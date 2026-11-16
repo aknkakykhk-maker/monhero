@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db8600118bf90787
+// source-sha256: 60e2dc4fcb8421be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163307,7 +163307,13 @@ function MsxQfxRows({
           '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length]
         },
         "data-msx-qg-part": x.src
-      }, m ? React.createElement("img", {
+      }, m ? Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       }) : React.createElement("em", null, "⛰️"), React.createElement("b", null, "+", x.v), m ? React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意') : React.createElement("small", null, "行き先"), React.createElement("i", {
@@ -163873,6 +163879,30 @@ function MsxActCrew({
   const tagged = tagMs.length > 0 || tags.includes('aid');
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
   const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
+  const monImg = m => {
+    const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : '';
+    if (!img) return null;
+    return Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: img,
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
+      src: img,
+      alt: ""
+    });
+  };
+  const faceImg = (sp, colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: sp,
+    src: typeof msxMonImg === 'function' ? msxMonImg(sp) : '',
+    masuColors: colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
+    src: thumb(sp),
+    alt: ""
+  });
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return React.createElement("div", {
@@ -163893,7 +163923,7 @@ function MsxActCrew({
       '--i': i
     }
   }, "✨")) : null, tagMs.map((i, n) => {
-    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    const img = monImg(team[i]);
     return img ? React.createElement("div", {
       key: `t${i}`,
       className: "cm tag duo",
@@ -163901,14 +163931,11 @@ function MsxActCrew({
         ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n],
         '--i': n
       }
-    }, React.createElement("img", {
-      src: img,
-      alt: ""
-    }), React.createElement("b", {
+    }, img, React.createElement("b", {
       className: "tg"
     }, "🤝 タッグ")) : null;
   }), restMs.map((i, n) => {
-    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    const img = monImg(team[i]);
     return img ? React.createElement("div", {
       key: i,
       className: "cm",
@@ -163916,10 +163943,7 @@ function MsxActCrew({
         ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))],
         '--i': n
       }
-    }, React.createElement("img", {
-      src: img,
-      alt: ""
-    }), React.createElement("i", {
+    }, img, React.createElement("i", {
       className: "ch"
     }, "📣")) : null;
   }), aidImg ? React.createElement("div", {
@@ -163934,19 +163958,13 @@ function MsxActCrew({
     "data-msx-tag-cutin": tagMs.length + (tags.includes('aid') ? 1 : 0)
   }, React.createElement("span", {
     className: "fc"
-  }, React.createElement("img", {
-    src: thumb(meSp),
-    alt: ""
-  })), tagMs.slice(0, 3).map(i => React.createElement(React.Fragment, {
+  }, faceImg(meSp, run.colors)), tagMs.slice(0, 3).map(i => React.createElement(React.Fragment, {
     key: i
   }, React.createElement("span", {
     className: "x"
   }, "×"), React.createElement("span", {
     className: "fc"
-  }, React.createElement("img", {
-    src: thumb(team[i].species),
-    alt: ""
-  })))), tags.includes('aid') && typeof msxFace === 'function' ? React.createElement(React.Fragment, null, React.createElement("span", {
+  }, faceImg(team[i].species, team[i].colors)))), tags.includes('aid') && typeof msxFace === 'function' ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "x"
   }, "×"), React.createElement("span", {
     className: "fc"
@@ -163974,18 +163992,25 @@ function MsxBondChips({
     "data-msx-bond-chips": ms.length + (aid ? 1 : 0)
   }, ms.map(i => {
     const tag = tags.includes(i);
+    const m = team[i];
     return React.createElement("span", {
       key: i,
       className: `v-bchip${tag ? ' tag' : ''}`,
       "data-msx-bond-chip": tag ? 'tag' : 'm'
-    }, React.createElement("img", {
-      src: thumb(team[i]),
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: typeof msxMonImg === 'function' ? msxMonImg(m.species) : '',
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
+      src: thumb(m),
       alt: ""
     }), tag ? React.createElement("i", {
       className: "bc-tg"
     }, "🤝") : null, React.createElement("span", {
       className: "bc-nm"
-    }, nameOf(team[i])), React.createElement("span", {
+    }, nameOf(m)), React.createElement("span", {
       className: "bc-up"
     }, "親密度 +", add));
   }), aid ? React.createElement("span", {
@@ -172678,6 +172703,7 @@ const msxTeamSrc = (slot, box, own, assist) => {
       aptBase: m.aptBase,
       aptAwake: m.aptAwake,
       assists: m.assists,
+      colors: m.colors,
       boxId: m.id
     };
   }
@@ -173454,7 +173480,25 @@ function MsxSlotPicker({
       onClick: () => onPick({
         box: m.id
       })
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      style: {
+        ...thumb,
+        display: 'inline-block',
+        overflow: 'hidden',
+        flex: 'none'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: "",
       style: thumb
@@ -173485,7 +173529,25 @@ function MsxSlotPicker({
       onClick: () => onPick({
         assist: m.id
       })
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      style: {
+        ...thumb,
+        display: 'inline-block',
+        overflow: 'hidden',
+        flex: 'none'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: "",
       style: thumb
@@ -173543,7 +173605,13 @@ function MsxGatherTable({
       return React.createElement("div", {
         key: i,
         className: "msx-gt-mon"
-      }, React.createElement("img", {
+      }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       }), React.createElement("span", {
@@ -174011,7 +174079,13 @@ function MsxStart({
     }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
-      const img = React.createElement("img", {
+      const img = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       });
@@ -174485,7 +174559,13 @@ function MsxStart({
     }, "編成"), members.map((m, i) => React.createElement("span", {
       key: i,
       className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: ""
     }))), React.createElement("span", {
@@ -174831,14 +174911,21 @@ function MsxTeamPick({
     "data-msx-tp-team": true
   }, view.map((s, i) => {
     const fr = frOf(i);
-    const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null;
+    const mm = fr ? members[i] : s ? memOf(s) : null;
+    const sp = mm ? mm.species : null;
     return React.createElement("div", {
       key: i,
       className: `msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`
     }, React.createElement("span", {
       className: "fc",
       "aria-label": fr ? 'フレンド' : curName(s, i)
-    }, sp ? React.createElement("img", {
+    }, sp ? Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: mm.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(sp),
       alt: ""
     }) : React.createElement("i", null, i + 1), fr ? React.createElement("b", {
@@ -175035,7 +175122,13 @@ function MsxFriendPick({
       onClick: () => onPick(on ? null : m)
     }, React.createElement("span", {
       className: "fc"
-    }, sp ? React.createElement("img", {
+    }, sp ? m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(sp),
       alt: ""
     }) : null, mem && mem.rank && mem.kind !== 'base' ? React.createElement("i", {
@@ -175127,7 +175220,13 @@ function MsxTeamEffects({
       return React.createElement("div", {
         key: i,
         className: "msx-gt-mon"
-      }, React.createElement("img", {
+      }, Array.isArray(members[r.mi].colors) && members[r.mi].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: members[r.mi].species,
+        src: msxMonImg(members[r.mi].species),
+        masuColors: members[r.mi].colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(members[r.mi].species),
         alt: ""
       }), React.createElement("span", {
@@ -175850,7 +175949,13 @@ function MsxPf({
   const r = m.kind === 'base' ? 'G' : m.rank;
   return React.createElement("span", {
     className: `v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`
-  }, React.createElement("img", {
+  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: m.species,
+    src: msxMonImg(m.species),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
     src: msxMonThumb(m.species),
     alt: ""
   }), React.createElement("i", {
@@ -176015,6 +176120,13 @@ function MonheroSuccessScreen({
       window.removeEventListener('resize', on);
       window.removeEventListener('orientationchange', on);
     };
+  }, []);
+  useEffect(() => {
+    if (typeof monsucRankFlush === 'function') {
+      try {
+        monsucRankFlush();
+      } catch (_) {}
+    }
   }, []);
   useEffect(() => {
     let alive = true;
@@ -179052,7 +179164,19 @@ function MsxEvent({
       height: '17%'
     },
     live: true
-  }), cheerIdx != null && s.team[cheerIdx] ? React.createElement("img", {
+  }), cheerIdx != null && s.team[cheerIdx] ? Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: s.team[cheerIdx].species,
+    src: msxMonImg(s.team[cheerIdx].species),
+    masuColors: s.team[cheerIdx].colors,
+    alt: "",
+    draggable: false,
+    className: "mon",
+    style: {
+      left: '70%',
+      bottom: '30%',
+      height: '36%'
+    }
+  }) : React.createElement("img", {
     className: "mon",
     src: msxMonImg(s.team[cheerIdx].species),
     alt: "",
@@ -179872,7 +179996,7 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
     box: next,
     meta
   };
-  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug);
+  const rank = !inBox || !metaDone || rec === true ? await msxR3RankSend(run, s, ev, debug) : null;
   return {
     ok: true,
     ...(inBox && metaDone ? {
@@ -179881,7 +180005,8 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
     box: next,
     meta,
     mon,
-    best3
+    best3,
+    rank
   };
 };
 const msxR3GameOver = async s => {
@@ -179960,27 +180085,24 @@ const msxR3RankRow = (run, s, ev, debug) => {
     debug: !!debug
   };
 };
-const msxR3RankSend = (run, s, ev, debug) => {
+const msxR3RankSend = async (run, s, ev, debug) => {
   try {
-    if (s.over === 'gameover') return false;
-    if (typeof monsucRankSubmit === 'function') {
-      monsucRankSubmit({
-        run: s,
-        ev,
-        name: run.nick || '',
-        colors: Array.isArray(run.colors) ? run.colors : [],
-        debug: !!debug,
-        runId: run.id
-      });
-      return true;
-    }
+    if (s.over === 'gameover') return null;
+    if (typeof monsucRankSubmit === 'function') return await monsucRankSubmit({
+      run: s,
+      ev,
+      name: run.nick || '',
+      colors: Array.isArray(run.colors) ? run.colors : [],
+      debug: !!debug,
+      runId: run.id
+    });
     if (typeof window !== 'undefined' && typeof window.MONSUC_RANK_SEND === 'function') {
       window.MONSUC_RANK_SEND(msxR3RankRow(run, s, ev, debug));
-      return true;
+      return null;
     }
-    return false;
+    return null;
   } catch (e) {
-    return false;
+    return null;
   }
 };
 let msxR3Tables = null;
@@ -183344,6 +183466,7 @@ function MsxR3Retire({
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
   const [res, setRes] = useState(null);
+  const [rankFix, setRankFix] = useState(null);
   const [showBox, setShowBox] = useState(false);
   const [, setTablesReady] = useState(0);
   useMsxR3Lines(s.aid);
@@ -183876,6 +183999,32 @@ function MsxR3Retire({
     setPick(now);
     setSure(false);
   };
+  useEffect(() => {
+    if (step !== 'done' && step !== 'best3') return undefined;
+    const base = res && res.rank;
+    if (!base || base.ok || !base.pending || rankFix) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
+        if (!alive) return;
+        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
+        if (!alive || st !== 'sent') return;
+        let place = null;
+        if (typeof monsucRankRead === 'function') {
+          const d = await monsucRankRead({});
+          if (d && d.mine) place = d.mine.place;
+        }
+        if (alive) setRankFix({
+          ok: true,
+          placeAll: place
+        });
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [step, res, rankFix]);
   const decide = async () => {
     if (!sure) {
       setSure(true);
@@ -183956,7 +184105,8 @@ function MsxR3Retire({
     setRes({
       ok: true,
       mon: r.mon,
-      best3: r.best3 || null
+      best3: r.best3 || null,
+      rank: r.rank || null
     });
     setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false);
@@ -183983,6 +184133,7 @@ function MsxR3Retire({
     });
   }
   if (step === 'done') {
+    const rankRes = rankFix || res && res.rank || null;
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-scene",
       style: {
@@ -184028,7 +184179,19 @@ function MsxR3Retire({
         width: 'auto',
         whiteSpace: 'nowrap'
       }
-    }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length} / ${box.cap}体` : '…'))));
+    }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length} / ${box.cap}体` : '…'))), rankRes && rankRes.ok ? React.createElement("div", {
+      className: "v-card"
+    }, React.createElement("div", {
+      className: "sub"
+    }, "🏆 ランキングに登録しました", rankRes.placeAll ? `(全体 ${rankRes.placeAll}位)` : '')) : null, rankRes && !rankRes.ok && rankRes.pending ? React.createElement("div", {
+      className: "v-card"
+    }, React.createElement("div", {
+      className: "sub"
+    }, "⏳ ランキングの登録待ちです。つながったら自動で送ります")) : null, rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? React.createElement("div", {
+      className: "v-card"
+    }, React.createElement("div", {
+      className: "sub"
+    }, "この記録はランキングに載せられませんでした")) : null);
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "閉じる",
@@ -184469,6 +184632,20 @@ function MsxR3Box({
   const [top, setTop] = useState('base');
   const [low, setLow] = useState('tech');
   const [techSel, setTechSel] = useState(null);
+  const [rankSt, setRankSt] = useState(null);
+  useEffect(() => {
+    if (page !== 'detail' || !sel || typeof monsucRankStatusOf !== 'function') return undefined;
+    let alive = true;
+    monsucRankStatusOf(sel).then(st => {
+      if (alive) setRankSt({
+        id: sel,
+        st
+      });
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [page, sel]);
   useEffect(() => {
     let alive = true;
     msxR3ReadBox().then(b => {
@@ -184913,7 +185090,7 @@ function MsxR3Box({
         super: 'スーパー',
         good: 'グッド',
         bad: 'ふつう'
-      }[cur.ending] || cur.ending] : null, lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null];
+      }[cur.ending] || cur.ending] : null, lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null, cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null];
       return React.createElement(MsxMonDetail, {
         species: cur.species,
         name: msxMmName(cur),
@@ -185866,12 +186043,14 @@ const monsucLendMember = (row, SUC) => {
     });
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  const colors = Array.isArray(m.colors) ? m.colors.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : [];
   return {
     kind: 'raised',
     species: m.species,
     name,
     stats,
     assists,
+    colors,
     friend: {
       id: typeof r.friendId === 'string' ? r.friendId : null,
       name: typeof r.name === 'string' ? r.name.slice(0, 40) : ''
@@ -189226,6 +189405,9 @@ function MsaFinish({
 }
 const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
 const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
+const MONSUC_RANK_PENDING_KEY = 'mh_monsuc_rank_pending_v1';
+const MONSUC_RANK_MIGRATED_KEY = 'mh_monsuc_rank_pending_migrated_v1';
+const MONSUC_RANK_PENDING_MAX = 50;
 const MONSUC_RANK_SENT_MAX = 50;
 const MONSUC_RANK_QUEUE_MAX = 5;
 const MONSUC_RANK_TIMEOUT_MS = 12000;
@@ -189285,10 +189467,15 @@ const monsucRankMonOf = species => {
   return m && typeof m === 'object' ? m : null;
 };
 const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
-const monsucRankRunId = (owner, rawId) => {
+const monsucRankTailOf = rawId => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
-  return `${owner}-${tail}`;
+  return tail;
+};
+const monsucRankRunId = (owner, rawId) => `${owner}-${monsucRankTailOf(rawId)}`;
+const monsucRankSentHas = (sentList, rawId) => {
+  const t = monsucRankTailOf(rawId);
+  return sentList.some(id => typeof id === 'string' && id.endsWith(`-${t}`));
 };
 const monsucRankSentList = async () => {
   try {
@@ -189317,6 +189504,60 @@ const monsucRankQueueSave = async list => {
   try {
     await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false);
   } catch (_) {}
+};
+const monsucRankPendingList = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_PENDING_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && typeof x.raw_id === 'string').slice(-MONSUC_RANK_PENDING_MAX) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const monsucRankPendingSave = async list => {
+  try {
+    await storeSet(MONSUC_RANK_PENDING_KEY, list.slice(-MONSUC_RANK_PENDING_MAX), false);
+  } catch (_) {}
+};
+const monsucRankPendingDrop = async rawId => {
+  const t = monsucRankTailOf(rawId);
+  const list = await monsucRankPendingList();
+  const next = list.filter(x => monsucRankTailOf(x.raw_id) !== t);
+  if (next.length !== list.length) await monsucRankPendingSave(next);
+};
+let monsucRankMigratedCache = false;
+const monsucRankMigrate = async () => {
+  if (monsucRankMigratedCache) return;
+  monsucRankMigratedCache = true;
+  try {
+    if (await storeGet(MONSUC_RANK_MIGRATED_KEY, false, false)) return;
+    const queue = await monsucRankQueue();
+    if (queue.length) {
+      const sent = await monsucRankSentList();
+      const pending = await monsucRankPendingList();
+      const have = new Set(pending.map(x => monsucRankTailOf(x.raw_id)));
+      for (const q of queue) {
+        const tail = q.run_id.slice(q.run_id.lastIndexOf('-') + 1);
+        if (sent.includes(q.run_id) || have.has(tail)) continue;
+        pending.push({
+          ...q,
+          raw_id: tail
+        });
+        have.add(tail);
+      }
+      await monsucRankPendingSave(pending);
+    }
+    await storeSet(MONSUC_RANK_MIGRATED_KEY, true, false);
+  } catch (_) {}
+};
+const monsucRankPendingCount = async () => {
+  await monsucRankMigrate();
+  return (await monsucRankPendingList()).length;
+};
+const monsucRankStatusOf = async rawId => {
+  if (monsucRankSentHas(await monsucRankSentList(), rawId)) return 'sent';
+  await monsucRankMigrate();
+  const t = monsucRankTailOf(rawId);
+  return (await monsucRankPendingList()).some(x => monsucRankTailOf(x.raw_id) === t) ? 'pending' : null;
 };
 const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
 const monsucRankRowOf = ({
@@ -189397,12 +189638,19 @@ const monsucRankPost = async (owner, key, row) => {
     if (timer) clearTimeout(timer);
   }
 };
-const monsucRankSendRow = async (me, row) => {
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'lv', 'loyal', 'pop', 'engine_version'];
+const monsucRankCleanRow = e => {
+  const r = {};
+  for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k];
+  return r;
+};
+const monsucRankSendPending = async (me, entry) => {
+  const row = monsucRankCleanRow(entry);
+  if (!row.run_id) row.run_id = monsucRankRunId(me.owner, entry.raw_id);
   const r = await monsucRankPost(me.owner, me.key, row);
-  const queue = (await monsucRankQueue()).filter(x => x.run_id !== row.run_id);
   if (r.ok) {
     await monsucRankMarkSent(row.run_id);
-    await monsucRankQueueSave(queue);
+    await monsucRankPendingDrop(entry.raw_id);
     return {
       ok: true,
       power: r.power,
@@ -189412,7 +189660,7 @@ const monsucRankSendRow = async (me, row) => {
       lineage: row.lineage
     };
   }
-  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankQueueSave(queue);else await monsucRankQueueSave(queue.concat([row]));
+  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankPendingDrop(entry.raw_id);
   return {
     ok: false,
     reason: r.reason || 'network'
@@ -189441,32 +189689,55 @@ const monsucRankSubmit = async ({
       ok: false,
       reason: 'skip'
     };
-    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
-    if (!me) return {
-      ok: false,
-      reason: 'no_id'
-    };
-    const row = monsucRankRowOf({
-      owner: me.owner,
+    const draft = monsucRankRowOf({
+      owner: '',
       run,
       ev,
       name,
       colors,
       userName: await monsucRankUserName()
     });
-    if (!row) return {
+    if (!draft) return {
       ok: false,
       reason: 'skip'
     };
-    if ((await monsucRankSentList()).includes(row.run_id)) return {
+    await monsucRankMigrate();
+    const rawId = String(run.id);
+    if (monsucRankSentHas(await monsucRankSentList(), rawId)) return {
       ok: false,
       reason: 'skip'
     };
-    return await monsucRankSendRow(me, row);
+    const pending = await monsucRankPendingList();
+    let entry = pending.find(x => monsucRankTailOf(x.raw_id) === monsucRankTailOf(rawId));
+    if (!entry) {
+      entry = {
+        ...draft,
+        run_id: null,
+        raw_id: rawId
+      };
+      await monsucRankPendingSave(pending.concat([entry]));
+    }
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
+    if (!me) return {
+      ok: false,
+      reason: 'no_id',
+      pending: true
+    };
+    if (entry.run_id && !entry.run_id.startsWith(`${me.owner}-`)) return {
+      ok: false,
+      reason: 'no_id',
+      pending: true
+    };
+    const r = await monsucRankSendPending(me, entry);
+    return r.ok ? r : {
+      ...r,
+      pending: !['bad', 'over_cap', 'locked'].includes(r.reason)
+    };
   } catch (_) {
     return {
       ok: false,
-      reason: 'network'
+      reason: 'network',
+      pending: true
     };
   }
 };
@@ -189476,27 +189747,51 @@ const monsucRankFlush = async () => {
       ok: false,
       reason: 'off'
     };
-    const queue = await monsucRankQueue();
-    if (queue.length === 0) return {
+    await monsucRankMigrate();
+    let pending = await monsucRankPendingList();
+    if (pending.length === 0) return {
       ok: true,
       left: 0
     };
     const sent = await monsucRankSentList();
-    const rest = queue.filter(x => !sent.includes(x.run_id));
-    if (rest.length !== queue.length) await monsucRankQueueSave(rest);
-    if (rest.length === 0) return {
+    const rest = pending.filter(x => !(x.run_id && sent.includes(x.run_id)) && !monsucRankSentHas(sent, x.raw_id));
+    if (rest.length !== pending.length) {
+      await monsucRankPendingSave(rest);
+      pending = rest;
+    }
+    if (pending.length === 0) return {
       ok: true,
       left: 0
     };
-    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(false) : null;
-    if (!me || !rest[0].run_id.startsWith(`${me.owner}-`)) return {
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
+    if (!me) return {
       ok: false,
-      reason: 'no_id'
+      reason: 'no_id',
+      left: pending.length
     };
-    const r = await monsucRankSendRow(me, rest[0]);
+    let target = null;
+    let marked = false;
+    for (const e of pending) {
+      if (e.run_id && !e.run_id.startsWith(`${me.owner}-`)) {
+        if (!e.held) {
+          e.held = true;
+          marked = true;
+        }
+        continue;
+      }
+      target = e;
+      break;
+    }
+    if (marked) await monsucRankPendingSave(pending);
+    if (!target) return {
+      ok: false,
+      reason: 'no_id',
+      left: pending.length
+    };
+    const r = await monsucRankSendPending(me, target);
     return {
       ...r,
-      left: Math.max(0, rest.length - 1)
+      left: (await monsucRankPendingList()).length
     };
   } catch (_) {
     return {
@@ -189662,9 +189957,28 @@ function MonsucRankScreen({
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [open, setOpen] = React.useState(null);
+  const [pendLeft, setPendLeft] = React.useState(0);
+  const [flushed, setFlushed] = React.useState(false);
   const on = monsucRankOn();
   React.useEffect(() => {
-    if (on) monsucRankFlush();
+    let alive = true;
+    if (!on) {
+      setFlushed(true);
+      return undefined;
+    }
+    (async () => {
+      try {
+        await monsucRankFlush();
+      } catch (_) {}
+      if (!alive) return;
+      try {
+        setPendLeft(await monsucRankPendingCount());
+      } catch (_) {}
+      setFlushed(true);
+    })();
+    return () => {
+      alive = false;
+    };
   }, [on]);
   React.useEffect(() => {
     let alive = true;
@@ -189672,6 +189986,7 @@ function MonsucRankScreen({
       setLoading(false);
       return undefined;
     }
+    if (!flushed) return undefined;
     setLoading(true);
     setOpen(null);
     monsucRankRead({
@@ -189685,7 +190000,7 @@ function MonsucRankScreen({
     return () => {
       alive = false;
     };
-  }, [on, tab, lineage]);
+  }, [on, flushed, tab, lineage]);
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
@@ -189730,7 +190045,9 @@ function MonsucRankScreen({
     className: "text-[12px] text-slate-200 mt-1.5"
   }, scopeName, " ", totalText, mine ? React.createElement(React.Fragment, null, " ・ あなたの順位 ", React.createElement("span", {
     className: "text-yellow-300 font-black"
-  }, mine.place, "位")) : null)), React.createElement("div", {
+  }, mine.place, "位")) : null), pendLeft > 0 && React.createElement("div", {
+    className: "text-[12px] font-bold text-amber-300 mt-1"
+  }, "⏳ 登録待ち ", pendLeft, "件")), React.createElement("div", {
     className: "flex-1 overflow-y-auto px-3 py-2 space-y-1.5"
   }, !on && React.createElement("div", {
     className: "text-center text-slate-300 text-[13px] py-8"
