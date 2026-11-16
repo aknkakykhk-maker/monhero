@@ -99,5 +99,51 @@ const cupBattle = (s, rival, star) => {
   ok(plain && !plain.techIds, 'ライバルでない相手にまで技の指定が付く');
 }
 
+// ---- 5. 大一番の決勝ライバル確定(2026-11-16): ダービーと四大大会は候補がいれば必ずライバル、
+//        いなければ今までどおり。札・実戦・restore で同じ個体。予想にもライバルの倍率が入る ----
+{
+  const rivals = [
+    { name: 'モッチー', breeder: 'みゅあ', kind: 'aid', species: 'Mocchi', id: 'aid:mua:1:Mocchi', stats: st(2400), rawSum: 2400 },
+    { name: 'タイガー', breeder: 'フレンド', kind: 'friend', species: 'Tiger', id: 'friend:fr-9:0:Tiger', stats: st(2400), rawSum: 2400 },
+  ];
+  const FINAL_CUPS = [[14, 'derby'], [20, 'four1'], [26, 'four2'], [32, 'four3'], [38, 'four4']];
+  for (const [turn, sys] of FINAL_CUPS) {
+    const s = { ...SUC.newRun({ id: `rival-final-${sys}`, species: 'Mocchi', aid: 'kiki', rivals }), turn };
+    const card = (SUC.cupsOf(s) || []).find((c) => c.sys === sys);
+    ok(!!card, `${sys}: 大会の札が無い(turn ${turn})`);
+    if (!card) continue;
+    ok(!!card.rival, `${sys}: 候補がいるのに決勝ライバルが付かない`);
+    if (!card.rival) continue;
+    ok(rivals.some((r) => r.id === card.rival.id), `${sys}: 付いたライバルが候補の外: ${card.rival.id}`);
+    // 札は決まった乱数なので、もう一度作っても同じ個体
+    const card2 = (SUC.cupsOf(s) || []).find((c) => c.sys === sys);
+    ok(card2 && card2.rival && card2.rival.id === card.rival.id, `${sys}: 札を作り直すとライバルが変わる`);
+    // 実戦の相手が札の個体と一致する
+    const b = { kind: 'cup', id: card.id, sys: card.sys, name: card.name || null, star: card.star, rival: card.rival, round: 0 };
+    const opp = SUC.opponents({ ...s, battle: b })[0];
+    ok(opp && opp.rival && opp.species === card.rival.species && opp.name === card.rival.name, `${sys}: 実戦の相手が札のライバルと違う`);
+    ok(opp && opp.rivalId === card.rival.id, `${sys}: 実戦の相手に個体の印が付かない`);
+    // 中断再開(restore)のあとも同じ個体
+    const re = SUC.restore(JSON.parse(JSON.stringify({ ...s, battle: b })));
+    const reOpp = SUC.opponents(re)[0];
+    ok(reOpp && reOpp.rival && reOpp.species === card.rival.species, `${sys}: restore 後の相手が変わる`);
+    // 予想: ライバルが付くと、付いていない同じ札より楽にはならない(倍率が予想にも入っている)
+    const order = ['easy', 'good', 'even', 'hard', 'none'];
+    const withR = SUC.forecastOf(s, card);
+    const withoutR = SUC.forecastOf(s, { ...card, rival: null });
+    ok(withR && withoutR && order.indexOf(withR.key) >= order.indexOf(withoutR.key), `${sys}: 予想にライバルの倍率が入っていない(${withoutR && withoutR.key} → ${withR && withR.key})`);
+  }
+  // 候補がいなければ、今までどおりライバルは付かない(相手は大会の常連)
+  for (const [turn, sys] of FINAL_CUPS) {
+    const s = { ...SUC.newRun({ id: `rival-final-none-${sys}`, species: 'Mocchi', aid: 'kiki', rivals: [] }), turn };
+    const card = (SUC.cupsOf(s) || []).find((c) => c.sys === sys);
+    ok(!!card && !card.rival, `${sys}: 候補がいないのにライバルが付く`);
+    if (!card) continue;
+    const b = { kind: 'cup', id: card.id, sys: card.sys, name: card.name || null, star: card.star, rival: null, round: 0 };
+    const opp = SUC.opponents({ ...s, battle: b })[0];
+    ok(opp && !opp.rival, `${sys}: 候補がいないのに実戦の相手がライバルになる`);
+  }
+}
+
 if (ng) { console.log(`monsuc-rival-check: NG ${ng} 件`); process.exit(1); }
 console.log('monsuc-rival-check: OK');
