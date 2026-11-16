@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d8a4b57847fee45
+// source-sha256: 986bede156209de0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172258,13 +172258,39 @@ const msxRivalsBuild = async (SUC, aid) => {
       const t = r && Array.isArray(r.list) ? r.list.find(x => x && x.lead && ok(x.monster)) || r.list.find(x => x && ok(x.monster)) : null;
       if (!t) continue;
       const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
+      const slot = Number.isInteger(t.slot) ? t.slot : 0;
+      let stats = t.stats && typeof t.stats === 'object' ? t.stats : null;
+      if (!stats && typeof amgEntryOf === 'function') {
+        try {
+          const e = amgEntryOf(id, t);
+          if (e && e.st && typeof e.st === 'object') stats = e.st;
+        } catch (_) {}
+      }
+      let techs = null;
+      let mastery = null;
+      if (typeof amgtBattleOf === 'function') {
+        try {
+          const bt = amgtBattleOf(id, t, t.lv);
+          if (bt && Array.isArray(bt.techs) && bt.techs.length) {
+            techs = bt.techs.filter(x => typeof x === 'string').slice(0, 16);
+            if (techs.length && bt.mastery && typeof bt.mastery === 'object') mastery = Object.fromEntries(techs.map(x => [x, Math.max(0, Math.min(100, Math.round(Number(bt.mastery[x]) || 0)))]));
+          }
+        } catch (_) {}
+      }
+      const rawSum = stats ? ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(stats[k])) ? Number(stats[k]) : 0), 0) : null;
       out.push({
         name: nick,
         breeder: msxAidName(id),
         kind: 'aid',
         species: t.monster,
-        ...(t.stats && typeof t.stats === 'object' ? {
-          stats: t.stats
+        id: `aid:${id}:${slot}:${t.monster}`,
+        ...(stats ? {
+          stats,
+          rawSum: Math.round(rawSum)
+        } : {}),
+        ...(techs && techs.length ? {
+          techs,
+          mastery: mastery || {}
         } : {})
       });
     }
@@ -172277,12 +172303,15 @@ const msxRivalsBuild = async (SUC, aid) => {
         if (out.length >= 8) break;
         const m = monsucLendMember(row, SUC);
         if (!m || !ok(m.species)) continue;
+        const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
         out.push({
           name: m.name || msxMonName(m.species),
           breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null,
           kind: 'friend',
           species: m.species,
-          stats: m.stats
+          stats: m.stats,
+          rawSum: Math.round(rawSumF),
+          id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}`
         });
       }
     }
@@ -179572,7 +179601,8 @@ const msxR3Fight = (engine, SUC, run) => {
     } : {})
   };
   const osp = spOf(opp.species);
-  const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map(t => t.id);
+  const ots0 = Array.isArray(opp.techIds) && opp.techIds.length ? opp.techIds.filter(id => (cat.species[osp].techs || []).some(t => t.id === id)) : [];
+  const ots = ots0.length ? ots0 : (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map(t => t.id);
   const o = {
     species: osp,
     name: opp.name || msxMonName(osp),
