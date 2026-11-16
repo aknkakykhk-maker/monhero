@@ -112,9 +112,9 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>長押しで詳しく</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null; return (
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const sp = mm ? mm.species : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`}>
-            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? <img src={msxMonThumb(sp)} alt=""/> : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
+            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? (Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={mm.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
         <div className="msx-tp-bar">
@@ -170,7 +170,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
             : !list.length ? <div className="msx-tp-none">{rows.length ? '当てはまるモンスターがいません' : '貸し出しているフレンドはいません'}</div>
             : list.map(({ row, m, mem, dup }) => { const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId); const name = (row.lend && row.lend.name) || (m && m.name) || ''; const sp = m ? m.species : row.lend && row.lend.species; return (
               <button type="button" key={row.friendId} className={`msx-fp-r${on ? ' on' : ''}${m ? '' : ' lk'}`} disabled={!m} data-msx-fp-row={row.friendId} onClick={() => onPick(on ? null : m)}>
-                <span className="fc">{sp ? <img src={msxMonThumb(sp)} alt=""/> : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
+                <span className="fc">{sp ? (m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
                 <span className="tx"><small>{row.name || 'フレンド'}</small><b>{name}</b>
                   <span className="tp">{mem ? mem.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(mem.bonus[k] || 0)}%`}</span>) : null}</span></span>
                 <span className="st">
@@ -209,7 +209,7 @@ function MsxTeamEffects({ members, onClose }) {
             <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
               <div className="hd"><span className="ic">{cardIconNode(d.icon, 16)}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (
-                <div key={i} className="msx-gt-mon"><img src={msxMonThumb(members[r.mi].species)} alt=""/><span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
+                <div key={i} className="msx-gt-mon">{Array.isArray(members[r.mi].colors) && members[r.mi].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={members[r.mi].species} src={msxMonImg(members[r.mi].species)} masuColors={members[r.mi].colors} alt="" draggable={false}/> : <img src={msxMonThumb(members[r.mi].species)} alt=""/>}<span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
             </div>); })
             : <div className="msx-gt-none">編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています</div>}
         </div>
