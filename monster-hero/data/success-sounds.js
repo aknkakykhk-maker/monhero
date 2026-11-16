@@ -83,9 +83,11 @@
     { id: 'cupEntry', name: '大会: 受付', bgm: 'monsuc_cup', se: 'join' },
     { id: 'cupPre', name: '大会: 試合の前', bgm: 'monsuc_cup', se: null },
     { id: 'cupMatch', name: '大会: 試合', bgm: 'ichika_battle', se: 'trainingDice' },
-    // 勝ち・負けは短いジングルを1回だけ流して無音(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
+    // 勝ち・負けは短いジングルを1回だけ流す(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
     { id: 'cupWin', name: '大会: 勝ち', bgm: 'monsuc_win', se: null },
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
+    // 決着のあと(ごほうび・昇級・ごはんの段)。ジングルが鳴り終わってから大会の曲をループさせる(sceneAfterOnce で入る)。無音のままにしない
+    { id: 'cupAfter', name: '大会: 決着のあと', bgm: 'monsuc_cup', se: null },
     // エンディング(ヒーローズファイナルのあとの掛け合い・エンディング・お祝い)。勝ち負けのジングルが鳴り終わってから流し、引退の画面まで切らさない(r1115-091)
     //   グッド・超グッド = クリアテーマ / バッド = リザルトテーマ(引退の画面と同じ曲なので、そのまま続く)
     { id: 'ending', name: 'エンディング(優勝)', bgm: 'ichika_clear', se: null },
