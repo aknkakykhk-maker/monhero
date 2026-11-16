@@ -560,17 +560,25 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  // 大会の曲(2026-11-14 社長の曲・ビート部の表): 組み合わせ表と札=cupPre / 試合=cupMatch / 決着=cupWin・cupLose
+  // 大会の曲(2026-11-14 社長の曲・ビート部の表): 組み合わせ表と札=cupPre / 試合=cupMatch / 決着の表示=cupWin・cupLose(ジングル1回) → 決着の段は cupAfter(下の effect)
   //   バトル部の見せる部品(MonsucCupShow)は段を onPhase で知らせてくる。部品が無いときは、ここの step で決める
   const [showPh, setShowPh] = useState('bracket');
   // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
   const [introSeen, setIntroSeen] = useState(null);
   // デバッグの「勝ったことにする」→「決勝へ」の流れでも、札(card)からあとは見せる部品が出る。その段も見る(2026-11-15 r1115-048 デバッグの流れで試合の曲に替わらなかった)
   const showView = showOn || (!!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch'));
-  const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
-    : showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
-      : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
+  const cupSound = showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+    : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessScene(st3 ? null : cupSound, { season: msxCalendar(s.turn).season });
+  // 決着が付いたあと(ごほうび・昇級・ごはんの段): 勝敗ジングルは1回だけ鳴らし、鳴り終わったら大会の曲(cupAfter)をループさせる(無音にしない)
+  //   決着の印が替わるたびに1回だけ。開き直して決着の段から始まるときは印を済ませておき、ジングルを鳴らさず曲をすぐ流す
+  const settledKey = st3 ? `${st3.won ? 'cupWin' : 'cupLose'}:${st3.from}` : null;
+  const settledRef = useRef(settledKey);
+  useEffect(() => {
+    if (!st3 || typeof SuccessSound === 'undefined') return undefined;
+    if (settledRef.current !== settledKey) { settledRef.current = settledKey; SuccessSound.scene(st3.won ? 'cupWin' : 'cupLose'); }
+    return SuccessSound.sceneAfterOnce('cupAfter', { season: msxCalendar(s.turn).season });
+  }, [settledKey]);
   // 試合のあいだは、試合の曲が確かに鳴っているかを見張り、違えば鳴らし直す(読み込みの失敗・ジングルのあと・中断からの再開でも試合の曲へ。r1115-048)
   useEffect(() => {
     if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
