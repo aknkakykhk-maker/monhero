@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 986bede156209de0
+// source-sha256: db8600118bf90787
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189720,8 +189720,7 @@ function MonsucRankScreen({
     onClick: () => setTab(k),
     className: `rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
   }, label))), tab === 'lineage' && React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1",
-    "data-msx-hscroll": true
+    className: "flex flex-wrap gap-1.5 mt-2"
   }, lineages.map(l => React.createElement("button", {
     key: l,
     type: "button",
