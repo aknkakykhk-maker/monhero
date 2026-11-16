@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 037001312c359ea6
+// source-sha256: 60e2dc4fcb8421be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163307,7 +163307,13 @@ function MsxQfxRows({
           '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length]
         },
         "data-msx-qg-part": x.src
-      }, m ? React.createElement("img", {
+      }, m ? Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       }) : React.createElement("em", null, "⛰️"), React.createElement("b", null, "+", x.v), m ? React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意') : React.createElement("small", null, "行き先"), React.createElement("i", {
@@ -163873,6 +163879,30 @@ function MsxActCrew({
   const tagged = tagMs.length > 0 || tags.includes('aid');
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
   const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
+  const monImg = m => {
+    const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : '';
+    if (!img) return null;
+    return Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: img,
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
+      src: img,
+      alt: ""
+    });
+  };
+  const faceImg = (sp, colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: sp,
+    src: typeof msxMonImg === 'function' ? msxMonImg(sp) : '',
+    masuColors: colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
+    src: thumb(sp),
+    alt: ""
+  });
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return React.createElement("div", {
@@ -163893,7 +163923,7 @@ function MsxActCrew({
       '--i': i
     }
   }, "✨")) : null, tagMs.map((i, n) => {
-    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    const img = monImg(team[i]);
     return img ? React.createElement("div", {
       key: `t${i}`,
       className: "cm tag duo",
@@ -163901,14 +163931,11 @@ function MsxActCrew({
         ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n],
         '--i': n
       }
-    }, React.createElement("img", {
-      src: img,
-      alt: ""
-    }), React.createElement("b", {
+    }, img, React.createElement("b", {
       className: "tg"
     }, "🤝 タッグ")) : null;
   }), restMs.map((i, n) => {
-    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    const img = monImg(team[i]);
     return img ? React.createElement("div", {
       key: i,
       className: "cm",
@@ -163916,10 +163943,7 @@ function MsxActCrew({
         ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))],
         '--i': n
       }
-    }, React.createElement("img", {
-      src: img,
-      alt: ""
-    }), React.createElement("i", {
+    }, img, React.createElement("i", {
       className: "ch"
     }, "📣")) : null;
   }), aidImg ? React.createElement("div", {
@@ -163934,19 +163958,13 @@ function MsxActCrew({
     "data-msx-tag-cutin": tagMs.length + (tags.includes('aid') ? 1 : 0)
   }, React.createElement("span", {
     className: "fc"
-  }, React.createElement("img", {
-    src: thumb(meSp),
-    alt: ""
-  })), tagMs.slice(0, 3).map(i => React.createElement(React.Fragment, {
+  }, faceImg(meSp, run.colors)), tagMs.slice(0, 3).map(i => React.createElement(React.Fragment, {
     key: i
   }, React.createElement("span", {
     className: "x"
   }, "×"), React.createElement("span", {
     className: "fc"
-  }, React.createElement("img", {
-    src: thumb(team[i].species),
-    alt: ""
-  })))), tags.includes('aid') && typeof msxFace === 'function' ? React.createElement(React.Fragment, null, React.createElement("span", {
+  }, faceImg(team[i].species, team[i].colors)))), tags.includes('aid') && typeof msxFace === 'function' ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "x"
   }, "×"), React.createElement("span", {
     className: "fc"
@@ -163974,18 +163992,25 @@ function MsxBondChips({
     "data-msx-bond-chips": ms.length + (aid ? 1 : 0)
   }, ms.map(i => {
     const tag = tags.includes(i);
+    const m = team[i];
     return React.createElement("span", {
       key: i,
       className: `v-bchip${tag ? ' tag' : ''}`,
       "data-msx-bond-chip": tag ? 'tag' : 'm'
-    }, React.createElement("img", {
-      src: thumb(team[i]),
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: typeof msxMonImg === 'function' ? msxMonImg(m.species) : '',
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
+      src: thumb(m),
       alt: ""
     }), tag ? React.createElement("i", {
       className: "bc-tg"
     }, "🤝") : null, React.createElement("span", {
       className: "bc-nm"
-    }, nameOf(team[i])), React.createElement("span", {
+    }, nameOf(m)), React.createElement("span", {
       className: "bc-up"
     }, "親密度 +", add));
   }), aid ? React.createElement("span", {
@@ -172678,6 +172703,7 @@ const msxTeamSrc = (slot, box, own, assist) => {
       aptBase: m.aptBase,
       aptAwake: m.aptAwake,
       assists: m.assists,
+      colors: m.colors,
       boxId: m.id
     };
   }
@@ -173454,7 +173480,25 @@ function MsxSlotPicker({
       onClick: () => onPick({
         box: m.id
       })
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      style: {
+        ...thumb,
+        display: 'inline-block',
+        overflow: 'hidden',
+        flex: 'none'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: "",
       style: thumb
@@ -173485,7 +173529,25 @@ function MsxSlotPicker({
       onClick: () => onPick({
         assist: m.id
       })
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      style: {
+        ...thumb,
+        display: 'inline-block',
+        overflow: 'hidden',
+        flex: 'none'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: "",
       style: thumb
@@ -173543,7 +173605,13 @@ function MsxGatherTable({
       return React.createElement("div", {
         key: i,
         className: "msx-gt-mon"
-      }, React.createElement("img", {
+      }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       }), React.createElement("span", {
@@ -174011,7 +174079,13 @@ function MsxStart({
     }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
-      const img = React.createElement("img", {
+      const img = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: m.species,
+        src: msxMonImg(m.species),
+        masuColors: m.colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(m.species),
         alt: ""
       });
@@ -174485,7 +174559,13 @@ function MsxStart({
     }, "編成"), members.map((m, i) => React.createElement("span", {
       key: i,
       className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, React.createElement("img", {
+    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: ""
     }))), React.createElement("span", {
@@ -174831,14 +174911,21 @@ function MsxTeamPick({
     "data-msx-tp-team": true
   }, view.map((s, i) => {
     const fr = frOf(i);
-    const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null;
+    const mm = fr ? members[i] : s ? memOf(s) : null;
+    const sp = mm ? mm.species : null;
     return React.createElement("div", {
       key: i,
       className: `msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`
     }, React.createElement("span", {
       className: "fc",
       "aria-label": fr ? 'フレンド' : curName(s, i)
-    }, sp ? React.createElement("img", {
+    }, sp ? Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: mm.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(sp),
       alt: ""
     }) : React.createElement("i", null, i + 1), fr ? React.createElement("b", {
@@ -175035,7 +175122,13 @@ function MsxFriendPick({
       onClick: () => onPick(on ? null : m)
     }, React.createElement("span", {
       className: "fc"
-    }, sp ? React.createElement("img", {
+    }, sp ? m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false
+    }) : React.createElement("img", {
       src: msxMonThumb(sp),
       alt: ""
     }) : null, mem && mem.rank && mem.kind !== 'base' ? React.createElement("i", {
@@ -175127,7 +175220,13 @@ function MsxTeamEffects({
       return React.createElement("div", {
         key: i,
         className: "msx-gt-mon"
-      }, React.createElement("img", {
+      }, Array.isArray(members[r.mi].colors) && members[r.mi].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: members[r.mi].species,
+        src: msxMonImg(members[r.mi].species),
+        masuColors: members[r.mi].colors,
+        alt: "",
+        draggable: false
+      }) : React.createElement("img", {
         src: msxMonThumb(members[r.mi].species),
         alt: ""
       }), React.createElement("span", {
@@ -175850,7 +175949,13 @@ function MsxPf({
   const r = m.kind === 'base' ? 'G' : m.rank;
   return React.createElement("span", {
     className: `v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`
-  }, React.createElement("img", {
+  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: m.species,
+    src: msxMonImg(m.species),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
     src: msxMonThumb(m.species),
     alt: ""
   }), React.createElement("i", {
@@ -179059,7 +179164,19 @@ function MsxEvent({
       height: '17%'
     },
     live: true
-  }), cheerIdx != null && s.team[cheerIdx] ? React.createElement("img", {
+  }), cheerIdx != null && s.team[cheerIdx] ? Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: s.team[cheerIdx].species,
+    src: msxMonImg(s.team[cheerIdx].species),
+    masuColors: s.team[cheerIdx].colors,
+    alt: "",
+    draggable: false,
+    className: "mon",
+    style: {
+      left: '70%',
+      bottom: '30%',
+      height: '36%'
+    }
+  }) : React.createElement("img", {
     className: "mon",
     src: msxMonImg(s.team[cheerIdx].species),
     alt: "",
@@ -185926,12 +186043,14 @@ const monsucLendMember = (row, SUC) => {
     });
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  const colors = Array.isArray(m.colors) ? m.colors.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : [];
   return {
     kind: 'raised',
     species: m.species,
     name,
     stats,
     assists,
+    colors,
     friend: {
       id: typeof r.friendId === 'string' ? r.friendId : null,
       name: typeof r.name === 'string' ? r.name.slice(0, 40) : ''

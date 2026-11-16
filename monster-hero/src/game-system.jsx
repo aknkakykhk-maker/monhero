@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be07d53b3cc6ea67
+// generated-sha256: 207094349593641b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84706,7 +84706,7 @@ function MsxQfxRows({ run, o, keys }) {
         <span className="qg-v"><small>{msxFmt(before)}→</small><b style={{ '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s` }}>{msxFmt(after)}</b></span>
         <span className="qg-parts">{parts.map((x, n) => { const m = x.src === 'team' ? (s.team || [])[x.i] : null;
           return (<span key={n} className={`qg-p ${x.src}`} style={{ '--d': `${0.3 + (d0 + n) * 0.3}s`, '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length] }} data-msx-qg-part={x.src}>
-            {m ? <img src={msxMonThumb(m.species)} alt=""/> : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small> : <small>行き先</small>}
+            {m ? (Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>) : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small> : <small>行き先</small>}
             <i className="fly" aria-hidden="true">+{x.v}</i></span>); })}</span>
       </div>); })}
   </div>);
@@ -85097,21 +85097,24 @@ function MsxActCrew({ run, o }) {
   const tagged = tagMs.length > 0 || tags.includes('aid');
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
   const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '');
+  // 編成の子の絵(染色があれば染め絵で出す)
+  const monImg = (m) => { const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''; if (!img) return null; return Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={img} masuColors={m.colors} alt="" draggable={false}/> : <img src={img} alt=""/>; };
+  const faceImg = (sp, colors) => (Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={typeof msxMonImg === 'function' ? msxMonImg(sp) : ''} masuColors={colors} alt="" draggable={false}/> : <img src={thumb(sp)} alt=""/>);
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return (
     <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tagscene={tagged ? 1 : 0}>
       {tagged ? <span className="tagglow"/> : null}
       {tagged ? Array.from({ length: 8 }, (_, i) => <i key={`st${i}`} className="tagstar" style={{ '--i': i }}>✨</i>) : null}
-      {tagMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (
-        <div key={`t${i}`} className="cm tag duo" style={{ ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n], '--i': n }}><img src={img} alt=""/><b className="tg">🤝 タッグ</b></div>) : null; })}
-      {restMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (
-        <div key={i} className="cm" style={{ ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))], '--i': n }}><img src={img} alt=""/><i className="ch">📣</i></div>) : null; })}
+      {tagMs.map((i, n) => { const img = monImg(team[i]); return img ? (
+        <div key={`t${i}`} className="cm tag duo" style={{ ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n], '--i': n }}>{img}<b className="tg">🤝 タッグ</b></div>) : null; })}
+      {restMs.map((i, n) => { const img = monImg(team[i]); return img ? (
+        <div key={i} className="cm" style={{ ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))], '--i': n }}>{img}<i className="ch">📣</i></div>) : null; })}
       {aidImg ? <div className={`aid${tags.includes('aid') ? ' tag' : ''}`}><img src={aidImg} alt=""/><b className="say">{tags.includes('aid') ? '🤝 いっしょに!' : 'がんばれ〜!'}</b></div> : null}
       {tagged ? (
         <div className="tagcut" data-msx-tag-cutin={tagMs.length + (tags.includes('aid') ? 1 : 0)}>
-          <span className="fc"><img src={thumb(meSp)} alt=""/></span>
-          {tagMs.slice(0, 3).map((i) => <React.Fragment key={i}><span className="x">×</span><span className="fc"><img src={thumb(team[i].species)} alt=""/></span></React.Fragment>)}
+          <span className="fc">{faceImg(meSp, run.colors)}</span>
+          {tagMs.slice(0, 3).map((i) => <React.Fragment key={i}><span className="x">×</span><span className="fc">{faceImg(team[i].species, team[i].colors)}</span></React.Fragment>)}
           {tags.includes('aid') && typeof msxFace === 'function' ? <><span className="x">×</span><span className="fc"><img src={msxFace(s.aid, 'excited') || msxFace(s.aid, 'happy')} alt=""/></span></> : null}
           <b>友情タッグ!<small>いっしょに 力を合わせる</small></b>
         </div>) : null}
@@ -85130,8 +85133,8 @@ function MsxBondChips({ s, card, add }) {
   const nameOf = (m) => (typeof msxMemberName === 'function' ? msxMemberName(m) : m.species);
   return (
     <div className="v-bchips" data-msx-bond-chips={ms.length + (aid ? 1 : 0)}>
-      {ms.map((i) => { const tag = tags.includes(i); return (
-        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}><img src={thumb(team[i])} alt=""/>{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(team[i])}</span><span className="bc-up">親密度 +{add}</span></span>); })}
+      {ms.map((i) => { const tag = tags.includes(i); const m = team[i]; return (
+        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''} masuColors={m.colors} alt="" draggable={false}/> : <img src={thumb(m)} alt=""/>}{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(m)}</span><span className="bc-up">親密度 +{add}</span></span>); })}
       {aid ? <span className={`v-bchip${tags.includes('aid') ? ' tag' : ''}`} data-msx-bond-chip="aid"><img src={typeof msxFace === 'function' ? msxFace(s.aid, 'happy') : ''} alt=""/>{tags.includes('aid') ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{typeof msxAidName === 'function' ? msxAidName(s.aid) : ''}</span><span className="bc-up">親密度 +{add}</span></span> : null}
     </div>
   );
@@ -89935,7 +89938,7 @@ const msxAptOf = (sp) => { const a = typeof AMG_APT !== 'undefined' && AMG_APT &
 const msxTeamSrc = (slot, box, own, assist) => {
   // メモリアルモンスター(合体の親・お別れしたモンスター。mh_monsuc_assist_v1)も、マスモンボックスの子と同じ形で編成に入る
   if (slot && slot.assist) { const a = ((assist && assist.mons) || []).find((x) => x.id === slot.assist); if (a) { const t = msxTeamSrc({ box: a.id }, { mons: [a] }, own); return { ...t, boxId: null, assistId: a.id }; } }
-  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, boxId: m.id }; }
+  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, colors: m.colors, boxId: m.id }; }
   const sp = slot && slot.base ? slot.base : 'Mocchi';
   // 育てる子と同じ種のベースモンは「(ベースモン)」をつけ、育てる子と取り違えない(2026-11-14)
   return { kind: 'base', species: sp, name: sp === own ? `${msxMonName(sp)}(ベースモン)` : msxMonName(sp) };
@@ -90210,7 +90213,9 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, stock = [], teamBox, t
           <div className="msx-dt-cap" style={{ marginTop: 8 }}>マスモンボックスのモンスター</div>
           {raised.length ? raised.map((m) => { const on = cur && cur.box === m.id; const used = !on && teamBox.includes(m.id); return (
             <button type="button" key={m.id} className={`v-item${on ? ' sel' : ''}`} disabled={!on && boxFull && !used} style={{ padding: '4px 8px', width: '100%' }} onClick={() => onPick({ box: m.id })}>
-              <img src={msxMonThumb(m.species)} alt="" style={thumb}/>
+              {Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+                ? <span style={{ ...thumb, display: 'inline-block', overflow: 'hidden', flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+                : <img src={msxMonThumb(m.species)} alt="" style={thumb}/>}
               <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}{used ? '・ほかの枠から移す' : ''}</small></div>
               <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })
             : <div className="msx-note">まだいません。育て終えたモンスターが入ります</div>}
@@ -90218,7 +90223,9 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, stock = [], teamBox, t
             <div className="msx-dt-cap" style={{ marginTop: 8 }}>メモリアルモンスター(育成には使えません)</div>
             {stock.map((m) => { const on = cur && cur.assist === m.id; return (
               <button type="button" key={m.id} className={`v-item${on ? ' sel' : ''}`} disabled={!on && boxFull} style={{ padding: '4px 8px', width: '100%' }} data-msx-pick-assist={m.id} onClick={() => onPick({ assist: m.id })}>
-                <img src={msxMonThumb(m.species)} alt="" style={thumb}/>
+                {Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+                  ? <span style={{ ...thumb, display: 'inline-block', overflow: 'hidden', flex: 'none' }}><DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+                  : <img src={msxMonThumb(m.species)} alt="" style={thumb}/>}
                 <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}・メモモン</small></div>
                 <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })}
           </>) : null}
@@ -90243,7 +90250,7 @@ function MsxGatherTable({ members, SUC, onClose }) {
               <div key={k} className="msx-gt-row" data-msx-gather-row={k}>
                 <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{msxTrainName(k, 1)}</b><span className="st">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="n">{rows.length}体</span></div>
                 {rows.length ? rows.map(({ m, j }, i) => { const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null; return (
-                  <div key={i} className="msx-gt-mon"><img src={msxMonThumb(m.species)} alt=""/><span className="nm">{m.name}</span>
+                  <div key={i} className="msx-gt-mon">{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>}<span className="nm">{m.name}</span>
                     <span className="v">得意{RANK[j]}{ch != null ? `・来やすさ${Math.round(ch * 100)}%` : ''}・伸び+{Math.round(m.bonus[k] || 0)}%</span></div>); })
                   : <div className="msx-gt-none">集まりやすいモンスターなし</div>}
               </div>
@@ -90417,7 +90424,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`} data-msx-slot={i} {...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {})} {...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {})} role="button" tabIndex={0} onClick={() => openSlot(i)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSlot(i); }}>
             {m.friend ? <i className="msx-sl-fr">🤝 フレンド</i> : null}
-            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
+            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
             {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
             <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
@@ -90528,7 +90535,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <span className="v-nm" style={{ left: '36%', bottom: 6 }}>{name}<small>{msxMonName(species)}</small></span>
         <img src={msxBody(aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, width: '50%', height: '78%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
       </div>
-      <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>)}<span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>}</span>)}<span className="ed">変える</span></button>
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
@@ -90666,9 +90673,9 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>長押しで詳しく</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null; return (
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const sp = mm ? mm.species : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`}>
-            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? <img src={msxMonThumb(sp)} alt=""/> : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
+            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? (Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={mm.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
         <div className="msx-tp-bar">
@@ -90724,7 +90731,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
             : !list.length ? <div className="msx-tp-none">{rows.length ? '当てはまるモンスターがいません' : '貸し出しているフレンドはいません'}</div>
             : list.map(({ row, m, mem, dup }) => { const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId); const name = (row.lend && row.lend.name) || (m && m.name) || ''; const sp = m ? m.species : row.lend && row.lend.species; return (
               <button type="button" key={row.friendId} className={`msx-fp-r${on ? ' on' : ''}${m ? '' : ' lk'}`} disabled={!m} data-msx-fp-row={row.friendId} onClick={() => onPick(on ? null : m)}>
-                <span className="fc">{sp ? <img src={msxMonThumb(sp)} alt=""/> : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
+                <span className="fc">{sp ? (m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
                 <span className="tx"><small>{row.name || 'フレンド'}</small><b>{name}</b>
                   <span className="tp">{mem ? mem.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(mem.bonus[k] || 0)}%`}</span>) : null}</span></span>
                 <span className="st">
@@ -90763,7 +90770,7 @@ function MsxTeamEffects({ members, onClose }) {
             <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
               <div className="hd"><span className="ic">{cardIconNode(d.icon, 16)}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (
-                <div key={i} className="msx-gt-mon"><img src={msxMonThumb(members[r.mi].species)} alt=""/><span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
+                <div key={i} className="msx-gt-mon">{Array.isArray(members[r.mi].colors) && members[r.mi].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={members[r.mi].species} src={msxMonImg(members[r.mi].species)} masuColors={members[r.mi].colors} alt="" draggable={false}/> : <img src={msxMonThumb(members[r.mi].species)} alt=""/>}<span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
             </div>); })
             : <div className="msx-gt-none">編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています</div>}
         </div>
@@ -91045,7 +91052,7 @@ function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const tag = bond >= tagAt;
   if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
   const r = m.kind === 'base' ? 'G' : m.rank;
-  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><img src={msxMonThumb(m.species)} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
+  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>}<i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
 }
 // 育てるモンスターの絵。live のときは演出の部品 MsxLiveMon(#5752・待機のぴょこぴょこ・気分・反応)を箱いっぱいに置く。
 //   部品が無いときは絵だけ(live なら CSS で小さく弾む .msx-hop)。箱の大きさは className / style で決まる
@@ -91989,7 +91996,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
-      {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
+      {cheerIdx != null && s.team[cheerIdx] ? (Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={s.team[cheerIdx].species} src={msxMonImg(s.team[cheerIdx].species)} masuColors={s.team[cheerIdx].colors} alt="" draggable={false} className="mon" style={{ left: '70%', bottom: '30%', height: '36%' }}/> : <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>)
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
@@ -94652,8 +94659,10 @@ const monsucLendMember = (row, SUC) => {
     if (cost <= budget) assists = list.map((a) => (v3 ? { id: a.id, lv: a.lv, ...(a.n != null ? { n: a.n } : {}) } : { id: a.id, lv: a.lv }));
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  // 染色もそのまま借りる(部位ごとの null = 未染色の部位も残す。古い貸し出しは項目が無く未染色になる)
+  const colors = Array.isArray(m.colors) ? m.colors.slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null)) : [];
   return {
-    kind: 'raised', species: m.species, name, stats, assists,
+    kind: 'raised', species: m.species, name, stats, assists, colors,
     friend: { id: typeof r.friendId === 'string' ? r.friendId : null, name: typeof r.name === 'string' ? r.name.slice(0, 40) : '' },
   };
 };
