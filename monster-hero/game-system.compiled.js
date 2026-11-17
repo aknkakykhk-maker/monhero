@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b083f8f42e818f3a
+// source-sha256: 9bf2bfb69659017b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179880,6 +179880,44 @@ const MSX_R3_CSS = `
 .msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
 .msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
 .msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-nw{white-space:nowrap}
+.msx .r3 .q-pv{margin-top:5px;padding:5px 7px 6px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
+.msx .r3 .q-pv-h{font-size:10px;font-weight:900;color:#fed7aa;margin-bottom:3px}
+.msx .r3 .q-tgl{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:inherit}
+.msx .r3 .q-tgl-t{margin-left:auto;font-size:9px;font-weight:800;color:#fbbf24;white-space:nowrap}
+.msx .r3 .q-pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
+.msx .r3 .q-pv-c{font-size:10.5px;font-weight:800;color:#e2e8f0;line-height:1.35;min-width:0}
+.msx .r3 .q-pv-r1{display:flex;align-items:center;gap:4px}
+.msx .r3 .q-pv-r2{display:flex;align-items:center;gap:1px 4px;flex-wrap:wrap;margin-top:1px}
+.msx .r3 .q-pv-k{white-space:nowrap}
+.msx .r3 .q-pv-p{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:700;color:#cbd5e1;white-space:nowrap}
+.msx .r3 .q-pv-p img{width:14px;height:14px;border-radius:50%;background:#fff;object-fit:contain}
+.msx .r3 .q-pv-p b{font-size:10px;font-weight:900;color:#fff}
+.msx .r3 .q-pv-p.course{color:#fbbf24}.msx .r3 .q-pv-p.course b{color:#fbbf24}
+.msx .r3 .q-pv-p small{font-size:8.5px;color:#94a3b8;font-weight:800}
+.msx .r3 .q-pv-t{margin-left:auto;font-size:12.5px;font-weight:900;color:#fde047;white-space:nowrap}
+.msx .r3 .q-pv-mul{margin-top:4px;font-size:9.5px;font-weight:700;color:#cbd5e1;line-height:1.4}
+.msx .r3 .q-pv-mul b{color:#fde047}
+.msx .r3 .q-bd{flex:none;margin:4px 0;padding:6px 8px 7px;border-radius:12px;background:rgba(15,23,42,.72);border:1px solid #ffffff2b;display:grid;gap:4px}
+.msx .r3 .q-bd-h{font-size:11px;font-weight:900;color:#fed7aa}
+.msx .r3 .q-bd-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;grid-template-areas:"k bar v" "p p p";align-items:center;column-gap:6px;row-gap:3px;background:#0f172ad9;border:1px solid #475569;border-radius:12px;padding:5px 8px}
+.msx .r3 .q-bd-k{grid-area:k;font-size:12px;font-weight:900;color:#fff;white-space:nowrap}
+.msx .r3 .q-bd-bar{grid-area:bar;position:relative;height:12px;border-radius:99px;background:#1e293b;border:1px solid #64748b;overflow:hidden;display:flex}
+.msx .r3 .q-bd-bar i{display:block;height:100%;box-shadow:inset -1px 0 0 #0006}
+.msx .r3 .q-bd-v{grid-area:v;text-align:right;white-space:nowrap;font-weight:900;color:#fff;font-size:12px}
+.msx .r3 .q-bd-v small{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-bd-v b{font-size:15px;color:#fde047}
+.msx .r3 .q-bd-v em{font-style:normal;font-size:11px;color:#86efac;margin-left:4px}
+.msx .r3 .q-bd-parts{grid-area:p;display:flex;flex-wrap:wrap;gap:4px}
+.msx .r3 .q-bd-p{display:inline-flex;align-items:center;gap:3px;padding:1px 6px 1px 2px;border-radius:99px;background:#1e293b;border:1.5px solid #475569;font-size:10px;font-weight:800;color:#cbd5e1;white-space:nowrap}
+.msx .r3 .q-bd-p img{width:20px;height:20px;border-radius:50%;background:#fff;object-fit:contain}
+.msx .r3 .q-bd-p em{font-style:normal;font-size:14px;width:20px;text-align:center}
+.msx .r3 .q-bd-p b{font-size:12px;font-weight:900;color:#fff}
+.msx .r3 .q-bd-p.course{border-color:#f59e0b}.msx .r3 .q-bd-p.course b{color:#fbbf24}
+.msx .r3 .q-bd-p small{font-size:9px;color:#94a3b8;font-weight:800}
+.msx .r3 .q-bd-p.none{border-style:dashed;color:#94a3b8}
+.msx .r3 .q-bd-mul{font-size:10px;font-weight:700;color:#cbd5e1;line-height:1.45}
+.msx .r3 .q-bd-mul b{color:#fde047}
 .msx .r3 .q-say{margin-top:3px}
 .msx .r3 .q-say img{width:34px;height:34px}
 .msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
@@ -183394,6 +183432,7 @@ const MSX_R3_COURSE_BG = Object.freeze({
   star: 'monhero_night'
 });
 const MSX_STAT_KEYS_R3 = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MSX_R3_QCOL = Object.freeze(['#38bdf8', '#a78bfa', '#f472b6', '#34d399', '#fb7185', '#facc15']);
 function MsxR3Shugyo({
   run,
   setRun,
@@ -183419,6 +183458,8 @@ function MsxR3Shugyo({
   const [stOn, setStOn] = useState(false);
   const [lockT, setLockT] = useState(null);
   const [focusT, setFocusT] = useState(null);
+  const [pvOpen, setPvOpen] = useState(false);
+  const [bdOpen, setBdOpen] = useState(false);
   useSuccessScene(res ? 'ascetic' : null, {
     season: msxCalendar(s0.turn).season
   });
@@ -183442,6 +183483,46 @@ function MsxR3Shugyo({
   const hpOf = sup => typeof SUC.shugyoHpOf === 'function' ? SUC.shugyoHpOf(s0, sup) : (SH.hp || 30) * (sup ? 2 : 1);
   const shortOf = sup => Math.max(0, hpOf(sup) - Math.round(Number(s0.hp) || 0));
   const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : shortOf(true) ? `超修行は体力が${hpOf(true)}いる。体力があと${shortOf(true)}足りない` : '';
+  const shFmt = n => {
+    const x = Math.round(Number(n) * 10) / 10;
+    return Number.isInteger(x) ? String(x) : x.toFixed(1);
+  };
+  const shThumb = m => m ? Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: m.species,
+    src: msxMonImg(m.species),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
+    src: msxMonThumb(m.species),
+    alt: ""
+  }) : null;
+  const HACHI_PCT = Math.round((((SUC.GOOD || {}).shugyoGood || {}).shugyo || 0.2) * 100);
+  const mulLine = (mi, sup) => {
+    if (!mi) return null;
+    const src = [];
+    if (mi.hachi) src.push(`修行のハチマキ +${HACHI_PCT}%`);
+    if (mi.assist) src.push(`修行効果アップ +${shFmt(mi.assist)}%`);
+    if (mi.waza) src.push(`技習得効果アップ +${shFmt(mi.waza)}%`);
+    if (mi.kiai) src.push('修行の気合い ×1.2');
+    const tail = [];
+    if (mi.toku) tail.push(`特別効果アップ +${shFmt(mi.toku)} を足してから`);
+    if (sup) tail.push('超修行で2回分');
+    if (!src.length && !tail.length) return React.createElement("span", null, "倍率は かかっていません");
+    return React.createElement("span", null, "倍率 ", src.map((t, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i ? '・' : '', React.createElement("span", {
+      className: "q-nw"
+    }, t))), src.length ? React.createElement(React.Fragment, null, " → ", React.createElement("span", {
+      className: "q-nw"
+    }, "合わせて ", React.createElement("b", null, "×", (Math.round(mi.mul * 100) / 100).toFixed(2)))) : React.createElement("span", {
+      className: "q-nw"
+    }, "×1.00"), tail.length ? React.createElement(React.Fragment, null, "（", tail.map((t, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i ? '・' : '', React.createElement("span", {
+      className: "q-nw"
+    }, t))), "）") : null);
+  };
   const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]);
   const go = () => {
     const r = SUC.act(s0, {
@@ -183458,6 +183539,8 @@ function MsxR3Shugyo({
       out: {
         ...r.out,
         parts: undefined,
+        partsRaw: undefined,
+        mulInfo: undefined,
         kind: 'shugyo'
       },
       log: [...(run.log || []), {
@@ -183595,7 +183678,71 @@ function MsxR3Shugyo({
       className: "nm"
     }, React.createElement("b", null, x.t.name), React.createElement("small", null, "覚える率 ", Math.round((x.rate || 0) * 100), "%")), React.createElement("span", {
       className: "rs"
-    }, x.hit ? React.createElement("b", null, "覚えた!") : React.createElement(React.Fragment, null, React.createElement("b", null, "覚えられなかった"), React.createElement("small", null, "次は +", SH.miss || 15, "%")))))) : null, React.createElement(MsxStRow, {
+    }, x.hit ? React.createElement("b", null, "覚えた!") : React.createElement(React.Fragment, null, React.createElement("b", null, "覚えられなかった"), React.createElement("small", null, "次は +", SH.miss || 15, "%")))))) : null, o.partsRaw || o.mulInfo ? (() => {
+      const rawP = o.partsRaw || {};
+      const fitP = o.parts || {};
+      const bdRows = MSX_STAT_KEYS_R3.map(k => {
+        const rp = rawP[k] || {
+          base: 0,
+          team: []
+        };
+        const raw = rp.base + (rp.team || []).reduce((a, x) => a + x.v, 0);
+        const g = gains[k] || 0;
+        if (!(raw > 0) && !g) return null;
+        return {
+          k,
+          rp,
+          g
+        };
+      }).filter(Boolean);
+      const maxG = Math.max(1, ...bdRows.map(x => x.g));
+      return React.createElement("div", {
+        className: "q-bd",
+        "data-msx-r3-qbd": true
+      }, React.createElement("button", {
+        type: "button",
+        className: "q-bd-h q-tgl",
+        onClick: () => setBdOpen(!bdOpen),
+        "aria-expanded": bdOpen
+      }, "修行の内訳（行き先の分・編成の分・倍率）", React.createElement("span", {
+        className: "q-tgl-t"
+      }, bdOpen ? 'とじる ▴' : 'ひらく ▾')), bdOpen ? React.createElement(React.Fragment, null, bdRows.map(({
+        k,
+        rp,
+        g
+      }) => {
+        const before = Math.round(Number((res.before || {})[k]) || 0);
+        const after = Math.round(Number((s.stats || {})[k]) || 0);
+        const segs = fitP[k] || [];
+        return React.createElement("div", {
+          className: "q-bd-row",
+          key: k
+        }, React.createElement("span", {
+          className: "q-bd-k"
+        }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("span", {
+          className: "q-bd-bar"
+        }, segs.map((x, n) => React.createElement("i", {
+          key: n,
+          style: {
+            width: `${x.v / maxG * 100}%`,
+            background: x.src === 'course' ? '#f59e0b' : MSX_R3_QCOL[x.i % MSX_R3_QCOL.length]
+          }
+        }))), React.createElement("span", {
+          className: "q-bd-v"
+        }, React.createElement("small", null, msxFmt(before), "→"), React.createElement("b", null, msxFmt(after)), React.createElement("em", null, "+", g)), React.createElement("span", {
+          className: "q-bd-parts"
+        }, rp.base > 0 ? React.createElement("span", {
+          className: "q-bd-p course"
+        }, React.createElement("em", null, "⛰️"), React.createElement("b", null, "+", shFmt(rp.base)), React.createElement("small", null, "行き先")) : null, (rp.team || []).map((x, n) => React.createElement("span", {
+          key: n,
+          className: "q-bd-p team"
+        }, shThumb((s.team || [])[x.i]), React.createElement("b", null, "+", shFmt(x.v)), React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意'))), g <= 0 ? React.createElement("span", {
+          className: "q-bd-p none"
+        }, "もう上がりきっている") : null));
+      }), React.createElement("div", {
+        className: "q-bd-mul msx-kp"
+      }, mulLine(o.mulInfo, o.super))) : null);
+    })() : null, React.createElement(MsxStRow, {
       who: s,
       stats: s.stats,
       ups: gains
@@ -183764,6 +183911,22 @@ function MsxR3Shugyo({
       className: c.ok ? '' : 'no'
     }, c.ok ? '済 +5%' : 'まだ')))) : React.createElement("ul", null, React.createElement("li", null, React.createElement("i", null, "条件"), "なし")));
   };
+  const pvParts = typeof SUC.shugyoPartsOf === 'function' ? SUC.shugyoPartsOf(s0, course) : null;
+  const pvMul = typeof SUC.shugyoMulOf === 'function' ? SUC.shugyoMulOf(s0) : null;
+  const pvRows = pvParts ? MSX_STAT_KEYS_R3.map(k => {
+    const p = pvParts[k] || {
+      base: 0,
+      team: []
+    };
+    const raw = p.base + (p.team || []).reduce((a, x) => a + x.v, 0);
+    if (!(raw > 0)) return null;
+    const exp = Math.round((raw * (pvMul ? pvMul.mulB : 1) + (pvMul ? pvMul.toku : 0)) * (pvMul ? pvMul.mulA : 1) * (isSuper ? 2 : 1));
+    return {
+      k,
+      p,
+      exp
+    };
+  }).filter(Boolean) : [];
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
     v: v,
@@ -183795,7 +183958,41 @@ function MsxR3Shugyo({
     key: i
   }, React.createElement("div", null, React.createElement("small", null, "第", i + 1, "段"), pair.map(k => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')), React.createElement("i", null, "▶"))), React.createElement("div", {
     className: "last"
-  }, React.createElement("small", null, "さいごに"), "✨ 技を覚える")), SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
+  }, React.createElement("small", null, "さいごに"), "✨ 技を覚える")), pvRows.length ? React.createElement("div", {
+    className: "q-pv",
+    "data-msx-r3-qpv": true
+  }, React.createElement("button", {
+    type: "button",
+    className: "q-pv-h q-tgl",
+    onClick: () => setPvOpen(!pvOpen),
+    "aria-expanded": pvOpen
+  }, "📈 上がる見込み", isSuper ? '（🔥超修行・2回分）' : '', React.createElement("span", {
+    className: "q-tgl-t"
+  }, pvOpen ? '内訳をとじる ▴' : '内訳をひらく ▾')), React.createElement("div", {
+    className: "q-pv-grid"
+  }, pvRows.map(({
+    k,
+    p,
+    exp
+  }) => React.createElement("div", {
+    className: "q-pv-c",
+    key: k
+  }, React.createElement("div", {
+    className: "q-pv-r1"
+  }, React.createElement("span", {
+    className: "q-pv-k"
+  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("b", {
+    className: "q-pv-t"
+  }, "+", exp)), pvOpen ? React.createElement("div", {
+    className: "q-pv-r2"
+  }, p.base > 0 ? React.createElement("span", {
+    className: "q-pv-p course"
+  }, "⛰️", React.createElement("b", null, "+", shFmt(p.base))) : null, (p.team || []).map((x, n) => React.createElement("span", {
+    key: n,
+    className: "q-pv-p team"
+  }, shThumb((s0.team || [])[x.i]), React.createElement("b", null, "+", shFmt(x.v)), React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意')))) : null))), pvMul ? React.createElement("div", {
+    className: "q-pv-mul msx-kp"
+  }, mulLine(pvMul, isSuper)) : null) : null, SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
     className: "q-note msx-kp",
     "data-msx-r3-qapt": true
   }, "📏 「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null), React.createElement("div", {
