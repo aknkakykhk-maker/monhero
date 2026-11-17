@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df64973effce3a12
+// source-sha256: b083f8f42e818f3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -190841,7 +190841,10 @@ function MonsucRankDetail({
           objectFit: 'contain'
         }
       }) : undefined;
-      return React.createElement(MsxMonDetail, {
+      return React.createElement("div", {
+        className: "msx",
+        "data-monsuc-rank-detail": true
+      }, React.createElement(MsxMonDetail, {
         species: row.species,
         name: row.child_name || mon.name || '？？？',
         art: art,
@@ -190858,7 +190861,7 @@ function MonsucRankDetail({
         info: info,
         onClose: onBack,
         SUC: SUC
-      });
+      }));
     } catch (_) {}
   }
   return React.createElement("div", {

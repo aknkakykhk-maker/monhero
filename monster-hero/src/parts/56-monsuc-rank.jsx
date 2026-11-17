@@ -398,9 +398,12 @@ function MonsucRankDetail({ row, pinned, onBack }) {
         info.push(['技の名前と熟練', 'この登録には技の名前が保存されていないため、出せません(新しい登録から出ます)']);
       }
       const art = mon.id ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt="" masuColors={monsucRankDyeOf(row.dye)} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : undefined;
-      return <MsxMonDetail species={row.species} name={row.child_name || mon.name || '？？？'} art={art} st={row.stats || {}} apt={apt} type={type} peak={peak} grades={grades}
+      // MsxMonDetail の見た目(MSX_CSS)は .msx の中だけに効く決まりで、ランキング画面は Tailwind 組みのため
+      // .msx の外に置かれている(56-monhero-success-main.jsx の注記)。詳細だけは .msx の入れ物で包んで、
+      // はじめる画面・マスモンボックス・ベースモンと同じ表示にする(2026-11-17 実機で文字が暗色に沈み技の升が重なる崩れの修正)
+      return <div className="msx" data-monsuc-rank-detail><MsxMonDetail species={row.species} name={row.child_name || mon.name || '？？？'} art={art} st={row.stats || {}} apt={apt} type={type} peak={peak} grades={grades}
         known={known} mastery={mastery} power={Math.round(monsucRankNum(row.power))} grade={row.grade || null}
-        sub={`${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`} info={info} onClose={onBack} SUC={SUC} />;
+        sub={`${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`} info={info} onClose={onBack} SUC={SUC} /></div>;
     } catch (_) { /* 作れなければ簡易表示に倒す */ }
   }
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
