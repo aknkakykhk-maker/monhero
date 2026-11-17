@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 883ea67138067ac3
+// generated-sha256: 54b84abe3fbe2674
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -93923,6 +93923,26 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   useMsxR3Lines(s.aid);
   useEffect(() => { let alive = true; msxR3ReadBox().then((b) => { if (alive) setBox(b); }); return () => { alive = false; }; }, [res]);
   useEffect(() => { let alive = true; msxR3LoadTables().then(() => { if (alive) setTablesReady((n) => n + 1); }); return () => { alive = false; }; }, []);
+  // 引退の結果の画面: 登録待ちが残っていたら送り直し、送れたら自分の順位を出し直す(待たない・落ちない)
+  // ★フックは早期リターンより前に置く(後ろに置くと step が進んだときにフックの数が変わって画面が落ちる)
+  useEffect(() => {
+    if (step !== 'done' && step !== 'best3') return undefined;
+    const base = res && res.rank;
+    if (!base || base.ok || !base.pending || rankFix) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
+        if (!alive) return;
+        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
+        if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
+        let place = null;
+        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
+        if (alive) setRankFix({ ok: true, placeAll: place });
+      } catch (_) {}
+    })();
+    return () => { alive = false; };
+  }, [step, res, rankFix]);
   const ev = SUC.evaluate(ws); const ev0 = SUC.evaluate(s);
   const right = `${Math.min(s.turn, msxSuc.core.TOTAL_TURNS)} / ${msxSuc.core.TOTAL_TURNS}ターン`;
   const grade = msxR3Grade(ev.power);
@@ -94073,25 +94093,6 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     while (up) { up = false; for (const id of Object.keys(now)) { const lv = now[id]; if (lv < 3) { const add = A[id].cost[lv] - A[id].cost[lv - 1]; if (add <= rest) { now[id] = lv + 1; rest -= add; up = true; } } } }
     setPick(now); setSure(false);
   };
-  // 引退の結果の画面: 登録待ちが残っていたら送り直し、送れたら自分の順位を出し直す(待たない・落ちない)
-  useEffect(() => {
-    if (step !== 'done' && step !== 'best3') return undefined;
-    const base = res && res.rank;
-    if (!base || base.ok || !base.pending || rankFix) return undefined;
-    let alive = true;
-    (async () => {
-      try {
-        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
-        if (!alive) return;
-        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
-        if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
-        let place = null;
-        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
-        if (alive) setRankFix({ ok: true, placeAll: place });
-      } catch (_) {}
-    })();
-    return () => { alive = false; };
-  }, [step, res, rankFix]);
   const decide = async () => {
     if (!sure) { setSure(true); return; }
     if (busy) return; setBusy(true);
