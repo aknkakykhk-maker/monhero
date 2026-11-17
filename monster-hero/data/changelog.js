@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-17 14:26", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'試合の画面で、モンスターの動きやダメージの数字が端で切れないようにしました',
+    items:[
+      'モンサクの試合と、助手のマスモン対戦・練習試合で、端にいるモンスターが技を出すと画面の外にはみ出したり、ダメージやガッツの数字が端で切れて見えることがありました。',
+      'モンスターの立ち位置と、技で動く幅、数字や札の出る場所を見直して、画面の中に収まるようにしました。',
+    ],
+  },
+  {
         date: "2026-11-17 13:20", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
         title:'モンヒロサクセスのランキングで、血統の切り替え方を変えました',
         items:[
