@@ -11,6 +11,7 @@
 //      queue_v1 からの移行は1回だけ・queue は消さない。持ち主の違う保留は消さず印を付けて飛ばす。本物の masmonPvpSelf(56-assistant-masmon-pvp.jsx)も読み込む
 //   ⑧ 画面: 絵は ALL_PLAYER_MONSTERS[種族名] で引く/ほかの人の色は配列だけ(6つ・40字まで)に整えてから DyedMonsterImage に渡す
 //   ⑦ 端末の総合力の式(MASMON_CALC.power)とサーバの SQL の式の重みがそろっている
+//   ⑩ 詳細の完全版(作業H): 技ID・熟練は表示専用の tech_detail で送る(総合力には使わない)。サーバ未適用でも送る分は捨てられ、読む分は今までの列で読み直す
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -227,6 +228,25 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
     const c9b = loadCtx(m9, { breederId: 'other-9999' });
     rr = await c9b.ctx.monsucRankFlush();
     check('⑨ 持ち主が戻れば送れる・印は送らない', rr.ok === true && c9b.calls[0] && !('held' in c9b.calls[0].body.p_row) && !('raw_id' in c9b.calls[0].body.p_row), JSON.stringify(rr));
+  }
+
+  // ⑩ ランキング詳細の完全版(作業H・2026-11-17): 技ID・熟練は表示専用の tech_detail で送る(総合力の techs { r, a } には混ぜない)。
+  //    サーバ未適用でも、送る分は捨てられるだけ・読む分は今までの列で読み直す
+  {
+    server(okServer);
+    const rH = await S({ run: runOf({ id: 'runtechdetail1', techs: ['sk-0001', 'sk-0002', 'sk-0001', 'bad id!', 'x'.repeat(40)], mastery: { 'sk-0001': 150, 'sk-0002': 33.6 } }), ev: { ...ev, techRows: [{ r: 2, a: 'B' }] }, name: 'わざ' });
+    const rowH = calls[calls.length - 1].body.p_row;
+    check('⑩ tech_detail を送る(技IDと熟練・重複と悪いIDは落とす・熟練は 0〜100)', rH.ok === true && JSON.stringify(rowH.tech_detail) === JSON.stringify([{ id: 'sk-0001', m: 100 }, { id: 'sk-0002', m: 34 }]), JSON.stringify(rowH.tech_detail));
+    check('⑩ techs({r,a})には技IDを混ぜない', JSON.stringify(rowH.techs) === JSON.stringify([{ r: 2, a: 'B' }]), JSON.stringify(rowH.techs));
+    check('⑩ 読む側の整え方', JSON.stringify(ctx.monsucRankTechDetailOf([{ id: 'sk-1', m: 250 }, { id: 'sk-1', m: 1 }, { id: 'bad id', m: 1 }, 'x', null])) === JSON.stringify([{ id: 'sk-1', m: 100 }]) && ctx.monsucRankTechDetailOf('x') === null && ctx.monsucRankTechDetailOf([]) === null);
+    const v5 = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_V5_TECH_DETAIL.sql'), 'utf8');
+    const v5m = fs.readFileSync(path.join(root, 'supabase/migrations/202611170001_monsuc_rank_v5_tech_detail.sql'), 'utf8');
+    check('⑩ docs/sql と migrations が同じ(V5)', v5 === v5m);
+    check('⑩ SQL は列と見え方と送信だけ(計算の関数は作り直さない・表は消さない)', v5.includes('add column if not exists tech_detail') && !/create or replace function public\.monsuc_rank_power/.test(v5) && !/drop table/i.test(v5) && !/delete from/i.test(v5));
+    check('⑩ SQL の見え方に詳細の列(末尾)', v5.includes('as place, loyal, pop, techs, tech_detail'));
+    const mH = {}; const cH = loadCtx(mH, { server: (url) => (String(url).includes('tech_detail') ? { status: 400, body: '{}' } : { status: 200, body: '[]' }) });
+    const topH = await cH.ctx.monsucRankReadTop({});
+    check('⑩ 未適用の見え方では今までの列で読み直す', !!topH && Array.isArray(topH.rows) && cH.calls.some(c => c.url.includes('tech_detail')) && cH.calls.some(c => !c.url.includes('tech_detail')), JSON.stringify(topH));
   }
 
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');
