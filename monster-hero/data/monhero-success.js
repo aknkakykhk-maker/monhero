@@ -925,32 +925,33 @@
     };
     // ---- 技を覚える(修行のくじ・連続イベントの伝授) ----
     const techById = (sp, id) => techsOf(sp).find(t => t.id === id) || null;
-    // ---- 技の升(ランク×間合い)の選び(2026-11-14 社長 r1114-128・131) ----
-    // 升 = `${ランク}-${間合い}`。1つの升に技が2つ以上ある所は、プレイヤーが覚える1つを選ぶ。選ばなかった技はその升では覚えない。
+    // ---- 技の升(ランク×間合い)の選び(2026-11-14 社長 r1114-128・131 → 2026-11-17 社長 方式Cで見直し) ----
+    // 升 = `${ランク}-${間合い}`。1つの升に技が2つ以上ある所は、プレイヤーが「いま覚える候補にする1つ」を選ぶ。
+    // 選んでいない技は候補に出ないが、選び直しはいつでもでき(覚えたあとでも)、もう片方も覚え直せる。前に覚えた技と熟練は残るので、同じ升の技を両方持てる。
     //   s.techPick = { 升: 技id }。項目が無い育成(古い保存・選ぶ画面を通らない育成)は絞らない(いままでどおり全部の技が候補)
     const techCellOf = (t) => `${techRank(t)}-${Math.min(...(Array.isArray(t && t.dist) && t.dist.length ? t.dist : [1]))}`;
     const techCells = (sp) => { const m = {}; techsOf(sp).forEach(t => { (m[techCellOf(t)] = m[techCellOf(t)] || []).push(t); }); return m; };
-    // 選びの正規化: 2つ以上ある升だけ残し、無い・知らない技は並びの1つ目。はじめから覚えている技がその升にあれば、それで固定
+    // 選びの正規化: 2つ以上ある升だけ残し、無い・知らない技は並びの1つ目(既定は、はじめから覚えている技がその升にあればそれ。選びが保存されていればそちらを尊重)
     const techPickNorm = (raw, sp) => {
       const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}; const out = {};
       Object.entries(techCells(sp)).forEach(([c, list]) => {
         if (list.length < 2) return;
         const st = list.find(t => t.learn && t.learn.start);
         const want = typeof src[c] === 'string' ? techCanon(src[c]) : '';
-        out[c] = st ? st.id : (list.some(t => t.id === want) ? want : list[0].id);
+        out[c] = list.some(t => t.id === want) ? want : (st ? st.id : list[0].id);
       });
       return out;
     };
-    // 升の選びを変えてよいか(その升の技を1つでも覚えたら変えられない)
-    const techPickLocked = (s, c) => (techCells(s.species)[c] || []).some(t => s.techs.includes(t.id));
+    // 升の選びを変えてよいか(2026-11-17 社長 方式C: 覚えたあとでも選び直せるので、ロックは無い。呼び出し元の形を保つため常に戻り値だけ残す)
+    const techPickLocked = (s, c) => false;
     const setTechPick = (s, c, id) => {
-      const list = techCells(s.species)[c]; if (!list || list.length < 2 || !list.some(t => t.id === id) || techPickLocked(s, c)) return false;
+      const list = techCells(s.species)[c]; if (!list || list.length < 2 || !list.some(t => t.id === id)) return false;
       s.techPick = { ...techPickNorm(s.techPick, s.species), [c]: id }; return true;
     };
     const canLearn = (s, t) => {
       if (!t || s.techs.includes(t.id) || s.techs.length >= TECH_MAX) return false;
       const L = t.learn || {}; if (L.start) return true;
-      if (s.techPick && typeof s.techPick === 'object') { const pk = s.techPick[techCellOf(t)]; if (pk && pk !== t.id && techById(s.species, pk)) return false; } // 選ばなかった技はその升では覚えない
+      if (s.techPick && typeof s.techPick === 'object') { const pk = s.techPick[techCellOf(t)]; if (pk && pk !== t.id && techById(s.species, pk)) return false; } // 選んでいない技は候補に出ない(選び直せば出る)
       if (L.st && Object.entries(L.st).some(([k, v]) => num(s.stats[k]) < num(v))) return false;
       if (L.need && Object.entries(L.need).some(([id, v]) => num(s.mastery[id]) < num(v))) return false;
       return true;
