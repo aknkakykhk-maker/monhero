@@ -105,7 +105,7 @@ const WRAP_PROBE = (sel) => {
       await page.mouse.click(195, 422);
       await page.waitForTimeout(3000);
       await page.evaluate(() => { window.__dismiss = setInterval(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /^(スキップ|受け取る|閉じる|OK|あとで読む)$/.test((e.innerText || '').trim())); if (x) x.click(); const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]'); if (b) b.click(); }, 700); });
-      await page.waitForFunction(() => document.querySelector('button.mh-home-facility.rhythm') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 }).catch(() => {});
+      await page.waitForFunction(() => document.querySelector('button[data-home-fac="rhythm"]') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 }).catch(() => {});
       // 起動のお知らせを閉じる係は、売り場を見る前に止める(止めないと、拡大の窓の「閉じる」まで押してしまう)
       await page.waitForTimeout(1500);
       await page.evaluate(() => clearInterval(window.__dismiss));
@@ -113,7 +113,7 @@ const WRAP_PROBE = (sel) => {
         const tag = `${owned ? '所持済み' : '未所持'}・${label}`;
         await page.setViewportSize({ width: w, height: h });
         await page.waitForTimeout(400);
-        await page.locator('[data-home-market], .mh-home-facility.market').first().click({ timeout: 15000 }).catch(() => {});
+        await page.locator('[data-home-market], [data-home-fac="market"]').first().click({ timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(1200);
         await page.getByRole('button', { name: /ビートP交換所/ }).first().click({ timeout: 8000 }).catch(() => {});
         await page.waitForTimeout(800);
