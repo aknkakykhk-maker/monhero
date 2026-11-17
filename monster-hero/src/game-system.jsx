@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 46cdb0ae9e20cef5
+// generated-sha256: ac5b0fb4c4df4077
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88385,7 +88385,8 @@ const MSX_CSS = `
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
-.msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+/* 体力とストレスは1段ずつ横いっぱいに取る。2つ並べると数字と名前で幅が取られ、棒が短くて残量が読めなかった(2026-11-17 社長「体力のゲージがやたら短くて見にくい」) */
+.msx .v-b2{display:grid;grid-template-columns:1fr;gap:5px;margin-top:6px}
 .msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
@@ -88456,9 +88457,17 @@ const MSX_CSS = `
 .msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
 .msx .v-st small{display:block;font-size:10px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st b{display:block;font-size:14px}
-.msx .v-st .vl{display:flex;align-items:baseline;justify-content:center;gap:2px}
+.msx .v-st .vl{display:flex;align-items:center;justify-content:center;gap:2px}
 .msx .v-st .vl b{display:inline;font-size:14px}
-.msx .v-st .vl .cap{font-size:9px;color:#94a3b8;font-weight:800}
+/* ランクの字は小さな札の形にして、カードの中に収める。字だけ大きいと隣のカードや数に重なって読めなかった(2026-11-17 社長) */
+.msx .v-st .msx-srk{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:15px;padding:0 3px;border-radius:5px;font-size:10px;line-height:1;color:#0f172a;text-shadow:none;flex:none}
+.msx .v-st .msx-srk.rG{background:#94a3b8}.msx .v-st .msx-srk.rF{background:#a78bfa}.msx .v-st .msx-srk.rE{background:#60a5fa}.msx .v-st .msx-srk.rD{background:#7dd3fc}.msx .v-st .msx-srk.rC{background:#4ade80}.msx .v-st .msx-srk.rB{background:#f472b6}
+.msx .v-st .msx-srk.rA,.msx .v-st .msx-srk.rAp{background:#f87171}.msx .v-st .msx-srk.rS,.msx .v-st .msx-srk.rSp{background:#fbbf24}.msx .v-st .msx-srk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa)}
+/* 上限(/999)は数と同じ行ではなく棒の横に置く。同じ行だと4桁の能力でカードからはみ出すため */
+.msx .v-st .br{display:flex;align-items:center;gap:3px;margin:1px 5px 0}
+.msx .v-st .br u{flex:1;min-width:0;margin:0}
+.msx .v-st .br .ap{flex:1;margin-top:0}
+.msx .v-st .br .cap{font-size:9px;color:#94a3b8;font-weight:800;flex:none}
 .msx .msx-srk{font-style:normal;font-weight:900}
 .msx .msx-srk.rM{color:#e879f9}.msx .msx-srk.rSp,.msx .msx-srk.rS{color:#fde047}.msx .msx-srk.rAp,.msx .msx-srk.rA{color:#f87171}.msx .msx-srk.rB{color:#f472b6}.msx .msx-srk.rC{color:#4ade80}.msx .msx-srk.rD{color:#7dd3fc}.msx .msx-srk.rE{color:#60a5fa}.msx .msx-srk.rF{color:#a78bfa}.msx .msx-srk.rG{color:#94a3b8}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
@@ -88467,7 +88476,8 @@ const MSX_CSS = `
 .msx .v-st u.ov{position:relative}
 .msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
-.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
+/* font-size:inherit … 浮動文字用の汎用 .up(24px)が漏れると、字の大きさを持たないランクの字が巨大化してカードからはみ出すため、打ち消す */
+.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766;font-size:inherit}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
@@ -88533,7 +88543,8 @@ const MSX_CSS = `
 .msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
 .msx .v-tr.sel .fs{transform:translateY(-5px)}
 .msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
-.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
+/* 下限は下の効き目パネル(.v-fx)の高さぶん空ける。全員ぶんが入らないときは、この中でスクロールして全員に届くようにする(2026-11-17 社長「編成の一覧が切れて全部見えない」) */
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 132px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
 .msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
@@ -88736,7 +88747,7 @@ const MSX_CSS = `
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
   .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
-  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}.msx .v-st .vl{gap:1px}.msx .v-st .msx-srk{min-width:14px;height:14px;font-size:9px;padding:0 2px}.msx .v-st .br{gap:2px;margin:1px 3px 0}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
   .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
@@ -89995,7 +90006,7 @@ function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
 // 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
 // 折り目は「の」「!」のあとと、決まったカタカナの境目だけ(「ー のあと」で区切ると「トレー|ニング」でも折れた。2026-11-14 窓口)
-const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
+const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)|(?<=.)(?=（)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>); /* 「（大盛）」など括弧書きの前でも割れるようにして、閉じ括弧だけが次の行に落ちないようにする(2026-11-17 社長「文字列が悪い」) */
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
@@ -91257,9 +91268,9 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
         const cur = grow && u ? before + (after - before) * ease(t) : after;
         const cap = who && who.cap && Number.isFinite(who.cap[k]) ? Math.max(999, who.cap[k]) : 999; // 能力の上限(育成開始時に決まる s.cap。無い古い育成・ほかの画面の子は 999)
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
-          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><span className="vl">{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(after)} data-msx-stat-rank={k}>{msxStatRankOf(after)}</i> : null}<b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>{aptOn ? null : <small className="cap">/{cap}</small>}</span>
-          {aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
-            : <u className={after > 999 ? 'ov' : undefined}><i style={{ width: pct(after) }}/>{after > 999 ? <b className="ov" data-msx-stat-over={after - 999} style={{ width: pct(after - 999) }}/> : null}</u>}
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><span className="vl">{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(after)} data-msx-stat-rank={k}>{msxStatRankOf(after)}</i> : null}<b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b></span>
+          <span className="br">{aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
+            : <u className={after > 999 ? 'ov' : undefined}><i style={{ width: pct(after) }}/>{after > 999 ? <b className="ov" data-msx-stat-over={after - 999} style={{ width: pct(after - 999) }}/> : null}</u>}{aptOn ? null : <small className="cap">/{cap}</small>}</span>
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
     </div>
