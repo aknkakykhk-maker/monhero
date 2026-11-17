@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-17 10:10", type:'fix', group:'rhythm', title:'iPhone で、同時押しや交互の連打のタイミングの評価を、もう少し正確にしました', status:'new',
+    items:[
+      'iPhone で、ほかの指が画面に触れている最中のタップが、少し早いタイミングとして評価されることが残っていました。押したとおりのタイミングにより近く評価されるようにしました。',
+    ],
+  },
+  {
     date: "2026-11-17 07:00", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの大会のあとの曲と、モンスターの選び方を改善しました',
     items:[

@@ -283,7 +283,7 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
     if(!st||!t||st.assist)continue;
     const key=row.platform||'other';
     if(!groups.has(key))groups.set(key,{key,plays:0,devices:new Map(),lateN:0,lateAct:[],lateFull:[],lateBias:[],lateEx:[],lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],
-      multiAll:0,multiLate:0,taps:0,late:0,newPlays:0,afterN:0,afterAct:[],afterBias:[],midN:0,midAct:[],midTyp:[],midBias:[],revN:0,revAct:[],revBias:[],smoothLive:0,lateStart:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,shownFrames:0,shownStalls:0});
+      multiAll:0,multiLate:0,taps:0,late:0,newPlays:0,afterN:0,afterAct:[],afterBias:[],b2MidN:0,b2Mid:[],b2MidBias:[],b2LateN:0,b2Late:[],b2LateBias:[],midN:0,midAct:[],midTyp:[],midBias:[],revN:0,revAct:[],revBias:[],smoothLive:0,lateStart:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,shownFrames:0,shownStalls:0});
     const g=groups.get(key);g.plays++;
     const dk=String(row.device_key||'?');
     if(!g.devices.has(dk))g.devices.set(dk,{on:0,off:0,offFrames:0,offStalls:0,onFrames:0,onStalls:0});
@@ -302,9 +302,13 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
     // 2026-11-14 の直し(lateStampTypical)を入れた回は別に数える(入れる前の「いまの判定」と混ぜない)。50〜80ms の帯・見えた指も、1曲に3回以上ある曲だけ
     const typical=Array.isArray(st.fixes)&&st.fixes.includes('lateStampTypical'),biasOk=Number.isFinite(Number(t.biasMs))&&num(t.biasN)>=30&&t.biasMs!==null;
     if(t.smoothLive)g.smoothLive++;
-    if(biasOk&&num(t.midN)>=3&&Number.isFinite(Number(t.midActMs))&&Number.isFinite(Number(t.midTypMs))){g.midN+=num(t.midN);g.midAct.push(Number(t.midActMs));g.midTyp.push(Number(t.midTypMs));g.midBias.push(Number(t.biasMs));}
+    // 2026-11-17 の案B(ふだんの遅れ + 10ms・50ms 超から)のあとの行(timing.staleV が 2 以上)は別に数える
+    const b2=num(t.staleV)>=2&&typical;
+    if(b2&&biasOk&&num(t.midN)>=3&&Number.isFinite(Number(t.midActMs))){g.b2MidN+=num(t.midN);g.b2Mid.push(Number(t.midActMs));g.b2MidBias.push(Number(t.biasMs));}
+    if(b2&&biasOk&&num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))){g.b2LateN+=num(t.lateN);g.b2Late.push(Number(t.lateActMs));g.b2LateBias.push(Number(t.biasMs));}
+    if(!b2&&biasOk&&num(t.midN)>=3&&Number.isFinite(Number(t.midActMs))&&Number.isFinite(Number(t.midTypMs))){g.midN+=num(t.midN);g.midAct.push(Number(t.midActMs));g.midTyp.push(Number(t.midTypMs));g.midBias.push(Number(t.biasMs));}
     if(biasOk&&num(t.revN)>=3&&Number.isFinite(Number(t.revActMs))){g.revN+=num(t.revN);g.revAct.push(Number(t.revActMs));g.revBias.push(Number(t.biasMs));}
-    if(typical){if(biasOk&&num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))){g.afterN+=num(t.lateN);g.afterAct.push(Number(t.lateActMs));g.afterBias.push(Number(t.biasMs));}}
+    if(b2){}else if(typical){if(biasOk&&num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))){g.afterN+=num(t.lateN);g.afterAct.push(Number(t.lateActMs));g.afterBias.push(Number(t.biasMs));}}
     else if(num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))&&Number.isFinite(Number(t.lateFullMs))&&Number.isFinite(Number(t.biasMs))&&num(t.biasN)>=30){
       g.lateN+=num(t.lateN);g.lateAct.push(Number(t.lateActMs));g.lateFull.push(Number(t.lateFullMs));g.lateBias.push(Number(t.biasMs));if(Number.isFinite(Number(t.lateExMs)))g.lateEx.push(Number(t.lateExMs));
     }
@@ -324,7 +328,8 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
       lateN:g.lateN,latePlays:g.lateAct.length,lateActMs:median(g.lateAct),lateFullMs:median(g.lateFull),lateBiasMs:median(g.lateBias),lateExMs:median(g.lateEx),lateActGap:actGap,lateFullGap:fullGap,
       afterN:g.afterN,afterPlays:g.afterAct.length,afterDiff:median(g.afterAct.map((v,i)=>v-g.afterBias[i])),
       midN:g.midN,midPlays:g.midAct.length,midActDiff:median(g.midAct.map((v,i)=>v-g.midBias[i])),midTypDiff:median(g.midTyp.map((v,i)=>v-g.midBias[i])),
-      revN:g.revN,revPlays:g.revAct.length,revDiff:median(g.revAct.map((v,i)=>v-g.revBias[i])),smoothLive:g.smoothLive};
+      revN:g.revN,revPlays:g.revAct.length,revDiff:median(g.revAct.map((v,i)=>v-g.revBias[i])),smoothLive:g.smoothLive,
+      b2MidN:g.b2MidN,b2MidPlays:g.b2Mid.length,b2MidDiff:median(g.b2Mid.map((v,i)=>v-g.b2MidBias[i])),b2LateN:g.b2LateN,b2LatePlays:g.b2Late.length,b2LateDiff:median(g.b2Late.map((v,i)=>v-g.b2LateBias[i]))};
   }).sort((a,b)=>b.plays-a.plays);
 };
 const syncLines=summary=>{
@@ -358,6 +363,10 @@ const syncLines=summary=>{
       const typBetter=Math.abs(g.midTypDiff)+5<Math.abs(g.midActDiff);
       lines.push(`${typBetter?'●':'・'} [${g.key}] 50〜80ms 遅れた入力で取れた単押し ${g.midN}回(${g.midPlays}曲): いまの判定(合図の時刻まで戻す)のずれ − ふだん = ${r1(g.midActDiff)}ms / ふだんの遅れだけ戻したら ${r1(g.midTypDiff)}ms。${typBetter?'**この帯も合図の時刻が古い**。ふだんの遅れだけ戻すほうが合う(案B)':'この帯は今のままでよい(差が5ms未満か、いまのほうが近い)'}`);
     }
+    // 2026-11-17 の案B のあと
+    if(g.b2MidN>=SYNC_LATE_MIN&&g.b2MidPlays>=3)lines.push(`${Math.abs(g.b2MidDiff)<=15?'◎':'▲'} [${g.key}] 案B(ふだんの遅れ + 10ms)のあと、50〜80ms 遅れた入力で取れた単押し ${g.b2MidN}回(${g.b2MidPlays}曲): ずれ − ふだんのずれ = ${r1(g.b2MidDiff)}ms(入れる前は約 -29ms。±15ms に入っていれば効いている)`);
+    else if(g.b2MidN||g.b2LateN)lines.push(`… [${g.key}] 案B の効き目(50〜80ms の帯)は、取れた単押しが ${SYNC_LATE_MIN}回たまってから(いま ${g.b2MidN}回)`);
+    if(g.b2LateN>=SYNC_LATE_MIN&&g.b2LatePlays>=3)lines.push(`${Math.abs(g.b2LateDiff)<=15?'◎':'▲'} [${g.key}] 案B のあと、80ms を超えて遅れた入力で取れた単押し ${g.b2LateN}回(${g.b2LatePlays}曲): ずれ − ふだんのずれ = ${r1(g.b2LateDiff)}ms(11/14 の直しでは +9ms)`);
     if(g.smoothLive)lines.push(`・ [${g.key}] 曲の時計の直しを、その曲の中で入れた曲 ${g.smoothLive}曲`);
   }
   return lines;
