@@ -211,7 +211,7 @@ const launch = async () => {
   await closeDialogs(12);
   let started = false;
   if (ENTRY === 'select') {
-    await clickText('モンヒロビート$'); await page.waitForTimeout(2500); await closeDialogs(6);
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click()); await page.waitForTimeout(2500); await closeDialogs(6);
     await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
     // 曲は id で(版ちがいの同じ曲名があるため)、難易度は data-rhythm-difficulty で選ぶ
     // 版のある曲(remix・short ver.・フル)は代表の1行にまとまるので、代表の行を押してから版のボタンで選ぶ(2026-11-11)

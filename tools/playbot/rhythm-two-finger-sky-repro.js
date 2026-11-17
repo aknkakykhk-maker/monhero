@@ -70,7 +70,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   await closeDialogs(12);
   let started = false;
   if (ENTRY === 'select') {
-    await clickText('モンヒロビート$'); await page.waitForTimeout(2500); await closeDialogs(6);
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click()); await page.waitForTimeout(2500); await closeDialogs(6);
     await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
     // 曲の名前は曲えらびの表示名で探す(songId から表示名を引く)
     const name = await page.evaluate((id) => (RHYTHM_SONGS.find(s => s.songId === id) || {}).displayName || id, SONG);
