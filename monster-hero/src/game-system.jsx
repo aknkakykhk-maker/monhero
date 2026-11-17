@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4557809225dda1d6
+// generated-sha256: 6d265485ced2e43a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83159,10 +83159,12 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
   const [show, setShow] = React.useState(null); // 合体の演出(確定のあと・終わると結果の札)
   const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true); const [busy, setBusy] = React.useState(false);
   const [fq, setFq] = React.useState(''); // 親を選ぶときの検索(表示だけの絞り込み。選択は id で持つので、隠れても外れない)
+  const [fsort, setFsort] = React.useState('new'); // 親を選ぶときの並び替え(ボックス一覧と同じ MSX_MM_SORTS。表示だけ)
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
+  const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
   const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
   const names = SUC ? SUC.STAT_NAMES : {};
@@ -83212,9 +83214,9 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </div>) : !main ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} count={usableF.length} total={usable.length}/> : null}
+          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
           <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
           </div>
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
@@ -83222,11 +83224,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
         </div>) : !mat ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
           {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} count={usableF.filter(m => m.id !== main.id).length} total={usable.length - 1}/> : null}
+          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableS.filter(m => m.id !== main.id).length} total={usable.length - 1}/> : null}
           <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
+            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
           </div>
-          {usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
+          {usable.length >= 2 && !usableS.filter(m => m.id !== main.id).length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
         </div>) : plan && plan.ok ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
           <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
@@ -88454,6 +88456,11 @@ const MSX_CSS = `
 .msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
 .msx .v-st small{display:block;font-size:10px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st b{display:block;font-size:14px}
+.msx .v-st .vl{display:flex;align-items:baseline;justify-content:center;gap:2px}
+.msx .v-st .vl b{display:inline;font-size:14px}
+.msx .v-st .vl .cap{font-size:9px;color:#94a3b8;font-weight:800}
+.msx .msx-srk{font-style:normal;font-weight:900}
+.msx .msx-srk.rM{color:#e879f9}.msx .msx-srk.rSp,.msx .msx-srk.rS{color:#fde047}.msx .msx-srk.rAp,.msx .msx-srk.rA{color:#f87171}.msx .msx-srk.rB{color:#f472b6}.msx .msx-srk.rC{color:#4ade80}.msx .msx-srk.rD{color:#7dd3fc}.msx .msx-srk.rE{color:#60a5fa}.msx .msx-srk.rF{color:#a78bfa}.msx .msx-srk.rG{color:#94a3b8}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
 .msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
 /* 能力の上限アップ(r1115-103): 999 を超えた分は2周目の帯を紫で重ねる */
@@ -88504,7 +88511,7 @@ const MSX_CSS = `
 .msx .v-ft{flex:none;height:40px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:5px;padding:0 10px}
 .msx .v-ft span,.msx .v-ft button{flex:1;text-align:center;background:#2b3348;border-radius:99px;padding:5px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
 .msx .v-ft span.on,.msx .v-ft button.on{background:#fde047;color:#422006}
-.msx .v-ft span.go,.msx .v-ft button.go{flex:2.4;background:linear-gradient(90deg,#f472b6,#fb923c);font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #9d174d}
+.msx .v-ft span.go,.msx .v-ft button.go{flex:2.4;background:linear-gradient(90deg,#fb923c,#f97316);font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #9a3412}
 .msx .v-ft span.go2,.msx .v-ft button.go2{flex:2.4;background:#fde047;color:#422006;font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #a16207}
 .msx .v-tabs{display:flex;gap:5px;margin-top:6px}
 .msx .v-tabs span,.msx .v-tabs button{flex:1;text-align:center;font-size:11.5px;font-weight:900;padding:5px 2px;border-radius:10px;background:#1e293b;border:1px solid #475569;color:#94a3b8;white-space:nowrap}
@@ -88825,21 +88832,22 @@ const MSX_CSS = `
 .msx .v-cupwin .q{margin-top:8px;text-align:center;font-weight:900;font-size:13px}.msx .v-cupwin .q.ng{color:#dc2626;font-size:12px}
 .msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
 .msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
-.msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff}
 .msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
 .msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
 .msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
-.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}
+.msx .v-cupwin .dbox .own{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#1e1b4b;margin:0 0 8px;text-align:left}.msx .v-cupwin .dbox .own i{font-style:normal;background:#92400e;color:#fff;border-radius:99px;padding:2px 10px}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
 .msx .v-vsh .sd small{display:block;font-size:10px;color:#fde047;font-weight:900}.msx .v-vsh .sd b{display:block;font-size:14px;white-space:nowrap}.msx .v-vsh .sd span{display:block;font-size:10px;font-weight:800;white-space:nowrap}
 .msx .v-vsh .vsm{flex:none;font-size:26px;font-weight:900;color:#fde047;text-shadow:0 3px 0 #9a3412,0 0 14px #fb923c;text-align:center;line-height:1}.msx .v-vsh .vsm small{display:block;font-size:10px;color:#fff;text-shadow:none;margin-top:3px}
-.msx .v-vs1{display:grid;grid-template-columns:32px 1fr 70px 1fr 32px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
-.msx .v-vs1 span{text-align:center;white-space:nowrap}.msx .v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1}.msx .v-vs1 b.w{color:#fde047}
+.msx .v-vs1{display:grid;grid-template-columns:46px 1fr 70px 1fr 46px;align-items:center;gap:5px;font-size:10.5px;font-weight:900}
+.msx .v-vs1 span{text-align:center;white-space:nowrap}.msx .v-vs1 b{font-size:13px;text-align:center;color:#cbd5e1;white-space:nowrap}.msx .v-vs1 b.w{color:#fde047}.msx .v-vs1 b .msx-srk{font-size:10px;margin:0 1px}
 .msx .v-vs1 i{height:10px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-vs1 i u{position:absolute;top:0;bottom:0;text-decoration:none}
-.msx .v-vs1 i.l u{right:0;background:linear-gradient(270deg,#f472b6,#fb923c)}.msx .v-vs1 i.r u{left:0;background:linear-gradient(90deg,#38bdf8,#6366f1)}
+.msx .v-vs1 i.l u{right:0;background:linear-gradient(270deg,var(--bc,#f472b6),var(--bc,#fb923c))}.msx .v-vs1 i.r u{left:0;background:linear-gradient(90deg,var(--bc,#38bdf8),var(--bc,#6366f1))}
 .msx .v-vs1 i.p{height:7px}
 .msx .v-dist{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:5px;font-size:10.5px;font-weight:900;text-align:center}
 .msx .v-dist div{display:flex;gap:3px;justify-content:center}
@@ -88965,7 +88973,7 @@ const MSX_CSS = `
 .msx button[disabled]{opacity:.45;cursor:default}
 .msx .v-ft span,.msx .v-ft button{flex:1;text-align:center}
 .msx .v-ft button{display:block;border-radius:99px;padding:8px 6px;font-size:12px;font-weight:900;background:#2b3348;white-space:nowrap}
-.msx .v-ft button.go{background:linear-gradient(90deg,#f472b6,#fb923c);flex:2.2;font-size:13.5px;box-shadow:0 2px 0 #9d174d}
+.msx .v-ft button.go{background:linear-gradient(90deg,#fb923c,#f97316);flex:2.2;font-size:13.5px;box-shadow:0 2px 0 #9a3412}
 .msx .v-ft button.on{background:#fde047;color:#1e1b4b}
 .msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
@@ -89002,11 +89010,16 @@ const MSX_CSS = `
 .msx-md-btabs{margin-top:6px}
 .msx-md-as .cap span{margin-left:auto}
 .msx-md-ac{display:flex;gap:8px;align-items:flex-start;background:linear-gradient(180deg,#2a2150,#1e1a36);border:1px solid #4a4380;border-radius:12px;padding:7px 8px;margin-top:6px}
-.msx-md-ac .ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:9px;background:#0f172a}
+.msx-md-ac.gold{background:linear-gradient(180deg,#713f12,#451a03);border-color:#f59e0b}
+.msx-md-ac .ic{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:0;clip-path:polygon(50% 0,100% 38%,81% 100%,19% 100%,0 38%);background:#475569}
+.msx-md-ac[data-msx-assist-type="with"] .ic{background:#7c3aed}
+.msx-md-ac[data-msx-assist-type="stay"] .ic{background:#0284c7}
+.msx-md-ac[data-msx-assist-type="self"] .ic{background:#16a34a}
+.msx-md-ac[data-msx-assist-type="battle"] .ic{background:#dc2626}
 .msx-md-ac .bd{flex:1;min-width:0}.msx-md-ac .hd{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
 .msx-md-ac .hd b{font-size:13px;font-weight:900;line-height:1.3;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.msx-md-ac .hd b em{font-style:normal;color:#fde047}
 .msx-md-ac .pips{flex:none;font-size:10px;font-weight:800;color:#cbd5e1;background:#0f172a;border-radius:99px;padding:1px 7px;white-space:nowrap}.msx-md-ac .pips i{font-style:normal;color:#fde047;font-weight:900}
-.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:5px;padding-top:5px;border-top:1.5px dashed #4a4380;word-break:keep-all;overflow-wrap:anywhere}
 .msx-md-ac .sc{font-size:10px;font-weight:800;color:#f9a8d4;margin-top:2px}
 .msx-md-art .pw{flex-wrap:wrap;row-gap:1px}.msx-md-art .pw b{flex:1 1 auto}
 .msx-md-bot{margin-top:6px}
@@ -89097,7 +89110,7 @@ const MSX_CSS = `
 .msx .msx-pick.on{border-color:#fde047;background:#3b2f0b}
 .msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
 .msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
-.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px}.msx-gt-row .hd b{flex:1;min-width:0}
+.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;background:#0f172a}.msx-gt-row[data-msx-assist-type="with"] .hd .ic{background:#7c3aed}.msx-gt-row[data-msx-assist-type="stay"] .hd .ic{background:#0284c7}.msx-gt-row[data-msx-assist-type="self"] .hd .ic{background:#16a34a}.msx-gt-row[data-msx-assist-type="battle"] .hd .ic{background:#dc2626}.msx-gt-row .hd b{flex:1;min-width:0}
 .msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
@@ -89129,7 +89142,7 @@ const MSX_CSS = `
 .msx .msx-dt-close{display:block;width:100%;margin-top:8px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;color:#fff;background:#1e1a36;border:1px solid #4a4380}
 .msx-dt-dex{font-size:12px;font-weight:500;line-height:1.7;background:#0f172a;border-radius:10px;padding:8px 10px}
 .msx-btn{display:block;width:100%;min-height:44px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
-.msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
+.msx-btn.go{background:linear-gradient(90deg,#fb923c,#f97316);box-shadow:0 2px 0 #9a3412}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
 .msx-note{font-size:10px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx-soon{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#475569;color:#e2e8f0;font-size:10px;font-weight:900;vertical-align:middle}
@@ -89336,11 +89349,11 @@ const MSX_CSS = `
 @media (max-height:620px){
 .msx .msx-tp-hd{padding-top:4px;padding-bottom:0}
 .msx .msx-tp-team{gap:3px;padding:4px 6px}
-.msx .msx-tp-dt{min-height:36px}
-.msx .msx-pt-q,.msx .msx-pt-s select,.msx .msx-pt-r{min-height:38px}
+.msx .msx-tp-dt{min-height:44px}
+.msx .msx-pt-q,.msx .msx-pt-s select,.msx .msx-pt-r{min-height:44px}
 }
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
-.msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
+.msx .msx-tp-c.on{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 0 2px #fde047,0 0 12px #fde04766}
 .msx .msx-tp-c.lk{opacity:.5}
 .msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
 /* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
@@ -89358,7 +89371,7 @@ const MSX_CSS = `
 .msx .msx-tp-c .lv{font-size:10px;color:#cbd5e1;white-space:nowrap}
 .msx .msx-tp-none{width:100%;font-size:11.5px;color:#cbd5e1;text-align:center;padding:24px 8px}
 .msx .msx-fp-r{display:flex;align-items:center;gap:8px;min-width:0;min-height:64px;padding:6px 8px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:left}
-.msx .msx-fp-r.on{border-color:#f472b6;background:#3b1736}.msx .msx-fp-r.lk{opacity:.6}
+.msx .msx-fp-r.on{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 0 2px #fde047,0 0 12px #fde04766}.msx .msx-fp-r.lk{opacity:.6}
 .msx .msx-fp-r .fc{position:relative;flex:none;width:56px;height:56px;border-radius:10px;overflow:hidden;background:#1e1a36}
 .msx .msx-fp-r .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}
 .msx .msx-fp-r .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -90183,6 +90196,10 @@ const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONST
 //   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
 //   st 能力6つ / apt 素質の字(画面の呼び名。2026-11-14 社長「伸びは素質って表記にして」) / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
+// 能力の値の段(ランク字)。色の約束は参考どおり全画面共通(S+・S=金 / A+・A=赤 / B=桃 / C=緑 / D=水色 / E=青 / F=紫 / G=灰 / 1000以上は M=紫)。
+//   段の切り方は、モンサクの能力の上限が通常999(上限アップで超過あり)という分布に合わせた決め(モンサク通し点検 中-2・中-3)
+const msxStatRankOf = (v) => { const n = Number(v) || 0; if (n >= 1200) return 'M'; if (n >= 1000) return 'S+'; if (n >= 950) return 'S'; if (n >= 900) return 'A+'; if (n >= 800) return 'A'; if (n >= 650) return 'B'; if (n >= 500) return 'C'; if (n >= 350) return 'D'; if (n >= 200) return 'E'; if (n >= 100) return 'F'; return 'G'; };
+const msxStatRankCls = (v) => `msx-srk r${msxStatRankOf(v).replace('+', 'p')}`;
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 // mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
@@ -90254,7 +90271,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
               <div className="msx-md-tabs" style={{ gridTemplateColumns: `repeat(${BT.length},1fr)` }}>{BT.map(([k, n]) => <button type="button" key={k} className={btab === k ? 'on' : ''} data-msx-detail-btab={k} onClick={() => setBtab(k)}>{n}</button>)}</div>
               {btab === 'assist' ? (<div className="msx-md-box msx-md-as" data-msx-detail-assist>
                 <div className="cap">取ったアシスト効果<span data-msx-assist-count>{got.length} / {AT.MAX_KINDS}種類</span></div>
-                {got.length ? got.map(({ a, n }) => (<div key={a.id} className="msx-md-ac" data-msx-assist-card={a.id}>
+                {got.length ? got.map(({ a, n }) => (<div key={a.id} className={`msx-md-ac${a.type === 'battle' || a.scene === 'cup' ? ' gold' : ''}`} data-msx-assist-card={a.id} data-msx-assist-type={a.type || ''}>
                   <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
                   <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b><span className="pips" aria-label={`目盛り ${n}/${a.max}`}><i>{n}</i>/{a.max}</span></div>
                     <div className="tx">{AT.describe(a.id, n)}</div>{sceneName(a.scene) ? <div className="sc">効く場面: {sceneName(a.scene)}</div> : null}</div></div>))
@@ -90839,7 +90856,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>詳しくは「効果・詳細」・長押し</small></div>
+        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>詳しくは選んだ子の「効果・詳細」・長押し</small></div>
         <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const sp = mm ? mm.species : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`}>
             <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? (Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={mm.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
@@ -90864,7 +90881,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
               <span className="tp">{m ? m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(m.bonus[k] || 0)}%`}</span>) : null}</span>
               <span className="lv">{x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : ''}</span>
             </button>
-            <button type="button" className="msx-tp-dt" data-msx-tp-detail={x.key} onClick={() => setLook(x)}>効果・詳細</button>
+            {on ? <button type="button" className="msx-tp-dt" data-msx-tp-detail={x.key} onClick={() => setLook(x)}>効果・詳細</button> : null}
             </div>); })
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
         </div>
@@ -90912,13 +90929,18 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
           {lendList === null || lendList === 'loading' ? <div className="msx-tp-none">探しています…</div>
             : !lendList.ok ? <div className="msx-tp-none">{typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません'}</div>
             : !list.length ? <div className="msx-tp-none">{rows.length ? (fq.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません') : '貸し出しているフレンドはいません'}</div>
-            : list.map(({ row, m, mem, dup }) => { const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId); const name = (row.lend && row.lend.name) || (m && m.name) || ''; const sp = m ? m.species : row.lend && row.lend.species; return (
+            : list.map(({ row, m, mem, dup }) => { const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId); const name = (row.lend && row.lend.name) || (m && m.name) || ''; const sp = m ? m.species : row.lend && row.lend.species;
+              // 最後に開いた時刻は名簿(sbFetchFriendRoster)の lastSeenAt が正本。無いときは貸し出しの更新時刻を「貸し出し更新」と正確にラベルして出す(最終ログインとは書かない)
+              const seenText = row.lastSeenAt && typeof friendsLastSeenText === 'function' ? friendsLastSeenText(row.lastSeenAt, Date.now()) : null;
+              const lendDays = !seenText && row.lend && row.lend.updatedAt ? Math.floor(Math.max(0, Date.now() - row.lend.updatedAt) / 86400000) : null; return (
               <div key={row.friendId} className="msx-tp-w">
               <button type="button" className={`msx-fp-r${on ? ' on' : ''}${m ? '' : ' lk'}`} disabled={!m} data-msx-fp-row={row.friendId} onClick={() => onPick(on ? null : m)}>
                 <span className="fc">{sp ? (m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
                 <span className="tx"><small>{row.name || 'フレンド'}</small><b>{name}</b>
+                  {seenText ? <small data-msx-fp-seen>{seenText}</small> : lendDays != null ? <small data-msx-fp-seen>貸し出し更新 {lendDays === 0 ? '今日' : `${lendDays}日前`}</small> : null}
                   <span className="tp">{mem ? mem.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(mem.bonus[k] || 0)}%`}</span>) : null}</span></span>
                 <span className="st">
+                  <i className="mk sp" data-msx-fp-friend>フレンド</i>
                   {on ? <i className="mk in">借りている</i> : null}
                   {!m ? <i className="mk lk" data-msx-fp-ng>編成不可</i> : null}
                   {dup.length ? <i className="mk dup" data-msx-fp-dup title={dup.map((a) => (msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : a.id)).join('・')}>アシスト重複</i> : null}
@@ -90961,7 +90983,7 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-note">重なって効く効果と、編成で一番大きい1つだけ効く効果があります。1つだけ効く効果で小さい方は「重複(効かない)」と出ます</div>
         <div className="msx-dt-body">
           {list.length ? list.map(({ d, rows }) => { const one = msxTpOneOnly(AT, d.id); const best = one ? Math.max(...rows.map((r) => r.v)) : null; let used = false; return (
-            <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
+            <div key={d.id} className="msx-gt-row" data-msx-effect={d.id} data-msx-assist-type={d.type || ''}>
               <div className="hd"><span className="ic">{cardIconNode(d.icon, 16)}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (
                 <div key={i} className="msx-gt-mon">{Array.isArray(members[r.mi].colors) && members[r.mi].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={members[r.mi].species} src={msxMonImg(members[r.mi].species)} masuColors={members[r.mi].colors} alt="" draggable={false}/> : <img src={msxMonThumb(members[r.mi].species)} alt=""/>}<span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
@@ -91158,7 +91180,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
           <div className="tr"><i style={{ width: `${s.stress}%`, ...(grow(stFrom, s.stress) || {}) }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
           {stAdd ? <em className="pl">+{stAdd}</em> : stGain ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
-      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span></div>
+      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span></div>
     </div>
   );
 }
@@ -91233,8 +91255,9 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
         const tick = zoomS && u ? { backgroundSize: `${1000 / span}% 100%` } : undefined;
         // 棒も数字と同じ値(数え上げの途中の値)から描く。数字と長さがいつも合う
         const cur = grow && u ? before + (after - before) * ease(t) : after;
+        const cap = who && who.cap && Number.isFinite(who.cap[k]) ? Math.max(999, who.cap[k]) : 999; // 能力の上限(育成開始時に決まる s.cap。無い古い育成・ほかの画面の子は 999)
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
-          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><span className="vl">{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(after)} data-msx-stat-rank={k}>{msxStatRankOf(after)}</i> : null}<b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>{aptOn ? null : <small className="cap">/{cap}</small>}</span>
           {aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
             : <u className={after > 999 ? 'ov' : undefined}><i style={{ width: pct(after) }}/>{after > 999 ? <b className="ov" data-msx-stat-over={after - 999} style={{ width: pct(after - 999) }}/> : null}</u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
@@ -93064,7 +93087,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
           <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>閉じる</button>}</div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -93394,7 +93417,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
           <MsxR3PrizeBox prizes={prizes} onPick={setPrz}/>
           <div className="q">この大会に参加しますか?</div>
           <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -93675,11 +93698,18 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   // ---- バトルカード(C2): 能力の比べ ----
   if (step === 'card') {
     const loyA = SUC.loyalOf(s);
-    const rowsSt = MSX_STATS.map((k) => [`${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`, s.stats[k], opp.stats[k]]);
+    const rowsSt = MSX_STATS.map((k) => [k, `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`, s.stats[k], opp.stats[k]]);
     const better = MSX_STATS.filter((k) => s.stats[k] >= opp.stats[k]).map((k) => MSX_STAT_NAME[k]);
     const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
     const lvA = (g) => ({ M: 3, 'SS+': 3, SS: 3, 'S+': 3, S: 3, A: 3, B: 2, C: 1 }[g] || 0);
     const techA = (Array.isArray(s.techs) ? s.techs : []).map((id) => { const t = (SUC.techsOf(s.species) || []).find((x) => x.id === id); return t ? t.name : null; }).filter(Boolean);
+    // 相手の技は、実際の試合(msxR3Fight)と同じ決め方で出す: techIds があれば種の技表で実在する物だけ → 無ければ種の技表の先頭から個数ぶん(最低1つ・無指定は2つ)。
+    //   決め方が試合とズレると「見た技と違う技で戦う」事故になるので、r3-store の msxR3Fight と突き合わせて同じにする
+    const oppTechTable = typeof SUC.techsOf === 'function' ? (SUC.techsOf(opp.species) || []) : [];
+    const oppTechIds0 = Array.isArray(opp.techIds) && opp.techIds.length ? opp.techIds.filter((id) => oppTechTable.some((t) => t.id === id)) : [];
+    const oppTechIds = oppTechIds0.length ? oppTechIds0 : oppTechTable.slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
+    const oppTechs = oppTechIds.map((id) => oppTechTable.find((t) => t.id === id)).filter(Boolean);
+    const techDistText = (t) => (Array.isArray(t.dist) ? t.dist.map((d) => (typeof MSX_DIST_NAMES !== 'undefined' ? MSX_DIST_NAMES : ['零', '近', '中', '遠'])[d] || '').filter(Boolean).join('・') : '');
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-bcs"><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>
@@ -93690,13 +93720,13 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       <div className="v-tabs t3">{[['st', 'ステータス'], ['tech', '技'], ['etc', '能力']].map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} style={{ textAlign: 'center', background: tab === k ? '#3b2f0b' : '#1e1a36', border: `1.5px solid ${tab === k ? '#fde047' : '#475569'}`, borderRadius: 99, padding: 4, fontSize: 12, fontWeight: 900, color: tab === k ? '#fde047' : '#cbd5e1' }}>{n}</button>)}</div>
       <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly' }}>
         {tab === 'st' ? <>
-          {rowsSt.map(([n, a, c]) => <div key={n} className="v-vs1"><b className={a >= c ? 'w' : ''}>{a}</b><i className="l"><u style={{ width: `${a / 10}%` }}/></i><span>{n}</span><i className="r"><u style={{ width: `${c / 10}%` }}/></i><b className={c > a ? 'w' : ''}>{c}</b></div>)}
+          {rowsSt.map(([k, n, a, c]) => <div key={n} className="v-vs1"><b className={a >= c ? 'w' : ''}>{a}{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(a)}>{msxStatRankOf(a)}</i> : null}</b><i className="l" style={{ '--bc': typeof MSX_STAT_COLOR !== 'undefined' ? MSX_STAT_COLOR[k] : undefined }}><u style={{ width: `${a / 10}%` }}/></i><span>{n}</span><i className="r" style={{ '--bc': typeof MSX_STAT_COLOR !== 'undefined' ? MSX_STAT_COLOR[k] : undefined }}><u style={{ width: `${c / 10}%` }}/></i><b className={c > a ? 'w' : ''}>{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(c)}>{msxStatRankOf(c)}</i> : null}{c}</b></div>)}
           <div className="v-vs1"><b className={s.pop >= (opp.pop || 0) ? 'w' : ''}>{s.pop}</b><i className="l p"><u style={{ width: `${s.pop}%` }}/></i><span>⭐ 人気</span><i className="r p"><u style={{ width: `${opp.pop || 0}%` }}/></i><b className={(opp.pop || 0) > s.pop ? 'w' : ''}>{Number.isFinite(opp.pop) ? opp.pop : '—'}</b></div>
           <div className="v-vs1"><b className={loyA >= (opp.loy || 0) ? 'w' : ''}>{loyA}</b><i className="l p"><u style={{ width: `${loyA}%` }}/></i><span>🤝 忠誠</span><i className="r p"><u style={{ width: `${opp.loy || 0}%` }}/></i><b className={(opp.loy || 0) > loyA ? 'w' : ''}>{Number.isFinite(opp.loy) ? opp.loy : '—'}</b></div>
-          <div className="v-dist"><div>{['零', '近', '中', '遠'].map((dn, i) => <i key={dn} className={`a${lvA(distA[i])}`}>{dn}</i>)}</div><span>間合いの適性</span><div>{['零', '近', '中', '遠'].map((dn, i) => <i key={dn} className={`a${lvA(distB[i])}`}>{dn}</i>)}</div></div>
+          <div className="v-dist"><div>{['零', '近', '中', '遠'].map((dn, i) => <i key={dn} className={`a${lvA(distA[i])}`}>{dn}</i>)}</div><span>間合いの適性</span><div>{[3, 2, 1, 0].map((i) => <i key={i} className={`a${lvA(distB[i])}`}>{['零', '近', '中', '遠'][i]}</i>)}</div></div>
         </> : tab === 'tech' ? <>
           <div className="v-kv"><b>{run.nick}</b><span>{techA.length ? techA.join('・') : '初めから使える技'}</span></div>
-          <div className="v-kv"><b>{foeName}</b><span>技 {opp.techs}つ・熟練 {opp.mastery}</span></div>
+          <div className="v-kv" data-msx-r3-opp-techs={oppTechIds.join(',')}><b>{foeName}</b><span>{oppTechs.length ? oppTechs.map((t) => `${t.name}(${techDistText(t)}・${t.kind === 'wise' ? 'かしこさ' : 'ちから'}・ガッツ${t.guts})`).join('、') : `技 ${opp.techs}つ`}・熟練 {opp.mastery}</span></div>
         </> : <>
           <div className="v-kv"><b>総合力</b><span>{msxFmt(ev.power)}(ランク {ev.rank})</span></div>
           <div className="v-kv"><b>相手の能力の合計</b><span>{msxFmt(opp.sum)}・あなた {msxFmt(MSX_STATS.reduce((a, k) => a + s.stats[k], 0))}</span></div>
@@ -94390,6 +94420,9 @@ function MsxR3Box({ onClose }) {
   const [menu, setMenu] = useState(null); // 'sort' / 'label' の小窓
   const [bq, setBq] = useState(''); // 一覧の検索・逆順(表示だけの絞り込み。並び替えは今までの view.sort を使う)
   const [brev, setBrev] = useState(false);
+  const [aq, setAq] = useState(''); // メモリアルモンスターの検索・並び替え・逆順(ボックス一覧とは混ざらないよう別に持つ。表示だけの絞り込み)
+  const [arev, setArev] = useState(false);
+  const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
   const [msg, setMsg] = useState('');
@@ -94486,12 +94519,18 @@ function MsxR3Box({ onClose }) {
   else if (page === 'assist') {
     title = 'メモリアルモンスター';
     const stock = assist ? assist.mons : [];
+    const stockSorted = msxMmSorted(stock, asort); // 並び替えはボックス一覧と同じ処理。写しだけを並べ替え、元の並び・保存データは変えない
+    const stockF = aq.trim() && typeof msxMatchQ === 'function' ? stockSorted.filter((m) => msxMatchQ(aq, msxMmName(m), msxMonName(m.species))) : stockSorted;
+    const stockList = arev ? stockF.slice().reverse() : stockF;
     body = (<>
       <div className="mm-hint msx-kp">合体の親にしたモンスター・お別れしたモンスターが残っています。{'\u200b'}育成には使えず、{'\u200b'}育成を始めるときの編成にだけ入れられます。{'\u200b'}アシスト効果と得意な能力が効きます</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
-      <div className="mm-gridw">{stock.length ? <MsxMmGrid mons={stock} label={view.label} mark={() => 'メモモン'} isOn={(m) => apick.includes(m.id)}
+      <div className="mm-ops">
+        {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length}/> : null}
+      </div>
+      <div className="mm-gridw">{stockList.length ? <MsxMmGrid mons={stockList} label={view.label} mark={() => 'メモモン'} isOn={(m) => apick.includes(m.id)}
         attrs={(m) => ({ 'data-msx-assist-mon': m.id })} onPick={(m) => setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id])}/>
-        : <div className="msx-note" style={{ padding: 8 }}>まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります</div>}</div>
+        : <div className="msx-note" style={{ padding: 8 }}>{stock.length ? '検索に当てはまるモンスターがいません' : 'まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります'}</div>}</div>
       <div className="mm-bar"><span className="cnt">メモモン <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span>
         <button type="button" className="mm-sel" disabled={!apick.length} onClick={() => setAAsk(true)} data-msx-assist-remove>外す({apick.length}体)</button></div>
       {aAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
@@ -94563,7 +94602,7 @@ function MsxR3Box({ onClose }) {
           pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
-          info={more} assists={Array.isArray(cur.assists) ? cur.assists : []}
+          info={more} assists={Array.isArray(cur.assists) ? cur.assists : []} initialTab={Array.isArray(cur.assists) && cur.assists.length ? 'assist' : null}
           peak={(() => { try { return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak; } catch (e) { return ''; } })()}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
             {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
@@ -94990,7 +95029,7 @@ const monsucLendFriends = async () => {
     if (!e || !e.mon || typeof e.mon !== 'object') return null;
     const mon = e.mon;
     return {
-      friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null,
+      friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null, lastSeenAt: f.lastSeenAt || 0,
       lend: {
         species: mon.species, name: mon.name, colors: Array.isArray(mon.colors) && mon.colors.every((c) => typeof c === 'string') ? mon.colors.slice(0, 8) : null, type: Number.isInteger(mon.type) ? mon.type : null,
         stats: mon.stats, assists: Array.isArray(mon.assists) ? mon.assists : [], version: e.version, updatedAt: Date.parse(e.updated_at) || 0,
