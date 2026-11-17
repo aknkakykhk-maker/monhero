@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b295c24d6196d77
+// source-sha256: 5409568211f52d34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160132,7 +160132,9 @@ function MonsucFuseSheet({
     className: "w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white",
     style: {
       maxHeight: '92dvh',
-      overflowY: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
       paddingBottom: 'max(24px, var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
@@ -160145,7 +160147,13 @@ function MonsucFuseSheet({
     onDone: () => setShow(null)
   }) : null, !SUC ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "まだ使えません") : done ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "まだ使えません") : done ? React.createElement("div", {
+    style: {
+      overflowY: 'auto',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("div", {
     className: "mt-2 rounded-xl bg-fuchsia-950 p-3",
     "data-monsuc-fuse-done": true
   }, React.createElement("p", {
@@ -160210,42 +160218,74 @@ function MonsucFuseSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: "mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "閉じる")) : !main ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
     q: fq,
     onQ: setFq,
     count: usableF.length,
     total: usable.length
-  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }) : null, React.createElement("div", {
+    style: {
+      flex: '1 1 auto',
+      minHeight: 0,
+      overflowY: 'auto'
+    }
+  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
     mons: usableF,
     onPick: m => setMain(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
     q: fq,
     onQ: setFq,
     count: usableF.filter(m => m.id !== main.id).length,
     total: usable.length - 1
-  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }) : null, React.createElement("div", {
+    style: {
+      flex: '1 1 auto',
+      minHeight: 0,
+      overflowY: 'auto'
+    }
+  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
     mons: usableF.filter(m => m.id !== main.id),
     onPick: m => setMat(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? React.createElement("p", {
+  }) : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement("div", {
+    style: {
+      overflowY: 'auto',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
     className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
@@ -170681,6 +170721,8 @@ const MSX_CSS = `
 .msx .v-ga .tr{margin-right:26px}
 .msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
+/* 選ぶ画面(育成開始)では場面を細くし、一覧に高さを譲る(選ぶ画面の統一。横向きの組み立てでは上の .land の指定が勝つ) */
+.msx .v-scene.sm{flex:none;height:112px}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
 .msx .v-scene.dk .sh{background:#0f0d2499}
@@ -170878,11 +170920,16 @@ const MSX_CSS = `
 .msx .v-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;position:relative;min-width:0}
 .msx .v-card.sel{border-color:#fde047;box-shadow:0 0 12px #fde04766}
 .msx .v-card.pk{border-color:#f472b6aa}
+.msx .v-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
-.msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
-.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 span{position:relative;display:block;min-width:0}
+.msx .v-grid6 button{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:0;background:none;border:0;color:inherit;font:inherit;text-align:center;cursor:pointer}
+/* 升の正方形はスペーサー(padding-top:100%)で決める。aspect-ratio 任せだと、対応の弱い端末では升の高さが付かずに行が重なる(2026-11-16 実機スクショの対策をこの方式へ差し替え) */
+.msx .v-grid6 .v-g6f{width:100%}
+.msx .v-grid6 .v-g6f::before{content:'';display:block;padding-top:100%}
 .msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .v-grid6 .v-g6n{font-size:9.5px;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.msx .v-grid6 button.on .v-g6n{color:#fde047}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -171560,8 +171607,11 @@ const MSX_CSS = `
 .msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
-.msx .msx-tp-tm .fc{flex:none;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
-.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{font-style:normal;font-weight:900;color:#64748b}
+.msx .msx-tp-tm .fc{flex:none;display:block;width:100%;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-tm .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-tm .fc>img,.msx .msx-tp-tm .fc>div{position:absolute!important;inset:0;width:100%;height:100%}
+.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#64748b}
 .msx .msx-tp-tm.on .fc{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
@@ -171584,7 +171634,9 @@ const MSX_CSS = `
 .msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
 .msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
 .msx .msx-md-sup{margin-top:8px}
-.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+/* 選ぶ画面の組み立て(統一): 操作行は自然な高さにする。横に伸ばすのは横並びの帯(.msx-tp-bar)の中だけ(縦並びの画面で操作行が縦に伸びて一覧を潰していた) */
+.msx .msx-tp-bar>.msx-pt{flex:1 1 220px}
 .msx .msx-pt-q{flex:1 1 120px;min-width:0;min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:16px;padding:4px 8px}
 .msx .msx-pt-s select{min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:12px;font-weight:900;padding:0 4px}
 .msx .msx-pt-r{flex:none;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:11px;font-weight:900;padding:4px 10px}
@@ -171606,7 +171658,10 @@ const MSX_CSS = `
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
 .msx .msx-tp-c.lk{opacity:.5}
-.msx .msx-tp-c .fc{display:block;flex:none;width:100%;height:auto;aspect-ratio:1;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+.msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-c .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-c .fc>img,.msx .msx-tp-c .fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .msx .msx-tp-c .fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
 .msx .msx-tp-c .fc .mm-art{display:block;width:100%;height:100%}
 .msx .msx-tp-c .rk,.msx .msx-fp-r .rk{position:absolute;right:3px;top:3px;font-style:normal}
@@ -174001,11 +174056,8 @@ function MsxStart({
   const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
   const peakText = preview.peak;
   const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
-  const scene = (style, inner) => React.createElement("div", {
-    className: "v-scene",
-    style: {
-      flex: '1 1 0'
-    }
+  const scene = (style, inner, sm) => React.createElement("div", {
+    className: `v-scene${sm ? ' sm' : ''}`
   }, React.createElement("img", {
     className: "bg",
     src: msxSceneBg(1).bg,
@@ -174113,25 +174165,27 @@ function MsxStart({
       count: list.length,
       total: listAll.length
     }) : null, React.createElement("div", {
-      className: "v-grid6",
-      style: {
-        maxHeight: 148,
-        overflowY: 'auto'
-      }
+      className: "v-gridw"
+    }, React.createElement("div", {
+      className: "v-grid6"
     }, list.length ? list.map(x => React.createElement("button", {
       type: "button",
       key: x.key,
       className: x.on ? 'on' : '',
       onClick: () => setPick(x.pick)
+    }, React.createElement("span", {
+      className: "v-g6f"
     }, React.createElement("img", {
       src: msxMonThumb(x.sp),
       alt: msxMonName(x.sp)
-    }))) : React.createElement("span", {
+    })), React.createElement("span", {
+      className: "v-g6n"
+    }, x.nm))) : React.createElement("span", {
       className: "msx-note",
       style: {
         gridColumn: '1 / -1'
       }
-    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')), scene({
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), scene({
       mb: '12%',
       h: '62%'
     }, React.createElement("div", {
@@ -174140,7 +174194,7 @@ function MsxStart({
       className: "v-chip ylw"
     }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), picked ? React.createElement("span", {
       className: "v-chip"
-    }, "選んだ回数 ", picked, "回") : null)), React.createElement("div", {
+    }, "選んだ回数 ", picked, "回") : null), true), React.createElement("div", {
       className: "v-card sel"
     }, React.createElement("div", {
       className: "msx-dt-hd"
@@ -185015,7 +185069,10 @@ const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
 .mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
-.mmg .mmg-fc{display:block;width:100%;height:auto;aspect-ratio:1/1;min-height:0;max-height:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+/* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
+.mmg .mmg-fc::before{content:'';display:block;padding-top:100%}
+.mmg .mmg-fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .mmg .mmg-c.on .mmg-fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mmg .mmg-c.lk{opacity:.5}
 .mmg .mmg-gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
@@ -185411,14 +185468,27 @@ function MsxR3Box({
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
-    }, msg) : null, typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+    }, msg) : null, React.createElement("div", {
+      className: "mm-ops"
+    }, typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
       q: bq,
       onQ: setBq,
       rev: brev,
       onRev: setBrev,
       count: list.length,
       total: box.mons.length
-    }) : null, React.createElement("div", {
+    }) : null, React.createElement("button", {
+      type: "button",
+      className: "mm-sel",
+      onClick: () => setMenu('sort'),
+      "data-msx-mm-sort": true
+    }, "並べ替え: ", sortName, "▼"), React.createElement("button", {
+      type: "button",
+      className: "mm-sel",
+      onClick: () => setMenu('label'),
+      "data-msx-mm-label": true,
+      "data-msx-r3-mmlabel": true
+    }, "表示: ", labelName, "▼")), React.createElement("div", {
       className: "mm-gridw"
     }, list.length ? React.createElement(MsxMmGrid, {
       mons: list,
@@ -185446,18 +185516,7 @@ function MsxR3Box({
       className: "mm-bar"
     }, React.createElement("span", {
       className: "cnt"
-    }, "所持数 ", React.createElement("b", null, box.mons.length), "/", box.cap, "体"), React.createElement("button", {
-      type: "button",
-      className: "mm-sel",
-      onClick: () => setMenu('sort'),
-      "data-msx-mm-sort": true
-    }, "並べ替え: ", sortName, "▼"), React.createElement("button", {
-      type: "button",
-      className: "mm-sel",
-      onClick: () => setMenu('label'),
-      "data-msx-mm-label": true,
-      "data-msx-r3-mmlabel": true
-    }, "表示: ", labelName, "▼")), menu ? React.createElement("div", {
+    }, "所持数 ", React.createElement("b", null, box.mons.length), "/", box.cap, "体")), menu ? React.createElement("div", {
       className: "msx-ov msx-fade",
       onClick: () => setMenu(null)
     }, React.createElement("div", {
@@ -185803,6 +185862,9 @@ const MSX_MM_CSS = `
 .msx .mm-art{display:block;position:relative}
 .msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto;background:#0f0c24;border:1px solid #3b3566;border-radius:14px;padding:8px 6px;margin-top:6px}
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
+.msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.msx .mm-ops>.msx-pt{flex:1 1 220px}
+.msx .mm-ops .mm-sel{flex:none}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
