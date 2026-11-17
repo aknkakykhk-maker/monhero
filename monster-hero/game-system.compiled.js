@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac83708f926cb343
+// source-sha256: 497c8a8d89479d15
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40802,6 +40802,7 @@ const rhythmTouchDiagOf = ({
   difficulty,
   notes,
   inputTimes,
+  inputLog,
   assist,
   mirror,
   cleared,
@@ -40826,6 +40827,7 @@ const rhythmTouchDiagOf = ({
       inputs: Array.isArray(inputTimes) ? inputTimes.length : 0,
       misses: miss.misses,
       noInputMisses: miss.noInput,
+      tapMiss: rhythmTapMissBreakdown(notes, inputLog),
       outside: perfTouch?.outside || 0,
       ignored: perfTouch?.ignored || 0,
       gestures: perfTouch?.gestures || 0,
@@ -43582,6 +43584,7 @@ const RhythmTapTest = ({
       difficulty,
       notes: run.notes,
       inputTimes: run.inputTimes,
+      inputLog: run.inputLog,
       assist: assistOn,
       mirror: mirrorOn,
       cleared: !failed,
@@ -44972,6 +44975,10 @@ const RhythmTapTest = ({
       deltaMs,
       standby
     }) => {
+      if (Array.isArray(run.inputTimes) && !input?.rejudge) {
+        const log = run.inputLog || (run.inputLog = []);
+        if (log.length < 20000) log.push([now, Number(input.subLaneCoordinate), target ? Number(target.index) : -1]);
+      }
       run.inputFeedbackState.set(input.inputKey, {
         subLane: Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(input.subLaneCoordinate))),
         subLaneCoordinate: Number(input.subLaneCoordinate),
@@ -45281,6 +45288,7 @@ const RhythmTapTest = ({
         subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(p.x, p.y, rect),
         pointerId: entry.id
       }], rawAge > 0 && rawAge < 300 ? rawAge : rhythmInputAgeMs(entry.stamp, nowMs()));
+      RHYTHM_TOUCH_BRIDGE.route('rec');
       if (entry.upAt != null) endRecovered(entry);
     };
     const sweepTimers = new Set();
@@ -45401,6 +45409,7 @@ const RhythmTapTest = ({
     }
     const originStamp = Number(e.nativeEvent?.__mhOriginStamp);
     if (e.pointerType === 'pen' && !Number.isFinite(originStamp)) RHYTHM_TIMING_DIAG.pen();
+    if (Number.isFinite(originStamp)) RHYTHM_TOUCH_BRIDGE.route('syn');
     const perfNow = typeof performance !== 'undefined' ? performance.now() : NaN;
     inputStarts([{
       lane,
@@ -45455,6 +45464,19 @@ const RhythmTapTest = ({
       if (!current || current.finished || current.paused) return;
       if (e.type === 'touchcancel') RHYTHM_PERF.touchCancel(e.changedTouches?.length || 0);else if (e.type === 'touchstart') RHYTHM_PERF.touchStart(e.touches?.length || 0);
       current.activeTouchInputs = current.activeTouchInputs || new Set();
+      RHYTHM_TIMING_DIAG.liveTouches(e.touches?.length || 0);
+      if (e.type === 'touchend' || e.type === 'touchcancel') Array.from(e.changedTouches || []).forEach(t => {
+        const key = rhythmInputKey('touch', t.identifier);
+        if (current.activeTouchInputs.has(key)) return;
+        if (current.droppedNoEnd?.has(key)) {
+          current.droppedNoEnd.delete(key);
+          return;
+        }
+        RHYTHM_TOUCH_BRIDGE.endOnly(e.touches?.length || 0);
+        RHYTHM_INPUT_REC.event('endOnly', {
+          key
+        });
+      });
       const rect = inputAreaRect(area),
         live = new Set(),
         liveSubLanes = [],
@@ -45507,6 +45529,7 @@ const RhythmTapTest = ({
           if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
         const revealedStart = !ownStart;
+        if (lane !== null && subLaneCoordinate !== null && !RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) RHYTHM_TOUCH_BRIDGE.route(revealedStart ? 'rev' : 'own');
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,

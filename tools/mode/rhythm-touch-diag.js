@@ -283,7 +283,7 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
     if(!st||!t||st.assist)continue;
     const key=row.platform||'other';
     if(!groups.has(key))groups.set(key,{key,plays:0,devices:new Map(),lateN:0,lateAct:[],lateFull:[],lateBias:[],lateEx:[],lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],
-      multiAll:0,multiLate:0,taps:0,late:0,newPlays:0,afterN:0,afterAct:[],afterBias:[],b2MidN:0,b2Mid:[],b2MidBias:[],b2LateN:0,b2Late:[],b2LateBias:[],midN:0,midAct:[],midTyp:[],midBias:[],revN:0,revAct:[],revBias:[],smoothLive:0,lateStart:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,shownFrames:0,shownStalls:0});
+      multiAll:0,multiLate:0,taps:0,late:0,newPlays:0,afterN:0,afterAct:[],afterBias:[],eoPlays:0,eoTaps:0,endOnly:[0,0],routes:[0,0,0,0],tapMiss:[0,0,0,0],eoMisses:0,eoByDiff:new Map(),midMultiN:0,midMulti:[],midMultiBias:[],midSingleN:0,midSingle:[],midSingleBias:[],b2ByDev:new Map(),b2ByDiff:new Map(),b2MidN:0,b2Mid:[],b2MidBias:[],b2LateN:0,b2Late:[],b2LateBias:[],midN:0,midAct:[],midTyp:[],midBias:[],revN:0,revAct:[],revBias:[],smoothLive:0,lateStart:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,shownFrames:0,shownStalls:0});
     const g=groups.get(key);g.plays++;
     const dk=String(row.device_key||'?');
     if(!g.devices.has(dk))g.devices.set(dk,{on:0,off:0,offFrames:0,offStalls:0,onFrames:0,onStalls:0});
@@ -304,6 +304,19 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
     if(t.smoothLive)g.smoothLive++;
     // 2026-11-17 の案B(ふだんの遅れ + 10ms・50ms 超から)のあとの行(timing.staleV が 2 以上)は別に数える
     const b2=num(t.staleV)>=2&&typical;
+    // r1117-002(2026-11-17): 離しの合図だけ届いた接触・入力の経路・MISS の単押しの内訳(足した版の行だけ)
+    if(Array.isArray(st.endOnly)&&Array.isArray(st.tapMiss)){
+      g.eoPlays++;g.eoTaps+=num(st.touchStarts);g.eoMisses+=num(st.misses);
+      st.endOnly.forEach((v,i)=>{if(i<2)g.endOnly[i]+=num(v);});(Array.isArray(st.routes)?st.routes:[]).forEach((v,i)=>{if(i<4)g.routes[i]+=num(v);});st.tapMiss.forEach((v,i)=>{if(i<4)g.tapMiss[i]+=num(v);});
+      const dk2=String(row.difficulty||'?');if(!g.eoByDiff.has(dk2))g.eoByDiff.set(dk2,{taps:0,eo:0,alt:0,notes:0});
+      const e=g.eoByDiff.get(dk2);e.taps+=num(st.touchStarts);e.eo+=num(st.endOnly[0])+num(st.endOnly[1]);e.alt+=num(st.tapMiss[0]);e.notes+=num(row.note_count);
+    }
+    if(b2&&biasOk){
+      if(num(t.midMultiN)>=3&&Number.isFinite(Number(t.midMultiActMs))){g.midMultiN+=num(t.midMultiN);g.midMulti.push(Number(t.midMultiActMs));g.midMultiBias.push(Number(t.biasMs));}
+      if(num(t.midSingleN)>=3&&Number.isFinite(Number(t.midSingleActMs))){g.midSingleN+=num(t.midSingleN);g.midSingle.push(Number(t.midSingleActMs));g.midSingleBias.push(Number(t.biasMs));}
+      if(num(t.midN)>=3&&Number.isFinite(Number(t.midActMs)))for(const [map,key2] of [[g.b2ByDev,dk.slice(0,5)+'・'+String(row.app_build||'').slice(5,10)],[g.b2ByDiff,String(row.difficulty||'?')]]){
+        if(!map.has(key2))map.set(key2,{n:0,d:[]});const m=map.get(key2);m.n+=num(t.midN);m.d.push(Number(t.midActMs)-Number(t.biasMs));}
+    }
     if(b2&&biasOk&&num(t.midN)>=3&&Number.isFinite(Number(t.midActMs))){g.b2MidN+=num(t.midN);g.b2Mid.push(Number(t.midActMs));g.b2MidBias.push(Number(t.biasMs));}
     if(b2&&biasOk&&num(t.lateN)>=3&&Number.isFinite(Number(t.lateActMs))){g.b2LateN+=num(t.lateN);g.b2Late.push(Number(t.lateActMs));g.b2LateBias.push(Number(t.biasMs));}
     if(!b2&&biasOk&&num(t.midN)>=3&&Number.isFinite(Number(t.midActMs))&&Number.isFinite(Number(t.midTypMs))){g.midN+=num(t.midN);g.midAct.push(Number(t.midActMs));g.midTyp.push(Number(t.midTypMs));g.midBias.push(Number(t.biasMs));}
@@ -329,6 +342,10 @@ const syncSummary=(rows,{days=null,now=Date.now()}={})=>{
       afterN:g.afterN,afterPlays:g.afterAct.length,afterDiff:median(g.afterAct.map((v,i)=>v-g.afterBias[i])),
       midN:g.midN,midPlays:g.midAct.length,midActDiff:median(g.midAct.map((v,i)=>v-g.midBias[i])),midTypDiff:median(g.midTyp.map((v,i)=>v-g.midBias[i])),
       revN:g.revN,revPlays:g.revAct.length,revDiff:median(g.revAct.map((v,i)=>v-g.revBias[i])),smoothLive:g.smoothLive,
+      eoPlays:g.eoPlays,eoTaps:g.eoTaps,eoMisses:g.eoMisses,endOnly:g.endOnly,routes:g.routes,tapMiss:g.tapMiss,
+      eoByDiff:[...g.eoByDiff.entries()].map(([k,e])=>({key:k,...e})).sort((a,b)=>b.taps-a.taps),
+      midMultiN:g.midMultiN,midMultiDiff:median(g.midMulti.map((v,i)=>v-g.midMultiBias[i])),midSingleN:g.midSingleN,midSingleDiff:median(g.midSingle.map((v,i)=>v-g.midSingleBias[i])),
+      b2ByDev:[...g.b2ByDev.entries()].map(([k,m])=>({key:k,n:m.n,diff:median(m.d)})),b2ByDiff:[...g.b2ByDiff.entries()].map(([k,m])=>({key:k,n:m.n,diff:median(m.d)})),
       b2MidN:g.b2MidN,b2MidPlays:g.b2Mid.length,b2MidDiff:median(g.b2Mid.map((v,i)=>v-g.b2MidBias[i])),b2LateN:g.b2LateN,b2LatePlays:g.b2Late.length,b2LateDiff:median(g.b2Late.map((v,i)=>v-g.b2LateBias[i]))};
   }).sort((a,b)=>b.plays-a.plays);
 };
@@ -367,6 +384,19 @@ const syncLines=summary=>{
     if(g.b2MidN>=SYNC_LATE_MIN&&g.b2MidPlays>=3)lines.push(`${Math.abs(g.b2MidDiff)<=15?'◎':'▲'} [${g.key}] 案B(ふだんの遅れ + 10ms)のあと、50〜80ms 遅れた入力で取れた単押し ${g.b2MidN}回(${g.b2MidPlays}曲): ずれ − ふだんのずれ = ${r1(g.b2MidDiff)}ms(入れる前は約 -29ms。±15ms に入っていれば効いている)`);
     else if(g.b2MidN||g.b2LateN)lines.push(`… [${g.key}] 案B の効き目(50〜80ms の帯)は、取れた単押しが ${SYNC_LATE_MIN}回たまってから(いま ${g.b2MidN}回)`);
     if(g.b2LateN>=SYNC_LATE_MIN&&g.b2LatePlays>=3)lines.push(`${Math.abs(g.b2LateDiff)<=15?'◎':'▲'} [${g.key}] 案B のあと、80ms を超えて遅れた入力で取れた単押し ${g.b2LateN}回(${g.b2LatePlays}曲): ずれ − ふだんのずれ = ${r1(g.b2LateDiff)}ms(11/14 の直しでは +9ms)`);
+    // 50〜80ms の帯の内訳(11/20 の見直し用): 端末・版 / 難易度 / ほかの指あり・なし
+    if(g.b2ByDev.length)lines.push(`・ [${g.key}] 案B のあとの 50〜80ms の帯(ずれ − ふだん): 端末・版ごと ${g.b2ByDev.map(x=>`${x.key} ${r1(x.diff)}ms(${x.n}回)`).join(' / ')}`);
+    if(g.b2ByDiff.length)lines.push(`・ [${g.key}] 同・難易度ごと ${g.b2ByDiff.map(x=>`${x.key} ${r1(x.diff)}ms(${x.n}回)`).join(' / ')}`);
+    if(g.midMultiN||g.midSingleN)lines.push(`・ [${g.key}] 同・ほかの指あり ${g.midMultiN}回 ${g.midMultiDiff===null?'-':r1(g.midMultiDiff)+'ms'} / ほかの指なし ${g.midSingleN}回 ${g.midSingleDiff===null?'-':r1(g.midSingleDiff)+'ms'}`);
+    // r1117-002: 離しの合図だけ届いた接触(押したのに入力にならなかった)・MISS の単押しの内訳・入力の経路
+    if(g.eoPlays){
+      const eo=g.endOnly[0]+g.endOnly[1],per=g.eoTaps?eo/g.eoTaps*1000:0,tm=g.tapMiss.reduce((a,b)=>a+b,0);
+      lines.push(`${per>=5?'●':'・'} [${g.key}] 離しの合図だけ届いた接触(touchstart も指の一覧にも出なかった・足した版 ${g.eoPlays}曲): ${eo}回 = 1000タッチに ${per.toFixed(1)}回(ほかの指あり ${g.endOnly[1]} / なし ${g.endOnly[0]})${per>=5?'。**押したのに入力になっていない接触がある**。離しの合図から1打として救う直しの候補':''}`);
+      if(g.eoByDiff.length)lines.push(`・ [${g.key}] 同・難易度ごと(1000タッチあたり / 交互の抜け候補は1000ノーツあたり): ${g.eoByDiff.map(x=>`${x.key} ${(x.taps?x.eo/x.taps*1000:0).toFixed(1)} / ${(x.notes?x.alt/x.notes*1000:0).toFixed(1)}`).join(' ・ ')}`);
+      if(tm)lines.push(`・ [${g.key}] MISS になった単押し ${tm}回の内訳: 交互の抜け候補 ${g.tapMiss[0]}(その位置に入力なし・同じ頃ほかの位置に入力あり)/ 別のノーツを取った ${g.tapMiss[1]} / 空打ち ${g.tapMiss[2]} / どこにも入力なし ${g.tapMiss[3]}`);
+      const rt=g.routes.reduce((a,b)=>a+b,0);
+      if(rt)lines.push(`・ [${g.key}] 入力の経路: 自分の touchstart ${g.routes[0]} / 別の指の合図で見えた ${g.routes[1]} / ポインタで取り戻した ${g.routes[2]} / 指の接触幅からの疑似タップ ${g.routes[3]}`);
+    }
     if(g.smoothLive)lines.push(`・ [${g.key}] 曲の時計の直しを、その曲の中で入れた曲 ${g.smoothLive}曲`);
   }
   return lines;
