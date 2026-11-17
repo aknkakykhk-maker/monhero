@@ -210,6 +210,7 @@ const Audio_ = (() => {
     "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-saudade-short.mp3": "e7a88d84c06a",
     "audio/bgm-saudade.mp3": "5364f7be63a5",
+    "audio/bgm-seasons-of-a-little-plaza.mp3": "b75ae2e2592d",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
