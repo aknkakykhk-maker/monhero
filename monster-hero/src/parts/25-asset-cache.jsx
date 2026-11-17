@@ -27,7 +27,7 @@ const ASSET_PACKS = [
   // MFバトルカードのカードの絵(小さい版と大きい版。2026-10-25 社長)。公開の印(RELEASE_FLAGS.cardBattle)が立つまでは、
   // デバッグ端末にだけ見せる。遊ぶ人には出さず、「全部」にも自動ダウンロードにも入れない(assetPackOpen)。公開した日から自動で入る
   { id: 'card', icon: '🃏', label: 'バトルカード', desc: 'MFバトルカードのカードの絵', gate: 'cardBattle' },
-  { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとバトルの両方' },
+  { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとモンヒロバトルの両方' },
 ];
 // まとまりを出してよいか(公開の印か、デバッグの合言葉が合った端末か。印は読むだけ)
 const assetPackOpen = (pack) => {
@@ -39,7 +39,7 @@ const assetPackOfId = (id) => ASSET_PACKS.find((p) => p.id === id) || null;
 // 設定の「ダウンロード」に並べるまとまり(出してよいものだけ)。「全部」の説明も、バトルカードを出すときは3つにする
 const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
-  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
+  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・モンヒロバトル・MFバトルカードの全部' } : p));
 };
 // 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];

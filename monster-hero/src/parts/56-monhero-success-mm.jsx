@@ -86,7 +86,10 @@ const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
 .mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
-.mmg .mmg-fc{display:block;width:100%;height:auto;aspect-ratio:1/1;min-height:0;max-height:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+/* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
+.mmg .mmg-fc::before{content:'';display:block;padding-top:100%}
+.mmg .mmg-fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .mmg .mmg-c.on .mmg-fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mmg .mmg-c.lk{opacity:.5}
 .mmg .mmg-gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
@@ -241,7 +244,11 @@ function MsxR3Box({ onClose }) {
         <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
-      {typeof MsxPickTools === 'function' ? <MsxPickTools q={bq} onQ={setBq} rev={brev} onRev={setBrev} count={list.length} total={box.mons.length}/> : null}
+      <div className="mm-ops">
+        {typeof MsxPickTools === 'function' ? <MsxPickTools q={bq} onQ={setBq} rev={brev} onRev={setBrev} count={list.length} total={box.mons.length}/> : null}
+        <button type="button" className="mm-sel" onClick={() => setMenu('sort')} data-msx-mm-sort>並べ替え: {sortName}▼</button>
+        <button type="button" className="mm-sel" onClick={() => setMenu('label')} data-msx-mm-label data-msx-r3-mmlabel>表示: {labelName}▼</button>
+      </div>
       <div className="mm-gridw">{list.length ? <MsxMmGrid mons={list} label={view.label} fav={fav}
         isOn={(m) => tab === 'bye' && pick.includes(m.id)} lockOf={tab === 'bye' ? byeLock : null}
         attrs={(m) => ({ 'data-msx-r3-boxmon': m.id })}
@@ -249,8 +256,6 @@ function MsxR3Box({ onClose }) {
         : <div className="msx-note" style={{ padding: 8 }}>{box.mons.length ? '検索に当てはまるモンスターがいません' : 'まだマスモンはいません。育成を最後まで終えると、ここに入ります'}</div>}</div>
       <div className="mm-bar">
         <span className="cnt">所持数 <b>{box.mons.length}</b>/{box.cap}体</span>
-        <button type="button" className="mm-sel" onClick={() => setMenu('sort')} data-msx-mm-sort>並べ替え: {sortName}▼</button>
-        <button type="button" className="mm-sel" onClick={() => setMenu('label')} data-msx-mm-label data-msx-r3-mmlabel>表示: {labelName}▼</button>
       </div>
       {menu ? <div className="msx-ov msx-fade" onClick={() => setMenu(null)}><div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
         <h3>{menu === 'sort' ? '並べ替え' : '顔の下に出す物'}</h3>
@@ -356,6 +361,9 @@ const MSX_MM_CSS = `
 .msx .mm-art{display:block;position:relative}
 .msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto;background:#0f0c24;border:1px solid #3b3566;border-radius:14px;padding:8px 6px;margin-top:6px}
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
+.msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.msx .mm-ops>.msx-pt{flex:1 1 220px}
+.msx .mm-ops .mm-sel{flex:none}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
