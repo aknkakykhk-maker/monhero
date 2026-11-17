@@ -9,7 +9,7 @@
 // 見るもの:
 //   ① 得の行のモンヒロバトルは、地図のモンヒロバトルの窓を開く(assistantLifeOpenMapAt)。画面は mapFocus を受けて地図の窓を出す
 //   ② 部屋(place === 'battle')に 👀 修行を見る・📣 応援するの行。見る画面の入れ物は、地図が出ていないときだけ家の画面にも1つ
-//   ③ HOME の顔は、下のすき間が狭い札では札の上に出す
+//   ③ HOME の顔は、施設のボタンの右上のバッジに固定 24px で出す(2026-11-17 ホーム一新。下のすき間へ逃がす作りは廃止)
 //   ④ 本物の画面: HOME の顔が画面の中に 18px 以上で出て押せる → 部屋に2行 → 修行を見るが開く → 応援できる → 「行く ›」で地図の窓(その助手を選んだ状態)
 //   ⑤ 練習試合(👀 修行を見る)を開いたまま助手ライフが閉じても、次に地図を開いたとき勝手に始まらない(社長「助手のオート対戦が気付いたらはじまってた」)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -33,7 +33,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   check('② 見る画面の入れ物は、地図が出ていないときだけ家の画面にも(2つ重ねない)', /\{roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost\/>\}/.test(house) && (map.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 2); // 地図の根元に1つ+モンヒロバトルの選択画面の枠(AssistantLifeBattleHall)に1つ。選択画面では家も地図も出ない
   const cheer = read('monster-hero/src/parts/56-assistant-life-masmon-cheer.jsx');
   check('⑤ 練習試合の入れ物が消えるときは「開いている」も消す(残ると次に地図を開いたとき勝手に始まる)', /AMGC_HOST\.subs\.delete\(f\); if \(!AMGC_HOST\.subs\.size\) AMGC_HOST\.open = null;/.test(cheer));
-  check('③ HOME の顔: 下のすき間が狭い札では上へ', /const above = r\.gap < 16 && Number\.isFinite\(r\.up\) && r\.up >= 19;/.test(house) && /above \? r\.y - size - 1 : r\.y \+ r\.h \+ 1/.test(house));
+  check('③ HOME の顔: バッジは施設のボタンの右上に固定 24px・居場所の記録は全員ぶん', /ASSISTANT_LIFE_BADGE_FACE = 24/.test(house) && /const top = r\.y - 9;/.test(house) && /data-assistant-life-home-faces-ids/.test(house));
 }
 
 (async () => {
@@ -68,7 +68,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForTimeout(1600);
     const face = page.locator(`[data-assistant-life-home-faces="battle"] [data-assistant-life-home-face="${WHO}"]`);
     const f = await face.evaluate(el => { const r = el.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { w: Math.round(r.width), top: Math.round(r.top), bottom: Math.round(r.bottom), H: innerHeight, hit: t === el || el.contains(t) }; }).catch(() => null);
-    check('④ HOME: モンヒロバトルの助手の顔が画面の中に 18px 以上で出て、押せる(前は 12px で下の帯にかかっていた)', !!f && f.w >= 18 && f.bottom <= f.H - 4 && f.top >= 0 && f.hit, JSON.stringify(f));
+    check('④ HOME: モンヒロバトルの助手の顔が画面の中に 18px 以上で出て、押せる(バッジはボタンの右上・固定 24px)', !!f && f.w >= 18 && f.bottom <= f.H - 4 && f.top >= 0 && f.hit, JSON.stringify(f));
     await face.tap({ timeout: 3000 }).catch(() => {});
     await page.locator(`[data-assistant-life-room-sheet="${WHO}"]`).waitFor({ timeout: 6000 }).catch(() => {});
     check('④ 顔を押すと、その助手の部屋が開く', (await page.locator(`[data-assistant-life-room-sheet="${WHO}"]`).count()) === 1);

@@ -1,12 +1,12 @@
-// HOME の助手の顔の列と施設の札を、いろいろな端末の大きさで開いて確かめる(2026-11-07 社長「顔は小さく・施設の札のすぐ下に横1列」
-//   「まだまだ仕上がりが甘すぎるからちゃんと検査しながらすすめて」)。
+// HOME の助手の顔バッジとドックを、いろいろな端末の大きさで開いて確かめる(2026-11-07 社長「顔は小さく・施設のすぐそばに」
+//   「まだまだ仕上がりが甘すぎるからちゃんと検査しながらすすめて」→ 2026-11-17 ホーム一新で顔はドックボタンの右上のバッジになった)。
 //   node tools/assistant/assistant-life-home-layout-check.js            検査(手元の配信)
 //   node tools/assistant/assistant-life-home-layout-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/home-faces-*.png)
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
 // 見ること(どの大きさでも):
-//   ・会った助手8人の顔が全部出る
-//   ・顔の列は、どの札でも札(名前)の下にあり、札・ほかのボタン・画面の端に重ならない(横へ逃がさない)
-//   ・施設の札どうし・みゅあの吹き出しと札が重ならない。吹き出しの台詞が長いときも(横 667×375 で M/B管理とモンヒロビートが重なった)
+//   ・会った助手8人がバッジに出る(居場所の記録は全員ぶん。顔は1つのボタンに最大3人+「+n」)
+//   ・顔バッジは、その施設のボタンの右上にあり、ボタン・ほかの部品・画面の端に重ならない
+//   ・ドックのボタンどうし・みゅあの吹き出しとドックが重ならない。吹き出しの台詞が長いときも
 // 大きさ: 縦 390×844・390×664(iPhone の Safari)・375×667・320×568 / 横 844×390・667×375 / 🔄横(モンヒロビートで回してから戻る)390×844・375×667
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9233;
@@ -27,7 +27,7 @@ const VIEWS = [
   { id: 'r390x844', name: '🔄横 390×844', w: 390, h: 844, rot: true },
   { id: 'r375x667', name: '🔄横 375×667', w: 375, h: 667, rot: true },
 ];
-// 吹き出しを、HOME で出うるいちばん長いくらいの台詞にする(助手の台詞は切らずに全部出すので、伸びたぶん札が動く)
+// 吹き出しを、HOME で出うるいちばん長いくらいの台詞にする(助手の台詞は切らずに全部出す)
 //   (いま HOME で出る台詞でいちばん長いのは、MFバトルカードの告知の66文字)
 const LONG = 'トーナメントでも総当たりでもいいし、来られなくても登録したデッキが代わりに戦ってくれるんだ♪ 仲間を呼んで、表が光るところ見てみて〜';
 
@@ -57,10 +57,10 @@ const LONG = 'トーナメントでも総当たりでもいいし、来られな
       await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
-      // 🔄横: HOME は回して描かない(モンヒロビートを出ると回転を戻す)。モンヒロビートで🔄横にしてから戻り、回転が戻って顔が札の下にあるかを見る
+      // 🔄横: HOME は回して描かない(モンヒロビートを出ると回転を戻す)。モンヒロビートで🔄横にしてから戻り、回転が戻って顔バッジがボタンの右上にあるかを見る
       if (v.rot) {
         await waitFaces(page);
-        await page.locator('.mh-home-facility.rhythm').click({ timeout: 10000 });
+        await page.locator('[data-home-fac="rhythm"]').click({ timeout: 10000 });
         await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 });
         await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(900);
         await page.getByRole('button', { name: '戻る' }).first().click({ timeout: 5000 });
@@ -68,16 +68,18 @@ const LONG = 'トーナメントでも総当たりでもいいし、来られな
         check(`${T}モンヒロビートで🔄横にしたまま HOME へ戻っても、HOME は回さずに描く`, await page.evaluate(() => !RHYTHM_VIEW_ROTATION.active()));
       }
       await waitFaces(page);
-      await page.waitForTimeout(1600); // 顔は 0.7秒ごとに札を測り直す
+      await page.waitForTimeout(1600); // 顔バッジは 0.7秒ごとにボタンを測り直す
       await finishTalk(page); await page.waitForTimeout(800); // 流れてきた掛け合い(特別なお話など)は読み終えてから見る
       const n = await page.locator('[data-assistant-life-home-face]').count();
-      check(`${T}会った助手8人の顔が全部出る`, n === 8, `${n}人`);
-      { const ng = await homeFacesProblems(page); check(`${T}顔の列は札の下にあり、札・ボタン・画面の端に重ならない/札どうしも重ならない`, ng.length === 0, ng.slice(0, 6).join(' / ')); }
+      const idsN = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces-ids]')].reduce((a, e) => a + (e.getAttribute('data-assistant-life-home-faces-ids') || '').split(',').filter(Boolean).length, 0));
+      const extra = await page.locator('[data-assistant-life-home-faces-extra]').count();
+      check(`${T}会った助手8人がバッジに出る(顔は最大3人ずつ+「+n」)`, idsN === 8 && n === 7 && extra === 1, `居場所の記録 ${idsN}人 / 顔 ${n}枚 / +n ${extra}個`);
+      { const ng = await homeFacesProblems(page); check(`${T}顔バッジはボタンの右上にあり、ボタン・画面の端に重ならない/ドックのボタンどうしも重ならない`, ng.length === 0, ng.slice(0, 6).join(' / ')); }
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `home-faces-${v.id}.png`) });
       // 吹き出しを長くする
       const grew = await page.evaluate((t) => { const el = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (!el) return false; el.textContent = t; window.dispatchEvent(new Event('resize')); return true; }, LONG);
       await page.waitForTimeout(1800);
-      { const ng = await homeFacesProblems(page); check(`${T}吹き出しの台詞が長くても、札・顔が重ならない`, grew && ng.length === 0, grew ? ng.slice(0, 6).join(' / ') : '吹き出しの文字が見つからない'); }
+      { const ng = await homeFacesProblems(page); check(`${T}吹き出しの台詞が長くても、ドック・顔バッジが重ならない`, grew && ng.length === 0, grew ? ng.slice(0, 6).join(' / ') : '吹き出しの文字が見つからない'); }
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `home-faces-${v.id}-long.png`) });
       check(`${T}実行時エラーがない`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();

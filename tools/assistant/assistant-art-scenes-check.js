@@ -183,7 +183,7 @@ const notes = [];
         if (cur !== id) { await page.evaluate((x) => localStorage.setItem('mh_assistant_selected_v1', JSON.stringify(x)), id); await boot(); }
         if (want('home')) await take('home', id);
         if (want('rhythm')) {
-          await page.locator('.mh-home-facility.rhythm').click({ timeout: 10000 });
+          await page.locator('[data-home-fac="rhythm"]').click({ timeout: 10000 });
           await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 });
           await turn(); await take('rhythm', id, { settle: 900 });
           await page.getByRole('button', { name: '戻る' }).first().click({ timeout: 5000 });

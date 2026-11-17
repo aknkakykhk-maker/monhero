@@ -151,14 +151,15 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // 流れてくる掛け合いが終わるのを待ってから顔を見る(掛け合いのあいだは出ない)
     await waitFaces(page);
     const faceIds = await page.locator('[data-assistant-life-home-face]').evaluateAll(els => els.map(e => e.getAttribute('data-assistant-life-home-face')));
-    check('① HOME の施設の横に、会った助手8人の顔が全部出る(上限で切らない)', faceIds.length === 8 && new Set(faceIds).size === 8, faceIds.join(','));
-    check('① 練習中の助手はモンヒロビート、カード研究の組は MFバトルカードの横', (await page.locator('[data-assistant-life-home-faces="rhythm"] [data-assistant-life-home-face="momosuke"]').count()) === 1 && (await page.locator('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]').count()) === 3);
-    check('① 家と町にいる助手は施設「🏡 助手ライフ」の横(5人目からは2段)', (await page.locator('[data-assistant-life-home-faces="life"] [data-assistant-life-home-face]').count()) === 4);
+    const badgeIds = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces-ids]')].flatMap(e => (e.getAttribute('data-assistant-life-home-faces-ids') || '').split(',').filter(Boolean)));
+    check('① HOME の施設のボタンの顔バッジに、会った助手8人が全部出る(顔は最大3人ずつ+「+n」。居場所の記録は全員ぶん)', badgeIds.length === 8 && new Set(badgeIds).size === 8 && faceIds.length === 7, `記録 ${badgeIds.join(',')} / 顔 ${faceIds.length}枚`);
+    check('① 練習中の助手はモンヒロビート、カード研究の組は MFバトルカードのバッジ', (await page.locator('[data-assistant-life-home-faces="rhythm"] [data-assistant-life-home-face="momosuke"]').count()) === 1 && (await page.locator('[data-assistant-life-home-faces="card"] [data-assistant-life-home-face]').count()) === 3);
+    check('① 家と町にいる助手は施設「ライフ」のバッジ(4人は顔3人+「+1」)', (await page.locator('[data-assistant-life-home-faces="life"] [data-assistant-life-home-face]').count()) === 3 && (await page.locator('[data-assistant-life-home-faces="life"] [data-assistant-life-home-faces-extra="1"]').count()) === 1);
     check('① 帯は出ない', (await page.locator('[data-assistant-life-band]').count()) === 0);
-    { const ng = await homeFacesProblems(page); check('① 顔の列は、どの札でも札(名前)の下にあり、何にも重ならない(縦 390×844)', ng.length === 0, ng.join(' / ')); }
-    check('① 顔ははみ出さない(縦 390)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
+    { const ng = await homeFacesProblems(page); check('① 顔バッジは、どのボタンでも右上にあり、何にも重ならない(縦 390×844)', ng.length === 0, ng.join(' / ')); }
+    check('① 顔バッジははみ出さない(縦 390)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -10 && r.right <= window.innerWidth + 10; })));
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-1-home-faces.png') });
-    // ⑯ 地図と HOME の札の位置(1対1)は assistant-life-map-check.js が見る(2026-11-08 地図 案A)
+    // ⑯ 地図のボタンと HOME の施設の対応は assistant-life-map-check.js が見る(2026-11-08 地図 案A)
     // 入場の演出(その日の最初は長い)・家
     // 入場の演出は1.2秒だけ出る。開いた直後はページが重く、確かめる側が遅れて見逃すことがあるので、押す前から「出たか」を記録しておく(2026-11-08)
     await page.evaluate(() => { window.__mhIntroSeen = []; const mo = new MutationObserver(() => { const e = document.querySelector('[data-assistant-life-intro]'); if (e) { const k = e.getAttribute('data-assistant-life-intro'); if (!window.__mhIntroSeen.includes(k)) window.__mhIntroSeen.push(k); } }); mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-assistant-life-intro'] }); window.__mhIntroMo = mo; });
@@ -403,16 +404,16 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     { const P = await open({ w: 390, h: 844, at: '2026-11-08T12:30:00+09:00' }); await P.page.clock.resume(); await finishTalk(P.page); await reopen(P.page); await standProblems(P.page, STAND_COMBOS, '縦'); if (SHOTS) await P.page.screenshot({ path: path.join(shotDir, 'life-18-scene-after.png') }); await P.page.close(); }
     const L = await open({ w: 844, h: 390 });
     await waitFaces(L.page);
-    check('① 横 844×390 でも顔が全部出て、はみ出さない', (await L.page.locator('[data-assistant-life-home-face]').count()) === 8 && await L.page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= window.innerWidth + 1; })));
-    check('① 横: 施設「🏡 助手ライフ」は右の列(画面の右半分・ほかの施設に重ならない)', await L.page.evaluate(() => { const el = document.querySelector('[data-home-assistant-life]'); if (!el) return false; const r = el.getBoundingClientRect(); const others = [...document.querySelectorAll('.mh-home-facility:not(.life),.mh-home-mission,.mh-home-gift')].map(x => x.getBoundingClientRect()); return r.left > window.innerWidth / 2 && r.width < 200 && others.every(o => o.right <= r.left || o.left >= r.right || o.bottom <= r.top || o.top >= r.bottom); }));
-    { const ng = await homeFacesProblems(L.page); check('① 横でも顔の列は札の下にあり、何にも重ならない', ng.length === 0, ng.join(' / ')); }
+    check('① 横 844×390 でも顔バッジが全部出て、はみ出さない', (await L.page.locator('[data-assistant-life-home-face]').count()) === 7 && await L.page.evaluate(() => { const ids = [...document.querySelectorAll('[data-assistant-life-home-faces-ids]')].flatMap(e => (e.getAttribute('data-assistant-life-home-faces-ids') || '').split(',').filter(Boolean)); return ids.length === 8 && [...document.querySelectorAll('[data-assistant-life-home-faces]')].every(el => { const r = el.getBoundingClientRect(); return r.left >= -10 && r.right <= window.innerWidth + 10; }); }));
+    check('① 横: 施設「ライフ」はドック下段の右端(画面の右半分・ほかのボタンに重ならない)', await L.page.evaluate(() => { const el = document.querySelector('[data-home-assistant-life]'); if (!el) return false; const r = el.getBoundingClientRect(); const others = [...document.querySelectorAll('[data-home-fac]:not([data-home-fac="life"]),[data-home-monhero-success],.mh-home-side-btn')].filter(x => x.offsetParent).map(x => x.getBoundingClientRect()); return r.left > window.innerWidth / 2 && r.width < 220 && others.every(o => o.right <= r.left || o.left >= r.right || o.bottom <= r.top || o.top >= r.bottom); }));
+    { const ng = await homeFacesProblems(L.page); check('① 横でも顔バッジはボタンの右上にあり、何にも重ならない', ng.length === 0, ng.join(' / ')); }
     if (SHOTS) await L.page.screenshot({ path: path.join(shotDir, 'life-5-home-faces-land.png') });
-    // iPhone の Safari に近い高さ(縦 390×664)。本番で顔が札の横に逃げていた(2026-11-07)
+    // iPhone の Safari に近い高さ(縦 390×664)。本番で顔が施設の横に逃げていた(2026-11-07)
     {
       const P = await open({ w: 390, h: 664 });
       await waitFaces(P.page); await finishTalk(P.page); await P.page.waitForTimeout(800);
       const ng = await homeFacesProblems(P.page);
-      check('① 縦 390×664 でも顔の列は札の下にあり、何にも重ならない', (await P.page.locator('[data-assistant-life-home-face]').count()) === 8 && ng.length === 0, ng.join(' / '));
+      check('① 縦 390×664 でも顔バッジはボタンの右上にあり、何にも重ならない', (await P.page.locator('[data-assistant-life-home-face]').count()) === 7 && ng.length === 0, ng.join(' / '));
       if (SHOTS) await P.page.screenshot({ path: path.join(shotDir, 'life-1-home-faces-664.png') });
       await openHouse(P.page);
       const t = await P.page.evaluate(() => { const ti = document.querySelector('[data-assistant-life-title] .mhl-ti'); return ti && ti.scrollWidth <= ti.clientWidth + 1; });

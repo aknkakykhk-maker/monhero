@@ -1,7 +1,7 @@
 // 助手ライフ: フレンドの家との行き来の画面を、本物のゲームを開いて縦・横・🔄横で触って確かめる(56-assistant-life-friend.jsx)。
 //   node tools/assistant/assistant-life-friend-browser-check.js [--shots <出力先>]
 // Supabase は偽物(表3つ・フレンドの一覧・assistant-chat)。公開の印 assistantLifeFriend はページの中だけで真にする。
-//   ① HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」。札の字・顔の列・ほかの札に重ならない・画面の外に出ない
+//   ① HOME: 施設「ライフ」のボタンの左上に「🏘 n」(右上は顔バッジの場所・2026-11-17 ホーム一新)。ボタンの字・顔バッジ・ほかのボタンに重ならない・画面の外に出ない
 //   ② 家: アイコンの列に5つ目「🏘 フレンド」。5つとも字が切れない
 //   ③ 「🏘 フレンド」のページ: いまの行き来・置き手紙・フレンドの家・設定。はみ出さない・字が切れない・言葉の途中で折れない
 //   ④ 部屋の札「🏘 あおいさんの家へ」が出る・札の字が切れない
@@ -91,11 +91,11 @@ const badgeProblems = (page) => page.evaluate(() => {
   const r = b.getBoundingClientRect(); const W = window.innerWidth, H = window.innerHeight;
   if (r.left < 0 || r.right > W || r.top < 0 || r.bottom > H) ng.push('印が画面の外');
   const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1;
-  const life = document.querySelector('.mh-home-facility.life');
-  const label = life && [...life.querySelectorAll('span,p,b')].find(e => /助手ライフ/.test(e.textContent || '') && e.children.length === 0);
-  if (label) { const rg = document.createRange(); rg.selectNodeContents(label); for (const t of rg.getClientRects()) if (hit(r, t)) ng.push('印が「助手ライフ」の字にかかる'); }
-  for (const f of document.querySelectorAll('[data-assistant-life-home-faces] > div')) if (hit(r, f.getBoundingClientRect())) ng.push('印が顔の列に重なる');
-  for (const o of document.querySelectorAll('.mh-home-facility:not(.life)>span,.mh-home-card-battle,.mh-home-assistant,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-event-banner')) if (o.offsetParent && hit(r, o.getBoundingClientRect())) ng.push(`印がほかの札に重なる(${o.className.split(' ')[0]})`);
+  const life = document.querySelector('[data-home-fac="life"]');
+  const label = life && [...life.querySelectorAll('span,p,b')].find(e => /ライフ/.test(e.textContent || '') && e.children.length === 0);
+  if (label) { const rg = document.createRange(); rg.selectNodeContents(label); for (const t of rg.getClientRects()) if (hit(r, t)) ng.push('印が「ライフ」の字にかかる'); }
+  for (const f of document.querySelectorAll('[data-assistant-life-home-faces]')) if (hit(r, f.getBoundingClientRect())) ng.push('印が顔バッジに重なる');
+  for (const o of document.querySelectorAll('[data-home-fac]:not([data-home-fac="life"]),[data-home-monhero-success],.mh-home-assistant,.mh-home-side-btn,.mh-home-event-banner,.mh-home-tour-banner')) if (o.offsetParent && hit(r, o.getBoundingClientRect())) ng.push(`印がほかのボタンに重なる(${(o.className || '').split(' ')[0]})`);
   return ng;
 });
 
@@ -133,11 +133,11 @@ const badgeProblems = (page) => page.evaluate(() => {
       const { page, errors, posted, calls } = await open(v);
       await waitFaces(page);
       await page.locator('[data-alf-badge]').waitFor({ timeout: 8000 }).catch(() => {});
-      { const ng = await badgeProblems(page); check(`① HOME の「🏘 n」が札の右上にあり、字・顔・ほかの札に重ならない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
+      { const ng = await badgeProblems(page); check(`① HOME の「🏘 n」がボタンの左上にあり、字・顔バッジ・ほかのボタンに重ならない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
       { await page.evaluate(() => { const s = ALF_STORE.state; ALF_STORE.set({ st: { ...s.st, seen: [] }, visits: s.visits.map(x => x) }); });
-        const ng = await page.evaluate(async () => { for (let i = 0; i < 30 && !document.querySelector('[data-alf-toast]'); i++) await new Promise(r => setTimeout(r, 100)); const t = document.querySelector('[data-alf-toast]'); if (!t) return ['帯が出ない(この場では出なくてもよい)']; const r = t.getBoundingClientRect(); const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; if (r.left < 0 || r.right > window.innerWidth || r.top < 0) out.push('帯が画面の外'); for (const o of document.querySelectorAll('.mh-home-facility>span,.mh-home-card-battle,.mh-home-assistant,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-event-banner,.mh-home-player,[data-assistant-life-home-faces] > div')) if (o.offsetParent && hit(r, o.getBoundingClientRect())) out.push(`帯が重なる(${(o.className || '').toString().split(' ')[0] || 'faces'})`); return out; });
-        check(`① HOME の帯は札のすぐ上に出て、吹き出し・札・顔に重ならない(${v.w}×${v.h})`, ng.length === 0 || /出ない/.test(ng[0]), ng.join(' / ')); }
-      { const ng = await homeFacesProblems(page); check(`① 顔の列も今のまま崩れない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
+        const ng = await page.evaluate(async () => { for (let i = 0; i < 30 && !document.querySelector('[data-alf-toast]'); i++) await new Promise(r => setTimeout(r, 100)); const t = document.querySelector('[data-alf-toast]'); if (!t) return ['帯が出ない(この場では出なくてもよい)']; const r = t.getBoundingClientRect(); const hit = (a, c) => Math.min(a.right, c.right) - Math.max(a.left, c.left) > 1 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 1; const out = []; if (r.left < 0 || r.right > window.innerWidth || r.top < 0) out.push('帯が画面の外'); for (const o of document.querySelectorAll('[data-home-fac],[data-home-monhero-success],.mh-home-assistant,.mh-home-side-btn,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-player,[data-assistant-life-home-faces]')) if (o.offsetParent && hit(r, o.getBoundingClientRect())) out.push(`帯が重なる(${(o.className || '').toString().split(' ')[0] || 'faces'})`); return out; });
+        check(`① HOME の帯はドックの上に出て、吹き出し・ボタン・顔バッジに重ならない(${v.w}×${v.h})`, ng.length === 0 || /出ない/.test(ng[0]), ng.join(' / ')); }
+      { const ng = await homeFacesProblems(page); check(`① 顔バッジも今のまま崩れない(${v.w}×${v.h})`, ng.length === 0, ng.join(' / ')); }
       check(`① 印は見ていない置き手紙の数(2)`, /🏘 2/.test(await page.locator('[data-alf-badge]').innerText().catch(() => '')));
       await shot(page, `${v.id}-1-home`);
       await openHouse(page);
@@ -384,7 +384,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       const { page, errors } = await open(v);
       await waitFaces(page);
       await page.locator('[data-alf-badge]').waitFor({ timeout: 8000 }).catch(() => {});
-      await page.locator('.mh-home-facility.rhythm').click({ timeout: 10000 });
+      await page.locator('[data-home-fac="rhythm"]').click({ timeout: 10000 });
       await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 });
       await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(1200);
       check(`⑦ 🔄横のモンヒロビートの中に、行き来の印・帯が出ない(${v.id})`, (await page.locator('[data-alf-badge],[data-alf-toast]').count()) === 0);

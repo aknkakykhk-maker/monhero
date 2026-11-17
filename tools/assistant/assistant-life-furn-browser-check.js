@@ -114,7 +114,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // ⑥ 交換所の「家具」タブ(縦 390・375・横 844)。タブが8つになっても名前が切れない・仲良し度の札が下の文字やボタンに重ならない(2026-11-08 窓口)
     for (const [w, h, tag] of [[390, 844, '縦 390'], [375, 667, '縦 375'], [844, 390, '横 844']]) {
       const page = await open(w, h, true);
-      await page.locator('[data-home-market], .mh-home-facility.market').first().click({ timeout: 15000 }).catch(() => {});
+      await page.locator('[data-home-market], [data-home-fac="market"]').first().click({ timeout: 15000 }).catch(() => {});
       await page.waitForTimeout(800);
       await page.getByRole('button', { name: /ビートP交換所/ }).first().click({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(500);
