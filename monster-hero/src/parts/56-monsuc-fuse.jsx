@@ -132,11 +132,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
   };
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-monsuc-fuse>
-      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto', paddingBottom: 'max(24px, var(--mh-sa-bottom))' }}>{/* 下のボタンがホームバーに近づかないよう safe-area を見る(2026-11-16) */}
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'max(24px, var(--mh-sa-bottom))' }}>{/* 下のボタンがホームバーに近づかないよう safe-area を見る(2026-11-16)。選ぶ段は検索を上に固定し、一覧だけをスクロールさせる(選ぶ画面の統一) */}
         <p className="text-[16px] font-black">🧬 合体する</p>
         {show ? <MonsucFuseShow a={show.a} b={show.b} child={show.child} childName={show.name} onDone={() => setShow(null)}/> : null}
         {!SUC ? <p className="mt-2 text-[11px] font-bold text-slate-400">まだ使えません</p>
-        : done ? (<>
+        : done ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
           <div className="mt-2 rounded-xl bg-fuchsia-950 p-3" data-monsuc-fuse-done>
             <p className="msx-pop text-center text-[26px] font-black text-fuchsia-200" data-monsuc-fuse-stamp>合体完了!</p>{/* 2026-11-14 社長(台帳 #6112): 育成の終わりの「育成完了!」とそろえる */}
             <p className="flex items-center gap-2 text-[14px] font-black">{typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null}{monsucFuseSpName(done.child.species)}が生まれました({done.child.gen}代目)</p>
@@ -157,20 +157,24 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
                 }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">この名前にする</button></>)}
             </div>) : null}
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
-        </>) : !main ? (<>
+        </div>) : !main ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
           {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} count={usableF.length} total={usable.length}/> : null}
-          {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+          </div>
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
           {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)</p>}
-        </>) : !mat ? (<>
+        </div>) : !mat ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
           {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
           {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} count={usableF.filter(m => m.id !== main.id).length} total={usable.length - 1}/> : null}
-          {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
+          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableF.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
+          </div>
           {usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
-        </>) : plan && plan.ok ? (<>
+        </div>) : plan && plan.ok ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
           <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
             {typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
@@ -191,7 +195,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
           <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
           <button type="button" onClick={() => { setMat(null); setSure(0); setErr(''); }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
-        </>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
+        </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
       </div>
     </div>);

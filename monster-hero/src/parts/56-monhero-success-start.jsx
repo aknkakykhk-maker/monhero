@@ -501,8 +501,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
   const peakText = preview.peak;
   const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
-  const scene = (style, inner) => (
-    <div className="v-scene" style={{ flex: '1 1 0' }}>
+  const scene = (style, inner, sm) => (
+    <div className={`v-scene${sm ? ' sm' : ''}`}>
       <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ bottom: `calc(${style.mb} - 5px)` }}/>
       {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
@@ -528,11 +528,13 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <button type="button" className={tab === 'fuse' ? 'on' : ''} onClick={() => { setTab('fuse'); if (!pick.box && unraised.length) { lastBase.current = pick.base || lastBase.current; setPick({ box: unraised[0].id }); } }}>🧬 合体で生まれたモンスター {unraised.length}</button>
       </div>
       {typeof MsxPickTools === 'function' ? <MsxPickTools q={pickQ} onQ={setPickQ} sorts={[['std', '標準'], ['name', '名前'], ['species', '種族']]} sort={pickSort} onSort={setPickSort} rev={pickRev} onRev={setPickRev} count={list.length} total={listAll.length}/> : null}
-      <div className="v-grid6" style={{ maxHeight: 148, overflowY: 'auto' }}>
-        {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><img src={msxMonThumb(x.sp)} alt={msxMonName(x.sp)}/></button>)
-          : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
+      <div className="v-gridw">
+        <div className="v-grid6">
+          {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><span className="v-g6f"><img src={msxMonThumb(x.sp)} alt={msxMonName(x.sp)}/></span><span className="v-g6n">{x.nm}</span></button>)
+            : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
+        </div>
       </div>
-      {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</span>{picked ? <span className="v-chip">選んだ回数 {picked}回</span> : null}</div>)}
+      {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</span>{picked ? <span className="v-chip">選んだ回数 {picked}回</span> : null}</div>, true)}
       <div className="v-card sel">
         <div className="msx-dt-hd"><div className="h1">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 詳しく</button></div>
         <div className="v-kv" data-msx-start-type><b>成長の型</b><span><span className="yel">{growName}</span>{peakText ? <span className="msx-dt-sm"> ピーク {peakText}</span> : null}</span></div>
