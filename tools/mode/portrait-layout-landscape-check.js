@@ -103,14 +103,14 @@ const seed = () => {
     check('HOMEは今までどおり横を広く使う',
       !!home && home.width > home.viewport * 0.7,
       home ? `器 ${home.width}px / 画面 ${home.viewport}px（max-width:${home.maxWidth}）` : 'なし');
-    // 横向き用のCSSが生きていること(施設が左右へ散っている)
+    // 横向き用のCSSが生きていること(ドックのボタンが左右いっぱいに広がっている。2026-11-17 のホーム一新で施設は下のドックに集約)
     const facilities = await page.evaluate(() => {
-      const list = [...document.querySelectorAll('.mh-home-facility')];
+      const list = [...document.querySelectorAll('[data-home-fac]')];
       if (!list.length) return null;
       const xs = list.map((el) => el.getBoundingClientRect().left);
       return { count: list.length, spread: Math.round(Math.max(...xs) - Math.min(...xs)) };
     });
-    check('HOMEの施設が左右へ散っている（横向きの並びが生きている）',
+    check('HOMEのドックのボタンが左右へ広がっている（横向きの並びが生きている）',
       !!facilities && facilities.spread > 200,
       facilities ? `${facilities.count}件・左右の開き ${facilities.spread}px` : '施設が見つからない');
 

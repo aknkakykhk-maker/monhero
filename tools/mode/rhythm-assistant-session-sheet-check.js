@@ -29,11 +29,11 @@ await page.goto(process.env.MH_BASE_URL?`${process.env.MH_BASE_URL.replace(/\/+$
 await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),null,{timeout:60000});
 await page.getByText('TAP TO START').click();await page.waitForTimeout(2500);await page.mouse.click(Number(390)/2,Number(844)/2);await page.waitForTimeout(3000);
 await page.evaluate(()=>{setInterval(()=>{const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|(?:始|はじ)める|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
-await page.waitForFunction(()=>document.querySelector('button.mh-home-facility.rhythm')&&!document.querySelector('[role=dialog]'),null,{timeout:40000});
+await page.waitForFunction(()=>document.querySelector('button[data-home-fac="rhythm"]')&&!document.querySelector('[role=dialog]'),null,{timeout:40000});
 if(!process.env.OFF)await page.evaluate(()=>{RELEASE_FLAGS.rhythmAssistantSession=true;});
 // 部屋を作り、呼ぶシートの「助手」のタブを開く
 await page.evaluate(()=>{RELEASE_FLAGS.rhythmAssistantSession=true;});
-await page.locator('button.mh-home-facility.rhythm').click();
+await page.locator('button[data-home-fac="rhythm"]').click();
 await page.locator('[data-rhythm-mode-private-open]').click();await page.locator('[data-rhythm-multi-create]').click();
 await page.waitForSelector('[data-rhythm-multi-room-code]',{timeout:15000});await page.waitForTimeout(600);
 // 助手ライフの「いまの時間帯」を作り、ききだけがモンビーに出かけている(練習)ことにする。無料も券も0にする
