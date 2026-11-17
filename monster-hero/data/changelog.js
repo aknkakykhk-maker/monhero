@@ -53,6 +53,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-17 09:20", type:'fix', group:'ui', status:'new',
+    title:'ヘルプや画面の施設名の表記を、正式な呼び名にそろえました',
+    items:[
+      'ヘルプやダウンロードの説明で「バトル」とだけ書かれていた箇所を「モンヒロバトル」にそろえ、MFバトルカードを「カードバトル」と書いていた箇所も正式な呼び名に直しました。遊び方や中身は変わりません。',
+    ],
+  },
+  {
     date: "2026-11-17 07:00", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの大会のあとの曲と、モンスターの選び方を改善しました',
     items:[
