@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d30ed29af6c4dda9
+// generated-sha256: 488cebbe5521e580
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -97157,11 +97157,40 @@ const monsucRankLineageTabs = () => {
   return out;
 };
 
+// 血統を選ぶ窓。血統は数が増えていくので、横並びの札ではなく共通部品 PickerSheet の一覧(検索つき)から選ぶ
+function MonsucRankLineageSheet({ lineages, tab, lineage, q, setQ, onPick, onClose }) {
+  const match = (texts) => (typeof msxMatchQ === 'function' ? msxMatchQ(q, ...texts) : !q);
+  const allShown = match(['全て', '全モンスター']);
+  const shown = lineages.filter((l) => match([`${monsucRankLineageName(l)}系`, monsucRankLineageName(l)]));
+  const allSel = tab === 'all';
+  return <PickerSheet title="血統を選ぶ" note="血統は 種類のまとまりです。選ぶと、その場で切り替わります" accent="border-amber-400"
+    search={q} onSearch={setQ} searchPlaceholder="血統を名前で探す" onClose={onClose} dataPicker="monsuc-rank-lineage">
+    <div className="flex flex-col gap-1.5">
+      {allShown && <button type="button" onClick={() => onPick(null)} aria-pressed={allSel}
+        className={`relative flex items-center gap-2 min-h-[48px] rounded-xl border px-3 text-left active:scale-95 ${allSel ? 'border-amber-400 bg-amber-950/60' : 'border-slate-700 bg-slate-950/40'}`}>
+        <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-black text-white">全て</span><span className="block text-[10px] font-bold text-slate-400">全モンスター</span></span>
+        {allSel && <PickerCheckMark />}
+      </button>}
+      {shown.map((l) => {
+        const sel = tab === 'lineage' && lineage === l;
+        return <button key={l} type="button" onClick={() => onPick(l)} aria-pressed={sel}
+          className={`relative flex items-center gap-2 min-h-[48px] rounded-xl border px-3 text-left active:scale-95 ${sel ? 'border-amber-400 bg-amber-950/60' : 'border-slate-700 bg-slate-950/40'}`}>
+          <span className="min-w-0 flex-1 truncate text-[13px] font-black text-white">{monsucRankLineageName(l)}系</span>
+          {sel && <PickerCheckMark />}
+        </button>;
+      })}
+      {!allShown && shown.length === 0 && <p className="py-6 text-center text-[11px] font-bold text-slate-500">当てはまる血統がいません</p>}
+    </div>
+  </PickerSheet>;
+}
+
 // R1 全モンスター / R2 血統別。onBack で戻る
 function MonsucRankScreen({ onBack }) {
   const [tab, setTab] = React.useState('all');
   const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
+  const [lineagePickerOpen, setLineagePickerOpen] = React.useState(false);
+  const [lineagePickerQ, setLineagePickerQ] = React.useState('');
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [failed, setFailed] = React.useState(false); // 直近の読み込みが失敗(前のデータは出し続ける)
@@ -97213,12 +97242,14 @@ function MonsucRankScreen({ onBack }) {
     if (!detail && listRef.current) listRef.current.scrollTop = savedScrollRef.current;
   }, [detail]);
   const openDetail = (row, pinned) => { savedScrollRef.current = listRef.current ? listRef.current.scrollTop : 0; setDetail({ row, pinned: !!pinned }); };
+  const closeLineagePicker = () => { setLineagePickerOpen(false); setLineagePickerQ(''); };
+  const pickLineage = (l) => { if (l) { setTab('lineage'); setLineage(l); } else setTab('all'); closeLineagePicker(); };
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
   const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
-  // 血統の札は横に流さず、札と札の切りのいいところで次の行へ折り返す(2026-11-16 社長: 基本は切らないで折り返す。今回は画面が広いので全部見せる)
+  // 血統の切り替えは、数が増えても破綻しないよう、ボタンを押して一覧(検索つき)から選ぶピッカー式にする(2026-11-17 あっくん決定: 横スクロールタブ・折り返しはやめて選択式に)
   // fixed の根は body の safe-area 余白が効かないので、ここで切り欠きぶんを足す(2026-11-16 社長指摘: 戻るボタンに時計が重なる)
   if (detail) return <MonsucRankDetail row={detail.row} pinned={detail.pinned} onBack={() => setDetail(null)} />;
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
@@ -97229,14 +97260,12 @@ function MonsucRankScreen({ onBack }) {
     <div className="px-3 pt-2">
       <div className="text-[18px] font-black">🏆 総合力ランキング</div>
       <div className="text-[11px] text-slate-300 leading-snug">育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別</div>
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
-          className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
-      </div>
-      {tab === 'lineage' && <div className="flex flex-wrap gap-1.5 mt-2">
-        {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
-      </div>}
+      <button type="button" data-monsuc-rank-lineage-open onClick={() => setLineagePickerOpen(true)}
+        className="w-full rounded-full py-2 px-3 mt-2 flex items-center gap-2 border bg-slate-800/70 border-slate-600 active:scale-[.98]">
+        <span className="shrink-0 text-[11px] font-bold text-slate-400">血統</span>
+        <span className="flex-1 text-center text-[14px] font-black text-white">{tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全て'}</span>
+        <span className="shrink-0 rounded-full bg-yellow-300 text-slate-900 px-2.5 py-0.5 text-[11px] font-black">選ぶ ▾</span>
+      </button>
       <div className="text-[12px] text-slate-200 mt-1.5">{scopeName} {totalText}{mine ? <> ・ あなたの順位 <span className="text-yellow-300 font-black">{mine.place}位</span></> : null}</div>
       {pendLeft > 0 && <div className="text-[12px] font-bold text-amber-300 mt-1">⏳ 登録待ち {pendLeft}件</div>}
     </div>
@@ -97256,6 +97285,7 @@ function MonsucRankScreen({ onBack }) {
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 戻る</button>
       <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く'}</div>
     </div>
+    {lineagePickerOpen && <MonsucRankLineageSheet lineages={lineages} tab={tab} lineage={lineage} q={lineagePickerQ} setQ={setLineagePickerQ} onPick={pickLineage} onClose={closeLineagePicker} />}
   </div>;
 }
 
