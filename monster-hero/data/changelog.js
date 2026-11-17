@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+        date: "2026-11-17 13:20", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+        title:'モンヒロサクセスのランキングで、血統の切り替え方を変えました',
+        items:[
+                      'ランキングの血統の切り替えが、「選ぶ」ボタンを押して一覧(名前で検索もできます)から選ぶ形になりました。血統が増えても、探して切り替えられます。',
+              ],
+  },{
         date: "2026-11-17 11:00", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
         title:'モンヒロサクセスで、育成の終わりに「アシスト効果を取る」を選ぶとエラーになる不具合を直しました',
         items:[
