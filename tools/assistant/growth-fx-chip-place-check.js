@@ -79,7 +79,7 @@ const chipHits = (page) => page.evaluate(() => {
       }
       if (rot) { await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(0)); await page.close(); continue; }
       await page.evaluate(() => { try { assistantLifeCloseScreen(); } catch {} }); await page.waitForTimeout(500);
-      await page.locator('.mh-home-facility.market').first().click({ timeout: 15000 }).catch(() => {}); await page.waitForTimeout(800);
+      await page.locator('[data-home-fac="market"]').first().click({ timeout: 15000 }).catch(() => {}); await page.waitForTimeout(800);
       await page.getByRole('button', { name: /ビートP交換所/ }).first().click({ timeout: 8000 }).catch(() => {}); await page.waitForTimeout(600);
       await look('ビートP交換所');
       await page.close();

@@ -2,10 +2,13 @@
 //   node tools/assistant/assistant-life-map-check.js            検査
 //   node tools/assistant/assistant-life-map-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/lifemap/)
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る
-//   ① 地図の場所は12か所それぞれ1つずつ。施設と結びつく場所は HOME と同じ札(同じ class)
-//   ② HOME の札と地図の札が同じ位置・同じ大きさ(1対1。HOME の画面の中での位置で ±2px)
-//   ③ HOME の札の下の顔と、地図の全身が同じ場所(町だけの場所の人は HOME では「助手ライフ」の下)
-//      家の札のシートには、HOME の「助手ライフ」の下の顔と同じ顔ぶれが並ぶ
+//   ① 地図の場所は12か所それぞれ1つずつ。施設と結びつく場所は HOME と同じ class のボタン
+//   ② 地図のボタンが場面の中に収まり、HOME にも同じ施設のボタンがある
+//      (旧②は「HOME の札と地図の札が同じ位置・同じ大きさ(1対1)」だったが、2026-11-17 のホーム一新で HOME の施設は
+//       下のドックに集約され、地図の並びは地図専用の配置になったため、1対1の前提が無くなった。置き換えの理由はここに残す)
+//   ③ HOME の顔バッジと、地図の全身が同じ場所(町だけの場所の人は HOME では「ライフ」のバッジ。バッジの顔は最大3人なので、
+//      居場所の対応は data-assistant-life-home-faces-ids=全員の記録で見る)
+//      家のシートには、HOME の「ライフ」のバッジと同じ顔ぶれが並ぶ
 //   ④ 居場所の言い方: 家の出かけ札・地図のシート・今日あったことが同じ場所の名前(モンヒロビート・MFバトルカード・M/B管理…)
 //   ⑤ 札・人の並び・上の帯・下の案内が重ならない・地図の中に収まる・町の札は絵の中の建物の近く・いない場所は薄い
 //   ⑥ 場所を押すと、いる助手とできることのシート。閉じるボタンで閉じる/「🏡 家へ」で家に戻る/人の「部屋へ」でその部屋
@@ -54,17 +57,10 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
   // 顔ぶれを入れる(いまの時間の様子として)
   const setLife = (page, mix) => page.evaluate((m) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, watched: [] } }); }, mix);
   const closeLife = async (page) => { for (let i = 0; i < 3 && await page.locator('[data-assistant-life-screen]').count(); i++) { await page.evaluate(() => ASSISTANT_LIFE_STORE.set({ open: false })); await page.waitForTimeout(300); } };
-  // HOME の顔: 助手 → 札
-  const homeFaces = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-assistant-life-home-face]')].map(b => [b.getAttribute('data-assistant-life-home-face'), b.closest('[data-assistant-life-home-faces]').getAttribute('data-assistant-life-home-faces')])));
-  // HOME の札の位置(HOME の画面の中)
-  const homeTags = (page) => page.evaluate(() => {
-    const scene = document.querySelector('main.mh-home-scene'); if (!scene) return null; const s = scene.getBoundingClientRect(); const o = {};
-    for (const [k, sel] of Object.entries({ management: '.mh-home-facility.management', temple: '.mh-home-facility.temple', market: '.mh-home-facility.market', battle: '.mh-home-facility.battle', life: '.mh-home-facility.life', rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle' })) {
-      const el = scene.querySelector(sel); if (!el) continue; const t = el.classList.contains('mh-home-facility') ? el.querySelector(':scope > span') : el; const r = t.getBoundingClientRect();
-      o[k] = { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
-    }
-    return o;
-  });
+  // HOME の顔バッジ: 助手 → 施設(バッジの顔は最大3人なので、全員の記録 data-assistant-life-home-faces-ids で見る)
+  const homeFaces = (page) => page.evaluate(() => { const o = {}; for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) { const f = box.getAttribute('data-assistant-life-home-faces'); for (const id of (box.getAttribute('data-assistant-life-home-faces-ids') || '').split(',').filter(Boolean)) o[id] = f; } return o; });
+  // HOME のドックにある施設のボタン(data-home-fac の値の一覧)
+  const homeFacs = (page) => page.evaluate(() => [...document.querySelectorAll('main.mh-home-scene [data-home-fac]')].map(e => e.getAttribute('data-home-fac')));
   const openMap = async (page) => {
     await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 6000 }).catch(() => {});
@@ -107,7 +103,7 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
     await toHome(page);
     if (v.rot) {
       await waitFaces(page);
-      await page.locator('.mh-home-facility.rhythm').click({ timeout: 10000 });
+      await page.locator('[data-home-fac="rhythm"]').click({ timeout: 10000 });
       await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 });
       await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(900);
       await page.getByRole('button', { name: '戻る' }).first().click({ timeout: 5000 });
@@ -121,21 +117,25 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
       if (mix) await setLife(page, mix);
       await page.waitForTimeout(1600); await finishTalk(page); await page.waitForTimeout(400);
       const faces = await homeFaces(page);
-      const tagsHome = await homeTags(page);
+      const facsHome = await homeFacs(page);
       await openMap(page);
       const m = await mapInfo(page);
       if (!m) { check(`${M}地図が開く`, false); continue; }
-      // ① 場所は12か所それぞれ1つ。HOME と同じ札
+      // ① 場所は12か所それぞれ1つ。HOME と同じ class のボタン
       { const ng = [];
         for (const p of m.allPlaces) { const n = m.places.filter(x => x.place === p).length; if (n !== 1) ng.push(`${p} が${n}個`); }
-        for (const x of m.places) { const f = m.facOf[x.place]; if (x.town) { if (f !== 'life') ng.push(`町の場所 ${x.place} が HOME の ${f} に結びついている`); continue; } if (!(` ${x.cls} `).includes(` ${FAC_CLASS[f]} `)) ng.push(`${x.place} の札が HOME の ${f} の札(${FAC_CLASS[f]})でない: ${x.cls}`); }
-        check(`${M}① 地図の場所は12か所それぞれ1つ。施設と結びつく場所は HOME と同じ札`, ng.length === 0, ng.join(' / ')); }
-      // ② 1対1の位置(🔄横は HOME が回らない作りのまま。HOME があれば同じ大きさ)
+        for (const x of m.places) { const f = m.facOf[x.place]; if (x.town) { if (f !== 'life') ng.push(`町の場所 ${x.place} が HOME の ${f} に結びついている`); continue; } if (!(` ${x.cls} `).includes(` ${FAC_CLASS[f]} `)) ng.push(`${x.place} のボタンが HOME の ${f} のボタン(${FAC_CLASS[f]})でない: ${x.cls}`); }
+        check(`${M}① 地図の場所は12か所それぞれ1つ。施設と結びつく場所は HOME と同じ class のボタン`, ng.length === 0, ng.join(' / ')); }
+      // ② 地図のボタンが場面の中に収まり、HOME にも同じ施設のボタンがある
+      //   (旧②「HOME の札と地図の札が同じ位置・同じ大きさ(1対1)」は、2026-11-17 のホーム一新で HOME の施設が下のドックに
+      //    集約され、地図の並びが地図専用になったため前提が無くなり、この確認に置き換えた)
       { const ng = [];
         if (!m.fromHome) ng.push('HOME の大きさを読めていない');
-        for (const x of m.places) { if (x.town) continue; const h = tagsHome && tagsHome[m.facOf[x.place]]; if (!h) { ng.push(`HOME に ${m.facOf[x.place]} が無い`); continue; }
-          if (Math.abs(h.x - x.x) > 2 || Math.abs(h.y - x.y) > 2 || Math.abs(h.w - x.w) > 2 || Math.abs(h.h - x.h) > 2) ng.push(`${x.place}: HOME(${Math.round(h.x)},${Math.round(h.y)} ${Math.round(h.w)}×${Math.round(h.h)}) 地図(${Math.round(x.x)},${Math.round(x.y)} ${Math.round(x.w)}×${Math.round(x.h)})`); }
-        check(`${M}② HOME の札と地図の札が同じ位置・同じ大きさ(1対1)`, ng.length === 0, ng.join(' / ')); }
+        for (const x of m.places) { if (x.town) continue; const f = m.facOf[x.place];
+          if (!facsHome.includes(f)) ng.push(`HOME のドックに ${f} が無い`);
+          if (x.x < -1 || x.y < -1 || x.x + x.w > m.W + 1 || x.y + x.h > m.H + 1) ng.push(`${x.place}: 地図の場面の外(${Math.round(x.x)},${Math.round(x.y)} ${Math.round(x.w)}×${Math.round(x.h)} / 場面 ${m.W}×${m.H})`);
+          if (x.w < 30 || x.h < 14) ng.push(`${x.place}: ボタンが小さすぎる(${Math.round(x.w)}×${Math.round(x.h)})`); }
+        check(`${M}② 地図のボタンが場面内に収まり、HOME にも同じ施設のボタンがある`, ng.length === 0, ng.join(' / ')); }
       // ③ HOME の顔と地図の全身が同じ場所
       { const ng = []; const mapAt = {};
         for (const c of m.crowds) for (const id of c.who) mapAt[id] = c.place;
@@ -143,13 +143,13 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
         for (const id of Object.keys(mapAt)) { const want = m.facOf[mapAt[id]]; const got = faces[id]; if (!got) { if (!(want === 'card' && spent[id])) ng.push(`${id}: HOME に顔が無い(地図は ${mapAt[id]})`); continue; } if (got !== want) ng.push(`${id}: HOME は ${got}・地図は ${mapAt[id]}(${want})`); }
         for (const id of Object.keys(faces)) if (!mapAt[id]) ng.push(`${id}: 地図にいない(HOME は ${faces[id]})`);
         if (Object.keys(mapAt).length !== 8) ng.push(`地図の人数 ${Object.keys(mapAt).length}`);
-        check(`${M}③ HOME の札の下の顔と、地図の全身が同じ場所`, ng.length === 0, ng.join(' / '));
-        // 家の札のシート = HOME の「助手ライフ」の下の顔ぶれ
+        check(`${M}③ HOME の顔バッジと、地図の全身が同じ場所`, ng.length === 0, ng.join(' / '));
+        // 家のシート = HOME の「ライフ」のバッジの顔ぶれ
         await page.locator('[data-assistant-life-map-place="home"]').click({ timeout: 3000 });
         await page.waitForTimeout(250);
         const inSheet = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-map-sheet="home"] [data-assistant-life-map-sheet-who]')].map(e => e.getAttribute('data-assistant-life-map-sheet-who')).sort());
         const lifeFaces = Object.keys(faces).filter(id => faces[id] === 'life').sort();
-        check(`${M}③ 家の札のシートに、HOME の「助手ライフ」の下の顔と同じ顔ぶれが並ぶ`, JSON.stringify(inSheet) === JSON.stringify(lifeFaces), `シート ${inSheet.join(',')} / HOME ${lifeFaces.join(',')}`);
+        check(`${M}③ 家のシートに、HOME の「ライフ」のバッジと同じ顔ぶれが並ぶ`, JSON.stringify(inSheet) === JSON.stringify(lifeFaces), `シート ${inSheet.join(',')} / HOME ${lifeFaces.join(',')}`);
         await page.locator('[data-assistant-life-map-sheet] [data-assistant-life-map-sheet-close]').click({ timeout: 3000 });
         await page.waitForTimeout(200);
       }

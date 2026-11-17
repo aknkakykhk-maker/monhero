@@ -129,7 +129,7 @@ const problems = (page) => page.evaluate(() => {
       await page.goto(`${BASE}monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page);
       if (v.rot) {
-        await page.locator('.mh-home-facility.rhythm').click({ timeout: 15000 }).catch(() => {});
+        await page.locator('[data-home-fac="rhythm"]').click({ timeout: 15000 }).catch(() => {});
         await page.getByRole('button', { name: '戻る' }).first().waitFor({ timeout: 15000 }).catch(() => {});
         await page.evaluate(() => RHYTHM_VIEW_ROTATION.set(90)); await page.waitForTimeout(800);
         await page.getByRole('button', { name: '戻る' }).first().click({ timeout: 5000 }).catch(() => {});
