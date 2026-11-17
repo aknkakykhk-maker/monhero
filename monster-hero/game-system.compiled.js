@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b295c24d6196d77
+// source-sha256: 5c6a05f7776866a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187291,6 +187291,7 @@ function MsxManualBar({
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
 const MSA_PAN_K = 0.35;
+const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
   label: '×1',
@@ -187469,6 +187470,8 @@ const MSA_CSS = `
 /* ---- アクセント(2026-11-12 社長「迫力とか見ごたえとか」) ---- */
 .msa-dim{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0,#0003 16%,#000d 55%);pointer-events:none;animation:msaDim var(--msa-pre,420ms) ease-out both}
 .msa-aura.big{width:150px;height:150px;margin-left:-75px;background:radial-gradient(circle,#fff7 0,#fde047aa 22%,#f97316 45%,#f9731600 70%);animation:msaAuraBig var(--msa-pre,420ms) ease-in both}
+/* 大きな場では、オーラの箱を絵の幅に合わせる(小さな絵で場いっぱいに広がりすぎないように。2026-11-17 仕上げ) */
+.msa-stage.big .msa-aura.big{width:var(--msa-ab,150px);height:var(--msa-ab,150px);margin-left:calc(var(--msa-ab,150px) / -2)}
 .msa-chargebig{animation:msaChargeBig var(--msa-pre,420ms) ease-in both}
 .msa-dmg.t1{font-size:22px}.msa-dmg.t2{font-size:30px}.msa-dmg.t3{font-size:40px;animation-name:msaPopBig}
 .msa-dmg.t4{font-size:52px;color:#fff;text-shadow:0 3px 0 #b91c1c,0 0 14px #f97316,0 0 26px #fde047;animation-name:msaPopBig}
@@ -187609,6 +187612,7 @@ const MSA_CSS = `
 /* ---- 撃つ前の構えの一拍(2026-11-13 社長「攻撃前にもう1アクセントほしいね」) ---- */
 .msa-wind{animation:msaWind var(--msa-pre,380ms) ease-in both}
 .msa-aura.wind{width:130px;height:130px;margin-left:-65px;bottom:-6px;animation:msaAuraWind var(--msa-pre,380ms) ease-out both}
+.msa-stage.big .msa-aura.wind{width:var(--msa-aw,130px);height:var(--msa-aw,130px);margin-left:calc(var(--msa-aw,130px) / -2)}
 @keyframes msaAuraWind{0%{opacity:0;transform:scale(1.5)}25%{opacity:1;transform:scale(.95)}85%{opacity:1;transform:scale(.85)}100%{opacity:0;transform:scale(1.7)}}
 .msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
 .msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
@@ -187627,9 +187631,9 @@ const MSA_CSS = `
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
-/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、220px(幅320 で場の中身が収まる高さ)を下回る低い画面は縦に流す(r1115-193 案③) */
+/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:220px}
+.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:240px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -188245,6 +188249,7 @@ function MsaFighter({
   x,
   e,
   foeX,
+  fwPx = 96,
   hpNow,
   reduce,
   idleOk,
@@ -188309,7 +188314,11 @@ function MsaFighter({
     const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w;
-      const dx = (foeX.x - x) * w;
+      const rawDx = (foeX.x - x) * w;
+      const half = (Number(fwPx) || 96) * 0.65;
+      const cxPx = x * w;
+      let dx = rawDx;
+      if (dx > 0) dx = Math.min(dx, Math.max(0, (w - half - MSA_SAFE - cxPx) / 1.2));else if (dx < 0) dx = Math.max(dx, Math.min(0, (half + MSA_SAFE - cxPx) / 1.2));
       style = {
         ...style,
         ...(typeof attackAimVars === 'function' ? attackAimVars(dx, -8) : {
@@ -188392,10 +188401,17 @@ function MsaFighter({
   const koNow = e && e.ev === 'ko' && e.side === side;
   if (down) cls = koNow ? 'mh-card-ko' : '';
   if (koNow) {
+    const w2 = Math.max(200, foeX && foeX.w || 340);
+    const koHalf = 72;
+    const koCx = x * w2;
+    const koShift = Math.max(MSA_SAFE, Math.min(w2 - MSA_SAFE - koHalf * 2, koCx - koHalf)) - (koCx - koHalf);
     extra.push(React.createElement("div", {
       key: `k-${e.k}`,
       className: "msa-ko big",
-      "data-msa-ko": side
+      "data-msa-ko": side,
+      style: koShift ? {
+        marginLeft: `${Math.round(koShift)}px`
+      } : undefined
     }, "K.O.!"));
     if (!reduce) extra.push(React.createElement("i", {
       key: `bu-${e.k}`,
@@ -188407,7 +188423,11 @@ function MsaFighter({
   if (tired) extra.push(React.createElement("span", {
     key: "pant",
     className: "msa-pant",
-    "data-msa-tired": side
+    "data-msa-tired": side,
+    style: side === 'B' ? {
+      right: 'auto',
+      left: -6
+    } : undefined
   }, "💦 息切れ"));
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
@@ -188808,8 +188828,12 @@ function MsaStage({
       const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
       return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
     }
-    const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
-    return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
+    const fwPx = fill ? 140 : 96;
+    const W2 = Math.max(200, stageW);
+    const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
+    const g0 = Math.max(MSA_GAP[0], Math.min(MSA_GAP[1] - 0.04, fwPx * 0.6 / W2));
+    const gMax = Math.max(g0, 1 - 2 * (fwPx / 2 + MSA_SAFE) / W2);
+    return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
   };
   const cs = useMemo(() => {
     const out = [0.5];
@@ -188819,8 +188843,10 @@ function MsaStage({
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09;
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c));
+      const eM = Math.max(0.09, ((wide ? bigFw : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
+      const lo = Math.max(0.5 - MSA_C_LIM, eM + g1 / 2, (eM + g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      const hi = Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2, (1 - eM - g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      c = lo > hi ? 0.5 : Math.max(lo, Math.min(hi, c));
       out.push(c);
     }
     return out;
@@ -188831,6 +188857,10 @@ function MsaStage({
   const xB = cNow + gap / 2;
   const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
   const scrX = x => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K);
+  const dmgX = x => {
+    const m = (75 + MSA_SAFE) / Math.max(200, stageW);
+    return Math.max(m, Math.min(1 - m, x));
+  };
   const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
@@ -188959,7 +188989,9 @@ function MsaStage({
     "data-msa-stage": true,
     style: wide ? {
       '--msa-fw': `${bigFw}px`,
-      '--msa-fh': `${bigFh}px`
+      '--msa-fh': `${bigFh}px`,
+      '--msa-ab': `${Math.min(150, Math.round(bigFw * 1.15))}px`,
+      '--msa-aw': `${Math.min(130, Math.round(bigFw * 1.05))}px`
     } : undefined
   }, React.createElement("div", {
     className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
@@ -189040,6 +189072,7 @@ function MsaStage({
       x: xB,
       w: stageW
     },
+    fwPx: wide ? bigFw : fill ? 140 : 96,
     hpNow: hpOf('A'),
     reduce: reduce,
     idleOk: true,
@@ -189058,6 +189091,7 @@ function MsaStage({
       x: xA,
       w: stageW
     },
+    fwPx: wide ? bigFw : fill ? 140 : 96,
     hpNow: hpOf('B'),
     reduce: reduce,
     idleOk: true,
@@ -189091,7 +189125,7 @@ function MsaStage({
   }), e.ev === 'tech' && React.createElement(MsaDmgLayer, {
     key: `dl-${pos}`,
     e: e,
-    x: e.side === 'A' ? xB : xA,
+    x: dmgX(e.side === 'A' ? xB : xA),
     delay: hitMs,
     tier: tier || 1
   }), e.ev === 'tech' && fx.fin && !reduce && React.createElement("i", {
