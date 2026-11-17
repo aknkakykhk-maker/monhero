@@ -35,6 +35,19 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 新曲「僕たちのページは晴れ模様」(2026-11-17 あっくん試験的依頼。難易度は「難しめ」・作者は きき・ビートP500。Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-17 23:58", type:'update', group:'rhythm', title:'新曲「僕たちのページは晴れ模様」を追加しました', status:'new',
+    image:'images/song-art/seasons-of-a-little-plaza.jpg?v=6224eca151bb',
+    items:[
+      'モンヒロビートに「僕たちのページは晴れ模様」（2分29秒）を追加しました。作曲は きき です。BPM 170 の、明るくて速い曲です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.29 ／ HELL Lv.44 です。',
+      'ノーツ数は 256 ／ 298 ／ 416 ／ 496 ／ 559 ／ 707 です。',
+      '難しめの譜面です。いちばん難しいHELLは、空中のノーツを少なめにして、ノーツの数で歯ごたえを出しています。',
+      'この曲は1曲ビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_seasons_of_a_little_plaza_v1', type:'content' },
+  },
+  {
     date: "2026-11-17 21:30", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスのランキングで、モンスターの詳細が見づらかったのを直しました',
     items:[
