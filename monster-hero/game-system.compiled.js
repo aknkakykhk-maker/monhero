@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b295c24d6196d77
+// source-sha256: 56b892743f337932
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189907,6 +189907,22 @@ const monsucRankMonOf = species => {
   return m && typeof m === 'object' ? m : null;
 };
 const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
+const monsucRankTechDetailOf = v => {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  const seen = new Set();
+  for (const e of v.slice(0, 99)) {
+    if (!e || typeof e !== 'object') continue;
+    const id = typeof e.id === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(e.id) ? e.id : null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      m: monsucRankClamp(Math.round(monsucRankNum(e.m)), 0, 100)
+    });
+  }
+  return out.length ? out : null;
+};
 const monsucRankTailOf = rawId => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
@@ -190025,6 +190041,10 @@ const monsucRankRowOf = ({
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
   const dyeOk = monsucRankDyeOf(colors) || [];
+  const tech_detail = monsucRankTechDetailOf((Array.isArray(run.techs) ? run.techs : []).map(id => ({
+    id,
+    m: run.mastery && run.mastery[id]
+  })));
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
@@ -190034,6 +190054,7 @@ const monsucRankRowOf = ({
     dye: dyeOk,
     stats,
     techs,
+    tech_detail,
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
@@ -190078,7 +190099,7 @@ const monsucRankPost = async (owner, key, row) => {
     if (timer) clearTimeout(timer);
   }
 };
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'lv', 'loyal', 'pop', 'engine_version'];
 const monsucRankCleanRow = e => {
   const r = {};
   for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k];
@@ -190240,7 +190261,8 @@ const monsucRankFlush = async () => {
     };
   }
 };
-const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail';
+const MONSUC_RANK_COLS_LEGACY = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
 const monsucRankGet = async (path, withCount) => {
   try {
     const headers = withCount ? {
@@ -190284,7 +190306,8 @@ const monsucRankReadTop = async ({
     where,
     limit
   } = monsucRankViewOf(lineage);
-  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  let top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   return {
@@ -190303,7 +190326,8 @@ const monsucRankReadMine = async ({
     view,
     where
   } = monsucRankViewOf(lineage);
-  const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  let m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  if (!m) m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
   return m && m.rows[0] ? m.rows[0] : null;
 };
 const monsucRankRead = async ({
@@ -190410,12 +190434,91 @@ function MonsucRankRow({
     className: "w-[64px] text-right text-[15px] font-black text-yellow-300"
   }, Math.round(monsucRankNum(row.power)).toLocaleString())));
 }
+const monsucRankSuc = () => {
+  try {
+    return typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  } catch (_) {
+    return null;
+  }
+};
 function MonsucRankDetail({
   row,
   pinned,
   onBack
 }) {
   const mon = monsucRankMonOf(row.species) || {};
+  const [, setSucTick] = React.useState(0);
+  React.useEffect(() => {
+    if (monsucRankSuc() || typeof msxLoad !== 'function') return undefined;
+    let alive = true;
+    msxLoad().then(() => {
+      if (alive) setSucTick(1);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const SUC = monsucRankSuc();
+  if (SUC && typeof MsxMonDetail === 'function') {
+    try {
+      const detail = monsucRankTechDetailOf(row.tech_detail);
+      const known = detail ? detail.map(d => d.id) : null;
+      const mastery = detail ? Object.fromEntries(detail.map(d => [d.id, d.m])) : null;
+      let grades = null;
+      let peak = '';
+      let type = null;
+      const peek = typeof SUC.newRun === 'function' ? SUC.newRun({
+        id: 'peek',
+        species: row.species
+      }) : null;
+      if (peek && typeof SUC.aptGradesOf === 'function') grades = SUC.aptGradesOf(peek);
+      if (peek && typeof SUC.peakInfo === 'function' && typeof SUC.periodOf === 'function') {
+        const pk = SUC.peakInfo(peek);
+        if (pk && Number.isInteger(pk.from) && Number.isInteger(pk.to)) {
+          const a = SUC.periodOf(pk.from).name;
+          const b = SUC.periodOf(pk.to).name;
+          peak = a === b ? a : `${a}〜${b}`;
+        }
+      }
+      if (typeof SUC.speciesType === 'function') type = SUC.speciesType(row.species);
+      const apt = typeof msxAptOf === 'function' ? msxAptOf(row.species) : ['C', 'C', 'C', 'C', 'C', 'C'];
+      const info = [['順位', `${Math.round(monsucRankNum(row.place))}位`], ['育てた人', pinned ? 'あなた' : row.user_name || 'ななしのブリーダー'], ['Lv', String(Math.round(monsucRankNum(row.lv)))], ...(row.loyal != null ? [['忠誠度', String(Math.round(monsucRankNum(row.loyal)))]] : []), ...(row.pop != null ? [['人気', String(Math.round(monsucRankNum(row.pop)))]] : []), ['習得技数', String(Math.round(monsucRankNum(row.tech_count, detail ? detail.length : 0)))]];
+      if (!detail) {
+        if (Array.isArray(row.techs) && row.techs.length) info.push(['技の内訳(ランク・適性)', row.techs.slice(0, 99).map(t => t && typeof t === 'object' ? `ランク${monsucRankClamp(Math.round(monsucRankNum(t.r, 1)), 1, 5)}(${MONSUC_RANK_APT.includes(t.a) ? t.a : 'C'})` : `熟練${monsucRankClamp(Math.round(monsucRankNum(t)), 0, 100)}`).join('・')]);
+        info.push(['技の名前と熟練', 'この登録には技の名前が保存されていないため、出せません(新しい登録から出ます)']);
+      }
+      const art = mon.id ? React.createElement(DyedMonsterImage, {
+        baseId: mon.id,
+        src: mon.iconUrl || mon.imgUrl,
+        alt: "",
+        masuColors: monsucRankDyeOf(row.dye),
+        draggable: false,
+        style: {
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain'
+        }
+      }) : undefined;
+      return React.createElement(MsxMonDetail, {
+        species: row.species,
+        name: row.child_name || mon.name || '？？？',
+        art: art,
+        st: row.stats || {},
+        apt: apt,
+        type: type,
+        peak: peak,
+        grades: grades,
+        known: known,
+        mastery: mastery,
+        power: Math.round(monsucRankNum(row.power)),
+        grade: row.grade || null,
+        sub: `${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`,
+        info: info,
+        onClose: onBack,
+        SUC: SUC
+      });
+    } catch (_) {}
+  }
   return React.createElement("div", {
     className: "fixed inset-0 z-[60] flex flex-col text-white",
     style: {
@@ -190475,7 +190578,13 @@ function MonsucRankDetail({
     className: "text-[12px] text-slate-200 mt-3"
   }, "習得技数: ", React.createElement("span", {
     className: "font-black text-white"
-  }, Math.round(monsucRankNum(row.tech_count)))))), React.createElement("div", {
+  }, Math.round(monsucRankNum(row.tech_count)))), row.loyal != null && React.createElement("div", {
+    className: "text-[12px] text-slate-200 mt-1"
+  }, "忠誠度: ", React.createElement("span", {
+    className: "font-black text-white"
+  }, Math.round(monsucRankNum(row.loyal))), " ・ 人気: ", React.createElement("span", {
+    className: "font-black text-white"
+  }, Math.round(monsucRankNum(row.pop)))))), React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, React.createElement("button", {
     type: "button",
