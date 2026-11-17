@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e0146a2cc1aaf3f
+// source-sha256: 9123052df07e27ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173492,7 +173492,7 @@ function MsxMonDetail({
       g: grades[d]
     }) : null,
     cell: (alts, r, d, cellK) => {
-      const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+      const t = alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id && !has(x)) || alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
       const got = has(t);
       const canAlt = !!pick && alts.length > 1;
       return React.createElement("button", {
@@ -173596,7 +173596,7 @@ function MsxMonDetail({
     const [pr, pd] = pickCell.split('-').map(Number);
     const alts = tgAt(pr, pd);
     const lock = !!pick.locked(pickCell);
-    const cur = alts.find(has) || alts.find(x => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+    const cur = alts.find(x => pick.sel && pick.sel[pickCell] === x.id) || alts.find(has) || alts[0];
     return React.createElement("div", {
       className: "msx-ov msx-fade",
       "data-msx-techpick": true,
@@ -173609,7 +173609,7 @@ function MsxMonDetail({
       onClick: e => e.stopPropagation()
     }, React.createElement("h3", null, "覚える技を選ぶ"), React.createElement("div", {
       className: "msx-note msx-kp"
-    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)), React.createElement("div", {
+    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)), React.createElement("div", {
       className: "msx-dt-body"
     }, alts.map(t => {
       const on = cur && cur.id === t.id;
@@ -173618,14 +173618,11 @@ function MsxMonDetail({
         type: "button",
         key: t.id,
         className: `msx-tpk${on ? ' on' : ''}`,
-        disabled: lock && !on,
         "data-msx-techpick-opt": t.id,
         onClick: () => {
-          if (!lock) {
-            pick.onPick(pickCell, t.id);
-            setPickT(t.id);
-            setPickCell(null);
-          }
+          pick.onPick(pickCell, t.id);
+          setPickT(t.id);
+          setPickCell(null);
         }
       }, React.createElement("span", {
         className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`,
@@ -179808,6 +179805,39 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-twrap{display:flex;gap:8px;align-items:flex-start}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:3px;flex:none}
+.msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
+.msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
+.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
+.msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
+.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
+.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:9px;font-weight:800;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:15px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:14px}
+.msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
+.msx .r3 .q-td.in-pop{margin:0 10px 8px}
+.msx .r3 .q-td.side{flex:1 1 0;min-width:0}
+.msx .r3 .q-td .q-td-nm{margin-bottom:4px}
+.msx .r3 .q-td .q-td-nm b{display:block;font-size:13.5px;font-weight:900;color:#fff;line-height:1.25}
+.msx .r3 .q-td .q-td-nm em{font-style:normal;font-size:10.5px;font-weight:800;color:#fde047}
+.msx .r3 .q-td .q-td-rows{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.msx .r3 .q-td .q-td-rows .kv{display:inline-flex;gap:4px;font-size:10px;color:#e2e8f0;font-weight:700}
+.msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
+.msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
+.msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-say{margin-top:3px}
+.msx .r3 .q-say img{width:34px;height:34px}
+.msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
+.msx .r3 .q-sec{margin-top:5px;padding:5px 8px 6px}
+.msx .r3 .q-sec h3{margin-bottom:3px}
+.msx .r3 .q-sec .v-stg{margin-top:4px}
+.msx .r3 .q-sec .v-stg div{padding:2px 3px;font-size:10px}
+.msx .r3 .q-sec .v-stg div small{font-size:9px}
+.msx .r3 .q-slot{min-height:36px}
+.msx .r3 .q-td .q-td-rows .kv b{color:#94a3b8;font-weight:800}
+.msx .r3 .q-td .q-td-rows .kv .gd{color:#fde68a;font-weight:900}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
@@ -183313,6 +183343,7 @@ function MsxR3Shugyo({
   const [fxDone, setFxDone] = useState(false);
   const [stOn, setStOn] = useState(false);
   const [lockT, setLockT] = useState(null);
+  const [focusT, setFocusT] = useState(null);
   useSuccessScene(res ? 'ascetic' : null, {
     season: msxCalendar(s0.turn).season
   });
@@ -183577,6 +183608,48 @@ function MsxR3Shugyo({
     }));
     return out;
   };
+  const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  const tdRows = t => React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "技種"), React.createElement("span", {
+    className: "vv"
+  }, t.kind === 'wise' ? 'かしこさ' : 'ちから')), React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "消費ガッツ"), React.createElement("span", {
+    className: "vv"
+  }, t.guts)), React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "ダメージ"), React.createElement("span", {
+    className: "gd"
+  }, grade('power', t.power))), React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "命中率"), React.createElement("span", {
+    className: "gd"
+  }, grade('hit', t.hit))), React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "ガッツダウン"), React.createElement("span", {
+    className: "gd"
+  }, grade('gd', t.gd))), React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "クリティカル率"), React.createElement("span", {
+    className: "gd"
+  }, grade('crit', t.crit))), typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? React.createElement("span", {
+    className: "kv"
+  }, React.createElement("b", null, "使ったあと"), React.createElement("span", {
+    className: "vv"
+  }, msxTechMoveTxt(t))) : null, (s0.techs || []).includes(t.id) && typeof msxMasteryOf === 'function' ? (() => {
+    const m = msxMasteryOf(s0.mastery, t.id);
+    const b = typeof msxMasteryBoost === 'function' ? msxMasteryBoost(SUC, t.id, m) : null;
+    return React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "kv"
+    }, React.createElement("b", null, "熟練"), React.createElement("span", {
+      className: "vv"
+    }, m, "/100")), React.createElement("span", {
+      className: "kv"
+    }, React.createElement("b", null, "熟練の効き目"), React.createElement("span", {
+      className: "vv"
+    }, b ? `威力+${b.pow}%・命中+${b.hit}%` : 'まだ無し')));
+  })() : null);
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」' : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = id => {
     if (!id) return React.createElement("div", {
@@ -183667,14 +183740,16 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の技のカードをタップ")), all.length ? React.createElement(MsxTechGrid, {
+  }, "タップで選ぶ・詳しさは右の欄")), all.length ? React.createElement("div", {
+    className: "q-twrap"
+  }, React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
     head: aptHead,
     cell: (alts, r, d, cellK) => {
       const gotOf = x => (s0.techs || []).includes(x.id);
       const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
-      const t = alts.find(gotOf) || alts.find(x => x.id === pk) || alts[0];
+      const t = alts.find(x => x.id === pk && !gotOf(x)) || alts.find(gotOf) || alts.find(x => x.id === pk) || alts[0];
       const got = gotOf(t);
       const ok = rateOf[t.id] != null;
       const sel = want.includes(t.id);
@@ -183688,7 +183763,10 @@ function MsxR3Shugyo({
         "data-msx-r3-tech": t.id,
         "data-msx-cell": cellK,
         "aria-label": `${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`,
-        onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null
+        onClick: () => {
+          setFocusT(t);
+          if (ok && !got) toggle(t.id);else if (!got) setLockT(t);
+        }
       }, React.createElement("span", {
         className: "ti",
         "aria-hidden": "true"
@@ -183720,9 +183798,26 @@ function MsxR3Shugyo({
         "aria-hidden": "true",
         "data-msx-alt": cellK,
         "data-msx-alt-n": alts.length
-      }, "⇄", alts.length) : null);
+      }, "⇄", alts.length) : null, React.createElement("span", {
+        className: "tg-nm",
+        "aria-hidden": "true"
+      }, t.name));
     }
-  }) : React.createElement("div", {
+  }), (() => {
+    const ft = focusT || all.find(x => x.id === want[0]) || all[0];
+    if (!ft) return null;
+    const fGot = (s0.techs || []).includes(ft.id);
+    const fSel = want.includes(ft.id);
+    const fOk = rateOf[ft.id] != null;
+    return React.createElement("div", {
+      className: "q-td side msx-kp",
+      "data-msx-r3-qtd": ft.id
+    }, React.createElement("div", {
+      className: "q-td-nm"
+    }, React.createElement("b", null, ft.name), React.createElement("em", null, fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり')), React.createElement("div", {
+      className: "q-td-rows"
+    }, tdRows(ft)));
+  })()) : React.createElement("div", {
     className: "q-note msx-kp"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "q-note msx-kp"
@@ -183736,6 +183831,10 @@ function MsxR3Shugyo({
   }, React.createElement("div", {
     className: "h"
   }, "🔒 ", lockT.name), React.createElement("div", {
+    className: "q-td in-pop"
+  }, React.createElement("div", {
+    className: "q-td-rows"
+  }, tdRows(lockT))), React.createElement("div", {
     className: "q-lock"
   }, full ? React.createElement("p", null, "覚えられる技は ", tkMax, "つまで。いまは いっぱいです") : null, condsOf(lockT).map((c, i) => React.createElement("div", {
     key: c.k,
