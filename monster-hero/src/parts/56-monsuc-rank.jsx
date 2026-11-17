@@ -1,6 +1,7 @@
 // ===== モンヒロサクセス 育成完了時の総合力ランキング(2026-11-12 クラフト・設計 docs/progress/player-raise/RANKING.md) =====
 // 送る口・読む口・画面(R1 全モンスター / R2 血統別・行を押すと6能力)をここに閉じる。
 //   サーバ: supabase/migrations/202611120003_monsuc_rank.sql(表 monsuc_finishes・見え方 monsuc_rank_all / monsuc_rank_lineage・関数 monsuc_rank_submit)
+//     技の表示用詳細(技ID・熟練)は 202611170001_monsuc_rank_v5_tech_detail.sql(列 tech_detail・表示専用で総合力には使わない)。未適用でも壊れない作り(下の tech_detail の注記)
 //   ★総合力と評価はサーバが出し直す。端末の値は表示の目安だけ
 //   ★持ち主の鍵は助手マスモン対戦の鍵(mh_masmon_pvp_owner_key_v1)をそのまま使う(56-assistant-masmon-pvp.jsx の masmonPvpSelf)
 //   保存(新しいキーだけ・CLAUDE.md ⑦):
@@ -56,6 +57,21 @@ const monsucRankMonOf = (species) => {
 };
 // 染めた色は「部位ごとの色の id の配列」(DyedMonsterImage の masuColors の形)だけ通す。ほかの人の行はだれでも入れられるので、読む側でも必ず整える
 const monsucRankDyeOf = (dye) => (Array.isArray(dye) ? dye.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : null);
+// 技の表示用詳細([{ id: 技ID, m: 熟練 0〜100 }])を整える。送る側・読む側の両方で使う(ほかの人の行はだれでも入れられるので、読む側でも必ず整える)
+//   ★表示専用。総合力の出し直しは今までどおり techs({ r, a })だけで、こちらは一切使わない(改ざん対策の設計を壊さない)
+//   ★サーバ未適用(v5 の SQL を流す前)でも壊れない: 送る分はサーバが知らない項目として捨てられるだけ、読む分は付いていなければ null(詳細は段1表示に倒す)
+const monsucRankTechDetailOf = (v) => {
+  if (!Array.isArray(v)) return null;
+  const out = []; const seen = new Set();
+  for (const e of v.slice(0, 99)) {
+    if (!e || typeof e !== 'object') continue;
+    const id = typeof e.id === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(e.id) ? e.id : null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, m: monsucRankClamp(Math.round(monsucRankNum(e.m)), 0, 100) });
+  }
+  return out.length ? out : null;
+};
 // 育成の id(英数字だけ・6〜32字)。計算の芯の s.id をもとに作り、持ち主の番号を前に付ける
 const monsucRankTailOf = (rawId) => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
@@ -150,11 +166,13 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
   const dyeOk = monsucRankDyeOf(colors) || [];
+  // 表示専用の技の詳細(覚えた技の ID と熟練)。techs({ r, a })とは分けて送る(サーバの総合力の出し直しには使わない・v5 の SQL が要る)
+  const tech_detail = monsucRankTechDetailOf((Array.isArray(run.techs) ? run.techs : []).map(id => ({ id, m: run.mastery && run.mastery[id] })));
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
     child_name: String(name || '').slice(0, 24),
-    species, lineage: monsucRankLineageOf(species), dye: dyeOk, stats, techs,
+    species, lineage: monsucRankLineageOf(species), dye: dyeOk, stats, techs, tech_detail,
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
@@ -180,7 +198,7 @@ const monsucRankPost = async (owner, key, row) => {
   } finally { if (timer) clearTimeout(timer); }
 };
 // サーバへ送る中身は決まった項目だけ(登録待ちに付いた印などは送らない)
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'lv', 'loyal', 'pop', 'engine_version'];
 const monsucRankCleanRow = (e) => { const r = {}; for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k]; return r; };
 // 登録待ちの1件を送る。run_id がまだ無ければ、いまの持ち主で作る(送る瞬間に作るのが決めごと)
 //   送れたら: 送れた印を付けて登録待ちから外す。形・上限・鍵で断られたものは送り直しても通らないので外す。電波・混雑は残す
@@ -251,7 +269,10 @@ const monsucRankFlush = async () => {
 };
 
 // ---- 読む(読むだけ)。失敗は null ----
-const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+// 完全版の列(忠誠・人気・技の並び・技の表示用詳細)は v5 の SQL の見え方にだけある。未適用の間はこの読み方が失敗するので、
+//   そのときは今までの列だけで読み直す(サーバ未適用でもランキング自体は壊れない・詳細は段1表示に倒れる)
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail';
+const MONSUC_RANK_COLS_LEGACY = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
 const monsucRankGet = async (path, withCount) => {
   try {
     const headers = withCount ? { ...SB_HEADERS, Prefer: 'count=exact' } : SB_HEADERS;
@@ -272,7 +293,8 @@ const monsucRankViewOf = (lineage) => {
 // 上位の一覧 { rows, total, sent }(失敗は null)
 const monsucRankReadTop = async ({ lineage = null } = {}) => {
   const { view, where, limit } = monsucRankViewOf(lineage);
-  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  let top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&order=place.asc,run_id.asc&limit=${limit}`, true); // v5 未適用なら今までの列で読み直す
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   return { rows: top.rows, total: top.total, sent };
@@ -282,7 +304,8 @@ const monsucRankReadMine = async ({ lineage = null, sent = [] } = {}) => {
   const ids = (Array.isArray(sent) ? sent : []).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   if (ids.length === 0) return null;
   const { view, where } = monsucRankViewOf(lineage);
-  const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  let m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  if (!m) m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false); // v5 未適用なら今までの列で読み直す
   return m && m.rows[0] ? m.rows[0] : null;
 };
 // { rows, total, mine, sent }(従来のまとめ読み)
@@ -331,10 +354,55 @@ function MonsucRankRow({ row, onOpen, mine, pinned }) {
     </div>
   </button>;
 }
-// ---- モンスター詳細(2026-11-16 UI改修・旧②ランキング詳細): 一覧の行から開く。登録済みの育成完了データだけから出す ----
+// ---- モンスター詳細(2026-11-17 作業H: 自分側と同じ詳細 MsxMonDetail ベースに作り替え): 一覧の行から開く。登録済みの育成完了データだけから出す ----
+//   技ID・熟練が保存されている登録(v5 以後の登録分)は技グリッドまで完全表示。それ以外は段1表示(基礎/特徴/適性は種族の素の性質+保存済みの数値、
+//   技は習得技数と { ランク, 適性 } の内訳まで。技の名前・熟練は保存が無いので出せない旨を育成情報に出す)
+//   芯(SUC)や MsxMonDetail が引けないときは、今までの簡易表示に倒す(落とさない)
 // ヘッダーと戻る位置は一覧とそろえ、「一覧へ」で元のタブ・スクロール位置に戻る(呼ぶ側が状態を保つ)
+const monsucRankSuc = () => { try { return typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC : null; } catch (_) { return null; } };
 function MonsucRankDetail({ row, pinned, onBack }) {
   const mon = monsucRankMonOf(row.species) || {};
+  const [, setSucTick] = React.useState(0);
+  React.useEffect(() => {
+    if (monsucRankSuc() || typeof msxLoad !== 'function') return undefined;
+    let alive = true;
+    msxLoad().then(() => { if (alive) setSucTick(1); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const SUC = monsucRankSuc();
+  if (SUC && typeof MsxMonDetail === 'function') {
+    try {
+      const detail = monsucRankTechDetailOf(row.tech_detail);
+      const known = detail ? detail.map(d => d.id) : null;
+      const mastery = detail ? Object.fromEntries(detail.map(d => [d.id, d.m])) : null;
+      // 適性・伸びどき・成長の型は保存が無いので、種族の素の性質を仮の育成から聞く(保存しない・総合力は行の値を使う)
+      let grades = null; let peak = ''; let type = null;
+      const peek = typeof SUC.newRun === 'function' ? SUC.newRun({ id: 'peek', species: row.species }) : null;
+      if (peek && typeof SUC.aptGradesOf === 'function') grades = SUC.aptGradesOf(peek);
+      if (peek && typeof SUC.peakInfo === 'function' && typeof SUC.periodOf === 'function') {
+        const pk = SUC.peakInfo(peek);
+        if (pk && Number.isInteger(pk.from) && Number.isInteger(pk.to)) { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; peak = a === b ? a : `${a}〜${b}`; }
+      }
+      if (typeof SUC.speciesType === 'function') type = SUC.speciesType(row.species);
+      const apt = typeof msxAptOf === 'function' ? msxAptOf(row.species) : ['C', 'C', 'C', 'C', 'C', 'C'];
+      const info = [
+        ['順位', `${Math.round(monsucRankNum(row.place))}位`],
+        ['育てた人', pinned ? 'あなた' : (row.user_name || 'ななしのブリーダー')],
+        ['Lv', String(Math.round(monsucRankNum(row.lv)))],
+        ...(row.loyal != null ? [['忠誠度', String(Math.round(monsucRankNum(row.loyal)))]] : []),
+        ...(row.pop != null ? [['人気', String(Math.round(monsucRankNum(row.pop)))]] : []),
+        ['習得技数', String(Math.round(monsucRankNum(row.tech_count, detail ? detail.length : 0)))],
+      ];
+      if (!detail) {
+        if (Array.isArray(row.techs) && row.techs.length) info.push(['技の内訳(ランク・適性)', row.techs.slice(0, 99).map(t => (t && typeof t === 'object' ? `ランク${monsucRankClamp(Math.round(monsucRankNum(t.r, 1)), 1, 5)}(${MONSUC_RANK_APT.includes(t.a) ? t.a : 'C'})` : `熟練${monsucRankClamp(Math.round(monsucRankNum(t)), 0, 100)}`)).join('・')]);
+        info.push(['技の名前と熟練', 'この登録には技の名前が保存されていないため、出せません(新しい登録から出ます)']);
+      }
+      const art = mon.id ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt="" masuColors={monsucRankDyeOf(row.dye)} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : undefined;
+      return <MsxMonDetail species={row.species} name={row.child_name || mon.name || '？？？'} art={art} st={row.stats || {}} apt={apt} type={type} peak={peak} grades={grades}
+        known={known} mastery={mastery} power={Math.round(monsucRankNum(row.power))} grade={row.grade || null}
+        sub={`${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`} info={info} onClose={onBack} SUC={SUC} />;
+    } catch (_) { /* 作れなければ簡易表示に倒す */ }
+  }
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 一覧へ</button>
@@ -365,6 +433,7 @@ function MonsucRankDetail({ row, pinned, onBack }) {
         <div className="text-[12px] font-bold text-slate-300 mt-3">6能力</div>
         <MonsucRankStats stats={row.stats} />
         <div className="text-[12px] text-slate-200 mt-3">習得技数: <span className="font-black text-white">{Math.round(monsucRankNum(row.tech_count))}</span></div>
+        {row.loyal != null && <div className="text-[12px] text-slate-200 mt-1">忠誠度: <span className="font-black text-white">{Math.round(monsucRankNum(row.loyal))}</span> ・ 人気: <span className="font-black text-white">{Math.round(monsucRankNum(row.pop))}</span></div>}
       </div>
     </div>
     <div className="px-3 pb-3 pt-1">

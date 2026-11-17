@@ -149,6 +149,8 @@ const MSX_CSS = `
 .msx .v-ga .tr{margin-right:26px}
 .msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
+/* 選ぶ画面(育成開始)では場面を細くし、一覧に高さを譲る(選ぶ画面の統一。横向きの組み立てでは上の .land の指定が勝つ) */
+.msx .v-scene.sm{flex:none;height:112px}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
 .msx .v-scene.dk .sh{background:#0f0d2499}
@@ -346,11 +348,16 @@ const MSX_CSS = `
 .msx .v-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;position:relative;min-width:0}
 .msx .v-card.sel{border-color:#fde047;box-shadow:0 0 12px #fde04766}
 .msx .v-card.pk{border-color:#f472b6aa}
+.msx .v-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
-.msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
-.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 span{position:relative;display:block;min-width:0}
+.msx .v-grid6 button{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:0;background:none;border:0;color:inherit;font:inherit;text-align:center;cursor:pointer}
+/* 升の正方形はスペーサー(padding-top:100%)で決める。aspect-ratio 任せだと、対応の弱い端末では升の高さが付かずに行が重なる(2026-11-16 実機スクショの対策をこの方式へ差し替え) */
+.msx .v-grid6 .v-g6f{width:100%}
+.msx .v-grid6 .v-g6f::before{content:'';display:block;padding-top:100%}
 .msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .v-grid6 .v-g6n{font-size:9.5px;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.msx .v-grid6 button.on .v-g6n{color:#fde047}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -1028,8 +1035,11 @@ const MSX_CSS = `
 .msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
-.msx .msx-tp-tm .fc{flex:none;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
-.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{font-style:normal;font-weight:900;color:#64748b}
+.msx .msx-tp-tm .fc{flex:none;display:block;width:100%;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-tm .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-tm .fc>img,.msx .msx-tp-tm .fc>div{position:absolute!important;inset:0;width:100%;height:100%}
+.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#64748b}
 .msx .msx-tp-tm.on .fc{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
@@ -1052,7 +1062,9 @@ const MSX_CSS = `
 .msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
 .msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
 .msx .msx-md-sup{margin-top:8px}
-.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+/* 選ぶ画面の組み立て(統一): 操作行は自然な高さにする。横に伸ばすのは横並びの帯(.msx-tp-bar)の中だけ(縦並びの画面で操作行が縦に伸びて一覧を潰していた) */
+.msx .msx-tp-bar>.msx-pt{flex:1 1 220px}
 .msx .msx-pt-q{flex:1 1 120px;min-width:0;min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:16px;padding:4px 8px}
 .msx .msx-pt-s select{min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:12px;font-weight:900;padding:0 4px}
 .msx .msx-pt-r{flex:none;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:11px;font-weight:900;padding:4px 10px}
@@ -1074,7 +1086,10 @@ const MSX_CSS = `
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
 .msx .msx-tp-c.lk{opacity:.5}
-.msx .msx-tp-c .fc{display:block;flex:none;width:100%;height:auto;aspect-ratio:1;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+.msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-c .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-c .fc>img,.msx .msx-tp-c .fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .msx .msx-tp-c .fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
 .msx .msx-tp-c .fc .mm-art{display:block;width:100%;height:100%}
 .msx .msx-tp-c .rk,.msx .msx-fp-r .rk{position:absolute;right:3px;top:3px;font-style:normal}
