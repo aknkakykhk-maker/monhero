@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-17 21:30", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスのランキングで、モンスターの詳細が見づらかったのを直しました',
+    items:[
+      '総合力ランキングでモンスターを押して開く詳細が、タブや能力の文字が暗くて読めず、技の表示も重なって見づらくなっていました。マスモンやベースモンの詳細と同じ見た目にそろえて、読みやすく直しました。',
+    ],
+  },
+  {
     date: "2026-11-17 19:35", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの画面を見やすく整えました',
     items:[
