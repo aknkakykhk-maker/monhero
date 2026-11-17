@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 46cdb0ae9e20cef5
+// generated-sha256: ebb65004018c6bba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92322,6 +92322,44 @@ const MSX_R3_CSS = `
 .msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
 .msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
 .msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-nw{white-space:nowrap}
+.msx .r3 .q-pv{margin-top:5px;padding:5px 7px 6px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
+.msx .r3 .q-pv-h{font-size:10px;font-weight:900;color:#fed7aa;margin-bottom:3px}
+.msx .r3 .q-tgl{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:inherit}
+.msx .r3 .q-tgl-t{margin-left:auto;font-size:9px;font-weight:800;color:#fbbf24;white-space:nowrap}
+.msx .r3 .q-pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
+.msx .r3 .q-pv-c{font-size:10.5px;font-weight:800;color:#e2e8f0;line-height:1.35;min-width:0}
+.msx .r3 .q-pv-r1{display:flex;align-items:center;gap:4px}
+.msx .r3 .q-pv-r2{display:flex;align-items:center;gap:1px 4px;flex-wrap:wrap;margin-top:1px}
+.msx .r3 .q-pv-k{white-space:nowrap}
+.msx .r3 .q-pv-p{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:700;color:#cbd5e1;white-space:nowrap}
+.msx .r3 .q-pv-p img{width:14px;height:14px;border-radius:50%;background:#fff;object-fit:contain}
+.msx .r3 .q-pv-p b{font-size:10px;font-weight:900;color:#fff}
+.msx .r3 .q-pv-p.course{color:#fbbf24}.msx .r3 .q-pv-p.course b{color:#fbbf24}
+.msx .r3 .q-pv-p small{font-size:8.5px;color:#94a3b8;font-weight:800}
+.msx .r3 .q-pv-t{margin-left:auto;font-size:12.5px;font-weight:900;color:#fde047;white-space:nowrap}
+.msx .r3 .q-pv-mul{margin-top:4px;font-size:9.5px;font-weight:700;color:#cbd5e1;line-height:1.4}
+.msx .r3 .q-pv-mul b{color:#fde047}
+.msx .r3 .q-bd{flex:none;margin:4px 0;padding:6px 8px 7px;border-radius:12px;background:rgba(15,23,42,.72);border:1px solid #ffffff2b;display:grid;gap:4px}
+.msx .r3 .q-bd-h{font-size:11px;font-weight:900;color:#fed7aa}
+.msx .r3 .q-bd-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;grid-template-areas:"k bar v" "p p p";align-items:center;column-gap:6px;row-gap:3px;background:#0f172ad9;border:1px solid #475569;border-radius:12px;padding:5px 8px}
+.msx .r3 .q-bd-k{grid-area:k;font-size:12px;font-weight:900;color:#fff;white-space:nowrap}
+.msx .r3 .q-bd-bar{grid-area:bar;position:relative;height:12px;border-radius:99px;background:#1e293b;border:1px solid #64748b;overflow:hidden;display:flex}
+.msx .r3 .q-bd-bar i{display:block;height:100%;box-shadow:inset -1px 0 0 #0006}
+.msx .r3 .q-bd-v{grid-area:v;text-align:right;white-space:nowrap;font-weight:900;color:#fff;font-size:12px}
+.msx .r3 .q-bd-v small{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-bd-v b{font-size:15px;color:#fde047}
+.msx .r3 .q-bd-v em{font-style:normal;font-size:11px;color:#86efac;margin-left:4px}
+.msx .r3 .q-bd-parts{grid-area:p;display:flex;flex-wrap:wrap;gap:4px}
+.msx .r3 .q-bd-p{display:inline-flex;align-items:center;gap:3px;padding:1px 6px 1px 2px;border-radius:99px;background:#1e293b;border:1.5px solid #475569;font-size:10px;font-weight:800;color:#cbd5e1;white-space:nowrap}
+.msx .r3 .q-bd-p img{width:20px;height:20px;border-radius:50%;background:#fff;object-fit:contain}
+.msx .r3 .q-bd-p em{font-style:normal;font-size:14px;width:20px;text-align:center}
+.msx .r3 .q-bd-p b{font-size:12px;font-weight:900;color:#fff}
+.msx .r3 .q-bd-p.course{border-color:#f59e0b}.msx .r3 .q-bd-p.course b{color:#fbbf24}
+.msx .r3 .q-bd-p small{font-size:9px;color:#94a3b8;font-weight:800}
+.msx .r3 .q-bd-p.none{border-style:dashed;color:#94a3b8}
+.msx .r3 .q-bd-mul{font-size:10px;font-weight:700;color:#cbd5e1;line-height:1.45}
+.msx .r3 .q-bd-mul b{color:#fde047}
 .msx .r3 .q-say{margin-top:3px}
 .msx .r3 .q-say img{width:34px;height:34px}
 .msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
@@ -93752,6 +93790,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_R3_COURSE_BG = Object.freeze({ fire: 'forest_evening', ice: 'forest_morning', wind: 'forest_deep', star: 'monhero_night' });
 const MSX_STAT_KEYS_R3 = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
+const MSX_R3_QCOL = Object.freeze(['#38bdf8', '#a78bfa', '#f472b6', '#34d399', '#fb7185', '#facc15']); // 内訳の編成の子の色(段演出 MsxQfxRows と同じ並び)
 function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const { SUC } = msxSuc;
   const s0 = run.s;
@@ -93765,6 +93804,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [stOn, setStOn] = useState(false);
   const [lockT, setLockT] = useState(null); // 🔒の札の条件をくわしく(選ぶ画面)
   const [focusT, setFocusT] = useState(null); // 詳しさ欄に出す技(最後に押したカード。2026-11-17 あっくん「技詳細もほしい」)
+  const [pvOpen, setPvOpen] = useState(false); // 上がる見込みの内訳チップの開閉(既定は閉=合計だけ。2026-11-17 あっくん「内訳って閉じられるの?ないときのほうが見やすかった」)
+  const [bdOpen, setBdOpen] = useState(false); // 結果の内訳パネルの開閉(既定は閉。開けば残るので後からでも見られる)
   // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
   useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
@@ -93783,12 +93824,32 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const hpOf = (sup) => (typeof SUC.shugyoHpOf === 'function' ? SUC.shugyoHpOf(s0, sup) : (SH.hp || 30) * (sup ? 2 : 1));
   const shortOf = (sup) => Math.max(0, hpOf(sup) - Math.round(Number(s0.hp) || 0));
   const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : shortOf(true) ? `超修行は体力が${hpOf(true)}いる。体力があと${shortOf(true)}足りない` : '';
+  // 修行の内訳の表示(予告・結果で共用): 小数は1桁まで・整数はそのまま。顔は段演出(MsxQfxRows)と同じ出し方
+  const shFmt = (n) => { const x = Math.round(Number(n) * 10) / 10; return Number.isInteger(x) ? String(x) : x.toFixed(1); };
+  const shThumb = (m) => (m ? (Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>) : null);
+  const HACHI_PCT = Math.round((((SUC.GOOD || {}).shugyoGood || {}).shugyo || 0.2) * 100);
+  // 倍率の1行: 出典(ハチマキ・修行効果アップ等) → 合算倍率を併記する。予告と結果で同じ形(値は途中で折れないよう塊ごとに nowrap)
+  const mulLine = (mi, sup) => {
+    if (!mi) return null;
+    const src = [];
+    if (mi.hachi) src.push(`修行のハチマキ +${HACHI_PCT}%`);
+    if (mi.assist) src.push(`修行効果アップ +${shFmt(mi.assist)}%`);
+    if (mi.waza) src.push(`技習得効果アップ +${shFmt(mi.waza)}%`);
+    if (mi.kiai) src.push('修行の気合い ×1.2');
+    const tail = [];
+    if (mi.toku) tail.push(`特別効果アップ +${shFmt(mi.toku)} を足してから`);
+    if (sup) tail.push('超修行で2回分');
+    if (!src.length && !tail.length) return <span>倍率は かかっていません</span>;
+    return (<span>倍率 {src.map((t, i) => <React.Fragment key={i}>{i ? '・' : ''}<span className="q-nw">{t}</span></React.Fragment>)}
+      {src.length ? <> → <span className="q-nw">合わせて <b>×{(Math.round(mi.mul * 100) / 100).toFixed(2)}</b></span></> : <span className="q-nw">×1.00</span>}
+      {tail.length ? <>（{tail.map((t, i) => <React.Fragment key={i}>{i ? '・' : ''}<span className="q-nw">{t}</span></React.Fragment>)}）</> : null}</span>);
+  };
   const toggle = (id) => setWant((w) => (w.includes(id) ? w.filter((x) => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]));
   const go = () => {
     const r = SUC.act(s0, { kind: 'shugyo', course, techs: want });
     if (!r.out.ok) return;
     const names = (r.out.learnedAll || (r.out.learned ? [r.out.learned] : [])).map((id) => (all.find((t) => t.id === id) || {}).name).filter(Boolean);
-    const next = { ...run, s: r.state, phase: 'react', out: { ...r.out, parts: undefined, kind: 'shugyo' }, log: [...(run.log || []), { turn: s0.turn, t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map((n) => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}` }].slice(-20) };
+    const next = { ...run, s: r.state, phase: 'react', out: { ...r.out, parts: undefined, partsRaw: undefined, mulInfo: undefined, kind: 'shugyo' }, log: [...(run.log || []), { turn: s0.turn, t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map((n) => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}` }].slice(-20) };
     setRun(next);
     setStOn(typeof MsxShugyoStages === 'function');
     setRes({ out: r.out, before: s0.stats, hp0: s0.hp, s: r.state });
@@ -93830,6 +93891,22 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           <span className="nm"><b>{x.t.name}</b><small>覚える率 {Math.round((x.rate || 0) * 100)}%</small></span>
           <span className="rs">{x.hit ? <b>覚えた!</b> : <><b>覚えられなかった</b><small>次は +{SH.miss || 15}%</small></>}</span>
         </div>))}</div> : null}
+      {(o.partsRaw || o.mulInfo) ? (() => { const rawP = o.partsRaw || {}; const fitP = o.parts || {}; const bdRows = MSX_STAT_KEYS_R3.map((k) => { const rp = rawP[k] || { base: 0, team: [] }; const raw = rp.base + (rp.team || []).reduce((a, x) => a + x.v, 0); const g = gains[k] || 0; if (!(raw > 0) && !g) return null; return { k, rp, g }; }).filter(Boolean); const maxG = Math.max(1, ...bdRows.map((x) => x.g)); return (
+      <div className="q-bd" data-msx-r3-qbd>
+        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>修行の内訳（行き先の分・編成の分・倍率）<span className="q-tgl-t">{bdOpen ? 'とじる ▴' : 'ひらく ▾'}</span></button>
+        {bdOpen ? <>{bdRows.map(({ k, rp, g }) => { const before = Math.round(Number((res.before || {})[k]) || 0); const after = Math.round(Number((s.stats || {})[k]) || 0); const segs = fitP[k] || []; return (
+        <div className="q-bd-row" key={k}>
+          <span className="q-bd-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
+          <span className="q-bd-bar">{segs.map((x, n) => <i key={n} style={{ width: `${(x.v / maxG) * 100}%`, background: x.src === 'course' ? '#f59e0b' : MSX_R3_QCOL[x.i % MSX_R3_QCOL.length] }}/>)}</span>
+          <span className="q-bd-v"><small>{msxFmt(before)}→</small><b>{msxFmt(after)}</b><em>+{g}</em></span>
+          <span className="q-bd-parts">
+            {rp.base > 0 ? <span className="q-bd-p course"><em>⛰️</em><b>+{shFmt(rp.base)}</b><small>行き先</small></span> : null}
+            {(rp.team || []).map((x, n) => <span key={n} className="q-bd-p team">{shThumb((s.team || [])[x.i])}<b>+{shFmt(x.v)}</b><small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small></span>)}
+            {g <= 0 ? <span className="q-bd-p none">もう上がりきっている</span> : null}
+          </span>
+        </div>); })}
+        <div className="q-bd-mul msx-kp">{mulLine(o.mulInfo, o.super)}</div></> : null}
+      </div>); })() : null}
       <MsxStRow who={s} stats={s.stats} ups={gains}/>
       <div className="v-log"><span className="hd2">⚔ 修行のけっか</span><br/>
         {Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">+{g}</b></span>) : '能力は上がらなかった'}
@@ -93887,12 +93964,27 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {bc.length ? <ul data-msx-r3-qconds>{bc.slice(0, 4).map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>上乗せ</i><span>{(BC[c.type] || (() => ''))(c)}</span><em className={c.ok ? '' : 'no'}>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
     </div>);
   };
+  // 上がる見込み(予告): 芯の生内訳 shugyoPartsOf + 倍率 shugyoMulOf で、行き先を替えるたびに出し直す。最終見込みは act と同じ組み立て (①+② × mulB + toku) × mulA × (超修行なら 2)
+  const pvParts = typeof SUC.shugyoPartsOf === 'function' ? SUC.shugyoPartsOf(s0, course) : null;
+  const pvMul = typeof SUC.shugyoMulOf === 'function' ? SUC.shugyoMulOf(s0) : null;
+  const pvRows = pvParts ? MSX_STAT_KEYS_R3.map((k) => { const p = pvParts[k] || { base: 0, team: [] }; const raw = p.base + (p.team || []).reduce((a, x) => a + x.v, 0); if (!(raw > 0)) return null; const exp = Math.round((raw * (pvMul ? pvMul.mulB : 1) + (pvMul ? pvMul.toku : 0)) * (pvMul ? pvMul.mulA : 1) * (isSuper ? 2 : 1)); return { k, p, exp }; }).filter(Boolean) : [];
   const body = (<>
     <MsxBand s={s0} v={v} ev={ev} use={hpOf(isSuper)}/>
     <div className="q-say"><img src={typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy')} alt=""/><p className="msx-kp" data-msx-r3-qsay>{say}</p></div>
     <div className="q-sec"><h3><i>1</i>行き先<span className="tk">🎫 チケット {tickets}枚</span></h3>
       <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
       <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技を覚える</div></div>
+      {pvRows.length ? <div className="q-pv" data-msx-r3-qpv>
+        <button type="button" className="q-pv-h q-tgl" onClick={() => setPvOpen(!pvOpen)} aria-expanded={pvOpen}>📈 上がる見込み{isSuper ? '（🔥超修行・2回分）' : ''}<span className="q-tgl-t">{pvOpen ? '内訳をとじる ▴' : '内訳をひらく ▾'}</span></button>
+        <div className="q-pv-grid">{pvRows.map(({ k, p, exp }) => (<div className="q-pv-c" key={k}>
+          <div className="q-pv-r1"><span className="q-pv-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><b className="q-pv-t">+{exp}</b></div>
+          {pvOpen ? <div className="q-pv-r2">
+            {p.base > 0 ? <span className="q-pv-p course">⛰️<b>+{shFmt(p.base)}</b></span> : null}
+            {(p.team || []).map((x, n) => <span key={n} className="q-pv-p team">{shThumb((s0.team || [])[x.i])}<b>+{shFmt(x.v)}</b><small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small></span>)}
+          </div> : null}
+        </div>))}</div>
+        {pvMul ? <div className="q-pv-mul msx-kp">{mulLine(pvMul, isSuper)}</div> : null}
+      </div> : null}
       {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="q-note msx-kp" data-msx-r3-qapt>📏 「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
     </div>
     <div className="q-sec"><h3><i>2</i>覚えたい技<span className="tk">2つで🔥超修行・残り{superLeft}回</span></h3>
