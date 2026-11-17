@@ -435,6 +435,17 @@ function MsxRivalOwnerIcon({ rival, size = 22 }) {
   if (typeof ProfileAvatar === 'function') return <ProfileAvatar src={msxBreederIconSrc(rival.icon)} id={rival.icon || null} frameId={rival.profileFrame || null} fit small className="shrink-0" style={{ width: size, height: size }} fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>} />;
   return null;
 }
+// ライバルのモンスターの小さい丸い絵(大会カード・優勝カード・組み合わせ表など)。染めた色(rival.colors)があれば染めた絵で出す(2026-11-18 染色の反映漏れの修正)。
+//   色が無ければ今までどおりの顔アイコン(imgStyle は、その場所で元の img に付いていた style)。
+//   DyedMonsterImage は包む要素を返すので、丸の大きさはこちらで持つ
+function MsxRivalThumb({ rival, size = 20, imgStyle }) {
+  const sp = rival && rival.species;
+  const colors = rival && rival.colors;
+  if (sp && Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return <span style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none', display: 'inline-block', background: '#1e1a36', verticalAlign: 'middle' }}><DyedMonsterImage baseId={sp} src={msxMonThumb(sp)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%' }}/></span>;
+  }
+  return <img src={msxMonThumb(sp)} alt="" style={imgStyle}/>;
+}
 // 対戦相手(芯の opponents)から、持ち主アイコンを出すためのライバル情報を作る。候補が残っていればアイコンまで、無ければ印だけ
 const msxRivalFaceOf = (rivals, opp) => {
   if (!opp || !opp.rival) return null;
@@ -468,7 +479,7 @@ const msxRivalsBuild = async (SUC, aid) => {
       if (typeof amgtBattleOf === 'function') { try { const bt = amgtBattleOf(id, t, t.lv); if (bt && Array.isArray(bt.techs) && bt.techs.length) { techs = bt.techs.filter((x) => typeof x === 'string').slice(0, 16); if (techs.length && bt.mastery && typeof bt.mastery === 'object') mastery = Object.fromEntries(techs.map((x) => [x, Math.max(0, Math.min(100, Math.round(Number(bt.mastery[x]) || 0)))])); } } catch (_) { /* 読めなければ技なしで続ける */ } }
       // 元の能力の合計(999 に丸められる前の数え。芯の強さ補正の材料・r1116-002)
       const rawSum = stats ? ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(stats[k])) ? Number(stats[k]) : 0), 0) : null;
-      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, id: `aid:${id}:${slot}:${t.monster}`, ...(stats ? { stats, rawSum: Math.round(rawSum) } : {}), ...(techs && techs.length ? { techs, mastery: mastery || {} } : {}) });
+      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, id: `aid:${id}:${slot}:${t.monster}`, ...(stats ? { stats, rawSum: Math.round(rawSum) } : {}), ...(techs && techs.length ? { techs, mastery: mastery || {} } : {}), ...(Array.isArray(t.colors) && t.colors.some(Boolean) ? { colors: t.colors } : {}) }); // 染めた色(共有の並びが持っている。見せるためだけ)
     }
   } catch (_) { /* 助手の分が読めなくても続ける */ }
   try {
@@ -481,7 +492,7 @@ const msxRivalsBuild = async (SUC, aid) => {
         if (!m || !ok(m.species)) continue;
         const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
         // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけに引き継ぐ。名簿の行が持っている)
-        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}`, ...(row.icon ? { icon: row.icon } : {}), ...(row.profileFrame ? { profileFrame: row.profileFrame } : {}) }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}`, ...(row.icon ? { icon: row.icon } : {}), ...(row.profileFrame ? { profileFrame: row.profileFrame } : {}), ...(Array.isArray(m.colors) && m.colors.some(Boolean) ? { colors: m.colors } : {}) }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)。染めた色は貸し出しの子が持っている(見せるためだけ)
       }
     }
   } catch (_) { /* フレンドの分が読めなくても続ける */ }
@@ -562,8 +573,165 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
+      <MonheroSuccessFarmMeal entryOpen={open}/>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
+  );
+}
+
+/* ===== ファームで あげる 優勝のごほうび(2026-11-17 社長「ご褒美はファームに戻ってからあげるほうがしっくりくる。音楽もファームの音楽」) =====
+   大会で優勝した ごはんの権利は、育成の芯(s.mealReady / s.mealOpts)に残っている。モンサクを閉じている間(=ファーム)に
+   権利があれば、ホームの下から パネルを出す。あげる/あげない の選択と効き目は、大会の場だった頃と全く同じ(芯の meal / mealSkip)。
+   保持の決まり(芯の既存の動きのまま。新しい保存項目は足さない): 育成で次の行動を取る・次の大会が精算される・育成が終わる、のどれかで権利は消える。
+   あげた直後は、変わった分を ゲージの演出(MsxGaugeFx)で見せる(2026-11-17 社長「ご褒美あげたときにステの変動演出がなかった」)。
+   音楽はファームのまま: ここでは SuccessSound を一切呼ばない(モンサクを閉じると ファームの曲へ戻る仕組みが既にある)。
+   見た目は MSX_CSS(.msx の中)に閉じ、枠だけ ここの CSS で足す(HOMEの CSS は触らない) */
+const MSX_HOME_MEAL_CSS = `
+.mh-home-meal{position:fixed;inset:0;z-index:1300;background:rgba(8,5,18,.66);display:flex;align-items:flex-end;justify-content:center}
+.mh-home-meal .msx{position:relative;width:100%;max-width:430px;height:auto;max-height:94dvh;overflow-y:auto;container-type:normal;border-radius:18px 18px 0 0;background:linear-gradient(180deg,#2a1e56,#151130);box-shadow:0 -6px 30px #000a}
+.mh-home-meal .v-meal{position:static;left:auto;right:auto;bottom:auto;background:transparent;border:none;box-shadow:none;padding:10px 10px 6px}
+`;
+function MonheroSuccessFarmMeal({ entryOpen }) {
+  const [data, setData] = useState(null); // ファームにいるときの読み直し結果(msxReadAll)
+  const [pickKey, setPickKey] = useState(null);
+  const [result, setResult] = useState(null); // あげた/あげなかった直後の見せ方 { key, before, after, skipped }
+  const [busy, setBusy] = useState(false);
+  const [deferred, setDeferred] = useState(false); // 「あとで」で この訪問だけ隠す(権利は残る。モンサクを開いて閉じる・開き直すと また出る)
+  useEffect(() => { // モンサクを開いたら隠す。閉じたら(ファームに戻ったら)読み直す
+    if (entryOpen) { setData(null); setPickKey(null); setResult(null); setDeferred(false); return undefined; }
+    let live = true;
+    (async () => {
+      const L = await msxLoad().catch(() => null);
+      if (!live || !L) return;
+      const d = await msxReadAll(L.SUC).catch(() => null);
+      if (live && d) setData(d);
+    })();
+    return () => { live = false; };
+  }, [entryOpen]);
+  const SUC = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  const run = data && data.run ? data.run : null;
+  const s = run && run.s ? run.s : null;
+  if (entryOpen || !SUC || !run || !s) return null;
+  if (!result && (deferred || !(s.mealReady && !s.over))) return null;
+  const M = SUC.MEALS || {};
+  const nm = run.nick || (typeof msxMonName === 'function' ? msxMonName(s.species) : s.species);
+  // 並ぶ3品と効き目(大会の場だった頃と全く同じ作り: 芯の meal を試しに呼んで、本物の増え方を出す)
+  const keys = typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s) : Object.keys(M);
+  const can = (k) => s.mealReady && !s.over && !!M[k] && keys.includes(k);
+  const tryMeal = (k) => { try { const r = SUC.meal(s, k); return r && r.out && r.out.ok ? r.state : null; } catch (e) { return null; } };
+  const loyOf = (x) => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
+  const effOf = (k) => {
+    const m = M[k]; const t = tryMeal(k); if (!m || !t) return null;
+    const hp = t.hp - s.hp; const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0); const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
+    const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0; const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0); const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
+    return { m, hp, ama, fear, st, pop, pts, loy0: loyOf(s), loy1: loyOf(t) };
+  };
+  const fx = (k) => {
+    const e = effOf(k); if (!e) return '';
+    const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
+    const ly = [e.m.ama ? (e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限') : '', e.m.fear ? (e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限') : ''].filter(Boolean).join('・');
+    if (e.m.gives) return '持ち物に入る';
+    if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
+    if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
+    return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
+  };
+  const fxLong = (k) => {
+    const e = effOf(k); if (!e) return '';
+    const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
+    if (e.m.gives) { const it = SUC.ITEMS && SUC.ITEMS[e.m.gives]; return `持ち物に「${(it && it.name) || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`; }
+    const parts = e.m.hp ? [hp] : [];
+    if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
+    if (e.m.fear || e.m.ama) { const ls = [e.m.ama ? (e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)') : '', e.m.fear ? (e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)') : ''].filter(Boolean).join('・'); parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`); }
+    if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
+    if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
+    return parts.join('・');
+  };
+  const MEAL_ICON = { vitamin: '🐍', gochiso: '🍰', f_life: '🍓', f_pow: '🍍', f_wise: '🍏', f_hit: '🥗', f_eva: '🧃', f_tough: '🥫', prune: '⭐' };
+  const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
+  const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
+  // あげた/あげなかった結果の保存(版番号を進めて書く。ほかの画面が先に進めていたら読み直して出し直す)
+  const saveMealResult = async (nextS, res) => {
+    const next = { ...run, s: nextS, rev: (Number(run.rev) || 0) + 1 };
+    const saved = await msxSaveRun(next);
+    if (saved === 'stale') {
+      const L = await msxLoad().catch(() => null);
+      const d = L ? await msxReadAll(L.SUC).catch(() => null) : null;
+      if (d) setData(d);
+      return;
+    }
+    setData({ ...data, run: next });
+    setResult(res);
+  };
+  const give = async () => {
+    if (busy || !pickKey || !can(pickKey)) return;
+    const r = SUC.meal(s, pickKey);
+    if (!r || !r.out || !r.out.ok) return;
+    setBusy(true);
+    await saveMealResult(r.state, { key: pickKey, before: s, after: r.state, skipped: false });
+    setBusy(false);
+  };
+  const skipMeal = async () => {
+    if (busy || typeof SUC.mealSkip !== 'function') return;
+    const r = SUC.mealSkip(s);
+    if (!r || !r.out || !r.out.ok) return;
+    setBusy(true);
+    await saveMealResult(r.state, { key: null, before: s, after: r.state, skipped: true });
+    setBusy(false);
+  };
+  // あげた直後の変動の札(芯の前後の差から作る。MsxGaugeFx が ゲージと数字を動かして見せる)
+  const gainItems = (before, after) => {
+    const items = [];
+    if ((after.hp || 0) !== (before.hp || 0)) items.push({ k: 'hp', e: '💗', name: '体力', from: before.hp || 0, to: after.hp || 0, max: after.hpMax || before.hpMax || 100 });
+    MSX_STATS.forEach((k) => { const f = (before.stats || {})[k] || 0; const t = (after.stats || {})[k] || 0; if (t !== f) items.push({ k, e: MSX_STAT_ICON[k], name: MSX_STAT_NAME[k], from: f, to: t, max: 999 }); });
+    if ((after.ama || 0) !== (before.ama || 0)) items.push({ k: 'ama', e: '💞', name: '甘え度', from: before.ama || 0, to: after.ama || 0, max: 50 });
+    if ((after.fear || 0) !== (before.fear || 0)) items.push({ k: 'fear', e: '😨', name: '恐れ度', from: before.fear || 0, to: after.fear || 0, max: 50 });
+    if ((after.pop || 0) !== (before.pop || 0)) items.push({ k: 'pop', e: '⭐', name: '人気', from: before.pop || 0, to: after.pop || 0, max: 100 });
+    if ((after.pts || 0) !== (before.pts || 0)) items.push({ k: 'pts', e: '🔷', name: '能力ポイント', from: before.pts || 0, to: after.pts || 0, max: Math.max(after.pts || 0, 1) });
+    return items;
+  };
+  const bagNote = (before, after) => {
+    const g = Object.keys(after.bag || {}).find((k) => ((after.bag || {})[k] || 0) > ((before.bag || {})[k] || 0));
+    if (!g) return '';
+    const it = SUC.ITEMS && SUC.ITEMS[g];
+    return `持ち物に「${(it && it.name) || g}」が入ったよ`;
+  };
+  if (result) {
+    const items = gainItems(result.before, result.after);
+    const bag = bagNote(result.before, result.after);
+    return (
+      <div className="mh-home-meal" data-mh-home-meal>
+        <style>{MSX_CSS}</style>
+        <style>{MSX_HOME_MEAL_CSS}</style>
+        <div className="msx">
+          <div className="v-meal" data-mh-home-meal-result>
+            <div className="t">{result.skipped ? '🍽 今日は あげなかった' : `🍽 ${M[result.key] ? M[result.key].name : 'ごはん'}を あげたよ!`}<small>{result.skipped ? `恐れ度 +${SUC.MEAL_SKIP_FEAR || 1}` : '変わった分は これだよ'}</small></div>
+            {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`farmmeal-${result.before.turn}-${result.skipped ? 'skip' : result.key}`} items={items} title="ごはんの効き目"/> : null}
+            {!items.length ? <div className="msx-note" style={{ textAlign: 'center', marginTop: 6 }}>数字は もう上限いっぱいで、変わらなかったよ</div> : null}
+            {bag ? <div className="msx-note" style={{ textAlign: 'center', marginTop: 6 }}>🎁 {bag}</div> : null}
+            <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, result.skipped ? 'normal' : 'happy')} alt=""/><div className="bub f1">{result.skipped ? '「また次の優勝で、ごほうびを あげよう!」' : '「おいしそうに 食べてるよ! よく がんばったね」'}</div></div>
+          </div>
+          <div className="v-ft"><button type="button" className="go" onClick={() => setResult(null)} data-mh-home-meal-close>とじる</button></div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mh-home-meal" data-mh-home-meal>
+      <style>{MSX_CSS}</style>
+      <style>{MSX_HOME_MEAL_CSS}</style>
+      <div className="msx">
+        <div className="v-meal">
+          <div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>優勝したときだけ あげられる(今日の3品から1回・ただ){s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : ''}</small></div>
+          <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, 'excited')} alt=""/><div className="bub f1" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{['「優勝', 'おめでとう!', 'ファームに', '帰ってきたから、', 'ごほうびの', 'ごはんだよ」'].map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</div></div>
+          <div className="ms">{keys.map((k) => (
+            <button type="button" key={k} className={`v-ml ${pickKey === k ? 'sel' : ''}`} disabled={!can(k) || busy} onClick={() => setPickKey(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-mh-home-meal-pick={k}>
+              <div className="e">{MEAL_ICON[k] || '🍙'}</div><b style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{String(M[k].name).split(/(?=（)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</b><small data-mh-home-meal-fx={k}>{fx(k).split('・').map((x, i) => <React.Fragment key={i}>{i > 0 ? <>・<wbr/></> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</small></button>))}</div>
+          <div className="msx-note" data-mh-home-meal-detail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a', ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {}) }}>{pickKey && M[pickKey] ? `${M[pickKey].name}: ${fxLong(pickKey)}`.split(/(?<=[・:])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{typeof jaWrap === 'function' ? jaWrap(x) : x}</React.Fragment>) : 'ごはんを押すと、詳しい効き目が出ます'}</div>
+          <div className="msx-note" data-mh-home-meal-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
+        </div>
+        <div className="v-ft"><button type="button" disabled={busy} onClick={() => setDeferred(true)} data-mh-home-meal-later style={{ flex: '0.55' }}>あとで</button><button type="button" disabled={busy} onClick={skipMeal} data-mh-home-meal-skip style={{ flex: '1.25', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.15 }}><span>あげずに おわる</span><span style={{ fontSize: 9.5, opacity: 0.85 }}>恐れ度 +{SUC.MEAL_SKIP_FEAR || 1}</span></button><button type="button" className="go" disabled={busy || !(pickKey && can(pickKey))} onClick={give} data-mh-home-meal-give>{pickKey && can(pickKey) ? `${M[pickKey].name}をあげる` : 'ごはんを選んでね'}</button></div>
+      </div>
+    </div>
   );
 }
 

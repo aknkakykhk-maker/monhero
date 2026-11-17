@@ -208,7 +208,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {isSuper ? <div className="q-note y msx-kp" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
-    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">タップで選ぶ・詳しさは右の欄</span></h3>
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">タップで選ぶ・詳しさは下の欄</span></h3>
       {all.length ? <div className="q-twrap"><MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
         // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
         const gotOf = (x) => (s0.techs || []).includes(x.id);
@@ -225,7 +225,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
           {alts.length > 1 ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}{/* 同じマスに技が2つ以上ある印(r1115-146①)。押せない */}
-          <span className="tg-nm" aria-hidden="true">{t.name}</span>{/* 技の名前帯(2026-11-17 あっくん「1画面でみにくい」) */}
+          <span className="tg-nm" aria-hidden="true">{msxTechNm(t.name)}</span>{/* 技の名前帯(2026-11-17 あっくん「1画面でみにくい」。2026-11-18 表を全幅にして名前は折り返して全部出す) */}
         </button>);
       }}/>{(() => { const ft = focusT || all.find((x) => x.id === want[0]) || all[0]; if (!ft) return null; const fGot = (s0.techs || []).includes(ft.id); const fSel = want.includes(ft.id); const fOk = rateOf[ft.id] != null; return (
         <div className="q-td side msx-kp" data-msx-r3-qtd={ft.id}>

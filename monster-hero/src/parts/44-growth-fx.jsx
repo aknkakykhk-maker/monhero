@@ -37,6 +37,10 @@ const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-ru
 // 裏クイックをどこでも回しているあいだ(右下の帯 data-quick-anywhere がある)は、Lvアップの全面は HOME でだけ出し、ほかの画面では貯めておく
 //   (2026-11-11 社長「ホームにいなくても出るときがある」。HOME へ戻ったときにまとめて出す)
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
+// モンヒロサクセスを開いているあいだの目印。サクセスは HOME の上に開く作りで gameState は HOME のままなので、
+//   画面の名前だけでは「ホームにいる」ことになってしまう。裏周回ぶんの Lvアップをサクセスへ割り込ませないために、
+//   サクセスが開いているあいだは「ホームにいる」と数えない(2026-11-17 社長「裏周回で上がったやつをホーム以外で出さないでほしい」)
+const GROWTH_FX_MONSUC_SELECTOR = '[data-monhero-success]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;      // 文の一行の札(読む時間をとる)
 const GROWTH_FX_ITEM_MS = 3400;
@@ -150,11 +154,24 @@ const growthFxMasuBondItem = ({ masuName, image, itemName, itemEmoji, count, gai
     rows: [{ kind: 'star', label: '絆Lv', levelFrom: before.level, levelTo: after.level, pctFrom: pct(before), pctTo: pct(after), gain, unit: '絆経験値' }] });
 };
 // ブリーダーLvが上がった(60-app.jsx でブリーダー経験値を足した所から)。経験値の伸びは結果画面のバーで見せているので、ここは Lvアップだけ
-const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+// opts.quick … 裏周回で上がったぶん(クイック周回ぶんの配布・どこでも裏クイックの周回ぶん)。出す場所をホームだけに絞る印で、
+//   まとめ直しのときに消えないよう growthFxPush の側でも扱いは変えない(片方に印があれば、まとめた1枚にも印が残る)
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '', opts = {}) => {
   const a = growthFxNum(levelFrom), b = growthFxNum(levelTo);
   if (!(b > a)) return;
   growthFxPush({ tier: 'level', kind: 'breeder', who: 'self', levelFrom: a, levelTo: b,
+    ...(opts && opts.quick ? { quick: true } : {}),
     title: 'ブリーダーLv UP!', sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`, gains: [] });
+};
+// 貯まっているシートを、いま出してよいか(1枚ずつ見る。GrowthFxLayer が先頭から出せるものを探す)
+//   裏周回ぶん(quick の印)は、全面を出してよい条件(vis.level)に加えて、ホームそのものを見ている(atHome)ときだけ出す。
+//   サクセスなど HOME の上に開く画面にいるときは atHome が偽になり、ホームへ戻るまで貯まったままになる(2026-11-17 社長)
+const growthFxSheetReady = (sheet, vis, atHome) => {
+  if (!sheet || !vis || !vis.sheet) return false;
+  if (sheet.tier !== 'level') return true;
+  if (!vis.level) return false;
+  if (sheet.quick && !atHome) return false;
+  return true;
 };
 
 // ---------- 公開前の値の呼び出し口(呼ぶのはそれぞれの担当。公開の印が真になるまで呼ばれない) ----------
@@ -726,7 +743,7 @@ const GrowthFxChipsBox = ({ level, count, children }) => {
 // 60-app.jsx に1つだけ置く。screen … いまの gameState / load … バトル設定「画面の軽さ」
 const GrowthFxLayer = ({ screen, load }) => {
   const [, setTick] = useState(0);
-  const [domHold, setDomHold] = useState({ all: false, sheet: false, quickAnywhere: false });
+  const [domHold, setDomHold] = useState({ all: false, sheet: false, quickAnywhere: false, monsuc: false });
   useEffect(() => { ensureGrowthFxCss(); return growthFxSubscribe(() => setTick(t => t + 1)); }, []);
   const small = GROWTH_FX_STORE.small, sheets = GROWTH_FX_STORE.sheets;
   const pending = small.length + sheets.length;
@@ -737,7 +754,8 @@ const GrowthFxLayer = ({ screen, load }) => {
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
       const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
-      setDomHold(prev => (prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : { all, sheet, quickAnywhere }));
+      const monsuc = !!document.querySelector(GROWTH_FX_MONSUC_SELECTOR);
+      setDomHold(prev => (prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere && prev.monsuc === monsuc ? prev : { all, sheet, quickAnywhere, monsuc }));
     };
     check();
     const t = setInterval(check, 600);
@@ -746,10 +764,11 @@ const GrowthFxLayer = ({ screen, load }) => {
   if (!pending) return null;
   const vis = growthFxVisible(screen, domHold);
   const holdAll = !vis.all;
-  const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
+  // ホームそのものを見ているか(サクセスが HOME の上に開いているあいだは、ホームにいるとは数えない)
+  const atHome = screen === 'HOME' && !domHold.monsuc;
   // Lvアップを貯めているあいだも、ほかの全面(アイテムのカードなど)は先に出す
-  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
+  const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
   return (
     <>
       {!holdAll && !sheet && small.length > 0 && <GrowthFxChipsBox level={level} count={Math.min(small.length, GROWTH_FX_SMALL_MAX)}>

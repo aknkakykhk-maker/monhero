@@ -458,7 +458,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
+              <span className={`msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <MscMyMon sp={e.species} colors={e.colors}/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
@@ -471,7 +471,8 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : <>⏩ 結果だけ見る<small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small></>}</button>
+        {/* 「(優勝ずみ)」を後ろに付けると、半分の幅では単語の途中で折れて読めなかった(2026-11-17 社長)。押せないときの副題と同じ形で、優勝ずみも副題にする */}
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">優勝ずみ</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
@@ -528,7 +529,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
         <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
         <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
-        <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="mon b"><MscMyMon sp={o.species} colors={o.colors}/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
         <div className="nm b"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{o.rival ? <MsxRivalOwnerIcon rival={msxRivalFaceOf(s.rivals, o)} size={20}/> : null}{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
@@ -586,7 +587,7 @@ function MonsucCutin({ s, info, onGo }) {
         <div className="msc-rays"/>
         <div className="word">{sp.word}</div>
         <div className="sub">{sp.sub}</div>
-        <div className="duo"><MscMyMon className="a" sp={s.species} colors={info.colors}/><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="duo"><MscMyMon className="a" sp={s.species} colors={info.colors}/><MscMyMon sp={o.species} colors={o.colors}/></div>
         <div className="say"><img src={mscFace(s.aid, 'happy')} alt=""/><div><b>{coach ? coach.name : ''}</b><p>{MSC_LINE[s.aid] || '「いっしょに がんばろう!」'}</p></div></div>
       </div>
       <div className="msc-eff">

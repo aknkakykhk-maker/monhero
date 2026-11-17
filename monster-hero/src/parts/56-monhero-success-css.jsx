@@ -127,7 +127,8 @@ const MSX_CSS = `
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
-.msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+/* 体力とストレスは1段ずつ横いっぱいに取る。2つ並べると数字と名前で幅が取られ、棒が短くて残量が読めなかった(2026-11-17 社長「体力のゲージがやたら短くて見にくい」) */
+.msx .v-b2{display:grid;grid-template-columns:1fr;gap:5px;margin-top:6px}
 .msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
@@ -198,9 +199,17 @@ const MSX_CSS = `
 .msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
 .msx .v-st small{display:block;font-size:10px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st b{display:block;font-size:14px}
-.msx .v-st .vl{display:flex;align-items:baseline;justify-content:center;gap:2px}
+.msx .v-st .vl{display:flex;align-items:center;justify-content:center;gap:2px}
 .msx .v-st .vl b{display:inline;font-size:14px}
-.msx .v-st .vl .cap{font-size:9px;color:#94a3b8;font-weight:800}
+/* ランクの字は小さな札の形にして、カードの中に収める。字だけ大きいと隣のカードや数に重なって読めなかった(2026-11-17 社長) */
+.msx .v-st .msx-srk{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:15px;padding:0 3px;border-radius:5px;font-size:10px;line-height:1;color:#0f172a;text-shadow:none;flex:none}
+.msx .v-st .msx-srk.rG{background:#94a3b8}.msx .v-st .msx-srk.rF{background:#a78bfa}.msx .v-st .msx-srk.rE{background:#60a5fa}.msx .v-st .msx-srk.rD{background:#7dd3fc}.msx .v-st .msx-srk.rC{background:#4ade80}.msx .v-st .msx-srk.rB{background:#f472b6}
+.msx .v-st .msx-srk.rA,.msx .v-st .msx-srk.rAp{background:#f87171}.msx .v-st .msx-srk.rS,.msx .v-st .msx-srk.rSp{background:#fbbf24}.msx .v-st .msx-srk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa)}
+/* 上限(/999)は数と同じ行ではなく棒の横に置く。同じ行だと4桁の能力でカードからはみ出すため */
+.msx .v-st .br{display:flex;align-items:center;gap:3px;margin:1px 5px 0}
+.msx .v-st .br u{flex:1;min-width:0;margin:0}
+.msx .v-st .br .ap{flex:1;margin-top:0}
+.msx .v-st .br .cap{font-size:9px;color:#94a3b8;font-weight:800;flex:none}
 .msx .msx-srk{font-style:normal;font-weight:900}
 .msx .msx-srk.rM{color:#e879f9}.msx .msx-srk.rSp,.msx .msx-srk.rS{color:#fde047}.msx .msx-srk.rAp,.msx .msx-srk.rA{color:#f87171}.msx .msx-srk.rB{color:#f472b6}.msx .msx-srk.rC{color:#4ade80}.msx .msx-srk.rD{color:#7dd3fc}.msx .msx-srk.rE{color:#60a5fa}.msx .msx-srk.rF{color:#a78bfa}.msx .msx-srk.rG{color:#94a3b8}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
@@ -209,7 +218,8 @@ const MSX_CSS = `
 .msx .v-st u.ov{position:relative}
 .msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
-.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
+/* font-size:inherit … 浮動文字用の汎用 .up(24px)が漏れると、字の大きさを持たないランクの字が巨大化してカードからはみ出すため、打ち消す */
+.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766;font-size:inherit}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
@@ -275,7 +285,8 @@ const MSX_CSS = `
 .msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
 .msx .v-tr.sel .fs{transform:translateY(-5px)}
 .msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
-.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
+/* 下限は下の効き目パネル(.v-fx)の高さぶん空ける。全員ぶんが入らないときは、この中でスクロールして全員に届くようにする(2026-11-17 社長「編成の一覧が切れて全部見えない」) */
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 132px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
 .msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
@@ -478,7 +489,7 @@ const MSX_CSS = `
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
   .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
-  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}.msx .v-st .vl{gap:1px}.msx .v-st .msx-srk{min-width:14px;height:14px;font-size:9px;padding:0 2px}.msx .v-st .br{gap:2px;margin:1px 3px 0}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
   .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
@@ -951,6 +962,12 @@ const MSX_CSS = `
 .msx.land .v-scene.hm .mon{height:40%}
 .msx .v-hm-logo{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:min(92%,360px);filter:drop-shadow(0 4px 6px #0008)}
 .msx .v-hm-logo img{display:block;width:100%;height:auto}
+.msx .v-hm-deco{position:absolute;inset:0;pointer-events:none}
+.msx .v-hm-deco .gs{position:absolute;left:50%;transform:translateX(-50%);bottom:-3px;width:72%;height:9%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
+.msx .v-hm-deco-m{position:absolute;transform:translateX(-50%);aspect-ratio:1;animation:msx-breathe 3.2s ease-in-out infinite}
+.msx .v-hm-deco-m img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 4px #0007)}
+.msx .v-hm-deco-a{position:absolute;transform:translateX(-50%);animation:msx-breathe 3.6s ease-in-out infinite}
+.msx .v-hm-deco-a img{display:block;height:100%;width:auto;filter:drop-shadow(0 6px 4px #0007)}
 .msx .v-hm-logo .msx-beta-mk{position:absolute;right:2%;bottom:6%}
 .msx .v-hm-cont{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;margin-top:8px;border-radius:18px;padding:10px 10px 9px;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;line-height:1.3;min-width:0}
 .msx .v-hm-cont .t{font-size:21px;font-weight:900;white-space:nowrap}

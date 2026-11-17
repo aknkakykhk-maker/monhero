@@ -1553,6 +1553,26 @@ const _bakeDyedLayers = (key, src, layers) => {
   promise.then((url) => { if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key); });
   return promise;
 };
+// 染め色の並びをそろえる(部位の色が無い子は、読み替え表 MASU_COLOR_FALLBACK_REGION で別の部位の色を流用する)。
+// DyedMonsterImage と先読み(warmDyedMonsterImage)で同じ並びを使うため、ここへ切り出した
+const _dyedColorsOf = (baseId, masuColors) => {
+  const rawColors = masuColors || [];
+  const hues = MASU_COLOR_REGION_HUES[baseId];
+  const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+  return (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+};
+// 焼きの材料(部位ごとの染め絵+マスク+濃さ)と、焼きの控えの名前をそろえる。DyedMonsterImage と先読みで共有する。
+//   そろっていない(マスク待ち・染め絵待ち)ときは key が空になる
+const _dyedBakeOf = (baseId, src, colors, masks, recolored) => {
+  const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+  if (!hues.length || !masks || !colors.some(Boolean)) return { layers: null, key: '' };
+  const layers = hues.map((_, idx) => {
+    const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
+    return url ? { url, mask: masks[idx], alpha: colorAlphaOf(colors[idx]) } : null;
+  });
+  const ready = hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
+  return { layers, key: ready ? [baseId, src, ...layers.map((l) => (l ? `${l.url}#${l.alpha}` : '-'))].join('|') : '' };
+};
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
   // 同じ血統の立ち絵の大きさをそろえる倍率(monsterArtScaleTable)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
   const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
@@ -1566,9 +1586,7 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: give
   const heldDyeUrlsRef = useRef([]);
   const holdDyeUrls = (urls) => { urls.forEach(_dyeBlobRetain); heldDyeUrlsRef.current.forEach(_dyeBlobRelease); heldDyeUrlsRef.current = urls; };
   useEffect(() => () => holdDyeUrls([]), []);
-  const rawColors = masuColors || [];
-  const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
-  const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+  const colors = _dyedColorsOf(baseId, masuColors);
   const colorKey = colors.join('|');
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) { setMasks(null); return; }
@@ -1601,15 +1619,8 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: give
   }, [baseId, src, colorKey]);
   // 型を重ねる子は、そろったら1枚に焼く(型の調整画面 debugMaskPlacement のときは、動かしながら見るので焼かない)。
   // baked: undefined = 焼いている途中(元の絵を出す)/ null = 焼けなかった(前の CSS の重ね方)/ 文字列 = 焼いた絵
-  const bakeLayers = (hues && hues.length > 0 && masks && !debugMaskPlacement && colors.some(Boolean))
-    ? hues.map((_, idx) => {
-      const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
-      return url ? { url, mask: masks[idx], alpha: colorAlphaOf(colors[idx]) } : null;
-    })
-    : null;
-  // 染め絵を作り終えたか(作れなかった色は控えに null で入る。その部位は重ねないだけで、ほかの部位は焼く)
-  const bakeReady = !!bakeLayers && hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
-  const bakeKey = bakeReady ? [baseId, src, ...bakeLayers.map((l) => (l ? `${l.url}#${l.alpha}` : '-'))].join('|') : '';
+  // 焼きの材料と名前は _dyedBakeOf でそろえる(先読みと共有)。型の調整画面(debugMaskPlacement)のときは焼かない
+  const { layers: bakeLayers, key: bakeKey } = debugMaskPlacement ? { layers: null, key: '' } : _dyedBakeOf(baseId, src, colors, masks, recolored);
   const [baked, setBaked] = useState({ key: '', url: undefined });
   // 表示している焼いた絵は片づけない(控えから捨てられても、使い終わるまで残す)
   useEffect(() => {
@@ -1667,6 +1678,28 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: give
       ) : null)}
     </div>
   );
+};
+// 染め絵を先に作って、控え(マスク・染め直し・焼きのキャッシュ)へ入れておく先読み。
+// 起動後の空き時間に自分のモンスターぶんを温めるのに使う(60-app の先読み)。
+// いままでは色マスクだけを温めていたので、画面を開いたときに染め直しと焼きの実時間ぶん、
+// 素の絵が見えていた(2026-11-18 染色の反映漏れの修正)。作り方は DyedMonsterImage と同じ控えを通す。
+// 失敗しても困らないよう、成否だけを返す(呼び出し側は無視してよい)
+const warmDyedMonsterImage = async (baseId, src, masuColors) => {
+  try {
+    if (!baseId || !src) return false;
+    const colors = _dyedColorsOf(baseId, masuColors);
+    if (!colors.some(Boolean)) return false;
+    const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+    const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
+    const entries = await Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])));
+    // 部位の無い子は、染め直しまでで温め終わり(出すときは colors[0] の染め絵をそのまま使う)
+    if (!hues.length) return entries.some(([, url]) => !!url);
+    const masks = await getDyeRegionMasks(baseId, src);
+    if (!masks) return false;
+    const { layers, key } = _dyedBakeOf(baseId, src, colors, masks, Object.fromEntries(entries));
+    if (!key || !layers) return false;
+    return !!(await _bakeDyedLayers(key, src, layers));
+  } catch (_) { return false; }
 };
 // DyedMonsterImage と同じ絵(object-contain・部位マスク・濃さ)を、size×size の canvas 1枚へ焼く。
 // モンヒロビートの演奏画面で使う(2026-09-25)。DOM のまま出すと、元絵(最大1024px)と

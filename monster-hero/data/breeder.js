@@ -70,35 +70,35 @@ const SNEGUROCHKA_AWAKENED_MARKET_ICON = "images/monsters/SNEGUROCHKA_AWAKENED.P
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
-const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=2cf55b47492a";
+const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=7efd2d044cd3";
 const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=0f5cf76eb420";
 const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=39933ff87253";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=55e7c1c5d1e9";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=4d6d7f7f7234";
-const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f693eca4429a";
-const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=974a914257f8";
-const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=6c1c56545861";
-const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=491367d07445";
-const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=6ec351898278";
-const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=c0d353e28482";
-const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=e26faa4a8580";
+const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=4a9061a24f42";
+const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=05e9349ea6ca";
+const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=c7fadb184f48";
+const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=ba2a4d4da01e";
+const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=513bb59f0f75";
+const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=09fccf4169ad";
+const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=6b109f4c0bbb";
 // 剣士モッチーの円盤石。絵は node tools/image/make-disc-icon.js が共通の土台へ重ねて作ったもの
-const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=130c85db1281";
+const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=a81e0c3e5e4c";
 // 近日公開予定のユグドラシル・メルホイップの円盤石(2026-09-28)。作り方は剣士モッチーと同じ
-const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=ceb1014354a3";
+const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=d43fa9c9d026";
 // ゴースト・スプーキー(2026-10-05・案の段階)。マーケットにはまだ並べていない
-const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=0583141e2a3b";
-const SPOOKY_DISC_ICON = "images/disc-icons/spooky-disc.PNG?v=cbd74baebb63";
-const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=fe9d907bed9a";
+const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=cec6b83b86a8";
+const SPOOKY_DISC_ICON = "images/disc-icons/spooky-disc.PNG?v=ef5064c9770d";
+const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=0285cafa5a44";
 // メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
-const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=494f3e2f723a";
-const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=c7c5ba3d8031";
+const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=9a689e32a7ce";
+const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=1c6f39d46901";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
-const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8368da2a70b6";
-const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=3f5815550d74";
+const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8bdb3953ac8f";
+const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=d5a2b288a2c3";
 // キュービ・オリヒメ(2026-10-27・案の段階)。マーケットの「近日追加」の商品は開発部が作る
-const KYUBI_DISC_ICON = "images/disc-icons/kyubi-disc.PNG?v=3ba6c9096afd";
-const ORIHIME_DISC_ICON = "images/disc-icons/orihime-disc.PNG?v=2463cbd1dd9e";
+const KYUBI_DISC_ICON = "images/disc-icons/kyubi-disc.PNG?v=78d4d3ae821c";
+const ORIHIME_DISC_ICON = "images/disc-icons/orihime-disc.PNG?v=427ab5657531";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -1274,7 +1274,7 @@ const ASSISTANT_DEFAULT_OUTFIT_NAMES = Object.freeze({ sorashido: '馬骨' });
 const assistantDefaultOutfitName = (assistantId) => ASSISTANT_DEFAULT_OUTFIT_NAMES[assistantId] || '元の服';
 // きゅうこの冬服(2026-11-16 社長「これを実装して販売してほしい」)。売り場はダイヤショップ 100,000(ほかの衣装と同じ)。
 //   絵は images/assistant/winter/(立ち絵は stand-winter、全身画は fullbody/kyuko_winter)。お話「冬支度」でも着る(STORY_OUTFIT_DIRS の winter)
-const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=964ea5bd8dad";
+const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=7dc991931f72";
 const kyukoWinterCostume = Object.freeze({
   id: 'kyuko_winter_v1', assistantId: 'kyuko',
   name: '冬の装い', desc: 'きゅうこの冬服。淡いピンクのケーブル編みカーディガンとおそろいのマフラー、ファー付きの冬ブーツです。',

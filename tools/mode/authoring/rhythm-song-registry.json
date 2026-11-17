@@ -1828,6 +1828,21 @@
    "chartIntensityByDifficulty": {
     "EXPERT": "mild"
    }
+  },
+  "seasons_of_a_little_plaza": {
+   "flowPlacement": true,
+   "challengeFactor": 1.15,
+   "audio": "monster-hero/audio/bgm-seasons-of-a-little-plaza.mp3",
+   "chartRevision": 40,
+   "audioSha256": "b75ae2e2592de434d621d4efecc006e3fce6fd2c167cc3ee9fa5111da9131a2b",
+   "durationMs": 149304,
+   "analyzedTiming": {
+    "bpm": 169.505,
+    "beatZeroMs": 417.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

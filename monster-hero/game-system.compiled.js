@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9bf2bfb69659017b
+// source-sha256: 5320dc075d3d5ef9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6427,6 +6427,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_seasons_of_a_little_plaza',
+  name: '僕たちのページは晴れ模様',
+  creator: 'きき',
+  src: 'audio/bgm-seasons-of-a-little-plaza.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8277,6 +8284,7 @@ const Audio_ = (() => {
     "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-saudade-short.mp3": "e7a88d84c06a",
     "audio/bgm-saudade.mp3": "5364f7be63a5",
+    "audio/bgm-seasons-of-a-little-plaza.mp3": "b75ae2e2592d",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -12403,6 +12411,32 @@ const _bakeDyedLayers = (key, src, layers) => {
   });
   return promise;
 };
+const _dyedColorsOf = (baseId, masuColors) => {
+  const rawColors = masuColors || [];
+  const hues = MASU_COLOR_REGION_HUES[baseId];
+  const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+  return fallbackMap && hues ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+};
+const _dyedBakeOf = (baseId, src, colors, masks, recolored) => {
+  const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+  if (!hues.length || !masks || !colors.some(Boolean)) return {
+    layers: null,
+    key: ''
+  };
+  const layers = hues.map((_, idx) => {
+    const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
+    return url ? {
+      url,
+      mask: masks[idx],
+      alpha: colorAlphaOf(colors[idx])
+    } : null;
+  });
+  const ready = hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
+  return {
+    layers,
+    key: ready ? [baseId, src, ...layers.map(l => l ? `${l.url}#${l.alpha}` : '-')].join('|') : ''
+  };
+};
 const DyedMonsterImage = ({
   baseId,
   src,
@@ -12430,9 +12464,7 @@ const DyedMonsterImage = ({
     heldDyeUrlsRef.current = urls;
   };
   useEffect(() => () => holdDyeUrls([]), []);
-  const rawColors = masuColors || [];
-  const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
-  const colors = fallbackMap && hues ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+  const colors = _dyedColorsOf(baseId, masuColors);
   const colorKey = colors.join('|');
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) {
@@ -12468,16 +12500,13 @@ const DyedMonsterImage = ({
       cancelled = true;
     };
   }, [baseId, src, colorKey]);
-  const bakeLayers = hues && hues.length > 0 && masks && !debugMaskPlacement && colors.some(Boolean) ? hues.map((_, idx) => {
-    const url = colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])];
-    return url ? {
-      url,
-      mask: masks[idx],
-      alpha: colorAlphaOf(colors[idx])
-    } : null;
-  }) : null;
-  const bakeReady = !!bakeLayers && hues.every((_, idx) => !colors[idx] || !masks[idx] || Object.prototype.hasOwnProperty.call(recolored, _recoloredKey(idx, colors[idx])));
-  const bakeKey = bakeReady ? [baseId, src, ...bakeLayers.map(l => l ? `${l.url}#${l.alpha}` : '-')].join('|') : '';
+  const {
+    layers: bakeLayers,
+    key: bakeKey
+  } = debugMaskPlacement ? {
+    layers: null,
+    key: ''
+  } : _dyedBakeOf(baseId, src, colors, masks, recolored);
   const [baked, setBaked] = useState({
     key: '',
     url: undefined
@@ -12620,6 +12649,27 @@ const DyedMonsterImage = ({
       opacity: colorAlphaOf(colors[idx]) / 100
     }
   }) : null));
+};
+const warmDyedMonsterImage = async (baseId, src, masuColors) => {
+  try {
+    if (!baseId || !src) return false;
+    const colors = _dyedColorsOf(baseId, masuColors);
+    if (!colors.some(Boolean)) return false;
+    const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+    const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
+    const entries = await Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url])));
+    if (!hues.length) return entries.some(([, url]) => !!url);
+    const masks = await getDyeRegionMasks(baseId, src);
+    if (!masks) return false;
+    const {
+      layers,
+      key
+    } = _dyedBakeOf(baseId, src, colors, masks, Object.fromEntries(entries));
+    if (!key || !layers) return false;
+    return !!(await _bakeDyedLayers(key, src, layers));
+  } catch (_) {
+    return false;
+  }
 };
 const _loadArtImage = url => new Promise(resolve => {
   if (!url || typeof window === 'undefined' || !window.Image) {
@@ -21300,6 +21350,63 @@ const useAssistantBubbleState = () => {
     const off = ASSISTANT_BUBBLE_STORE.subscribe(setState);
     setState(ASSISTANT_BUBBLE_STORE.get());
     void ASSISTANT_BUBBLE_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
+const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
+const HOME_ASSISTANT_COMMENT_STORE = (() => {
+  let state = {
+    on: true,
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = true;
+        try {
+          on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false;
+        } catch (_) {}
+        state = {
+          on,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    setOn(next) {
+      state = {
+        ...state,
+        on: next === true,
+        loaded: true
+      };
+      emit();
+      try {
+        void Promise.resolve(storeSet(HOME_ASSISTANT_COMMENT_KEY, state.on)).catch(() => {});
+      } catch (_) {}
+    }
+  };
+})();
+const useHomeAssistantComment = () => {
+  const [state, setState] = useState(() => HOME_ASSISTANT_COMMENT_STORE.get());
+  useEffect(() => {
+    const off = HOME_ASSISTANT_COMMENT_STORE.subscribe(setState);
+    setState(HOME_ASSISTANT_COMMENT_STORE.get());
+    void HOME_ASSISTANT_COMMENT_STORE.load();
     return off;
   }, []);
   return state;
@@ -53404,6 +53511,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['excited', '2:00でいちばん強くなるの！ ここまぢでアガる♪']],
     'listen:rpg': [['excited', '0:53でいきなりいちばん強いの！ ドキドキが止まらないよ♪']],
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
+    'listen:seasons_of_a_little_plaza': [['excited', '1:47からのサビ、いちばん強いのが長く続くぢゃん！ テンション上がるよ♪']],
     'listen:sparkling_pink_overture': [['excited', '0:07からいちばん盛り上がるの！ ずっとキラキラなのー♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
@@ -53486,6 +53594,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', '最初の静かなところ、夜みたいにやさしくてきれいでつ']],
     'listen:rpg': [['normal', '0:24の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
+    'listen:seasons_of_a_little_plaza': [['normal', '0:24の静かなところ、音がすっと引いて、とてもきれいです♪']],
     'listen:sparkling_pink_overture': [['normal', '1:12の静かなところ、ひと息ついてまた走り出す感じでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
@@ -53568,6 +53677,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['excited', '2:58からいちばん強いのが続くよ♡ 最高潮だよ♡']],
     'listen:rpg': [['excited', '3:06と3:11、いちばん強いのが続くよ♡ すごいね♡']],
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
+    'listen:seasons_of_a_little_plaza': [['excited', '1:31でいちばん強くなって、1:47からまたサビ！！ ももはここが大好き♡']],
     'listen:sparkling_pink_overture': [['excited', '0:11と0:33がいちばん強いよ♡ ずっと最高潮だよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
@@ -53650,6 +53760,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', 'BPM148でちょうどいいぞ。夜の冒険にぴったりだな']],
     'listen:rpg': [['happy', 'BPM175で速いぞ。強い音が多くて冒険が走り出すみたいだな']],
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
+    'listen:seasons_of_a_little_plaza': [['happy', '0:00は静かでも0:47から強めになるぞ。旅立ちの合図みたいだな']],
     'listen:sparkling_pink_overture': [['happy', 'BPM212の全力ダッシュだな。2分ちょっとで駆け抜けるぞ']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
@@ -53732,6 +53843,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', '3:32で静かに締めるところ、余韻あっていいよね笑']],
     'listen:rpg': [['happy', '3:58でスッと静かになって終わるの、余韻があっていいよね笑']],
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
+    'listen:seasons_of_a_little_plaza': [['happy', '2:26で静かに終わるの、締めがきれいだね笑']],
     'listen:sparkling_pink_overture': [['happy', '2分ちょっとなのに強い音が多いね笑 あっという間だよ']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
@@ -53814,6 +53926,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', '1:14でいったん落として、1:27からまた上げるのがいいんだよね〜']],
     'listen:rpg': [['happy', '1:23でひと息ついて、2:00でまたいちばん強くするのがいいんだよね〜']],
     'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:seasons_of_a_little_plaza': [['happy', '1:37で一度静かにしてから1:47のサビ、ためが効いてるんだよね〜']],
     'listen:sparkling_pink_overture': [['happy', '0:07〜1:02の長いサビが続くのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
@@ -53896,6 +54009,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', 'BPM148です。強く打つ音が31%・・・！ まざる音がいいです']],
     'listen:rpg': [['normal', 'BPM175です。強く打つ音が59%・・・！ 速くて力強いです']],
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
+    'listen:seasons_of_a_little_plaza': [['normal', 'BPM170です。強い音36%に軽い音1%、芯のある音の配分です']],
     'listen:sparkling_pink_overture': [['normal', 'BPM212です。強く打つ音が51%・・・！ ぎっしり詰まった音です']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
@@ -53978,6 +54092,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', '1:14の静かなところ、ひと息つけるね']],
     'listen:rpg': [['normal', '1:23の静かなところ、ひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
+    'listen:seasons_of_a_little_plaza': [['normal', '0:00と0:24の静かな所は落ち着くね。息を整えてから行けるかな']],
     'listen:sparkling_pink_overture': [['normal', '1:12のところは静かだから、ちょっと息が整うね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
@@ -61019,7 +61134,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   rpg: 500,
   midnight_studio: 500,
   hopes_and_dreams: 500,
-  sparkling_pink_overture: 500
+  sparkling_pink_overture: 500,
+  seasons_of_a_little_plaza: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -65921,6 +66037,7 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_I
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
+const GROWTH_FX_MONSUC_SELECTOR = '[data-monhero-success]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
@@ -66121,7 +66238,7 @@ const growthFxMasuBondItem = ({
     }]
   });
 };
-const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '', opts = {}) => {
   const a = growthFxNum(levelFrom),
     b = growthFxNum(levelTo);
   if (!(b > a)) return;
@@ -66131,10 +66248,20 @@ const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
     who: 'self',
     levelFrom: a,
     levelTo: b,
+    ...(opts && opts.quick ? {
+      quick: true
+    } : {}),
     title: 'ブリーダーLv UP!',
     sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`,
     gains: []
   });
+};
+const growthFxSheetReady = (sheet, vis, atHome) => {
+  if (!sheet || !vis || !vis.sheet) return false;
+  if (sheet.tier !== 'level') return true;
+  if (!vis.level) return false;
+  if (sheet.quick && !atHome) return false;
+  return true;
 };
 const growthFxPeerPct = points => {
   const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
@@ -67113,7 +67240,8 @@ const GrowthFxLayer = ({
   const [domHold, setDomHold] = useState({
     all: false,
     sheet: false,
-    quickAnywhere: false
+    quickAnywhere: false,
+    monsuc: false
   });
   useEffect(() => {
     ensureGrowthFxCss();
@@ -67128,10 +67256,12 @@ const GrowthFxLayer = ({
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
       const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
-      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : {
+      const monsuc = !!document.querySelector(GROWTH_FX_MONSUC_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere && prev.monsuc === monsuc ? prev : {
         all,
         sheet,
-        quickAnywhere
+        quickAnywhere,
+        monsuc
       });
     };
     check();
@@ -67141,9 +67271,9 @@ const GrowthFxLayer = ({
   if (!pending) return null;
   const vis = growthFxVisible(screen, domHold);
   const holdAll = !vis.all;
-  const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
+  const atHome = screen === 'HOME' && !domHold.monsuc;
+  const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
@@ -67741,6 +67871,7 @@ function SettingsScreen({
   const [homeScreenGuideOpen, setHomeScreenGuideOpen] = useState(false);
   const assistantBubble = useAssistantBubbleState();
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
+  const homeComment = useHomeAssistantComment();
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return React.createElement(AssetDownloadPage, {
     onBack: () => setAssetDownloadOpen(false)
@@ -67952,6 +68083,34 @@ function SettingsScreen({
     "aria-pressed": assistantBubble.mode === option.id,
     onClick: () => ASSISTANT_BUBBLE_STORE.setMode(option.id),
     className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, option.label), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold opacity-80"
+  }, option.note))))), React.createElement("div", {
+    "data-home-assistant-comment-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "ホームの助手コメント"), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, [{
+    on: false,
+    label: '切',
+    note: '吹き出しを隠す'
+  }, {
+    on: true,
+    label: '入',
+    note: 'これまでどおり'
+  }].map(option => React.createElement("button", {
+    key: option.label,
+    type: "button",
+    "data-home-assistant-comment": option.on ? 'on' : 'off',
+    "aria-pressed": homeComment.on === option.on,
+    onClick: () => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on),
+    className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${homeComment.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
   }, React.createElement("span", {
     className: "block"
   }, option.label), React.createElement("small", {
@@ -82524,6 +82683,7 @@ function HomeScreen({
     return () => clearInterval(id);
   }, [homeStripCount]);
   const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
+  const homeComment = useHomeAssistantComment();
   return React.createElement("main", {
     ref: homeSceneRef,
     className: "mh-home-scene",
@@ -82632,27 +82792,9 @@ function HomeScreen({
     className: i === homeStripShow ? 'on' : ''
   })))), React.createElement("div", {
     className: "mh-home-side-stack"
-  }, React.createElement("button", {
-    onClick: openGiftBox,
-    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
-    "aria-label": "ギフト"
-  }, React.createElement("span", {
-    className: "mh-home-side-ic"
-  }, React.createElement(Package, {
-    size: 20
-  })), React.createElement("span", {
-    className: "mh-home-side-lb"
-  }, "ギフト"), giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts))), React.createElement("button", {
-    onClick: openMissions,
-    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
-    "aria-label": "ミッション"
-  }, React.createElement("span", {
-    className: "mh-home-side-ic"
-  }, React.createElement(List, {
-    size: 20
-  })), React.createElement("span", {
-    className: "mh-home-side-lb"
-  }, "ミッション"), missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
+  }, typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
+    home: true
+  }), React.createElement("button", {
     onClick: openChangelog,
     className: "mh-home-side-btn mh-home-update",
     "aria-label": "更新履歴"
@@ -82665,9 +82807,27 @@ function HomeScreen({
   }, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "未読あり"
-  }, "!")), typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
-    home: true
-  })), React.createElement("div", {
+  }, "!")), React.createElement("button", {
+    onClick: openMissions,
+    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
+    "aria-label": "ミッション"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(List, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ミッション"), missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
+    onClick: openGiftBox,
+    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
+    "aria-label": "ギフト"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Package, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ギフト"), giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts)))), React.createElement("div", {
     className: "mh-home-dock"
   }, nextStep && React.createElement("button", {
     type: "button",
@@ -82833,7 +82993,7 @@ function HomeScreen({
     className: "mh-home-dock-txt"
   }, React.createElement("span", {
     className: "mh-home-dock-name"
-  }, "助手ライフ"))))), React.createElement("div", {
+  }, "助手ライフ"))))), homeComment.on && React.createElement("div", {
     className: `mh-home-assistant${spotClass('assistant')}`
   }, React.createElement(AssistantBubble, {
     scene: "home",
@@ -154453,9 +154613,9 @@ function MonsucBracket({
   }, e.you ? React.createElement(MscMyMon, {
     sp: e.species,
     colors: info.colors
-  }) : React.createElement("img", {
-    src: mscMonImg(e.species),
-    alt: ""
+  }) : React.createElement(MscMyMon, {
+    sp: e.species,
+    colors: e.colors
   })))), React.createElement("svg", {
     className: "msc-lines",
     width: W,
@@ -154518,10 +154678,12 @@ function MonsucBracket({
     "data-msc-quick": true,
     disabled: !canSkip,
     onClick: () => canSkip && onResultOnly()
-  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : React.createElement(React.Fragment, null, "⏩ 結果だけ見る", React.createElement("small", {
+  }, "⏩ 結果だけ見る", canSkip ? React.createElement("small", {
+    className: "msc-qsub"
+  }, "優勝ずみ") : React.createElement("small", {
     className: "msc-qsub",
     "data-msc-quick-why": true
-  }, "一度優勝すると使えます"))), React.createElement("button", {
+  }, "一度優勝すると使えます")), React.createElement("button", {
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
@@ -154622,9 +154784,9 @@ function MonsucBattleCard({
     }) : im;
   })()), React.createElement("div", {
     className: "mon b"
-  }, React.createElement("img", {
-    src: mscMonImg(o.species),
-    alt: ""
+  }, React.createElement(MscMyMon, {
+    sp: o.species,
+    colors: o.colors
   })), React.createElement("div", {
     className: "vs"
   }, "VS"), React.createElement("div", {
@@ -154801,9 +154963,9 @@ function MonsucCutin({
     className: "a",
     sp: s.species,
     colors: info.colors
-  }), React.createElement("img", {
-    src: mscMonImg(o.species),
-    alt: ""
+  }), React.createElement(MscMyMon, {
+    sp: o.species,
+    colors: o.colors
   })), React.createElement("div", {
     className: "say"
   }, React.createElement("img", {
@@ -170752,7 +170914,8 @@ const MSX_CSS = `
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
-.msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+/* 体力とストレスは1段ずつ横いっぱいに取る。2つ並べると数字と名前で幅が取られ、棒が短くて残量が読めなかった(2026-11-17 社長「体力のゲージがやたら短くて見にくい」) */
+.msx .v-b2{display:grid;grid-template-columns:1fr;gap:5px;margin-top:6px}
 .msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
@@ -170823,9 +170986,17 @@ const MSX_CSS = `
 .msx .v-st div{background:#1e1a36;border:1px solid #3b3566;border-radius:9px;padding:2px 1px 3px;text-align:center;line-height:1.15;position:relative;min-width:0}
 .msx .v-st small{display:block;font-size:10px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st b{display:block;font-size:14px}
-.msx .v-st .vl{display:flex;align-items:baseline;justify-content:center;gap:2px}
+.msx .v-st .vl{display:flex;align-items:center;justify-content:center;gap:2px}
 .msx .v-st .vl b{display:inline;font-size:14px}
-.msx .v-st .vl .cap{font-size:9px;color:#94a3b8;font-weight:800}
+/* ランクの字は小さな札の形にして、カードの中に収める。字だけ大きいと隣のカードや数に重なって読めなかった(2026-11-17 社長) */
+.msx .v-st .msx-srk{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:15px;padding:0 3px;border-radius:5px;font-size:10px;line-height:1;color:#0f172a;text-shadow:none;flex:none}
+.msx .v-st .msx-srk.rG{background:#94a3b8}.msx .v-st .msx-srk.rF{background:#a78bfa}.msx .v-st .msx-srk.rE{background:#60a5fa}.msx .v-st .msx-srk.rD{background:#7dd3fc}.msx .v-st .msx-srk.rC{background:#4ade80}.msx .v-st .msx-srk.rB{background:#f472b6}
+.msx .v-st .msx-srk.rA,.msx .v-st .msx-srk.rAp{background:#f87171}.msx .v-st .msx-srk.rS,.msx .v-st .msx-srk.rSp{background:#fbbf24}.msx .v-st .msx-srk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa)}
+/* 上限(/999)は数と同じ行ではなく棒の横に置く。同じ行だと4桁の能力でカードからはみ出すため */
+.msx .v-st .br{display:flex;align-items:center;gap:3px;margin:1px 5px 0}
+.msx .v-st .br u{flex:1;min-width:0;margin:0}
+.msx .v-st .br .ap{flex:1;margin-top:0}
+.msx .v-st .br .cap{font-size:9px;color:#94a3b8;font-weight:800;flex:none}
 .msx .msx-srk{font-style:normal;font-weight:900}
 .msx .msx-srk.rM{color:#e879f9}.msx .msx-srk.rSp,.msx .msx-srk.rS{color:#fde047}.msx .msx-srk.rAp,.msx .msx-srk.rA{color:#f87171}.msx .msx-srk.rB{color:#f472b6}.msx .msx-srk.rC{color:#4ade80}.msx .msx-srk.rD{color:#7dd3fc}.msx .msx-srk.rE{color:#60a5fa}.msx .msx-srk.rF{color:#a78bfa}.msx .msx-srk.rG{color:#94a3b8}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
@@ -170834,7 +171005,8 @@ const MSX_CSS = `
 .msx .v-st u.ov{position:relative}
 .msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
-.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
+/* font-size:inherit … 浮動文字用の汎用 .up(24px)が漏れると、字の大きさを持たないランクの字が巨大化してカードからはみ出すため、打ち消す */
+.msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766;font-size:inherit}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
@@ -170900,7 +171072,8 @@ const MSX_CSS = `
 .msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
 .msx .v-tr.sel .fs{transform:translateY(-5px)}
 .msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
-.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px}
+/* 下限は下の効き目パネル(.v-fx)の高さぶん空ける。全員ぶんが入らないときは、この中でスクロールして全員に届くようにする(2026-11-17 社長「編成の一覧が切れて全部見えない」) */
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 132px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
 .msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
@@ -171103,7 +171276,7 @@ const MSX_CSS = `
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
   .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
-  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}.msx .v-st .vl{gap:1px}.msx .v-st .msx-srk{min-width:14px;height:14px;font-size:9px;padding:0 2px}.msx .v-st .br{gap:2px;margin:1px 3px 0}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
   .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
@@ -171576,6 +171749,12 @@ const MSX_CSS = `
 .msx.land .v-scene.hm .mon{height:40%}
 .msx .v-hm-logo{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:min(92%,360px);filter:drop-shadow(0 4px 6px #0008)}
 .msx .v-hm-logo img{display:block;width:100%;height:auto}
+.msx .v-hm-deco{position:absolute;inset:0;pointer-events:none}
+.msx .v-hm-deco .gs{position:absolute;left:50%;transform:translateX(-50%);bottom:-3px;width:72%;height:9%;border-radius:50%;background:radial-gradient(ellipse,#000a 0,#0000 70%)}
+.msx .v-hm-deco-m{position:absolute;transform:translateX(-50%);aspect-ratio:1;animation:msx-breathe 3.2s ease-in-out infinite}
+.msx .v-hm-deco-m img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 4px #0007)}
+.msx .v-hm-deco-a{position:absolute;transform:translateX(-50%);animation:msx-breathe 3.6s ease-in-out infinite}
+.msx .v-hm-deco-a img{display:block;height:100%;width:auto;filter:drop-shadow(0 6px 4px #0007)}
 .msx .v-hm-logo .msx-beta-mk{position:absolute;right:2%;bottom:6%}
 .msx .v-hm-cont{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;margin-top:8px;border-radius:18px;padding:10px 10px 9px;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;line-height:1.3;min-width:0}
 .msx .v-hm-cont .t{font-size:21px;font-weight:900;white-space:nowrap}
@@ -172525,6 +172704,43 @@ function MsxRivalOwnerIcon({
   });
   return null;
 }
+function MsxRivalThumb({
+  rival,
+  size = 20,
+  imgStyle
+}) {
+  const sp = rival && rival.species;
+  const colors = rival && rival.colors;
+  if (sp && Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
+    return React.createElement("span", {
+      style: {
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flex: 'none',
+        display: 'inline-block',
+        background: '#1e1a36',
+        verticalAlign: 'middle'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonThumb(sp),
+      masuColors: colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%'
+      }
+    }));
+  }
+  return React.createElement("img", {
+    src: msxMonThumb(sp),
+    alt: "",
+    style: imgStyle
+  });
+}
 const msxRivalFaceOf = (rivals, opp) => {
   if (!opp || !opp.rival) return null;
   const cand = Array.isArray(rivals) ? rivals.find(r => r && (opp.rivalId && r.id === opp.rivalId || !opp.rivalId && r.name === opp.name)) : null;
@@ -172586,6 +172802,9 @@ const msxRivalsBuild = async (SUC, aid) => {
         ...(techs && techs.length ? {
           techs,
           mastery: mastery || {}
+        } : {}),
+        ...(Array.isArray(t.colors) && t.colors.some(Boolean) ? {
+          colors: t.colors
         } : {})
       });
     }
@@ -172612,6 +172831,9 @@ const msxRivalsBuild = async (SUC, aid) => {
           } : {}),
           ...(row.profileFrame ? {
             profileFrame: row.profileFrame
+          } : {}),
+          ...(Array.isArray(m.colors) && m.colors.some(Boolean) ? {
+            colors: m.colors
           } : {})
         });
       }
@@ -172744,11 +172966,404 @@ function MonheroSuccessHomeEntry({
     className: "nm"
   }, "モンヒロサクセス"), React.createElement("span", {
     className: "sb"
-  }, "育成"))), open && React.createElement(MonheroSuccessScreen, {
+  }, "育成"))), React.createElement(MonheroSuccessFarmMeal, {
+    entryOpen: open
+  }), open && React.createElement(MonheroSuccessScreen, {
     onClose: () => setOpen(false),
     callNameOf: callNameOf,
     bondLvOf: bondLvOf
   }));
+}
+const MSX_HOME_MEAL_CSS = `
+.mh-home-meal{position:fixed;inset:0;z-index:1300;background:rgba(8,5,18,.66);display:flex;align-items:flex-end;justify-content:center}
+.mh-home-meal .msx{position:relative;width:100%;max-width:430px;height:auto;max-height:94dvh;overflow-y:auto;container-type:normal;border-radius:18px 18px 0 0;background:linear-gradient(180deg,#2a1e56,#151130);box-shadow:0 -6px 30px #000a}
+.mh-home-meal .v-meal{position:static;left:auto;right:auto;bottom:auto;background:transparent;border:none;box-shadow:none;padding:10px 10px 6px}
+`;
+function MonheroSuccessFarmMeal({
+  entryOpen
+}) {
+  const [data, setData] = useState(null);
+  const [pickKey, setPickKey] = useState(null);
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [deferred, setDeferred] = useState(false);
+  useEffect(() => {
+    if (entryOpen) {
+      setData(null);
+      setPickKey(null);
+      setResult(null);
+      setDeferred(false);
+      return undefined;
+    }
+    let live = true;
+    (async () => {
+      const L = await msxLoad().catch(() => null);
+      if (!live || !L) return;
+      const d = await msxReadAll(L.SUC).catch(() => null);
+      if (live && d) setData(d);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [entryOpen]);
+  const SUC = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  const run = data && data.run ? data.run : null;
+  const s = run && run.s ? run.s : null;
+  if (entryOpen || !SUC || !run || !s) return null;
+  if (!result && (deferred || !(s.mealReady && !s.over))) return null;
+  const M = SUC.MEALS || {};
+  const nm = run.nick || (typeof msxMonName === 'function' ? msxMonName(s.species) : s.species);
+  const keys = typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s) : Object.keys(M);
+  const can = k => s.mealReady && !s.over && !!M[k] && keys.includes(k);
+  const tryMeal = k => {
+    try {
+      const r = SUC.meal(s, k);
+      return r && r.out && r.out.ok ? r.state : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  const loyOf = x => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
+  const effOf = k => {
+    const m = M[k];
+    const t = tryMeal(k);
+    if (!m || !t) return null;
+    const hp = t.hp - s.hp;
+    const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0);
+    const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
+    const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0;
+    const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0);
+    const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
+    return {
+      m,
+      hp,
+      ama,
+      fear,
+      st,
+      pop,
+      pts,
+      loy0: loyOf(s),
+      loy1: loyOf(t)
+    };
+  };
+  const fx = k => {
+    const e = effOf(k);
+    if (!e) return '';
+    const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
+    const ly = [e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '', e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : ''].filter(Boolean).join('・');
+    if (e.m.gives) return '持ち物に入る';
+    if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
+    if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
+    return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
+  };
+  const fxLong = k => {
+    const e = effOf(k);
+    if (!e) return '';
+    const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
+    if (e.m.gives) {
+      const it = SUC.ITEMS && SUC.ITEMS[e.m.gives];
+      return `持ち物に「${it && it.name || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`;
+    }
+    const parts = e.m.hp ? [hp] : [];
+    if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
+    if (e.m.fear || e.m.ama) {
+      const ls = [e.m.ama ? e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)' : '', e.m.fear ? e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)' : ''].filter(Boolean).join('・');
+      parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`);
+    }
+    if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
+    if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
+    return parts.join('・');
+  };
+  const MEAL_ICON = {
+    vitamin: '🐍',
+    gochiso: '🍰',
+    f_life: '🍓',
+    f_pow: '🍍',
+    f_wise: '🍏',
+    f_hit: '🥗',
+    f_eva: '🧃',
+    f_tough: '🥫',
+    prune: '⭐'
+  };
+  const LY = SUC.LOYAL || {};
+  const RT = SUC.RATE || {};
+  const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
+  const saveMealResult = async (nextS, res) => {
+    const next = {
+      ...run,
+      s: nextS,
+      rev: (Number(run.rev) || 0) + 1
+    };
+    const saved = await msxSaveRun(next);
+    if (saved === 'stale') {
+      const L = await msxLoad().catch(() => null);
+      const d = L ? await msxReadAll(L.SUC).catch(() => null) : null;
+      if (d) setData(d);
+      return;
+    }
+    setData({
+      ...data,
+      run: next
+    });
+    setResult(res);
+  };
+  const give = async () => {
+    if (busy || !pickKey || !can(pickKey)) return;
+    const r = SUC.meal(s, pickKey);
+    if (!r || !r.out || !r.out.ok) return;
+    setBusy(true);
+    await saveMealResult(r.state, {
+      key: pickKey,
+      before: s,
+      after: r.state,
+      skipped: false
+    });
+    setBusy(false);
+  };
+  const skipMeal = async () => {
+    if (busy || typeof SUC.mealSkip !== 'function') return;
+    const r = SUC.mealSkip(s);
+    if (!r || !r.out || !r.out.ok) return;
+    setBusy(true);
+    await saveMealResult(r.state, {
+      key: null,
+      before: s,
+      after: r.state,
+      skipped: true
+    });
+    setBusy(false);
+  };
+  const gainItems = (before, after) => {
+    const items = [];
+    if ((after.hp || 0) !== (before.hp || 0)) items.push({
+      k: 'hp',
+      e: '💗',
+      name: '体力',
+      from: before.hp || 0,
+      to: after.hp || 0,
+      max: after.hpMax || before.hpMax || 100
+    });
+    MSX_STATS.forEach(k => {
+      const f = (before.stats || {})[k] || 0;
+      const t = (after.stats || {})[k] || 0;
+      if (t !== f) items.push({
+        k,
+        e: MSX_STAT_ICON[k],
+        name: MSX_STAT_NAME[k],
+        from: f,
+        to: t,
+        max: 999
+      });
+    });
+    if ((after.ama || 0) !== (before.ama || 0)) items.push({
+      k: 'ama',
+      e: '💞',
+      name: '甘え度',
+      from: before.ama || 0,
+      to: after.ama || 0,
+      max: 50
+    });
+    if ((after.fear || 0) !== (before.fear || 0)) items.push({
+      k: 'fear',
+      e: '😨',
+      name: '恐れ度',
+      from: before.fear || 0,
+      to: after.fear || 0,
+      max: 50
+    });
+    if ((after.pop || 0) !== (before.pop || 0)) items.push({
+      k: 'pop',
+      e: '⭐',
+      name: '人気',
+      from: before.pop || 0,
+      to: after.pop || 0,
+      max: 100
+    });
+    if ((after.pts || 0) !== (before.pts || 0)) items.push({
+      k: 'pts',
+      e: '🔷',
+      name: '能力ポイント',
+      from: before.pts || 0,
+      to: after.pts || 0,
+      max: Math.max(after.pts || 0, 1)
+    });
+    return items;
+  };
+  const bagNote = (before, after) => {
+    const g = Object.keys(after.bag || {}).find(k => ((after.bag || {})[k] || 0) > ((before.bag || {})[k] || 0));
+    if (!g) return '';
+    const it = SUC.ITEMS && SUC.ITEMS[g];
+    return `持ち物に「${it && it.name || g}」が入ったよ`;
+  };
+  if (result) {
+    const items = gainItems(result.before, result.after);
+    const bag = bagNote(result.before, result.after);
+    return React.createElement("div", {
+      className: "mh-home-meal",
+      "data-mh-home-meal": true
+    }, React.createElement("style", null, MSX_CSS), React.createElement("style", null, MSX_HOME_MEAL_CSS), React.createElement("div", {
+      className: "msx"
+    }, React.createElement("div", {
+      className: "v-meal",
+      "data-mh-home-meal-result": true
+    }, React.createElement("div", {
+      className: "t"
+    }, result.skipped ? '🍽 今日は あげなかった' : `🍽 ${M[result.key] ? M[result.key].name : 'ごはん'}を あげたよ!`, React.createElement("small", null, result.skipped ? `恐れ度 +${SUC.MEAL_SKIP_FEAR || 1}` : '変わった分は これだよ')), typeof MsxGaugeFx === 'function' ? React.createElement(MsxGaugeFx, {
+      key: `farmmeal-${result.before.turn}-${result.skipped ? 'skip' : result.key}`,
+      items: items,
+      title: "ごはんの効き目"
+    }) : null, !items.length ? React.createElement("div", {
+      className: "msx-note",
+      style: {
+        textAlign: 'center',
+        marginTop: 6
+      }
+    }, "数字は もう上限いっぱいで、変わらなかったよ") : null, bag ? React.createElement("div", {
+      className: "msx-note",
+      style: {
+        textAlign: 'center',
+        marginTop: 6
+      }
+    }, "🎁 ", bag) : null, React.createElement("div", {
+      className: "row",
+      style: {
+        marginTop: 6
+      }
+    }, React.createElement("img", {
+      className: "fc",
+      src: msxFace(s.aid, result.skipped ? 'normal' : 'happy'),
+      alt: ""
+    }), React.createElement("div", {
+      className: "bub f1"
+    }, result.skipped ? '「また次の優勝で、ごほうびを あげよう!」' : '「おいしそうに 食べてるよ! よく がんばったね」'))), React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => setResult(null),
+      "data-mh-home-meal-close": true
+    }, "とじる"))));
+  }
+  return React.createElement("div", {
+    className: "mh-home-meal",
+    "data-mh-home-meal": true
+  }, React.createElement("style", null, MSX_CSS), React.createElement("style", null, MSX_HOME_MEAL_CSS), React.createElement("div", {
+    className: "msx"
+  }, React.createElement("div", {
+    className: "v-meal"
+  }, React.createElement("div", {
+    className: "t"
+  }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(今日の3品から1回・ただ)", s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : '')), React.createElement("div", {
+    className: "row",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("img", {
+    className: "fc",
+    src: msxFace(s.aid, 'excited'),
+    alt: ""
+  }), React.createElement("div", {
+    className: "bub f1",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'normal'
+    }
+  }, ['「優勝', 'おめでとう!', 'ファームに', '帰ってきたから、', 'ごほうびの', 'ごはんだよ」'].map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, x))))), React.createElement("div", {
+    className: "ms"
+  }, keys.map(k => React.createElement("button", {
+    type: "button",
+    key: k,
+    className: `v-ml ${pickKey === k ? 'sel' : ''}`,
+    disabled: !can(k) || busy,
+    onClick: () => setPickKey(k),
+    style: {
+      opacity: can(k) ? 1 : 0.45
+    },
+    "data-mh-home-meal-pick": k
+  }, React.createElement("div", {
+    className: "e"
+  }, MEAL_ICON[k] || '🍙'), React.createElement("b", {
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'normal'
+    }
+  }, String(M[k].name).split(/(?=（)/).map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, x)))), React.createElement("small", {
+    "data-mh-home-meal-fx": k
+  }, fx(k).split('・').map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 ? React.createElement(React.Fragment, null, "・", React.createElement("wbr", null)) : null, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, x))))))), React.createElement("div", {
+    className: "msx-note",
+    "data-mh-home-meal-detail": true,
+    style: {
+      marginTop: 5,
+      fontSize: 11,
+      lineHeight: 1.5,
+      textAlign: 'left',
+      color: '#fde68a',
+      ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {})
+    }
+  }, pickKey && M[pickKey] ? `${M[pickKey].name}: ${fxLong(pickKey)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : 'ごはんを押すと、詳しい効き目が出ます'), React.createElement("div", {
+    className: "msx-note",
+    "data-mh-home-meal-loynote": true,
+    style: {
+      marginTop: 4,
+      fontSize: 10.5,
+      lineHeight: 1.5,
+      textAlign: 'left'
+    }
+  }, "💡 ", loyNote)), React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => setDeferred(true),
+    "data-mh-home-meal-later": true,
+    style: {
+      flex: '0.55'
+    }
+  }, "あとで"), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: skipMeal,
+    "data-mh-home-meal-skip": true,
+    style: {
+      flex: '1.25',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      lineHeight: 1.15
+    }
+  }, React.createElement("span", null, "あげずに おわる"), React.createElement("span", {
+    style: {
+      fontSize: 9.5,
+      opacity: 0.85
+    }
+  }, "恐れ度 +", SUC.MEAL_SKIP_FEAR || 1)), React.createElement("button", {
+    type: "button",
+    className: "go",
+    disabled: busy || !(pickKey && can(pickKey)),
+    onClick: give,
+    "data-mh-home-meal-give": true
+  }, pickKey && can(pickKey) ? `${M[pickKey].name}をあげる` : 'ごはんを選んでね'))));
 }
 function MonheroSuccessDebugEntry({
   callNameOf,
@@ -172778,7 +173393,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)|(?<=.)(?=（)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -173324,7 +173939,8 @@ function MsxMonDetail({
   assists = null,
   info = null,
   initialTab = null,
-  supportSummary = null
+  supportSummary = null,
+  cap = null
 }) {
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech');
@@ -173343,7 +173959,9 @@ function MsxMonDetail({
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = id => mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null;
-  const maxSt = Math.max(300, ...MSX_STATS.map(k => Math.min(999, Number(st[k]) || 0)));
+  const capK = k => SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({
+    cap
+  }, k) : cap && Number.isFinite(cap[k]) ? Math.max(999, cap[k]) : 999;
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return React.createElement("div", {
     className: "msx-ov msx-fade",
@@ -173387,29 +174005,42 @@ function MsxMonDetail({
     className: "msx-md-box"
   }, React.createElement("div", {
     className: "cap"
-  }, "能力", React.createElement("span", null, "素質")), MSX_STATS.map((k, i) => React.createElement("div", {
-    key: k,
-    className: "msx-md-st"
-  }, React.createElement("span", {
-    className: "n"
-  }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
-    className: "v"
-  }, React.createElement("b", null, st[k]), React.createElement("span", {
-    className: `g${(Number(st[k]) || 0) > 999 ? ' ov' : ''}`
-  }, React.createElement("i", {
-    style: {
-      width: `${Math.max(2, Math.min(100, Math.min(999, Number(st[k]) || 0) / maxSt * 100))}%`,
-      background: MSX_STAT_COLOR[k]
-    }
-  }), (Number(st[k]) || 0) > 999 ? React.createElement("b", {
-    className: "ov",
-    "data-msx-stat-over": (Number(st[k]) || 0) - 999,
-    style: {
-      width: `${Math.min(100, ((Number(st[k]) || 0) - 999) / 9.99)}%`
-    }
-  }) : null)), React.createElement("span", {
-    className: `a${apt[i] > 'B' ? ' lo' : ''}`
-  }, apt[i])))) : null, tab === 'feat' ? React.createElement("div", {
+  }, "能力", React.createElement("span", null, "素質")), MSX_STATS.map((k, i) => {
+    const v = Number(st[k]) || 0;
+    const cp = capK(k);
+    const over = Math.max(0, v - cp);
+    return React.createElement("div", {
+      key: k,
+      className: "msx-md-st"
+    }, React.createElement("span", {
+      className: "n"
+    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+      className: "v"
+    }, React.createElement("b", null, st[k], React.createElement("small", {
+      "data-msx-stat-cap": k,
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: '#94a3b8',
+        marginLeft: 2
+      }
+    }, "/", cp)), React.createElement("span", {
+      className: `g${over ? ' ov' : ''}`
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.max(2, Math.min(100, v / cp * 100))}%`,
+        background: MSX_STAT_COLOR[k]
+      }
+    }), over ? React.createElement("b", {
+      className: "ov",
+      "data-msx-stat-over": over,
+      style: {
+        width: `${Math.min(100, over / cp * 100)}%`
+      }
+    }) : null)), React.createElement("span", {
+      className: `a${apt[i] > 'B' ? ' lo' : ''}`
+    }, apt[i]));
+  })) : null, tab === 'feat' ? React.createElement("div", {
     className: "msx-md-box"
   }, React.createElement("div", {
     className: "msx-md-kv"
@@ -176393,9 +177024,9 @@ function MsxStRow({
     }, typeof msxStatRankOf === 'function' ? React.createElement("i", {
       className: msxStatRankCls(after),
       "data-msx-stat-rank": k
-    }, msxStatRankOf(after)) : null, React.createElement("b", null, grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]), aptOn ? null : React.createElement("small", {
-      className: "cap"
-    }, "/", cap)), aptOn && aptL ? React.createElement("span", {
+    }, msxStatRankOf(after)) : null, React.createElement("b", null, grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k])), React.createElement("span", {
+      className: "br"
+    }, aptOn && aptL ? React.createElement("span", {
       className: `ap a${aptL[MSX_STATS.indexOf(k)]}`
     }, "素質 ", aptL[MSX_STATS.indexOf(k)]) : grow && u ? React.createElement("u", {
       className: "g",
@@ -176430,7 +177061,9 @@ function MsxStRow({
       style: {
         width: pct(after - 999)
       }
-    }) : null), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
+    }) : null), aptOn ? null : React.createElement("small", {
+      className: "cap"
+    }, "/", cap)), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
   }));
 }
 function MsxPf({
@@ -177008,6 +177641,70 @@ function MonheroSuccessScreen({
   }, "やめておく")))));
   return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
 }
+function MsxHomeDeco({
+  data
+}) {
+  const box = (data && data.box && Array.isArray(data.box.mons) ? data.box.mons : []).filter(m => m && m.species && msxMon(m.species));
+  const own = [...box.filter(m => m.raised), ...box.filter(m => !m.raised)].slice(0, 2);
+  const mons = own.length ? own.map(m => ({
+    sp: m.species,
+    colors: m.colors
+  })) : [{
+    sp: 'Mocchi'
+  }, {
+    sp: 'Suezo'
+  }];
+  const spots = [{
+    left: '57%',
+    bottom: '11%',
+    height: '28%'
+  }, {
+    left: '82%',
+    bottom: '10%',
+    height: '21%'
+  }];
+  return React.createElement("div", {
+    className: "v-hm-deco",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "v-hm-deco-a",
+    style: {
+      left: '21%',
+      bottom: '12%',
+      height: '32%'
+    }
+  }, React.createElement("i", {
+    className: "gs"
+  }), React.createElement("img", {
+    src: msxBody('mua', 'happy'),
+    alt: "",
+    draggable: false
+  })), mons.map((m, i) => React.createElement("span", {
+    key: `${m.sp}-${i}`,
+    className: "v-hm-deco-m",
+    style: {
+      ...spots[i],
+      animationDelay: `${i * 0.7}s`
+    }
+  }, React.createElement("i", {
+    className: "gs"
+  }), m.colors && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: m.sp,
+    src: msxMonImg(m.sp),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: msxMonImg(m.sp),
+    alt: "",
+    draggable: false
+  }))));
+}
 function MsxHome({
   data,
   run,
@@ -177082,7 +177779,9 @@ function MsxHome({
     className: "mon"
   }), React.createElement("span", {
     className: "v-nm"
-  }, run.nick, React.createElement("small", null, msxMonName(s.species)))) : null, React.createElement("div", {
+  }, run.nick, React.createElement("small", null, msxMonName(s.species)))) : React.createElement(MsxHomeDeco, {
+    data: data
+  }), React.createElement("div", {
     className: "v-hm-logo"
   }, React.createElement("img", {
     src: MSX_LOGO_ART,
@@ -178741,6 +179440,7 @@ function MsxPlay({
         noPeak: true
       }),
       st: s.stats,
+      cap: s.cap,
       apt: msxAptOf(s.species),
       type: s.type,
       peak: peak,
@@ -179858,17 +180558,18 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
-.msx .r3 .q-twrap{display:flex;gap:8px;align-items:flex-start}
-.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:3px;flex:none}
+/* 技の表と詳しさ欄は縦並び(表=全幅・詳しさは下)。横並びだと表が細くなり技名が切れるため(2026-11-18) */
+.msx .r3 .q-twrap{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%}
 .msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
 .msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
 .msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
 .msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
 .msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
 .msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
-.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:9px;font-weight:800;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 6px 6px;pointer-events:none}
-.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:15px}
-.msx .r3 .msx-md-tg.q .tc .g{bottom:14px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:10px;font-weight:800;line-height:1.3;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:31px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:30px}
 .msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
 .msx .r3 .q-td.in-pop{margin:0 10px 8px}
 .msx .r3 .q-td.side{flex:1 1 0;min-width:0}
@@ -180940,12 +181641,11 @@ const msxR3Prizes = (SUC, c) => {
       rare: true
     });
   });
-  const wtk = ex && ex.four || c.star >= 3 ? 1 : 0;
   out.push({
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: `${wtk ? `勝つと修行チケット +${wtk}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
+    desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)'
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
@@ -181257,9 +181957,8 @@ function MsxR3Cup({
     }, React.createElement(MsxRivalOwnerIcon, {
       rival: c.rival,
       size: 20
-    }), React.createElement("img", {
-      src: msxMonThumb(c.rival.species),
-      alt: ""
+    }), React.createElement(MsxRivalThumb, {
+      rival: c.rival
     }), React.createElement("b", null, "ライバル ", c.rival.name), c.rival.breeder ? React.createElement("small", null, c.rival.breeder) : null) : null, React.createElement("span", {
       className: "g"
     }, Number(c.prizeMax) > Number(c.prize) ? React.createElement(React.Fragment, null, React.createElement("small", null, "最大"), msxFmt(c.prizeMax)) : msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement("span", {
@@ -181313,10 +182012,10 @@ function MsxR3Cup({
   }, React.createElement(MsxRivalOwnerIcon, {
     rival: wc.rival,
     size: 22
-  }), React.createElement("img", {
-    src: msxMonThumb(wc.rival.species),
-    alt: "",
-    style: {
+  }), React.createElement(MsxRivalThumb, {
+    rival: wc.rival,
+    size: 22,
+    imgStyle: {
       width: 22,
       height: 22,
       borderRadius: '50%',
@@ -181616,9 +182315,9 @@ function MsxR3Bracket({
       className: "cn"
     }), React.createElement("span", {
       className: "fc2"
-    }, React.createElement("img", {
-      src: msxMonThumb(x.species),
-      alt: ""
+    }, React.createElement(MsxRivalThumb, {
+      rival: x,
+      size: 26
     })));
   })), React.createElement("div", {
     className: "rt",
@@ -181981,7 +182680,7 @@ const msxR3ForcedPrizes = (SUC, b) => {
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: '賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)'
+    desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)'
   });
   const bpz = msxR3BeatPrize(SUC, g);
   if (bpz) out.push(bpz);
@@ -182210,7 +182909,6 @@ function MsxR3Battle({
   const [step, setStep] = useState(() => run.r3skip && !showOn ? 'auto' : 'bracket');
   const pendRef = useRef(null);
   const [tab, setTab] = useState('st');
-  const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
   const [showPh, setShowPh] = useState('bracket');
   const [introSeen, setIntroSeen] = useState(null);
@@ -182264,7 +182962,7 @@ function MsxR3Battle({
     const d = msxR3Diff(before, r.state);
     const out = {
       r3: {
-        stage: won || msxR3HasPrize(d) ? 'prize' : d.rankTo > d.rankFrom ? 'rank' : 'meal',
+        stage: won || msxR3HasPrize(d) ? 'prize' : d.rankTo > d.rankFrom ? 'rank' : 'result',
         won,
         name,
         icon: msxR3BattleIcon(b),
@@ -182309,7 +183007,6 @@ function MsxR3Battle({
     const rankUp = d && d.rankTo > d.rankFrom;
     const prizeLost = !won && msxR3HasPrize(d);
     const r3 = {
-      meal: !!(s2.mealReady && !s2.over),
       won,
       name,
       icon: msxR3BattleIcon(b),
@@ -182339,7 +183036,7 @@ function MsxR3Battle({
       });
       return;
     }
-    if (rankUp || s2.mealReady && !s2.over) {
+    if (rankUp) {
       setRun({
         ...runNoPend(),
         s: s2,
@@ -182350,7 +183047,7 @@ function MsxR3Battle({
         out: {
           r3: {
             ...r3,
-            stage: rankUp ? 'rank' : 'meal'
+            stage: 'rank'
           }
         }
       });
@@ -182441,7 +183138,6 @@ function MsxR3Battle({
     if (won || hasPrize) {
       const r3 = {
         stage: 'prize',
-        meal: !!(p.r.state.mealReady && !p.r.state.over),
         won,
         name,
         icon: msxR3BattleIcon(b),
@@ -182564,15 +183260,6 @@ function MsxR3Battle({
         total: s.fameTotal,
         gain: d.fameGain
       }));
-      const next = () => st3.meal ? setRun({
-        ...run,
-        out: {
-          r3: {
-            ...st3,
-            stage: 'meal'
-          }
-        }
-      }) : finish(s);
       return React.createElement(MsxR3Frame, {
         run: run,
         back: "中断",
@@ -182583,9 +183270,9 @@ function MsxR3Battle({
         }, React.createElement("button", {
           type: "button",
           className: "go",
-          onClick: next,
+          onClick: () => finish(s),
           "data-msx-r3-next": true
-        }, st3.meal ? '🍽 ごはんへ ▶' : '次へ ▶'))
+        }, "次へ ▶"))
       });
     }
     if (st3.stage === 'prize') {
@@ -182629,10 +183316,10 @@ function MsxR3Battle({
         "data-msx-r3-prize-stamp": st3.won ? 'win' : 'second'
       }, st3.won ? msxR3WinWord(st3.kind, st3.round) : '準優勝', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, st3.won && st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : '')), st3.rival && st3.won ? React.createElement("div", {
         className: "v-rvw"
-      }, React.createElement("img", {
-        src: st3.foe ? msxMonThumb(st3.foe.species) : '',
-        alt: ""
-      }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "能力ポイント1.5倍")) : null, React.createElement("div", {
+      }, st3.foe ? React.createElement(MsxRivalThumb, {
+        rival: st3.foe,
+        size: 22
+      }) : null, "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "能力ポイント1.5倍")) : null, React.createElement("div", {
         className: "v-trophy"
       }, st3.won ? '🏆' : '🥈')), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
@@ -182663,22 +183350,19 @@ function MsxR3Battle({
         const l = msxR3Line('turn.cup.win', run, {
           cup: st3.name,
           rival: st3.rivalName || ''
-        }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! つぎは ごはんだよ!」' : '「やったね! つぎは ごはんだよ!」');
+        }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! ごほうびのごはんは、ファームに帰ってから あげよう!」' : '「やったね! ごほうびのごはんは、ファームに帰ってから あげよう!」');
         return React.createElement(MsxSay, {
           aid: s.aid,
           ex: l.e || 'excited',
           text: l.t
         });
-      })());
-      const next = () => s.mealReady && !s.over ? setRun({
-        ...run,
-        out: {
-          r3: {
-            ...st3,
-            stage: 'meal'
-          }
+      })(), st3.won && s.mealReady && !s.over ? React.createElement("div", {
+        className: "msx-note",
+        "data-msx-r3-mealwait": true,
+        style: {
+          textAlign: 'center'
         }
-      }) : finish(s);
+      }, "🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ") : null);
       return React.createElement(MsxR3Frame, {
         run: run,
         back: "中断",
@@ -182689,92 +183373,11 @@ function MsxR3Battle({
         }, React.createElement("button", {
           type: "button",
           className: "go",
-          onClick: next,
+          onClick: () => finish(s),
           "data-msx-r3-next": true
-        }, s.mealReady && !s.over ? '🍽 ごはんへ ▶' : '次へ ▶'))
+        }, "次へ ▶"))
       });
     }
-    const M = SUC.MEALS || {};
-    const keys = typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s) : Object.keys(M);
-    const can = k => s.mealReady && !s.over && !!M[k] && keys.includes(k);
-    const tryMeal = k => {
-      try {
-        const r = SUC.meal(s, k);
-        return r && r.out && r.out.ok ? r.state : null;
-      } catch (e) {
-        return null;
-      }
-    };
-    const loyOf = x => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
-    const effOf = k => {
-      const m = M[k];
-      const t = tryMeal(k);
-      if (!m || !t) return null;
-      const hp = t.hp - s.hp;
-      const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0);
-      const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
-      const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0;
-      const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0);
-      const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
-      return {
-        m,
-        hp,
-        ama,
-        fear,
-        st,
-        pop,
-        pts,
-        loy0: loyOf(s),
-        loy1: loyOf(t)
-      };
-    };
-    const fx = k => {
-      const e = effOf(k);
-      if (!e) return '';
-      const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
-      const ly = [e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '', e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : ''].filter(Boolean).join('・');
-      if (e.m.gives) return '持ち物に入る';
-      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
-      if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
-      return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
-    };
-    const fxLong = k => {
-      const e = effOf(k);
-      if (!e) return '';
-      const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
-      if (e.m.gives) {
-        const it = SUC.ITEMS && SUC.ITEMS[e.m.gives];
-        return `持ち物に「${it && it.name || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`;
-      }
-      const parts = e.m.hp ? [hp] : [];
-      if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
-      if (e.m.fear || e.m.ama) {
-        const ls = [e.m.ama ? e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)' : '', e.m.fear ? e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)' : ''].filter(Boolean).join('・');
-        parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`);
-      }
-      if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
-      if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
-      return parts.join('・');
-    };
-    const MEAL_ICON = {
-      vitamin: '🐍',
-      gochiso: '🍰',
-      f_life: '🍓',
-      f_pow: '🍍',
-      f_wise: '🍏',
-      f_hit: '🥗',
-      f_eva: '🧃',
-      f_tough: '🥫',
-      prune: '⭐'
-    };
-    const LY = SUC.LOYAL || {};
-    const RT = SUC.RATE || {};
-    const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
-    const give = () => {
-      if (!mealPick || !can(mealPick)) return;
-      const r = SUC.meal(s, mealPick);
-      if (r.out.ok) finish(r.state);
-    };
     const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
       s: s,
       v: v,
@@ -182814,87 +183417,7 @@ function MsxR3Battle({
         top: '4%',
         fontSize: st3.won ? 42 : 34
       }
-    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), s.mealReady && !s.over ? React.createElement("div", {
-      className: "v-meal"
-    }, React.createElement("div", {
-      className: "t"
-    }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(今日の3品から1回・ただ)", s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : '')), React.createElement("div", {
-      className: "ms"
-    }, keys.map(k => React.createElement("button", {
-      type: "button",
-      key: k,
-      className: `v-ml ${mealPick === k ? 'sel' : ''}`,
-      disabled: !can(k),
-      onClick: () => setMealPick(k),
-      style: {
-        opacity: can(k) ? 1 : 0.45
-      },
-      "data-msx-r3-meal": k
-    }, React.createElement("div", {
-      className: "e"
-    }, MEAL_ICON[k] || '🍙'), React.createElement("b", {
-      style: {
-        wordBreak: 'keep-all',
-        overflowWrap: 'normal'
-      }
-    }, String(M[k].name).split(/(?=（)/).map((x, i) => React.createElement(React.Fragment, {
-      key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
-      style: {
-        whiteSpace: 'nowrap'
-      }
-    }, x)))), React.createElement("small", {
-      "data-msx-r3-mealfx": k
-    }, fx(k).split('・').map((x, i) => React.createElement(React.Fragment, {
-      key: i
-    }, i > 0 ? React.createElement(React.Fragment, null, "・", React.createElement("wbr", null)) : null, React.createElement("span", {
-      style: {
-        whiteSpace: 'nowrap'
-      }
-    }, x))))))), React.createElement("div", {
-      className: "msx-note",
-      "data-msx-r3-mealdetail": true,
-      style: {
-        marginTop: 5,
-        fontSize: 11,
-        lineHeight: 1.5,
-        textAlign: 'left',
-        color: '#fde68a',
-        ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {})
-      }
-    }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
-      key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : 'ごはんを押すと、詳しい効き目が出ます'), React.createElement("div", {
-      className: "msx-note",
-      "data-msx-r3-loynote": true,
-      style: {
-        marginTop: 4,
-        fontSize: 10.5,
-        lineHeight: 1.5,
-        textAlign: 'left'
-      }
-    }, "💡 ", loyNote), React.createElement("div", {
-      className: "row",
-      style: {
-        marginTop: 6
-      }
-    }, React.createElement("img", {
-      className: "fc",
-      src: msxFace(s.aid, st3.won ? 'excited' : 'troubled'),
-      alt: ""
-    }), React.createElement("div", {
-      className: "bub f1",
-      style: {
-        wordBreak: 'keep-all',
-        overflowWrap: 'normal'
-      }
-    }, (st3.won ? ['「優勝だもん、', '今日は', 'ごちそうに', 'しちゃお!」'] : ['「おつかれさま。', 'おいしいもの', '食べて、', 'また', 'がんばろ!」']).map((x, i) => React.createElement(React.Fragment, {
-      key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
-      style: {
-        whiteSpace: 'nowrap'
-      }
-    }, x)))))) : !st3.won && !s.over ? React.createElement("div", {
+    }, st3.won ? '優勝!' : '負けた…', React.createElement("small", null, cardIconNode(st3.icon, 16), " ", st3.name, d.fame ? `・賞金 💰${msxFmt(d.fame)}` : '')), !st3.won && !s.over ? React.createElement("div", {
       className: "v-meal",
       "data-msx-r3-lostnote": true
     }, React.createElement("div", {
@@ -182908,38 +183431,19 @@ function MsxR3Battle({
     }, msxR3Line('turn.cup.lose', run, {
       cup: st3.name
     }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」').t))) : null));
-    const foot = !(s.mealReady && !s.over) ? React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      className: "go",
-      onClick: () => finish(s),
-      "data-msx-r3-nomeal": true
-    }, "次へ ▶")) : React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => finish(typeof SUC.mealSkip === 'function' ? SUC.mealSkip(s).state : s),
-      "data-msx-r3-nomeal": true
-    }, "あげずに次へ", React.createElement("small", {
-      style: {
-        display: 'block',
-        fontSize: 9.5,
-        opacity: 0.85
-      }
-    }, "恐れ度 +", SUC.MEAL_SKIP_FEAR || 1)), React.createElement("button", {
-      type: "button",
-      className: "go",
-      disabled: !(mealPick && can(mealPick)),
-      onClick: () => mealPick && can(mealPick) ? give() : null,
-      "data-msx-r3-give": true
-    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'ごはんを選んでね'));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
       onBack: onPause,
       body: body,
-      foot: foot
+      foot: React.createElement("div", {
+        className: "v-ft"
+      }, React.createElement("button", {
+        type: "button",
+        className: "go",
+        onClick: () => finish(s),
+        "data-msx-r3-next": true
+      }, "次へ ▶"))
     });
   }
   if (!b) return React.createElement(MsxR3Frame, {
@@ -184012,7 +184516,7 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "タップで選ぶ・詳しさは右の欄")), all.length ? React.createElement("div", {
+  }, "タップで選ぶ・詳しさは下の欄")), all.length ? React.createElement("div", {
     className: "q-twrap"
   }, React.createElement(MsxTechGrid, {
     className: "q",
@@ -184073,7 +184577,7 @@ function MsxR3Shugyo({
       }, "⇄", alts.length) : null, React.createElement("span", {
         className: "tg-nm",
         "aria-hidden": "true"
-      }, t.name));
+      }, msxTechNm(t.name)));
     }
   }), (() => {
     const ft = focusT || all.find(x => x.id === want[0]) || all[0];
@@ -186606,7 +187110,18 @@ function MsxArcPick({
   const top = opp ? React.createElement("div", {
     className: "arc-foe",
     "data-msx-arc-foe": true
-  }, React.createElement("img", {
+  }, Array.isArray(opp.colors) && opp.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: opp.species,
+    src: msxMonImg(opp.species),
+    masuColors: opp.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      height: 64,
+      width: 64,
+      margin: '0 auto'
+    }
+  }) : React.createElement("img", {
     src: msxMonThumb(opp.species),
     alt: ""
   }), React.createElement("b", null, foe), React.createElement("small", null, opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)), React.createElement("div", {
@@ -187182,15 +187697,15 @@ const monsucLendClaim = async () => {
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
 const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
 const MSX_MANUAL_CSS = `
-.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:9px;margin-top:8px;color:#fff;font-weight:700}
+.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:8px;margin-top:6px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
 .msxm-top b{color:#fff}
 .msxm-g{flex:1;height:8px;border-radius:8px;background:#334155;overflow:hidden}.msxm-g i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15)}
-.msxm-sec{margin-top:8px}
-.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:4px}
+.msxm-sec{margin-top:6px}
+.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:3px}
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
-.msxm-row.r3{flex-wrap:nowrap;margin-top:6px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:5px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.2}
-.msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
+.msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:5px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.2}
+.msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
@@ -187200,7 +187715,7 @@ ${MSA_TN_CSS}
 .msxm-btn.far{background:#221d3d;border-style:dashed}
 .msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
-.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
+.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
@@ -187303,9 +187818,9 @@ const MSA_DC_CSS = `
 .msa-dc-c.ng small.p{color:#fca5a5}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:62px;padding:4px 6px}
+.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:56px;padding:3px 6px}
 .msa-dc.a .msa-dc-c.none{display:block}
-.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:44px;height:44px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
+.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:40px;height:40px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
 .msa-dc.a .msa-dc-ic.wise{box-shadow:0 0 0 2px #22c55e}
 .msa-dc.a .msa-dc-ic .tg-img{width:100%;height:100%;display:block}
 .msa-dc.a .msa-dc-ic .k{position:absolute;right:0;bottom:0;font-style:normal;font-size:11px;line-height:1;padding:2px 2px 1px 3px;border-radius:6px 0 0 0;background:#1b1733}
@@ -188138,7 +188653,8 @@ const MSA_CSS = `
 .msa-stagebox{flex:1 1 auto;min-height:300px}
 /* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:240px}
+/* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
+.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,46vh,520px);min-height:300px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -188161,6 +188677,12 @@ const MSA_CSS = `
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+}
+/* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面すべてへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
+@media (orientation:portrait){
+  .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 /* 低い縦の画面(320×568 など・r1115-202 M14): 場面を低くして上に留め、札の所まで送っても体力の帯と場面が見えるように。画面は縦に少し流す決まりのまま */
 @media (max-height:700px) and (orientation:portrait){
@@ -188752,6 +189274,8 @@ function MsaFighter({
   side,
   member,
   x,
+  prevX,
+  sf = 1,
   e,
   foeX,
   fwPx = 96,
@@ -188771,6 +189295,48 @@ function MsaFighter({
     fin: false,
     big: false
   };
+  const rootRef = useRef(null);
+  const blownRow = !!(e && e.side === side && e.ev === 'move' && e.why === 'blown');
+  useEffect(() => {
+    if (!blownRow || reduce) return undefined;
+    const root = rootRef.current;
+    if (!root || typeof root.animate !== 'function') return undefined;
+    const bodyEl = root.querySelector('[data-msa-body]');
+    if (!bodyEl) return undefined;
+    const w = foeX && foeX.w || 340;
+    const dx = Math.round(((Number(prevX) || 0) - (Number(x) || 0)) * w);
+    if (!dx) return undefined;
+    const dur = Math.max(200, Math.min(680, Math.round(640 * (Number(sf) || 1))));
+    const arc = Math.round(Math.min(70, 20 + Math.abs(dx) * 0.18));
+    const spin = -Math.sign(dx) * 15;
+    let a = null;
+    try {
+      a = bodyEl.animate([{
+        transform: `translate(${dx}px,0px) rotate(0deg)`,
+        offset: 0
+      }, {
+        transform: `translate(${Math.round(dx * 0.45)}px,${-arc}px) rotate(${spin}deg)`,
+        offset: 0.55
+      }, {
+        transform: `translate(${Math.round(dx * 0.12)}px,${-Math.round(arc * 0.25)}px) rotate(${Math.round(spin * 0.35)}deg)`,
+        offset: 0.82
+      }, {
+        transform: 'translate(0px,0px) rotate(0deg)',
+        offset: 1
+      }], {
+        duration: dur,
+        easing: 'cubic-bezier(.3,.6,.35,1)',
+        fill: 'none'
+      });
+    } catch (_) {
+      a = null;
+    }
+    return () => {
+      try {
+        if (a) a.cancel();
+      } catch (_) {}
+    };
+  }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
@@ -188887,8 +189453,8 @@ function MsaFighter({
   }
   let bodyStyle;
   if (me && e.ev === 'move') {
-    cls = 'msa-step';
-    bodyStyle = {
+    cls = blownRow ? 'msa-blown' : 'msa-step';
+    bodyStyle = blownRow ? undefined : {
       '--msa-lean': `${lean}deg`
     };
     if (!reduce) [0, 1, 2].forEach(j => extra.push(React.createElement("i", {
@@ -188954,11 +189520,17 @@ function MsaFighter({
     }) : still0;
     body = React.createElement("div", {
       key: `b-${e ? e.k : 0}-${cls}`,
+      "data-msa-body": side,
       className: `flex items-end justify-center ${cls}`,
       style: bodyStyle
     }, still);
   }
+  if (blownRow && !reduce) style = {
+    ...style,
+    transition: 'none'
+  };
   return React.createElement("div", {
+    ref: rootRef,
     className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
     "data-msa-fighter": side
@@ -189360,6 +189932,10 @@ function MsaStage({
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2;
   const xB = cNow + gap / 2;
+  const gapPf = gapOf(pf ? pf.d : 1);
+  const cPf = pos > 0 && cs[pos - 1] != null ? cs[pos - 1] : cNow;
+  const xAPf = cPf - gapPf / 2;
+  const xBPf = cPf + gapPf / 2;
   const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
   const scrX = x => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K);
   const dmgX = x => {
@@ -189572,6 +190148,8 @@ function MsaStage({
     lean: e0.side === 'A' ? walkLean : 0,
     member: mA,
     x: xA,
+    prevX: xAPf,
+    sf: sf,
     e: e,
     foeX: {
       x: xB,
@@ -189591,6 +190169,8 @@ function MsaStage({
     lean: e0.side === 'B' ? walkLean : 0,
     member: mB,
     x: xB,
+    prevX: xBPf,
+    sf: sf,
     e: e,
     foeX: {
       x: xA,
@@ -189722,7 +190302,13 @@ function MsaStage({
     className: "nm"
   }, mA ? mA.name : '')), React.createElement("div", {
     className: "pb"
-  }, mB ? React.createElement("img", {
+  }, mB ? Array.isArray(mB.colors) && mB.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: mB.species,
+    src: mscMonImg(mB.species),
+    masuColors: mB.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
     src: mscMonImg(mB.species),
     alt: ""
   }) : null, React.createElement("span", {
@@ -189846,19 +190432,31 @@ function MonsucArena({
     return () => clearTimeout(t);
   }, [ended]);
   const stageTeams = useMemo(() => {
-    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
-    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    const cA = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    const cB = info && info.opp && Array.isArray(info.opp.colors) && info.opp.colors.some(Boolean) ? info.opp.colors : null;
+    if (!cA && !cB || !teams.A || !Array.isArray(teams.A.members)) return teams;
     return {
       ...teams,
-      A: {
-        ...teams.A,
-        members: teams.A.members.map((m, i) => i === 0 && m ? {
-          ...m,
-          colors: c
-        } : m)
-      }
+      ...(cA ? {
+        A: {
+          ...teams.A,
+          members: teams.A.members.map((m, i) => i === 0 && m ? {
+            ...m,
+            colors: cA
+          } : m)
+        }
+      } : {}),
+      ...(cB && teams.B && Array.isArray(teams.B.members) ? {
+        B: {
+          ...teams.B,
+          members: teams.B.members.map((m, i) => i === 0 && m ? {
+            ...m,
+            colors: cB
+          } : m)
+        }
+      } : {})
     };
-  }, [teams.A, teams.B, info && info.colors]);
+  }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
@@ -191039,8 +191637,18 @@ function MonsucRankDetail({
         }
       }) : undefined;
       return React.createElement("div", {
-        className: "msx",
-        "data-monsuc-rank-detail": true
+        "data-monsuc-rank-detail": true,
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 60,
+          display: 'flex',
+          justifyContent: 'center',
+          background: '#0b0920',
+          padding: 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)'
+        }
+      }, React.createElement("div", {
+        className: "msx"
       }, React.createElement(MsxMonDetail, {
         species: row.species,
         name: row.child_name || mon.name || '？？？',
@@ -191058,7 +191666,7 @@ function MonsucRankDetail({
         info: info,
         onClose: onBack,
         SUC: SUC
-      }));
+      })));
     } catch (_) {}
   }
   return React.createElement("div", {
@@ -237221,7 +237829,9 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
-      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName, {
+        quick: true
+      });
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => {
@@ -238684,13 +239294,14 @@ function MonsterHeroGame() {
     const jobs = [];
     const seen = new Set();
     masuMons.forEach(m => {
-      if (!getMasuColors(m).some(Boolean)) return;
+      const colors = getMasuColors(m);
+      if (!colors.some(Boolean)) return;
       const base = ALL_PLAYER_MONSTERS[m.baseId];
       [base?.imgUrl, base?.iconUrl].forEach(url => {
         const key = `${m.baseId}::${url}`;
         if (url && !seen.has(key)) {
           seen.add(key);
-          jobs.push(() => getDyeRegionMasks(m.baseId, url));
+          jobs.push(() => warmDyedMonsterImage(m.baseId, url, colors));
         }
       });
     });
@@ -244696,7 +245307,9 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
-    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName, {
+      quick: isQuickMode(runMode) && quickAnywhereRunRef.current
+    });
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => {
@@ -275842,7 +276455,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -276093,7 +276706,7 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
     @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{min-height:44px;padding:5px 10px}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
     /* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
-   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:6px 0 0 3%;pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
+   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:3px 0 0 3%;pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-masumon-layer{bottom:38%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
@@ -276136,8 +276749,13 @@ const createAnimationStyle = () => {
     [data-assistant-life-map] .mh-home-facility.rhythm{left:1.9%;top:55.25%}[data-assistant-life-map] .mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){[data-assistant-life-map] .mh-home-facility.life{top:37%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){[data-assistant-life-map] .mh-home-facility.life{top:39%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
     /* ===== ホーム一新(2026-11-17): 下部ドック・期間ものの細バナー・右端スタック =====
        施設は背景の建物に合わせた札をやめ、下のドック(絶対配置・下固定)に集約した。上の帯と吹き出しは流れで置くので、
-       吹き出しが伸びても押し下げ合いは起きない。safe-area は body の余白が受け持つため、ドックでは足さない(家ルール) */
-    .mh-home-event-strip{position:relative;z-index:5;display:flex;align-items:center;gap:6px;margin:5px 0 0 9px}
+       吹き出しが伸びても押し下げ合いは起きない。safe-area は body の余白が受け持つため、ドックでは足さない(家ルール)
+       同日のあっくん追加指示「もうちょいうえにつめる」で、上部を少し詰めた: 上の帯の上余白 8px→5px(safe-area分はそのまま)、
+       細バナーの上の間 5px→3px、吹き出しの上の間 6px→3px。広場がそのぶん広くなる */
+    /* 横幅は中身の分だけにする(2026-11-17・ホーム磨き)。帯の箱はもともと場面いっぱいに広がっていて、見えない箱が
+       右端ボタンに届き、開催期間中だけ配置検査(home-layout-check)が「細バナー×右端ボタン」と言っていた(変更前の main でも再現)。
+       見た目(バナーの大きさ・位置)は変えず、箱だけを中身に合わせる */
+    .mh-home-event-strip{position:relative;z-index:5;display:flex;align-items:center;gap:6px;width:fit-content;max-width:calc(100% - 15px);margin:3px 0 0 9px}
     .mh-home-event-strip .mh-home-event-banner,.mh-home-event-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
     .mh-home-event-strip-dots{display:flex;gap:4px;align-items:center}
     .mh-home-event-strip-dots i{width:6px;height:6px;border-radius:50%;background:#ffffff55}
