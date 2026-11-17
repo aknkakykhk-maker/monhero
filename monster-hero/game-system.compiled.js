@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8854a3637e83f23
+// source-sha256: ac83708f926cb343
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -183894,6 +183894,32 @@ function MsxR3Retire({
       alive = false;
     };
   }, []);
+  useEffect(() => {
+    if (step !== 'done' && step !== 'best3') return undefined;
+    const base = res && res.rank;
+    if (!base || base.ok || !base.pending || rankFix) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
+        if (!alive) return;
+        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
+        if (!alive || st !== 'sent') return;
+        let place = null;
+        if (typeof monsucRankRead === 'function') {
+          const d = await monsucRankRead({});
+          if (d && d.mine) place = d.mine.place;
+        }
+        if (alive) setRankFix({
+          ok: true,
+          placeAll: place
+        });
+      } catch (_) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [step, res, rankFix]);
   const ev = SUC.evaluate(ws);
   const ev0 = SUC.evaluate(s);
   const right = `${Math.min(s.turn, msxSuc.core.TOTAL_TURNS)} / ${msxSuc.core.TOTAL_TURNS}ターン`;
@@ -184405,32 +184431,6 @@ function MsxR3Retire({
     setPick(now);
     setSure(false);
   };
-  useEffect(() => {
-    if (step !== 'done' && step !== 'best3') return undefined;
-    const base = res && res.rank;
-    if (!base || base.ok || !base.pending || rankFix) return undefined;
-    let alive = true;
-    (async () => {
-      try {
-        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
-        if (!alive) return;
-        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
-        if (!alive || st !== 'sent') return;
-        let place = null;
-        if (typeof monsucRankRead === 'function') {
-          const d = await monsucRankRead({});
-          if (d && d.mine) place = d.mine.place;
-        }
-        if (alive) setRankFix({
-          ok: true,
-          placeAll: place
-        });
-      } catch (_) {}
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [step, res, rankFix]);
   const decide = async () => {
     if (!sure) {
       setSure(true);
