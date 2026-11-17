@@ -287,7 +287,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
                   // 升に出す技: 覚えた技があればそれ → 選んだ技 → 並びの1つ目
-                  const t = alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+                  const t = alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id && !has(x)) || alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
                   const got = has(t); const canAlt = !!pick && alts.length > 1;
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
@@ -313,13 +313,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             </div>
           </div>
         </div>
-        {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find(has) || alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+        {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts.find(has) || alts[0];
           return (<div className="msx-ov msx-fade" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
-              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
-                <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
+                <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} data-msx-techpick-opt={t.id} onClick={() => { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); }}>
                   <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`} data-msx-techpick-icon><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span></span>
                   <span className="tpb"><b>{msxTechNm(t.name)}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb" data-msx-techpick-grades><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>ガッツダウン {grade('gd', t.gd)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small>{msxTechMoveTxt(t) ? <small className="tp-nb"><i>使ったあと {msxTechMoveTxt(t)}</i></small> : null}<small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>

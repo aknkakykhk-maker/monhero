@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3106d3e2958a2df6
+// generated-sha256: 4557809225dda1d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90267,7 +90267,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
                   // 升に出す技: 覚えた技があればそれ → 選んだ技 → 並びの1つ目
-                  const t = alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+                  const t = alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id && !has(x)) || alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
                   const got = has(t); const canAlt = !!pick && alts.length > 1;
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
@@ -90293,13 +90293,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             </div>
           </div>
         </div>
-        {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find(has) || alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+        {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts.find(has) || alts[0];
           return (<div className="msx-ov msx-fade" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
-              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
-                <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
+                <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} data-msx-techpick-opt={t.id} onClick={() => { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); }}>
                   <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`} data-msx-techpick-icon><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span></span>
                   <span className="tpb"><b>{msxTechNm(t.name)}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb" data-msx-techpick-grades><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>ガッツダウン {grade('gd', t.gd)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small>{msxTechMoveTxt(t) ? <small className="tp-nb"><i>使ったあと {msxTechMoveTxt(t)}</i></small> : null}<small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
@@ -92277,6 +92277,39 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-twrap{display:flex;gap:8px;align-items:flex-start}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:3px;flex:none}
+.msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
+.msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
+.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
+.msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
+.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
+.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:9px;font-weight:800;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:15px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:14px}
+.msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
+.msx .r3 .q-td.in-pop{margin:0 10px 8px}
+.msx .r3 .q-td.side{flex:1 1 0;min-width:0}
+.msx .r3 .q-td .q-td-nm{margin-bottom:4px}
+.msx .r3 .q-td .q-td-nm b{display:block;font-size:13.5px;font-weight:900;color:#fff;line-height:1.25}
+.msx .r3 .q-td .q-td-nm em{font-style:normal;font-size:10.5px;font-weight:800;color:#fde047}
+.msx .r3 .q-td .q-td-rows{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.msx .r3 .q-td .q-td-rows .kv{display:inline-flex;gap:4px;font-size:10px;color:#e2e8f0;font-weight:700}
+.msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
+.msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
+.msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-say{margin-top:3px}
+.msx .r3 .q-say img{width:34px;height:34px}
+.msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
+.msx .r3 .q-sec{margin-top:5px;padding:5px 8px 6px}
+.msx .r3 .q-sec h3{margin-bottom:3px}
+.msx .r3 .q-sec .v-stg{margin-top:4px}
+.msx .r3 .q-sec .v-stg div{padding:2px 3px;font-size:10px}
+.msx .r3 .q-sec .v-stg div small{font-size:9px}
+.msx .r3 .q-slot{min-height:36px}
+.msx .r3 .q-td .q-td-rows .kv b{color:#94a3b8;font-weight:800}
+.msx .r3 .q-td .q-td-rows .kv .gd{color:#fde68a;font-weight:900}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
@@ -93701,6 +93734,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
   const [lockT, setLockT] = useState(null); // 🔒の札の条件をくわしく(選ぶ画面)
+  const [focusT, setFocusT] = useState(null); // 詳しさ欄に出す技(最後に押したカード。2026-11-17 あっくん「技詳細もほしい」)
   // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
   useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
@@ -93798,6 +93832,18 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     Object.entries(L.need || {}).forEach(([id, n]) => out.push({ k: `nd-${id}`, short: `${techName(id)} 熟練${n}で`, long: msxPh(`「${techName(id)}」の熟練が｜${n} 以上｜${(s0.techs || []).includes(id) ? `(いま ${(s0.mastery || {})[id] || 0})` : '(まだ覚えていない)'}`), ok: ((s0.mastery || {})[id] || 0) >= n }));
     return out;
   };
+  const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  // 技の詳しさの行(モンスター詳細の技の詳しさと同じ並び)。§3の詳しさ欄と、🔒の条件ポップアップで共用する
+  const tdRows = (t) => (<>
+    <span className="kv"><b>技種</b><span className="vv">{t.kind === 'wise' ? 'かしこさ' : 'ちから'}</span></span>
+    <span className="kv"><b>消費ガッツ</b><span className="vv">{t.guts}</span></span>
+    <span className="kv"><b>ダメージ</b><span className="gd">{grade('power', t.power)}</span></span>
+    <span className="kv"><b>命中率</b><span className="gd">{grade('hit', t.hit)}</span></span>
+    <span className="kv"><b>ガッツダウン</b><span className="gd">{grade('gd', t.gd)}</span></span>
+    <span className="kv"><b>クリティカル率</b><span className="gd">{grade('crit', t.crit)}</span></span>
+    {typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <span className="kv"><b>使ったあと</b><span className="vv">{msxTechMoveTxt(t)}</span></span> : null}
+    {(s0.techs || []).includes(t.id) && typeof msxMasteryOf === 'function' ? (() => { const m = msxMasteryOf(s0.mastery, t.id); const b = typeof msxMasteryBoost === 'function' ? msxMasteryBoost(SUC, t.id, m) : null; return (<><span className="kv"><b>熟練</b><span className="vv">{m}/100</span></span><span className="kv"><b>熟練の効き目</b><span className="vv">{b ? `威力+${b.pow}%・命中+${b.hit}%` : 'まだ無し'}</span></span></>); })() : null}
+  </>);
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? (superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」') : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = (id) => {
     if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の技のカードから 技を選ぶ'}</div>;
@@ -93824,31 +93870,37 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {isSuper ? <div className="q-note y msx-kp" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
-    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の技のカードをタップ</span></h3>
-      {all.length ? <MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">タップで選ぶ・詳しさは右の欄</span></h3>
+      {all.length ? <div className="q-twrap"><MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
         // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
         const gotOf = (x) => (s0.techs || []).includes(x.id);
         const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
-        const t = alts.find(gotOf) || alts.find((x) => x.id === pk) || alts[0];
+        const t = alts.find((x) => x.id === pk && !gotOf(x)) || alts.find(gotOf) || alts.find((x) => x.id === pk) || alts[0];
         const got = gotOf(t); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
         const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
         const state = sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock';
         const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
         return (<button type="button" className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`} data-msx-r3-tech={t.id} data-msx-cell={cellK}
           aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
-          onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)}>
+          onClick={() => { setFocusT(t); if (ok && !got) toggle(t.id); else if (!got) setLockT(t); }}>
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
           {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
           {alts.length > 1 ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}{/* 同じマスに技が2つ以上ある印(r1115-146①)。押せない */}
+          <span className="tg-nm" aria-hidden="true">{t.name}</span>{/* 技の名前帯(2026-11-17 あっくん「1画面でみにくい」) */}
         </button>);
-      }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
+      }}/>{(() => { const ft = focusT || all.find((x) => x.id === want[0]) || all[0]; if (!ft) return null; const fGot = (s0.techs || []).includes(ft.id); const fSel = want.includes(ft.id); const fOk = rateOf[ft.id] != null; return (
+        <div className="q-td side msx-kp" data-msx-r3-qtd={ft.id}>
+          <div className="q-td-nm"><b>{ft.name}</b><em>{fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり'}</em></div>
+          <div className="q-td-rows">{tdRows(ft)}</div>
+        </div>); })()}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="q-note msx-kp">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。{typeof msxBetaAidOk !== 'function' || msxBetaAidOk('dra') ? '助手がドラだと、さらに覚えやすい' : ''}</div>
     </div>
     {lockT ? (
       <div className="v-cupwin" onClick={() => setLockT(null)} data-msx-r3-qlock>
         <div className="in" onClick={(e) => e.stopPropagation()}>
           <div className="h">🔒 {lockT.name}</div>
+          <div className="q-td in-pop"><div className="q-td-rows">{tdRows(lockT)}</div></div>
           <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
             {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
             {!full && condsOf(lockT).length ? <p>条件を全て満たすと、緑の「覚えられる」カードになります</p> : null}</div>
