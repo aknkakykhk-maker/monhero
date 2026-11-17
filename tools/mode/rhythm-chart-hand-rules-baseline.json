@@ -2773,6 +2773,41 @@
    "fastSameSide": 8,
    "heldHandSwitch": 0
   },
+  "seasons_of_a_little_plaza/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "seasons_of_a_little_plaza/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "seasons_of_a_little_plaza/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 13,
+   "heldHandSwitch": 0
+  },
+  "seasons_of_a_little_plaza/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 7,
+   "heldHandSwitch": 0
+  },
+  "seasons_of_a_little_plaza/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 14,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2899,6 +2934,16 @@
    "at": "2026-11-15T00:54",
    "reason": "新曲 Sparkling Pink Overture を公開",
    "changed": 5
+  },
+  {
+   "at": "2026-11-17T13:21",
+   "reason": "新曲 seasons_of_a_little_plaza(僕たちのページは晴れ模様)追加",
+   "changed": 5
+  },
+  {
+   "at": "2026-11-17T14:22",
+   "reason": "新曲 seasons_of_a_little_plaza の難易度を challengeFactor 1.15 に再生成したため、自曲の行だけ件数を更新",
+   "changed": 3
   }
  ]
 }
