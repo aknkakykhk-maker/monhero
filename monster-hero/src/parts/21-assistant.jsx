@@ -325,6 +325,47 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+// ── HOMEの助手コメント(吹き出し)を出すか(2026-11-17 あっくん「ファーム(ホーム)が狭く感じる。助手のコメントのオンオフがほしい」) ──
+//   上の「助手のひとこと」の3択は HOME を対象外にしている(HOMEの助手はお知らせや話しかけの入口のため)。
+//   こちらは HOME 専用の入/切で、切ると HOME の吹き出しと「💬 おしゃべり」のボタンが消えて、そのぶん広場が広くなる。
+//   保存は新しいキーだけ(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無い・壊れているときは「入」(今の見た目が既定)
+//   助手の告知(アップデートのお知らせ)はこの部品を使っていないので、この設定の影響を受けない
+const HOME_ASSISTANT_COMMENT_KEY = 'mh_home_assistant_comment_v1';
+const HOME_ASSISTANT_COMMENT_STORE = (() => {
+  let state = { on: true, loaded: false };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach((fn) => { try { fn(state); } catch (_) { /* 画面側の失敗で止めない */ } });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let on = true;
+        try { on = (await storeGet(HOME_ASSISTANT_COMMENT_KEY, true, false)) !== false; } catch (_) { /* 読めなければ「入」 */ }
+        state = { on, loaded: true };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    setOn(next) {
+      state = { ...state, on: next === true, loaded: true };
+      emit();
+      try { void Promise.resolve(storeSet(HOME_ASSISTANT_COMMENT_KEY, state.on)).catch(() => {}); } catch (_) { /* 保存できなくてもこの回は効く */ }
+    },
+  };
+})();
+const useHomeAssistantComment = () => {
+  const [state, setState] = useState(() => HOME_ASSISTANT_COMMENT_STORE.get());
+  useEffect(() => {
+    const off = HOME_ASSISTANT_COMMENT_STORE.subscribe(setState);
+    setState(HOME_ASSISTANT_COMMENT_STORE.get());
+    void HOME_ASSISTANT_COMMENT_STORE.load();
+    return off;
+  }, []);
+  return state;
+};
 // ── 吹き出しを小さくたたむ(2026-10-26 開発部・マーケットのビートP交換所「押すと小さくたためて、たたんだことを覚える」) ──
 // collapseKey を渡した吹き出しだけ、右上の「たたむ」で顔と小さな札だけになり、たたんだことを端末に覚える。
 // 保存: 新しいキー mh_bubble_collapsed_v1 = { collapseKey: true }(たたんだものだけ入れる。無い・壊れていれば全部ひらいたまま)。既存のキーは触らない
