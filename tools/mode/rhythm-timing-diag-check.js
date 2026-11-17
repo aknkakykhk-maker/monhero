@@ -37,7 +37,7 @@ const makeContext=(ua,store={})=>{
   vm.createContext(ctx);
   // ageBlock は rhythmInputAgeMs を、timingBlock は RHYTHM_TIMING_DIAG を持つ。順番は本体と同じ(定数→診断→上限→年齢)
   // ageBlock には、上限の定数・診断(RHYTHM_TIMING_DIAG)・上限の関数・rhythmInputAgeMs がこの順で入っている
-  vm.runInContext(`${ageBlock}\n${platformBlock}\n${fixBlock}\nthis.out={clock,rhythmSmoothClockLiveCheck,rhythmInputAgeTypicalMs,rhythmRevealedAgeMs,rhythmTouchFixAutoSet,rhythmTouchFixAutoFrom,rhythmInputAgeMs,rhythmInputAgeResetFloor,RHYTHM_TIMING_DIAG,rhythmTouchFixOn,rhythmTouchFixSetOverride,rhythmTouchFixesActive,rhythmInputAgeCapMs,RHYTHM_TOUCH_FIXES};`,ctx);
+  vm.runInContext(`${ageBlock}\n${platformBlock}\n${fixBlock}\nthis.out={clock,rhythmInputAgeStaleMs,rhythmSmoothClockLiveCheck,rhythmInputAgeTypicalMs,rhythmRevealedAgeMs,rhythmTouchFixAutoSet,rhythmTouchFixAutoFrom,rhythmInputAgeMs,rhythmInputAgeResetFloor,RHYTHM_TIMING_DIAG,rhythmTouchFixOn,rhythmTouchFixSetOverride,rhythmTouchFixesActive,rhythmInputAgeCapMs,RHYTHM_TOUCH_FIXES};`,ctx);
   return ctx.out;
 };
 const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
@@ -56,7 +56,7 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
   check('20ms遅れた入力は20msのまま',o.rhythmInputAgeMs(1000,1020)===20);
   o.clock.now=5000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=5005;
   // 2026-11-14(社長が案A を選んだ): iPhone では、コマが止まっていないのに古い時刻の入力は、合図の時刻が当てにならないので「ふだんの遅れ」だけ戻す(まだ数が無いあいだは 25ms)
-  check('iPhone: コマが止まっていないのに古い時刻の入力(200ms)は、ふだんの遅れ(まだ数が無ければ 25ms)だけ戻す',o.rhythmInputAgeMs(4805,5005)===25);
+  check('iPhone: コマが止まっていないのに古い時刻の入力(200ms)は、ふだんの遅れ(まだ数が無ければ 25ms)+10ms だけ戻す(2026-11-17 案B)',o.rhythmInputAgeMs(4805,5005)===35);
   {const p=makeContext(PC);p.rhythmInputAgeResetFloor();p.rhythmInputAgeMs(1000,1020);p.clock.now=5000;p.RHYTHM_TIMING_DIAG.frame(1);p.clock.now=5005;
    check('パソコン・Android: 同じ入力は今までどおり 80ms で止める',p.rhythmInputAgeMs(4805,5005)===80);}
 }
@@ -164,11 +164,11 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   o.clock.now=1010;check('ふつうの入力の補正は今までどおり',o.rhythmInputAgeMs(1000,1010)===10);
   o.RHYTHM_TIMING_DIAG.bias(-20);
   o.clock.now=5000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=5005;
-  check('遅れて届いた入力(200ms・コマは来ていた)は、iPhone ではふだんの遅れ(25ms)だけ戻す',o.rhythmInputAgeMs(4805,5005)===25);
+  check('遅れて届いた入力(200ms・コマは来ていた)は、iPhone ではふだんの遅れ(25ms)+10ms だけ戻す',o.rhythmInputAgeMs(4805,5005)===35);
   o.RHYTHM_TIMING_DIAG.bias(95);
   o.clock.now=5100;o.RHYTHM_TIMING_DIAG.bias(-25);
   const t=o.RHYTHM_TIMING_DIAG.snapshot();
-  check('遅れた入力で取れた単押しは別に数え、合図の時刻まで戻したときのずれも残す',t.lateN===1&&t.lateActMs===95&&t.lateFullMs===-80&&t.lateExMs===175,JSON.stringify({n:t.lateN,act:t.lateActMs,full:t.lateFullMs,ex:t.lateExMs}));
+  check('遅れた入力で取れた単押しは別に数え、合図の時刻まで戻したときのずれも残す',t.lateN===1&&t.lateActMs===95&&t.lateFullMs===-70&&t.lateExMs===165,JSON.stringify({n:t.lateN,act:t.lateActMs,full:t.lateFullMs,ex:t.lateExMs}));
   check('ふだんのずれ(biasMs)には混ぜない',t.biasN===2&&t.biasMs===-20,JSON.stringify({n:t.biasN,ms:t.biasMs}));
   o.clock.now=6010;o.rhythmInputAgeMs(6000,6010);o.RHYTHM_TIMING_DIAG.bias(-30);
   check('次のふつうの入力では消える',o.RHYTHM_TIMING_DIAG.snapshot().lateN===1&&o.RHYTHM_TIMING_DIAG.snapshot().biasN===3);
@@ -212,14 +212,14 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   [12,14,16,18,20,22,24,26,28].forEach((age,i)=>o.rhythmInputAgeMs(1000*(i+1),1000*(i+1)+age));
   check('ふだんの遅れ: 80ms 以下の遅れの中央値',o.rhythmInputAgeTypicalMs()===20,String(o.rhythmInputAgeTypicalMs()));
   o.clock.now=20000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=20005;
-  check('iPhone: コマは来ていたのに 150ms 古い入力は、ふだんの遅れ(20ms)だけ戻す',o.rhythmInputAgeMs(19855,20005)===20);
+  check('iPhone: コマは来ていたのに 150ms 古い入力は、ふだんの遅れ(20ms)+10ms だけ戻す',o.rhythmInputAgeMs(19855,20005)===30);
   check('80ms を超えた遅れは、ふだんの遅れの数に入れない',o.rhythmInputAgeTypicalMs()===20);
   check('iPhone: 80ms 以下の遅れは今までどおりそのまま戻す',o.rhythmInputAgeMs(30000,30060)===60);
   // 本当にコマが止まっていたとき(直前のコマが遅れの6割以上前)は今までどおり 80ms
   o.clock.now=40000;o.RHYTHM_TIMING_DIAG.frame(2);o.clock.now=40200;
   check('iPhone: その間コマが本当に止まっていた遅れ(200ms)は、今までどおり 80ms 戻す',o.rhythmInputAgeMs(40000,40200)===80);
   // 上限 50ms
-  const hi=makeContext(IPHONE);hi.rhythmInputAgeResetFloor();hi.rhythmInputAgeMs(100,110);for(let i=0;i<12;i++)hi.rhythmInputAgeMs(1000*(i+2),1000*(i+2)+70);
+  const hi=makeContext(PC);hi.rhythmInputAgeResetFloor();hi.rhythmInputAgeMs(100,110);for(let i=0;i<12;i++)hi.rhythmInputAgeMs(1000*(i+2),1000*(i+2)+70);
   check('ふだんの遅れの上限は 50ms',hi.rhythmInputAgeTypicalMs()===50,String(hi.rhythmInputAgeTypicalMs()));
   // 別の指の合図の中で初めて見えた指
   check('見えた指: 合図の遅れがふだんより大きければ、ふだんの遅れまで',o.rhythmRevealedAgeMs(64)===o.rhythmInputAgeTypicalMs()&&o.rhythmRevealedAgeMs(5)===5);
@@ -234,7 +234,7 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   d.clock.now=20060;d.rhythmInputAgeMs(20000,20060);d.RHYTHM_TIMING_DIAG.bias(-70);
   d.clock.now=21000;d.rhythmInputAgeMs(20995,21000);d.RHYTHM_TIMING_DIAG.revealed(true);d.RHYTHM_TIMING_DIAG.bias(-33);d.RHYTHM_TIMING_DIAG.revealed(false);d.RHYTHM_TIMING_DIAG.bias(-31);
   const t=d.RHYTHM_TIMING_DIAG.snapshot();
-  check('50〜80ms 遅れた入力で取れた単押しを数え、ふだんの遅れだけ戻したときのずれも残す(biasMs にも今までどおり入る)',t.midN===1&&t.midActMs===-70&&t.midTypMs===-20&&t.biasN===2,JSON.stringify({n:t.midN,act:t.midActMs,typ:t.midTypMs,biasN:t.biasN}));
+  check('50〜80ms 遅れた入力で取れた単押しを数え、ふだんの遅れだけ戻したときのずれも残す(biasMs にも今までどおり入る)',t.midN===1&&t.midActMs===-70&&t.midTypMs===-60&&t.biasN===2&&t.staleV===2,JSON.stringify({n:t.midN,act:t.midActMs,typ:t.midTypMs,biasN:t.biasN}));
   check('見えた指で取れた単押しは別に数え、biasMs に混ぜない',t.revN===1&&t.revActMs===-33);
   check('診断の大きさは小さいまま(足したあと)',JSON.stringify(t).length<600,String(JSON.stringify(t).length));
   // 曲の時計の直しを、その曲の中で入れる
@@ -261,6 +261,39 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   check('報告ツール: 外れていれば「戻すことを考える」',bad.some(l=>/^▲/.test(l)&&/false へ戻す/.test(l)));
   const mid=dd.syncLines(dd.syncSummary(Array.from({length:6},()=>row(['lateStampTypical'],{midN:6,midActMs:-70,midTypMs:-36}))));
   check('報告ツール: 50〜80ms の帯も古いと分かれば出す',mid.some(l=>/^●/.test(l)&&/この帯も合図の時刻が古い/.test(l)));
+}
+
+// 8. 案B(2026-11-17・社長が選んだ): iPhone で、コマは来ていたのに 50ms を超えて古い入力は「ふだんの遅れ + 10ms」だけ戻す(80ms 超の帯も同じ・上限 60ms・合図の遅れより多くは戻さない)
+//   11/14 の直しのあとの記録(iPhone 123曲・6台)で、50〜80ms の帯も合図の時刻が古いと分かった(合図の時刻まで戻すと ふだんより 29ms 早い・6台とも同じ向き)
+{
+  const o=makeContext(IPHONE);o.rhythmInputAgeResetFloor();o.RHYTHM_TIMING_DIAG.reset();
+  [12,14,16,18,20,22,24,26,28].forEach((age,i)=>o.rhythmInputAgeMs(1000*(i+1),1000*(i+1)+age));
+  o.clock.now=20000;o.RHYTHM_TIMING_DIAG.frame(1);o.clock.now=20005;
+  check('iPhone: コマは来ていたのに 60ms 古い入力は、ふだんの遅れ(20ms)+10ms だけ戻す',o.rhythmInputAgeMs(19945,20005)===30);
+  check('その入力は、ふだんの遅れの数に入れない',o.rhythmInputAgeTypicalMs()===20);
+  check('iPhone: 50ms 以下の遅れは今までどおりそのまま戻す',o.rhythmInputAgeMs(19960,20005)===45);
+  o.clock.now=30000;o.RHYTHM_TIMING_DIAG.frame(2);o.clock.now=30060;
+  check('iPhone: その間コマが本当に止まっていた 60ms の遅れは、今までどおりそのまま戻す',o.rhythmInputAgeMs(30000,30060)===60);
+  const p=makeContext(PC);p.rhythmInputAgeResetFloor();p.rhythmInputAgeMs(1000,1010);p.clock.now=20000;p.RHYTHM_TIMING_DIAG.frame(1);p.clock.now=20005;
+  check('パソコン・Android: 60ms 古い入力は今までどおりそのまま戻す',p.rhythmInputAgeMs(19945,20005)===60);
+  // 上限 60ms・合図の遅れより多くは戻さない(ふだんの遅れが上限の 50ms の端末)
+  const hi=makeContext(IPHONE);hi.rhythmInputAgeResetFloor();hi.rhythmInputAgeMs(100,110);for(let i=0;i<12;i++)hi.rhythmInputAgeMs(1000*(i+2),1000*(i+2)+48);
+  hi.clock.now=50000;hi.RHYTHM_TIMING_DIAG.frame(1);hi.clock.now=50005;
+  check('戻す長さの上限は 60ms',hi.rhythmInputAgeTypicalMs()===48&&hi.rhythmInputAgeMs(49805,50005)===58&&hi.rhythmInputAgeStaleMs(500)===58);
+  check('合図の遅れより多くは戻さない',hi.rhythmInputAgeMs(49950,50005)===55);
+  o.rhythmTouchFixSetOverride('lateStampTypical',false);o.clock.now=40000;o.RHYTHM_TIMING_DIAG.frame(3);o.clock.now=40005;
+  check('上書きで切ると、前の動き(60ms はそのまま・80ms 超は 80ms)へ戻る',o.rhythmInputAgeMs(39945,40005)===60&&o.rhythmInputAgeMs(39855,40005)===80);
+  o.rhythmTouchFixSetOverride('lateStampTypical',null);
+  // 曲の頭の 0 のコマは、その曲の中で時計の直しを入れるかの数に入れない
+  const c=makeContext(PC);c.RHYTHM_TIMING_DIAG.reset();c.rhythmTouchFixAutoSet({});
+  for(let i=0;i<12;i++)c.RHYTHM_TIMING_DIAG.frame(0,0);for(let i=1;i<300;i++)c.RHYTHM_TIMING_DIAG.frame(i*16,i*16);
+  check('時計の直し: 曲の頭で時計が 0 のままのコマは「止まり」と数えない(止まりやすくない端末で入らない)',c.rhythmSmoothClockLiveCheck()===false&&c.RHYTHM_TIMING_DIAG.snapshot().stalls===11&&c.RHYTHM_TIMING_DIAG.stallShare().share===0);
+  // 報告ツール
+  const dd=require('./rhythm-touch-diag.js');
+  const row=timing=>({platform:'ios',device_key:'a',song_id:'haruka',note_count:300,created_at:new Date().toISOString(),stats:{touchStarts:300,fixes:['lateStampTypical'],lateHist:[0,0,0,0],timing:{frames:5000,stalls:0,biasN:200,biasMs:-38,staleV:2,...timing}}});
+  const good=dd.syncLines(dd.syncSummary(Array.from({length:6},()=>row({midN:6,midActMs:-31,midTypMs:-41,lateN:6,lateActMs:-40,lateFullMs:-150,lateExMs:90}))));
+  check('報告ツール: 案B のあとの 50〜80ms の帯のずれを出す(±15ms なら効いている)',good.some(l=>/^◎/.test(l)&&/案B/.test(l)&&/50〜80ms/.test(l)),good.join(' | ').slice(0,300));
+  check('報告ツール: 案B のあとの行は、前の比べ(この帯も古い)に混ぜない',good.every(l=>!/この帯も合図の時刻が古い/.test(l)));
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

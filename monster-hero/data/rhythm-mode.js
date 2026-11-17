@@ -1956,6 +1956,11 @@ const rhythmInputAgeTypicalMs=()=>{
   return rhythmInputAgeTypicalCache=Math.min(RHYTHM_INPUT_AGE_TYPICAL_MAX_MS,sorted[sorted.length>>1]);
 };
 const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;rhythmInputAgeRecent=[];rhythmInputAgeTypicalCache=null;};
+// 【2026-11-17・社長が案B を選んだ】時刻が当てにならない入力(コマは来ていたのに 50ms を超えて古い)を戻す長さ。「ふだんの遅れ + 10ms」・上限 60ms・合図の遅れより多くは戻さない。
+// 11/14 の直しのあとの記録(iPhone 123曲・6台)で、80ms 超の帯はふだんより +9ms(ふだんの遅れだけでは少し足りない)、50〜80ms の帯は合図の時刻まで戻すと −29ms(6台とも早い側)・
+// ふだんの遅れだけだと +18〜20ms だった。本当の遅れは「ふだんの遅れ + 約10ms」と読める
+const RHYTHM_INPUT_AGE_STALE_FROM_MS=50,RHYTHM_INPUT_AGE_STALE_EXTRA_MS=10,RHYTHM_INPUT_AGE_STALE_MAX_MS=60;
+const rhythmInputAgeStaleMs=age=>Math.min(Number(age)>0?Number(age):0,RHYTHM_INPUT_AGE_STALE_MAX_MS,rhythmInputAgeTypicalMs()+RHYTHM_INPUT_AGE_STALE_EXTRA_MS);
 // 別の指の合図の中で初めて見えた指(自分の touchstart が無い)の遅れ。その合図の時刻は別の指のものなので、ふだんの遅れより古くは戻さない
 const rhythmRevealedAgeMs=eventAgeMs=>{const age=Number(eventAgeMs)>0?Number(eventAgeMs):0;return rhythmTouchFixOn('lateStampTypical')?Math.min(age,rhythmInputAgeTypicalMs()):age;};
 // ===== 実機でしか分からないことを、診断で数える(2026-10-07・ユーザー指示「実機で確認しないと直せないものは、直せる仕組みを作って」) =====
@@ -2043,12 +2048,14 @@ const RHYTHM_TIMING_DIAG=(()=>{
   const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,stallsShown:0,maxStepMs:0,hidden:0,pen:0});
   // midN / midActMs / midTypMs … 50〜80ms 遅れた入力で取れた単押しの数・いまの判定のずれ・ふだんの遅れだけ戻したとしたときのずれ(2026-11-14。この帯は biasMs にも今までどおり入る)
   // revN / revActMs … 別の指の合図の中で初めて見えた指で取れた単押しの数・ずれ(biasMs には混ぜない)
+  // zeroStalls … 曲の頭で、音が出るまで時計が 0 のままのコマ(stalls には今までどおり入る)。その曲の中で時計の直しを入れるかを決めるときは数えない(2026-11-17。止まりやすくない端末でも入っていた)
+  let zeroStalls=0;
   let stats=zero(),meta={},lastSong=null,lastShown=null,lastTick=0,lastStallAt=0,biasList=[],lateEx=null,lateList=[],midEx=null,midList=[],revAt=0,revList=[];
   const perfNow=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
   const median=list=>{const s=list.slice().sort((a,b)=>a-b);return s.length?Math.round(s[s.length>>1]*10)/10:null;};
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;lastShown=null;lastTick=0;lastStallAt=0;biasList=[];lateEx=null;lateList=[];midEx=null;midList=[];revAt=0;revList=[];},
+    reset(){zeroStalls=0;stats=zero();meta={};lastSong=null;lastShown=null;lastTick=0;lastStallAt=0;biasList=[];lateEx=null;lateList=[];midEx=null;midList=[];revAt=0;revList=[];},
       // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
       bias(deltaMs){const v=Number(deltaMs);if(!Number.isFinite(v))return;
         if(revAt>0&&perfNow()-revAt<=4){if(revList.length<200)revList.push(v);return;}
@@ -2058,11 +2065,11 @@ const RHYTHM_TIMING_DIAG=(()=>{
         if(Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
     // 上限を超えて遅れた入力の「戻し切れなかった分」(ms)。rhythmInputAgeMs が、基準のそろった端末でだけ呼ぶ。次の入力で消える
     lateExcess(ms){const v=Number(ms);lateEx=v>0?{ex:v,at:perfNow()}:null;},
-    midExcess(ms){const v=Number(ms);midEx=Number.isFinite(v)&&v!==0?{ex:v,at:perfNow()}:null;},
+    midExcess(ms){const v=Number(ms);midEx=ms!==null&&ms!==undefined&&Number.isFinite(v)?{ex:v,at:perfNow()}:null;},
     // 別の指の合図の中で初めて見えた指の入力を、これから判定する(on=true)/し終えた(false)
     revealed(on){revAt=on?perfNow():0;},
     // 元の時計の止まりの割合(その曲のここまで)。曲の時計の直しを、その曲の中で入れるかを決めるのに使う
-    stallShare(){return {frames:stats.frames,share:stats.frames?stats.stalls/stats.frames:0};},
+    stallShare(){return {frames:stats.frames,share:stats.frames?Math.max(0,stats.stalls-zeroStalls)/stats.frames:0};},
     // 直近 ms のあいだに、80ms以上コマが止まったか(取りこぼしの回収を、止まったあとだけ長くするのに使う)
     recentStall(ms){return lastStallAt>0&&typeof performance!=='undefined'&&performance.now&&performance.now()-lastStallAt<=ms;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
@@ -2073,13 +2080,13 @@ const RHYTHM_TIMING_DIAG=(()=>{
     matchByAge(){stats.matchByAge++;},
     ageUnbacked(){stats.ageUnbacked++;},
     // songMs … 画面と判定に使っている曲の時計 / rawMs … 元の時計(なめらかにする前。渡されなければ songMs と同じ物として数える)
-    frame(songMs,rawMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const shown=Number(songMs);if(!Number.isFinite(shown))return;const raw=Number(rawMs),v=rawMs!=null&&Number.isFinite(raw)?raw:shown;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0)stats.stalls++;else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;if(lastShown!==null&&shown===lastShown)stats.stallsShown++;lastShown=shown;},
+    frame(songMs,rawMs){const tickNow=typeof performance!=='undefined'&&performance.now?performance.now():0;if(lastTick>0&&tickNow-lastTick>=80)lastStallAt=tickNow;lastTick=tickNow;const shown=Number(songMs);if(!Number.isFinite(shown))return;const raw=Number(rawMs),v=rawMs!=null&&Number.isFinite(raw)?raw:shown;stats.frames++;if(lastSong!==null){const d=v-lastSong;if(d===0){stats.stalls++;if(!(v>0))zeroStalls++;}else if(d>stats.maxStepMs)stats.maxStepMs=Math.round(d*10)/10;}lastSong=v;if(lastShown!==null&&shown===lastShown)stats.stallsShown++;lastShown=shown;},
     meta(value){if(value&&typeof value==='object')meta={...meta,...value};},
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
     snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,
       lateN:lateList.length,lateActMs:median(lateList.map(x=>x[0])),lateFullMs:median(lateList.map(x=>x[1])),lateExMs:median(lateList.map(x=>x[2])),
-      midN:midList.length,midActMs:median(midList.map(x=>x[0])),midTypMs:median(midList.map(x=>x[1])),revN:revList.length,revActMs:median(revList),...meta};},
+      staleV:2,midN:midList.length,midActMs:median(midList.map(x=>x[0])),midTypMs:median(midList.map(x=>x[1])),revN:revList.length,revActMs:median(revList),...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
@@ -2101,10 +2108,12 @@ const rhythmInputAgeCompMs=(eventTimeStamp,nowPerfMs)=>{
   if(!(age>0))return 0;
   if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
   RHYTHM_TIMING_DIAG.age(age);
+  // 50〜80ms の帯(案B・2026-11-17): 直しの入った端末(iPhone)で、基準がそろっていて、その間コマが止まっていなかったなら、合図の時刻は使わない。ふだんの遅れの数にも入れない
+  if(age>RHYTHM_INPUT_AGE_STALE_FROM_MS&&age<=RHYTHM_INPUT_AGE_MAX_MS&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS&&rhythmTouchFixOn('lateStampTypical')&&RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)<age*RHYTHM_INPUT_AGE_STALL_SHARE)return rhythmInputAgeStaleMs(age);
   if(age<=RHYTHM_INPUT_AGE_MAX_MS){rhythmInputAgeRecent.push(age);if(rhythmInputAgeRecent.length>RHYTHM_INPUT_AGE_TYPICAL_KEEP)rhythmInputAgeRecent.shift();rhythmInputAgeTypicalCache=null;return age;}
   const aligned=rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS;
   // 直し方 lateStampTypical(2026-11-14・iPhone): コマは来ていたのに古い時刻の入力は、合図の時刻が当てにならないので、ふだんの遅れだけ戻す(これまでは 80ms)
-  const staleMs=rhythmTouchFixOn('lateStampTypical')?rhythmInputAgeTypicalMs():RHYTHM_INPUT_AGE_MAX_MS;
+  const staleMs=rhythmTouchFixOn('lateStampTypical')?rhythmInputAgeStaleMs(age):RHYTHM_INPUT_AGE_MAX_MS;
   // 直し方 inputAgeCap を入れていない端末は、これまでどおり(上限80ms・基準がそろっていなければ0)
   // 当てるノーツを選ぶための本当の遅れ(rhythmInputMatchAgeFor)。基準がそろっていて、その間ゲームが本当に止まっていたと見えたときだけ覚える
   // (「時刻だけ古い」入力では覚えない＝これまでどおり)。判定に使う遅れ(下で返す値)は変えない
@@ -2131,7 +2140,8 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   const lateAge=Number(nowPerfMs)-Number(eventTimeStamp);
   RHYTHM_TIMING_DIAG.lateExcess(lateAge>RHYTHM_INPUT_AGE_MAX_MS&&lateAge<2000&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?lateAge-comp:0);
   // 50〜80ms 遅れた入力(いまは合図の時刻まで戻している)。ふだんの遅れだけ戻したとしたら、との差を覚える(数えるだけ・2026-11-14)
-  RHYTHM_TIMING_DIAG.midExcess(lateAge>50&&lateAge<=RHYTHM_INPUT_AGE_MAX_MS&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?lateAge-rhythmInputAgeTypicalMs():0);
+  // (2026-11-17 から: 実際に戻した分 − ふだんの遅れ。案B のあとは +10ms 前後になる)
+  RHYTHM_TIMING_DIAG.midExcess(lateAge>50&&lateAge<=RHYTHM_INPUT_AGE_MAX_MS&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?comp-rhythmInputAgeTypicalMs():null);
   return comp;
 };
 // 【2026-10-11・社長「たまに、ちゃんと押しているのに MISS になる」】HOLD/SLIDE を離した合図(touchend など)の遅れ。
