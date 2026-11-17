@@ -1,7 +1,8 @@
 // モンヒロサクセスの「技の升の選び」(芯 data/monhero-success.js の techPick)を確かめる(画面は開かない)
 //   ・升(ランク×間合い)に技が2つ以上ある種族で、選ばなかった技は覚える候補(learnable)から外れる
 //   ・項目の無い育成(古い保存)は絞らない・壊れた値は並びの1つ目に直る・保存から戻しても残る
-//   ・その升の技を1つでも覚えたら選びは変えられない・選べる技は同じ升の技だけ
+//   ・その升の技を覚えたあとでも選び直せて、もう片方も候補に出る(方式C・2026-11-17)。前に覚えた技は残る
+//   ・選べる技は同じ升の技だけ。はじめからの技と同居する升(剣士モッチー 1-2)でも、保存した選びが start 技に戻らない
 'use strict';
 const { load } = require('./load.js');
 const errors = [];
@@ -36,8 +37,28 @@ if (sp) {
     // 変えられる・変えられない
     let s4 = mk({}); ok(SUC.setTechPick(s4, cell, b.id) === true && s4.techPick[cell] === b.id, '覚える前なのに選びが変えられない');
     ok(SUC.setTechPick(s4, cell, 'zzz') === false, '知らない技を選べてしまう');
-    s4.techs.push(b.id); ok(SUC.techPickLocked(s4, cell) && SUC.setTechPick(s4, cell, a.id) === false && s4.techPick[cell] === b.id, '覚えたあとなのに選びが変えられる');
+    s4.techs.push(b.id); // 方式C: 覚えたあとでも選び直せる(ロック無し)
+    ok(SUC.techPickLocked(s4, cell) === false, '覚えたあとにロックが掛かっている');
+    ok(SUC.setTechPick(s4, cell, a.id) === true && s4.techPick[cell] === a.id, '覚えたあとなのに選び直せない');
+    ok(s4.techs.includes(b.id), '選び直しで前に覚えた技が消えた');
+    ok(ids(s4).includes(a.id) && !ids(s4).includes(b.id), '選び直したあとの候補が合わない(覚えた技は候補に戻らない・もう片方が出る)');
+    // 両方覚える: a も覚えたら、同じ升の技を両方持てる
+    s4.techs.push(a.id); ok(s4.techs.includes(a.id) && s4.techs.includes(b.id), '同じ升の技を両方持てない');
+  }
+}
+// はじめからの技と同居する升(剣士モッチー 1-2): 保存した選びが start 技に戻らない・既定は start 技
+{
+  const kc = SUC.techCells('KenshiMocchi'); const kcell = Object.keys(kc).find((c) => kc[c].length >= 2 && kc[c].some((t) => t.learn && t.learn.start));
+  ok(!!kcell, '剣士モッチーの start 同居升が見つからない');
+  if (kcell) {
+    const start = kc[kcell].find((t) => t.learn && t.learn.start); const other = kc[kcell].find((t) => t !== start);
+    ok(SUC.techPickNorm({}, 'KenshiMocchi')[kcell] === start.id, '剣士モッチー: 選びが無いときの既定が start 技でない');
+    ok(SUC.techPickNorm({ [kcell]: other.id }, 'KenshiMocchi')[kcell] === other.id, '剣士モッチー: 保存した選びが start 技に戻ってしまう');
+    const ks = SUC.newRun({ id: 'k', species: 'KenshiMocchi', techPick: { [kcell]: other.id } });
+    ok(ks.techPick[kcell] === other.id, '剣士モッチー: 育成開始で選びが戻ってしまう');
+    const kback = SUC.restore ? SUC.restore(JSON.parse(JSON.stringify(ks))) : null;
+    ok(!kback || kback.techPick[kcell] === other.id, '剣士モッチー: 保存から戻すと選びが戻ってしまう');
   }
 }
 if (errors.length) { console.log('NG: 技の升の選び'); errors.forEach((e) => console.log(' - ' + e)); process.exit(1); }
-console.log('OK: 技の升の選び(候補の絞り込み・既定・保存から戻す・覚えたあとは固定)');
+console.log('OK: 技の升の選び(候補の絞り込み・既定・保存から戻す・覚えたあとでも選び直し可=方式C・start同居升の選び保持)');
