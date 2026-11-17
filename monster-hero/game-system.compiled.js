@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b083f8f42e818f3a
+// source-sha256: 8836228e5234af0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -65921,6 +65921,7 @@ const GROWTH_FX_CALM_SCREENS = Object.freeze(new Set(['HOME', 'PROFILE', 'ITEM_I
 const GROWTH_FX_HOLD_ALL_SELECTOR = '[data-event-story],[data-story-stage],[data-story-sheet],[data-player-rank-up-fx]';
 const GROWTH_FX_HOLD_SHEET_SELECTOR = '[data-assistant-chat],[data-life-quick-run="live"]';
 const GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '[data-quick-anywhere]';
+const GROWTH_FX_MONSUC_SELECTOR = '[data-monhero-success]';
 const GROWTH_FX_SMALL_MS = 1900;
 const GROWTH_FX_TEXT_MS = 3600;
 const GROWTH_FX_ITEM_MS = 3400;
@@ -66121,7 +66122,7 @@ const growthFxMasuBondItem = ({
     }]
   });
 };
-const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
+const growthFxBreederLevel = (levelFrom, levelTo, breederName = '', opts = {}) => {
   const a = growthFxNum(levelFrom),
     b = growthFxNum(levelTo);
   if (!(b > a)) return;
@@ -66131,10 +66132,20 @@ const growthFxBreederLevel = (levelFrom, levelTo, breederName = '') => {
     who: 'self',
     levelFrom: a,
     levelTo: b,
+    ...(opts && opts.quick ? {
+      quick: true
+    } : {}),
     title: 'ブリーダーLv UP!',
     sub: `${breederName ? `${breederName} の` : ''}ブリーダーLvが Lv.${b} になった`,
     gains: []
   });
+};
+const growthFxSheetReady = (sheet, vis, atHome) => {
+  if (!sheet || !vis || !vis.sheet) return false;
+  if (sheet.tier !== 'level') return true;
+  if (!vis.level) return false;
+  if (sheet.quick && !atHome) return false;
+  return true;
 };
 const growthFxPeerPct = points => {
   const list = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' && Array.isArray(ASSISTANT_PEER_BOND_LEVELS) ? ASSISTANT_PEER_BOND_LEVELS : [];
@@ -67113,7 +67124,8 @@ const GrowthFxLayer = ({
   const [domHold, setDomHold] = useState({
     all: false,
     sheet: false,
-    quickAnywhere: false
+    quickAnywhere: false,
+    monsuc: false
   });
   useEffect(() => {
     ensureGrowthFxCss();
@@ -67128,10 +67140,12 @@ const GrowthFxLayer = ({
       const all = !!document.querySelector(GROWTH_FX_HOLD_ALL_SELECTOR);
       const sheet = all || !!document.querySelector(GROWTH_FX_HOLD_SHEET_SELECTOR);
       const quickAnywhere = !!document.querySelector(GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR);
-      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere ? prev : {
+      const monsuc = !!document.querySelector(GROWTH_FX_MONSUC_SELECTOR);
+      setDomHold(prev => prev.all === all && prev.sheet === sheet && prev.quickAnywhere === quickAnywhere && prev.monsuc === monsuc ? prev : {
         all,
         sheet,
-        quickAnywhere
+        quickAnywhere,
+        monsuc
       });
     };
     check();
@@ -67141,9 +67155,9 @@ const GrowthFxLayer = ({
   if (!pending) return null;
   const vis = growthFxVisible(screen, domHold);
   const holdAll = !vis.all;
-  const holdSheet = !vis.sheet;
   const level = growthFxLevelOf(load);
-  const sheet = !holdSheet ? (vis.level ? sheets[0] : sheets.find(s => s.tier !== 'level')) || null : null;
+  const atHome = screen === 'HOME' && !domHold.monsuc;
+  const sheet = sheets.find(s => growthFxSheetReady(s, vis, atHome)) || null;
   return React.createElement(React.Fragment, null, !holdAll && !sheet && small.length > 0 && React.createElement(GrowthFxChipsBox, {
     level: level,
     count: Math.min(small.length, GROWTH_FX_SMALL_MAX)
@@ -237024,7 +237038,9 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
-      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName, {
+        quick: true
+      });
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => {
@@ -244499,7 +244515,9 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
-    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName, {
+      quick: isQuickMode(runMode) && quickAnywhereRunRef.current
+    });
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => {
