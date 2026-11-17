@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b295c24d6196d77
+// source-sha256: 2be072ae1a07ccf9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -31875,7 +31875,7 @@ const ASSET_PACKS = [{
   id: 'all',
   icon: '📦',
   label: '全部',
-  desc: 'モンヒロビートとバトルの両方'
+  desc: 'モンヒロビートとモンヒロバトルの両方'
 }];
 const assetPackOpen = pack => {
   if (!pack || !pack.gate) return true;
@@ -31893,7 +31893,7 @@ const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
   return ASSET_PACKS.filter(assetPackOpen).map(p => p.id === 'all' && cardOpen ? {
     ...p,
-    desc: 'モンヒロビート・バトル・バトルカードの全部'
+    desc: 'モンヒロビート・モンヒロバトル・MFバトルカードの全部'
   } : p);
 };
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
@@ -117968,7 +117968,7 @@ function AssistantLifeHouse({
     className: "mhl-chip",
     "data-assistant-life-tier-help": true,
     "aria-label": "にぎわいの説明",
-    onClick: () => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`),
+    onClick: () => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`),
     style: {
       minHeight: 32,
       padding: '0 10px'
@@ -211218,7 +211218,7 @@ const CardBattleScreen = ({
     }
   }, label))), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-400"
-  }, "デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
+  }, "デバッグ: MFバトルカードの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
     type: "button",
     "data-card-motion-demo": true,
     className: "mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black",
@@ -211241,12 +211241,12 @@ const CardBattleScreen = ({
     type: "button",
     className: "mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black",
     onClick: () => setConfirmReset(true)
-  }, "カードバトルの記録を消して、スターター選びからやり直す")))), detail && React.createElement(CardDetailModal, {
+  }, "MFバトルカードの記録を消して、スターター選びからやり直す")))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
   }), confirmReset && React.createElement(ConfirmSheet, {
-    title: "カードバトルの記録を消しますか？",
+    title: "MFバトルカードの記録を消しますか？",
     message: '持っているカード・デッキ・ビートP・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。',
     confirmLabel: "消す",
     danger: true,

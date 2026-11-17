@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 488cebbe5521e580
+// generated-sha256: d46aaf2921b2d881
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -19338,7 +19338,7 @@ const ASSET_PACKS = [
   // MFバトルカードのカードの絵(小さい版と大きい版。2026-10-25 社長)。公開の印(RELEASE_FLAGS.cardBattle)が立つまでは、
   // デバッグ端末にだけ見せる。遊ぶ人には出さず、「全部」にも自動ダウンロードにも入れない(assetPackOpen)。公開した日から自動で入る
   { id: 'card', icon: '🃏', label: 'バトルカード', desc: 'MFバトルカードのカードの絵', gate: 'cardBattle' },
-  { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとバトルの両方' },
+  { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとモンヒロバトルの両方' },
 ];
 // まとまりを出してよいか(公開の印か、デバッグの合言葉が合った端末か。印は読むだけ)
 const assetPackOpen = (pack) => {
@@ -19350,7 +19350,7 @@ const assetPackOfId = (id) => ASSET_PACKS.find((p) => p.id === id) || null;
 // 設定の「ダウンロード」に並べるまとまり(出してよいものだけ)。「全部」の説明も、バトルカードを出すときは3つにする
 const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
-  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
+  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・モンヒロバトル・MFバトルカードの全部' } : p));
 };
 // 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
@@ -69069,7 +69069,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
       <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{assistantLifeTodLabel()} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</span></p>
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
-        {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
+        {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
         <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
       </div>
@@ -109136,7 +109136,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 }}>{label}</button>
               ))}
             </div>
-            <div className="text-[11px] font-bold text-slate-400">デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)</div>
+            <div className="text-[11px] font-bold text-slate-400">デバッグ: MFバトルカードの記録(mh_card_* の新しいキーだけ)</div>
             <button type="button" data-card-motion-demo className="mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black" onClick={() => {
               // 技の動きの見本(決まった順に自動で進む。保存は何もしない)
               const demo = cardMotionDemo(db);
@@ -109145,13 +109145,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               onBgm && onBgm(CARD_AI_BGM.mua);
               onNavigate('CARD_BATTLE');
             }}>技の動きの見本を流す(保存しない)</button>
-            <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
+            <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>MFバトルカードの記録を消して、スターター選びからやり直す</button>
           </div>
         )}
         </div>
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
-      {confirmReset && <ConfirmSheet title="カードバトルの記録を消しますか？" message={'持っているカード・デッキ・ビートP・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。'} confirmLabel="消す" danger onCancel={() => setConfirmReset(false)} onConfirm={async () => {
+      {confirmReset && <ConfirmSheet title="MFバトルカードの記録を消しますか？" message={'持っているカード・デッキ・ビートP・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。'} confirmLabel="消す" danger onCancel={() => setConfirmReset(false)} onConfirm={async () => {
         setConfirmReset(false);
         await Promise.all(Object.values(CARD_SAVE_KEYS).map((k) => storeSet(k, null)));
         setNotice('');
