@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3989b5d7ec368964
+// generated-sha256: 3106d3e2958a2df6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6110,20 +6110,28 @@ const titleArtSrc = (value, shape = 'portrait') => {
 };
 
 // ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。
-// 保存は新しいキー mh_home_art に id だけ。横画面では wideSrc を画面いっぱいに出す
+// 保存は新しいキー mh_home_art に id だけ。
+// squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
+// (正方形の絵はクラシックだけ。2026-11-17・タブレット縦で両脇にぼかしの帯が出ていたため)
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
 const HOME_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
-  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg', squareSrc: 'data/images/home-background-square.jpg', wideSrc: 'data/images/home-background-wide.jpg' },
 ];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
 const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
-const homeArtSrc = (value, landscape = false) => {
+// 形('portrait' / 'square' / 'wide')から出す絵を決める。形の境目は HOME の場面側(69-screen-home.jsx)が決める。
+// 昔の呼び方(真偽値)も受ける: 真なら横長(60-app.jsx の先読みがこの形)
+const homeArtSrc = (value, shape = 'portrait') => {
   const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, shape = false) => { const kind = shape === true ? 'wide' : shape; return kind === 'wide' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc; };
+const homeArtIsSquare = (value, shape = 'portrait') => { const kind = shape === true ? 'wide' : shape; return kind === 'square' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).squareSrc; };
 
 // ---- part: 14-audio.jsx ----
 const Audio_ = (() => {
@@ -48946,10 +48954,9 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-// ★重なり順は施設(.mh-home-facilities の z-index:3)より前の 4(2026-10-11・社長の実機の指摘)。
-//   施設は建物ぶんの透明な押し場所を持つので、2のままだと右に置いた吹き出しが神殿・マーケットの押し場所の下になり、
-//   「▶ つぎ」を押すと施設が開いていた。枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
-//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなど(z-index:5)よりは後ろのまま
+// ★重なり順は 4(2026-10-11・社長の実機の指摘で、旧・施設の並び(z-index:3)より前にした)。
+//   枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
+//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなどと、2026-11-17 からは下のドック(z-index:5)より後ろのまま
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:4, pointerEvents:'none',
   width:'44%', maxWidth:'190px', minWidth:'120px',
@@ -49028,10 +49035,9 @@ const homeRaidSayObstacles = (wrap) => {
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
   document.querySelectorAll('button, a[href], [role="button"]').forEach((el) => {
     if (wrap && wrap.contains(el)) return;
-    // HOMEの施設(M/B管理・神殿・マーケットなど)は、建物ぶんの透明な押し場所の中に「見える札」(> span)を置いた作り。
-    // 押し場所ごと避けると真ん中に置き場所が残らないので、見える札だけを避ける(押せる範囲は変えない)
-    const face = el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el;
-    const r = face.getBoundingClientRect();
+    // 施設は下のドックに集まった(2026-11-17 ホーム一新)。ドックのボタンは見えている面そのものが押し場所なので、
+    // ほかのボタンと同じくボタン全体を避ける(以前の「見える札だけを避ける」特別扱いは、建物ぶんの透明な押し場所があった頃のもの)
+    const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) return;
     if (r.width * r.height > vw * vh * 0.4) return;
     const cs = getComputedStyle(el);
@@ -49102,7 +49108,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(place, 1500);
     window.addEventListener('resize', place);
     window.addEventListener('orientationchange', place);
-    // みゅあの吹き出しが伸び縮みすると、札(M/B管理・神殿)も動く(--mh-home-assistant-bottom)。札が動き終わってから測り直す
+    // みゅあの吹き出しが伸び縮みしたら測り直す(吹き出しはジャックの吹き出しの障害物になる)
     const mua = document.querySelector('.mh-home-assistant');
     const ro = (mua && typeof ResizeObserver !== 'undefined') ? new ResizeObserver(() => timers.push(setTimeout(place, 60))) : null;
     if (ro) ro.observe(mua);
@@ -49224,72 +49230,31 @@ function HomeScreen({
   // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
   successEntry = null,
 }) {
-  // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
+  // 背景の絵は「HOMEの枠の縦横比」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 形の境目(2026-11-17・正方形の絵を追加して3方向に): 比が 3/4 未満は縦長、3/4〜1.2 はほぼ正方形、1.2 を超えたら横長。
+  // 下の境目 3/4 は、タイトル絵の「ほぼ正方形」の帯(3:4〜。70-bootstrap.jsx)の下端と、ホームの3枚の比
+  // (縦 941/1672・正方形 1600/1600・横 2048/1152)の相乗平均 0.75 に一致する。タブレット縦(768x1024=0.75)は正方形になる。
+  // 上の境目は、横長の判定として使ってきた 1.2 をそのまま使う(タブレット横 1024x768=1.33 は横長になる)
   // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
   React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
   const homeSceneRef=React.useRef(null);
-  const [homeSceneWide,setHomeSceneWide]=React.useState(false);
+  const [homeSceneShape,setHomeSceneShape]=React.useState('portrait');
   React.useEffect(()=>{
     const el=homeSceneRef.current;
     if(!el)return undefined;
-    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0)setHomeSceneWide(w/h>1.2);};
+    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0){const r=w/h;setHomeSceneShape(r>1.2?'wide':r>=0.75?'square':'portrait');}};
     measure();
     if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
     const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
   },[]);
-  // みゅあの吹き出しの下端(場面の上から何px)を CSS の --mh-home-assistant-bottom へ渡す。台詞は切らずに全部出すので、
-  // 長い台詞で伸びたぶんだけ M/B管理・神殿の札を下げる(2026-10-24 窓口「幅320で『ついてるから大丈夫！…』と切れている」)。
-  // 回して描いているときも狂わないよう、画面上の位置ではなく offset で測る
-  React.useEffect(()=>{
-    const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
-    if(!scene||!box)return undefined;
-    // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる。その位置に使う M/B管理の右端も渡す(2026-11-07 横 667×375 で
-    // 吹き出しが1行伸びると、M/B管理とモンヒロビートの札が重なった。左の列は縦に積む余白がない)
-    // 左の列は上から 吹き出し → M/B管理 → 助手ライフ → モンヒロビート。上の札が下がったら、下の札もその下端(+顔の列の分)より下へ押す
-    // (2026-11-07 長い台詞で M/B管理が下がり、縦では助手ライフ、横ではモンヒロビートの札に重なった)。ふだんの位置は CSS の % のまま
-    const offTop=el=>{let y=0;for(let e=el;e&&e!==scene;e=e.offsetParent)y+=e.offsetTop;return y;};
-    const offLeft=el=>{let x=0;for(let e=el;e&&e!==scene;e=e.offsetParent)x+=e.offsetLeft;return x;};
-    const measure=()=>{const b=offTop(box)+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);
-      // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる(左の列は縦に積む余白がない)。その位置に使う M/B管理の右端
-      const mg=scene.querySelector('.mh-home-facility.management');
-      if(mg&&mg.offsetParent){scene.style.setProperty('--mh-home-management-right',`${Math.ceil(offLeft(mg)+mg.offsetWidth)}px`);scene.style.setProperty('--mh-home-management-bottom',`${Math.ceil(offTop(mg)+mg.offsetHeight)}px`);}
-      const lf=scene.querySelector('.mh-home-facility.life');
-      if(lf&&lf.offsetParent)scene.style.setProperty('--mh-home-life-bottom',`${Math.ceil(offTop(lf)+lf.offsetHeight)}px`);
-      // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
-      // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
-      const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
-      // 横(背の低い横画面)では M/B管理の右にモンヒロビートが並ぶので、M/B管理の真下の札(イベント)も、M/B管理の下端より下へ押す(2026-11-08 横 568×320 で吹き出しが長いと重なった)
-      if(mg&&mg.offsetParent){const mb=offTop(mg)+mg.offsetHeight+6,mr=offLeft(mg)+mg.offsetWidth;
-        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(mg)&&offLeft(el)<mr)push=Math.max(push,mb-t);}}
-      if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
-        // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
-        let room=Infinity;
-        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
-        push=Math.min(push,Math.max(0,room));
-        // 縦画面(モンヒロビートが M/B管理 より下に積まれている)で、下の札の束がビートの札から離れすぎているときは、束ごとビートの札(と顔の列)のすぐ下まで引き上げる。
-        // 2026-11-14 社長「モンヒロビートと本オープン記念のあいだが大きく空いている」(390×844 で札1つぶん以上空き、左の列が上下に分かれて見えた)
-        if(push<=0&&mg&&mg.offsetParent&&offTop(rh)>=offTop(mg)+mg.offsetHeight){let top=Infinity;
-          for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)top=Math.min(top,t);}
-          if(Number.isFinite(top)&&top>rb+4)push=rb+4-top;}}
-      scene.style.setProperty('--mh-home-left-push',`${Math.ceil(push)}px`);
-      // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
-      // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
-      const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
-      if(bt&&bt.offsetParent){const bl=offLeft(bt)-bt.offsetWidth/2,br=bl+bt.offsetWidth,btop=offTop(bt),bb=btop+bt.offsetHeight;
-        for(const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')){if(!el.offsetParent)continue;const l=offLeft(el),t=offTop(el);if(t<bb&&t+el.offsetHeight>btop&&l<br&&l+el.offsetWidth>bl)nudge=Math.max(nudge,br-l+8);}
-        nudge=Math.min(nudge,Math.max(0,bl-8));}
-      scene.style.setProperty('--mh-home-battle-nudge',`${-Math.ceil(nudge)}px`);};
-    measure();
-    if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
-    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
-    // 札は後から出る(助手ライフは公開の印・読み込みのあと)。ときどき測り直す
-    const id=setInterval(measure,1000);
-    return()=>{ro.disconnect();clearInterval(id);};
-  },[]);
-  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
-  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
+  // 【2026-11-17 ホーム一新で撤去】吹き出しが伸びたら施設の札を押し下げる測定機構(--mh-home-* の CSS変数6つ)。
+  //   施設は下のドックに集約され、吹き出しは上の帯・細バナーの下に流れで置くようになったので、押し下げ合いは起きない。
+  //   ジャックの吹き出しの測り直しは HomeRaidJack 自身の ResizeObserver(吹き出しを見る)+1.5秒間隔が受け持つ
+  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneShape);
+  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneShape);
+  const homeBackgroundSquare=homeArtIsSquare(homeArt,homeSceneShape);
   // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
   //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
   //   head なら画面の中身に影響しない。
@@ -49327,11 +49292,21 @@ function HomeScreen({
     if(!released||typeof rhythmLimitedEventAt!=='function')return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
+  // 期間ものの細バナー(2026-11-17 ホーム一新): イベントと公式杯を上の帯の下の1本に集約する。
+  // 両方あるときはカルーセル(5秒ごとに切替・手で切り替える操作は付けない。バナー自体が行き先ボタンのため)
+  const homeStripCount=(homeEventCampaign?1:0)+((homeCardTour&&typeof onOpenCardTour==='function')?1:0);
+  const [homeStripIdx,setHomeStripIdx]=React.useState(0);
+  React.useEffect(()=>{
+    if(homeStripCount<2)return undefined;
+    const id=setInterval(()=>setHomeStripIdx(i=>i+1),5000);
+    return ()=>clearInterval(id);
+  },[homeStripCount]);
+  const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
   return (
 
       <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
-        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠が横長なら横長の絵を画面いっぱいに出す(is-wide) */}
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
@@ -49350,57 +49325,94 @@ function HomeScreen({
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
-        <nav className="mh-home-facilities" aria-label="拠点施設">
-          {/* 看板の下に小さく1行(2026-10-09 ユーザー選択。G7「呼び名が分かりにくい」→ 呼び名は変えず、入口に何のことかを足す) */}
-          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span></button>
-          <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
-          <button className={`mh-home-facility market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
-          {/* 修行の施設をやめ、その場所を音ゲー「モンヒロビート」に譲った(2026-09-03にユーザーが決定、
-              2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
-              公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
-              中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-          {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示
-              「イベント開催中は対応してるコンテンツボタンのとこにイベント開催中みたいなのがほしい」)。
-              HOMEを開いた時点で「いま何かやっている」と分かるようにする。
-              ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で
-                古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
-              ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
-                ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
-          {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔はこの札の横に出る(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
-          {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button className="mh-home-facility life" data-home-assistant-life onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ"><span><span aria-hidden="true" style={{fontSize:16,lineHeight:1}}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span></button>}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
-          {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。
-              モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
-          <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
-        </nav>
-        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
-          <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
-          <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
-          <i aria-hidden="true">›</i>
-        </button>}
-        <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
-          {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
-        </button>
-        <button onClick={openGiftBox} className={`mh-home-gift${spotClass('reward')}`}><Package size={16}/>ギフト
-          {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
-        </button>
-        {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
-        <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-        {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
-        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
-          {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
-          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
-        </button>}
-        {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
-        {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
-          <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
-        </button>}
-        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる。公式杯の札があるときはその下) */}
-        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeCardTour?(homeEventCampaign?' below-tour':''):(homeEventCampaign?'':' raised')}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
-        {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
-            公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
-        {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
-        {successEntry}
+        {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
+            両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
+        {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
+          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+            {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+            <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
+          </button>}
+          {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+            <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+          </button>}
+          {homeStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeStripCount},(_,i)=><i key={i} className={i===homeStripShow?'on':''}/>)}</span>}
+        </div>}
+        {/* 右端の縦スタック(2026-11-17 ホーム一新): ギフト・ミッション・更新履歴を丸ボタン+小ラベルで縦に寄せる。いまの時刻は末尾 */}
+        <div className="mh-home-side-stack">
+          <button onClick={openGiftBox} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={20}/></span><span className="mh-home-side-lb">ギフト</span>
+            {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
+          </button>
+          <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
+            {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
+          </button>
+          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+          {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+        </div>
+        {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
+            施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
+            施設名は当初ホームだけ略称にしたが、統一カードの実画面を見て「フルネームでもおかしくない」とあっくんが判断し、
+            ホームでもフルネームに戻した(2026-11-17 あっくん追加指示)。名前の字の大きさは最長の「モンヒロサクセス」が
+            1行に収まるよう全施設一律に決めてある(70-bootstrap.jsx の .mh-home-dock-name)。助手の顔バッジは AssistantLifeHomeFaces が
+            data-home-fac のボタンの右上へ重ねる(56-assistant-life-house.jsx) */}
+        <div className="mh-home-dock">
+          {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
+            <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
+            <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+            <i aria-hidden="true">›</i>
+          </button>}
+          <div className="mh-home-dock-row mh-home-dock-top">
+            {/* モンヒロサクセス β の入口(2026-11-13 社長)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry で、
+                ドック上段の先頭のセルとして流れる(公開の印が偽なら何も出さず、残りのカードで割り直す) */}
+            {successEntry}
+            {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。下の言葉は「挑戦」(2026-11-17 あっくん決定)。
+                ホームの名前も正式名称のまま(略称「モンバト」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
+            <button type="button" data-home-fac="battle" className={`mh-home-dock-card battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-battle.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロバトル</span><span className="mh-home-dock-sub">挑戦</span></span>
+            </button>
+            {/* モンヒロビート(2026-09-03に修行の場所を譲った。2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
+                公開フラグが立つまでは「準備中」の案内だけを出し、本編からは遊べない */}
+            {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示)。いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で古いままになる・CLAUDE.md ⑥-4) */}
+            <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
+              <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}
+            </button>
+            {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
+            {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+            </button>}
+            {/* 公開前の予告(社長 2026-10-25)。カード自体に「近日公開」を付け、押すと予告の小窓。中には入れない。
+                公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+            {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-fac="card" data-home-card-battle-teaser className="mh-home-dock-card card soon" onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+              <small className="mh-home-dock-chip">近日公開</small>
+            </button>}
+          </div>
+          {/* 下段の4施設は「下の言葉」が無い。縦位置の受け方は全カード共通で、絵は上端そろえ、
+              名前は文字の枠(.mh-home-dock-txt。「名前1行+間+下の言葉1行」ぶんの固定の高さ)の中で
+              縦に中央寄せする(70-bootstrap.jsx)。下の言葉が無い施設は名前1行だけが枠の縦中央に来る
+              (2026-11-17 あっくん追加指示。センター合わせの対象はカード全体ではなく文字の枠部分) */}
+          <nav className="mh-home-dock-row mh-home-dock-bottom" aria-label="拠点施設">
+            <button type="button" data-home-fac="management" className={`mh-home-dock-card management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-management.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">M/B管理</span></span>
+            </button>
+            <button type="button" data-home-fac="temple" className={`mh-home-dock-card temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-temple.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">神殿</span></span>
+            </button>
+            <button type="button" data-home-fac="market" className={`mh-home-dock-card market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-market.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">マーケット</span></span>
+            </button>
+            {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔は、このボタンの右上のバッジに集まる(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
+            {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button type="button" data-home-fac="life" data-home-assistant-life className="mh-home-dock-card life" onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-life.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">助手ライフ</span></span>
+            </button>}
+          </nav>
+        </div>
+
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
@@ -67662,7 +67674,7 @@ function AssistantLifeItemIntro({ peerItems }) {
 // ===== 助手ライフ「助手たちの家」(段階1・2026-11-07 社長) =====
 // 専用ページの真ん中は家の断面。8人それぞれの部屋があり、いる・いないが分かる(いる部屋は灯りと顔、出かけている部屋は灯りが消えて扉に行き先の札)。
 // 案と止め絵: docs/progress/assistant-peer/LIFE-HOUSE-PLAN.md・ux/life-house-mock-*.jpg。家の絵は描き下ろしが届くまで図形で組む(注文書 HOUSE-ART-ORDER.md)
-// HOME では、遊んでいる所の施設の横に顔だけを出す(AssistantLifeHomeFaces)。家と町にいる助手は施設「🏡 助手ライフ」の横
+// HOME では、遊んでいる所の施設のボタンの右上に顔バッジを出す(AssistantLifeHomeFaces)。家と町にいる助手は施設「ライフ」のバッジ
 // 保存は足すだけ: 今日あったこと mh_assistant_life_diary_v1 / 入場を長く見せた日 mh_assistant_life_intro_v1
 // 公開の印 assistantLife の後ろ。様子の仕組み・台本の引き方は 56-assistant-life.jsx
 
@@ -69241,12 +69253,13 @@ function AssistantLifeSpentMark({ size = 20 }) {
   const d = Math.max(10, Math.round(size * 0.6));
   return <span aria-hidden="true" data-assistant-life-spent-mark className="pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow" style={{ left: -3, bottom: 0, width: d, height: d, fontSize: Math.max(7, Math.round(d * 0.72)), lineHeight: 1, boxShadow: '0 0 0 1px #0b1020' }}>済</span>;
 }
-// ---------- HOME: 遊んでいる所の施設の下に顔だけ(2026-11-07 社長「もっと小さくしてコンテンツの下において」) ----------
-// 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
-// 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
-// HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
-const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-success,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
+// ---------- HOME: 遊んでいる所の施設のボタン右上に顔バッジ(2026-11-17 ホーム一新) ----------
+// 施設は下のドックに集約されたので、顔は「札の下の列」をやめて、各ドックボタンの右上にバッジで重ねる。
+// 顔は固定 24px(場所ごとに測って変えない)。1〜3人は全員の顔を少し重ねて並べ、4人以上は顔3人+「+n」。
+// バッジ全体が1つの押し場所で、押すと助手ライフを先頭の助手に focus して開く(顔ごとの押し分けはバッジ化で簡略化)。
+// 対応表(ASSISTANT_LIFE_SPOT_FAC)はそのまま。家と町にいる助手は「ライフ」のバッジに集まる
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]', card: 'main.mh-home-scene [data-home-fac="card"]', management: 'main.mh-home-scene [data-home-fac="management"]', temple: 'main.mh-home-scene [data-home-fac="temple"]', market: 'main.mh-home-scene [data-home-fac="market"]', battle: 'main.mh-home-scene [data-home-fac="battle"]', life: 'main.mh-home-scene [data-home-fac="life"]' });
+const ASSISTANT_LIFE_BADGE_FACE = 24; // 顔バッジの顔の大きさ(px・固定)
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
@@ -69254,26 +69267,20 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
-      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。顔の列も器の中に置かれるため
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。バッジも器の中に置かれるため
       //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
       const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
       const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
-      const vw = rot ? window.innerHeight : window.innerWidth, vh = rot ? window.innerWidth : window.innerHeight;
-      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: rectOf(el) }));
+      const vw = rot ? window.innerHeight : window.innerWidth;
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
         if (!el || !el.offsetParent) continue;
         const r = rectOf(el);
-        // 札の下にある、横に重なるものまでのすき間(顔の列は札の幅+140px まで伸びうるので、その幅で見る)
-        const right = r.left + r.width / 2 > vw / 2;
-        const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
-        let gap = vh - r.bottom;
-        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
-        // 札の上のすき間も測る(下に余地が無い札=画面のいちばん下のモンヒロバトルは、顔を札の上に出す)
-        let up = r.top;
-        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom); }
-        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), up: Math.round(up), right };
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, right: r.left + r.width / 2 > vw / 2 };
       }
+      // フレンドの帯の置き場所用に、ドック全体の上端も測る(帯はドックの上に出す)
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
       setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
     };
     measure();
@@ -69289,55 +69296,51 @@ function AssistantLifeHomeFaces({ metIds }) {
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
-    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」。前の「外す」(Q2 A・#5073)を改めた)。押すと部屋で次の時間帯が分かる
+    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」)。押すと部屋で次の時間帯が分かる
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
-  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。MFバトルカードの札の横の顔の並びに小さく「UP」
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。バトルカードのボタンの左上に小さく「UP」
   const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id)); // 「UP」は、まだごほうびが上がる助手がいるときだけ
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8; // 少し重ねる(顔の約1/3)
   return (<>
     {Object.entries(by).map(([f, list]) => {
       const r = rects[f];
-      // 顔は必ず札(名前)の下(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」。横へ逃がす形はやめた)。
-      //   すき間は札の並び(70-bootstrap.jsx)であけてある。足りないときは顔を小さくする(12px まで)
-      const side = false;
-      // 下のすき間が狭すぎる(16px 未満)ときは札の上へ。モンヒロバトルの札は画面の下端にあり、顔が 12px で下の帯にかかって
-      //   見えない・押せなかった(2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」)
-      const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
-      const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
-      const step = size - 4; // 少し重ねる
-      const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
-      const rowW = size + (list.length - 1) * step + 6 + upW;
-      const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
-      const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
+      const shown = list.slice(0, 3);
+      const extra = list.length - shown.length;
+      const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+      const left = r.x + r.w - rowW + 6; // ボタンの右上隅に少しはみ出す
+      const top = r.y - 9;
+      const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
       return (
-        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} data-assistant-life-home-face-above={above ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
-          <div className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow">
-            {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: size + 2 }}>
+          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
+            className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95" style={{ height: size + 2 }}>
+            {shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
               return (
-                <button key={id} type="button" data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} aria-label={`${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: id }); }}
-                  className="relative shrink-0 rounded-full active:scale-90" style={{ marginLeft: i ? -4 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
+                <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
                   <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
                   {spent && <AssistantLifeSpentMark size={size}/>}
-                  {/* 押しやすいように、見た目より広く押せる */}
-                  <span aria-hidden="true" className="absolute -inset-1.5"/>
-                </button>); })}
-            {upW > 0 && <span data-assistant-life-home-card-up className="pointer-events-none shrink-0 rounded-full bg-amber-300 font-black text-slate-950" style={{ marginLeft: 2, fontSize: Math.max(8, Math.round(size * 0.48)), lineHeight: `${Math.max(10, size - 4)}px`, padding: '0 3px' }}>UP</span>}
-          </div>
+                </span>); })}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}
+          </button>
         </div>); })}
-    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life}/>}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
   </>);
 }
 
 // ---- part: 56-assistant-life-map.jsx ----
 // ===== 助手ライフ「📋 みんなの居場所」の地図(案A・2026-11-08 社長「推奨でいいけどもっと矛盾のない作りとわかりやすく」) =====
-// HOME の画面そのものを地図にする。絵・札の部品・札の位置は HOME と同じもの(同じ class なので、HOME の配置を直せば地図も直る)。
-//   ・地図の大きさは HOME の画面(main.mh-home-scene)と同じ。HOME が位置合わせに使う値(--mh-home-*)も写す → 札の位置が HOME と1対1
+// 村の絵の上を地図にする。絵と場面の大きさは HOME と同じものを使う。
+//   ・2026-11-17 のホーム一新で HOME の施設は下のドックに集約されたため、地図のボタンの並びは地図専用の配置として残した
+//     (70-bootstrap.jsx の [data-assistant-life-map] 付きの規則。HOME のドックとは位置を写し合わない)
 //   ・施設と結びつく場所(モンヒロビート・MFバトルカード・M/B管理・神殿・マーケット・助手ライフ=みんなの家)は HOME の札そのもの
 //   ・HOME に札の無い町の場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)は、同じ形の小さめの札を絵の中の「その建物・その場所」に
 //   ・助手は札の上(入らなければ下・横)に小さな全身で立ち、名前としていることの短い札を付ける。5人からは重ねて「◯◯ほか◯人」
@@ -69346,7 +69349,7 @@ function AssistantLifeHomeFaces({ metIds }) {
 // 案と止め絵: docs/progress/assistant-peer/LIFE-MAP-PLAN.md。検査 tools/assistant/assistant-life-map-check.js
 // 何も保存しない
 
-// 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
+// 場所ごとの HOME の施設(fac)。町だけの場所は HOME では「ライフ」のボタンの顔バッジに集まる(assistantLifeFacilityOf と同じ表)
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
 // 🏥 病院(56-assistant-life-body.jsx)は印 assistantLifeBody が真のときだけ地図に足す(偽のあいだは札も人もシートも出さない・ミハリ5)
@@ -69384,7 +69387,8 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
 const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', battle: 'モンヒロバトル', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
 const assistantLifeMapSpotWord = (place) => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
 
-// HOME の画面の大きさ・位置合わせの値・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)
+// HOME の画面の大きさ・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)。
+//   カードのボタンの置き方は地図側の決め打ち(2026-11-17 ホーム一新までは HOME のボタンの class を写していた)
 const assistantLifeMapReadHome = () => {
   const out = { w: window.innerWidth, h: window.innerHeight, vars: {}, src: 'data/images/home-background.jpg', wide: false, card: 'mh-home-card-battle raised', fromHome: false };
   try {
@@ -69393,11 +69397,8 @@ const assistantLifeMapReadHome = () => {
     if (!scene) return out;
     const img = scene.querySelector('.mh-home-background img.mh-home-main');
     if (img && img.getAttribute('src')) { out.src = img.getAttribute('src'); out.wide = !!scene.querySelector('.mh-home-background.is-wide'); }
-    const card = scene.querySelector('.mh-home-card-battle');
-    if (card) out.card = [...card.classList].filter(c => c !== 'is-tutorial-spot').join(' ');
     if (rot || !scene.offsetWidth || !scene.offsetHeight) return out;
     out.w = scene.offsetWidth; out.h = scene.offsetHeight; out.fromHome = true;
-    for (let i = 0; i < scene.style.length; i++) { const k = scene.style[i]; if (/^--mh-home-/.test(k)) out.vars[k] = scene.style.getPropertyValue(k); }
   } catch (_) {}
   return out;
 };
@@ -69719,7 +69720,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
-        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること。下の案内は、HOME の下にあるモンヒロバトルの札と重ならないよう札の上に置く(2026-11-11) */}
+        {/* 地図の施設ボタン(HOME と同じ class・同じ中身だが、並びは地図専用の配置)。押すと、そこにいる助手とできること。下の案内は、下のボタンと重ならないよう上に置く(2026-11-11) */}
         <nav className="mh-home-facilities" aria-label="町の場所">
           {facBtn('ranch', 'management', 'M/B管理', <span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span>)}
           {facBtn('temple', 'temple', '神殿', <span><Sparkles size={18}/>神殿</span>)}
@@ -87271,11 +87272,13 @@ const assistantLifeFriendDecorateRooms = (rooms) => {
   }
   return rooms;
 };
-// HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」(札の字にかからないよう、札の角の外側に半分出す)。
-//   新しい置き手紙・来ている助手が増えたら、札のすぐ上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない。
+// HOME: 施設「ライフ」のボタンの左上に「🏘 n」(ボタンの角の外側に半分出す。右上は助手の顔バッジの場所・2026-11-17 ホーム一新)。
+//   新しい置き手紙・来ている助手が増えたら、ボタンのすぐ上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない。
 //   画面の上に出すと助手の吹き出しの名前に重なった・2026-11-08 ミハリ)
-function AssistantLifeFriendHomeBadge({ rect }) {
+function AssistantLifeFriendHomeBadge({ rect, dockTop }) {
   const s = useAssistantLifeFriendState();
+  // 帯(トースト・来ていますのお知らせ)の高さの基準: ライフのボタンのすぐ上はドックの上段なので、ドック全体の上に出す(2026-11-17 ホーム一新)
+  const topBase = (typeof dockTop === 'number' && isFinite(dockTop)) ? dockTop : (rect ? rect.y : 0);
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
   React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); if (typeof albCountIncoming === 'function') { try { await albCountIncoming(); } catch {} } })(); }, []);
@@ -87296,11 +87299,11 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   const here = typeof albEnabled === 'function' && albEnabled() && s.loaded && s.mode && s.mode !== 'off' ? (s.st.came || []).find(c => c && !c.seen) : null;
   if (!n && !toast && !here) return null;
   return (<>
-    {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: rect.x + rect.w - 14, top: rect.y - 8 }}>🏘 {n}</span>}
+    {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: Math.max(2, rect.x - 6), top: rect.y - 8 }}>🏘 {n}</span>}
     {toast && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg" data-alf-toast
-      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
+      style={{ zIndex: 60, top: Math.max(4, topBase - 28), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
     {!toast && here && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-amber-300/80 bg-amber-100 px-2.5 text-[11px] font-black leading-[20px] text-amber-950 shadow-lg" data-alb-here
-      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
+      style={{ zIndex: 60, top: Math.max(4, topBase - 28), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
   </>);
 }
 
@@ -89916,26 +89919,25 @@ const msxFill = (t, ctx) => { const se = msxSuc && msxSuc.script; return se && t
 // ターンのはじめの様子(数字は言わない)。場面の決め方はエンジンの SCENE.start
 const msxStartScene = (s) => { const se = msxSuc && msxSuc.script; return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal'; };
 
-// ---- HOMEの入口「モンヒロサクセス β」の札(2026-11-13 社長「HOMEにβの札」)。公開の印 monheroSuccess が真のときだけ出る ----
-// 置き場所: 縦持ちは左の列の「MFバトルカード」の札のすぐ下(その札が上がる・下がるのに合わせる)、横持ちはその札の右。
-// 69-screen-home.jsx の HomeScreen へ 60-app.jsx が successEntry として渡す。見た目はここに閉じる(HOMEの CSS は触らない)
+// ---- HOMEの入口「モンヒロサクセス β」(2026-11-13 社長「HOMEにβの札」→ 2026-11-17 ホーム一新でドック上段のカードに)。公開の印 monheroSuccess が真のときだけ出る ----
+// 置き場所: HOME のドック上段の先頭のセル(69-screen-home.jsx の HomeScreen が successEntry として置く)。セルとして流れる形にし、
+// 位置はドック側に任せる。見た目はここに閉じる(HOMEの CSS は触らない)
 const MSX_HOME_CSS = `
-.mh-home-success{position:absolute;z-index:5;left:9px;bottom:calc(min(calc(33% - 40px),calc(44.75% - 126px)) - 60px);padding:0;translate:0 var(--mh-home-left-push,0px)}
-.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success{bottom:calc(min(calc(33% + 4px),calc(44.75% - 82px)) - 60px)}
-.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{bottom:calc(min(calc(33% - 84px),calc(44.75% - 170px)) - 60px)}
-.mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
-.mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
-.mh-home-success:active>span{transform:scale(.96)}
-.mh-home-success>span{flex-wrap:wrap;max-width:178px}
-/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ700以上。664 ではモンヒロバトルの上の助手の顔が詰まった・r1115-206)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
-.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
-@container (min-height:700px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-34px}}
+.mh-home-success{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px 6px;border:2px solid #f9a8d4dd;border-radius:16px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;text-shadow:0 2px 4px #000;box-shadow:0 3px 10px #0007;touch-action:manipulation}
+.mh-home-success:active{transform:scale(.95)}
+.mh-home-success .pic{display:block;width:100%;max-width:104px;aspect-ratio:1;border-radius:11px;overflow:hidden}
+.mh-home-success .pic img{display:block;width:100%;height:100%;object-fit:cover}
+.mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
+.mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
+.mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
-/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
-/* 背の低い横画面(高さ400以下: 568×320・640×360・667×375・844×390 など)は、右の「助手ライフ」とその顔の列(札の右端から左へ最大140px)の下にかからないよう少し左へ寄せる。
-   高さ340以下だけ寄せていたら、640×360・667×375 で助手ライフの顔が札の上へ逃げた(2026-11-16 r1115-206 印を立てて home-layout-check) */
-@media (orientation:landscape) and (max-height:400px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 40px)}}
+@media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:700px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:600px){.mh-home-success .nm{font-size:7px}.mh-home-success .txt{height:calc(7px*1.15 + 1px + 9px*1.1)}}
+@container (min-width:700px) and (min-height:560px){.mh-home-success{gap:2px;padding:7px 5px 8px;border-radius:18px;max-width:128px}.mh-home-success .pic{max-width:120px;border-radius:13px}.mh-home-success .txt{gap:2px;height:calc(8.5px*1.15 + 2px + 9px*1.1)}.mh-home-success .nm{font-size:8.5px}.mh-home-success .sb{font-size:9px}}
+@container (min-width:950px) and (min-height:560px){.mh-home-success .nm{font-size:10.5px}.mh-home-success .sb{font-size:10px}.mh-home-success .txt{height:calc(10.5px*1.15 + 2px + 10px*1.1)}}
 `;
 function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
@@ -89945,10 +89947,12 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
     <>
       <style>{MSX_HOME_CSS}</style>
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
-        {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し): 上のリボン「β版 開幕！」と札の一言 */}
+        {/* リボン「β版 開幕！」は公開の日の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し)。
+            βの表示はリボン1つだけ(2026-11-16 UI改修: 中の β と二重になっていた)。名前はフルネーム「モンヒロサクセス」+下の言葉「育成」
+            (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         <i className="rb" aria-hidden="true">β版 開幕！</i>
-        {/* βの表示は上のリボン1つだけにする(2026-11-16 UI改修: 札の中の β と二重になっていた) */}
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
+        <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
+        <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
@@ -139389,7 +139393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showScreenTheme ? (
     <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
-    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
+    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowAudioSettings(false))}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button type="button" aria-label="閉じる" onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
   ) : showBgmArrangement ? (
@@ -151293,7 +151297,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(calc(-50% + var(--mh-home-battle-nudge,0px)))}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -151529,10 +151533,10 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
-    }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:max(27.4%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */[data-assistant-life-map] .mh-home-facility.management,[data-assistant-life-map] .mh-home-facility.temple{top:27.4%}[data-assistant-life-map] .mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     /* はじめての人の「つぎにやること」(2026-11-11 案4)。モンヒロバトルの札のすぐ上。縦持ちは下の列の上に横いっぱい、横持ち(背が低い)はバトルの札のすぐ上の中央の小さな帯 */
-    .mh-home-nextstep{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
+    .mh-home-nextstep{position:relative;z-index:6;display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
     .mh-home-nextstep:active{transform:scale(.97)}
     .mh-home-nextstep-lab{flex:none;font-size:10px;font-weight:900;line-height:1.2;text-align:center;color:#fcd34d}
     .mh-home-nextstep-lab b{display:block;color:#cbd5e1;font-weight:900}
@@ -151542,15 +151546,15 @@ const createAnimationStyle = () => {
     .mh-home-nextstep i{flex:none;font-style:normal;font-size:22px;font-weight:900;color:#fcd34d}
     @keyframes mhNextStepPulse{0%,100%{box-shadow:0 4px 14px #000a}50%{box-shadow:0 4px 18px #fcd34dcc}}
     @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
-    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{left:50%;right:auto;transform:translateX(-50%);width:min(32%,230px);bottom:calc(66px + env(safe-area-inset-bottom));min-height:44px;padding:5px 10px}.mh-home-nextstep:active{transform:translateX(-50%) scale(.97)}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
-    .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
-   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{min-height:44px;padding:5px 10px}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
+    /* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
+   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:6px 0 0 3%;pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
-    @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
+    @media(max-height:620px){.mh-home-masumon-layer{bottom:38%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:340px){.mh-home-assistant{width:56%!important}}@media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-scene .mh-home-facility.rhythm,.mh-home-scene .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{left:calc(var(--mh-home-management-right,124px) + 8px);top:max(calc(156px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 16px))}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:340px){.mh-home-assistant{width:56%!important}}@media(orientation:landscape) and (max-height:600px){.mh-home-assistant{margin-left:2%;width:36%}.mh-home-facility>span{padding:6px 12px}[data-assistant-life-map] .mh-home-facility.management{left:2.4%;top:calc(146px + env(safe-area-inset-top))}[data-assistant-life-map] .mh-home-facility.rhythm{left:132px;top:calc(156px + env(safe-area-inset-top))}[data-assistant-life-map] .mh-home-facility.temple{right:2.4%;top:35.76%}[data-assistant-life-map] .mh-home-facility.market{right:2.4%;top:59.76%}[data-assistant-life-map] .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}[data-assistant-life-map]:has(.mh-home-facility.life) .mh-home-card-battle{bottom:32px}[data-assistant-life-map] .mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:28%;bottom:44%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
-    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
+    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){[data-assistant-life-map] .mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
@@ -151584,7 +151588,108 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
-    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}.mh-home-scene .mh-home-event-banner,.mh-home-scene .mh-home-tour-banner,.mh-home-scene .mh-home-card-battle{translate:0 var(--mh-home-left-push,0px)}@media (orientation:portrait){.mh-home-facility.life{top:max(37%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(49.5%,calc(var(--mh-home-life-bottom,0px) + 32px))}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:max(39%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(52%,calc(var(--mh-home-life-bottom,0px) + 32px))}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    [data-assistant-life-map] .mh-home-facility.rhythm{left:1.9%;top:55.25%}[data-assistant-life-map] .mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){[data-assistant-life-map] .mh-home-facility.life{top:37%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){[data-assistant-life-map] .mh-home-facility.life{top:39%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    /* ===== ホーム一新(2026-11-17): 下部ドック・期間ものの細バナー・右端スタック =====
+       施設は背景の建物に合わせた札をやめ、下のドック(絶対配置・下固定)に集約した。上の帯と吹き出しは流れで置くので、
+       吹き出しが伸びても押し下げ合いは起きない。safe-area は body の余白が受け持つため、ドックでは足さない(家ルール) */
+    .mh-home-event-strip{position:relative;z-index:5;display:flex;align-items:center;gap:6px;margin:5px 0 0 9px}
+    .mh-home-event-strip .mh-home-event-banner,.mh-home-event-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+    .mh-home-event-strip-dots{display:flex;gap:4px;align-items:center}
+    .mh-home-event-strip-dots i{width:6px;height:6px;border-radius:50%;background:#ffffff55}
+    .mh-home-event-strip-dots i.on{background:#fde68a}
+    .mh-home-dock{position:absolute;z-index:5;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:6px;padding:6px 8px 8px;background:linear-gradient(180deg,#0b1f1a00,#0b1f1acc 24%,#0b1f1af2)}
+    .mh-home-dock-row{display:flex;gap:6px}
+    /* 施設カードは8つとも同じ形・同じ大きさ(2026-11-17 あっくん追加指示)。寸法の決め方: 行の中で flex:1 1 0 の等分が幅を決め、
+       絵は .mh-home-dock-pic(幅いっぱい・最大104px・aspect-ratio:1)が全施設共通の正方形になる。名前(施設によっては下の言葉も)が下に付く。
+       中身の並びは「絵→文字の枠」。絵は全カードで上端をそろえ(カードの上寄せ)、文字は .mh-home-dock-txt という
+       「名前1行+間+下の言葉1行」ぶんの固定の高さの枠に入れて、その中で縦に中央寄せする。
+       下の言葉が無い施設(M/B管理・神殿・マーケット・助手ライフ)は、名前1行だけが枠の縦中央に来るので、
+       名前の真下にだけ空きが残る見え方にならない(2026-11-17 あっくん追加指示)。
+       経緯: 当初は下の言葉が無い4枚だけ中身が上寄せになっていた(同日 あっくん指摘)。空の下の言葉で1行ぶんの
+       高さを確保して揃える→カード全体を中央寄せ、と変えたが、センター合わせの対象はカード全体ではなく
+       「文字の枠部分」だとあっくんが正したので、この形になった。
+       下段だけ小さな円だった作り(mh-home-dock-btn / mh-home-dock-ic)は廃止した
+       名前の字の大きさ(2026-11-17 フルネーム化に合わせて改定): 施設名は全てフルネームで、最長は「モンヒロサクセス」の8文字。
+       カードの内側の幅(幅390で約79px・幅360で約71px・幅320で約63px)に8文字が1行で収まるよう、全施設一律で
+       基本9.5px / 幅380以下8.5px / 幅350以下7.5px / 横画面8.5px にした。施設ごとに字の大きさを変えない(統一感を保つ) */
+    .mh-home-dock-card{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px 6px;border:2px solid #ffe6a7a8;border-radius:16px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;color:#fff;text-shadow:0 2px 4px #000;touch-action:manipulation;transition:transform .1s,filter .1s}
+    .mh-home-dock-card:active{transform:scale(.95);filter:brightness(1.3)}
+    .mh-home-dock-pic{display:block;width:100%;max-width:104px;aspect-ratio:1;border-radius:11px;overflow:hidden}
+    .mh-home-dock-pic img{display:block;width:100%;height:100%;object-fit:cover}
+    /* 文字の枠: 高さは「名前の字×行間 + 間 + 下の言葉の字×行間」で固定し、中の文字は縦中央に置く。
+       名前・下の言葉の字の大きさが段階で変わる場所(下の @media / @container)では、この高さも同じ段階で追随させる */
+    .mh-home-dock-txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
+    .mh-home-dock-name{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
+    .mh-home-dock-sub{font-size:9px;font-weight:800;color:#ffe6a7;line-height:1.1;white-space:nowrap}
+    .mh-home-dock-soon{margin-left:3px;padding:0 4px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:8px;font-weight:900;line-height:1.5;vertical-align:2px}
+    .mh-home-dock-chip{position:absolute;top:-7px;right:-4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:9px;font-weight:900;line-height:1.4;box-shadow:0 2px 5px #0008}
+    .mh-home-dock-card.card.soon .mh-home-dock-pic{filter:saturate(.55) brightness(.85)}
+    .mh-home-side-stack{position:absolute;z-index:5;right:6px;top:calc(76px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:9px}
+    .mh-home-side-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation;transition:transform .1s,filter .1s}
+    .mh-home-side-btn:active{transform:scale(.92);filter:brightness(1.3)}
+    .mh-home-side-ic{display:flex;align-items:center;justify-content:center;width:47px;height:47px;border-radius:50%;border:1.5px solid #eed995aa;background:#102c29e8;box-shadow:0 3px 8px #0007}
+    .mh-home-gift .mh-home-side-ic{border-color:#67e8f9aa;background:#083344e8;color:#cffafe}
+    .mh-home-mission .mh-home-side-ic{border-color:#fbbf24aa;background:#422006e8;color:#fef3c7}
+    .mh-home-side-lb{font-size:8.5px;font-weight:900;text-shadow:0 1px 3px #000}
+    .mh-home-side-btn em{position:absolute;top:-3px;right:1px;display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px;font-weight:900;box-shadow:0 1px 4px #0008}
+    .mh-home-scene .mh-home-side-stack .mh-tod-clock{position:static}
+    @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+    @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
+    @media(orientation:landscape) and (max-height:600px){
+      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
+         ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
+         施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
+         以前は横画面だけカードを横並び(絵40px+名前が横)に変えていたが、8枚の形の統一が崩れるため廃止した。
+         「次にやること」は先頭に細長い案内として置く(初めての人だけに出る) */
+      .mh-home-dock{flex-direction:row;align-items:stretch;gap:6px;padding:5px 8px 7px}
+      .mh-home-dock-row{flex:1 1 0;gap:6px}
+      .mh-home-nextstep{flex:0 0 148px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:0}
+      .mh-home-dock-card .mh-home-dock-name{font-size:8.5px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
+      .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
+      .mh-home-side-ic{width:34px;height:34px}
+      .mh-home-side-lb{display:none}
+    }
+    /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
+       全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */
+    @media(orientation:landscape) and (max-height:600px) and (max-width:700px){
+      .mh-home-dock-card .mh-home-dock-name{font-size:7.5px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}
+    }
+    @media(orientation:landscape) and (max-height:600px) and (max-width:600px){
+      .mh-home-dock-card .mh-home-dock-name{font-size:7px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(7px*1.15 + 1px + 9px*1.1)}
+    }
+    /* 広い場面(タブレット・パソコン)では、ドックを8枚1列に並べる(2026-11-17 あっくん決定「タブレットなら両手だし1段でも問題ない」)。
+       場面(.mh-home-scene)は container-type:size なので、場面自身の大きさで決める。コラムの広げ方(index.html)とは独立。
+       当初は絵を最大148pxに大きくした2段で、タブレット縦(768x1024)ではドックが丈の4割近くを取っていたので改めた。
+       並べ方は横画面(上の @media)のドックと同じで、ドックを横向きにし、2つの段を等分、中のカードも等分する。
+       カード幅の上限は128px。場面は最大1024pxまでしか広がらないので、通常は約117px(1024幅)・約86px(768幅)で
+       頭打ちになり、上限は将来もっと広がったときの備え。余った幅は段の中で中央寄せして受ける。
+       名前は、768px幅ではカードの内側が約72pxしかないため、横画面と同じ8.5pxにする(最長8文字が1行に収まる)。
+       右端スタックの拡大(58px)はドックと関係のない縦の並びで、広い画面での押しやすさとして残す。
+       丈の条件(560px以上)は、横持ちのスマホ(幅は広いが丈が390px前後)を除くため(そちらは上の @media の1列が受け持つ)。
+       上の帯(プレイヤー・財布)は情報の並びが決まっているので据え置きにし、広場の空きを圧迫しない */
+    @container (min-width:700px) and (min-height:560px){
+      .mh-home-dock{flex-direction:row;align-items:stretch;gap:8px;padding:10px 14px 12px}
+      .mh-home-dock-row{flex:1 1 0;gap:8px;justify-content:center}
+      .mh-home-nextstep{flex:0 0 148px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:0}
+      .mh-home-dock-card{gap:2px;padding:7px 5px 8px;border-radius:18px;max-width:128px}
+      .mh-home-dock-pic{max-width:120px;border-radius:13px}
+      .mh-home-dock-txt{gap:2px;height:calc(8.5px*1.15 + 2px + 9px*1.1)}
+      .mh-home-dock-name{font-size:8.5px}
+      .mh-home-side-stack{right:12px;gap:12px}
+      .mh-home-side-ic{width:58px;height:58px}
+      .mh-home-side-lb{font-size:10px}
+      .mh-home-event-strip .mh-home-event-banner,.mh-home-event-strip .mh-home-tour-banner{max-width:min(72vw,380px)}
+    }
+    /* ひときわ広い場面(950px以上)ではカードの内側に余裕ができるので、名前と下の言葉を一段だけ大きくする */
+    @container (min-width:950px) and (min-height:560px){
+      .mh-home-dock-name{font-size:10.5px}
+      .mh-home-dock-sub{font-size:10px}
+      .mh-home-dock-txt{height:calc(10.5px*1.15 + 2px + 10px*1.1)}
+    }
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.rhythm small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
