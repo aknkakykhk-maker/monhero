@@ -36,17 +36,18 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
-.msx .r3 .q-twrap{display:flex;gap:8px;align-items:flex-start}
-.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:3px;flex:none}
+/* 技の表と詳しさ欄は縦並び(表=全幅・詳しさは下)。横並びだと表が細くなり技名が切れるため(2026-11-18) */
+.msx .r3 .q-twrap{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%}
 .msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
 .msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
 .msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
 .msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
 .msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
 .msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
-.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:9px;font-weight:800;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 6px 6px;pointer-events:none}
-.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:15px}
-.msx .r3 .msx-md-tg.q .tc .g{bottom:14px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:10px;font-weight:800;line-height:1.3;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:31px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:30px}
 .msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
 .msx .r3 .q-td.in-pop{margin:0 10px 8px}
 .msx .r3 .q-td.side{flex:1 1 0;min-width:0}

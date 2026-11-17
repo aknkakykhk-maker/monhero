@@ -401,9 +401,15 @@ function MonsucRankDetail({ row, pinned, onBack }) {
       // MsxMonDetail の見た目(MSX_CSS)は .msx の中だけに効く決まりで、ランキング画面は Tailwind 組みのため
       // .msx の外に置かれている(56-monhero-success-main.jsx の注記)。詳細だけは .msx の入れ物で包んで、
       // はじめる画面・マスモンボックス・ベースモンと同じ表示にする(2026-11-17 実機で文字が暗色に沈み技の升が重なる崩れの修正)
-      return <div className="msx" data-monsuc-rank-detail><MsxMonDetail species={row.species} name={row.child_name || mon.name || '？？？'} art={art} st={row.stats || {}} apt={apt} type={type} peak={peak} grades={grades}
+      // 包んだ .msx をそのまま返すと、置き場所の .msx-wrap(display:flex の横並び)の子として育成側の .msx と
+      // 幅を取り合い、半分ほどに潰れて「たてなが」になる(2026-11-17 実機報告)。さらに潰れた幅が 359px 以下に
+      // なるとコンテナ判定で上の段が縦積みに切り替わってしまう。一覧・簡易表示と同じ fixed の全面の殻に入れ、
+      // .msx-wrap と同じ組み立て(中央寄せ・安全領域の余白)で .msx を1つだけ置く
+      return <div data-monsuc-rank-detail style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', justifyContent: 'center', background: '#0b0920', padding: 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)' }}>
+        <div className="msx"><MsxMonDetail species={row.species} name={row.child_name || mon.name || '？？？'} art={art} st={row.stats || {}} apt={apt} type={type} peak={peak} grades={grades}
         known={known} mastery={mastery} power={Math.round(monsucRankNum(row.power))} grade={row.grade || null}
-        sub={`${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`} info={info} onClose={onBack} SUC={SUC} /></div>;
+        sub={`${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`} info={info} onClose={onBack} SUC={SUC} /></div>
+      </div>;
     } catch (_) { /* 作れなければ簡易表示に倒す */ }
   }
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>

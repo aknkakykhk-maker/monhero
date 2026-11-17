@@ -5318,7 +5318,8 @@ function MonsterHeroGame() {
       const after = levelInfo(nextXp);
       setBreederXp(nextXp);
       storeSet('mh_breeder_xp', nextXp, false);
-      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName);
+      // ここはクイック周回ぶんの配布専用の入口なので、Lvアップの演出は「裏周回ぶん」の印を付ける(出す場所はホームだけ。44-growth-fx.jsx)
+      if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(before.level, after.level, breederName, { quick: true });
       const gainedLevels = after.level - before.level;
       if (gainedLevels > 0) {
         setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
@@ -6870,18 +6871,21 @@ function MonsterHeroGame() {
     // (タイトル画像の取得とBGMの準備が何百回もやり直されていた)。
   }, [bootPhase, dataLoaded]);
 
-  // 色マスクなど後続画面用の素材は、ブラウザが空いた時に1件ずつ処理する。
+  // 後続画面用の素材は、ブラウザが空いた時に1件ずつ処理する。
+  // 染めたモンスターは、色マスクだけでなく染め絵(染め直し+焼き)まで温める。
+  // マスクだけだと、画面の切り替わりで染め直しと焼きの実時間ぶん素の絵が見えていた(2026-11-18)
   useEffect(() => {
     if (bootPhase === 'LOADING') return;
     let cancelled = false;
     const jobs = [];
     const seen = new Set();
     masuMons.forEach((m) => {
-      if (!getMasuColors(m).some(Boolean)) return;
+      const colors = getMasuColors(m);
+      if (!colors.some(Boolean)) return;
       const base = ALL_PLAYER_MONSTERS[m.baseId];
       [base?.imgUrl, base?.iconUrl].forEach(url => {
         const key = `${m.baseId}::${url}`;
-        if (url && !seen.has(key)) { seen.add(key); jobs.push(() => getDyeRegionMasks(m.baseId, url)); }
+        if (url && !seen.has(key)) { seen.add(key); jobs.push(() => warmDyedMonsterImage(m.baseId, url, colors)); }
       });
     });
     const schedule = window.requestIdleCallback || ((cb) => setTimeout(() => cb({timeRemaining:()=>8}), 24));
@@ -11379,7 +11383,9 @@ function MonsterHeroGame() {
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
-    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName);
+    // どこでも裏クイックの周回ぶんは「裏周回ぶん」の印を付ける(出す場所はホームだけ。44-growth-fx.jsx)。
+    //   ふつうに戦ったランのぶんは印なしで、今までどおり出してよい画面で出す
+    if (typeof growthFxBreederLevel === 'function') growthFxBreederLevel(breederLevelBefore.level, breederLevelAfter.level, breederName, { quick: isQuickMode(runMode) && quickAnywhereRunRef.current });
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
