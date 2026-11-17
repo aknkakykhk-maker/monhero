@@ -444,11 +444,12 @@
   //   grade … 札の格の色(bronze・silver・gold・green・four・rainbow)
   // 賞金ランク(2026-11-14 社長「このまま作る」→ 2026-11-15 r1115-085・126 社長「案A」で参考の9段・参考の金額へ)。下から ルーキー〜ヒーロー。
   //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜9 これまでの賞金の合計(3,000〜120,000G)。いちばん上の 120,000G は社長の決め(2026-11-15 r1115-168・参考の 130,000G から変更)・5段目の 15,000G は正式
-  //   段が上がるたびに修行チケット1枚、6段目から上は1段で2枚(tk)。チケット運で もう1枚
+  //   段が上がるたびに修行チケット1枚(tk)。チケット運で もう1枚のことがある
+  //   (2026-11-17 社長: もらえる仕組みは「賞金ランクが上がったら1枚」に統一。6段目から上の2枚と、優勝でもらえる1枚はやめた)
   //   step は 1〜9(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段(参考どおり4つとも「はながた」= 6段 エース 26,000G。r1115-134)。前の10段で保存した途中の育成は restore が いまの段に丸める
   const FAME_RANK = Object.freeze([
     { name: 'ルーキー', cond: 'debut', tk: 1 }, { name: '初めの一勝', cond: 'win', tk: 1 }, { name: '一人前', min: 3000, tk: 1 }, { name: '腕利き', min: 7000, tk: 1 }, { name: '期待の星', min: 15000, tk: 1 },
-    { name: 'エース', min: 26000, tk: 2 }, { name: 'スター', min: 40000, tk: 2 }, { name: 'チャンピオン', min: 70000, tk: 2 }, { name: 'ヒーロー', min: 120000, tk: 2 },
+    { name: 'エース', min: 26000, tk: 1 }, { name: 'スター', min: 40000, tk: 1 }, { name: 'チャンピオン', min: 70000, tk: 1 }, { name: 'ヒーロー', min: 120000, tk: 1 },
   ].map(Object.freeze));
   const FAME_RANK_MAX = FAME_RANK.length; // 9
   const rankTicketsOf = (from, to) => { let n = 0; for (let st = Math.max(1, from + 1); st <= Math.min(FAME_RANK_MAX, to); st++) n += num(FAME_RANK[st - 1].tk, 1); return n; }; // from の次の段〜to の段で もらえる修行チケット
@@ -460,8 +461,7 @@
   };
   const rankNameOf = (step) => (step >= 1 && step <= FAME_RANK_MAX ? FAME_RANK[step - 1].name : 'デビュー前');
   const rankNeedG = (step) => num((FAME_RANK[step - 1] || {}).min);
-  // 段のほかに、優勝の獲得物に付く修行チケット(期末の大会・ヒーローズファイナルの各戦・★★★以上・四大大会)
-  const WIN_TICKET = Object.freeze({ forced: Object.freeze(['junior', 'middle', 'pro']), cupStar: 3, add: 1 });
+  // 優勝の獲得物に修行チケットは付かない(2026-11-17 社長: チケットは賞金ランクが上がったときだけ。以前の WIN_TICKET は廃止)
   const DIST_JA = ['零', '近', '中', '遠'];
   const DIST_T_NAME = ['インファイト・トーナメント', 'ニアライト・トーナメント', 'ミドルレンジ・トーナメント', 'ロングレール・トーナメント'];
   const DIST_C_NAME = ['インファイト・チャンピオンズ', 'ニアライト・チャンピオンズ', 'ミドルレンジ・チャンピオンズ', 'ロングレール・チャンピオンズ'];
@@ -654,8 +654,11 @@
       const techs = Array.isArray(r.techs) ? r.techs.filter(t => typeof t === 'string' && t).slice(0, 16) : null;
       const mastery = {};
       if (techs && r.mastery && typeof r.mastery === 'object') techs.forEach(t => { const v = Number(r.mastery[t]); if (Number.isFinite(v)) mastery[t] = clamp(Math.round(v), 0, 100); });
+      // 染めた色(見せるためだけ。2026-11-18 染色の反映漏れの修正: 助手の共有・フレンドの貸し出しには色があるのに、候補へ取り込んでいなかった)
+      const colors = Array.isArray(r.colors) ? r.colors.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : null;
       return { name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species),
         id: typeof r.id === 'string' && r.id ? r.id.slice(0, 96) : null, rawSum, ...(techs && techs.length ? { techs, mastery } : {}),
+        ...(colors && colors.some(Boolean) ? { colors } : {}),
         // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけ。フレンドの子だけが持つ。古い育成には無い)
         ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon.slice(0, 128) } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame.slice(0, 64) } : {}) };
     };
@@ -1828,7 +1831,7 @@
       return list.map(c => ({ ...c, entry: canEnter(s, c), done: s.wonNow.includes(`${c.sys}:${c.star}`) || s.wonBefore.includes(`${c.sys}:${c.star}`) }));
     };
     // ライバルの印(大会の札・対戦に付ける表示と照合のための情報。強さや技は候補そのものから引く)
-    const rivalMarkOf = (r) => ({ name: r.name, breeder: typeof r.breeder === 'string' ? r.breeder : null, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null, ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame } : {}) });
+    const rivalMarkOf = (r) => ({ name: r.name, breeder: typeof r.breeder === 'string' ? r.breeder : null, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null, ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame } : {}), ...(Array.isArray(r.colors) && r.colors.some(Boolean) ? { colors: r.colors.slice(0, 6) } : {}) });
     const rivalOf = (s, n) => {
       const list = Array.isArray(s.rivals) ? s.rivals : []; if (!list.length || !n) return null;
       const rng = rngOf(s.id, s.turn, 'rival'); if (rng() >= RIVAL.rate) return null;
@@ -1982,7 +1985,7 @@
         if (picked.length) techIds = picked;
       }
       return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0, pop, loy,
-        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}), ...(rv ? { rivalId: rv.id || null, rivalKind: rv.kind || null } : {}) }];
+        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}), ...(rv ? { rivalId: rv.id || null, rivalKind: rv.kind || null } : {}), ...(rv && rv.colors ? { colors: rv.colors } : {}) }];
     };
 
     // 組み合わせ表の演出(8人のトーナメント・2026-11-14 社長「トーナメントの表示がおかしい」で作り直し)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
@@ -1999,7 +2002,7 @@
       const others = [...champs, ...rest];
       while (others.length < 6) others.push({ name: null, breeder: null, species: speciesList[Math.floor(rng() * speciesList.length)] || 'Mocchi' });
       const you = { you: true, species: s.species };
-      const foe = { name: opp ? opp.name : null, breeder: opp ? opp.breeder : null, species: opp ? opp.species : 'Mocchi', champ: opp ? opp.champ : false, rival: opp ? opp.rival : false };
+      const foe = { name: opp ? opp.name : null, breeder: opp ? opp.breeder : null, species: opp ? opp.species : 'Mocchi', champ: opp ? opp.champ : false, rival: opp ? opp.rival : false, ...(opp && opp.colors ? { colors: opp.colors } : {}) };
       // ほかの6体: 王者(決勝の相手でないとき)は自分の山の1〜3番、残りはばらばらに
       const shuf = (arr) => arr.map(x => ({ x, r: rng() })).sort((p, q) => p.r - q.r).map(o => o.x);
       const ch = others.filter(x => x.champ); const rs = shuf(others.filter(x => !x.champ));
@@ -2060,16 +2063,12 @@
       s.fame += prize; s.fameTotal += prize; out.prize = prize;
       if (won) { const bp = beatOfPrize(full); if (bp) { s.beatEarned = num(s.beatEarned) + bp; out.beat = bp; } } // ビートP(優勝の賞品・この大会で1回)
       void tkFull; // 2026-11-14 社長: 修行チケットは賞金ランクの段が上がるたびに(勝つたびの1〜4枚はやめた)
-      if (won) { // 優勝の獲得物のチケット(期末の大会・ヒーローズファイナル・★★★以上・四大大会)とライバル
-        const winTk = (WIN_TICKET.forced.includes(b.kind) || b.kind === 'summit' || (b.kind === 'cup' && (b.star >= WIN_TICKET.cupStar || (exB && exB.four)))) ? WIN_TICKET.add : 0;
-        const t = winTk; if (t) { s.tickets += t; out.tickets = t; out.winTickets = t; }
-      }
-      { // 賞金ランク: 上がった段の数だけチケット。🎫チケット運は段が上がるたびに ◯% でもう1枚
+      { // 賞金ランク: 上がった段の数だけチケット(1段ごとに1枚)。🎫チケット運は段が上がるたびに ◯% でもう1枚
         const from = num(s.fameRank); const to = rankStepOf(s);
         if (to > from) {
           const tk = stayNum(s, 'ticket') / 100; let luck = 0;
           for (let st = from + 1; st <= to; st++) if (tk > 0 && rngOf(s.id, s.turn, 'ticket', st)() < tk) luck += 1;
-          const got = rankTicketsOf(from, to); // 6段目から上は1段で2枚(r1115-126)
+          const got = rankTicketsOf(from, to); // 1段ごとに1枚(2026-11-17 社長: 6段目から上の2枚はやめた)
           s.tickets += got + luck; s.fameRank = to;
           out.rankUp = { from, to, name: rankNameOf(to), tickets: got + luck, luck }; if (luck) out.ticketLuck = true;
           out.tickets = num(out.tickets) + got + luck;
@@ -2219,7 +2218,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
