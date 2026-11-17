@@ -39,7 +39,7 @@ const ctx = { console, ASSISTANT_LIST: [{ id: 'secret', name: 'ひみつ', image
   assistantBondStage: (p) => ({ level: p >= 100 ? 2 : 1, need: p >= 100 ? 100 : 0 }), assistantBondNext: (p) => (p < 100 ? { level: 2, need: 100 } : { level: 3, need: 300 }),
   assistantBondLevel: (p) => (p >= 100 ? 2 : 1), assistantBondStageByLevel: () => ({ title: '' }), assistantBondRewardRows: () => [{ level: 2, rewards: ['ダイヤ×10'], frames: [], callStyle: false }] };
 vm.createContext(ctx);
-vm.runInContext(`${head}\n${vis ? vis[0] : ''}\nthis.S=GROWTH_FX_STORE;this.push=growthFxPush;this.bond=growthFxAssistantBond;this.visible=growthFxVisible;this.breeder=growthFxBreederLevel;this.item=growthFxMasuBondItem;this.peerItem=growthFxPeerItem;this.peerLevel=growthFxPeerLevel;this.session=growthFxSessionLevel;`, ctx);
+vm.runInContext(`${head}\n${vis ? vis[0] : ''}\nthis.S=GROWTH_FX_STORE;this.push=growthFxPush;this.bond=growthFxAssistantBond;this.visible=growthFxVisible;this.breeder=growthFxBreederLevel;this.sheetReady=growthFxSheetReady;this.item=growthFxMasuBondItem;this.peerItem=growthFxPeerItem;this.peerLevel=growthFxPeerLevel;this.session=growthFxSessionLevel;`, ctx);
 ctx.bond('mua', 10, 14); ctx.bond('mua', 14, 18); ctx.bond('mua', 18, 22);
 if (ctx.S.small.length !== 1 || ctx.S.small[0].gain !== 12) ng(`同じ助手の仲良し度が3回上がったら札1枚・+12 にまとめる(いま ${ctx.S.small.length}枚・+${ctx.S.small[0] && ctx.S.small[0].gain})`);
 ctx.bond('mua', 22, 22); ctx.bond('mua', 30, 20);
@@ -75,6 +75,28 @@ for (const s of ['RHYTHM_PLAY', 'RHYTHM_MULTI', 'BATTLE', 'CARD_BATTLE', 'CHAMPI
 if (!v('HOME').sheet) ng('HOME で出せない');
 if (v('HOME', { all: true }).all) ng('お話の最中(HOME の上)に札を出してしまう');
 if (v('HOME', { sheet: true }).sheet || !v('HOME', { sheet: true }).all) ng('おしゃべりの最中は札だけ出し、カード・Lvアップは待つ');
+
+// 裏周回ぶんの Lvアップはホームだけ(2026-11-17 社長「裏周回で上がったやつをホーム以外で出さないでほしい」)。
+//   サクセスは HOME の上に開くので、画面の名前が HOME でも atHome は偽にして確かめる
+{
+  ctx.S.sheets = []; ctx.S.small = [];
+  ctx.breeder(10, 11, '', { quick: true });
+  const qs = ctx.S.sheets.find(s => s.kind === 'breeder');
+  if (!qs || qs.quick !== true) ng('裏周回ぶんのブリーダーLvアップに quick の印が付いていない');
+  ctx.breeder(11, 12);
+  const merged = ctx.S.sheets.filter(s => s.kind === 'breeder');
+  if (merged.length !== 1 || merged[0].quick !== true || merged[0].levelFrom !== 10 || merged[0].levelTo !== 12)
+    ng('裏周回ぶんと通常ぶんが重なってまとめたときに、quick の印が消える(または、まとめ方が壊れた)');
+  if (!ctx.sheetReady(qs, v('HOME'), true)) ng('裏周回ぶんの Lvアップを、ホームを見ているときに出せない');
+  if (ctx.sheetReady(qs, v('HOME'), false)) ng('サクセスなど HOME の上に開く画面で、裏周回ぶんの Lvアップを出してしまう');
+  if (ctx.sheetReady(qs, v('PROFILE'), false)) ng('ホーム以外の画面で、裏周回ぶんの Lvアップを出してしまう');
+  const plain = { tier: 'level', kind: 'breeder' };
+  if (!ctx.sheetReady(plain, v('PROFILE'), false)) ng('通常ぶんの Lvアップが、出せる画面で出せなくなった');
+  if (!/GROWTH_FX_MONSUC_SELECTOR = '\[data-monhero-success\]'/.test(SRC)) ng('サクセスの目印で「ホームにいるか」を見ていない');
+  if (!/growthFxBreederLevel\(before\.level, after\.level, breederName, \{ quick: true \}\)/.test(APP)) ng('クイック周回ぶんの配布(awardRhythmPlayRunLoops)で quick の印を付けていない');
+  if (!/quick: isQuickMode\(runMode\) && quickAnywhereRunRef\.current/.test(APP)) ng('awardRunRewards で、どこでも裏クイックの周回ぶんに quick の印を付けていない');
+  ctx.S.sheets = []; ctx.S.small = [];
+}
 
 // 公開前の呼び出し口(友情Lv・セッションLv)
 ctx.S.sheets = []; ctx.S.small = [];
