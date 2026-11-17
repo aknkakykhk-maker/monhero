@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 497c8a8d89479d15
+// source-sha256: 0b295c24d6196d77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -190492,12 +190492,64 @@ const monsucRankLineageTabs = () => {
   });
   return out;
 };
+function MonsucRankLineageSheet({
+  lineages,
+  tab,
+  lineage,
+  q,
+  setQ,
+  onPick,
+  onClose
+}) {
+  const match = texts => typeof msxMatchQ === 'function' ? msxMatchQ(q, ...texts) : !q;
+  const allShown = match(['全て', '全モンスター']);
+  const shown = lineages.filter(l => match([`${monsucRankLineageName(l)}系`, monsucRankLineageName(l)]));
+  const allSel = tab === 'all';
+  return React.createElement(PickerSheet, {
+    title: "血統を選ぶ",
+    note: "血統は 種類のまとまりです。選ぶと、その場で切り替わります",
+    accent: "border-amber-400",
+    search: q,
+    onSearch: setQ,
+    searchPlaceholder: "血統を名前で探す",
+    onClose: onClose,
+    dataPicker: "monsuc-rank-lineage"
+  }, React.createElement("div", {
+    className: "flex flex-col gap-1.5"
+  }, allShown && React.createElement("button", {
+    type: "button",
+    onClick: () => onPick(null),
+    "aria-pressed": allSel,
+    className: `relative flex items-center gap-2 min-h-[48px] rounded-xl border px-3 text-left active:scale-95 ${allSel ? 'border-amber-400 bg-amber-950/60' : 'border-slate-700 bg-slate-950/40'}`
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block truncate text-[13px] font-black text-white"
+  }, "全て"), React.createElement("span", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "全モンスター")), allSel && React.createElement(PickerCheckMark, null)), shown.map(l => {
+    const sel = tab === 'lineage' && lineage === l;
+    return React.createElement("button", {
+      key: l,
+      type: "button",
+      onClick: () => onPick(l),
+      "aria-pressed": sel,
+      className: `relative flex items-center gap-2 min-h-[48px] rounded-xl border px-3 text-left active:scale-95 ${sel ? 'border-amber-400 bg-amber-950/60' : 'border-slate-700 bg-slate-950/40'}`
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[13px] font-black text-white"
+    }, monsucRankLineageName(l), "系"), sel && React.createElement(PickerCheckMark, null));
+  }), !allShown && shown.length === 0 && React.createElement("p", {
+    className: "py-6 text-center text-[11px] font-bold text-slate-500"
+  }, "当てはまる血統がいません")));
+}
 function MonsucRankScreen({
   onBack
 }) {
   const [tab, setTab] = React.useState('all');
   const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
+  const [lineagePickerOpen, setLineagePickerOpen] = React.useState(false);
+  const [lineagePickerQ, setLineagePickerQ] = React.useState('');
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [failed, setFailed] = React.useState(false);
@@ -190591,6 +190643,17 @@ function MonsucRankScreen({
       pinned: !!pinned
     });
   };
+  const closeLineagePicker = () => {
+    setLineagePickerOpen(false);
+    setLineagePickerQ('');
+  };
+  const pickLineage = l => {
+    if (l) {
+      setTab('lineage');
+      setLineage(l);
+    } else setTab('all');
+    closeLineagePicker();
+  };
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
@@ -190622,21 +190685,18 @@ function MonsucRankScreen({
     className: "text-[18px] font-black"
   }, "🏆 総合力ランキング"), React.createElement("div", {
     className: "text-[11px] text-slate-300 leading-snug"
-  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 mt-2"
-  }, [['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => React.createElement("button", {
-    key: k,
+  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("button", {
     type: "button",
-    onClick: () => setTab(k),
-    className: `rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
-  }, label))), tab === 'lineage' && React.createElement("div", {
-    className: "flex flex-wrap gap-1.5 mt-2"
-  }, lineages.map(l => React.createElement("button", {
-    key: l,
-    type: "button",
-    onClick: () => setLineage(l),
-    className: `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
-  }, monsucRankLineageName(l), "系"))), React.createElement("div", {
+    "data-monsuc-rank-lineage-open": true,
+    onClick: () => setLineagePickerOpen(true),
+    className: "w-full rounded-full py-2 px-3 mt-2 flex items-center gap-2 border bg-slate-800/70 border-slate-600 active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "shrink-0 text-[11px] font-bold text-slate-400"
+  }, "血統"), React.createElement("span", {
+    className: "flex-1 text-center text-[14px] font-black text-white"
+  }, tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全て'), React.createElement("span", {
+    className: "shrink-0 rounded-full bg-yellow-300 text-slate-900 px-2.5 py-0.5 text-[11px] font-black"
+  }, "選ぶ ▾")), React.createElement("div", {
     className: "text-[12px] text-slate-200 mt-1.5"
   }, scopeName, " ", totalText, mine ? React.createElement(React.Fragment, null, " ・ あなたの順位 ", React.createElement("span", {
     className: "text-yellow-300 font-black"
@@ -190690,7 +190750,15 @@ function MonsucRankScreen({
     className: "rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
   }, "← 戻る"), React.createElement("div", {
     className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
-  }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く')));
+  }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く')), lineagePickerOpen && React.createElement(MonsucRankLineageSheet, {
+    lineages: lineages,
+    tab: tab,
+    lineage: lineage,
+    q: lineagePickerQ,
+    setQ: setLineagePickerQ,
+    onPick: pickLineage,
+    onClose: closeLineagePicker
+  }));
 }
 const MLAB_STATS = Object.freeze([['life', 'ライフ'], ['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ']]);
 const MLAB_DIST = Object.freeze([['遠', 3, 'bg-blue-500'], ['中', 2, 'bg-green-500'], ['近', 1, 'bg-amber-500'], ['零', 0, 'bg-red-500']]);
