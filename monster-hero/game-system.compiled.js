@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b295c24d6196d77
+// source-sha256: 9e0146a2cc1aaf3f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8013,7 +8013,9 @@ const HOME_ART_OPTIONS = [{
   id: 'classic',
   label: 'クラシック',
   desc: 'これまでの村の広場',
-  src: 'data/images/home-background.jpg'
+  src: 'data/images/home-background.jpg',
+  squareSrc: 'data/images/home-background-square.jpg',
+  wideSrc: 'data/images/home-background-wide.jpg'
 }];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
@@ -8021,11 +8023,21 @@ const resolveHomeArt = (value, now = Date.now()) => {
   const v = normalizeHomeArt(value);
   return v === 'auto' ? resolveScreenTheme('auto', now) : v;
 };
-const homeArtSrc = (value, landscape = false) => {
+const homeArtSrc = (value, shape = 'portrait') => {
   const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, shape = false) => {
+  const kind = shape === true ? 'wide' : shape;
+  return kind === 'wide' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc;
+};
+const homeArtIsSquare = (value, shape = 'portrait') => {
+  const kind = shape === true ? 'wide' : shape;
+  return kind === 'square' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).squareSrc;
+};
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -31875,7 +31887,7 @@ const ASSET_PACKS = [{
   id: 'all',
   icon: '📦',
   label: '全部',
-  desc: 'モンヒロビートとバトルの両方'
+  desc: 'モンヒロビートとモンヒロバトルの両方'
 }];
 const assetPackOpen = pack => {
   if (!pack || !pack.gate) return true;
@@ -31893,7 +31905,7 @@ const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
   return ASSET_PACKS.filter(assetPackOpen).map(p => p.id === 'all' && cardOpen ? {
     ...p,
-    desc: 'モンヒロビート・バトル・バトルカードの全部'
+    desc: 'モンヒロビート・モンヒロバトル・MFバトルカードの全部'
   } : p);
 };
 const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
@@ -81954,8 +81966,7 @@ const homeRaidSayObstacles = wrap => {
     out = [];
   document.querySelectorAll('button, a[href], [role="button"]').forEach(el => {
     if (wrap && wrap.contains(el)) return;
-    const face = el.classList.contains('mh-home-facility') ? el.querySelector(':scope > span') || el : el;
-    const r = face.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) return;
     if (r.width * r.height > vw * vh * 0.4) return;
     const cs = getComputedStyle(el);
@@ -82440,14 +82451,17 @@ function HomeScreen({
     };
   });
   const homeSceneRef = React.useRef(null);
-  const [homeSceneWide, setHomeSceneWide] = React.useState(false);
+  const [homeSceneShape, setHomeSceneShape] = React.useState('portrait');
   React.useEffect(() => {
     const el = homeSceneRef.current;
     if (!el) return undefined;
     const measure = () => {
       const w = el.clientWidth,
         h = el.clientHeight;
-      if (w > 0 && h > 0) setHomeSceneWide(w / h > 1.2);
+      if (w > 0 && h > 0) {
+        const r = w / h;
+        setHomeSceneShape(r > 1.2 ? 'wide' : r >= 0.75 ? 'square' : 'portrait');
+      }
     };
     measure();
     if (typeof ResizeObserver === 'undefined') {
@@ -82458,98 +82472,9 @@ function HomeScreen({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  React.useEffect(() => {
-    const scene = homeSceneRef.current;
-    const box = scene && scene.querySelector('.mh-home-assistant');
-    if (!scene || !box) return undefined;
-    const offTop = el => {
-      let y = 0;
-      for (let e = el; e && e !== scene; e = e.offsetParent) y += e.offsetTop;
-      return y;
-    };
-    const offLeft = el => {
-      let x = 0;
-      for (let e = el; e && e !== scene; e = e.offsetParent) x += e.offsetLeft;
-      return x;
-    };
-    const measure = () => {
-      const b = offTop(box) + box.offsetHeight;
-      if (b > 0) scene.style.setProperty('--mh-home-assistant-bottom', `${Math.ceil(b)}px`);
-      const mg = scene.querySelector('.mh-home-facility.management');
-      if (mg && mg.offsetParent) {
-        scene.style.setProperty('--mh-home-management-right', `${Math.ceil(offLeft(mg) + mg.offsetWidth)}px`);
-        scene.style.setProperty('--mh-home-management-bottom', `${Math.ceil(offTop(mg) + mg.offsetHeight)}px`);
-      }
-      const lf = scene.querySelector('.mh-home-facility.life');
-      if (lf && lf.offsetParent) scene.style.setProperty('--mh-home-life-bottom', `${Math.ceil(offTop(lf) + lf.offsetHeight)}px`);
-      const rh = scene.querySelector('.mh-home-facility.rhythm');
-      let push = 0;
-      if (mg && mg.offsetParent) {
-        const mb = offTop(mg) + mg.offsetHeight + 6,
-          mr = offLeft(mg) + mg.offsetWidth;
-        for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
-          if (!el.offsetParent) continue;
-          const t = offTop(el);
-          if (t > offTop(mg) && offLeft(el) < mr) push = Math.max(push, mb - t);
-        }
-      }
-      if (rh && rh.offsetParent) {
-        const rb = offTop(rh) + rh.offsetHeight + 22,
-          rr = offLeft(rh) + rh.offsetWidth;
-        let room = Infinity;
-        for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')) {
-          if (!el.offsetParent) continue;
-          const t = offTop(el);
-          if (t > offTop(rh) && offLeft(el) < rr) {
-            push = Math.max(push, rb - t);
-            room = Math.min(room, scene.clientHeight - (t + el.offsetHeight) - (el.classList.contains('mh-home-card-battle') ? 24 : 4));
-          }
-        }
-        push = Math.min(push, Math.max(0, room));
-        if (push <= 0 && mg && mg.offsetParent && offTop(rh) >= offTop(mg) + mg.offsetHeight) {
-          let top = Infinity;
-          for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')) {
-            if (!el.offsetParent) continue;
-            const t = offTop(el);
-            if (t > offTop(rh) && offLeft(el) < rr) top = Math.min(top, t);
-          }
-          if (Number.isFinite(top) && top > rb + 4) push = rb + 4 - top;
-        }
-      }
-      scene.style.setProperty('--mh-home-left-push', `${Math.ceil(push)}px`);
-      const bt = scene.querySelector('.mh-home-facility.battle');
-      let nudge = 0;
-      if (bt && bt.offsetParent) {
-        const bl = offLeft(bt) - bt.offsetWidth / 2,
-          br = bl + bt.offsetWidth,
-          btop = offTop(bt),
-          bb = btop + bt.offsetHeight;
-        for (const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')) {
-          if (!el.offsetParent) continue;
-          const l = offLeft(el),
-            t = offTop(el);
-          if (t < bb && t + el.offsetHeight > btop && l < br && l + el.offsetWidth > bl) nudge = Math.max(nudge, br - l + 8);
-        }
-        nudge = Math.min(nudge, Math.max(0, bl - 8));
-      }
-      scene.style.setProperty('--mh-home-battle-nudge', `${-Math.ceil(nudge)}px`);
-    };
-    measure();
-    if (typeof ResizeObserver === 'undefined') {
-      const id = setInterval(measure, 1000);
-      return () => clearInterval(id);
-    }
-    const ro = new ResizeObserver(measure);
-    ro.observe(box);
-    ro.observe(scene);
-    const id = setInterval(measure, 1000);
-    return () => {
-      ro.disconnect();
-      clearInterval(id);
-    };
-  }, []);
-  const homeBackgroundSrc = homeArtSrc(homeArt, homeSceneWide);
-  const homeBackgroundWide = homeArtIsWide(homeArt, homeSceneWide);
+  const homeBackgroundSrc = homeArtSrc(homeArt, homeSceneShape);
+  const homeBackgroundWide = homeArtIsWide(homeArt, homeSceneShape);
+  const homeBackgroundSquare = homeArtIsSquare(homeArt, homeSceneShape);
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
     if (document.getElementById('mh-home-event-badge-css')) return;
@@ -82591,12 +82516,20 @@ function HomeScreen({
     if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
+  const homeStripCount = (homeEventCampaign ? 1 : 0) + (homeCardTour && typeof onOpenCardTour === 'function' ? 1 : 0);
+  const [homeStripIdx, setHomeStripIdx] = React.useState(0);
+  React.useEffect(() => {
+    if (homeStripCount < 2) return undefined;
+    const id = setInterval(() => setHomeStripIdx(i => i + 1), 5000);
+    return () => clearInterval(id);
+  }, [homeStripCount]);
+  const homeStripShow = homeStripCount ? homeStripIdx % homeStripCount : 0;
   return React.createElement("main", {
     ref: homeSceneRef,
     className: "mh-home-scene",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''} ${homeBackgroundSquare ? 'is-square' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
     className: "mh-home-backdrop",
@@ -82670,57 +82603,73 @@ function HomeScreen({
     "aria-label": "設定"
   }, React.createElement(Settings, {
     size: 20
-  }), React.createElement("span", null, "設定")))), React.createElement("nav", {
-    className: "mh-home-facilities",
-    "aria-label": "拠点施設"
+  }), React.createElement("span", null, "設定")))), homeStripCount > 0 && React.createElement("div", {
+    className: "mh-home-event-strip",
+    "data-home-event-strip": true
+  }, homeEventCampaign && homeStripShow === 0 && React.createElement("button", {
+    type: "button",
+    "data-home-event-banner": true,
+    className: "mh-home-event-banner",
+    onClick: openChangelog,
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
+    type: "button",
+    "data-home-card-tour": homeCardTour.id,
+    className: "mh-home-tour-banner",
+    onClick: () => onOpenCardTour(homeCardTour.id),
+    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))), homeStripCount > 1 && React.createElement("span", {
+    className: "mh-home-event-strip-dots",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: homeStripCount
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    className: i === homeStripShow ? 'on' : ''
+  })))), React.createElement("div", {
+    className: "mh-home-side-stack"
   }, React.createElement("button", {
-    className: `mh-home-facility management${spotClass('management')}`,
-    onClick: onOpenManagement,
-    "aria-label": "M/B管理"
-  }, React.createElement("span", null, React.createElement(Layers, {
-    size: 18
-  }), React.createElement("b", {
-    className: "mh-home-facility-label"
-  }, "M/B管理", React.createElement("small", null, "モンスター・編成")))), React.createElement("button", {
-    className: `mh-home-facility temple${spotClass('temple')}`,
-    onClick: onOpenTemple,
-    "aria-label": "神殿"
-  }, React.createElement("span", null, React.createElement(Sparkles, {
-    size: 18
-  }), "神殿")), React.createElement("button", {
-    className: `mh-home-facility market${spotClass('market')}`,
-    onClick: onOpenMarket,
-    "aria-label": "マーケット"
-  }, React.createElement("span", null, React.createElement(ShoppingBag, {
-    size: 17
-  }), "マーケット")), typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && React.createElement("button", {
-    className: "mh-home-facility life",
-    "data-home-assistant-life": true,
-    onClick: () => assistantLifeOpenScreen(),
-    "aria-label": "助手ライフ"
-  }, React.createElement("span", null, React.createElement("span", {
-    "aria-hidden": "true",
-    style: {
-      fontSize: 16,
-      lineHeight: 1
-    }
-  }, "🏡"), React.createElement("b", {
-    className: "mh-home-facility-label"
-  }, "助手ライフ", React.createElement("small", null, "みんなの家")))), React.createElement("button", {
-    className: "mh-home-facility rhythm",
-    onClick: onOpenRhythm,
-    "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
-  }, React.createElement("span", null, "🎵 モンヒロビート", !RHYTHM_MODE_PUBLIC_RELEASE && React.createElement("small", null, "準備中"), homeRhythmEventOpen && React.createElement("em", {
-    "data-home-event-badge": true,
-    className: "mh-home-event-badge",
-    style: HOME_EVENT_BADGE_STYLE
-  }, "✨開催中✨"))), React.createElement("button", {
-    className: `mh-home-facility battle${spotClass('battle')}`,
-    onClick: onOpenBattle,
-    "aria-label": "モンヒロバトル"
-  }, React.createElement("span", null, React.createElement(Sword, {
-    size: 25
-  }), "モンヒロバトル"))), nextStep && React.createElement("button", {
+    onClick: openGiftBox,
+    className: `mh-home-side-btn mh-home-gift${spotClass('reward')}`,
+    "aria-label": "ギフト"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(Package, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ギフト"), giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts))), React.createElement("button", {
+    onClick: openMissions,
+    className: `mh-home-side-btn mh-home-mission${spotClass('reward')}`,
+    "aria-label": "ミッション"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(List, {
+    size: 20
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "ミッション"), missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
+    onClick: openChangelog,
+    className: "mh-home-side-btn mh-home-update",
+    "aria-label": "更新履歴"
+  }, React.createElement("span", {
+    className: "mh-home-side-ic"
+  }, React.createElement(RefreshCcw, {
+    size: 19
+  })), React.createElement("span", {
+    className: "mh-home-side-lb"
+  }, "更新履歴"), hasUnreadChangelog && React.createElement("em", {
+    className: "mh-unread-badge",
+    "aria-label": "未読あり"
+  }, "!")), typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
+    home: true
+  })), React.createElement("div", {
+    className: "mh-home-dock"
+  }, nextStep && React.createElement("button", {
     type: "button",
     className: "mh-home-nextstep",
     "data-home-next-step": nextStep.n,
@@ -82732,55 +82681,159 @@ function HomeScreen({
     className: "mh-home-nextstep-body"
   }, React.createElement("b", null, ['①', '②', '③'][nextStep.n - 1], " ", nextStep.title), React.createElement("small", null, nextStep.sub)), React.createElement("i", {
     "aria-hidden": "true"
-  }, "›")), React.createElement("button", {
-    onClick: openMissions,
-    className: `mh-home-mission${spotClass('reward')}`
-  }, React.createElement(List, {
-    size: 16
-  }), "ミッション", missionClaimableCount(normalizeMissions(missions)) > 0 && React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), React.createElement("button", {
-    onClick: openGiftBox,
-    className: `mh-home-gift${spotClass('reward')}`
-  }, React.createElement(Package, {
-    size: 16
-  }), "ギフト", giftClaimableCount(gifts) > 0 && React.createElement("em", null, giftClaimableCount(gifts))), typeof TimeOfDayClock === 'function' && React.createElement(TimeOfDayClock, {
-    home: true
-  }), React.createElement("button", {
-    onClick: openChangelog,
-    className: "mh-home-update"
-  }, React.createElement(RefreshCcw, {
-    size: 15
-  }), "更新履歴", hasUnreadChangelog && React.createElement("em", {
-    className: "mh-unread-badge",
-    "aria-label": "未読あり"
-  }, "!")), homeEventCampaign && React.createElement("button", {
+  }, "›")), React.createElement("div", {
+    className: "mh-home-dock-row mh-home-dock-top"
+  }, successEntry, React.createElement("button", {
     type: "button",
-    "data-home-event-banner": true,
-    className: "mh-home-event-banner",
-    onClick: openChangelog,
-    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
-    className: "t2"
-  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
-    type: "button",
-    "data-home-card-tour": homeCardTour.id,
-    className: `mh-home-tour-banner${homeEventCampaign ? '' : ' raised'}`,
-    onClick: () => onOpenCardTour(homeCardTour.id),
-    "aria-label": `${homeCardTour.name} ${homeCardTour.sub}`
+    "data-home-fac": "battle",
+    className: `mh-home-dock-card battle${spotClass('battle')}`,
+    onClick: onOpenBattle,
+    "aria-label": "モンヒロバトル"
   }, React.createElement("span", {
-    "aria-hidden": "true"
-  }, "🏆"), React.createElement("span", null, React.createElement("b", null, homeCardTour.name), React.createElement("small", null, homeCardTour.sub, homeCardTour.prize && React.createElement("em", null, homeCardTour.prize)))), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-battle.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロバトル"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "挑戦"))), React.createElement("button", {
     type: "button",
+    "data-home-fac": "rhythm",
+    className: "mh-home-dock-card rhythm",
+    onClick: onOpenRhythm,
+    "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-beat.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "モンヒロビート", !RHYTHM_MODE_PUBLIC_RELEASE && React.createElement("small", {
+    className: "mh-home-dock-soon"
+  }, "準備中")), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "音ゲー")), homeRhythmEventOpen && React.createElement("em", {
+    "data-home-event-badge": true,
+    className: "mh-home-event-badge",
+    style: HOME_EVENT_BADGE_STYLE
+  }, "✨開催中✨")), cardBattleVisible && typeof onOpenCardBattle === 'function' && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "card",
     "data-home-card-battle": true,
-    className: `mh-home-card-battle${homeCardTour ? homeEventCampaign ? ' below-tour' : '' : homeEventCampaign ? '' : ' raised'}`,
+    className: "mh-home-dock-card card",
     onClick: onOpenCardBattle,
     "aria-label": "MFバトルカード"
-  }, React.createElement("span", null, "🃏 MFバトルカード")), !cardBattleVisible && cardBattleTeaser && typeof onOpenCardTeaser === 'function' && React.createElement("button", {
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦"))), !cardBattleVisible && cardBattleTeaser && typeof onOpenCardTeaser === 'function' && React.createElement("button", {
     type: "button",
+    "data-home-fac": "card",
     "data-home-card-battle-teaser": true,
-    className: `mh-home-card-battle soon${homeEventCampaign ? '' : ' raised'}`,
+    className: "mh-home-dock-card card soon",
     onClick: onOpenCardTeaser,
     "aria-label": "MFバトルカード 近日公開"
-  }, React.createElement("span", null, "🃏 MFバトルカード", React.createElement("small", null, "近日公開"))), successEntry, React.createElement("div", {
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-card.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "MFバトルカード"), React.createElement("span", {
+    className: "mh-home-dock-sub"
+  }, "カード対戦")), React.createElement("small", {
+    className: "mh-home-dock-chip"
+  }, "近日公開"))), React.createElement("nav", {
+    className: "mh-home-dock-row mh-home-dock-bottom",
+    "aria-label": "拠点施設"
+  }, React.createElement("button", {
+    type: "button",
+    "data-home-fac": "management",
+    className: `mh-home-dock-card management${spotClass('management')}`,
+    onClick: onOpenManagement,
+    "aria-label": "M/B管理"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-management.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "M/B管理"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "temple",
+    className: `mh-home-dock-card temple${spotClass('temple')}`,
+    onClick: onOpenTemple,
+    "aria-label": "神殿"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-temple.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "神殿"))), React.createElement("button", {
+    type: "button",
+    "data-home-fac": "market",
+    className: `mh-home-dock-card market${spotClass('market')}`,
+    onClick: onOpenMarket,
+    "aria-label": "マーケット"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-market.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "マーケット"))), typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && React.createElement("button", {
+    type: "button",
+    "data-home-fac": "life",
+    "data-home-assistant-life": true,
+    className: "mh-home-dock-card life",
+    onClick: () => assistantLifeOpenScreen(),
+    "aria-label": "助手ライフ"
+  }, React.createElement("span", {
+    className: "mh-home-dock-pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-life.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "mh-home-dock-txt"
+  }, React.createElement("span", {
+    className: "mh-home-dock-name"
+  }, "助手ライフ"))))), React.createElement("div", {
     className: `mh-home-assistant${spotClass('assistant')}`
   }, React.createElement(AssistantBubble, {
     scene: "home",
@@ -117968,7 +118021,7 @@ function AssistantLifeHouse({
     className: "mhl-chip",
     "data-assistant-life-tier-help": true,
     "aria-label": "にぎわいの説明",
-    onClick: () => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`),
+    onClick: () => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`),
     style: {
       minHeight: 32,
       padding: '0 10px'
@@ -118675,15 +118728,15 @@ function AssistantLifeSpentMark({
   }, "済");
 }
 const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({
-  rhythm: 'main.mh-home-scene .mh-home-facility.rhythm',
-  card: 'main.mh-home-scene .mh-home-card-battle',
-  management: 'main.mh-home-scene .mh-home-facility.management',
-  temple: 'main.mh-home-scene .mh-home-facility.temple',
-  market: 'main.mh-home-scene .mh-home-facility.market',
-  battle: 'main.mh-home-scene .mh-home-facility.battle',
-  life: 'main.mh-home-scene .mh-home-facility.life'
+  rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]',
+  card: 'main.mh-home-scene [data-home-fac="card"]',
+  management: 'main.mh-home-scene [data-home-fac="management"]',
+  temple: 'main.mh-home-scene [data-home-fac="temple"]',
+  market: 'main.mh-home-scene [data-home-fac="market"]',
+  battle: 'main.mh-home-scene [data-home-fac="battle"]',
+  life: 'main.mh-home-scene [data-home-fac="life"]'
 });
-const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-success,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
+const ASSISTANT_LIFE_BADGE_FACE = 24;
 function AssistantLifeHomeFaces({
   metIds
 }) {
@@ -118695,39 +118748,21 @@ function AssistantLifeHomeFaces({
       const o = {};
       const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
       const rectOf = el => rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
-      const vw = rot ? window.innerHeight : window.innerWidth,
-        vh = rot ? window.innerWidth : window.innerHeight;
-      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({
-        el,
-        r: rectOf(el)
-      }));
+      const vw = rot ? window.innerHeight : window.innerWidth;
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
         if (!el || !el.offsetParent) continue;
         const r = rectOf(el);
-        const right = r.left + r.width / 2 > vw / 2;
-        const x0 = right ? r.right - Math.max(r.width, 140) : r.left,
-          x1 = right ? r.right : r.left + Math.max(r.width, 140);
-        let gap = vh - r.bottom;
-        for (const b of obs) {
-          if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue;
-          if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom);
-        }
-        let up = r.top;
-        for (const b of obs) {
-          if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue;
-          if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom);
-        }
         o[k] = {
           x: r.left,
           y: r.top,
           w: r.width,
           h: r.height,
-          gap: Math.round(gap),
-          up: Math.round(up),
-          right
+          right: r.left + r.width / 2 > vw / 2
         };
       }
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
       setRects(prev => JSON.stringify(prev) === JSON.stringify(o) ? prev : o);
     };
     measure();
@@ -118754,52 +118789,58 @@ function AssistantLifeHomeFaces({
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8;
   return React.createElement(React.Fragment, null, Object.entries(by).map(([f, list]) => {
     const r = rects[f];
-    const side = false;
-    const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
-    const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
-    const step = size - 4;
-    const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
-    const rowW = size + (list.length - 1) * step + 6 + upW;
-    const left = side ? r.right ? r.x - rowW - 4 : r.x + r.w + 4 : r.right ? Math.max(4, r.x + r.w - rowW) : r.x;
-    const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
+    const shown = list.slice(0, 3);
+    const extra = list.length - shown.length;
+    const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+    const left = r.x + r.w - rowW + 6;
+    const top = r.y - 9;
+    const names = list.map(id => {
+      const who = assistantById(id);
+      return who ? who.name : id;
+    }).join('・');
     return React.createElement("div", {
       key: f,
       "data-assistant-life-home-faces": f,
-      "data-assistant-life-home-face-size": size,
-      "data-assistant-life-home-face-side": side ? '1' : '0',
-      "data-assistant-life-home-face-above": above ? '1' : '0',
+      "data-assistant-life-home-faces-ids": list.join(','),
       className: "pointer-events-none fixed",
       style: {
         zIndex: 40,
         left,
         top,
-        width: rowW
+        width: rowW,
+        height: size + 2
       }
-    }, React.createElement("div", {
-      className: "pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow"
-    }, list.map((id, i) => {
+    }, React.createElement("button", {
+      type: "button",
+      "data-assistant-life-home-badge": f,
+      "aria-label": `${names}がいます。助手ライフを開く`,
+      onClick: () => {
+        ASSISTANT_LIFE_STORE.set({
+          open: true,
+          focus: shown[0]
+        });
+      },
+      className: "pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95",
+      style: {
+        height: size + 2
+      }
+    }, shown.map((id, i) => {
       const who = assistantById(id);
       if (!who) return null;
       const w = assistantLifeWhereOf(life, id);
       const lonely = w && w.reason === 'lonely';
       const spent = f === 'card' && !!assistantLifeCardSpent(id);
-      return React.createElement("button", {
+      return React.createElement("span", {
         key: id,
-        type: "button",
         "data-assistant-life-home-face": id,
         "data-assistant-life-home-face-spent": spent ? '1' : undefined,
-        "aria-label": `${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`,
-        onClick: () => {
-          ASSISTANT_LIFE_STORE.set({
-            open: true,
-            focus: id
-          });
-        },
-        className: "relative shrink-0 rounded-full active:scale-90",
+        className: "relative shrink-0 rounded-full",
         style: {
-          marginLeft: i ? -4 : 0,
+          marginLeft: i ? -8 : 0,
           boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff'
         }
       }, React.createElement("span", {
@@ -118813,22 +118854,30 @@ function AssistantLifeHomeFaces({
         accent: who.accent
       })), spent && React.createElement(AssistantLifeSpentMark, {
         size: size
-      }), React.createElement("span", {
-        "aria-hidden": "true",
-        className: "absolute -inset-1.5"
       }));
-    }), upW > 0 && React.createElement("span", {
-      "data-assistant-life-home-card-up": true,
-      className: "pointer-events-none shrink-0 rounded-full bg-amber-300 font-black text-slate-950",
+    }), extra > 0 && React.createElement("span", {
+      "data-assistant-life-home-faces-extra": extra,
+      className: "shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow",
       style: {
         marginLeft: 2,
-        fontSize: Math.max(8, Math.round(size * 0.48)),
-        lineHeight: `${Math.max(10, size - 4)}px`,
-        padding: '0 3px'
+        fontSize: 9,
+        lineHeight: '14px'
       }
-    }, "UP")));
-  }), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
-    rect: rects.life
+    }, "+", extra)));
+  }), rects.card && cardUp && React.createElement("span", {
+    "data-assistant-life-home-card-up": true,
+    className: "pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow",
+    style: {
+      zIndex: 40,
+      left: Math.max(2, rects.card.x - 4),
+      top: rects.card.y - 8,
+      fontSize: 9,
+      lineHeight: '15px',
+      padding: '0 5px'
+    }
+  }, "UP"), rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && React.createElement(AssistantLifeFriendHomeBadge, {
+    rect: rects.life,
+    dockTop: rects.__dockTop
   }));
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
@@ -118925,16 +118974,10 @@ const assistantLifeMapReadHome = () => {
       out.src = img.getAttribute('src');
       out.wide = !!scene.querySelector('.mh-home-background.is-wide');
     }
-    const card = scene.querySelector('.mh-home-card-battle');
-    if (card) out.card = [...card.classList].filter(c => c !== 'is-tutorial-spot').join(' ');
     if (rot || !scene.offsetWidth || !scene.offsetHeight) return out;
     out.w = scene.offsetWidth;
     out.h = scene.offsetHeight;
     out.fromHome = true;
-    for (let i = 0; i < scene.style.length; i++) {
-      const k = scene.style[i];
-      if (/^--mh-home-/.test(k)) out.vars[k] = scene.style.getPropertyValue(k);
-    }
   } catch (_) {}
   return out;
 };
@@ -160132,7 +160175,9 @@ function MonsucFuseSheet({
     className: "w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white",
     style: {
       maxHeight: '92dvh',
-      overflowY: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
       paddingBottom: 'max(24px, var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
@@ -160145,7 +160190,13 @@ function MonsucFuseSheet({
     onDone: () => setShow(null)
   }) : null, !SUC ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "まだ使えません") : done ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "まだ使えません") : done ? React.createElement("div", {
+    style: {
+      overflowY: 'auto',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("div", {
     className: "mt-2 rounded-xl bg-fuchsia-950 p-3",
     "data-monsuc-fuse-done": true
   }, React.createElement("p", {
@@ -160210,42 +160261,74 @@ function MonsucFuseSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: "mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "閉じる")) : !main ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
     q: fq,
     onQ: setFq,
     count: usableF.length,
     total: usable.length
-  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }) : null, React.createElement("div", {
+    style: {
+      flex: '1 1 auto',
+      minHeight: 0,
+      overflowY: 'auto'
+    }
+  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
     mons: usableF,
     onPick: m => setMain(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
     q: fq,
     onQ: setFq,
     count: usableF.filter(m => m.id !== main.id).length,
     total: usable.length - 1
-  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }) : null, React.createElement("div", {
+    style: {
+      flex: '1 1 auto',
+      minHeight: 0,
+      overflowY: 'auto'
+    }
+  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
     mons: usableF.filter(m => m.id !== main.id),
     onPick: m => setMat(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? React.createElement("p", {
+  }) : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement("div", {
+    style: {
+      overflowY: 'auto',
+      minHeight: 0,
+      flex: '1 1 auto'
+    }
+  }, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
     className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
@@ -168620,9 +168703,11 @@ const assistantLifeFriendDecorateRooms = rooms => {
   return rooms;
 };
 function AssistantLifeFriendHomeBadge({
-  rect
+  rect,
+  dockTop
 }) {
   const s = useAssistantLifeFriendState();
+  const topBase = typeof dockTop === 'number' && isFinite(dockTop) ? dockTop : rect ? rect.y : 0;
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
   React.useEffect(() => {
@@ -168659,7 +168744,7 @@ function AssistantLifeFriendHomeBadge({
     "data-alf-badge": true,
     style: {
       zIndex: 41,
-      left: rect.x + rect.w - 14,
+      left: Math.max(2, rect.x - 6),
       top: rect.y - 8
     }
   }, "🏘 ", n), toast && rect && React.createElement("div", {
@@ -168667,7 +168752,7 @@ function AssistantLifeFriendHomeBadge({
     "data-alf-toast": true,
     style: {
       zIndex: 60,
-      top: Math.max(4, rect.y - 26),
+      top: Math.max(4, topBase - 28),
       ...(rect.right ? {
         right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w)
       } : {
@@ -168679,7 +168764,7 @@ function AssistantLifeFriendHomeBadge({
     "data-alb-here": true,
     style: {
       zIndex: 60,
-      top: Math.max(4, rect.y - 26),
+      top: Math.max(4, topBase - 28),
       ...(rect.right ? {
         right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w)
       } : {
@@ -170681,6 +170766,8 @@ const MSX_CSS = `
 .msx .v-ga .tr{margin-right:26px}
 .msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
+/* 選ぶ画面(育成開始)では場面を細くし、一覧に高さを譲る(選ぶ画面の統一。横向きの組み立てでは上の .land の指定が勝つ) */
+.msx .v-scene.sm{flex:none;height:112px}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
 .msx .v-scene.dk .sh{background:#0f0d2499}
@@ -170878,11 +170965,16 @@ const MSX_CSS = `
 .msx .v-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;position:relative;min-width:0}
 .msx .v-card.sel{border-color:#fde047;box-shadow:0 0 12px #fde04766}
 .msx .v-card.pk{border-color:#f472b6aa}
+.msx .v-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
-.msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
-.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 span{position:relative;display:block;min-width:0}
+.msx .v-grid6 button{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:0;background:none;border:0;color:inherit;font:inherit;text-align:center;cursor:pointer}
+/* 升の正方形はスペーサー(padding-top:100%)で決める。aspect-ratio 任せだと、対応の弱い端末では升の高さが付かずに行が重なる(2026-11-16 実機スクショの対策をこの方式へ差し替え) */
+.msx .v-grid6 .v-g6f{width:100%}
+.msx .v-grid6 .v-g6f::before{content:'';display:block;padding-top:100%}
 .msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .v-grid6 .v-g6n{font-size:9.5px;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.msx .v-grid6 button.on .v-g6n{color:#fde047}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -171560,8 +171652,11 @@ const MSX_CSS = `
 .msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
-.msx .msx-tp-tm .fc{flex:none;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
-.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{font-style:normal;font-weight:900;color:#64748b}
+.msx .msx-tp-tm .fc{flex:none;display:block;width:100%;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-tm .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-tm .fc>img,.msx .msx-tp-tm .fc>div{position:absolute!important;inset:0;width:100%;height:100%}
+.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#64748b}
 .msx .msx-tp-tm.on .fc{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
@@ -171584,7 +171679,9 @@ const MSX_CSS = `
 .msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
 .msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
 .msx .msx-md-sup{margin-top:8px}
-.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+/* 選ぶ画面の組み立て(統一): 操作行は自然な高さにする。横に伸ばすのは横並びの帯(.msx-tp-bar)の中だけ(縦並びの画面で操作行が縦に伸びて一覧を潰していた) */
+.msx .msx-tp-bar>.msx-pt{flex:1 1 220px}
 .msx .msx-pt-q{flex:1 1 120px;min-width:0;min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:16px;padding:4px 8px}
 .msx .msx-pt-s select{min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:12px;font-weight:900;padding:0 4px}
 .msx .msx-pt-r{flex:none;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:11px;font-weight:900;padding:4px 10px}
@@ -171606,7 +171703,10 @@ const MSX_CSS = `
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
 .msx .msx-tp-c.lk{opacity:.5}
-.msx .msx-tp-c .fc{display:block;flex:none;width:100%;height:auto;aspect-ratio:1;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+.msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+/* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
+.msx .msx-tp-c .fc::before{content:'';display:block;padding-top:100%}
+.msx .msx-tp-c .fc>img,.msx .msx-tp-c .fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .msx .msx-tp-c .fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
 .msx .msx-tp-c .fc .mm-art{display:block;width:100%;height:100%}
 .msx .msx-tp-c .rk,.msx .msx-fp-r .rk{position:absolute;right:3px;top:3px;font-style:normal}
@@ -172576,22 +172676,21 @@ const msxStartScene = s => {
   return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal';
 };
 const MSX_HOME_CSS = `
-.mh-home-success{position:absolute;z-index:5;left:9px;bottom:calc(min(calc(33% - 40px),calc(44.75% - 126px)) - 60px);padding:0;translate:0 var(--mh-home-left-push,0px)}
-.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success{bottom:calc(min(calc(33% + 4px),calc(44.75% - 82px)) - 60px)}
-.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{bottom:calc(min(calc(33% - 84px),calc(44.75% - 170px)) - 60px)}
-.mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
-.mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
-.mh-home-success:active>span{transform:scale(.96)}
-.mh-home-success>span{flex-wrap:wrap;max-width:178px}
-/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ700以上。664 ではモンヒロバトルの上の助手の顔が詰まった・r1115-206)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
-.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
-@container (min-height:700px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-34px}}
+.mh-home-success{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px 6px;border:2px solid #f9a8d4dd;border-radius:16px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;text-shadow:0 2px 4px #000;box-shadow:0 3px 10px #0007;touch-action:manipulation}
+.mh-home-success:active{transform:scale(.95)}
+.mh-home-success .pic{display:block;width:100%;max-width:104px;aspect-ratio:1;border-radius:11px;overflow:hidden}
+.mh-home-success .pic img{display:block;width:100%;height:100%;object-fit:cover}
+.mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
+.mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
+.mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
-/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
-/* 背の低い横画面(高さ400以下: 568×320・640×360・667×375・844×390 など)は、右の「助手ライフ」とその顔の列(札の右端から左へ最大140px)の下にかからないよう少し左へ寄せる。
-   高さ340以下だけ寄せていたら、640×360・667×375 で助手ライフの顔が札の上へ逃げた(2026-11-16 r1115-206 印を立てて home-layout-check) */
-@media (orientation:landscape) and (max-height:400px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 40px)}}
+@media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:700px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:600px){.mh-home-success .nm{font-size:7px}.mh-home-success .txt{height:calc(7px*1.15 + 1px + 9px*1.1)}}
+@container (min-width:700px) and (min-height:560px){.mh-home-success{gap:2px;padding:7px 5px 8px;border-radius:18px;max-width:128px}.mh-home-success .pic{max-width:120px;border-radius:13px}.mh-home-success .txt{gap:2px;height:calc(8.5px*1.15 + 2px + 9px*1.1)}.mh-home-success .nm{font-size:8.5px}.mh-home-success .sb{font-size:9px}}
+@container (min-width:950px) and (min-height:560px){.mh-home-success .nm{font-size:10.5px}.mh-home-success .sb{font-size:10px}.mh-home-success .txt{height:calc(10.5px*1.15 + 2px + 10px*1.1)}}
 `;
 function MonheroSuccessHomeEntry({
   callNameOf,
@@ -172614,11 +172713,19 @@ function MonheroSuccessHomeEntry({
   }, React.createElement("i", {
     className: "rb",
     "aria-hidden": "true"
-  }, "β版 開幕！"), React.createElement("span", null, React.createElement("span", {
-    "aria-hidden": "true"
-  }, "🌱"), "モンヒロサクセス", React.createElement("small", {
-    className: "ln"
-  }, "デビュー戦から", React.createElement("wbr", null), "ヒーローズファイナルまで、", React.createElement("wbr", null), "1体をじっくり育てよう"))), open && React.createElement(MonheroSuccessScreen, {
+  }, "β版 開幕！"), React.createElement("span", {
+    className: "pic"
+  }, React.createElement("img", {
+    src: "images/home/facility-success.webp",
+    alt: "",
+    draggable: false
+  })), React.createElement("span", {
+    className: "txt"
+  }, React.createElement("span", {
+    className: "nm"
+  }, "モンヒロサクセス"), React.createElement("span", {
+    className: "sb"
+  }, "育成"))), open && React.createElement(MonheroSuccessScreen, {
     onClose: () => setOpen(false),
     callNameOf: callNameOf,
     bondLvOf: bondLvOf
@@ -174001,11 +174108,8 @@ function MsxStart({
   const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
   const peakText = preview.peak;
   const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
-  const scene = (style, inner) => React.createElement("div", {
-    className: "v-scene",
-    style: {
-      flex: '1 1 0'
-    }
+  const scene = (style, inner, sm) => React.createElement("div", {
+    className: `v-scene${sm ? ' sm' : ''}`
   }, React.createElement("img", {
     className: "bg",
     src: msxSceneBg(1).bg,
@@ -174113,25 +174217,27 @@ function MsxStart({
       count: list.length,
       total: listAll.length
     }) : null, React.createElement("div", {
-      className: "v-grid6",
-      style: {
-        maxHeight: 148,
-        overflowY: 'auto'
-      }
+      className: "v-gridw"
+    }, React.createElement("div", {
+      className: "v-grid6"
     }, list.length ? list.map(x => React.createElement("button", {
       type: "button",
       key: x.key,
       className: x.on ? 'on' : '',
       onClick: () => setPick(x.pick)
+    }, React.createElement("span", {
+      className: "v-g6f"
     }, React.createElement("img", {
       src: msxMonThumb(x.sp),
       alt: msxMonName(x.sp)
-    }))) : React.createElement("span", {
+    })), React.createElement("span", {
+      className: "v-g6n"
+    }, x.nm))) : React.createElement("span", {
       className: "msx-note",
       style: {
         gridColumn: '1 / -1'
       }
-    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')), scene({
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), scene({
       mb: '12%',
       h: '62%'
     }, React.createElement("div", {
@@ -174140,7 +174246,7 @@ function MsxStart({
       className: "v-chip ylw"
     }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), picked ? React.createElement("span", {
       className: "v-chip"
-    }, "選んだ回数 ", picked, "回") : null)), React.createElement("div", {
+    }, "選んだ回数 ", picked, "回") : null), true), React.createElement("div", {
       className: "v-card sel"
     }, React.createElement("div", {
       className: "msx-dt-hd"
@@ -185015,7 +185121,10 @@ const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
 .mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
-.mmg .mmg-fc{display:block;width:100%;height:auto;aspect-ratio:1/1;min-height:0;max-height:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+/* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
+.mmg .mmg-fc::before{content:'';display:block;padding-top:100%}
+.mmg .mmg-fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
 .mmg .mmg-c.on .mmg-fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mmg .mmg-c.lk{opacity:.5}
 .mmg .mmg-gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
@@ -185411,14 +185520,27 @@ function MsxR3Box({
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
-    }, msg) : null, typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+    }, msg) : null, React.createElement("div", {
+      className: "mm-ops"
+    }, typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
       q: bq,
       onQ: setBq,
       rev: brev,
       onRev: setBrev,
       count: list.length,
       total: box.mons.length
-    }) : null, React.createElement("div", {
+    }) : null, React.createElement("button", {
+      type: "button",
+      className: "mm-sel",
+      onClick: () => setMenu('sort'),
+      "data-msx-mm-sort": true
+    }, "並べ替え: ", sortName, "▼"), React.createElement("button", {
+      type: "button",
+      className: "mm-sel",
+      onClick: () => setMenu('label'),
+      "data-msx-mm-label": true,
+      "data-msx-r3-mmlabel": true
+    }, "表示: ", labelName, "▼")), React.createElement("div", {
       className: "mm-gridw"
     }, list.length ? React.createElement(MsxMmGrid, {
       mons: list,
@@ -185446,18 +185568,7 @@ function MsxR3Box({
       className: "mm-bar"
     }, React.createElement("span", {
       className: "cnt"
-    }, "所持数 ", React.createElement("b", null, box.mons.length), "/", box.cap, "体"), React.createElement("button", {
-      type: "button",
-      className: "mm-sel",
-      onClick: () => setMenu('sort'),
-      "data-msx-mm-sort": true
-    }, "並べ替え: ", sortName, "▼"), React.createElement("button", {
-      type: "button",
-      className: "mm-sel",
-      onClick: () => setMenu('label'),
-      "data-msx-mm-label": true,
-      "data-msx-r3-mmlabel": true
-    }, "表示: ", labelName, "▼")), menu ? React.createElement("div", {
+    }, "所持数 ", React.createElement("b", null, box.mons.length), "/", box.cap, "体")), menu ? React.createElement("div", {
       className: "msx-ov msx-fade",
       onClick: () => setMenu(null)
     }, React.createElement("div", {
@@ -185803,6 +185914,9 @@ const MSX_MM_CSS = `
 .msx .mm-art{display:block;position:relative}
 .msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto;background:#0f0c24;border:1px solid #3b3566;border-radius:14px;padding:8px 6px;margin-top:6px}
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
+.msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.msx .mm-ops>.msx-pt{flex:1 1 220px}
+.msx .mm-ops .mm-sel{flex:none}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
@@ -187291,6 +187405,7 @@ function MsxManualBar({
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
 const MSA_PAN_K = 0.35;
+const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
   label: '×1',
@@ -187469,6 +187584,8 @@ const MSA_CSS = `
 /* ---- アクセント(2026-11-12 社長「迫力とか見ごたえとか」) ---- */
 .msa-dim{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0,#0003 16%,#000d 55%);pointer-events:none;animation:msaDim var(--msa-pre,420ms) ease-out both}
 .msa-aura.big{width:150px;height:150px;margin-left:-75px;background:radial-gradient(circle,#fff7 0,#fde047aa 22%,#f97316 45%,#f9731600 70%);animation:msaAuraBig var(--msa-pre,420ms) ease-in both}
+/* 大きな場では、オーラの箱を絵の幅に合わせる(小さな絵で場いっぱいに広がりすぎないように。2026-11-17 仕上げ) */
+.msa-stage.big .msa-aura.big{width:var(--msa-ab,150px);height:var(--msa-ab,150px);margin-left:calc(var(--msa-ab,150px) / -2)}
 .msa-chargebig{animation:msaChargeBig var(--msa-pre,420ms) ease-in both}
 .msa-dmg.t1{font-size:22px}.msa-dmg.t2{font-size:30px}.msa-dmg.t3{font-size:40px;animation-name:msaPopBig}
 .msa-dmg.t4{font-size:52px;color:#fff;text-shadow:0 3px 0 #b91c1c,0 0 14px #f97316,0 0 26px #fde047;animation-name:msaPopBig}
@@ -187609,6 +187726,7 @@ const MSA_CSS = `
 /* ---- 撃つ前の構えの一拍(2026-11-13 社長「攻撃前にもう1アクセントほしいね」) ---- */
 .msa-wind{animation:msaWind var(--msa-pre,380ms) ease-in both}
 .msa-aura.wind{width:130px;height:130px;margin-left:-65px;bottom:-6px;animation:msaAuraWind var(--msa-pre,380ms) ease-out both}
+.msa-stage.big .msa-aura.wind{width:var(--msa-aw,130px);height:var(--msa-aw,130px);margin-left:calc(var(--msa-aw,130px) / -2)}
 @keyframes msaAuraWind{0%{opacity:0;transform:scale(1.5)}25%{opacity:1;transform:scale(.95)}85%{opacity:1;transform:scale(.85)}100%{opacity:0;transform:scale(1.7)}}
 .msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
 .msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
@@ -187627,9 +187745,9 @@ const MSA_CSS = `
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
-/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、220px(幅320 で場の中身が収まる高さ)を下回る低い画面は縦に流す(r1115-193 案③) */
+/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:220px}
+.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:240px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -188245,6 +188363,7 @@ function MsaFighter({
   x,
   e,
   foeX,
+  fwPx = 96,
   hpNow,
   reduce,
   idleOk,
@@ -188309,7 +188428,11 @@ function MsaFighter({
     const kind = msaMotionKind(sp, e.tech);
     if (kind) {
       const w = foeX.w;
-      const dx = (foeX.x - x) * w;
+      const rawDx = (foeX.x - x) * w;
+      const half = (Number(fwPx) || 96) * 0.65;
+      const cxPx = x * w;
+      let dx = rawDx;
+      if (dx > 0) dx = Math.min(dx, Math.max(0, (w - half - MSA_SAFE - cxPx) / 1.2));else if (dx < 0) dx = Math.max(dx, Math.min(0, (half + MSA_SAFE - cxPx) / 1.2));
       style = {
         ...style,
         ...(typeof attackAimVars === 'function' ? attackAimVars(dx, -8) : {
@@ -188392,10 +188515,17 @@ function MsaFighter({
   const koNow = e && e.ev === 'ko' && e.side === side;
   if (down) cls = koNow ? 'mh-card-ko' : '';
   if (koNow) {
+    const w2 = Math.max(200, foeX && foeX.w || 340);
+    const koHalf = 72;
+    const koCx = x * w2;
+    const koShift = Math.max(MSA_SAFE, Math.min(w2 - MSA_SAFE - koHalf * 2, koCx - koHalf)) - (koCx - koHalf);
     extra.push(React.createElement("div", {
       key: `k-${e.k}`,
       className: "msa-ko big",
-      "data-msa-ko": side
+      "data-msa-ko": side,
+      style: koShift ? {
+        marginLeft: `${Math.round(koShift)}px`
+      } : undefined
     }, "K.O.!"));
     if (!reduce) extra.push(React.createElement("i", {
       key: `bu-${e.k}`,
@@ -188407,7 +188537,11 @@ function MsaFighter({
   if (tired) extra.push(React.createElement("span", {
     key: "pant",
     className: "msa-pant",
-    "data-msa-tired": side
+    "data-msa-tired": side,
+    style: side === 'B' ? {
+      right: 'auto',
+      left: -6
+    } : undefined
   }, "💦 息切れ"));
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
@@ -188808,8 +188942,12 @@ function MsaStage({
       const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
       return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
     }
-    const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
-    return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
+    const fwPx = fill ? 140 : 96;
+    const W2 = Math.max(200, stageW);
+    const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
+    const g0 = Math.max(MSA_GAP[0], Math.min(MSA_GAP[1] - 0.04, fwPx * 0.6 / W2));
+    const gMax = Math.max(g0, 1 - 2 * (fwPx / 2 + MSA_SAFE) / W2);
+    return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
   };
   const cs = useMemo(() => {
     const out = [0.5];
@@ -188819,8 +188957,10 @@ function MsaStage({
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09;
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c));
+      const eM = Math.max(0.09, ((wide ? bigFw : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
+      const lo = Math.max(0.5 - MSA_C_LIM, eM + g1 / 2, (eM + g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      const hi = Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2, (1 - eM - g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      c = lo > hi ? 0.5 : Math.max(lo, Math.min(hi, c));
       out.push(c);
     }
     return out;
@@ -188831,6 +188971,10 @@ function MsaStage({
   const xB = cNow + gap / 2;
   const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
   const scrX = x => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K);
+  const dmgX = x => {
+    const m = (75 + MSA_SAFE) / Math.max(200, stageW);
+    return Math.max(m, Math.min(1 - m, x));
+  };
   const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
@@ -188959,7 +189103,9 @@ function MsaStage({
     "data-msa-stage": true,
     style: wide ? {
       '--msa-fw': `${bigFw}px`,
-      '--msa-fh': `${bigFh}px`
+      '--msa-fh': `${bigFh}px`,
+      '--msa-ab': `${Math.min(150, Math.round(bigFw * 1.15))}px`,
+      '--msa-aw': `${Math.min(130, Math.round(bigFw * 1.05))}px`
     } : undefined
   }, React.createElement("div", {
     className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
@@ -189040,6 +189186,7 @@ function MsaStage({
       x: xB,
       w: stageW
     },
+    fwPx: wide ? bigFw : fill ? 140 : 96,
     hpNow: hpOf('A'),
     reduce: reduce,
     idleOk: true,
@@ -189058,6 +189205,7 @@ function MsaStage({
       x: xA,
       w: stageW
     },
+    fwPx: wide ? bigFw : fill ? 140 : 96,
     hpNow: hpOf('B'),
     reduce: reduce,
     idleOk: true,
@@ -189091,7 +189239,7 @@ function MsaStage({
   }), e.ev === 'tech' && React.createElement(MsaDmgLayer, {
     key: `dl-${pos}`,
     e: e,
-    x: e.side === 'A' ? xB : xA,
+    x: dmgX(e.side === 'A' ? xB : xA),
     delay: hitMs,
     tier: tier || 1
   }), e.ev === 'tech' && fx.fin && !reduce && React.createElement("i", {
@@ -189907,6 +190055,22 @@ const monsucRankMonOf = species => {
   return m && typeof m === 'object' ? m : null;
 };
 const monsucRankDyeOf = dye => Array.isArray(dye) ? dye.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : null;
+const monsucRankTechDetailOf = v => {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  const seen = new Set();
+  for (const e of v.slice(0, 99)) {
+    if (!e || typeof e !== 'object') continue;
+    const id = typeof e.id === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(e.id) ? e.id : null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      m: monsucRankClamp(Math.round(monsucRankNum(e.m)), 0, 100)
+    });
+  }
+  return out.length ? out : null;
+};
 const monsucRankTailOf = rawId => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
@@ -190025,6 +190189,10 @@ const monsucRankRowOf = ({
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
   const dyeOk = monsucRankDyeOf(colors) || [];
+  const tech_detail = monsucRankTechDetailOf((Array.isArray(run.techs) ? run.techs : []).map(id => ({
+    id,
+    m: run.mastery && run.mastery[id]
+  })));
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
@@ -190034,6 +190202,7 @@ const monsucRankRowOf = ({
     dye: dyeOk,
     stats,
     techs,
+    tech_detail,
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
@@ -190078,7 +190247,7 @@ const monsucRankPost = async (owner, key, row) => {
     if (timer) clearTimeout(timer);
   }
 };
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'lv', 'loyal', 'pop', 'engine_version'];
 const monsucRankCleanRow = e => {
   const r = {};
   for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k];
@@ -190240,7 +190409,8 @@ const monsucRankFlush = async () => {
     };
   }
 };
-const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail';
+const MONSUC_RANK_COLS_LEGACY = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
 const monsucRankGet = async (path, withCount) => {
   try {
     const headers = withCount ? {
@@ -190284,7 +190454,8 @@ const monsucRankReadTop = async ({
     where,
     limit
   } = monsucRankViewOf(lineage);
-  const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  let top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  if (!top) top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   return {
@@ -190303,7 +190474,8 @@ const monsucRankReadMine = async ({
     view,
     where
   } = monsucRankViewOf(lineage);
-  const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  let m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  if (!m) m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
   return m && m.rows[0] ? m.rows[0] : null;
 };
 const monsucRankRead = async ({
@@ -190410,12 +190582,91 @@ function MonsucRankRow({
     className: "w-[64px] text-right text-[15px] font-black text-yellow-300"
   }, Math.round(monsucRankNum(row.power)).toLocaleString())));
 }
+const monsucRankSuc = () => {
+  try {
+    return typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  } catch (_) {
+    return null;
+  }
+};
 function MonsucRankDetail({
   row,
   pinned,
   onBack
 }) {
   const mon = monsucRankMonOf(row.species) || {};
+  const [, setSucTick] = React.useState(0);
+  React.useEffect(() => {
+    if (monsucRankSuc() || typeof msxLoad !== 'function') return undefined;
+    let alive = true;
+    msxLoad().then(() => {
+      if (alive) setSucTick(1);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const SUC = monsucRankSuc();
+  if (SUC && typeof MsxMonDetail === 'function') {
+    try {
+      const detail = monsucRankTechDetailOf(row.tech_detail);
+      const known = detail ? detail.map(d => d.id) : null;
+      const mastery = detail ? Object.fromEntries(detail.map(d => [d.id, d.m])) : null;
+      let grades = null;
+      let peak = '';
+      let type = null;
+      const peek = typeof SUC.newRun === 'function' ? SUC.newRun({
+        id: 'peek',
+        species: row.species
+      }) : null;
+      if (peek && typeof SUC.aptGradesOf === 'function') grades = SUC.aptGradesOf(peek);
+      if (peek && typeof SUC.peakInfo === 'function' && typeof SUC.periodOf === 'function') {
+        const pk = SUC.peakInfo(peek);
+        if (pk && Number.isInteger(pk.from) && Number.isInteger(pk.to)) {
+          const a = SUC.periodOf(pk.from).name;
+          const b = SUC.periodOf(pk.to).name;
+          peak = a === b ? a : `${a}〜${b}`;
+        }
+      }
+      if (typeof SUC.speciesType === 'function') type = SUC.speciesType(row.species);
+      const apt = typeof msxAptOf === 'function' ? msxAptOf(row.species) : ['C', 'C', 'C', 'C', 'C', 'C'];
+      const info = [['順位', `${Math.round(monsucRankNum(row.place))}位`], ['育てた人', pinned ? 'あなた' : row.user_name || 'ななしのブリーダー'], ['Lv', String(Math.round(monsucRankNum(row.lv)))], ...(row.loyal != null ? [['忠誠度', String(Math.round(monsucRankNum(row.loyal)))]] : []), ...(row.pop != null ? [['人気', String(Math.round(monsucRankNum(row.pop)))]] : []), ['習得技数', String(Math.round(monsucRankNum(row.tech_count, detail ? detail.length : 0)))]];
+      if (!detail) {
+        if (Array.isArray(row.techs) && row.techs.length) info.push(['技の内訳(ランク・適性)', row.techs.slice(0, 99).map(t => t && typeof t === 'object' ? `ランク${monsucRankClamp(Math.round(monsucRankNum(t.r, 1)), 1, 5)}(${MONSUC_RANK_APT.includes(t.a) ? t.a : 'C'})` : `熟練${monsucRankClamp(Math.round(monsucRankNum(t)), 0, 100)}`).join('・')]);
+        info.push(['技の名前と熟練', 'この登録には技の名前が保存されていないため、出せません(新しい登録から出ます)']);
+      }
+      const art = mon.id ? React.createElement(DyedMonsterImage, {
+        baseId: mon.id,
+        src: mon.iconUrl || mon.imgUrl,
+        alt: "",
+        masuColors: monsucRankDyeOf(row.dye),
+        draggable: false,
+        style: {
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain'
+        }
+      }) : undefined;
+      return React.createElement(MsxMonDetail, {
+        species: row.species,
+        name: row.child_name || mon.name || '？？？',
+        art: art,
+        st: row.stats || {},
+        apt: apt,
+        type: type,
+        peak: peak,
+        grades: grades,
+        known: known,
+        mastery: mastery,
+        power: Math.round(monsucRankNum(row.power)),
+        grade: row.grade || null,
+        sub: `${mon.name || row.species}・${monsucRankLineageName(row.lineage)}系・Lv ${Math.round(monsucRankNum(row.lv))}`,
+        info: info,
+        onClose: onBack,
+        SUC: SUC
+      });
+    } catch (_) {}
+  }
   return React.createElement("div", {
     className: "fixed inset-0 z-[60] flex flex-col text-white",
     style: {
@@ -190475,7 +190726,13 @@ function MonsucRankDetail({
     className: "text-[12px] text-slate-200 mt-3"
   }, "習得技数: ", React.createElement("span", {
     className: "font-black text-white"
-  }, Math.round(monsucRankNum(row.tech_count)))))), React.createElement("div", {
+  }, Math.round(monsucRankNum(row.tech_count)))), row.loyal != null && React.createElement("div", {
+    className: "text-[12px] text-slate-200 mt-1"
+  }, "忠誠度: ", React.createElement("span", {
+    className: "font-black text-white"
+  }, Math.round(monsucRankNum(row.loyal))), " ・ 人気: ", React.createElement("span", {
+    className: "font-black text-white"
+  }, Math.round(monsucRankNum(row.pop)))))), React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, React.createElement("button", {
     type: "button",
@@ -211218,7 +211475,7 @@ const CardBattleScreen = ({
     }
   }, label))), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-400"
-  }, "デバッグ: カードバトルの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
+  }, "デバッグ: MFバトルカードの記録(mh_card_* の新しいキーだけ)"), React.createElement("button", {
     type: "button",
     "data-card-motion-demo": true,
     className: "mh-button mh-button-secondary min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black",
@@ -211241,12 +211498,12 @@ const CardBattleScreen = ({
     type: "button",
     className: "mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black",
     onClick: () => setConfirmReset(true)
-  }, "カードバトルの記録を消して、スターター選びからやり直す")))), detail && React.createElement(CardDetailModal, {
+  }, "MFバトルカードの記録を消して、スターター選びからやり直す")))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
   }), confirmReset && React.createElement(ConfirmSheet, {
-    title: "カードバトルの記録を消しますか？",
+    title: "MFバトルカードの記録を消しますか？",
     message: '持っているカード・デッキ・ビートP・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。',
     confirmLabel: "消す",
     danger: true,
@@ -254988,7 +255245,7 @@ function MonsterHeroGame() {
   }) : showHomeArt ? React.createElement(ArtPickerModal, {
     pickerId: "home",
     heading: "ホーム画面アレンジ",
-    note: "ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。",
+    note: "ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。",
     options: HOME_ART_OPTIONS,
     value: homeArt,
     resolved: resolveHomeArt(homeArt),
@@ -275191,7 +275448,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(calc(-50% + var(--mh-home-battle-nudge,0px)))}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}.mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised,.mh-home-card-battle.below-tour{bottom:12px}/* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */.mh-home-tour-banner,.mh-home-tour-banner.raised{bottom:52px}.mh-home-scene:has(.mh-home-tour-banner) .mh-home-event-banner{bottom:96px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -275427,10 +275684,10 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
-    }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:max(27.4%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */[data-assistant-life-map] .mh-home-facility.management,[data-assistant-life-map] .mh-home-facility.temple{top:27.4%}[data-assistant-life-map] .mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     /* はじめての人の「つぎにやること」(2026-11-11 案4)。モンヒロバトルの札のすぐ上。縦持ちは下の列の上に横いっぱい、横持ち(背が低い)はバトルの札のすぐ上の中央の小さな帯 */
-    .mh-home-nextstep{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
+    .mh-home-nextstep{position:relative;z-index:6;display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:7px 12px;border:2px solid #fcd34d;border-radius:16px;background:#0f172af0;color:#fff;text-align:left;box-shadow:0 4px 14px #000a;animation:mhNextStepPulse 2.4s ease-in-out infinite}
     .mh-home-nextstep:active{transform:scale(.97)}
     .mh-home-nextstep-lab{flex:none;font-size:10px;font-weight:900;line-height:1.2;text-align:center;color:#fcd34d}
     .mh-home-nextstep-lab b{display:block;color:#cbd5e1;font-weight:900}
@@ -275440,15 +275697,15 @@ const createAnimationStyle = () => {
     .mh-home-nextstep i{flex:none;font-style:normal;font-size:22px;font-weight:900;color:#fcd34d}
     @keyframes mhNextStepPulse{0%,100%{box-shadow:0 4px 14px #000a}50%{box-shadow:0 4px 18px #fcd34dcc}}
     @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
-    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{left:50%;right:auto;transform:translateX(-50%);width:min(32%,230px);bottom:calc(66px + env(safe-area-inset-bottom));min-height:44px;padding:5px 10px}.mh-home-nextstep:active{transform:translateX(-50%) scale(.97)}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
-    .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
-   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
+    @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{min-height:44px;padding:5px 10px}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
+    /* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
+   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:6px 0 0 3%;pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
-    @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
+    @media(max-height:620px){.mh-home-masumon-layer{bottom:38%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
-    @media(orientation:landscape) and (max-height:340px){.mh-home-assistant{width:56%!important}}@media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-scene .mh-home-facility.rhythm,.mh-home-scene .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{left:calc(var(--mh-home-management-right,124px) + 8px);top:max(calc(156px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 16px))}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-scene .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.raised,.mh-home-scene:has(.mh-home-facility.life) .mh-home-card-battle.below-tour{bottom:32px}.mh-home-scene:has(.mh-home-facility.life) .mh-home-event-banner{bottom:72px}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    @media(orientation:landscape) and (max-height:340px){.mh-home-assistant{width:56%!important}}@media(orientation:landscape) and (max-height:600px){.mh-home-assistant{margin-left:2%;width:36%}.mh-home-facility>span{padding:6px 12px}[data-assistant-life-map] .mh-home-facility.management{left:2.4%;top:calc(146px + env(safe-area-inset-top))}[data-assistant-life-map] .mh-home-facility.rhythm{left:132px;top:calc(156px + env(safe-area-inset-top))}[data-assistant-life-map] .mh-home-facility.temple{right:2.4%;top:35.76%}[data-assistant-life-map] .mh-home-facility.market{right:2.4%;top:59.76%}[data-assistant-life-map] .mh-home-facility.life{left:auto;right:calc(2.4% + 118px);top:59.76%}[data-assistant-life-map]:has(.mh-home-facility.life) .mh-home-card-battle{bottom:32px}[data-assistant-life-map] .mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:28%;bottom:44%}}
     /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
-    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
+    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){[data-assistant-life-map] .mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
@@ -275482,7 +275739,108 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
-    .mh-home-facility.rhythm{left:1.9%;top:55.25%}.mh-home-facility.life{left:2.52%;top:37%}.mh-home-scene .mh-home-event-banner,.mh-home-scene .mh-home-tour-banner,.mh-home-scene .mh-home-card-battle{translate:0 var(--mh-home-left-push,0px)}@media (orientation:portrait){.mh-home-facility.life{top:max(37%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(49.5%,calc(var(--mh-home-life-bottom,0px) + 32px))}}@media (orientation:portrait) and (max-height:620px){.mh-home-facility.life{top:max(39%,calc(var(--mh-home-management-bottom,0px) + 20px))}.mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:max(52%,calc(var(--mh-home-life-bottom,0px) + 32px))}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    [data-assistant-life-map] .mh-home-facility.rhythm{left:1.9%;top:55.25%}[data-assistant-life-map] .mh-home-facility.life{left:2.52%;top:37%}@media (orientation:portrait){[data-assistant-life-map] .mh-home-facility.life{top:37%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:49.5%}}@media (orientation:portrait) and (max-height:620px){[data-assistant-life-map] .mh-home-facility.life{top:39%}[data-assistant-life-map] .mh-home-facilities:has(.mh-home-facility.life) .mh-home-facility.rhythm{top:52%}}.mh-home-facility.life>span{border-color:#f9a8d4dd;background:linear-gradient(135deg,#4a1d3bf2,#1e1b4bf2);box-shadow:0 3px 12px #0009,0 0 15px #f472b666}.mh-home-facility.rhythm>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#0e7490ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66}
+    /* ===== ホーム一新(2026-11-17): 下部ドック・期間ものの細バナー・右端スタック =====
+       施設は背景の建物に合わせた札をやめ、下のドック(絶対配置・下固定)に集約した。上の帯と吹き出しは流れで置くので、
+       吹き出しが伸びても押し下げ合いは起きない。safe-area は body の余白が受け持つため、ドックでは足さない(家ルール) */
+    .mh-home-event-strip{position:relative;z-index:5;display:flex;align-items:center;gap:6px;margin:5px 0 0 9px}
+    .mh-home-event-strip .mh-home-event-banner,.mh-home-event-strip .mh-home-tour-banner{max-width:min(72vw,300px)}
+    .mh-home-event-strip-dots{display:flex;gap:4px;align-items:center}
+    .mh-home-event-strip-dots i{width:6px;height:6px;border-radius:50%;background:#ffffff55}
+    .mh-home-event-strip-dots i.on{background:#fde68a}
+    .mh-home-dock{position:absolute;z-index:5;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:6px;padding:6px 8px 8px;background:linear-gradient(180deg,#0b1f1a00,#0b1f1acc 24%,#0b1f1af2)}
+    .mh-home-dock-row{display:flex;gap:6px}
+    /* 施設カードは8つとも同じ形・同じ大きさ(2026-11-17 あっくん追加指示)。寸法の決め方: 行の中で flex:1 1 0 の等分が幅を決め、
+       絵は .mh-home-dock-pic(幅いっぱい・最大104px・aspect-ratio:1)が全施設共通の正方形になる。名前(施設によっては下の言葉も)が下に付く。
+       中身の並びは「絵→文字の枠」。絵は全カードで上端をそろえ(カードの上寄せ)、文字は .mh-home-dock-txt という
+       「名前1行+間+下の言葉1行」ぶんの固定の高さの枠に入れて、その中で縦に中央寄せする。
+       下の言葉が無い施設(M/B管理・神殿・マーケット・助手ライフ)は、名前1行だけが枠の縦中央に来るので、
+       名前の真下にだけ空きが残る見え方にならない(2026-11-17 あっくん追加指示)。
+       経緯: 当初は下の言葉が無い4枚だけ中身が上寄せになっていた(同日 あっくん指摘)。空の下の言葉で1行ぶんの
+       高さを確保して揃える→カード全体を中央寄せ、と変えたが、センター合わせの対象はカード全体ではなく
+       「文字の枠部分」だとあっくんが正したので、この形になった。
+       下段だけ小さな円だった作り(mh-home-dock-btn / mh-home-dock-ic)は廃止した
+       名前の字の大きさ(2026-11-17 フルネーム化に合わせて改定): 施設名は全てフルネームで、最長は「モンヒロサクセス」の8文字。
+       カードの内側の幅(幅390で約79px・幅360で約71px・幅320で約63px)に8文字が1行で収まるよう、全施設一律で
+       基本9.5px / 幅380以下8.5px / 幅350以下7.5px / 横画面8.5px にした。施設ごとに字の大きさを変えない(統一感を保つ) */
+    .mh-home-dock-card{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px 6px;border:2px solid #ffe6a7a8;border-radius:16px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;color:#fff;text-shadow:0 2px 4px #000;touch-action:manipulation;transition:transform .1s,filter .1s}
+    .mh-home-dock-card:active{transform:scale(.95);filter:brightness(1.3)}
+    .mh-home-dock-pic{display:block;width:100%;max-width:104px;aspect-ratio:1;border-radius:11px;overflow:hidden}
+    .mh-home-dock-pic img{display:block;width:100%;height:100%;object-fit:cover}
+    /* 文字の枠: 高さは「名前の字×行間 + 間 + 下の言葉の字×行間」で固定し、中の文字は縦中央に置く。
+       名前・下の言葉の字の大きさが段階で変わる場所(下の @media / @container)では、この高さも同じ段階で追随させる */
+    .mh-home-dock-txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
+    .mh-home-dock-name{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
+    .mh-home-dock-sub{font-size:9px;font-weight:800;color:#ffe6a7;line-height:1.1;white-space:nowrap}
+    .mh-home-dock-soon{margin-left:3px;padding:0 4px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:8px;font-weight:900;line-height:1.5;vertical-align:2px}
+    .mh-home-dock-chip{position:absolute;top:-7px;right:-4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:9px;font-weight:900;line-height:1.4;box-shadow:0 2px 5px #0008}
+    .mh-home-dock-card.card.soon .mh-home-dock-pic{filter:saturate(.55) brightness(.85)}
+    .mh-home-side-stack{position:absolute;z-index:5;right:6px;top:calc(76px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:9px}
+    .mh-home-side-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation;transition:transform .1s,filter .1s}
+    .mh-home-side-btn:active{transform:scale(.92);filter:brightness(1.3)}
+    .mh-home-side-ic{display:flex;align-items:center;justify-content:center;width:47px;height:47px;border-radius:50%;border:1.5px solid #eed995aa;background:#102c29e8;box-shadow:0 3px 8px #0007}
+    .mh-home-gift .mh-home-side-ic{border-color:#67e8f9aa;background:#083344e8;color:#cffafe}
+    .mh-home-mission .mh-home-side-ic{border-color:#fbbf24aa;background:#422006e8;color:#fef3c7}
+    .mh-home-side-lb{font-size:8.5px;font-weight:900;text-shadow:0 1px 3px #000}
+    .mh-home-side-btn em{position:absolute;top:-3px;right:1px;display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px;font-weight:900;box-shadow:0 1px 4px #0008}
+    .mh-home-scene .mh-home-side-stack .mh-tod-clock{position:static}
+    @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+    @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
+    @media(orientation:landscape) and (max-height:600px){
+      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
+         ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
+         施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
+         以前は横画面だけカードを横並び(絵40px+名前が横)に変えていたが、8枚の形の統一が崩れるため廃止した。
+         「次にやること」は先頭に細長い案内として置く(初めての人だけに出る) */
+      .mh-home-dock{flex-direction:row;align-items:stretch;gap:6px;padding:5px 8px 7px}
+      .mh-home-dock-row{flex:1 1 0;gap:6px}
+      .mh-home-nextstep{flex:0 0 148px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:0}
+      .mh-home-dock-card .mh-home-dock-name{font-size:8.5px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
+      .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
+      .mh-home-side-ic{width:34px;height:34px}
+      .mh-home-side-lb{display:none}
+    }
+    /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
+       全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */
+    @media(orientation:landscape) and (max-height:600px) and (max-width:700px){
+      .mh-home-dock-card .mh-home-dock-name{font-size:7.5px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}
+    }
+    @media(orientation:landscape) and (max-height:600px) and (max-width:600px){
+      .mh-home-dock-card .mh-home-dock-name{font-size:7px}
+      .mh-home-dock-card .mh-home-dock-txt{height:calc(7px*1.15 + 1px + 9px*1.1)}
+    }
+    /* 広い場面(タブレット・パソコン)では、ドックを8枚1列に並べる(2026-11-17 あっくん決定「タブレットなら両手だし1段でも問題ない」)。
+       場面(.mh-home-scene)は container-type:size なので、場面自身の大きさで決める。コラムの広げ方(index.html)とは独立。
+       当初は絵を最大148pxに大きくした2段で、タブレット縦(768x1024)ではドックが丈の4割近くを取っていたので改めた。
+       並べ方は横画面(上の @media)のドックと同じで、ドックを横向きにし、2つの段を等分、中のカードも等分する。
+       カード幅の上限は128px。場面は最大1024pxまでしか広がらないので、通常は約117px(1024幅)・約86px(768幅)で
+       頭打ちになり、上限は将来もっと広がったときの備え。余った幅は段の中で中央寄せして受ける。
+       名前は、768px幅ではカードの内側が約72pxしかないため、横画面と同じ8.5pxにする(最長8文字が1行に収まる)。
+       右端スタックの拡大(58px)はドックと関係のない縦の並びで、広い画面での押しやすさとして残す。
+       丈の条件(560px以上)は、横持ちのスマホ(幅は広いが丈が390px前後)を除くため(そちらは上の @media の1列が受け持つ)。
+       上の帯(プレイヤー・財布)は情報の並びが決まっているので据え置きにし、広場の空きを圧迫しない */
+    @container (min-width:700px) and (min-height:560px){
+      .mh-home-dock{flex-direction:row;align-items:stretch;gap:8px;padding:10px 14px 12px}
+      .mh-home-dock-row{flex:1 1 0;gap:8px;justify-content:center}
+      .mh-home-nextstep{flex:0 0 148px;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:0}
+      .mh-home-dock-card{gap:2px;padding:7px 5px 8px;border-radius:18px;max-width:128px}
+      .mh-home-dock-pic{max-width:120px;border-radius:13px}
+      .mh-home-dock-txt{gap:2px;height:calc(8.5px*1.15 + 2px + 9px*1.1)}
+      .mh-home-dock-name{font-size:8.5px}
+      .mh-home-side-stack{right:12px;gap:12px}
+      .mh-home-side-ic{width:58px;height:58px}
+      .mh-home-side-lb{font-size:10px}
+      .mh-home-event-strip .mh-home-event-banner,.mh-home-event-strip .mh-home-tour-banner{max-width:min(72vw,380px)}
+    }
+    /* ひときわ広い場面(950px以上)ではカードの内側に余裕ができるので、名前と下の言葉を一段だけ大きくする */
+    @container (min-width:950px) and (min-height:560px){
+      .mh-home-dock-name{font-size:10.5px}
+      .mh-home-dock-sub{font-size:10px}
+      .mh-home-dock-txt{height:calc(10.5px*1.15 + 2px + 10px*1.1)}
+    }
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.rhythm small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
