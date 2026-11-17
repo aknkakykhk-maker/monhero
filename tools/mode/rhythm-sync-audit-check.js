@@ -105,7 +105,13 @@ const run = async () => {
     __send('touchmove', [A, C, D], [D]); await wait(60);            // A の番号が、別の合図の中に見える(離しの合図のあと)
     const afterOwnEnd = window.__inputs.slice();
     __send('touchend', [], [A, C, D]); await wait(30);
-    return { afterBack, afterNew, afterOwnEnd, bridge: RHYTHM_TOUCH_BRIDGE.snapshot() };
+    // r1117-002(2026-11-17): touchstart も指の一覧にも一度も出ずに、離しの合図だけ届いた接触(E)。入力にはならないが、数は残る
+    const E = [105, .2], F = [106, .8];
+    __send('touchstart', [F], [F]); await wait(30);
+    __send('touchend', [F], [E]); await wait(30);                   // E は離しの合図だけ(F が触れている最中)
+    __send('touchend', [], [F]); await wait(30);                    // F はふつうに離す(数えない)
+    const afterEndOnly = window.__inputs.slice();
+    return { afterBack, afterNew, afterOwnEnd, afterEndOnly, bridge: RHYTHM_TOUCH_BRIDGE.snapshot() };
   });
   try {
     // ① iPhone
@@ -117,6 +123,8 @@ const run = async () => {
     check('① iPhone: 一度も見えていなかった指は、今までどおり入力にする', count(r1.afterNew, 103) === 1, JSON.stringify(r1.afterNew));
     check('③ 自分の離しの合図で消えた指の番号は、戻った扱いにしない(入力にする)', count(r1.afterOwnEnd, 101) === 2, JSON.stringify(r1.afterOwnEnd));
     check('① 数が残る(戻った1・押した扱いにしなかった1・touchmove で見えた2)', r1.bridge.lsBack === 1 && r1.bridge.lsBackGuard === 1 && r1.bridge.lsByMove === 2 && r1.bridge.lateStart === 3, JSON.stringify(r1.bridge));
+    check('⑥ 離しの合図だけ届いた接触は数える(ほかの指あり 1)。ふつうに離した指・自分の離しの合図の指は数えない', JSON.stringify(r1.bridge.endOnly) === '[0,1]' && count(r1.afterEndOnly, 105) === 0 && count(r1.afterEndOnly, 106) === 1, JSON.stringify({ endOnly: r1.bridge.endOnly, inputs: r1.afterEndOnly.slice(-3) }));
+    check('⑥ 入力の経路を数える(自分の touchstart と、別の指の合図で見えた指)', r1.bridge.routes[0] >= 4 && r1.bridge.routes[1] >= 1 && r1.bridge.routes[2] === 0, JSON.stringify(r1.bridge.routes));
     // ④ 曲の時計: 直し方を入れても、止まりは元の時計で数える
     const clock = await ios.evaluate(async () => {
       const seen = []; const orig = RHYTHM_TIMING_DIAG.frame;
@@ -136,7 +144,7 @@ const run = async () => {
     check('④ 診断に、元の時計の止まり(stalls)と画面の時計の止まり(stallsShown)の両方がある', Number.isFinite(clock.snap.stalls) && Number.isFinite(clock.snap.stallsShown));
     // ⑤ 大きさ
     const size = await ios.evaluate(() => JSON.stringify({ ...RHYTHM_TOUCH_BRIDGE.snapshot(), timing: RHYTHM_TIMING_DIAG.snapshot() }).length);
-    check('⑤ 突き合わせと時刻の診断を足しても 1KB ほど(行の上限は 4KB)', size < 1300, `${size}文字`);
+    check('⑤ 突き合わせと時刻の診断を足しても 1.3KB ほど(行の上限は 4KB)', size < 1500, `${size}文字`);
     await ios.close();
     // ② Android
     const android = await open(null);

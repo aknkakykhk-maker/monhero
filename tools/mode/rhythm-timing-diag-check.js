@@ -73,7 +73,7 @@ const PC='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120';
   check('離れた回数・ペンを数える',s2.hidden===1&&s2.pen===1);
   o.RHYTHM_TIMING_DIAG.meta({outLatMs:30,baseLatMs:10,hasTs:true,rate:48000,headMs:103});
   check('端末の音の事情を持てる',o.RHYTHM_TIMING_DIAG.snapshot().headMs===103&&o.RHYTHM_TIMING_DIAG.snapshot().hasTs===true);
-  check('診断の大きさは小さい(サーバーの上限4KBの十分内側)',JSON.stringify(o.RHYTHM_TIMING_DIAG.snapshot()).length<400);
+  check('診断の大きさは小さい(サーバーの上限4KBの十分内側。2026-11-17 に数を足して 400 → 560 未満へ)',JSON.stringify(o.RHYTHM_TIMING_DIAG.snapshot()).length<560,String(JSON.stringify(o.RHYTHM_TIMING_DIAG.snapshot()).length));
 }
 // 2b. ゲームが記録から自分で決める入れ切り
 {
@@ -294,6 +294,59 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   const good=dd.syncLines(dd.syncSummary(Array.from({length:6},()=>row({midN:6,midActMs:-31,midTypMs:-41,lateN:6,lateActMs:-40,lateFullMs:-150,lateExMs:90}))));
   check('報告ツール: 案B のあとの 50〜80ms の帯のずれを出す(±15ms なら効いている)',good.some(l=>/^◎/.test(l)&&/案B/.test(l)&&/50〜80ms/.test(l)),good.join(' | ').slice(0,300));
   check('報告ツール: 案B のあとの行は、前の比べ(この帯も古い)に混ぜない',good.every(l=>!/この帯も合図の時刻が古い/.test(l)));
+}
+
+// 9. r1117-002(2026-11-17・iPhone の両手の高速交互タップの抜け・社長「まず数える」)
+//   ①取り戻して離した接触の近くの新しい接触を無視しない(正当な遅着は今までどおり無視) ②番号 0 の指 ③数えるもの(endOnly・経路・MISS の単押しの内訳・50〜80ms のほかの指あり/なし)
+{
+  const bridgeBlock=pick(/const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;[\s\S]*?const RHYTHM_TOUCH_BRIDGE=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/);
+  const mk=()=>{const c={};vm.createContext(c);vm.runInContext(`${bridgeBlock}\nthis.B=RHYTHM_TOUCH_BRIDGE;`,c);return c.B;};
+  let B=mk();B.pointerDown(1,100,100,1000,1000);B.pointerUp(1,1020,1020);B.sweep(1050);
+  check('取り戻して離した接触の近くに、離したあとの時刻で来た新しい接触は無視しない',B.touchStart(2,100,100,1100,1100,0)==='normal'&&B.isIgnoredTouch(2)===false&&B.snapshot().newAfterRecovered===1&&B.snapshot().ignoredLateTouches===0);
+  B=mk();B.pointerDown(1,100,100,1000,1000);B.pointerUp(1,1020,1020);B.sweep(1050);
+  check('正当な遅着(同じ接触・時刻は押した時)は今までどおり無視する(二重に取らない)',B.touchStart(11,100,100,1000,1100,100)==='ignore'&&B.isIgnoredTouch(11)===true);
+  check('そのあとの同じ場所の新しい接触は通す(1つの取り戻しに結ぶのは1本だけ)',B.touchStart(12,100,100,1200,1200,0)==='normal');
+  B=mk();B.pointerDown(1,100,100,1000,1000);B.sweep(1050);
+  check('まだ離していない取り戻しに遅れて届いたタッチは無視する',B.touchStart(11,101,101,1000,1090,90)==='ignore');
+  B=mk();B.pointerDown(1,100,100,1000,1000);B.sweep(1050);B.pointerUp(1,1080,1075);
+  check('取り戻したあとで離した接触も、離した時刻を覚える(そのあとの新しい接触は通す・前の時刻の遅着は無視)',B.touchStart(2,100,100,1150,1150,0)==='normal'&&B.touchStart(11,100,100,1002,1160,158)==='ignore');
+  B=mk();B.pointerDown(1,100,100,1000,1000);B.sweep(1050);
+  const r0=B.touchStart(0,100,100,1000,1060,60),r5=B.touchStart(5,102,101,1001,1070,69);
+  check('番号 0 の指を結んだあと、近くの別の接触まで無視しない',r0==='ignore'&&r5==='normal'&&B.isIgnoredTouch(0)===true&&B.isIgnoredTouch(5)===false,JSON.stringify([r0,r5]));
+  B=mk();B.pointerDown(1,100,100,1000,1000);B.pointerUp(1,1020,1020);B.sweep(1050);
+  check('離れた位置の接触は今までどおり通す',B.touchStart(2,300,100,1100,1100,0)==='normal');
+  B=mk();B.endOnly(0);B.endOnly(1);B.endOnly(2);B.route('own');B.route('own');B.route('rev');B.route('rec');B.route('syn');B.route('x');
+  let b=B.snapshot();
+  check('離しの合図だけ届いた接触と、入力の経路を数える',JSON.stringify(b.endOnly)==='[1,2]'&&JSON.stringify(b.routes)==='[2,1,1,1]',JSON.stringify([b.endOnly,b.routes]));
+  B.reset();check('数え直すと 0 に戻る',JSON.stringify(B.snapshot().endOnly)==='[0,0]'&&JSON.stringify(B.snapshot().routes)==='[0,0,0,0]');
+  check('足した数を入れても、突き合わせの数は小さい',JSON.stringify(B.snapshot()).length<600,String(JSON.stringify(B.snapshot()).length));
+  // MISS になった単押しの内訳
+  const missBlock=pick(/const RHYTHM_TAP_MISS_WINDOW_MS=200,[\s\S]*?const rhythmTapMissBreakdown=[\s\S]*?\n\};/);
+  const mc={};vm.createContext(mc);vm.runInContext(`${missBlock}\nthis.f=rhythmTapMissBreakdown;`,mc);
+  const N=(t,sub,j='MISS',type='TAP')=>({type,timeMs:t,subLane:sub,subLaneWidth:2,_rhythmFinalJudgment:j});
+  const notes=[N(1000,2),N(2000,2),N(3000,2),N(4000,2),N(5000,2,'GREAT'),N(6000,2,'MISS','HOLD')];
+  const log=[[950,9,7],[1100,10,8],/*1000: 右だけ叩いた=交互の抜け候補*/[2010,3,-1],/*2000: 近くで空打ち*/[2990,2.5,42],/*3000: 近くの入力が別のノーツを取った*/[5000,2,4]];
+  const out=mc.f(notes,log);
+  check('MISS の単押しを [交互の抜け候補, 別のノーツ, 空打ち, 入力なし] に分ける(TAP の MISS だけ)',JSON.stringify(out)==='[1,1,1,1]',JSON.stringify(out));
+  check('記録が無い・壊れていても落ちない',JSON.stringify(mc.f(notes,null))==='[0,0,0,4]'&&JSON.stringify(mc.f(null,[[1,2]]))==='[0,0,0,0]');
+  // 50〜80ms の帯: ほかの指あり/なし
+  const d=makeContext(IPHONE);d.rhythmInputAgeResetFloor();d.RHYTHM_TIMING_DIAG.reset();
+  [10,10,10,10,10,10,10,10,10].forEach((age,i)=>d.rhythmInputAgeMs(1000*(i+1),1000*(i+1)+age));
+  d.RHYTHM_TIMING_DIAG.liveTouches(2);d.clock.now=20060;d.rhythmInputAgeMs(20000,20060);d.RHYTHM_TIMING_DIAG.bias(-40);
+  d.RHYTHM_TIMING_DIAG.liveTouches(1);d.clock.now=21060;d.rhythmInputAgeMs(21000,21060);d.RHYTHM_TIMING_DIAG.bias(-20);
+  const t=d.RHYTHM_TIMING_DIAG.snapshot();
+  check('50〜80ms の帯の単押しを、ほかの指あり/なしで分ける',t.midN===2&&t.midMultiN===1&&t.midMultiActMs===-40&&t.midSingleN===1&&t.midSingleActMs===-20,JSON.stringify({n:t.midN,mn:t.midMultiN,ma:t.midMultiActMs,sn:t.midSingleN,sa:t.midSingleActMs}));
+  check('診断の大きさは小さいまま(足したあと)',JSON.stringify(t).length<700,String(JSON.stringify(t).length));
+  // 演奏画面のつなぎ
+  check('離しの合図だけ届いた接触を数える(一覧から消えていた指の遅れた離しは数えない)',/if\(e\.type==='touchend'\|\|e\.type==='touchcancel'\)Array\.from\(e\.changedTouches\|\|\[\]\)\.forEach\(t=>\{const key=rhythmInputKey\('touch',t\.identifier\);if\(current\.activeTouchInputs\.has\(key\)\)return;if\(current\.droppedNoEnd\?\.has\(key\)\)\{current\.droppedNoEnd\.delete\(key\);return;\}RHYTHM_TOUCH_BRIDGE\.endOnly\(/.test(play));
+  check('入力の経路を数える(自分の touchstart・見えた指・取り戻し・疑似タップ)',/RHYTHM_TOUCH_BRIDGE\.route\(revealedStart\?'rev':'own'\)/.test(play)&&/RHYTHM_TOUCH_BRIDGE\.route\('rec'\)/.test(play)&&/RHYTHM_TOUCH_BRIDGE\.route\('syn'\)/.test(play));
+  check('入力の時刻・位置・取ったノーツを覚え、診断の行へ内訳を入れる',/log\.push\(\[now,Number\(input\.subLaneCoordinate\),target\?Number\(target\.index\):-1\]\)/.test(play)&&/tapMiss:rhythmTapMissBreakdown\(notes,inputLog\)/.test(play)&&/inputLog:run\.inputLog/.test(play));
+  // 報告ツール
+  const dd=require('./rhythm-touch-diag.js');
+  const row=(extra,timing={})=>({platform:'ios',device_key:'a',app_build:'2026-11-17 13:00',song_id:'haruka',difficulty:'MASTER',note_count:300,created_at:new Date().toISOString(),stats:{touchStarts:300,fixes:['lateStampTypical'],lateHist:[0,0,0,0],misses:10,...extra,timing:{frames:5000,stalls:0,biasN:200,biasMs:-38,staleV:2,...timing}}});
+  const lines=dd.syncLines(dd.syncSummary(Array.from({length:6},()=>row({endOnly:[1,5],routes:[280,15,0,200],tapMiss:[4,1,2,1]}))));
+  check('報告ツール: 離しの合図だけ届いた接触を 1000タッチあたりで出す',lines.some(l=>/離しの合図だけ届いた接触/.test(l)&&/20\.0/.test(l)),lines.join(' | ').slice(0,400));
+  check('報告ツール: MISS の単押しの内訳と、入力の経路を出す',lines.some(l=>/MISS になった単押し/.test(l)&&/交互の抜け候補 24/.test(l))&&lines.some(l=>/入力の経路/.test(l)));
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

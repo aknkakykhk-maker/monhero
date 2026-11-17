@@ -2049,7 +2049,7 @@ const RHYTHM_TIMING_DIAG=(()=>{
   // midN / midActMs / midTypMs … 50〜80ms 遅れた入力で取れた単押しの数・いまの判定のずれ・ふだんの遅れだけ戻したとしたときのずれ(2026-11-14。この帯は biasMs にも今までどおり入る)
   // revN / revActMs … 別の指の合図の中で初めて見えた指で取れた単押しの数・ずれ(biasMs には混ぜない)
   // zeroStalls … 曲の頭で、音が出るまで時計が 0 のままのコマ(stalls には今までどおり入る)。その曲の中で時計の直しを入れるかを決めるときは数えない(2026-11-17。止まりやすくない端末でも入っていた)
-  let zeroStalls=0;
+  let zeroStalls=0,liveNow=0;
   let stats=zero(),meta={},lastSong=null,lastShown=null,lastTick=0,lastStallAt=0,biasList=[],lateEx=null,lateList=[],midEx=null,midList=[],revAt=0,revList=[];
   const perfNow=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
   const median=list=>{const s=list.slice().sort((a,b)=>a-b);return s.length?Math.round(s[s.length>>1]*10)/10:null;};
@@ -2059,13 +2059,15 @@ const RHYTHM_TIMING_DIAG=(()=>{
       // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
       bias(deltaMs){const v=Number(deltaMs);if(!Number.isFinite(v))return;
         if(revAt>0&&perfNow()-revAt<=4){if(revList.length<200)revList.push(v);return;}
-        if(midEx&&perfNow()-midEx.at<=4&&midList.length<200)midList.push([v,v+midEx.ex]);
+        if(midEx&&perfNow()-midEx.at<=4&&midList.length<200)midList.push([v,v+midEx.ex,midEx.multi?1:0]);
         // 直前(同じ合図の処理の中)に、上限を超えて遅れた入力があったなら、その入力で取れた単押し。ふだんのずれの数には混ぜない
         if(lateEx&&perfNow()-lateEx.at<=4){if(lateList.length<200)lateList.push([v,v-lateEx.ex,lateEx.ex]);return;}
         if(Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
     // 上限を超えて遅れた入力の「戻し切れなかった分」(ms)。rhythmInputAgeMs が、基準のそろった端末でだけ呼ぶ。次の入力で消える
     lateExcess(ms){const v=Number(ms);lateEx=v>0?{ex:v,at:perfNow()}:null;},
-    midExcess(ms){const v=Number(ms);midEx=ms!==null&&ms!==undefined&&Number.isFinite(v)?{ex:v,at:perfNow()}:null;},
+    midExcess(ms){const v=Number(ms);midEx=ms!==null&&ms!==undefined&&Number.isFinite(v)?{ex:v,at:perfNow(),multi:liveNow>=2}:null;},
+    // いま触れている指の数(その合図の指の一覧の長さ)。50〜80ms の帯を「ほかの指あり/なし」で分けるためだけに使う(2026-11-17)
+    liveTouches(n){liveNow=Number(n)||0;},
     // 別の指の合図の中で初めて見えた指の入力を、これから判定する(on=true)/し終えた(false)
     revealed(on){revAt=on?perfNow():0;},
     // 元の時計の止まりの割合(その曲のここまで)。曲の時計の直しを、その曲の中で入れるかを決めるのに使う
@@ -2086,7 +2088,8 @@ const RHYTHM_TIMING_DIAG=(()=>{
     pen(){stats.pen++;},
     snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,
       lateN:lateList.length,lateActMs:median(lateList.map(x=>x[0])),lateFullMs:median(lateList.map(x=>x[1])),lateExMs:median(lateList.map(x=>x[2])),
-      staleV:2,midN:midList.length,midActMs:median(midList.map(x=>x[0])),midTypMs:median(midList.map(x=>x[1])),revN:revList.length,revActMs:median(revList),...meta};},
+      staleV:2,midMultiN:midList.filter(x=>x[2]).length,midMultiActMs:median(midList.filter(x=>x[2]).map(x=>x[0])),midSingleN:midList.filter(x=>!x[2]).length,midSingleActMs:median(midList.filter(x=>!x[2]).map(x=>x[0])),
+      midN:midList.length,midActMs:median(midList.map(x=>x[0])),midTypMs:median(midList.map(x=>x[1])),revN:revList.length,revActMs:median(revList),...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
@@ -3592,7 +3595,8 @@ const RHYTHM_INPUT_REC=(()=>{
 const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;     // ポインタのあと、タッチをこれだけ待つ
 const RHYTHM_TOUCH_BRIDGE_MATCH_PX=28;    // 同じ指とみなす位置の差
 const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚えておく長さ(遅れて届くほうを待つ)
-const RHYTHM_TOUCH_BRIDGE_LATE_MS=50;     // これより遅れて届いたタッチを「遅れた」と数える
+const RHYTHM_TOUCH_BRIDGE_LATE_MS=50;
+const RHYTHM_TOUCH_BRIDGE_UP_SLACK_MS=8;  // 離した時刻より、これ以上あとの時刻のタッチは新しい接触(2026-11-17)     // これより遅れて届いたタッチを「遅れた」と数える
 const RHYTHM_TOUCH_BRIDGE=(()=>{
   const zero=()=>({pointerDowns:0,touchStarts:0,matched:0,pointerOnly:0,touchOnly:0,recovered:0,ignoredLateTouches:0,
     lateStart:0,lateDelivery:0,maxDelayMs:0,cancels:0,cancelledTouches:0,maxTouches:0,
@@ -3603,7 +3607,12 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
     //   lsBack    … 自分の touchstart なしに見えた指のうち、自分の離しの合図なしに一覧から消えていた指が戻ったもの(=押し直していない)。lsBackGuard はそれを「新しく押した」にしなかった数
     //   lsByStart / lsByMove / lsByEnd … 初めて見えたのが、別の指の touchstart / touchmove / touchend・touchcancel だった数
     //   lsFollow / lsFollowEarlier / lsFollowMaxMs … そのあとで自分の touchstart が届いた数 / その時刻が「初めて見えた合図」より古かった数 / いちばん大きかった差
-    lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],multiAll:0,multiLate:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0});
+    lateHist:[0,0,0,0],edgeAll:[0,0,0,0],edgeLate:[0,0,0,0],multiAll:0,multiLate:0,lsBack:0,lsBackGuard:0,lsByStart:0,lsByMove:0,lsByEnd:0,lsFollow:0,lsFollowEarlier:0,lsFollowMaxMs:0,
+    // 【2026-11-17・r1117-002 iPhone の両手の高速交互タップの抜け】数えるだけ(判定には使わない)
+    //   endOnly … 自分の touchstart も、ほかの合図の指の一覧にも一度も出ずに、離しの合図だけ届いた接触 [ほかの指なし, ほかの指あり]。押したのに入力にならなかった接触の数
+    //   routes  … 入力になった経路 [自分の touchstart, 別の指の合図で見えた, ポインタで取り戻した, 指の接触幅からの疑似タップ]
+    //   newAfterRecovered … 取り戻して離した接触の近くの新しい接触を、無視せず通した数(上の直し)
+    endOnly:[0,0],routes:[0,0,0,0],newAfterRecovered:0});
   const edgeBucket=px=>px<24?0:px<60?1:px<120?2:3;
   const revealed=new Map();
   let stats=zero();
@@ -3627,7 +3636,7 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
     },
     pointerUp(id,now,stamp){
       const pending=pointers.get(id);if(pending){pending.upAt=now;pending.upStamp=stamp;return null;}
-      const entry=recovered.get(id);if(entry&&entry.upAt==null){entry.upAt=now;return entry;}
+      const entry=recovered.get(id);if(entry&&entry.upAt==null){entry.upAt=now;entry.upStamp=stamp;return entry;}
       return null;
     },
     // タッチ(touchstart の changedTouches の1本)。'ignore' を返したら、その指は入力にしない(取り戻したポインタで既に通っている)
@@ -3643,7 +3652,14 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
         if(multi){stats.multiAll++;if(late)stats.multiLate++;}
       }
       for(const [id,p] of pointers)if(near(p,{x,y})&&within(p.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){pointers.delete(id);stats.matched++;touches.push({id:identifier,x,y,stamp,at:now,matched:true});return 'normal';}
-      for(const [,entry] of recovered)if(!entry.touchId&&near(entry,{x,y})&&within(entry.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){entry.touchId=identifier;stats.ignoredLateTouches++;return 'ignore';}
+      // 【2026-11-17・r1117-002】取り戻した接触に遅れて届いたタッチかどうか。もう離した接触(upAt あり)は、合図の時刻が「その接触が離れた時刻」までのものだけ同じ接触と見る。
+    //   それまでは、離して 600ms のあいだ、近くに触れた新しい接触(時刻が離したあと)まで「遅れて届いた同じ接触」として無視していた(本番では全期間で1回。主因ではないが欠陥)。
+    //   離した時刻が分からないときは今までどおり。結んだかどうかは null で見る(番号 0 の指を「まだ結んでいない」と見て、近くの別の接触まで無視していた)
+    for(const [,entry] of recovered){
+      if(entry.touchId!=null||!near(entry,{x,y})||!within(entry.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS))continue;
+      if(entry.upAt!=null&&Number.isFinite(Number(entry.upStamp))&&Number(stamp)>Number(entry.upStamp)+RHYTHM_TOUCH_BRIDGE_UP_SLACK_MS){stats.newAfterRecovered++;continue;}
+      entry.touchId=identifier;stats.ignoredLateTouches++;return 'ignore';
+    }
       touches.push({id:identifier,x,y,stamp,at:now,matched:false});
       return 'normal';
     },
@@ -3677,8 +3693,10 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
         return true;
       },
       forgetTouch(identifier){revealed.delete(identifier);},
+    endOnly(others){stats.endOnly[Number(others)>0?1:0]++;},
+    route(kind){const i=kind==='own'?0:kind==='rev'?1:kind==='rec'?2:kind==='syn'?3:-1;if(i>=0)stats.routes[i]++;},
     liveTouches(count){const n=Number(count)||0;if(n>stats.maxTouches)stats.maxTouches=n;},
-      snapshot(){return {...stats,lateHist:stats.lateHist.slice(),edgeAll:stats.edgeAll.slice(),edgeLate:stats.edgeLate.slice()};},
+      snapshot(){return {...stats,lateHist:stats.lateHist.slice(),edgeAll:stats.edgeAll.slice(),edgeLate:stats.edgeLate.slice(),endOnly:stats.endOnly.slice(),routes:stats.routes.slice()};},
       _state:{pointers,touches,recovered},
   };
   return api;
@@ -3804,6 +3822,28 @@ const rhythmTouchStandalone=()=>{
 // 指がゲームへ届く前に消えたときは、ここに出る(ふつうに見逃したMISSも混ざるので、iPhone と Android の差で見る)
 const RHYTHM_TOUCH_NO_INPUT_MS=200;
 const RHYTHM_TOUCH_ACTIVE_MS=700;
+// 【2026-11-17・r1117-002】MISS になった単押し(TAP)の内訳。上の「入力の無い MISS」は、前後 200ms に別の指の入力が1つでもあると数えないので、
+// 交互連打の1打抜けが見えなかった(noInput が低い=抜けていない、とは読めない)。入力の位置も見て分ける。数えるだけ。
+//   inputLog … [判定に使った曲の時刻, サブレーンの位置, 取ったノーツの番号(取れなければ -1)] の並び(30-rhythm-play.jsx の inputStarts が足す)
+//   返す並び [alt, other, empty, none]:
+//     alt   … その位置の近くには入力が無く、同じ頃ほかの位置には入力があった(=交互の抜けの候補。押したのに届かなかった・押し忘れた、の両方を含む)
+//     other … 近くに入力はあったが、別のノーツを取っていた / empty … 近くに入力はあったが、何も取れなかった(空打ち)
+//     none  … 同じ頃、どこにも入力が無かった(ふつうの見逃し)
+const RHYTHM_TAP_MISS_WINDOW_MS=200,RHYTHM_TAP_MISS_NEAR_SUB_LANES=2;
+const rhythmTapMissBreakdown=(notes,inputLog)=>{
+  const log=(Array.isArray(inputLog)?inputLog:[]).filter(e=>Array.isArray(e)&&Number.isFinite(e[0])).slice().sort((a,b)=>a[0]-b[0]);
+  const out=[0,0,0,0];
+  (Array.isArray(notes)?notes:[]).forEach(note=>{
+    if(!note||note.type!=='TAP'||note._rhythmFinalJudgment!=='MISS')return;
+    const t=Number(note.timeMs),from=Number(note.subLane),width=Number(note.subLaneWidth)||1;if(!Number.isFinite(t))return;
+    let lo=0,hi=log.length;while(lo<hi){const m=(lo+hi)>>1;if(log[m][0]<t-RHYTHM_TAP_MISS_WINDOW_MS)lo=m+1;else hi=m;}
+    let any=false,near=false,nearHit=false;
+    for(let i=lo;i<log.length&&log[i][0]<=t+RHYTHM_TAP_MISS_WINDOW_MS;i++){any=true;const x=Number(log[i][1]);
+      if(Number.isFinite(from)&&Number.isFinite(x)&&x>=from-RHYTHM_TAP_MISS_NEAR_SUB_LANES&&x<=from+width+RHYTHM_TAP_MISS_NEAR_SUB_LANES){near=true;if(Number(log[i][2])>=0)nearHit=true;}}
+    out[near?(nearHit?1:2):any?0:3]++;
+  });
+  return out;
+};
 const rhythmTouchNoInputMisses=(notes,inputTimes)=>{
   const times=(Array.isArray(inputTimes)?inputTimes:[]).filter(Number.isFinite).slice().sort((a,b)=>a-b);
   let misses=0,noInput=0;
