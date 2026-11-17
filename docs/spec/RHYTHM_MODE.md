@@ -8634,3 +8634,12 @@ songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuk
 - **歯ごたえ(challengeFactor)**: 自動のままだと毎秒ノーツ 1.0〜2.2 で、既存曲の帯より低かった(ラテン調のノリのいい曲なのに MASTER Lv.20)。`challengeFactor:1.18`・`masterDensity:1.2` を2曲に書いた(`rhythm-chart-tune.js` の候補。社長が「これで」を選択)。通常版 6/7/12/18/29・HELL37、short 7/8/10/19/29・HELL37。点検の帯に収まり、押せない0・モンスター4個
 - **HELL**: variant は通常版 3・short 0(交差・届きにくいが少ない順)
 - 聞きどころ8行は `docs/progress/beat-assistant-session/lines/listen-saudade.txt`
+
+## 「僕たちのページは晴れ模様」をモンヒロビートへ足した（2026-11-17）
+
+社長の依頼(窓口経由・mp3 とジャケット)で試験的に追加。songId `seasons_of_a_little_plaza`、bgmTrackId `melo_seasons_of_a_little_plaza`、マーカー `seasons-of-a-little-plaza-v3`。表示名はジャケット内の題「僕たちのページは晴れ模様」(音源タグの題は「Seasons of a Little Plaza — Extended」)。作者表記は社長の指定で「きき」(`BGM_TRACKS` の creator。音源タグ由来の名前は使わない)。
+
+- **テンポ**: 169.505 BPM・4拍子・拍の頭 417.8ms(自動判定のまま。tempo-ambiguous・meter-doubt の警告なし)。149.3秒・最初のノーツは MASTER 2.3秒(無音足しなし)
+- **歯ごたえ(challengeFactor)**: 自動のままだと全73曲の中で易しい側の約1割(MASTER Lv.23)だった。社長「新曲は難しめで」を受けて実際に生成して比べ、`challengeFactor:1.15` に固定した。EASY 9 / NORMAL 11 / HARD 14 / EXPERT 25 / MASTER 29、ノーツ 256 / 298 / 416 / 496 / 559。`chartIntensity:'strong'` 案は EXPERT に帯の中ノーツが1件出たため不採用
+- **HELL**: 社長「ヘルはスカイ少なめでノーツ数で難しくして」。`rhythm-hell-mix.js` の曲の設定に `phrases:['L','ground','R','ground']`(両手が空の小節を無くし、両手とも地上の小節を半分に)と `hellDensity:1.2`(拾う音を増やす)を書き、variant は 0〜3 を比べて 3 を選んだ(硬い基準=モンスター4個・押せない0・帯の中0・水平クロス0 を満たす中で、スカイ最少・交差+届きにくい最少)。challengeFactor 1.15 の既定設定(variant 2)と比べて、スカイ(空中のノーツ)51 → 30、ノーツ数 601 → 680、Lv.43 → 44(いずれも `rhythm-hell-mix.js` の数え方)。書き込んだ譜面をゲームの形で数え直すと スカイ 29・707ノーツで、自動の最初の状態は Lv.32・スカイ 76・482ノーツだった
+- **有料**: ビートP500(`monster-hero/src/parts/39-rhythm-song-owned.jsx` の `RHYTHM_SONG_PRICES` に `seasons_of_a_little_plaza: 500`)
