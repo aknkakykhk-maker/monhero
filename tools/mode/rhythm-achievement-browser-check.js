@@ -61,11 +61,11 @@ const seed = (song) => {
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
     for (let i = 0; i < 6; i++) { if (!(await clickText('受け取る|閉じる|OK|とじる'))) break; await page.waitForTimeout(250); }
     const before = await page.evaluate(() => localStorage.getItem('mh_rhythm_achievements_v1'));
     check('モンヒロビートを開く前は、台帳はまだ無い', before === null);
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     // 入るとまずモードえらび(2026-10-03)。台帳へのそろえは、この画面を開いた時点で走る
     await page.waitForFunction(() => document.body.innerText.includes('ソロライブ'), null, { timeout: 30000 });
     await page.waitForFunction(() => localStorage.getItem('mh_rhythm_achievements_v1') !== null, null, { timeout: 15000 }).catch(() => null);

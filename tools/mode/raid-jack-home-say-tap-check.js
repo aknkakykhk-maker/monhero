@@ -170,9 +170,9 @@ const LINES_PER_SIZE = 6;
         // HOMEのほかのボタンは、真ん中を押せばそのボタンが反応する(ジャックと吹き出しがふさがない)
         const cover = await page.evaluate(() => {
           const out = [];
-          const faces = [...document.querySelectorAll('.mh-home-facility')].map((el) => [el, el.querySelector(':scope > span') || el]);
+          const faces = [...document.querySelectorAll('[data-home-fac]')].map((el) => [el, el]);
           document.querySelectorAll('.mh-home-scene button').forEach((el) => {
-            if (el.closest('[data-home-raid-jack-wrap]') || el.classList.contains('mh-home-facility')) return;
+            if (el.closest('[data-home-raid-jack-wrap]') || el.hasAttribute('data-home-fac')) return;
             faces.push([el, el]);
           });
           for (const [btn, face] of faces) {
@@ -188,27 +188,28 @@ const LINES_PER_SIZE = 6;
         if (cover.length) coverBad.push(`${probe.side}: ${cover.join('・')}`);
       }
       // ④ 施設の押せる範囲(吹き出し・ジャックの位置には左右されないので、1回だけ測る)
+      //   旧④は「見える札+まわり8pxだけが押せる」だったが、前提(見える札より大きい透明な押し場所)は 2026-11-17 の
+      //   ホーム一新で無くなった(ドックのボタンは見える面そのものが押し場所)。代わりに「真ん中が押せる・高さ44px以上・
+      //   ボタンの外14pxでは開かない」を見る
       const hit = await page.evaluate(() => {
         const bad = [];
-        document.querySelectorAll('.mh-home-facility').forEach((btn) => {
+        const minH = innerHeight >= innerWidth ? 44 : 34; // 横画面はドックを詰める決め(2026-11-17)なので、下段は34pxまで許す
+        document.querySelectorAll('[data-home-fac]').forEach((btn) => {
           const name = btn.getAttribute('aria-label');
-          const r = btn.querySelector(':scope > span').getBoundingClientRect();
+          const r = btn.getBoundingClientRect();
           const owns = (x, y) => { if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return null; const t = document.elementFromPoint(x, y); return !!t && btn.contains(t); };
           const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          if (owns(cx, cy) === false) { const t = document.elementFromPoint(cx, cy); bad.push(`${name}: 札の真ん中が押せない(上にあるもの: ${t ? (t.getAttribute('aria-label') || t.getAttribute('data-home-hint') || t.className || t.tagName).toString().slice(0, 80) + ' / ' + (t.closest('[aria-label]') ? t.closest('[aria-label]').getAttribute('aria-label') : '') + ' / ' + ((t.closest('.mh-home-assistant') || t).innerText || '').replace(/\s+/g, ' ').slice(0, 80) : 'なし'})`); }
-          if (r.height + 16 < 44) bad.push(`${name}: 押せる高さが44px未満(${Math.round(r.height + 16)})`);
+          if (owns(cx, cy) === false) { const t = document.elementFromPoint(cx, cy); bad.push(`${name}: ボタンの真ん中が押せない(上にあるもの: ${t ? (t.getAttribute('aria-label') || t.getAttribute('data-home-hint') || t.className || t.tagName).toString().slice(0, 80) + ' / ' + (t.closest('[aria-label]') ? t.closest('[aria-label]').getAttribute('aria-label') : '') + ' / ' + ((t.closest('.mh-home-assistant') || t).innerText || '').replace(/\s+/g, ' ').slice(0, 80) : 'なし'})`); }
+          if (r.height < minH) bad.push(`${name}: 押せる高さが${minH}px未満(${Math.round(r.height)})`);
           for (const [dx, dy, side] of [[-1, 0, '左'], [1, 0, '右'], [0, -1, '上'], [0, 1, '下']]) {
             const edgeX = dx < 0 ? r.left : dx > 0 ? r.right : cx, edgeY = dy < 0 ? r.top : dy > 0 ? r.bottom : cy;
-            const near = owns(edgeX + dx * 4, edgeY + dy * 4), far = owns(edgeX + dx * 14, edgeY + dy * 14);
-            // 札のすぐ外(4px)は、ほかのボタンや吹き出しが上にあるときを除いて押せる
-            const nearTop = document.elementFromPoint(edgeX + dx * 4, edgeY + dy * 4);
-            if (near === false && nearTop && !nearTop.closest('button, [role="button"], a[href], .mh-home-assistant, .mh-home-status')) bad.push(`${name}: 札の${side}4pxが押せない`);
-            if (far === true) bad.push(`${name}: 札の${side}14pxの何もない所でも押せてしまう`);
+            const far = owns(edgeX + dx * 14, edgeY + dy * 14);
+            if (far === true) bad.push(`${name}: ボタンの${side}14pxの何もない所でも押せてしまう`);
           }
         });
         return bad;
       });
-      check(`${tag}: 施設は札とそのまわり8pxだけが押せる(札の外の何もない所では開かない)`, hit.length === 0, hit.slice(0, 3).join(' | '));
+      check(`${tag}: 施設のボタンは真ん中が押せて・十分な高さがあり・ボタンの外では開かない`, hit.length === 0, hit.slice(0, 3).join(' | '));
       check(`${tag}: 吹き出しの中のどこを押しても、いちばん上は吹き出し(${LINES_PER_SIZE}セリフ)`, gridBad.length === 0, gridBad.slice(0, 2).join(' | '));
       check(`${tag}: 「▶ つぎ」を押すとセリフが進み、施設は開かない`, tapBad.length === 0, tapBad.slice(0, 2).join(' | '));
       check(`${tag}: ほかのボタンの真ん中を、ジャックと吹き出しがふさがない`, coverBad.length === 0, coverBad.slice(0, 2).join(' | '));
