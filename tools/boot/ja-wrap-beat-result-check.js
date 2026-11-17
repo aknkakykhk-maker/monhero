@@ -65,9 +65,9 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+      await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
       await page.waitForTimeout(1200); await closeAll();
-      await clickText('モンヒロビート');
+      await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
       await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(800); await closeAll();
       await clickText('ソロライブ');
       await page.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 }); await page.waitForTimeout(600); await closeAll();

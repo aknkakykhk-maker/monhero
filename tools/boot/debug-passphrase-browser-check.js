@@ -48,7 +48,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
     for (let i = 0; i < 14; i++) {
       const did = await page.evaluate(() => { const inOverlay = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
         const l = [...document.querySelectorAll('button')].filter(b => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
