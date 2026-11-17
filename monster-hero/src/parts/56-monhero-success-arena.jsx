@@ -284,7 +284,8 @@ const MSA_CSS = `
 .msa-stagebox{flex:1 1 auto;min-height:300px}
 /* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:240px}
+/* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
+.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,46vh,520px);min-height:300px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -307,6 +308,12 @@ const MSA_CSS = `
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+}
+/* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面すべてへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
+@media (orientation:portrait){
+  .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 /* 低い縦の画面(320×568 など・r1115-202 M14): 場面を低くして上に留め、札の所まで送っても体力の帯と場面が見えるように。画面は縦に少し流す決まりのまま */
 @media (max-height:700px) and (orientation:portrait){
@@ -662,8 +669,33 @@ const msaSay = (e, nm, log = null) => {
 
 // ---- 場の1体 ----
 //   gd … この行での自分のガッツの増減(ためる +・技を撃つ −・ガッツを削られた −)
-function MsaFighter({ side, member, x, e, foeX, fwPx = 96, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null, lean = 0 }) {
+function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null, lean = 0 }) {
   fx = fx || { pre: 0, stop: 0, fin: false, big: false };
+  const rootRef = useRef(null);
+  // 吹き飛ばし(2026-11-17 社長「演出がなくいきなり遠距離に行く」): 位置の移り変わり(left の transition)だけに頼らず、
+  // カメラと同じ WAAPI で「前の立ち位置から弧を描いて飛ぶ」動きを必ず付ける。判定・間合いは変えない(見た目だけ)
+  const blownRow = !!(e && e.side === side && e.ev === 'move' && e.why === 'blown');
+  useEffect(() => {
+    if (!blownRow || reduce) return undefined;
+    const root = rootRef.current; if (!root || typeof root.animate !== 'function') return undefined;
+    const bodyEl = root.querySelector('[data-msa-body]'); if (!bodyEl) return undefined;
+    const w = (foeX && foeX.w) || 340;
+    const dx = Math.round(((Number(prevX) || 0) - (Number(x) || 0)) * w);
+    if (!dx) return undefined;
+    const dur = Math.max(200, Math.min(680, Math.round(640 * (Number(sf) || 1)))); // 見せる速さに合わせる(行の長さ 820ms×速さ に収める)
+    const arc = Math.round(Math.min(70, 20 + Math.abs(dx) * 0.18));
+    const spin = -Math.sign(dx) * 15; // 頭が飛ぶ向きの逆に残る倒れ方
+    let a = null;
+    try {
+      a = bodyEl.animate([
+        { transform: `translate(${dx}px,0px) rotate(0deg)`, offset: 0 },
+        { transform: `translate(${Math.round(dx * 0.45)}px,${-arc}px) rotate(${spin}deg)`, offset: 0.55 },
+        { transform: `translate(${Math.round(dx * 0.12)}px,${-Math.round(arc * 0.25)}px) rotate(${Math.round(spin * 0.35)}deg)`, offset: 0.82 },
+        { transform: 'translate(0px,0px) rotate(0deg)', offset: 1 },
+      ], { duration: dur, easing: 'cubic-bezier(.3,.6,.35,1)', fill: 'none' });
+    } catch (_) { a = null; }
+    return () => { try { if (a) a.cancel(); } catch (_) {} };
+  }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
   // 染めた色(member.colors。モンサクの育てるモンスターだけ。芯へは渡さない見せる用の値)があれば染めた絵
@@ -712,7 +744,8 @@ function MsaFighter({ side, member, x, e, foeX, fwPx = 96, hpNow, reduce, idleOk
   }
   let bodyStyle;
   if (me && e.ev === 'move') {
-    cls = 'msa-step'; bodyStyle = { '--msa-lean': `${lean}deg` };
+    // 吹き飛ばしは歩く格好(msa-step)にしない。飛ぶ動きは上の WAAPI が付ける
+    cls = blownRow ? 'msa-blown' : 'msa-step'; bodyStyle = blownRow ? undefined : { '--msa-lean': `${lean}deg` };
     if (!reduce) [0, 1, 2].forEach((j) => extra.push(<i key={`du-${e.k}-${j}`} className="msa-dust" aria-hidden="true" style={{ left: `${18 + j * 22}%`, animationDelay: `${120 + j * 190}ms`, '--msa-dx': `${(lean >= 0 ? -1 : 1) * (side === 'A' ? 1 : -1) * 16}px` }}/>));
   }
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
@@ -739,10 +772,12 @@ function MsaFighter({ side, member, x, e, foeX, fwPx = 96, hpNow, reduce, idleOk
     // 覚醒した自分の側はキラ(超覚醒はレアキラ)をまとう。バトルカードと同じ光(84 の cardKiraWrap)
     const kira = side === 'A' && member && member.awake && !down && typeof msxKiraOf === 'function' ? msxKiraOf(member.awake) : null;
     const still = kira && typeof cardKiraWrap === 'function' ? cardKiraWrap(kira, still0, { src, calm: reduce }) : still0;
-    body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`} style={bodyStyle}>{still}</div>;
+    body = <div key={`b-${e ? e.k : 0}-${cls}`} data-msa-body={side} className={`flex items-end justify-center ${cls}`} style={bodyStyle}>{still}</div>;
   }
+  // 吹き飛ばしの行は left の transition を止める(飛ぶ動きは WAAPI が受け持つ。二重に動くと行き過ぎて戻る形になる)
+  if (blownRow && !reduce) style = { ...style, transition: 'none' };
   return (
-    <div className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side}>
+    <div ref={rootRef} className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side}>
       <span className="msa-shadow" aria-hidden="true"/>
       {body}
       {extra}
@@ -976,6 +1011,10 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2; const xB = cNow + gap / 2;
+  // 1つ前の行での立ち位置(吹き飛ばされた子が「前の場所から飛ぶ」動きを作るため。2026-11-17)
+  const gapPf = gapOf(pf ? pf.d : 1);
+  const cPf = pos > 0 && cs[pos - 1] != null ? cs[pos - 1] : cNow;
+  const xAPf = cPf - gapPf / 2; const xBPf = cPf + gapPf / 2;
   // カメラの横の追いかけ: 2体のまん中が画面のまん中へ来るよう、場の中身を横へ送る(歩くのと同じ速さ・同じゆるみ)
   const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
   const scrX = (x) => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K); // 画面の上での位置(カメラの寄せの中心に使う)
@@ -1070,8 +1109,8 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
       {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms` }}/>}
       {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
-      <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
-      <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
+      <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} prevX={xAPf} sf={sf} e={e} foeX={{ x: xB, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
+      <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} prevX={xBPf} sf={sf} e={e} foeX={{ x: xA, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
       {e.ev === 'tech' && !reduce && fx.rank >= 3 && fx.pre > fx.cut && preAt !== pos && <MsaSpeedLines key={`sl-${pos}`} x={e.side === 'A' ? xA : xB} kind={e.kind} pre={fx.pre - fx.cut} at={fx.cut} rank={fx.rank}/>}
       {e.ev === 'tech' && !reduce && fx.rank >= 2 && pf && pf.d >= 2 && <MsaTrail key={`tr-${pos}`} x0={e.side === 'A' ? xA : xB} x1={e.side === 'A' ? xB : xA} kind={e.kind} rank={fx.rank} delay={Math.max(fx.pre, hitMs - 240)} dur={Math.min(300, Math.max(140, hitMs - fx.pre))}/>}
       {e.ev === 'tech' && !reduce && <MsaHitFx key={`hx-${pos}`} x={e.side === 'A' ? xB : xA} kind={e.kind} lv={rkFx.hit} delay={hitMs} hit={!!e.hit}/>}
@@ -1098,7 +1137,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
           <div className="ph1">
             <div className="ttl">{introTitle || '試合開始'}</div>
             <div className="pa">{mA ? (Array.isArray(mA.colors) && mA.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mA.species} src={mscMonImg(mA.species)} masuColors={mA.colors} alt="" draggable={false}/> : <img src={mscMonImg(mA.species)} alt=""/>) : null}<span className="nm">{mA ? mA.name : ''}</span></div>
-            <div className="pb">{mB ? <img src={mscMonImg(mB.species)} alt=""/> : null}<span className="nm">{mB ? mB.name : ''}</span></div>
+            <div className="pb">{mB ? (Array.isArray(mB.colors) && mB.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mB.species} src={mscMonImg(mB.species)} masuColors={mB.colors} alt="" draggable={false}/> : <img src={mscMonImg(mB.species)} alt=""/>) : null}<span className="nm">{mB ? mB.name : ''}</span></div>
             <div className="vs">VS</div>
           </div>
           <div className="msa-word">READY</div>
@@ -1177,12 +1216,15 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
-  // 場に出す両チーム: 育てるモンスターに染めた色(info.colors)を足す。芯の入力(input)は変えない
+  // 場に出す両チーム: 育てるモンスターと、相手(ライバルなら その子の染めた色)を足す。芯の入力(input)は変えない
   const stageTeams = useMemo(() => {
-    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
-    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
-    return { ...teams, A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: c } : m)) } };
-  }, [teams.A, teams.B, info && info.colors]);
+    const cA = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    const cB = info && info.opp && Array.isArray(info.opp.colors) && info.opp.colors.some(Boolean) ? info.opp.colors : null;
+    if ((!cA && !cB) || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    return { ...teams,
+      ...(cA ? { A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: cA } : m)) } } : {}),
+      ...(cB && teams.B && Array.isArray(teams.B.members) ? { B: { ...teams.B, members: teams.B.members.map((m, i) => (i === 0 && m ? { ...m, colors: cB } : m)) } } : {}) };
+  }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];

@@ -125,6 +125,8 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
   const assistantBubble = useAssistantBubbleState();
   // 助手どうしの会話を自動で進めるか(56-assistant-peer.jsx の ASSISTANT_PEER_AUTO_STORE。既定は切)
   const peerAuto = typeof useAssistantPeerAuto === 'function' ? useAssistantPeerAuto() : null;
+  // HOMEの助手コメントを出すか(21-assistant.jsx の HOME_ASSISTANT_COMMENT_STORE。既定は入)
+  const homeComment = useHomeAssistantComment();
   // 行動カードの見た目(71-screen-battle.jsx の BATTLE_CARD_LOOK。端末に保存する。バトル画面は開くたびに読む)
   const [battleCardLook, setBattleCardLook] = useState(() => BATTLE_CARD_LOOK.value);
   if (assetDownloadOpen) return <AssetDownloadPage onBack={() => setAssetDownloadOpen(false)}/>;
@@ -257,6 +259,24 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
                 aria-pressed={assistantBubble.mode === option.id}
                 onClick={() => ASSISTANT_BUBBLE_STORE.setMode(option.id)}
                 className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${assistantBubble.mode === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* HOMEの助手コメントを出すか(2026-11-17 あっくん「ファームが狭く感じる。助手のコメントのオンオフがほしい」)。
+            上の「助手のひとこと」の3択は HOME を対象外にしているので、HOME専用の入/切をここに置く。
+            「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
+        <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
+              <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
+                aria-pressed={homeComment.on === option.on}
+                onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(option.on)}
+                className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${homeComment.on === option.on ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
                 <span className="block">{option.label}</span>
                 <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
               </button>
