@@ -19,6 +19,7 @@
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;  // 2体のまん中が場のまん中から離れてよい幅(場の幅に対する割合。離れているときは2体が場に収まる所まで)
 const MSA_PAN_K = 0.35;  // カメラがまん中を追う割合(1 で真ん中に戻しきる。追いすぎると動いていない相手まで流れて見えるので、少しだけ追う)            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
+const MSA_SAFE = 12;     // 場の内側の安全域(px。2026-11-17 仕上げ): モンスターの絵・ダメージの数字・札が場の縁で切れないよう、端からこのぶん内側に収める。寸法の棚卸しは ~/workspace/msa-stage-finish/PLAN.md の付録
 const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
 // 試合の場の背景(2026-11-14 社長「背景は参考資料のバトル中にならって。サッカー場みたいのもオプションで選べるように」)
 //   闘技場(既定・tools/battle/msa-arena-art.js が描く)/スタジアム(前からの会場の絵 MSC_VENUE_IMG)。選んだ方は mh_monsuc_arena_bg_v1 に 'arena' | 'stadium' で持つ
@@ -120,6 +121,8 @@ const MSA_CSS = `
 /* ---- アクセント(2026-11-12 社長「迫力とか見ごたえとか」) ---- */
 .msa-dim{position:absolute;inset:0;z-index:2;background:radial-gradient(circle at var(--msa-cx,30%) 70%,#0000 0,#0003 16%,#000d 55%);pointer-events:none;animation:msaDim var(--msa-pre,420ms) ease-out both}
 .msa-aura.big{width:150px;height:150px;margin-left:-75px;background:radial-gradient(circle,#fff7 0,#fde047aa 22%,#f97316 45%,#f9731600 70%);animation:msaAuraBig var(--msa-pre,420ms) ease-in both}
+/* 大きな場では、オーラの箱を絵の幅に合わせる(小さな絵で場いっぱいに広がりすぎないように。2026-11-17 仕上げ) */
+.msa-stage.big .msa-aura.big{width:var(--msa-ab,150px);height:var(--msa-ab,150px);margin-left:calc(var(--msa-ab,150px) / -2)}
 .msa-chargebig{animation:msaChargeBig var(--msa-pre,420ms) ease-in both}
 .msa-dmg.t1{font-size:22px}.msa-dmg.t2{font-size:30px}.msa-dmg.t3{font-size:40px;animation-name:msaPopBig}
 .msa-dmg.t4{font-size:52px;color:#fff;text-shadow:0 3px 0 #b91c1c,0 0 14px #f97316,0 0 26px #fde047;animation-name:msaPopBig}
@@ -260,6 +263,7 @@ const MSA_CSS = `
 /* ---- 撃つ前の構えの一拍(2026-11-13 社長「攻撃前にもう1アクセントほしいね」) ---- */
 .msa-wind{animation:msaWind var(--msa-pre,380ms) ease-in both}
 .msa-aura.wind{width:130px;height:130px;margin-left:-65px;bottom:-6px;animation:msaAuraWind var(--msa-pre,380ms) ease-out both}
+.msa-stage.big .msa-aura.wind{width:var(--msa-aw,130px);height:var(--msa-aw,130px);margin-left:calc(var(--msa-aw,130px) / -2)}
 @keyframes msaAuraWind{0%{opacity:0;transform:scale(1.5)}25%{opacity:1;transform:scale(.95)}85%{opacity:1;transform:scale(.85)}100%{opacity:0;transform:scale(1.7)}}
 .msa-aura.wind.pow{background:radial-gradient(circle,#fff6 0,#fb923caa 25%,#ef444455 50%,#ef444400 70%)}
 .msa-aura.wind.wise{background:radial-gradient(circle,#fff6 0,#67e8f9aa 25%,#818cf855 50%,#818cf800 70%)}
@@ -278,9 +282,9 @@ const MSA_CSS = `
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
-/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、220px(幅320 で場の中身が収まる高さ)を下回る低い画面は縦に流す(r1115-193 案③) */
+/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:220px}
+.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:240px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -658,7 +662,7 @@ const msaSay = (e, nm, log = null) => {
 
 // ---- 場の1体 ----
 //   gd … この行での自分のガッツの増減(ためる +・技を撃つ −・ガッツを削られた −)
-function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null, lean = 0 }) {
+function MsaFighter({ side, member, x, e, foeX, fwPx = 96, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null, lean = 0 }) {
   fx = fx || { pre: 0, stop: 0, fin: false, big: false };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
@@ -681,7 +685,13 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
     // 攻める: 相手の位置まで(--atk-dx)。モンヒロのバトルと同じ動き
     const kind = msaMotionKind(sp, e.tech);
     if (kind) {
-      const w = foeX.w; const dx = (foeX.x - x) * w;
+      const w = foeX.w; const rawDx = (foeX.x - x) * w;
+      // 突進系の動きは相手の中心を最大で 1.2 倍ぶん越える(70-bootstrap の skfxDash)。受け手が端にいると攻め手が場の外へ出てしまうので、
+      // 進んだ先の中心が「場の端 −(絵の幅×0.65 + 安全域)」に収まるよう dx を抑える(×0.65 は当たりの瞬間の横つぶれ最大1.3倍ぶん。当たりの位置そのものは相手の所のまま)
+      const half = (Number(fwPx) || 96) * 0.65; const cxPx = x * w;
+      let dx = rawDx;
+      if (dx > 0) dx = Math.min(dx, Math.max(0, (w - half - MSA_SAFE - cxPx) / 1.2));
+      else if (dx < 0) dx = Math.max(dx, Math.min(0, (half + MSA_SAFE - cxPx) / 1.2));
       style = { ...style, ...(typeof attackAimVars === 'function' ? attackAimVars(dx, -8) : { '--atk-dx': `${Math.round(dx)}px`, '--atk-dy': '-8px' }) };
       body = <SkillFxMotion key={`m-${e.k}`} kind={kind} image={img}/>;
     }
@@ -709,12 +719,16 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   const koNow = e && e.ev === 'ko' && e.side === side;
   if (down) cls = koNow ? 'mh-card-ko' : '';
   if (koNow) {
-    extra.push(<div key={`k-${e.k}`} className="msa-ko big" data-msa-ko={side}>K.O.!</div>);
+    // K.O. の印(54px の字で幅 約144px)は小さな絵より幅が広く、端の子では場の外へ出る。中心を安全域の内側へ寄せる(2026-11-17 仕上げ)
+    const w2 = Math.max(200, (foeX && foeX.w) || 340); const koHalf = 72; const koCx = x * w2;
+    const koShift = Math.max(MSA_SAFE, Math.min(w2 - MSA_SAFE - koHalf * 2, koCx - koHalf)) - (koCx - koHalf);
+    extra.push(<div key={`k-${e.k}`} className="msa-ko big" data-msa-ko={side} style={koShift ? { marginLeft: `${Math.round(koShift)}px` } : undefined}>K.O.!</div>);
     if (!reduce) extra.push(<i key={`bu-${e.k}`} className="msa-burst" aria-hidden="true"/>);
   }
   // 息切れ: ガッツが尽きかけ(ためている行は出さない)
   const tired = !down && Number.isFinite(gutsNow) && gutsNow < MSA_GUTS_TIRED && !(me && e.ev === 'charge');
-  if (tired) extra.push(<span key="pant" className="msa-pant" data-msa-tired={side}>💦 息切れ</span>);
+  // 息切れの札は絵の右上に出る決まりだが、右側(B)の子ではそのまま場の外へ出てしまうので、B は内側(左)へ反転する(2026-11-17 仕上げ)
+  if (tired) extra.push(<span key="pant" className="msa-pant" data-msa-tired={side} style={side === 'B' ? { right: 'auto', left: -6 } : undefined}>💦 息切れ</span>);
   // ガッツの増減(ためた・撃った・削られた)。削られたのは当たる瞬間に出す
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
@@ -936,7 +950,12 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   // 零でも2体の体と顔が見えるように、絵の幅の6割はあける(2026-11-13 社長「重なりを直して」。小さい子が大きい子の後ろに隠れた)
   const gapOf = (d) => {
     if (wide) { const g0 = Math.max(MSA_GAP[0], Math.min(0.44, (bigFw * 0.72) / Math.max(200, stageW))); const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1)); const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW)); return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3)); }
-    const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1]; return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, ((fill ? 140 : 96) * 0.6) / Math.max(200, stageW))) : g; };
+    // 大きな場(big)でなくても、絵の大きさに対して間合いが広すぎると両端の絵が場の外へ出る(助手バトルの fill は絵が140pxで eM が 9% 固定だった)。
+    //   big と同じ考え方で、間合いの上限を「2体とも絵の半分+安全域が場に収まる幅」に抑える(2026-11-17 仕上げ)
+    const fwPx = fill ? 140 : 96; const W2 = Math.max(200, stageW); const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
+    const g0 = Math.max(MSA_GAP[0], Math.min(MSA_GAP[1] - 0.04, (fwPx * 0.6) / W2));
+    const gMax = Math.max(g0, 1 - 2 * (fwPx / 2 + MSA_SAFE) / W2);
+    return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3)); };
   // 立ち位置(2026-11-14 社長「距離の移動が違和感」): 間合いを変えた子だけが歩いて動き、相手はその場に残る。
   // 2体のまん中(c)は行ごとに前から順に決める(動いた子の相手の位置を残す)。端に寄りすぎないよう c は 0.5±MSA_C_LIM・2体が場の内側に収まる範囲に収める
   const cs = useMemo(() => {
@@ -944,8 +963,12 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     for (let k = 1; k < frames.length; k++) {
       const r = log[k] || {}; const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1); const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? (c + g0 / 2) - g1 / 2 : (c - g0 / 2) + g1 / 2;
-      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09; // 大きな場では、絵の半分の幅だけ端から離す
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c)); // 2体とも場の内側(端から9%)に収まる範囲
+      // 端からの余白は「絵の半分+安全域(MSA_SAFE)」(2026-11-17 仕上げ。以前は big が絵の半分+1%・それ以外は 9% 固定で、大きな絵では端で切れていた)
+      const eM = Math.max(0.09, ((wide ? bigFw : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
+      // 横送り(pan)まで含めた画面の上での位置でも同じ余白を保つ範囲。pan は 2体のまん中を画面のまん中へ寄せるので、広い間合いでは端の子がさらに端へ寄る
+      const lo = Math.max(0.5 - MSA_C_LIM, eM + g1 / 2, (eM + g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      const hi = Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2, (1 - eM - g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
+      c = lo > hi ? 0.5 : Math.max(lo, Math.min(hi, c)); // どうしても収まらない間合いは、はみ出しが左右均等になる真ん中へ(以前は左端に寄っていた)
       out.push(c);
     }
     return out;
@@ -956,6 +979,8 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   // カメラの横の追いかけ: 2体のまん中が画面のまん中へ来るよう、場の中身を横へ送る(歩くのと同じ速さ・同じゆるみ)
   const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
   const scrX = (x) => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K); // 画面の上での位置(カメラの寄せの中心に使う)
+  // ダメージの数字(幅150px)の中心: 受け手が端にいても、数字が安全域の内側に収まる所まで寄せる(2026-11-17 仕上げ)
+  const dmgX = (x) => { const m = (75 + MSA_SAFE) / Math.max(200, stageW); return Math.max(m, Math.min(1 - m, x)); };
   // 歩く向き: 間合いを詰める=前のめり / 下がる=のけぞる(A は右向き・B は左向き)
   const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
@@ -1034,7 +1059,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   };
   const mA = memberOf('A'); const mB = memberOf('B');
   return (
-    <div className={`msa-stage${fill ? ' fill' : ''}${wide ? ' big' : ''}`} ref={stageRef} data-msa-stage style={wide ? { '--msa-fw': `${bigFw}px`, '--msa-fh': `${bigFh}px` } : undefined}>
+    <div className={`msa-stage${fill ? ' fill' : ''}${wide ? ' big' : ''}`} ref={stageRef} data-msa-stage style={wide ? { '--msa-fw': `${bigFw}px`, '--msa-fh': `${bigFh}px`, '--msa-ab': `${Math.min(150, Math.round(bigFw * 1.15))}px`, '--msa-aw': `${Math.min(130, Math.round(bigFw * 1.05))}px` } : undefined}>
      <div className={`msa-shk ${shake ? `shake s${shakeLv}` : ''}`} key={shake ? `sh-${pos}` : 'st'} style={shake ? { animationDelay: `${hitMs}ms` } : undefined}>
       <div className="msa-cam" ref={camRef} data-msa-cam>
       <div className="msa-pan" style={{ transform: `translateX(${Math.round(panX)}px)` }} data-msa-pan>
@@ -1045,12 +1070,12 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
       {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms` }}/>}
       {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
-      <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
-      <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
+      <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
+      <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} fwPx={wide ? bigFw : fill ? 140 : 96} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
       {e.ev === 'tech' && !reduce && fx.rank >= 3 && fx.pre > fx.cut && preAt !== pos && <MsaSpeedLines key={`sl-${pos}`} x={e.side === 'A' ? xA : xB} kind={e.kind} pre={fx.pre - fx.cut} at={fx.cut} rank={fx.rank}/>}
       {e.ev === 'tech' && !reduce && fx.rank >= 2 && pf && pf.d >= 2 && <MsaTrail key={`tr-${pos}`} x0={e.side === 'A' ? xA : xB} x1={e.side === 'A' ? xB : xA} kind={e.kind} rank={fx.rank} delay={Math.max(fx.pre, hitMs - 240)} dur={Math.min(300, Math.max(140, hitMs - fx.pre))}/>}
       {e.ev === 'tech' && !reduce && <MsaHitFx key={`hx-${pos}`} x={e.side === 'A' ? xB : xA} kind={e.kind} lv={rkFx.hit} delay={hitMs} hit={!!e.hit}/>}
-      {e.ev === 'tech' && <MsaDmgLayer key={`dl-${pos}`} e={e} x={e.side === 'A' ? xB : xA} delay={hitMs} tier={tier || 1}/>}
+      {e.ev === 'tech' && <MsaDmgLayer key={`dl-${pos}`} e={e} x={dmgX(e.side === 'A' ? xB : xA)} delay={hitMs} tier={tier || 1}/>}
       {e.ev === 'tech' && fx.fin && !reduce && <i key={`fin-${pos}`} className="msa-fin" aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}
       </div>
       </div>
