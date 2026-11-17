@@ -28,9 +28,9 @@ const ok = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${
     await page.waitForFunction(() => document.body.innerText.includes('TAP TO START'), undefined, { timeout: 90000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), undefined, { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), undefined, { timeout: 40000 });
     for (let i = 0; i < 8; i++) { if (!(await clickText('受け取る|閉じる|OK|スキップ'))) break; await page.waitForTimeout(300); }
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     for (let k = 0; k < 2; k++) { await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start]', { timeout: 30000 }).catch(() => {}); await page.evaluate(() => document.querySelector('[data-rhythm-mode-solo]')?.click()); }
     await page.waitForSelector('[data-rhythm-song-row]', { timeout: 30000 });
     for (let i = 0; i < 12; i++) { await page.mouse.click(195, 300); await page.waitForTimeout(200); if (!(await clickText('^スキップ$|閉じる|OK|^確認$'))) break; await page.waitForTimeout(400); }
