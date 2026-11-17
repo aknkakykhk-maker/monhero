@@ -104,7 +104,7 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+      await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
       for (let i = 0; i < 14; i++) {
         if (!(await clickText('^(受け取る|閉じる|OK|確認|あとで|次へ|はじめる|決定|スキップ)$'))) break;
         await page.waitForTimeout(250);
@@ -356,13 +356,13 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+      await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
       for (let i = 0; i < 14; i++) {
         if (!(await clickText('^(受け取る|閉じる|OK|確認|あとで|次へ|はじめる|決定|スキップ)$'))) break;
         await page.waitForTimeout(250);
       }
       // ホーム → モンヒロビート(最初にモードえらび。フレンドの招待もここに出る。2026-10-03)
-      await page.evaluate(() => document.querySelector('.mh-home-facility.rhythm')?.click());
+      await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
       await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 });
       // 入口: 招待が出る(フレンドからだけ。知らない人の招待は出ない)。まだ招待は無いので、最初は出ない
       await page.waitForTimeout(1500);
@@ -446,7 +446,7 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+      await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
       // 割り込む別の案内だけを閉じる(フレンドの知らせの「あとで」は押さない)
       for (let round = 0; round < 40; round++) {
         if (await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'))) break;
