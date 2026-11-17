@@ -94,7 +94,7 @@ const makeRun = async (kind) => {
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
     ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['MA1', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '@@h', '*[data-msxm-move="1"]', 'w600', '@@h', 'w5400', '@@h']], ['MA2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="-1"]', 'w6000']], // 手動の試合: 札の案A・場の高さが番で変わらない・零で吹き飛ばし(r1115-050②・074・185・193)
     ['G2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="1"]', 'w6000']], // 手動の試合の2ラウンド目の自分の番: 上の帯と操作欄のガッツが同じ(r1115-187)
-    ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_tough']], // R1: 賞金ランク UP!(段が上がったときだけ)
+    ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], // R1: 賞金ランク UP!(段が上がったときだけ)。C3b: ごはんは その場では出ない(2026-11-17 社長: ファームで あげる)。権利が育成に残るかを見る
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Y1', 'win', ['cont', '@cupintro-go']], ['N1', 'winnew', ['cont', '@cupintro-go']], ['N2', 'winnew', ['cont', '@cupintro-go', '%go']], // 初めての大会: 結果だけ見るは押せず、理由が出る(r1115-057)
@@ -287,6 +287,8 @@ const makeRun = async (kind) => {
             localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify('こわれた')); const broken = await msxReadAssist();
             return { kept: r.kept, full: r.full, n: a.mons.length, r2: r2.kept, r2full: r2.full, rm: rm.mons.length, r3: r3.kept, brokenN: broken.mons.length, copy: !!localStorage.getItem('mh_monsuc_assist_v1_broken') }; });
           check(`${label}: 置き場は100体まで・外すと空く・壊れた値は写して空で始める`, k.kept === 100 && k.full === 20 && k.n === 100 && k.r2 === 0 && k.r2full === 1 && k.rm === 98 && k.r3 === 1 && k.brokenN === 0 && k.copy, JSON.stringify(k)); }
+        if (name === 'C3b') { const q = await page.evaluate(async () => { const run = await storeGet(MSX_KEYS.run, null); return { panel: !!document.querySelector('[data-msx-r3-meal]'), kept: !!(run && run.s && run.s.mealReady), phase: run && run.phase }; });
+          check(`${label}: 優勝しても その場では ごはんは出ず、権利が育成に残る(ファームで あげる)`, !q.panel && q.kept, JSON.stringify(q)); }
         if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
         if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
         if (name === 'E9') { const e = await page.evaluate(async (w0) => { const b = await storeGet(MSX_KEYS.box, null); const m = b && b.mons && b.mons[0]; const w1 = await loadRhythmEventPoints(); return { rank: m && m.rank, d: w1 - w0, end: msxSuc.SUC.beatOfEnd(m && m.rank) }; }, beat0); e.want = e.end + pend0;
