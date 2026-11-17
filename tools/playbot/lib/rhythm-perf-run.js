@@ -94,7 +94,7 @@ async function runOnce(o) {
     let started = false;
     const entry = o.entry || 'select';
     if (entry === 'select') {
-      await clickText('モンヒロビート$'); await page.waitForTimeout(2500); await closeDialogs(6);
+      await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click()); await page.waitForTimeout(2500); await closeDialogs(6);
       await clickText('ソロライブ'); await page.waitForTimeout(2500); await closeDialogs(3);
       const name = await page.evaluate((id) => (RHYTHM_SONGS.find(s => s.songId === id) || {}).displayName || id, o.song);
       await clickText('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); await page.waitForTimeout(1200);

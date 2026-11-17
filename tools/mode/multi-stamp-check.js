@@ -90,8 +90,8 @@ const FAKE_WS = () => {
     return page;
   };
   const toRhythm = async (page) => {
-    await page.waitForFunction(() => document.querySelector('button.mh-home-facility.rhythm') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
-    await page.locator('button.mh-home-facility.rhythm').click();
+    await page.waitForFunction(() => document.querySelector('button[data-home-fac="rhythm"]') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
+    await page.locator('button[data-home-fac="rhythm"]').click();
     await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
     await page.waitForTimeout(800);
   };
@@ -178,7 +178,7 @@ const FAKE_WS = () => {
     for (const [w, h, label] of [[390, 844, 'tate'], [844, 390, 'yoko']]) {
       await A.setViewportSize({ width: w, height: h });
       await A.waitForTimeout(400);
-      await A.locator('[data-home-market], .mh-home-facility.market').first().click({ timeout: 15000 }).catch(() => {});
+      await A.locator('[data-home-market], [data-home-fac="market"]').first().click({ timeout: 15000 }).catch(() => {});
       await A.waitForTimeout(1200);
       await A.getByRole('button', { name: /ビートP交換所/ }).first().click({ timeout: 8000 }).catch(() => {});
       await A.waitForTimeout(800);
@@ -203,7 +203,7 @@ const FAKE_WS = () => {
       if (SHOT) await A.screenshot({ path: path.join(SHOT, `real-editor-${label}.png`) });
       await A.locator('[data-multi-stamp-editor-close]').click().catch(() => {});
       await A.goBack().catch(() => {});
-      for (let i = 0; i < 4; i++) { const back = A.locator('button[aria-label="戻る"], [data-screen-back]').first(); if (await back.count()) await back.click({ timeout: 1500 }).catch(() => {}); await A.waitForTimeout(400); if (await A.locator('button.mh-home-facility.rhythm').count()) break; }
+      for (let i = 0; i < 4; i++) { const back = A.locator('button[aria-label="戻る"], [data-screen-back]').first(); if (await back.count()) await back.click({ timeout: 1500 }).catch(() => {}); await A.waitForTimeout(400); if (await A.locator('button[data-home-fac="rhythm"]').count()) break; }
     }
 
     // ===== ④ ビートの部屋で送る・届く =====

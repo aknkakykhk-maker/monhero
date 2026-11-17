@@ -6,7 +6,7 @@
 // 助手ライフの様子を書きかえて、ソラシド・えるびんだけをカード部屋に置いた状態で見る
 //
 // 見ているもの(縦 390×844・横 844×390・小さい横 568×320 の3つ。🔄横(絵を回す)はモンヒロビートの中だけで、HOME・カードの画面は回らない。2026-11-07 ナカヨシ7)
-//   ① HOME: MFバトルカードの札の横の顔の並びに「UP」。画面の中に入っている
+//   ① HOME: MFバトルカードのボタンの顔バッジに「UP」。画面の中に入っている
 //   ② 顔を押した助手の部屋に「🃏 カード部屋で対戦する」。画面の中に入っていて、押すとMFバトルカードの相手えらびがその助手で開く
 //   ③ 相手えらび: カード部屋にいる助手の札だけに「🃏UP」。札の左上の角で、名前・「勝」の印に重ならず、札からはみ出さない。強さのボタンの下に説明の帯(いる助手の名前)。強さのボタンが「対戦する」の帯に潜らない(568×320 も)
 //   ④ MASTER で勝つ: もらったビートP 275(ふだん 200)・帯「200 → 275」・保存のビートPも 275 増える(ランクアップのごほうびは別)。
@@ -40,7 +40,7 @@ const MODES = [
   { id: 'tate', label: '縦', view: { width: 390, height: 844 } },
   { id: 'yoko', label: '横', view: { width: 844, height: 390 } },
   // 小さい横(SE)。カード部屋の帯が3行になると、強さのボタンが「対戦する」の帯に潜っていた(2026-11-08 ツナグの指摘)
-  //   この画面で見るのは相手えらび(③)から。HOME の顔の列は札が画面のいちばん下に来て切れる(助手ライフ側の顔の置き方。部長へ報告済み)ので、① は縦・横だけで見る
+  //   この画面で見るのは相手えらび(③)から(① は縦・横だけで見る形を変えない。HOME の顔は 2026-11-17 の一新でボタンの右上のバッジになり、画面の下で切れることは無くなった)
   { id: 'se', label: '横(568×320)', view: { width: 568, height: 320 }, skipHome: true },
 ];
 const LIFE = ['sorashido', 'erubin'];
@@ -123,7 +123,7 @@ const run = async (browser, mode, errors) => {
     check(`① ${mode.label} 助手ライフの口で、カード部屋にいるのがソラシド・えるびんだと読める`, Array.isArray(ids) && ids.slice().sort().join() === LIFE.slice().sort().join(), JSON.stringify(ids));
     const up = await inView('[data-assistant-life-home-card-up]');
     const faces = await page.evaluate((ids) => ids.every((id) => !!document.querySelector(`[data-assistant-life-home-faces="card"] [data-assistant-life-home-face="${id}"]`)), LIFE);
-    if (!mode.skipHome) check(`① ${mode.label} HOME: カードの札の横の顔(ソラシド・えるびん)に「UP」が出て、画面に入っている`, faces && up === true, `顔 ${faces} / UP ${up}`);
+    if (!mode.skipHome) check(`① ${mode.label} HOME: カードのボタンのバッジの顔(ソラシド・えるびん)に「UP」が出て、画面に入っている`, faces && up === true, `顔 ${faces} / UP ${up}`);
     await snap('1-home');
     // ② 部屋の窓
     await page.locator('[data-assistant-life-home-face="sorashido"]').dispatchEvent('click');

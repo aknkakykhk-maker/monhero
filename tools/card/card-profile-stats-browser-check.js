@@ -72,7 +72,7 @@ const boot = async (browser, w, h, fresh, errors) => {
   await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
   await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-  await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+  await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
   for (let i = 0; i < 12; i++) { if (!(await clickText('^(受け取る|閉じる|OK|確認|あとで|次へ|はじめる|決定|スキップ)$'))) break; await page.waitForTimeout(250); }
   return page;
 };

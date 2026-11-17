@@ -80,13 +80,13 @@ const VIEW={width:390,height:844};
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),{timeout:40000});
     // 配布物のモーダルなどが出ていたら閉じる(押した場所を奪われないように)
     // 「お詫びの配布」などのモーダルは、押す場所を奪うので先に全部閉じる。
     // 「確認」を入れ忘れていて、これが開いたまま測っていたことがある(2026-09-06)
     // 「確認」は前後に何も付かないものだけを狙う。緩めると別のボタンまで押してしまう
     for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる|^確認$')))break;await page.waitForTimeout(250);}
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
     await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     // 「決定」は目印で押す。文字で探すと、みゅあの吹き出しのセリフを拾うことがある

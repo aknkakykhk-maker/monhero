@@ -56,7 +56,7 @@ const runAt=async(playwright,width)=>{
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),{timeout:40000});
     for(let i=0;i<14;i++){if(!(await clickText('^(受け取る|閉じる|OK|確認|あとで|次へ|はじめる|決定|スキップ)$')))break;await page.waitForTimeout(250);}
     // 公開中のフレーム(画像は全種類・色の輪は1つ)と、枠の無い人を1人ずつフレンドにする。アイコンはふつうのブリーダーアイコン
     const looks=await page.evaluate(()=>{const list=(typeof releasedProfileFrames==='function'?releasedProfileFrames():PROFILE_FRAMES).filter(f=>f&&f.id);

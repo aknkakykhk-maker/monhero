@@ -1499,11 +1499,13 @@ const assistantLifeFriendDecorateRooms = (rooms) => {
   }
   return rooms;
 };
-// HOME: 施設「🏡 助手ライフ」の札の右上に「🏘 n」(札の字にかからないよう、札の角の外側に半分出す)。
-//   新しい置き手紙・来ている助手が増えたら、札のすぐ上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない。
+// HOME: 施設「ライフ」のボタンの左上に「🏘 n」(ボタンの角の外側に半分出す。右上は助手の顔バッジの場所・2026-11-17 ホーム一新)。
+//   新しい置き手紙・来ている助手が増えたら、ボタンのすぐ上に1行の帯を3秒(HOME だけ。演奏中・バトル中などには出さない。
 //   画面の上に出すと助手の吹き出しの名前に重なった・2026-11-08 ミハリ)
-function AssistantLifeFriendHomeBadge({ rect }) {
+function AssistantLifeFriendHomeBadge({ rect, dockTop }) {
   const s = useAssistantLifeFriendState();
+  // 帯(トースト・来ていますのお知らせ)の高さの基準: ライフのボタンのすぐ上はドックの上段なので、ドック全体の上に出す(2026-11-17 ホーム一新)
+  const topBase = (typeof dockTop === 'number' && isFinite(dockTop)) ? dockTop : (rect ? rect.y : 0);
   const [toast, setToast] = React.useState('');
   const lastRef = React.useRef(null);
   React.useEffect(() => { if (alfEnabled()) void (async () => { await ALF_STORE.load(); const m = await alfLoadMode(); if (m !== 'off') await alfEnsureHouse(); await alfRoster(); await alfFetchVisits(); if (typeof albCountIncoming === 'function') { try { await albCountIncoming(); } catch {} } })(); }, []);
@@ -1524,10 +1526,10 @@ function AssistantLifeFriendHomeBadge({ rect }) {
   const here = typeof albEnabled === 'function' && albEnabled() && s.loaded && s.mode && s.mode !== 'off' ? (s.st.came || []).find(c => c && !c.seen) : null;
   if (!n && !toast && !here) return null;
   return (<>
-    {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: rect.x + rect.w - 14, top: rect.y - 8 }}>🏘 {n}</span>}
+    {n > 0 && rect && <span className="pointer-events-none fixed rounded-full border border-white/70 bg-sky-300 px-1 text-[9.5px] font-black leading-[15px] text-slate-950 shadow" data-alf-badge style={{ zIndex: 41, left: Math.max(2, rect.x - 6), top: rect.y - 8 }}>🏘 {n}</span>}
     {toast && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-sky-200/60 bg-slate-950/90 px-2.5 text-[11px] font-black leading-[20px] text-sky-50 shadow-lg" data-alf-toast
-      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
+      style={{ zIndex: 60, top: Math.max(4, topBase - 28), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>{toast}</div>}
     {!toast && here && rect && <div className="pointer-events-none fixed whitespace-nowrap rounded-full border border-amber-300/80 bg-amber-100 px-2.5 text-[11px] font-black leading-[20px] text-amber-950 shadow-lg" data-alb-here
-      style={{ zIndex: 60, top: Math.max(4, rect.y - 26), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
+      style={{ zIndex: 60, top: Math.max(4, topBase - 28), ...(rect.right ? { right: Math.max(4, (typeof window !== 'undefined' ? window.innerWidth : 390) - rect.x - rect.w) } : { left: Math.max(4, rect.x) }) }}>🚪 {here.name}さんの{assistantLifeName(here.aid)}が来ています</div>}
   </>);
 }

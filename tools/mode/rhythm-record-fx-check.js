@@ -93,9 +93,9 @@ check('演出量MINIMAL・軽量モードでは、念のためCSSでも隠す', 
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
     for (let i = 0; i < 6; i++) { if (!(await clickText('受け取る|閉じる|OK|とじる'))) break; await page.waitForTimeout(250); }
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     // 入るとまずモードえらび(2026-10-03)。ソロライブを押して曲えらびへ
     await page.waitForFunction(() => document.body.innerText.includes('ソロライブ'), null, { timeout: 30000 });
     await clickText('ソロライブ');

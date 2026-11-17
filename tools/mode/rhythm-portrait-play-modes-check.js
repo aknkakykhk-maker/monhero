@@ -30,9 +30,9 @@ try{for(const [w,h] of [[390,844],[320,568],[844,390]]){const portrait=h>w;
  await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
  await page.getByRole('button',{name:'TAP TO START'}).click({force:true,timeout:60000});
  await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
- await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),null,{timeout:40000});
+ await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),null,{timeout:40000});
  for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK')))break;await page.waitForTimeout(250);}
- await clickText('モンヒロビート');
+ await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
  await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
  await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});await page.waitForTimeout(1500);
  const r=await page.evaluate(()=>{const R=e=>e.getBoundingClientRect();const vis=e=>{if(!e)return false;const x=R(e);return x.width>0&&x.height>0;};

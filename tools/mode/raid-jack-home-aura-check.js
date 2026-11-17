@@ -132,9 +132,9 @@ const TIERS = [1, 2, 3, 4, 5];
         await page.setViewportSize({ width: w, height: h });
         await page.waitForTimeout(900);
         await closeOverlays();
-        // HOMEの上に何もかぶっていない(施設の札の真ん中でいちばん上にあるのがその施設)ことを先に確かめる
-        const clear = await page.evaluate(() => [...document.querySelectorAll('.mh-home-facility')].every((el) => {
-          const r = (el.querySelector(':scope > span') || el).getBoundingClientRect();
+        // HOMEの上に何もかぶっていない(ドックのボタンの真ん中でいちばん上にあるのがそのボタン)ことを先に確かめる
+        const clear = await page.evaluate(() => [...document.querySelectorAll('[data-home-fac]')].every((el) => {
+          const r = el.getBoundingClientRect();
           if (r.width < 2 || r.height < 2) return true;
           const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           return !!top && (el.contains(top) || !!top.closest('[data-home-raid-jack-wrap],[data-home-raid-aura-wrap]'));
@@ -145,17 +145,17 @@ const TIERS = [1, 2, 3, 4, 5];
           const z = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const v = getComputedStyle(e).zIndex; if (v !== 'auto') return Number(v); } return 0; };
           const auraEls = [...document.querySelectorAll('[data-jack-aura-el] > *')];
           const auraWrap = document.querySelector('[data-home-raid-aura-wrap]');
-          const facility = document.querySelector('.mh-home-facilities');
+          const facility = document.querySelector('.mh-home-dock');
           const inAuraLayer = auraEls.every((el) => auraWrap && auraWrap.contains(el));
           const auraBox = auraEls.reduce((b, el) => { const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return b;
             return { left: Math.min(b.left, r.left), top: Math.min(b.top, r.top), right: Math.max(b.right, r.right), bottom: Math.max(b.bottom, r.bottom) }; },
             { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
           // 炎と、比べる相手に当たり判定を持たせて、重なった所でいちばん上が何かを見る
           const tag = document.createElement('style');
-          tag.textContent = '[data-jack-aura-el],[data-jack-aura-el] *{pointer-events:auto!important}.mh-home-status,.mh-home-status *,.mh-home-facility,.mh-home-facility *,.mh-home-assistant,.mh-home-assistant *{pointer-events:auto!important}';
+          tag.textContent = '[data-jack-aura-el],[data-jack-aura-el] *{pointer-events:auto!important}.mh-home-status,.mh-home-status *,[data-home-fac],[data-home-fac] *,.mh-home-assistant,.mh-home-assistant *{pointer-events:auto!important}';
           document.head.appendChild(tag);
           const targets = [
-            ...[...document.querySelectorAll('.mh-home-facility')].map((el) => ({ name: (el.getAttribute('aria-label') || '施設').trim(), el: el.querySelector(':scope > span') || el })),
+            ...[...document.querySelectorAll('[data-home-fac]')].map((el) => ({ name: (el.getAttribute('aria-label') || '施設').trim(), el })),
             { name: 'みゅあの吹き出し', el: document.querySelector('.mh-home-assistant') },
             { name: '上の帯', el: document.querySelector('.mh-home-status') },
           ].filter((t) => t.el);
@@ -179,7 +179,7 @@ const TIERS = [1, 2, 3, 4, 5];
         const tagName = `段階${tier} ${w}×${h}`;
         check(`${tagName}: 炎は施設より後ろの層にある`, res.count > 0 && res.inAuraLayer && res.auraZ !== null && res.facilityZ !== null && res.auraZ < res.facilityZ,
           `炎 ${res.count}個 / 重なり順 炎${res.auraZ}・施設${res.facilityZ}`);
-        check(`${tagName}: 施設の札・みゅあの吹き出し・上の帯の上に炎が出ない`, res.covered.length === 0,
+        check(`${tagName}: ドックのボタン・みゅあの吹き出し・上の帯の上に炎が出ない`, res.covered.length === 0,
           res.covered.length ? res.covered.join(', ') : `重なる範囲 ${res.touched.join('・') || 'なし'}`);
       }
       await page.setViewportSize({ width: 390, height: 844 });

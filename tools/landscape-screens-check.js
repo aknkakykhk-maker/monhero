@@ -65,7 +65,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),{timeout:40000});
     await dismiss(page);
     return page;
   };
@@ -75,7 +75,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
       const l=[...document.querySelectorAll('button')].filter(b=>inOverlay(b)&&/^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ)$/.test((b.innerText||'').replace(/\s+/g,' ').trim()));
       if(!l.length)return false;l[0].click();return true;});
     if(!did)return;await page.waitForTimeout(300);}};
-  const clickHome=(page,label)=>page.evaluate(l=>{const b=[...document.querySelectorAll('.mh-home-facility,.mh-home-mission,.mh-home-gift,.mh-home-settings')]
+  const clickHome=(page,label)=>page.evaluate(l=>{const b=[...document.querySelectorAll('[data-home-fac],.mh-home-mission,.mh-home-gift,.mh-home-settings')]
     .find(b=>(b.innerText||'').replace(/\s+/g,' ').trim().startsWith(l));if(!b)return false;b.click();return true;},label);
   const backHome=async page=>{for(let i=0;i<4;i++){
     if(await page.evaluate(()=>!!document.querySelector('.mh-home-scene')))return true;

@@ -74,11 +74,11 @@ const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),{timeout:40000});
     // 配布のお知らせ(「確認」)を閉じずに測ると、画面ぜんぶを覆う 96% の暗い幕ごしに
     // 撮ることになり、色の差が20分の1以下に潰れる(2026-09-06にここで実際に外した)。
     for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる|^確認$')))break;await page.waitForTimeout(250);}
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
     await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     // 曲えらびの「決定」は data-rhythm-demo-start が目印。

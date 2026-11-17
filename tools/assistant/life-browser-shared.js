@@ -57,35 +57,62 @@ const toHome = async (page) => {
   for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
 };
 const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
-// HOME の顔の列: どの札でも札(名前)の下にあり、札・ほかのボタン・画面の端に重ならない(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」)
-// HOME の顔の列: どの札でも札(名前)の下にあり、札・ほかのボタン・画面の端に重ならない(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」)。
-//   🔄横(端末は縦のまま、器を90度回す)では、器の中の向きで測る(RHYTHM_VIEW_ROTATION.rectOf)。
-//   また、施設の札どうし・みゅあの吹き出しと札・「開催中」の札が重ならないことも見る(横 667×375 で吹き出しが長いと M/B管理とモンヒロビートが重なった)
-const homeFacesProblems = (page) => page.evaluate(() => {
+// HOME のドックと顔バッジの見張り(2026-11-17 ホーム一新で、旧 homeFacesProblems=「札の下の顔の列」から置き換え)。
+//   見るもの: ドックのボタンが画面の中にあり・ボタンどうしが重ならない／顔バッジがその施設のボタンの右上にあり・
+//   画面の外に出ない・隣のボタンの真ん中を隠さない・顔がバッジからはみ出さない／期間ものの細バナー・右端スタック・
+//   吹き出し・上の帯がドックや互いに重ならない。🔄横では器の中の向きで測る(RHYTHM_VIEW_ROTATION.rectOf)。
+//   homeFacesProblems の名前で呼ぶ検査が残っているため、旧名はこの関数の別名として残す
+const homeDockProblems = (page) => page.evaluate(() => {
   const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
   const R = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
   const W = rot ? window.innerHeight : window.innerWidth, H = rot ? window.innerWidth : window.innerHeight;
-  const sel = { rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle', management: '.mh-home-facility.management', market: '.mh-home-facility.market', life: '.mh-home-facility.life' };
-  const obs = [...document.querySelectorAll('.mh-home-facility,.mh-home-card-battle,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant,.mh-home-player,.mh-home-wallet,.mh-home-update,.mh-home-settings')].filter(e => e.offsetParent).map(e => ({ el: e, c: e.className.slice(0, 28), r: R(e) }));
+  const vis = (e) => !!e && !!e.offsetParent;
   const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
   const ng = [];
+  const btns = [...document.querySelectorAll('[data-home-fac],[data-home-monhero-success]')].filter(vis)
+    .map(e => ({ el: e, k: e.getAttribute('data-home-fac') || 'success', r: R(e) }));
+  for (const b of btns) {
+    if (b.r.left < -1 || b.r.right > W + 1 || b.r.top < -1 || b.r.bottom > H + 1) ng.push(`${b.k}: ドックのボタンが画面の外`);
+    if (b.r.width < 30 || b.r.height < 24) ng.push(`${b.k}: ドックのボタンが小さすぎる(${Math.round(b.r.width)}×${Math.round(b.r.height)})`);
+  }
+  for (let i = 0; i < btns.length; i++) for (let j = i + 1; j < btns.length; j++) if (hit(btns[i].r, btns[j].r)) ng.push(`ドックのボタンが重なる: ${btns[i].k} × ${btns[j].k}`);
+  const dock = document.querySelector('.mh-home-dock');
+  const dockR = vis(dock) ? R(dock) : null;
+  if (!dockR) ng.push('ドックが無い'); else if (dockR.bottom > H + 1 || dockR.left < -1 || dockR.right > W + 1) ng.push('ドックが画面の外');
   for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) {
-    const k = box.getAttribute('data-assistant-life-home-faces'); const f = R(box.firstElementChild);
-    const el = document.querySelector(sel[k]); if (!el) continue; const r = R(el);
-    if (f.top < r.bottom - 1 || f.top > r.bottom + 6) ng.push(`${k}: 札の下にない(札の下 ${Math.round(r.bottom)}・顔の上 ${Math.round(f.top)})`);
-    if (f.left < r.left - 1 - 140 || f.right > r.right + 1 + 140) ng.push(`${k}: 札から離れている`);
-    if (f.left < -1 || f.right > W + 1 || f.bottom > H + 1 || f.top < -1) ng.push(`${k}: 画面の外`);
-    for (const o of obs) if (hit(f, o.r)) ng.push(`${k}の顔×${o.c}`);
+    const k = box.getAttribute('data-assistant-life-home-faces');
+    const btn = btns.find(b => b.k === k);
+    const f = R(box);
+    if (!btn) { ng.push(`${k}: バッジの施設のボタンが無い`); continue; }
+    const r = btn.r;
+    if (f.right < r.right - 34 || f.right > r.right + 10) ng.push(`${k}: バッジがボタンの右上にない(ボタンの右 ${Math.round(r.right)}・バッジの右 ${Math.round(f.right)})`);
+    const cy = (f.top + f.bottom) / 2;
+    if (cy < r.top - 14 || cy > r.top + r.height * 0.6) ng.push(`${k}: バッジがボタンの上の方にない`);
+    if (f.left < -10 || f.right > W + 10 || f.top < -10 || f.bottom > H + 1) ng.push(`${k}: バッジが画面の外`);
+    for (const o of btns) { if (o.k === k) continue; const cx = (o.r.left + o.r.right) / 2, cyy = (o.r.top + o.r.bottom) / 2; if (cx > f.left && cx < f.right && cyy > f.top && cyy < f.bottom) ng.push(`${k}のバッジ×${o.k}のボタンの真ん中`); }
+    for (const face of box.querySelectorAll('[data-assistant-life-home-face]')) {
+      const fr = R(face);
+      if (fr.left < f.left - 2 || fr.right > f.right + 2 || fr.top < f.top - 2 || fr.bottom > f.bottom + 2) ng.push(`${k}の顔: バッジからはみ出す`);
+      if (fr.width < 18 || fr.width > 30) ng.push(`${k}の顔: 大きさがおかしい(${Math.round(fr.width)})`);
+    }
   }
-  // 施設の札(押す所)どうし・吹き出しと札
-  const labels = [...document.querySelectorAll('.mh-home-facility>span,.mh-home-card-battle,.mh-home-assistant,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-event-banner')].filter(e => e.offsetParent).map(e => ({ el: e, c: (e.closest('.mh-home-facility') || e).className.slice(0, 28), r: R(e) }));
-  for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
-    const a = labels[i], b = labels[j]; if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
-    if (hit(a.r, b.r)) ng.push(`札が重なる: ${a.c} × ${b.c}`);
+  const parts = [];
+  const strip = document.querySelector('.mh-home-event-strip'); if (vis(strip)) parts.push({ c: '細バナー', r: R(strip) });
+  for (const e of document.querySelectorAll('.mh-home-side-btn')) if (vis(e)) parts.push({ c: '右端ボタン', r: R(e) });
+  const bubble = document.querySelector('.mh-home-assistant'); if (vis(bubble)) parts.push({ c: '吹き出し', r: R(bubble) });
+  const player = document.querySelector('.mh-home-player'); if (vis(player)) parts.push({ c: '上の帯', r: R(player) });
+  for (const p of parts) {
+    if (p.r.left < -1 || p.r.right > W + 1 || p.r.top < -1 || p.r.bottom > H + 1) ng.push(`${p.c}が画面の外`);
+    if (dockR && hit(p.r, dockR)) ng.push(`${p.c}×ドック`);
   }
-  for (const a of labels) if (a.r.left < -1 || a.r.right > W + 1 || a.r.bottom > H + 1) ng.push(`札が画面の外: ${a.c}`);
+  for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) if (hit(parts[i].r, parts[j].r)) ng.push(`${parts[i].c}×${parts[j].c}`);
+  for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) {
+    const k = box.getAttribute('data-assistant-life-home-faces'); const f = R(box);
+    for (const p of parts) if (hit(f, p.r)) ng.push(`${k}のバッジ×${p.c}`);
+  }
   return ng;
 });
+const homeFacesProblems = homeDockProblems;
 const waitFaces = async (page) => { for (let i = 0; i < 60 && !(await page.locator('[data-assistant-life-home-face]').count()); i++) { await finishTalk(page); await page.waitForTimeout(500); } };
 
-module.exports = { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, waitFaces };
+module.exports = { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, finishTalk, homeFacesProblems, homeDockProblems, waitFaces };

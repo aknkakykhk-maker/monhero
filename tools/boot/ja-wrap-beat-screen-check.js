@@ -219,7 +219,7 @@ const runMulti = async (browser, W, H) => {
     await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
     // 助手のワンポイントアドバイスの窓は、モードえらびの上にときどき出てボタンを覆う(2026-10-27 カード部パックくんが撮った画面で見つけた)。「閉じる」で閉じる
     await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d || d.closest('[data-rhythm-multi],[data-rhythm-mode-private-sheet],[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]')) return; const tip = /ワンポイントアドバイス/.test(d.getAttribute('aria-label') || ''); const b = [...d.querySelectorAll('button')].find((x) => (tip ? /^(閉じる)$/ : /^(受け取る|OK|確認|スキップ|あとで読む)$/).test((x.innerText || x.getAttribute('aria-label') || '').trim())); if (b) b.click(); }, 400); });
     await page.waitForTimeout(1500);
@@ -318,7 +318,7 @@ const runTutorial = async (browser, W, H) => {
     await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
     await page.waitForTimeout(1200);
     for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length && !x.closest('[aria-label="初めての案内"]')); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
@@ -366,7 +366,7 @@ if (require.main === module) (async () => {
         await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
         await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
         await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-        await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+        await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 40000 });
         await page.waitForTimeout(1200); await closeAll();
         if (stayHome) return;
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });

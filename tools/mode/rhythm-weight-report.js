@@ -83,9 +83,9 @@ const measure=async(playwright,port,scene)=>{
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),{timeout:60000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
-    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
-    await clickText('モンヒロビート');
+    await page.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
     if(MODE)await page.waitForSelector('[data-rhythm-mode-solo]',{timeout:30000});
     else{    for(let i=0;i<2;i++){await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());} await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});}
     for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}

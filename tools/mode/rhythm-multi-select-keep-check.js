@@ -91,8 +91,8 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     await page.waitForTimeout(3000);
     // お知らせ・ギフトなどの吹き出しは閉じ続ける
     await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|(?:始|はじ)める|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
-    await page.waitForFunction(() => document.querySelector('button.mh-home-facility.rhythm') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
-    await page.locator('button.mh-home-facility.rhythm').click();
+    await page.waitForFunction(() => document.querySelector('button[data-home-fac="rhythm"]') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
+    await page.locator('button[data-home-fac="rhythm"]').click();
     await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
     await page.waitForTimeout(800);
     return page;
@@ -145,8 +145,8 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const A2 = A;
     await A2.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 60000 });
     await A2.getByText('TAP TO START').click(); await A2.waitForTimeout(2500); await A2.mouse.click(VIEW.width / 2, VIEW.height / 2); await A2.waitForTimeout(3000);
-    await A2.waitForFunction(() => document.querySelector('button.mh-home-facility.rhythm') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
-    await A2.locator('button.mh-home-facility.rhythm').click();
+    await A2.waitForFunction(() => document.querySelector('button[data-home-fac="rhythm"]') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
+    await A2.locator('button[data-home-fac="rhythm"]').click();
     await A2.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
     // 前の部屋へ戻る案内が出ることがあるので、新しく作る
     await A2.locator('[data-rhythm-multi-free]').click();

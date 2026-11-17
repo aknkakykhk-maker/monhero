@@ -74,7 +74,7 @@ const serve = () => new Promise(resolve => {
     await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+    await page.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), { timeout: 40000 });
     await dismiss();
     await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
     await page.waitForSelector('[data-profile-battle-records]', { timeout: 15000 });
