@@ -129,7 +129,7 @@ const monsucLendFriends = async () => {
     if (!e || !e.mon || typeof e.mon !== 'object') return null;
     const mon = e.mon;
     return {
-      friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null,
+      friendId: f.otherId, name: f.userName, icon: f.icon ?? null, profileFrame: f.profileFrame || null, lastSeenAt: f.lastSeenAt || 0,
       lend: {
         species: mon.species, name: mon.name, colors: Array.isArray(mon.colors) && mon.colors.every((c) => typeof c === 'string') ? mon.colors.slice(0, 8) : null, type: Number.isInteger(mon.type) ? mon.type : null,
         stats: mon.stats, assists: Array.isArray(mon.assists) ? mon.assists : [], version: e.version, updatedAt: Date.parse(e.updated_at) || 0,
