@@ -1,6 +1,7 @@
 // ===== 助手ライフ「📋 みんなの居場所」の地図(案A・2026-11-08 社長「推奨でいいけどもっと矛盾のない作りとわかりやすく」) =====
-// HOME の画面そのものを地図にする。絵・札の部品・札の位置は HOME と同じもの(同じ class なので、HOME の配置を直せば地図も直る)。
-//   ・地図の大きさは HOME の画面(main.mh-home-scene)と同じ。HOME が位置合わせに使う値(--mh-home-*)も写す → 札の位置が HOME と1対1
+// 村の絵の上を地図にする。絵と場面の大きさは HOME と同じものを使う。
+//   ・2026-11-17 のホーム一新で HOME の施設は下のドックに集約されたため、地図のボタンの並びは地図専用の配置として残した
+//     (70-bootstrap.jsx の [data-assistant-life-map] 付きの規則。HOME のドックとは位置を写し合わない)
 //   ・施設と結びつく場所(モンヒロビート・MFバトルカード・M/B管理・神殿・マーケット・助手ライフ=みんなの家)は HOME の札そのもの
 //   ・HOME に札の無い町の場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)は、同じ形の小さめの札を絵の中の「その建物・その場所」に
 //   ・助手は札の上(入らなければ下・横)に小さな全身で立ち、名前としていることの短い札を付ける。5人からは重ねて「◯◯ほか◯人」
@@ -9,7 +10,7 @@
 // 案と止め絵: docs/progress/assistant-peer/LIFE-MAP-PLAN.md。検査 tools/assistant/assistant-life-map-check.js
 // 何も保存しない
 
-// 場所ごとの HOME の札(fac)。町だけの場所は HOME では「🏡 助手ライフ」の札の下に顔が出る(assistantLifeFacilityOf と同じ表)
+// 場所ごとの HOME の施設(fac)。町だけの場所は HOME では「ライフ」のボタンの顔バッジに集まる(assistantLifeFacilityOf と同じ表)
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
 // 🏥 病院(56-assistant-life-body.jsx)は印 assistantLifeBody が真のときだけ地図に足す(偽のあいだは札も人もシートも出さない・ミハリ5)
@@ -47,7 +48,8 @@ const ASSISTANT_LIFE_MAP_ABOUT = Object.freeze({
 const ASSISTANT_LIFE_MAP_FAC_NAME = Object.freeze({ management: 'M/B管理', temple: '神殿', market: 'マーケット', battle: 'モンヒロバトル', life: '助手ライフ', rhythm: 'モンヒロビート', card: 'MFバトルカード' });
 const assistantLifeMapSpotWord = (place) => `${ASSISTANT_LIFE_PLACE_ICON[place] || '📍'} ${place === 'home' ? 'みんなの家' : assistantLifePlaceShow(place)}`;
 
-// HOME の画面の大きさ・位置合わせの値・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)
+// HOME の画面の大きさ・絵を読む(HOME が無いとき・🔄横で回しているときは、この画面の大きさと既定の絵)。
+//   カードのボタンの置き方は地図側の決め打ち(2026-11-17 ホーム一新までは HOME のボタンの class を写していた)
 const assistantLifeMapReadHome = () => {
   const out = { w: window.innerWidth, h: window.innerHeight, vars: {}, src: 'data/images/home-background.jpg', wide: false, card: 'mh-home-card-battle raised', fromHome: false };
   try {
@@ -56,11 +58,8 @@ const assistantLifeMapReadHome = () => {
     if (!scene) return out;
     const img = scene.querySelector('.mh-home-background img.mh-home-main');
     if (img && img.getAttribute('src')) { out.src = img.getAttribute('src'); out.wide = !!scene.querySelector('.mh-home-background.is-wide'); }
-    const card = scene.querySelector('.mh-home-card-battle');
-    if (card) out.card = [...card.classList].filter(c => c !== 'is-tutorial-spot').join(' ');
     if (rot || !scene.offsetWidth || !scene.offsetHeight) return out;
     out.w = scene.offsetWidth; out.h = scene.offsetHeight; out.fromHome = true;
-    for (let i = 0; i < scene.style.length; i++) { const k = scene.style[i]; if (/^--mh-home-/.test(k)) out.vars[k] = scene.style.getPropertyValue(k); }
   } catch (_) {}
   return out;
 };
@@ -382,7 +381,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
-        {/* HOME と同じ札(同じ class・同じ中身)。押すと、そこにいる助手とできること。下の案内は、HOME の下にあるモンヒロバトルの札と重ならないよう札の上に置く(2026-11-11) */}
+        {/* 地図の施設ボタン(HOME と同じ class・同じ中身だが、並びは地図専用の配置)。押すと、そこにいる助手とできること。下の案内は、下のボタンと重ならないよう上に置く(2026-11-11) */}
         <nav className="mh-home-facilities" aria-label="町の場所">
           {facBtn('ranch', 'management', 'M/B管理', <span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span>)}
           {facBtn('temple', 'temple', '神殿', <span><Sparkles size={18}/>神殿</span>)}

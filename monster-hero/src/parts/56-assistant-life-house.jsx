@@ -1,7 +1,7 @@
 // ===== 助手ライフ「助手たちの家」(段階1・2026-11-07 社長) =====
 // 専用ページの真ん中は家の断面。8人それぞれの部屋があり、いる・いないが分かる(いる部屋は灯りと顔、出かけている部屋は灯りが消えて扉に行き先の札)。
 // 案と止め絵: docs/progress/assistant-peer/LIFE-HOUSE-PLAN.md・ux/life-house-mock-*.jpg。家の絵は描き下ろしが届くまで図形で組む(注文書 HOUSE-ART-ORDER.md)
-// HOME では、遊んでいる所の施設の横に顔だけを出す(AssistantLifeHomeFaces)。家と町にいる助手は施設「🏡 助手ライフ」の横
+// HOME では、遊んでいる所の施設のボタンの右上に顔バッジを出す(AssistantLifeHomeFaces)。家と町にいる助手は施設「ライフ」のバッジ
 // 保存は足すだけ: 今日あったこと mh_assistant_life_diary_v1 / 入場を長く見せた日 mh_assistant_life_intro_v1
 // 公開の印 assistantLife の後ろ。様子の仕組み・台本の引き方は 56-assistant-life.jsx
 
@@ -1580,12 +1580,13 @@ function AssistantLifeSpentMark({ size = 20 }) {
   const d = Math.max(10, Math.round(size * 0.6));
   return <span aria-hidden="true" data-assistant-life-spent-mark className="pointer-events-none absolute z-[1] grid place-items-center rounded-full bg-slate-100 font-black text-slate-900 shadow" style={{ left: -3, bottom: 0, width: d, height: d, fontSize: Math.max(7, Math.round(d * 0.72)), lineHeight: 1, boxShadow: '0 0 0 1px #0b1020' }}>済</span>;
 }
-// ---------- HOME: 遊んでいる所の施設の下に顔だけ(2026-11-07 社長「もっと小さくしてコンテンツの下において」) ----------
-// 施設の札のすぐ下に、小さい顔を横1列で並べる。全員出す(上限で切らない)。札やほかのボタンに重ならないよう、
-// 下にある札までのすき間を測って顔の大きさを決める(20〜12px)。1列に並びきらないときは、札の幅より外へ伸ばす(左の列は右へ・右の列は左へ)
-// HOME(main)の札だけを見る(地図も同じ class の札を持つため)。神殿も地図と同じく顔を出す(2026-11-08 地図 A)
-const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene .mh-home-facility.rhythm', card: 'main.mh-home-scene .mh-home-card-battle', management: 'main.mh-home-scene .mh-home-facility.management', temple: 'main.mh-home-scene .mh-home-facility.temple', market: 'main.mh-home-scene .mh-home-facility.market', battle: 'main.mh-home-scene .mh-home-facility.battle', life: 'main.mh-home-scene .mh-home-facility.life' });
-const ASSISTANT_LIFE_HOME_OBSTACLES = '.mh-home-facility,.mh-home-card-battle,.mh-home-success,.mh-home-event-banner,.mh-home-tour-banner,.mh-home-mission,.mh-home-gift,.mh-home-event-badge,.mh-home-assistant';
+// ---------- HOME: 遊んでいる所の施設のボタン右上に顔バッジ(2026-11-17 ホーム一新) ----------
+// 施設は下のドックに集約されたので、顔は「札の下の列」をやめて、各ドックボタンの右上にバッジで重ねる。
+// 顔は固定 24px(場所ごとに測って変えない)。1〜3人は全員の顔を少し重ねて並べ、4人以上は顔3人+「+n」。
+// バッジ全体が1つの押し場所で、押すと助手ライフを先頭の助手に focus して開く(顔ごとの押し分けはバッジ化で簡略化)。
+// 対応表(ASSISTANT_LIFE_SPOT_FAC)はそのまま。家と町にいる助手は「ライフ」のバッジに集まる
+const ASSISTANT_LIFE_FACILITY_SEL = Object.freeze({ rhythm: 'main.mh-home-scene [data-home-fac="rhythm"]', card: 'main.mh-home-scene [data-home-fac="card"]', management: 'main.mh-home-scene [data-home-fac="management"]', temple: 'main.mh-home-scene [data-home-fac="temple"]', market: 'main.mh-home-scene [data-home-fac="market"]', battle: 'main.mh-home-scene [data-home-fac="battle"]', life: 'main.mh-home-scene [data-home-fac="life"]' });
+const ASSISTANT_LIFE_BADGE_FACE = 24; // 顔バッジの顔の大きさ(px・固定)
 function AssistantLifeHomeFaces({ metIds }) {
   const st = useAssistantLifeNow(metIds);
   const [rects, setRects] = React.useState({});
@@ -1593,26 +1594,20 @@ function AssistantLifeHomeFaces({ metIds }) {
     if (!assistantLifeEnabled()) return undefined;
     const measure = () => {
       const o = {};
-      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。顔の列も器の中に置かれるため
+      // 🔄横(端末は縦のまま、器を90度回して描く)では、画面の座標ではなく器の中の座標で測る。バッジも器の中に置かれるため
       //   (2026-11-07 本番で、🔄横の顔が札と関係ない所に出ていた)
       const rot = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.active();
       const rectOf = (el) => (rot ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect());
-      const vw = rot ? window.innerHeight : window.innerWidth, vh = rot ? window.innerWidth : window.innerHeight;
-      const obs = [...document.querySelectorAll(ASSISTANT_LIFE_HOME_OBSTACLES)].filter(el => el.offsetParent).map(el => ({ el, r: rectOf(el) }));
+      const vw = rot ? window.innerHeight : window.innerWidth;
       for (const [k, sel] of Object.entries(ASSISTANT_LIFE_FACILITY_SEL)) {
         const el = document.querySelector(sel);
         if (!el || !el.offsetParent) continue;
         const r = rectOf(el);
-        // 札の下にある、横に重なるものまでのすき間(顔の列は札の幅+140px まで伸びうるので、その幅で見る)
-        const right = r.left + r.width / 2 > vw / 2;
-        const x0 = right ? r.right - Math.max(r.width, 140) : r.left, x1 = right ? r.right : r.left + Math.max(r.width, 140);
-        let gap = vh - r.bottom;
-        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.top >= r.bottom - 2 && b.r.right > x0 && b.r.left < x1) gap = Math.min(gap, b.r.top - r.bottom); }
-        // 札の上のすき間も測る(下に余地が無い札=画面のいちばん下のモンヒロバトルは、顔を札の上に出す)
-        let up = r.top;
-        for (const b of obs) { if (b.el === el || b.el.contains(el) || el.contains(b.el)) continue; if (b.r.bottom <= r.top + 2 && b.r.right > x0 && b.r.left < x1) up = Math.min(up, r.top - b.r.bottom); }
-        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, gap: Math.round(gap), up: Math.round(up), right };
+        o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, right: r.left + r.width / 2 > vw / 2 };
       }
+      // フレンドの帯の置き場所用に、ドック全体の上端も測る(帯はドックの上に出す)
+      const dk = document.querySelector('.mh-home-dock');
+      if (dk && dk.offsetParent) o.__dockTop = rectOf(dk).top;
       setRects(prev => (JSON.stringify(prev) === JSON.stringify(o) ? prev : o));
     };
     measure();
@@ -1628,47 +1623,42 @@ function AssistantLifeHomeFaces({ metIds }) {
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
     let f = assistantLifeFacilityOf(assistantLifeWhereOf(life, id));
-    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」。前の「外す」(Q2 A・#5073)を改めた)。押すと部屋で次の時間帯が分かる
+    // カード部屋の 1.5倍を使い切った助手も顔は出し、「済」の印を付ける(2026-11-08 社長「HOMEも地図も出す」)。押すと部屋で次の時間帯が分かる
     if (!rects[f]) f = 'life';
     if (!rects[f]) continue;
     (by[f] = by[f] || []).push(id);
   }
-  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。MFバトルカードの札の横の顔の並びに小さく「UP」
+  // カード部屋にいる助手と対戦するとごほうびアップ(カード部の口があるときだけ)。バトルカードのボタンの左上に小さく「UP」
   const cardUp = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && assistantLifeHouseCardIds().some(id => (by.card || []).includes(id) && !assistantLifeCardSpent(id)); // 「UP」は、まだごほうびが上がる助手がいるときだけ
   const peer = typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null;
   const q = peer && peer.quarrel && peer.quarrel.pending;
   const after = new Set(q && q.pair ? String(q.pair).split('-') : []);
+  const size = ASSISTANT_LIFE_BADGE_FACE;
+  const step = size - 8; // 少し重ねる(顔の約1/3)
   return (<>
     {Object.entries(by).map(([f, list]) => {
       const r = rects[f];
-      // 顔は必ず札(名前)の下(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」。横へ逃がす形はやめた)。
-      //   すき間は札の並び(70-bootstrap.jsx)であけてある。足りないときは顔を小さくする(12px まで)
-      const side = false;
-      // 下のすき間が狭すぎる(16px 未満)ときは札の上へ。モンヒロバトルの札は画面の下端にあり、顔が 12px で下の帯にかかって
-      //   見えない・押せなかった(2026-11-12 社長「モンバトに助手いるけどなにもないよ?」「タップ押しても何も起きない」)
-      const above = r.gap < 16 && Number.isFinite(r.up) && r.up >= 19;
-      const size = above ? Math.min(20, r.up - 3) : Math.max(12, Math.min(20, r.gap - 3));
-      const step = size - 4; // 少し重ねる
-      const upW = f === 'card' && cardUp ? Math.round(size * 1.25) + 2 : 0;
-      const rowW = size + (list.length - 1) * step + 6 + upW;
-      const left = side ? (r.right ? r.x - rowW - 4 : r.x + r.w + 4) : (r.right ? Math.max(4, r.x + r.w - rowW) : r.x);
-      const top = side ? r.y + r.h / 2 - size / 2 : above ? r.y - size - 1 : r.y + r.h + 1;
+      const shown = list.slice(0, 3);
+      const extra = list.length - shown.length;
+      const rowW = size + Math.max(0, shown.length - 1) * step + (extra > 0 ? 22 : 0) + 6;
+      const left = r.x + r.w - rowW + 6; // ボタンの右上隅に少しはみ出す
+      const top = r.y - 9;
+      const names = list.map(id => { const who = assistantById(id); return who ? who.name : id; }).join('・');
       return (
-        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-face-size={size} data-assistant-life-home-face-side={side ? '1' : '0'} data-assistant-life-home-face-above={above ? '1' : '0'} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW }}>
-          <div className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow">
-            {list.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
+        <div key={f} data-assistant-life-home-faces={f} data-assistant-life-home-faces-ids={list.join(',')} className="pointer-events-none fixed" style={{ zIndex: 40, left, top, width: rowW, height: size + 2 }}>
+          <button type="button" data-assistant-life-home-badge={f} aria-label={`${names}がいます。助手ライフを開く`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: shown[0] }); }}
+            className="pointer-events-auto flex items-center rounded-full bg-slate-950/70 px-[3px] shadow active:scale-95" style={{ height: size + 2 }}>
+            {shown.map((id, i) => { const who = assistantById(id); if (!who) return null; const w = assistantLifeWhereOf(life, id); const lonely = w && w.reason === 'lonely';
               const spent = f === 'card' && !!assistantLifeCardSpent(id);
               return (
-                <button key={id} type="button" data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} aria-label={`${who.name}のようす${spent ? '(対戦のごほうび済み)' : ''}`} onClick={() => { ASSISTANT_LIFE_STORE.set({ open: true, focus: id }); }}
-                  className="relative shrink-0 rounded-full active:scale-90" style={{ marginLeft: i ? -4 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
+                <span key={id} data-assistant-life-home-face={id} data-assistant-life-home-face-spent={spent ? '1' : undefined} className="relative shrink-0 rounded-full" style={{ marginLeft: i ? -8 : 0, boxShadow: lonely ? '0 0 0 1.5px #fbbf24,0 0 6px #fbbf24' : after.has(id) ? '0 0 0 1.5px #7dd3fc' : '0 0 0 1.5px #fff' }}>
                   <span className="block" style={spent ? { filter: 'grayscale(.6) brightness(.8)' } : undefined}><AssistantFace who={who} size={size} accent={who.accent}/></span>
                   {spent && <AssistantLifeSpentMark size={size}/>}
-                  {/* 押しやすいように、見た目より広く押せる */}
-                  <span aria-hidden="true" className="absolute -inset-1.5"/>
-                </button>); })}
-            {upW > 0 && <span data-assistant-life-home-card-up className="pointer-events-none shrink-0 rounded-full bg-amber-300 font-black text-slate-950" style={{ marginLeft: 2, fontSize: Math.max(8, Math.round(size * 0.48)), lineHeight: `${Math.max(10, size - 4)}px`, padding: '0 3px' }}>UP</span>}
-          </div>
+                </span>); })}
+            {extra > 0 && <span data-assistant-life-home-faces-extra={extra} className="shrink-0 rounded-full bg-slate-100 px-1 font-black text-slate-900 shadow" style={{ marginLeft: 2, fontSize: 9, lineHeight: '14px' }}>+{extra}</span>}
+          </button>
         </div>); })}
-    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life}/>}
+    {rects.card && cardUp && <span data-assistant-life-home-card-up className="pointer-events-none fixed rounded-full bg-amber-300 font-black text-slate-950 shadow" style={{ zIndex: 40, left: Math.max(2, rects.card.x - 4), top: rects.card.y - 8, fontSize: 9, lineHeight: '15px', padding: '0 5px' }}>UP</span>}
+    {rects.life && typeof AssistantLifeFriendHomeBadge === 'function' && <AssistantLifeFriendHomeBadge rect={rects.life} dockTop={rects.__dockTop}/>}
   </>);
 }

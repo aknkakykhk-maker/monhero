@@ -1354,17 +1354,25 @@ const titleArtSrc = (value, shape = 'portrait') => {
 };
 
 // ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。
-// 保存は新しいキー mh_home_art に id だけ。横画面では wideSrc を画面いっぱいに出す
+// 保存は新しいキー mh_home_art に id だけ。
+// squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
+// (正方形の絵はクラシックだけ。2026-11-17・タブレット縦で両脇にぼかしの帯が出ていたため)
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
 const HOME_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
-  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg', squareSrc: 'data/images/home-background-square.jpg', wideSrc: 'data/images/home-background-wide.jpg' },
 ];
 const DEFAULT_HOME_ART = 'auto';
 const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
 const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
-const homeArtSrc = (value, landscape = false) => {
+// 形('portrait' / 'square' / 'wide')から出す絵を決める。形の境目は HOME の場面側(69-screen-home.jsx)が決める。
+// 昔の呼び方(真偽値)も受ける: 真なら横長(60-app.jsx の先読みがこの形)
+const homeArtSrc = (value, shape = 'portrait') => {
   const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, shape = false) => { const kind = shape === true ? 'wide' : shape; return kind === 'wide' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc; };
+const homeArtIsSquare = (value, shape = 'portrait') => { const kind = shape === true ? 'wide' : shape; return kind === 'square' && !!HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).squareSrc; };

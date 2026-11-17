@@ -527,26 +527,25 @@ const msxFill = (t, ctx) => { const se = msxSuc && msxSuc.script; return se && t
 // ターンのはじめの様子(数字は言わない)。場面の決め方はエンジンの SCENE.start
 const msxStartScene = (s) => { const se = msxSuc && msxSuc.script; return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal'; };
 
-// ---- HOMEの入口「モンヒロサクセス β」の札(2026-11-13 社長「HOMEにβの札」)。公開の印 monheroSuccess が真のときだけ出る ----
-// 置き場所: 縦持ちは左の列の「MFバトルカード」の札のすぐ下(その札が上がる・下がるのに合わせる)、横持ちはその札の右。
-// 69-screen-home.jsx の HomeScreen へ 60-app.jsx が successEntry として渡す。見た目はここに閉じる(HOMEの CSS は触らない)
+// ---- HOMEの入口「モンヒロサクセス β」(2026-11-13 社長「HOMEにβの札」→ 2026-11-17 ホーム一新でドック上段のカードに)。公開の印 monheroSuccess が真のときだけ出る ----
+// 置き場所: HOME のドック上段の先頭のセル(69-screen-home.jsx の HomeScreen が successEntry として置く)。セルとして流れる形にし、
+// 位置はドック側に任せる。見た目はここに閉じる(HOMEの CSS は触らない)
 const MSX_HOME_CSS = `
-.mh-home-success{position:absolute;z-index:5;left:9px;bottom:calc(min(calc(33% - 40px),calc(44.75% - 126px)) - 60px);padding:0;translate:0 var(--mh-home-left-push,0px)}
-.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success{bottom:calc(min(calc(33% + 4px),calc(44.75% - 82px)) - 60px)}
-.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{bottom:calc(min(calc(33% - 84px),calc(44.75% - 170px)) - 60px)}
-.mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
-.mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
-.mh-home-success:active>span{transform:scale(.96)}
-.mh-home-success>span{flex-wrap:wrap;max-width:178px}
-/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ700以上。664 ではモンヒロバトルの上の助手の顔が詰まった・r1115-206)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
-.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
-@container (min-height:700px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-34px}}
+.mh-home-success{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px 6px;border:2px solid #f9a8d4dd;border-radius:16px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;text-shadow:0 2px 4px #000;box-shadow:0 3px 10px #0007;touch-action:manipulation}
+.mh-home-success:active{transform:scale(.95)}
+.mh-home-success .pic{display:block;width:100%;max-width:104px;aspect-ratio:1;border-radius:11px;overflow:hidden}
+.mh-home-success .pic img{display:block;width:100%;height:100%;object-fit:cover}
+.mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
+.mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
+.mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
-/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
-/* 背の低い横画面(高さ400以下: 568×320・640×360・667×375・844×390 など)は、右の「助手ライフ」とその顔の列(札の右端から左へ最大140px)の下にかからないよう少し左へ寄せる。
-   高さ340以下だけ寄せていたら、640×360・667×375 で助手ライフの顔が札の上へ逃げた(2026-11-16 r1115-206 印を立てて home-layout-check) */
-@media (orientation:landscape) and (max-height:400px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 40px)}}
+@media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:700px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
+@media(orientation:landscape) and (max-height:600px) and (max-width:600px){.mh-home-success .nm{font-size:7px}.mh-home-success .txt{height:calc(7px*1.15 + 1px + 9px*1.1)}}
+@container (min-width:700px) and (min-height:560px){.mh-home-success{gap:2px;padding:7px 5px 8px;border-radius:18px;max-width:128px}.mh-home-success .pic{max-width:120px;border-radius:13px}.mh-home-success .txt{gap:2px;height:calc(8.5px*1.15 + 2px + 9px*1.1)}.mh-home-success .nm{font-size:8.5px}.mh-home-success .sb{font-size:9px}}
+@container (min-width:950px) and (min-height:560px){.mh-home-success .nm{font-size:10.5px}.mh-home-success .sb{font-size:10px}.mh-home-success .txt{height:calc(10.5px*1.15 + 2px + 10px*1.1)}}
 `;
 function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
@@ -556,10 +555,12 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
     <>
       <style>{MSX_HOME_CSS}</style>
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
-        {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し): 上のリボン「β版 開幕！」と札の一言 */}
+        {/* リボン「β版 開幕！」は公開の日の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し)。
+            βの表示はリボン1つだけ(2026-11-16 UI改修: 中の β と二重になっていた)。名前はフルネーム「モンヒロサクセス」+下の言葉「育成」
+            (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
         <i className="rb" aria-hidden="true">β版 開幕！</i>
-        {/* βの表示は上のリボン1つだけにする(2026-11-16 UI改修: 札の中の β と二重になっていた) */}
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
+        <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
+        <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
