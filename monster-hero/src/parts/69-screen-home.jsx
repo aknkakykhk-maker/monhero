@@ -418,6 +418,9 @@ function HomeScreen({
     return ()=>clearInterval(id);
   },[homeStripCount]);
   const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
+  // HOMEの助手コメントを出すか(2026-11-17 あっくん「助手のコメントのオンオフ」)。設定は 21-assistant.jsx の
+  // HOME_ASSISTANT_COMMENT_STORE(既定は入)。「切」のときは吹き出しの枠ごと描かず、そのぶん広場が広くなる
+  const homeComment=useHomeAssistantComment();
   return (
 
       <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
@@ -453,16 +456,18 @@ function HomeScreen({
           </button>}
           {homeStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeStripCount},(_,i)=><i key={i} className={i===homeStripShow?'on':''}/>)}</span>}
         </div>}
-        {/* 右端の縦スタック(2026-11-17 ホーム一新): ギフト・ミッション・更新履歴を丸ボタン+小ラベルで縦に寄せる。いまの時刻は末尾 */}
+        {/* 右端の縦スタック(2026-11-17 ホーム一新): 更新履歴・ミッション・ギフトを丸ボタン+小ラベルで縦に寄せる。
+            並びは同日のあっくん追加指示で「更新履歴 → ミッション → ギフト」に変更(当初はギフト・ミッション・更新履歴)。
+            時刻は当初スタック末尾だったが、同日あっくん指示「時計は右上の角に」で先頭(=右上の角)へ移動 */}
         <div className="mh-home-side-stack">
-          <button onClick={openGiftBox} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={20}/></span><span className="mh-home-side-lb">ギフト</span>
-            {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
-          </button>
+          {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
           <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
             {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
           </button>
-          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-          {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+          <button onClick={openGiftBox} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={20}/></span><span className="mh-home-side-lb">ギフト</span>
+            {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
+          </button>
         </div>
         {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
             施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
@@ -529,13 +534,14 @@ function HomeScreen({
           </nav>
         </div>
 
-        {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
-        <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
+        {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る)。
+            設定「ホームの助手コメント」が「切」のときは、この枠ごと出さない(2026-11-17 あっくん) */}
+        {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
               吹き出しが高くなり、横持ちでは施設の札「M/B管理」、小さい画面ではジャックの吹き出しにかぶって押せなくなっていた
               (raid-jack-home-say-tap-check)。吹き出しの中身はボタン(詳しい説明を開く)なので、入れ子にせず上に重ねる。左は顔(48px)+すき間(8px)+吹き出しの内側。吹き出しには footerSpace で、下の行の左にボタンの幅ぶんの空きを取らせる */}
           {typeof onOpenAssistantChat==='function'&&<button type="button" data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10 rounded-full border border-pink-300/70 bg-pink-500/85 px-1.5 py-px text-[9px] font-black leading-tight text-white shadow active:scale-95" style={{left:'64px'}}>💬 おしゃべり</button>}
-        </div>
+        </div>}
       </main>
     
   );
