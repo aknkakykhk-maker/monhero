@@ -1026,6 +1026,19 @@
       });
       return out;
     };
+    // 修行の倍率の内訳(画面の予告と結果の表示用)。act の shugyo と同じ読み方で、計算には使わない
+    //   mulA = ③の倍率(ハチマキ × ⚔修行効果アップ)・mulB = 補正(📚技習得効果アップ × 🔮気合い)・mul = mulA × mulB(①+②にかかる合計)
+    //   toku = 🗡修行特別効果アップ(倍率の前に足す分)。最終的な伸びは (①+② × mulB + toku) × mulA × (超修行なら 2)
+    const shugyoMulOf = (s) => {
+      const hachi = !!(s.good && s.good.shugyoGood);
+      const assist = stayNum(s, 'shugyo');
+      const waza = stayNum(s, 'wazakazu') * (s.techs || []).length;
+      const kiai = !!s.shBoost;
+      const toku = stayNum(s, 'shugyotoku');
+      const mulA = (1 + (hachi ? GOOD.shugyoGood.shugyo : 0)) * (1 + assist / 100);
+      const mulB = (1 + waza / 100) * (kiai ? 1.2 : 1);
+      return { hachi, assist, waza, kiai, toku, mulA, mulB, mul: mulA * mulB };
+    };
     const shugyoLeft = (s) => Math.max(0, num(s.tickets));
     // 修行で使う体力(超修行は2回分・🍃修行の体力消費ダウンを引いた後)。体力がこれより少ないと行けない(2026-11-15 社長 r1115-062)
     const shugyoHpOf = (s, sup) => Math.max(0, Math.round(SHUGYO.hp * RESULTS.ok.hp * (sup ? 2 : 1) * (1 - stayNum(s, 'shugyohp') / 100)));
@@ -1213,6 +1226,7 @@
         const res = 'ok'; const R = RESULTS.ok; const pol = C.policyOf(s.pol);
         // ⚔修行効果アップ: 修行の上がりの合計の最後にかける倍率 ×(1 + v%)(窓口 2026-11-14)
         const boost = 1 + stayNum(s, 'shugyo') / 100; // ⚔修行効果アップ(足し合わせ・r1115-107)
+        const mulCap = shugyoMulOf(s); // 表示用の倍率の内訳(🔮気合いは消える前・技の数は覚える前に読む)。計算には使わない
         // 📚技習得効果アップ(覚えた技1つにつき)・🔮修行チャンスの「修行の気合い」(1回で消える)
         const boost2 = (1 + stayNum(s, 'wazakazu') * s.techs.length / 100) * (s.shBoost ? 1.2 : 1); s.shBoost = false;
         const toku = stayNum(s, 'shugyotoku'); // 🗡修行特別効果アップ
@@ -1249,6 +1263,8 @@
         out.result = res; out.course = course; out.learned = got[0] || null; out.learnedAll = got; out.tries = tries; out.super = sup;
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         out.parts = shugyoPartsFit(parts0, out.gain); // 演出の内訳(行き先の分・編成の子の分)。保存しない
+        out.partsRaw = parts0; // 倍率をかける前の生の内訳(結果の内訳パネル用)。保存しない
+        out.mulInfo = { ...mulCap, super: sup }; // 倍率の内訳(結果の表示用)。保存しない
         s.last = { kind: 'shugyo', res }; s.acted = true; s.reacted = false;
         return { state: s, out };
       }
@@ -2203,7 +2219,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
