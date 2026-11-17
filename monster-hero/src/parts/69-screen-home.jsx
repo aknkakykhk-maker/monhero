@@ -70,10 +70,9 @@ const HOME_RAID_JACK_CSS = `
 @keyframes mhRaidJackShadow{0%,100%{transform:scaleX(1.05);opacity:.5}50%{transform:scaleX(.7);opacity:.3}}
 @media(prefers-reduced-motion:reduce){.mh-home-raid-jack-img,.mh-home-raid-jack-shadow{animation:none}}
 `;
-// ★重なり順は施設(.mh-home-facilities の z-index:3)より前の 4(2026-10-11・社長の実機の指摘)。
-//   施設は建物ぶんの透明な押し場所を持つので、2のままだと右に置いた吹き出しが神殿・マーケットの押し場所の下になり、
-//   「▶ つぎ」を押すと施設が開いていた。枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
-//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなど(z-index:5)よりは後ろのまま
+// ★重なり順は 4(2026-10-11・社長の実機の指摘で、旧・施設の並び(z-index:3)より前にした)。
+//   枠そのものは押せなくして(pointerEvents:none)、吹き出しとジャック本体だけを押せるようにする
+//   (枠の余白で施設の押し場所をふさがない)。上の帯・みゅあ・ギフトなどと、2026-11-17 からは下のドック(z-index:5)より後ろのまま
 const HOME_RAID_JACK_WRAP_STYLE = Object.freeze({
   position:'absolute', left:'50%', top:'44%', transform:'translate(-50%,-50%)', zIndex:4, pointerEvents:'none',
   width:'44%', maxWidth:'190px', minWidth:'120px',
@@ -152,10 +151,9 @@ const homeRaidSayObstacles = (wrap) => {
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
   document.querySelectorAll('button, a[href], [role="button"]').forEach((el) => {
     if (wrap && wrap.contains(el)) return;
-    // HOMEの施設(M/B管理・神殿・マーケットなど)は、建物ぶんの透明な押し場所の中に「見える札」(> span)を置いた作り。
-    // 押し場所ごと避けると真ん中に置き場所が残らないので、見える札だけを避ける(押せる範囲は変えない)
-    const face = el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el;
-    const r = face.getBoundingClientRect();
+    // 施設は下のドックに集まった(2026-11-17 ホーム一新)。ドックのボタンは見えている面そのものが押し場所なので、
+    // ほかのボタンと同じくボタン全体を避ける(以前の「見える札だけを避ける」特別扱いは、建物ぶんの透明な押し場所があった頃のもの)
+    const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= vw || r.top >= vh) return;
     if (r.width * r.height > vw * vh * 0.4) return;
     const cs = getComputedStyle(el);
@@ -226,7 +224,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(place, 1500);
     window.addEventListener('resize', place);
     window.addEventListener('orientationchange', place);
-    // みゅあの吹き出しが伸び縮みすると、札(M/B管理・神殿)も動く(--mh-home-assistant-bottom)。札が動き終わってから測り直す
+    // みゅあの吹き出しが伸び縮みしたら測り直す(吹き出しはジャックの吹き出しの障害物になる)
     const mua = document.querySelector('.mh-home-assistant');
     const ro = (mua && typeof ResizeObserver !== 'undefined') ? new ResizeObserver(() => timers.push(setTimeout(place, 60))) : null;
     if (ro) ro.observe(mua);
@@ -348,72 +346,31 @@ function HomeScreen({
   // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
   successEntry = null,
 }) {
-  // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
+  // 背景の絵は「HOMEの枠の縦横比」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 形の境目(2026-11-17・正方形の絵を追加して3方向に): 比が 3/4 未満は縦長、3/4〜1.2 はほぼ正方形、1.2 を超えたら横長。
+  // 下の境目 3/4 は、タイトル絵の「ほぼ正方形」の帯(3:4〜。70-bootstrap.jsx)の下端と、ホームの3枚の比
+  // (縦 941/1672・正方形 1600/1600・横 2048/1152)の相乗平均 0.75 に一致する。タブレット縦(768x1024=0.75)は正方形になる。
+  // 上の境目は、横長の判定として使ってきた 1.2 をそのまま使う(タブレット横 1024x768=1.33 は横長になる)
   // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
   React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
   const homeSceneRef=React.useRef(null);
-  const [homeSceneWide,setHomeSceneWide]=React.useState(false);
+  const [homeSceneShape,setHomeSceneShape]=React.useState('portrait');
   React.useEffect(()=>{
     const el=homeSceneRef.current;
     if(!el)return undefined;
-    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0)setHomeSceneWide(w/h>1.2);};
+    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0){const r=w/h;setHomeSceneShape(r>1.2?'wide':r>=0.75?'square':'portrait');}};
     measure();
     if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
     const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
   },[]);
-  // みゅあの吹き出しの下端(場面の上から何px)を CSS の --mh-home-assistant-bottom へ渡す。台詞は切らずに全部出すので、
-  // 長い台詞で伸びたぶんだけ M/B管理・神殿の札を下げる(2026-10-24 窓口「幅320で『ついてるから大丈夫！…』と切れている」)。
-  // 回して描いているときも狂わないよう、画面上の位置ではなく offset で測る
-  React.useEffect(()=>{
-    const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
-    if(!scene||!box)return undefined;
-    // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる。その位置に使う M/B管理の右端も渡す(2026-11-07 横 667×375 で
-    // 吹き出しが1行伸びると、M/B管理とモンヒロビートの札が重なった。左の列は縦に積む余白がない)
-    // 左の列は上から 吹き出し → M/B管理 → 助手ライフ → モンヒロビート。上の札が下がったら、下の札もその下端(+顔の列の分)より下へ押す
-    // (2026-11-07 長い台詞で M/B管理が下がり、縦では助手ライフ、横ではモンヒロビートの札に重なった)。ふだんの位置は CSS の % のまま
-    const offTop=el=>{let y=0;for(let e=el;e&&e!==scene;e=e.offsetParent)y+=e.offsetTop;return y;};
-    const offLeft=el=>{let x=0;for(let e=el;e&&e!==scene;e=e.offsetParent)x+=e.offsetLeft;return x;};
-    const measure=()=>{const b=offTop(box)+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);
-      // 横(背の低い横画面)では、モンヒロビートの札を M/B管理の右隣に並べる(左の列は縦に積む余白がない)。その位置に使う M/B管理の右端
-      const mg=scene.querySelector('.mh-home-facility.management');
-      if(mg&&mg.offsetParent){scene.style.setProperty('--mh-home-management-right',`${Math.ceil(offLeft(mg)+mg.offsetWidth)}px`);scene.style.setProperty('--mh-home-management-bottom',`${Math.ceil(offTop(mg)+mg.offsetHeight)}px`);}
-      const lf=scene.querySelector('.mh-home-facility.life');
-      if(lf&&lf.offsetParent)scene.style.setProperty('--mh-home-life-bottom',`${Math.ceil(offTop(lf)+lf.offsetHeight)}px`);
-      // モンヒロビートが押し下げられて、その下(イベントの札・公式杯・MFバトルカード)にかかるときだけ、下の札をまとめて下げる。
-      // 下の札は下から位置を決めているので、translate で動かす(offsetTop は translate を含まないので、測り直しても積み上がらない)
-      const rh=scene.querySelector('.mh-home-facility.rhythm');let push=0;
-      // 横(背の低い横画面)では M/B管理の右にモンヒロビートが並ぶので、M/B管理の真下の札(イベント)も、M/B管理の下端より下へ押す(2026-11-08 横 568×320 で吹き出しが長いと重なった)
-      if(mg&&mg.offsetParent){const mb=offTop(mg)+mg.offsetHeight+6,mr=offLeft(mg)+mg.offsetWidth;
-        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(mg)&&offLeft(el)<mr)push=Math.max(push,mb-t);}}
-      if(rh&&rh.offsetParent){const rb=offTop(rh)+rh.offsetHeight+22,rr=offLeft(rh)+rh.offsetWidth;
-        // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
-        let room=Infinity;
-        for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
-        push=Math.min(push,Math.max(0,room));
-        // 縦画面(モンヒロビートが M/B管理 より下に積まれている)で、下の札の束がビートの札から離れすぎているときは、束ごとビートの札(と顔の列)のすぐ下まで引き上げる。
-        // 2026-11-14 社長「モンヒロビートと本オープン記念のあいだが大きく空いている」(390×844 で札1つぶん以上空き、左の列が上下に分かれて見えた)
-        if(push<=0&&mg&&mg.offsetParent&&offTop(rh)>=offTop(mg)+mg.offsetHeight){let top=Infinity;
-          for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)top=Math.min(top,t);}
-          if(Number.isFinite(top)&&top>rb+4)push=rb+4-top;}}
-      scene.style.setProperty('--mh-home-left-push',`${Math.ceil(push)}px`);
-      // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
-      // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
-      const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
-      if(bt&&bt.offsetParent){const bl=offLeft(bt)-bt.offsetWidth/2,br=bl+bt.offsetWidth,btop=offTop(bt),bb=btop+bt.offsetHeight;
-        for(const el of scene.querySelectorAll('.mh-home-mission,.mh-home-gift')){if(!el.offsetParent)continue;const l=offLeft(el),t=offTop(el);if(t<bb&&t+el.offsetHeight>btop&&l<br&&l+el.offsetWidth>bl)nudge=Math.max(nudge,br-l+8);}
-        nudge=Math.min(nudge,Math.max(0,bl-8));}
-      scene.style.setProperty('--mh-home-battle-nudge',`${-Math.ceil(nudge)}px`);};
-    measure();
-    if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
-    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);
-    // 札は後から出る(助手ライフは公開の印・読み込みのあと)。ときどき測り直す
-    const id=setInterval(measure,1000);
-    return()=>{ro.disconnect();clearInterval(id);};
-  },[]);
-  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
-  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
+  // 【2026-11-17 ホーム一新で撤去】吹き出しが伸びたら施設の札を押し下げる測定機構(--mh-home-* の CSS変数6つ)。
+  //   施設は下のドックに集約され、吹き出しは上の帯・細バナーの下に流れで置くようになったので、押し下げ合いは起きない。
+  //   ジャックの吹き出しの測り直しは HomeRaidJack 自身の ResizeObserver(吹き出しを見る)+1.5秒間隔が受け持つ
+  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneShape);
+  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneShape);
+  const homeBackgroundSquare=homeArtIsSquare(homeArt,homeSceneShape);
   // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
   //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
   //   head なら画面の中身に影響しない。
@@ -451,11 +408,21 @@ function HomeScreen({
     if(!released||typeof rhythmLimitedEventAt!=='function')return false;
     return !!rhythmLimitedEventAt(Date.now());
   })();
+  // 期間ものの細バナー(2026-11-17 ホーム一新): イベントと公式杯を上の帯の下の1本に集約する。
+  // 両方あるときはカルーセル(5秒ごとに切替・手で切り替える操作は付けない。バナー自体が行き先ボタンのため)
+  const homeStripCount=(homeEventCampaign?1:0)+((homeCardTour&&typeof onOpenCardTour==='function')?1:0);
+  const [homeStripIdx,setHomeStripIdx]=React.useState(0);
+  React.useEffect(()=>{
+    if(homeStripCount<2)return undefined;
+    const id=setInterval(()=>setHomeStripIdx(i=>i+1),5000);
+    return ()=>clearInterval(id);
+  },[homeStripCount]);
+  const homeStripShow=homeStripCount?homeStripIdx%homeStripCount:0;
   return (
 
       <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
-        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠が横長なら横長の絵を画面いっぱいに出す(is-wide) */}
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠の形に合った絵を画面いっぱいに出す(横長は is-wide、正方形は is-square) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''} ${homeBackgroundSquare?'is-square':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         {raidJackVisible&&<HomeRaidJack eventId={raidJackEventId} onOpen={onOpenRaidJack}/>}
@@ -474,57 +441,94 @@ function HomeScreen({
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
-        <nav className="mh-home-facilities" aria-label="拠点施設">
-          {/* 看板の下に小さく1行(2026-10-09 ユーザー選択。G7「呼び名が分かりにくい」→ 呼び名は変えず、入口に何のことかを足す) */}
-          <button className={`mh-home-facility management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理"><span><Layers size={18}/><b className="mh-home-facility-label">M/B管理<small>モンスター・編成</small></b></span></button>
-          <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
-          <button className={`mh-home-facility market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
-          {/* 修行の施設をやめ、その場所を音ゲー「モンヒロビート」に譲った(2026-09-03にユーザーが決定、
-              2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
-              公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
-              中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-          {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示
-              「イベント開催中は対応してるコンテンツボタンのとこにイベント開催中みたいなのがほしい」)。
-              HOMEを開いた時点で「いま何かやっている」と分かるようにする。
-              ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で
-                古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
-              ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
-                ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
-          {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔はこの札の横に出る(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
-          {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button className="mh-home-facility life" data-home-assistant-life onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ"><span><span aria-hidden="true" style={{fontSize:16,lineHeight:1}}>🏡</span><b className="mh-home-facility-label">助手ライフ<small>みんなの家</small></b></span></button>}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
-          {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。
-              モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
-          <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
-        </nav>
-        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
-          <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
-          <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
-          <i aria-hidden="true">›</i>
-        </button>}
-        <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
-          {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
-        </button>
-        <button onClick={openGiftBox} className={`mh-home-gift${spotClass('reward')}`}><Package size={16}/>ギフト
-          {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
-        </button>
-        {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
-        <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-        {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
-        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
-          {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
-          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
-        </button>}
-        {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
-        {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
-          <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
-        </button>}
-        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる。公式杯の札があるときはその下) */}
-        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeCardTour?(homeEventCampaign?' below-tour':''):(homeEventCampaign?'':' raised')}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
-        {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
-            公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
-        {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
-        {successEntry}
+        {/* 期間ものの細バナー(2026-11-17 ホーム一新)。イベントと公式杯を、上の帯の下の1本に集約する。
+            両方あるときはカルーセルで切り替わる(homeStripShow)。近日公開の予告はバトルカードのカード側へ移した */}
+        {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
+          {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+            {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+            <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
+          </button>}
+          {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
+            <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
+          </button>}
+          {homeStripCount>1&&<span className="mh-home-event-strip-dots" aria-hidden="true">{Array.from({length:homeStripCount},(_,i)=><i key={i} className={i===homeStripShow?'on':''}/>)}</span>}
+        </div>}
+        {/* 右端の縦スタック(2026-11-17 ホーム一新): ギフト・ミッション・更新履歴を丸ボタン+小ラベルで縦に寄せる。いまの時刻は末尾 */}
+        <div className="mh-home-side-stack">
+          <button onClick={openGiftBox} className={`mh-home-side-btn mh-home-gift${spotClass('reward')}`} aria-label="ギフト"><span className="mh-home-side-ic"><Package size={20}/></span><span className="mh-home-side-lb">ギフト</span>
+            {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
+          </button>
+          <button onClick={openMissions} className={`mh-home-side-btn mh-home-mission${spotClass('reward')}`} aria-label="ミッション"><span className="mh-home-side-ic"><List size={20}/></span><span className="mh-home-side-lb">ミッション</span>
+            {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
+          </button>
+          <button onClick={openChangelog} className="mh-home-side-btn mh-home-update" aria-label="更新履歴"><span className="mh-home-side-ic"><RefreshCcw size={19}/></span><span className="mh-home-side-lb">更新履歴</span>{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
+          {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
+        </div>
+        {/* 下部の統一ドック(2026-11-17 ホーム一新): 上から「次にやること」→施設カード×8(ふつうは4列×2段、広い場面と横画面では8枚1列。70-bootstrap.jsx)。
+            施設ごとに担当の助手が分かれているので、8つとも同じ大きさ・同じ形の正方形カードにそろえた(2026-11-17 あっくん追加指示)。
+            施設名は当初ホームだけ略称にしたが、統一カードの実画面を見て「フルネームでもおかしくない」とあっくんが判断し、
+            ホームでもフルネームに戻した(2026-11-17 あっくん追加指示)。名前の字の大きさは最長の「モンヒロサクセス」が
+            1行に収まるよう全施設一律に決めてある(70-bootstrap.jsx の .mh-home-dock-name)。助手の顔バッジは AssistantLifeHomeFaces が
+            data-home-fac のボタンの右上へ重ねる(56-assistant-life-house.jsx) */}
+        <div className="mh-home-dock">
+          {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
+            <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
+            <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+            <i aria-hidden="true">›</i>
+          </button>}
+          <div className="mh-home-dock-row mh-home-dock-top">
+            {/* モンヒロサクセス β の入口(2026-11-13 社長)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry で、
+                ドック上段の先頭のセルとして流れる(公開の印が偽なら何も出さず、残りのカードで割り直す) */}
+            {successEntry}
+            {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。下の言葉は「挑戦」(2026-11-17 あっくん決定)。
+                ホームの名前も正式名称のまま(略称「モンバト」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
+            <button type="button" data-home-fac="battle" className={`mh-home-dock-card battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-battle.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロバトル</span><span className="mh-home-dock-sub">挑戦</span></span>
+            </button>
+            {/* モンヒロビート(2026-09-03に修行の場所を譲った。2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
+                公開フラグが立つまでは「準備中」の案内だけを出し、本編からは遊べない */}
+            {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示)。いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で古いままになる・CLAUDE.md ⑥-4) */}
+            <button type="button" data-home-fac="rhythm" className="mh-home-dock-card rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}>
+              <span className="mh-home-dock-pic"><img src="images/home/facility-beat.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small className="mh-home-dock-soon">準備中</small>}</span><span className="mh-home-dock-sub">音ゲー</span></span>
+              {homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}
+            </button>
+            {/* MFバトルカード(公開の印 cardBattle が立ち、公開のお話を見た人だけ。60-app.jsx が決める) */}
+            {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-fac="card" data-home-card-battle className="mh-home-dock-card card" onClick={onOpenCardBattle} aria-label="MFバトルカード">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+            </button>}
+            {/* 公開前の予告(社長 2026-10-25)。カード自体に「近日公開」を付け、押すと予告の小窓。中には入れない。
+                公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+            {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-fac="card" data-home-card-battle-teaser className="mh-home-dock-card card soon" onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-card.webp" alt="" draggable={false}/></span>
+              <span className="mh-home-dock-txt"><span className="mh-home-dock-name">MFバトルカード</span><span className="mh-home-dock-sub">カード対戦</span></span>
+              <small className="mh-home-dock-chip">近日公開</small>
+            </button>}
+          </div>
+          {/* 下段の4施設は「下の言葉」が無い。縦位置の受け方は全カード共通で、絵は上端そろえ、
+              名前は文字の枠(.mh-home-dock-txt。「名前1行+間+下の言葉1行」ぶんの固定の高さ)の中で
+              縦に中央寄せする(70-bootstrap.jsx)。下の言葉が無い施設は名前1行だけが枠の縦中央に来る
+              (2026-11-17 あっくん追加指示。センター合わせの対象はカード全体ではなく文字の枠部分) */}
+          <nav className="mh-home-dock-row mh-home-dock-bottom" aria-label="拠点施設">
+            <button type="button" data-home-fac="management" className={`mh-home-dock-card management${spotClass('management')}`} onClick={onOpenManagement} aria-label="M/B管理">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-management.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">M/B管理</span></span>
+            </button>
+            <button type="button" data-home-fac="temple" className={`mh-home-dock-card temple${spotClass('temple')}`} onClick={onOpenTemple} aria-label="神殿">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-temple.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">神殿</span></span>
+            </button>
+            <button type="button" data-home-fac="market" className={`mh-home-dock-card market${spotClass('market')}`} onClick={onOpenMarket} aria-label="マーケット">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-market.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">マーケット</span></span>
+            </button>
+            {/* 助手ライフ(2026-11-07 社長)。家と町にいる助手の顔は、このボタンの右上のバッジに集まる(56-assistant-life-house.jsx の AssistantLifeHomeFaces) */}
+            {typeof assistantLifeEnabled==='function'&&assistantLifeEnabled()&&<button type="button" data-home-fac="life" data-home-assistant-life className="mh-home-dock-card life" onClick={()=>assistantLifeOpenScreen()} aria-label="助手ライフ">
+              <span className="mh-home-dock-pic"><img src="images/home/facility-life.webp" alt="" draggable={false}/></span><span className="mh-home-dock-txt"><span className="mh-home-dock-name">助手ライフ</span></span>
+            </button>}
+          </nav>
+        </div>
+
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
