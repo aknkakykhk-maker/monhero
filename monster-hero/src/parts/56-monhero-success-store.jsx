@@ -435,6 +435,11 @@ const msxBreederIconSrc = (icon) => {
   return item ? item.icon : null;
 };
 // rival は { kind:'aid'|'friend', id(個体の印), icon, profileFrame }。助手は印から助手 id を読んで顔アイコン、フレンドはプロフィールアイコン
+function msxBreederLabel(name, kind) {
+  if (kind === 'aid') return '［助手］' + name;
+  if (kind === 'friend') return '［プレイヤー］' + name;
+  return name;
+}
 function MsxRivalOwnerIcon({ rival, size = 22 }) {
   if (!rival) return null;
   if (rival.kind === 'aid') {

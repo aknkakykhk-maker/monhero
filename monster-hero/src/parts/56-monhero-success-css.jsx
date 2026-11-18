@@ -575,7 +575,8 @@ const MSX_CSS = `
 .msx .v-cup2 .rvl{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:900;color:#fda4af;line-height:1.3;min-width:0}
 .msx .v-cup2 .rvl img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;flex:none}
 .msx .v-cup2 .rvl b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msx .v-cup2 .rvl small{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .rvl{flex-wrap:wrap}
+.msx .v-cup2 .rvl small{max-width:100%;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}

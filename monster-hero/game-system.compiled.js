@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ba9c4427e0cede5
+// source-sha256: b1ae4216fb337c7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -154666,6 +154666,9 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 育てた人が長いときだけ折り返す(名札はひとかたまりで割らない) */
+.msc-tl span.msc-brd-wrap{white-space:normal;overflow:visible}
+.msc-tl span .msc-lbl{font-style:normal;white-space:nowrap}
 /* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
@@ -155000,6 +155003,8 @@ function MonsucBattleCard({
   const foeTechs = (catalog && catalog.species[o.species] && catalog.species[o.species].techs || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  const brdLabel = o.breeder ? msxBreederLabel(o.breeder, o.rivalKind) : '';
+  const brdLong = brdLabel.length > 9;
   const ahead = MSC_STAT_KEYS.map(k => ({
     k,
     d: mscNum(me[k]) - mscNum(op[k])
@@ -155193,7 +155198,11 @@ function MonsucBattleCard({
     key: t.id
   }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—"))), tab === 'abl' && React.createElement("div", {
     className: "msc-tl"
-  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species, true)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species, true)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", {
+    className: brdLong ? 'msc-brd-wrap' : ''
+  }, o.breeder ? brdLong ? React.createElement(React.Fragment, null, "育てた人 ", React.createElement("em", {
+    className: "msc-lbl"
+  }, msxBreederLabel('', o.rivalKind)), o.breeder) : `育てた人 ${brdLabel}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
     className: "msc-hint"
   }, React.createElement("img", {
     src: mscFace(s.aid),
@@ -155288,7 +155297,7 @@ function MscPanel({
   }, side === 'A' ? React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }) : null, React.createElement("span", null, m.name, side === 'B' && o.breeder ? React.createElement("small", null, " ・", o.breeder) : null, side === 'A' && buffed ? React.createElement("i", {
+  }) : null, React.createElement("span", null, m.name, side === 'B' && o.breeder ? React.createElement("small", null, " ・", msxBreederLabel(o.breeder, o.rivalKind)) : null, side === 'A' && buffed ? React.createElement("i", {
     className: "msc-buff"
   }, "✨ 特別な1話") : null)), React.createElement("div", {
     className: "bars"
@@ -167826,7 +167835,7 @@ function AlfSceneSheet({
     className: `min-w-0 rounded-2xl border px-2.5 py-1.5 text-[12px] leading-snug ${l.guest ? 'border-sky-300/40 bg-sky-950/70 text-sky-50' : 'border-pink-300/40 bg-pink-950/60 text-pink-50'}`
   }, React.createElement("p", {
     className: "text-[9.5px] font-black opacity-80"
-  }, l.guest ? alfTheirLabel(scene.host, l.who) : assistantLifeName(l.who)), React.createElement("p", null, l.text))))), scene.reward && React.createElement("p", {
+  }, "［助手］", assistantLifeName(l.who), l.guest ? `（［プレイヤー］${scene.host}さんの助手）` : ''), React.createElement("p", null, l.text))))), scene.reward && React.createElement("p", {
     className: "mt-2 text-[11px] font-black text-amber-200",
     "data-alf-scene-reward": true
   }, scene.reward), React.createElement("button", {
@@ -168178,7 +168187,7 @@ function AlfFriendHouseView({
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "truncate text-[17px] font-black text-amber-100"
-  }, "🏘 ", friend.name, "さんの助手ライフ"), React.createElement("p", {
+  }, "🏘 ［プレイヤー］", friend.name, "さんの助手ライフ"), React.createElement("p", {
     className: "text-[10px] font-bold text-slate-200"
   }, "👀 見る専用です")), vIcons(false)), React.createElement("div", {
     className: "relative min-h-0 flex-1 overflow-y-auto",
@@ -168218,7 +168227,7 @@ function AlfFriendHouseView({
   }, "VISIT · FRIEND HOUSE"), React.createElement("p", {
     className: "truncate text-[17px] font-black text-amber-100",
     "data-alf-visit-title": true
-  }, "🏘 ", friend.name, "さんの家"), React.createElement("p", {
+  }, "🏘 ［プレイヤー］", friend.name, "さんの家"), React.createElement("p", {
     className: "text-[10px] font-bold text-slate-200"
   }, React.createElement("span", {
     className: "whitespace-nowrap"
@@ -168313,7 +168322,7 @@ function AlfFriendHouseView({
     },
     pop: false,
     onBoard: () => setBoardOpen(true),
-    hname: `🏡 ${friend.name}さんの家`,
+    hname: `🏡 ［プレイヤー］${friend.name}さんの家`,
     other: otherPut
   }));
   const rvOk = typeof AssistantLifeRoomScene === 'function';
@@ -168379,8 +168388,8 @@ function AlfFriendHouseView({
     furn: rvFurn,
     layoutItems: layoutOf(roomId),
     bubble: talk && talk.aid === roomId ? talk.text : '',
-    title: `${alfTheirLabel(friend.name, roomId)}の部屋`,
-    sub: `🏘 ${friend.name}さんの家`,
+    title: `［助手］${assistantLifeName(roomId)}の部屋`,
+    sub: `🏘 ［プレイヤー］${friend.name}さんの家`,
     onPerson: roomState === 'home' ? () => {
       greet(roomId);
       setTimeout(rvToSheet, 60);
@@ -168465,7 +168474,7 @@ function AlfFriendHouseView({
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "text-[16px] font-black text-white"
-  }, alfTheirLabel(friend.name, roomId), "の部屋"), React.createElement("p", {
+  }, "［助手］", assistantLifeName(roomId), "の部屋"), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200",
     "data-alf-visit-room-state": roomState
   }, alfNoBreak(roomState === 'out' ? r0.p && typeof assistantLifePlaceShow === 'function' ? `${typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p] || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます' : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`))), React.createElement("button", {
@@ -168932,10 +168941,10 @@ function AssistantLifeFriendPage({
   })), React.createElement("p", {
     className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
   }, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, st.out.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, st.out.name, "さんの家へ")), React.createElement("button", {
+    className: "break-words"
+  }, "［助手］", st.out.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", st.out.name, "さんの家へ")), React.createElement("button", {
     type: "button",
     className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
     "data-alf-act": "out",
@@ -168966,8 +168975,8 @@ function AssistantLifeFriendPage({
   }), React.createElement("p", {
     className: "min-w-0 flex-1 text-[11.5px] text-slate-100"
   }, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, alfTheirLabel(c.name, c.aid)), "が遊びに来た"), !c.seen ? React.createElement("button", {
+    className: "break-words"
+  }, "［プレイヤー］", c.name, "さんの［助手］", assistantLifeName(c.aid)), "が遊びに来た"), !c.seen ? React.createElement("button", {
     type: "button",
     className: "shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950",
     "data-alf-act": "come",
@@ -169008,18 +169017,18 @@ function AssistantLifeFriendPage({
   }, React.createElement("span", {
     className: "whitespace-nowrap text-slate-400"
   }, alfAgoText(n.at)), ' ', n.dir === 'away' ? React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, "・", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, n.name, "さんの", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
+    className: "break-words"
+  }, "［助手］", n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
+    className: "break-words"
+  }, "［助手］", assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
+    className: "break-words"
+  }, "・［助手］", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さんの［助手］", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
     className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
     "data-alf-note-text": true
   }, "✏️ ", n.note) : React.createElement("p", {
@@ -169064,7 +169073,7 @@ function AssistantLifeFriendPage({
       className: "min-w-0 flex-1"
     }, React.createElement("p", {
       className: "truncate text-[12px] font-black text-slate-100"
-    }, f.name, "さんの家", been ? ' 📷' : '', typeof AlfBondChip === 'function' && React.createElement(AlfBondChip, {
+    }, "［プレイヤー］", f.name, "さんの家", been ? ' 📷' : '', typeof AlfBondChip === 'function' && React.createElement(AlfBondChip, {
       id: f.id
     })), React.createElement("p", {
       className: "text-[10px] text-slate-300",
@@ -169124,7 +169133,7 @@ function AssistantLifeFriendPage({
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "truncate text-[12px] font-black text-slate-300"
-  }, f.name, "さんの家"), React.createElement("p", {
+  }, "［プレイヤー］", f.name, "さんの家"), React.createElement("p", {
     className: "text-[10px] leading-snug text-slate-300"
   }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
     className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
@@ -171679,7 +171688,8 @@ const MSX_CSS = `
 .msx .v-cup2 .rvl{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:900;color:#fda4af;line-height:1.3;min-width:0}
 .msx .v-cup2 .rvl img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;flex:none}
 .msx .v-cup2 .rvl b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msx .v-cup2 .rvl small{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .rvl{flex-wrap:wrap}
+.msx .v-cup2 .rvl small{max-width:100%;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
@@ -173035,6 +173045,11 @@ const msxBreederIconSrc = icon => {
   const item = items.find(m => m && m.id === icon && m.type === 'icon');
   return item ? item.icon : null;
 };
+function msxBreederLabel(name, kind) {
+  if (kind === 'aid') return '［助手］' + name;
+  if (kind === 'friend') return '［プレイヤー］' + name;
+  return name;
+}
 function MsxRivalOwnerIcon({
   rival,
   size = 22
@@ -182516,7 +182531,7 @@ function MsxR3Cup({
       size: 20
     }), React.createElement(MsxRivalThumb, {
       rival: c.rival
-    }), React.createElement("b", null, "ライバル ", c.rival.name), c.rival.breeder ? React.createElement("small", null, c.rival.breeder) : null) : null, React.createElement("span", {
+    }), React.createElement("b", null, "ライバル ", c.rival.name), c.rival.breeder ? React.createElement("small", null, msxBreederLabel(c.rival.breeder, c.rival.kind)) : null) : null, React.createElement("span", {
       className: "g"
     }, Number(c.prizeMax) > Number(c.prize) ? React.createElement(React.Fragment, null, React.createElement("small", null, "最大"), msxFmt(c.prizeMax)) : msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement("span", {
       className: "rvb"
@@ -182579,7 +182594,7 @@ function MsxR3Cup({
       objectFit: 'cover',
       objectPosition: '50% 20%'
     }
-  }), React.createElement("span", null, "ライバル: ", wc.rival.name, wc.rival.breeder ? `(${wc.rival.breeder})` : '')) : null, React.createElement("div", {
+  }), React.createElement("span", null, "ライバル: ", wc.rival.name, wc.rival.breeder ? `(${msxBreederLabel(wc.rival.breeder, wc.rival.kind)})` : '')) : null, React.createElement("div", {
     className: "sub"
   }, "獲得物"), React.createElement(MsxR3PrizeBox, {
     prizes: msxR3Prizes(SUC, wc),
@@ -187740,7 +187755,7 @@ function MsxArcPick({
       width: 64,
       margin: '0 auto'
     }
-  }), React.createElement("b", null, foe), React.createElement("small", null, opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)), React.createElement("div", {
+  }), React.createElement("b", null, foe), React.createElement("small", null, opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)), React.createElement("div", {
     className: "why"
   }, "組み合わせ: ", MSX_ARC_PICK_WHY[opp.pick] || '相手')) : null;
   return React.createElement(MsxArcTalk, {
@@ -192240,7 +192255,7 @@ function MonsucArena({
     className: "msc-buff"
   }, "✨ 特別な1話") : null, (info.opp || {}).breeder ? React.createElement("small", {
     className: "msa-breeder"
-  }, "相手 ", nm('B'), "・", info.opp.breeder) : null), React.createElement("div", {
+  }, "相手 ", nm('B'), "・", msxBreederLabel(info.opp.breeder, info.opp.rivalKind)) : null), React.createElement("div", {
     className: "msa-stagebox",
     "data-msa-stagebox": true
   }, React.createElement(MsaStage, {

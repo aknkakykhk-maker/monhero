@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00ccdf7f6dc92ff5
+// generated-sha256: b1556c5df407df2b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80879,6 +80879,9 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 育てた人が長いときだけ折り返す(名札はひとかたまりで割らない) */
+.msc-tl span.msc-brd-wrap{white-space:normal;overflow:visible}
+.msc-tl span .msc-lbl{font-style:normal;white-space:nowrap}
 /* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
@@ -81092,6 +81095,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  // 育てた人: 名札込みで長いと能力タブの右列が画面外へはみ出す(13文字の名前で実測)。「育てた人 ［プレイヤー］きき」までは1行に収まるので、それを超えたら折り返す
+  const brdLabel = o.breeder ? msxBreederLabel(o.breeder, o.rivalKind) : '';
+  const brdLong = brdLabel.length > 9;
   // 勝っている能力の上位2つと、いちばん得意な間合い(コーチの一言)
   const ahead = MSC_STAT_KEYS.map(k => ({ k, d: mscNum(me[k]) - mscNum(op[k]) })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
   const apt = aptOf(s.species, true); const rankOf = (g) => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
@@ -81164,7 +81170,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         </div>}
         {tab === 'abl' && <div className="msc-tl">
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
-          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
+          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span className={brdLong ? 'msc-brd-wrap' : ''}>{o.breeder ? (brdLong ? <>育てた人 <em className="msc-lbl">{msxBreederLabel('', o.rivalKind)}</em>{o.breeder}</> : `育てた人 ${brdLabel}`) : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
@@ -81206,7 +81212,7 @@ function MscPanel({ side, team, frame, maxHp, info, s, buffed }) {
   const o = info.opp || {};
   return (
     <div className={`msc-mp ${side === 'A' ? 'a' : 'b'}`} data-msc-panel={side}>
-      <div className="h">{side === 'A' ? <img src={mscFace(s.aid)} alt=""/> : null}<span>{m.name}{side === 'B' && o.breeder ? <small> ・{o.breeder}</small> : null}{side === 'A' && buffed ? <i className="msc-buff">✨ 特別な1話</i> : null}</span></div>
+      <div className="h">{side === 'A' ? <img src={mscFace(s.aid)} alt=""/> : null}<span>{m.name}{side === 'B' && o.breeder ? <small> ・{msxBreederLabel(o.breeder, o.rivalKind)}</small> : null}{side === 'A' && buffed ? <i className="msc-buff">✨ 特別な1話</i> : null}</span></div>
       <div className="bars">
         <div>
           <div className={`ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`}><i style={{ width: `${Math.round(hp / mx * 100)}%` }}/></div>
@@ -87113,7 +87119,7 @@ function AlfSceneSheet({ scene, onClose }) {
             <div key={i} className={`flex items-end gap-2 ${l.guest ? 'flex-row-reverse' : ''}`} data-alf-scene-line>
               <AlfFace id={l.who} size={36}/>
               <div className={`min-w-0 rounded-2xl border px-2.5 py-1.5 text-[12px] leading-snug ${l.guest ? 'border-sky-300/40 bg-sky-950/70 text-sky-50' : 'border-pink-300/40 bg-pink-950/60 text-pink-50'}`}>
-                <p className="text-[9.5px] font-black opacity-80">{l.guest ? alfTheirLabel(scene.host, l.who) : assistantLifeName(l.who)}</p>
+                <p className="text-[9.5px] font-black opacity-80">［助手］{assistantLifeName(l.who)}{l.guest ? `（［プレイヤー］${scene.host}さんの助手）` : ''}</p>
                 <p>{l.text}</p>
               </div>
             </div>))}
@@ -87256,7 +87262,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         : <>
           <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
             <button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-8 shrink-0 text-[19px] text-slate-100" onClick={() => goTab('house')}>←</button>
-            <div className="min-w-0 flex-1"><p className="truncate text-[17px] font-black text-amber-100">🏘 {friend.name}さんの助手ライフ</p><p className="text-[10px] font-bold text-slate-200">👀 見る専用です</p></div>
+            <div className="min-w-0 flex-1"><p className="truncate text-[17px] font-black text-amber-100">🏘 ［プレイヤー］{friend.name}さんの助手ライフ</p><p className="text-[10px] font-bold text-slate-200">👀 見る専用です</p></div>
             {vIcons(false)}
           </div>
           <div className="relative min-h-0 flex-1 overflow-y-auto" data-alf-vview-body>
@@ -87271,7 +87277,7 @@ function AlfFriendHouseView({ friend, onClose }) {
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
-        <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 {friend.name}さんの家</p>
+        <p className="truncate text-[17px] font-black text-amber-100" data-alf-visit-title>🏘 ［プレイヤー］{friend.name}さんの家</p>
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
         {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {land ? (now.long || now.text) : now.text}</p>}
       </div>
@@ -87298,7 +87304,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const houseView = (
     <div className="relative pt-1" style={{ paddingInline: pad }} data-alf-visit-house>
       <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={(id) => { setTalk(null); setLeaving(null); setRoomId(id); bondMark('find'); }}
-        diary={{ items: [...diaryItems].reverse().map(d => ({ t: d.t, text: d.x })) }} pop={false} onBoard={() => setBoardOpen(true)} hname={`🏡 ${friend.name}さんの家`} other={otherPut}/>
+        diary={{ items: [...diaryItems].reverse().map(d => ({ t: d.t, text: d.x })) }} pop={false} onBoard={() => setBoardOpen(true)} hname={`🏡 ［プレイヤー］${friend.name}さんの家`} other={otherPut}/>
     </div>);
   // 大きな部屋に渡すもの: いる助手・寝ている・留守の札・贈られた家具・写したマスモン・話しかけたときの吹き出し
   const rvOk = typeof AssistantLifeRoomScene === 'function';
@@ -87316,7 +87322,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const rvScene = rvOk && roomId && r0 ? (
     <AssistantLifeRoomScene id={roomId} look={look} land={land} people={roomState === 'out' ? [] : [roomId]} sleepIds={roomState === 'sleep' ? [roomId] : []}
       away={roomState === 'out' ? { title: rvPlace, sub: 'いまは家にいない' } : null} team={rvTeam} furn={rvFurn} layoutItems={layoutOf(roomId)}
-      bubble={talk && talk.aid === roomId ? talk.text : ''} title={`${alfTheirLabel(friend.name, roomId)}の部屋`} sub={`🏘 ${friend.name}さんの家`}
+      bubble={talk && talk.aid === roomId ? talk.text : ''} title={`［助手］${assistantLifeName(roomId)}の部屋`} sub={`🏘 ［プレイヤー］${friend.name}さんの家`}
       onPerson={roomState === 'home' ? () => { greet(roomId); setTimeout(rvToSheet, 60); } : () => rvToSheet()} dock={rvDock} padLeft={78}/>) : null;
   const rvSheetW = land && vw < 760 ? '50%' : '42%';
   const closeRoom = () => { setRoomId(null); setTalk(null); };
@@ -87334,7 +87340,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <div className="flex items-center gap-2">
           <AlfFace id={roomId} size={46}/>
           <div className="min-w-0 flex-1">
-            <p className="text-[16px] font-black text-white">{alfTheirLabel(friend.name, roomId)}の部屋</p>
+            <p className="text-[16px] font-black text-white">［助手］{assistantLifeName(roomId)}の部屋</p>
             <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{alfNoBreak(roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)}</p>
           </div>
           <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={closeRoom}>閉じる</button>
@@ -87502,9 +87508,9 @@ function AssistantLifeFriendPage({ life }) {
         </div>)}
       <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
       <div className={card} data-alf-now style={hideIfEmpty}>
-        {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
+        {st.out && <div className="flex items-center gap-2" data-alf-now-out>{st.out.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="break-words">［助手］{st.out.ids.map(assistantLifeName).join('・')}</span>が<span className="break-words">［プレイヤー］{st.out.name}さんの家へ</span></p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="out" onClick={() => openScene('out')}>▶ 様子</button></div>}
         {!st.out && st.back && !st.back.seen && <div className="flex items-center gap-2" data-alf-now-back>{st.back.ids.map(id => <AlfFace key={id} id={id} size={28}/>)}<p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{st.back.ids.map(assistantLifeName).join('・')}</span>が帰ってきた</p><button type="button" className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="back" onClick={() => openScene('back')}>おかえり！</button></div>}
-        {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="whitespace-nowrap">{alfTheirLabel(c.name, c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
+        {st.came.map((c, i) => <div key={i} className="mt-1 flex items-center gap-2" data-alf-now-come><AlfFace id={c.aid} size={28}/><p className="min-w-0 flex-1 text-[11.5px] text-slate-100"><span className="break-words">［プレイヤー］{c.name}さんの［助手］{assistantLifeName(c.aid)}</span>が遊びに来た</p>{!c.seen ? <button type="button" className="shrink-0 rounded-xl bg-sky-300 px-2.5 py-1 text-[11px] font-black text-slate-950" data-alf-act="come" onClick={() => openScene('come', i)}>▶ 迎える</button> : <span className="shrink-0 text-[10px] text-slate-400">迎えた</span>}</div>)}
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
@@ -87515,9 +87521,9 @@ function AssistantLifeFriendPage({ life }) {
           <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
             <p className="text-[11px] leading-snug text-slate-100">
               <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
-              {n.dir === 'away' ? <><span className="whitespace-nowrap">{n.ids.map(assistantLifeName).join('・')}</span>が<span className="whitespace-nowrap">{n.name}さんの家へ</span>遊びに行っていた</>
-                : n.kind === 'player' ? <><span className="whitespace-nowrap">{n.name}さん</span>が{n.noteTo ? <span className="whitespace-nowrap">{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="whitespace-nowrap">・{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
-                : <><span className="whitespace-nowrap">{n.name}さんの{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
+              {n.dir === 'away' ? <><span className="break-words">［助手］{n.ids.map(assistantLifeName).join('・')}</span>が<span className="break-words">［プレイヤー］{n.name}さんの家へ</span>遊びに行っていた</>
+                : n.kind === 'player' ? <><span className="break-words">［プレイヤー］{n.name}さん</span>が{n.noteTo ? <span className="break-words">［助手］{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="break-words">・［助手］{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
+                : <><span className="break-words">［プレイヤー］{n.name}さんの［助手］{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
             </p>
             {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
               ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
@@ -87534,7 +87540,7 @@ function AssistantLifeFriendPage({ life }) {
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-100">{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
+              <p className="truncate text-[12px] font-black text-slate-100">［プレイヤー］{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
               <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
                 return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
               {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
@@ -87549,7 +87555,7 @@ function AssistantLifeFriendPage({ life }) {
         {waiting.map(f => (
           <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-300">{f.name}さんの家</p>
+              <p className="truncate text-[12px] font-black text-slate-300">［プレイヤー］{f.name}さんの家</p>
               <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
             </div>
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
@@ -89144,7 +89150,8 @@ const MSX_CSS = `
 .msx .v-cup2 .rvl{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:900;color:#fda4af;line-height:1.3;min-width:0}
 .msx .v-cup2 .rvl img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;flex:none}
 .msx .v-cup2 .rvl b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msx .v-cup2 .rvl small{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .rvl{flex-wrap:wrap}
+.msx .v-cup2 .rvl small{max-width:100%;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
@@ -90190,6 +90197,11 @@ const msxBreederIconSrc = (icon) => {
   return item ? item.icon : null;
 };
 // rival は { kind:'aid'|'friend', id(個体の印), icon, profileFrame }。助手は印から助手 id を読んで顔アイコン、フレンドはプロフィールアイコン
+function msxBreederLabel(name, kind) {
+  if (kind === 'aid') return '［助手］' + name;
+  if (kind === 'friend') return '［プレイヤー］' + name;
+  return name;
+}
 function MsxRivalOwnerIcon({ rival, size = 22 }) {
   if (!rival) return null;
   if (rival.kind === 'aid') {
@@ -93723,7 +93735,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : <span className="ok">出場できます</span>}
-              {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{c.rival.breeder}</small> : null}</span> : null}
+              {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{msxBreederLabel(c.rival.breeder, c.rival.kind)}</small> : null}</span> : null}
               <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
             </div>
             {c.rival ? <span className="rvb">能力ポイント1.5倍</span> : null}
@@ -93736,7 +93748,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
         <div className="in" onClick={(e) => e.stopPropagation()}>
           <div className="h">大会参加確認</div>
           <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
-          {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${wc.rival.breeder})` : ''}</span></div> : null}
+          {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${msxBreederLabel(wc.rival.breeder, wc.rival.kind)})` : ''}</span></div> : null}
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
@@ -95494,7 +95506,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const SUM = msxSuc.SUC.SUMMIT || [];
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
-      <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
+      <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)}</small>
       <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
@@ -98004,7 +98016,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-main" data-msa-main>
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
-        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
+        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{msxBreederLabel(info.opp.breeder, info.opp.rivalKind)}</small> : null}</div>
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind}/>
         <div className="msa-say over" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
