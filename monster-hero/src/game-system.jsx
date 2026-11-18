@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9c9fe93908dcd55b
+// generated-sha256: c4b0c45e4b55b300
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68895,6 +68895,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
+  // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
+  winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
@@ -70318,6 +70320,8 @@ function AssistantLifeRoomFigure({ who, src, p, look, sleep = false, onPress = n
     <div style={box} data-assistant-life-roomview-person={who.id} data-assistant-life-roomview-face={Math.round(p.face)} data-assistant-life-roomview-head={Math.round(p.headTop)}>
       <img src={src} alt="" draggable={false} data-assistant-life-roomview-fig={who.id} onClick={onPress || undefined}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
+      {/* 寝顔の絵が無い人は、目の位置を測った絵のときだけ閉じた目(AssistantLifeSleepEyes が絵を見て決める) */}
+      {sleep && <AssistantLifeSleepEyes pid={who.id} src={src} w={p.width} h={p.height} style={{ left: 0, top: 0, filter: 'brightness(.6)' }}/>}
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, ...shape, background: tone, mixBlendMode: 'multiply', pointerEvents: 'none' }}/>
     </div>
     {sleep && <span aria-hidden="true" style={{ position: 'absolute', left: p.cx + p.w * 0.2, top: p.visTop, fontSize: 18, pointerEvents: 'none' }}>💤</span>}
@@ -70380,7 +70384,17 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
   'sorashido_normal.PNG', 'face/sorashido_normal.PNG', // 2026-11-15 ソラシド『馬骨』の寝顔(社長から)
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
+  'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', // きゅうこ『冬の装い』の寝顔(2026-11-19 部屋の画面で、冬服に SVG の目がずれて重なっていた)
 ]));
+// SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
+//   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない
+function assistantLifeSleepMeasured(pid, src) {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!who || !who.imagePrefix || !who.imageDir) return null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''), base = `${who.imageDir}/`, i = s0.indexOf(base);
+  const rel = i >= 0 ? s0.slice(i + base.length) : '';
+  return rel === `${who.imagePrefix}_normal.PNG` ? 'full' : rel === `face/${who.imagePrefix}_normal.PNG` ? 'face' : null;
+}
 // その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
 function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
@@ -70410,7 +70424,7 @@ const ASSISTANT_LIFE_SLEEP_GLASSES = Object.freeze({
 // その絵に「眼鏡を外した寝顔」を重ねられるか(その助手のふつうの顔の絵のときだけ。着替えなど別の絵では位置がちがう)
 function assistantLifeSleepGlassesDef(pid, src) {
   const g = ASSISTANT_LIFE_SLEEP_GLASSES[pid], who = typeof assistantById === 'function' ? assistantById(pid) : null;
-  if (!g || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  if (!g || !who || !assistantLifeSleepMeasured(pid, src)) return null;
   return g;
 }
 // 外してそばに置いた眼鏡(つるをたたんだ形)。gw … 眼鏡の幅(px)。置けるのは眼鏡を外した寝顔が出るときだけ
@@ -70459,7 +70473,7 @@ function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
   const def = (isFace ? ASSISTANT_LIFE_SLEEP_EYES_FACE : ASSISTANT_LIFE_SLEEP_EYES)[pid];
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   // 着替えなど別の絵では目の位置がちがうので描かない(その助手のふつうの顔の絵のときだけ)
-  if (!def || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  if (!def || !who || !assistantLifeSleepMeasured(pid, src)) return null;
   const fid = `mhlse-${pid}${isFace ? '-f' : ''}`;
   return (
     <svg data-assistant-life-roomview-sleep-eyes={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
@@ -70618,7 +70632,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
   const n = Math.max(1, Math.min(4, people.length));
   const deskTop = floorY - Math.round(usable * 0.05);
   // 立ち絵(①②③): 見えている体の範囲を測り、オクリモノ3の測り方で置く
-  const standItems = people.slice(0, 4).map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantFullImage(a, sleepIds.includes(pid) ? 'normal' : 'happy'); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
+  const standItems = people.slice(0, 4).map(pid => { const a = assistantById(pid); if (!a) return null; const s0 = assistantFullImage(a, sleepIds.includes(pid) ? 'normal' : 'happy'), src = sleepIds.includes(pid) ? assistantLifeSleepSrc(pid, s0) : s0; /* 寝ている人は社長の寝顔の絵(部屋に起きている人もいるとき・2026-11-19) */ return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const [boxes, setBoxes] = React.useState({});
   const srcKey = standItems.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(standItems.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; standItems.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [srcKey]);
