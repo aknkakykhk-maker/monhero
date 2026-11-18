@@ -189,7 +189,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : <span className="ok">出場できます</span>}
-              {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{c.rival.breeder}</small> : null}</span> : null}
+              {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{msxBreederLabel(c.rival.breeder, c.rival.kind)}</small> : null}</span> : null}
               <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
             </div>
             {c.rival ? <span className="rvb">能力ポイント1.5倍</span> : null}
@@ -202,7 +202,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
         <div className="in" onClick={(e) => e.stopPropagation()}>
           <div className="h">大会参加確認</div>
           <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
-          {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${wc.rival.breeder})` : ''}</span></div> : null}
+          {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${msxBreederLabel(wc.rival.breeder, wc.rival.kind)})` : ''}</span></div> : null}
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}

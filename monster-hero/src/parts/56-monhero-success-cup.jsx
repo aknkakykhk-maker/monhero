@@ -564,7 +564,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         </div>}
         {tab === 'abl' && <div className="msc-tl">
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
-          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
+          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${msxBreederLabel(o.breeder, o.rivalKind)}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
@@ -606,7 +606,7 @@ function MscPanel({ side, team, frame, maxHp, info, s, buffed }) {
   const o = info.opp || {};
   return (
     <div className={`msc-mp ${side === 'A' ? 'a' : 'b'}`} data-msc-panel={side}>
-      <div className="h">{side === 'A' ? <img src={mscFace(s.aid)} alt=""/> : null}<span>{m.name}{side === 'B' && o.breeder ? <small> ・{o.breeder}</small> : null}{side === 'A' && buffed ? <i className="msc-buff">✨ 特別な1話</i> : null}</span></div>
+      <div className="h">{side === 'A' ? <img src={mscFace(s.aid)} alt=""/> : null}<span>{m.name}{side === 'B' && o.breeder ? <small> ・{msxBreederLabel(o.breeder, o.rivalKind)}</small> : null}{side === 'A' && buffed ? <i className="msc-buff">✨ 特別な1話</i> : null}</span></div>
       <div className="bars">
         <div>
           <div className={`ambw-bar ${hp / mx < 0.3 ? 'low' : ''}`}><i style={{ width: `${Math.round(hp / mx * 100)}%` }}/></div>
