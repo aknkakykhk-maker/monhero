@@ -210,7 +210,7 @@ const msxStatRankCls = (v) => `msx-srk r${msxStatRankOf(v).replace('+', 'p')}`;
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 // mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null, initialTab = null, supportSummary = null, cap = null }) {
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null, initialTab = null, supportSummary = null, cap = null, initialTech = null }) {
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => (initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech')); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)。initialTab='assist' でアシストから開く(編成の効果確認)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
@@ -226,7 +226,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   //   同じ間合い・同じランクに技が2つ以上ある升は、並びの1つ目(または選んだ技)を出し、右上に「⇄」(選べる印)を付ける。そのランクの技が無い升は ×
   const tgAt = (r, d) => all.filter((t) => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
   const tgLines = [1, 2, 3, 4, 5];
-  const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
+  const [pickT, setPickT] = useState(() => { const ini = initialTech ? all.find((t) => t.id === initialTech) : null; return (ini || all.find(has) || all[0] || {}).id || null; }); // initialTech: 能力画面の技名から開いたとき、その技から見せる(Issue #6807 UI-4)
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = (id) => (mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null); // 熟練(渡されていなければ null = 出さない)

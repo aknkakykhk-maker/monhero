@@ -663,6 +663,7 @@ const MSX_CSS = `
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
 .msx .v-tr .tn{display:block;font-size:10px;font-weight:800;color:#fde68a;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-height:2.3em;padding:0 1px;text-align:center}
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr .pv{display:block;font-size:10px;font-weight:900;color:#86efac;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
 .msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
