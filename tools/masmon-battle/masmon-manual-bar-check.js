@@ -28,7 +28,7 @@ const { MsxManualBar, msxManualOpen } = mod.exports;
 
 // 帯の HTML から、ボタンの「押せる/押せない」を取り出す
 const buttons = (html) => [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map(m => ({ disabled: /disabled=""/.test(m[1]), text: m[2].replace(/<[^>]+>/g, ''), tech: (/data-msxm-tech="([^"]+)"/.exec(m[1]) || [])[1], all: /data-msxm-all/.test(m[1]),
-  card: (/data-msa-dc-card="(\d)"/.exec(m[1]) || [])[1], cardRep: (/data-msa-dc-rep="([^"]*)"/.exec(m[1]) || [])[1], row: /msa-sh-use/.test(m[1]), repBtn: (/data-msa-rep="([^"]+)"/.exec(m[1]) || [])[1] }));
+  step: (/data-msxm-move="(-?\d+)"/.exec(m[1]) || [])[1], card: (/data-msa-dc-card="(\d)"/.exec(m[1]) || [])[1], cardRep: (/data-msa-dc-rep="([^"]*)"/.exec(m[1]) || [])[1], row: /msa-sh-use/.test(m[1]), repBtn: (/data-msa-rep="([^"]+)"/.exec(m[1]) || [])[1] }));
 const bar = (o, extra = {}) => RDS.renderToStaticMarkup(React.createElement(MsxManualBar, { opt: o, onPick: () => {}, onAuto: () => {}, busy: false, ...extra }));
 // 代表の決め方(決めていなければ 命中×威力 が最大・同じならガッツの軽いほう)を、検査の側でも計算する
 const repAuto = (o, d) => { const at = o.tech.filter(t => t.dist.includes(d)); if (!at.length) return null; let b = at[0]; for (const t of at) { const a = t.p * t.power, c = b.p * b.power; if (a > c || (a === c && t.guts < b.guts)) b = t; } return b.key; };
@@ -83,7 +83,7 @@ for (let i = 0; i < N; i++) {
     const bsAll = buttons(bar(o, { sheetInit: 'all' }));
     for (const t of far) { farN++; const b = bsAll.find(x => x.tech === t.key); if (b && b.disabled && b.text.includes('いまは届かない')) farOk++; }
     const ch = bs.find(b => b.text.startsWith('💪 ためる')); otherN++; if (ch && ch.disabled === !o.charge.ok) otherOk++;
-    for (const mv of o.move) { otherN++; const b = bs.find(x => x.text.startsWith(mv.step < 0 ? '前進 ▶' : '◀ 後退')); if (b && b.disabled === !mv.ok) otherOk++; }
+    for (const mv of o.move) { otherN++; const b = bs.find(x => x.step === String(mv.step)); if (b && b.disabled === !mv.ok) otherOk++; }
     // 押せるボタンの手を芯に渡す
     const all = [...o.tech.filter(x => x.ok), o.guard, ...o.move.filter(x => x.ok), ...(o.charge.ok ? [o.charge] : []), ...o.swap.filter(x => x.ok)];
     const c = all[Math.floor(pr() * all.length)];

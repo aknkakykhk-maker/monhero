@@ -39,10 +39,10 @@ const N = 300;
   const rate = (loy) => { let sulk = 0, acts = 0; for (let i = 0; i < N; i++) { const r = engine.simulate(input(i, { loy }, {})); for (const e of r.log) if (e.side === 'A' && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev)) { acts++; if (e.why === 'sulk') sulk++; } } return sulk / acts; };
   const r0 = rate(0), r80 = rate(80), r100 = rate(100);
   check('② 忠誠0 で約25%・80 で約5%・100 で0% がそっぽを向く', Math.abs(r0 - 0.25) < 0.03 && Math.abs(r80 - 0.05) < 0.015 && r100 === 0, `0: ${(r0 * 100).toFixed(1)}% / 80: ${(r80 * 100).toFixed(1)}% / 100: ${(r100 * 100).toFixed(1)}%`);
-  let win0 = 0, win100 = 0; for (let i = 0; i < N; i++) { if (engine.simulate(input(i, { loy: 0 }, {})).winner === 'A') win0++; if (engine.simulate(input(i)).winner === 'A') win100++; }
+  let win0 = 0, win100 = 0; for (let i = 0; i < 3000; i++) { if (engine.simulate(input(i, { loy: 0 }, {})).winner === 'A') win0++; if (engine.simulate(input(i)).winner === 'A') win100++; }
   check('② 忠誠度が低いと勝ちにくい', win0 < win100, `忠誠0 ${win0}勝 / 忠誠100 ${win100}勝`);
   const r = engine.simulate(input(1, { loy: 0 }, {})); const e = r.log.find(x => x.why === 'sulk');
-  check('② 忠誠度・人気が効く編成も効かない編成も、試合の行に今の版(10)が残る', engine.simulate(input(1, { loy: 0 }, {})).version === engine.VERSION && engine.simulate(input(1)).version === engine.VERSION_PLAIN && engine.VERSION === 10 && engine.VERSION_PLAIN === 10);
+  check('② 忠誠度・人気が効く編成も効かない編成も、試合の行に今の版(11)が残る', engine.simulate(input(1, { loy: 0 }, {})).version === engine.VERSION && engine.simulate(input(1)).version === engine.VERSION_PLAIN && engine.VERSION === 11 && engine.VERSION_PLAIN === 11);
   check('② そっぽの番は「ためる」の形(ガッツだけたまる)・吹き出しの文がある', !!e && e.ev === 'charge' && !!engine.WHY.sulk);
 }
 // ③ 人気
@@ -80,7 +80,7 @@ const N = 300;
   { const A = core.battleTeam({ assistantId: 'kiki', team: t0, division: 'raw', size: 1, engine, pop: 0 }); const B = core.battleTeam({ assistantId: 'mua', team: t0, division: 'raw', size: 1, engine, pop: 0 });
     const r1 = engine.simulate({ seed: 'loy50', catalog, teamA: A, teamB: B }); const r2 = engine.simulate({ seed: 'loy50', catalog, teamA: JSON.parse(JSON.stringify(A)), teamB: JSON.parse(JSON.stringify(B)) });
     check('⑤ 50 とみなした試合は、行の編成で見返しても同じ(digest)・忠誠度が効く版', r1.digest === r2.digest && r1.version === engine.VERSION, `${r1.version}`); }
-  check('⑤ サーバの計算の写しも同じ版(10)', (eng && eng.VERSION) === engine.VERSION || /VERSION = 10;/.test(fs.readFileSync(path.join(ROOT, 'supabase', 'functions', 'masmon-pvp', 'engine.js'), 'utf8')));
+  check('⑤ サーバの計算の写しも同じ版(11)', (eng && eng.VERSION) === engine.VERSION || /VERSION = 11;/.test(fs.readFileSync(path.join(ROOT, 'supabase', 'functions', 'masmon-pvp', 'engine.js'), 'utf8')));
   void cat;
   console.log(ng ? `NG ${ng} 件` : 'すべて OK');
   process.exit(ng ? 1 : 0);

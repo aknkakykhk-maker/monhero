@@ -154,7 +154,11 @@ const playRandom = (m, seed, stopAt = -1) => {
           if (!(t.p >= 5 && t.p <= 99)) techOk = false;
         }
         // 版10: 移動・ふきとばしは 5×(段+1) のガッツを払う。足りなければ選べない。ふきとばしは零だけ
-        for (const mv of o.move) if (mv.ok !== (mv.to >= 0 && mv.to <= 3 && o.guts >= o.moveCost) || mv.guts !== o.moveCost) moveOk = false;
+        for (const mv of o.move) {
+          const expected = Math.abs(mv.step) === 2 ? 20 + 10 * o.moveLv : o.moveCost;
+          if (mv.guts !== expected || mv.to !== o.dist + mv.step || mv.ok !== (mv.to >= 0 && mv.to <= 3 && o.guts >= expected)) moveOk = false;
+        }
+        if (!o.move.some(mv => Math.abs(mv.step) === 2 && mv.to >= 0 && mv.to <= 3)) moveOk = false;
         if (o.moveCost !== engine.MOVE_COST_STEP * (o.moveLv + 1)) moveOk = false;
         if (o.blow.ok !== (o.dist === 0 && o.guts >= o.moveCost && !o.blow.wait)) moveOk = false;
         if (o.charge.ok !== (o.guts < engine.GUTS_MAX)) chargeOk = false;

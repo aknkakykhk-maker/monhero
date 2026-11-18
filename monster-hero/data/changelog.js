@@ -34,6 +34,7 @@
 //   ・作っている途中の調整・内部の作り直し・見たこともない不具合の修正 → dev:true も付ける
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
+  { date: "2026-11-18 21:00", type:'update', group:'success', status:'new', title:'マスモン対戦とモンサク大会で2歩移動が選べます', items:['初回20ガッツで一気に2歩前進・後退できます。相手も、同じ間合いを行き来し続ける手を選びにくくなりました。'] },
   {
     date: "2026-11-18 16:47", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスのトレーニングと修行の伸びを調整しました',
