@@ -35,6 +35,11 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-18 12:24", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスの大会で「さくら吹雪」に花びらが舞うようになりました',
+    items:['モッチーが大会で「さくら吹雪」を使うと、桜の花びらが舞います。'],
+  },
+  {
     date: "2026-11-18 01:45", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの大会で、ライバルのモンスターの染めた色が見えるようになりました',
     items:[
