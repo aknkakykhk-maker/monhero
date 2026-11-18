@@ -5,6 +5,8 @@
 //   ④ えるびん(そのまま)には付かない。ソラシドは『馬骨』の寝顔の絵 sorashido_sleep.PNG(2026-11-15 r1115-013)に差し替わるので、閉じた目に数える
 //   ⑦ ドラ(眼鏡)は眼鏡を外した顔(3の字の目)になり、外した眼鏡がそばに置かれる(2026-11-11 社長「ドラはメガネ外して…メガネ3の字に」)
 //   ⑤ 顔の表と全身の表に、5人とも目の位置がある ⑥ ページのエラーが出ない
+//   ⑧ (2026-11-19 社長「寝顔があるのに、寝顔じゃない顔を無理やり寝顔にしようとしてる」)8人×着せ替え全部×(全身・顔・立ち絵)で、
+//      寝顔の絵がある絵には SVG の目を重ねない/SVG の目・眼鏡を外した顔を重ねるのは、目の位置の表を測った絵(ふだんの服の全身・顔アイコン)だけ。ずれた目を出すくらいなら出さない
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9267;
 let failed = 0;
@@ -38,6 +40,33 @@ const ART_ONLY = ['sorashido']; // 目の位置の表は持たず、寝顔の絵
   const tables = await page.evaluate(() => ({ full: Object.keys(ASSISTANT_LIFE_SLEEP_EYES), face: Object.keys(ASSISTANT_LIFE_SLEEP_EYES_FACE), glasses: Object.keys(ASSISTANT_LIFE_SLEEP_GLASSES) }));
   check('⑤ 閉じた目の全身と顔の表に、5人とも目の位置がある(ドラ・ソラシド・えるびんは無い)', CLOSE.every(id => tables.full.includes(id) && tables.face.includes(id)) && !['dra', 'sorashido', 'erubin'].some(id => tables.full.includes(id) || tables.face.includes(id)), JSON.stringify(tables));
   check('⑦ 眼鏡を外す表にドラがいる', OFF.every(id => tables.glasses.includes(id)), tables.glasses.join(','));
+  // ⑧ 絵の組み合わせ全部での決まり(画面を開かず、関数を直接呼ぶ)
+  const combo = await page.evaluate(() => {
+    const out = { n: 0, stacked: [], misplaced: [], noArt: [] };
+    const outfits = [null, ...ASSISTANT_COSTUMES.map(c => c.id)];
+    for (const who of ASSISTANTS) {
+      for (const cid of outfits) {
+        const c = cid ? ASSISTANT_COSTUMES.find(x => x.id === cid) : null;
+        if (c && c.assistantId && c.assistantId !== who.id) continue;
+        setAssistantCostumeWornNow(c ? { [who.id]: cid } : {});
+        const srcs = [assistantFullImage(who, 'normal'), assistantFaceImage(who, 'normal'), `${who.imageDir}/${who.imagePrefix}_normal.PNG`, `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`];
+        for (const s0 of [...new Set(srcs)]) {
+          out.n++;
+          const shown = assistantLifeSleepSrc(who.id, s0), replaced = /_sleep\.PNG/i.test(shown);
+          const el = AssistantLifeSleepEyes({ pid: who.id, src: shown, w: 100, h: 100, style: {} });
+          const tag = `${who.id}/${cid || 'base'}/${s0.split('/assistant/').pop()}`;
+          if (replaced && el && el.type !== 'img') out.stacked.push(tag);
+          if (replaced && el && el.type === 'img' && el.props.src !== shown && !/face\//.test(shown)) out.stacked.push(tag + '(全身に顔の絵)');
+          if (!replaced && el && el.type === 'svg' && !assistantLifeSleepMeasured(who.id, shown)) out.misplaced.push(tag);
+          if (!replaced && !el && who.id !== 'erubin' && !(cid && true)) out.noArt.push(tag);
+        }
+      }
+    }
+    setAssistantCostumeWornNow({});
+    return out;
+  });
+  check('⑧ 寝顔の絵がある絵には SVG の目を重ねない', combo.stacked.length === 0, `${combo.n}通り ${combo.stacked.slice(0, 3).join(' / ')}`);
+  check('⑧ SVG の目・眼鏡を外した顔は、目の位置を測った絵(ふだんの服の全身・顔)にだけ重なる', combo.misplaced.length === 0, combo.misplaced.slice(0, 3).join(' / '));
   await page.evaluate((ids) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: [], solo: Object.fromEntries(ids.map(id => [id, { doing: 'sleep', place: 'home' }])), watched: [] } }); }, IDS);
   await page.waitForTimeout(800); await finishTalk(page);
   await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
