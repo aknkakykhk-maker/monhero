@@ -183,7 +183,7 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
-            if (st === 'clinic') return click(/通院/);
+            if (st === 'clinic') { if (!click(/通院/)) return false; await new Promise((r) => setTimeout(r, 300)); const g = document.querySelector('[data-msx-care-go]'); if (g && !g.disabled) { g.click(); return true; } return false; } // 2026-11-18 Issue #6807 UI-2: 通院は選ぶ画面で見込みを見てから実行ボタンで確定(結果の撮影が目的のまま)
             if (st === 'begin') return click(/育成を(?:始|はじ)める/);
             if (st === 'birthSkip') { // 円盤石から生まれる演出(56-monsuc-birth.jsx)を飛ばして「育成をはじめる」
               const k = document.querySelector('[data-msx-birth-skip]'); if (k) k.click(); await new Promise((r) => setTimeout(r, 400));
@@ -191,7 +191,7 @@ const makeRun = async (kind) => {
             }
             if (st === 'introNext') { const b = document.querySelector('[data-msx-intro-next]'); if (!b) return false; b.click(); return true; }
             if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
-            if (st === 'rest') return click(/^🛌/);
+            if (st === 'rest') { if (!click(/^🛌/)) return false; await new Promise((r) => setTimeout(r, 300)); const g = document.querySelector('[data-msx-care-go]'); if (g && !g.disabled) { g.click(); return true; } return false; } // 2026-11-18 Issue #6807 UI-2: 休むも選ぶ画面から実行ボタンで確定
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
             if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
               const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const P = msxSuc.core.PERIODS;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: af6e58e9213c2555
+// source-sha256: 96f388ca4fbf4acc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171754,6 +171754,7 @@ const MSX_CSS = `
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
 .msx .v-tr .tn{display:block;font-size:10px;font-weight:800;color:#fde68a;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-height:2.3em;padding:0 1px;text-align:center}
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr .pv{display:block;font-size:10px;font-weight:900;color:#86efac;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
 .msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
@@ -174320,7 +174321,8 @@ function MsxMonDetail({
   info = null,
   initialTab = null,
   supportSummary = null,
-  cap = null
+  cap = null,
+  initialTech = null
 }) {
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech');
@@ -174335,7 +174337,10 @@ function MsxMonDetail({
   const list = all.slice().sort((x, y) => has(y) - has(x) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
   const tgAt = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
   const tgLines = [1, 2, 3, 4, 5];
-  const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
+  const [pickT, setPickT] = useState(() => {
+    const ini = initialTech ? all.find(t => t.id === initialTech) : null;
+    return (ini || all.find(has) || all[0] || {}).id || null;
+  });
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = id => mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null;
@@ -178191,6 +178196,8 @@ function MsxPlay({
   const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(false);
+  const [detailTech, setDetailTech] = useState(null);
+  const [careSel, setCareSel] = useState('rest');
   const [preAt, setPreAt] = useState(null);
   const [preDesk, setPreDesk] = useState(false);
   const preB = run.phase === 'battle' && s.battle && s.battle.kind !== 'cup' ? s.battle : null;
@@ -179413,6 +179420,11 @@ function MsxPlay({
     })) : null, MSX_STATS.map(k => {
       const c = msxCardOf(v, k);
       const lv = lvOf(c);
+      const cpv = c && typeof SUC.preview === 'function' ? SUC.preview(s, {
+        kind: c.kind,
+        stat: k
+      }) : null;
+      const cg = cpv && cpv.gain ? cpv.gain[k] || 0 : 0;
       return React.createElement("button", {
         type: "button",
         key: k,
@@ -179431,7 +179443,10 @@ function MsxPlay({
         key: i
       }, i ? React.createElement("wbr", null) : null, x))), lv ? React.createElement("i", {
         className: "lv"
-      }, "Lv.", lv) : null, k === stat && c ? React.createElement("span", {
+      }, "Lv.", lv) : null, cg ? React.createElement("small", {
+        className: "pv",
+        "data-msx-train-gain": k
+      }, "+", cg) : null, k === stat && c ? React.createElement("span", {
         className: "ke",
         "data-msx-train-ok": true
       }, "選択中") : null);
@@ -179458,6 +179473,116 @@ function MsxPlay({
         stat
       })
     }, msxTrainIcon(stat, trainLv), " ", msxTrainName(stat, trainLv), "をする"));
+  } else if (sub === 'care') {
+    const canC = v.can || [];
+    const careKinds = [{
+      kind: 'rest',
+      e: '🛌',
+      nm: '休む',
+      tn: '体力を回復',
+      ok: true
+    }, {
+      kind: 'play',
+      e: '🎈',
+      nm: '遊ぶ',
+      tn: '体力+・甘え+',
+      ok: true
+    }, {
+      kind: 'clinic',
+      e: '🏥',
+      nm: '通院',
+      tn: 'ようすを治す',
+      ok: canC.includes('clinic')
+    }];
+    const selCare = careKinds.find(c => c.kind === careSel && c.ok) || careKinds[0];
+    const cp = typeof SUC.carePreview === 'function' ? SUC.carePreview(s, selCare.kind) : null;
+    const sgn = n => n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0';
+    const yosuName = {
+      sabori: 'サボりグセ',
+      utsu: 'どんより'
+    };
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement("div", {
+      className: "v-scene",
+      style: {
+        flex: '1 1 0'
+      }
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg(s.turn).bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr",
+      style: {
+        bottom: 'calc(8% - 5px)'
+      }
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        bottom: '8%',
+        height: '34%',
+        opacity: .9
+      },
+      live: true
+    })), React.createElement("div", {
+      className: "v-trs",
+      "data-msx-care-row": true,
+      style: {
+        display: 'flex',
+        gap: 6
+      }
+    }, careKinds.map(c => React.createElement("button", {
+      type: "button",
+      key: c.kind,
+      className: `v-tr${c.kind === selCare.kind ? ' sel' : ''}`,
+      style: {
+        flex: 1
+      },
+      disabled: !c.ok,
+      onClick: () => setCareSel(c.kind),
+      "data-msx-care": c.kind
+    }, React.createElement("div", {
+      className: "o"
+    }, c.e), React.createElement("b", {
+      className: "nm"
+    }, c.nm), React.createElement("small", {
+      className: "tn one"
+    }, c.tn), c.kind === selCare.kind ? React.createElement("span", {
+      className: "ke",
+      "data-msx-care-ok": true
+    }, "選択中") : null))), React.createElement("div", {
+      className: "v-trsum",
+      "data-msx-care-sum": true,
+      style: {
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 3
+      }
+    }, selCare.kind === 'rest' && cp ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力の回復は抽選です"), cp.list.map(r => React.createElement("span", {
+      key: r.key
+    }, r.name, ": 体力 ", React.createElement("b", null, "+", r.hp), "(", React.createElement("b", null, Math.round(r.p * 100), "%"), ")")), React.createElement("span", null, "ストレス ", React.createElement("b", null, sgn(cp.stress)))) : selCare.kind === 'play' && cp ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力 ", React.createElement("b", null, "+", cp.hp), "・ストレス ", React.createElement("b", null, sgn(cp.stress)), "・甘え度 ", React.createElement("b", null, sgn(cp.ama))), cp.curesUtsu ? React.createElement("span", null, "どんよりが治ります") : null) : selCare.kind === 'clinic' && cp ? React.createElement(React.Fragment, null, cp.list.map(r => React.createElement("span", {
+      key: r.key
+    }, yosuName[r.key], "が治る見込み ", React.createElement("b", null, Math.round(r.p * 100), "%"), r.again ? '(前回治らなかったので、今回は必ず治ります)' : '(治らなくても、次は必ず治ります)')), React.createElement("span", null, "体力 ", React.createElement("b", null, "+", cp.hp))) : React.createElement("span", null, selCare.nm, "の見込みは出せません")));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => setSub('main')
+    }, "← 戻る"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      disabled: !selCare.ok || selCare.kind === 'clinic' && !cp,
+      onClick: () => doAct({
+        kind: selCare.kind
+      }),
+      "data-msx-care-go": true
+    }, selCare.e, " ", selCare.nm, selCare.kind === 'clinic' ? 'する' : ''));
   } else {
     const can = v.can || [];
     const anyTag = MSX_STATS.some(k => {
@@ -179559,7 +179684,10 @@ function MsxPlay({
       type: "button",
       className: "v-bagb st",
       "data-msx-detail-open": true,
-      onClick: () => setDetail(true)
+      onClick: () => {
+        setDetailTech(null);
+        setDetail(true);
+      }
     }, "🔍", React.createElement("small", null, "詳しく"))), React.createElement(MsxStRow, {
       who: s,
       stats: s.stats
@@ -179614,9 +179742,10 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => doAct({
-        kind: 'rest'
-      })
+      onClick: () => {
+        setCareSel('rest');
+        setSub('care');
+      }
     }, React.createElement("div", {
       className: "e"
     }, "🛌"), "休む", React.createElement("small", null, "体力を回復")), React.createElement("button", {
@@ -179640,9 +179769,10 @@ function MsxPlay({
       type: "button",
       className: `v-p ${yosu ? 'hosp' : 'off'}`,
       disabled: !can.includes('clinic'),
-      onClick: () => doAct({
-        kind: 'clinic'
-      })
+      onClick: () => {
+        setCareSel('clinic');
+        setSub('care');
+      }
     }, React.createElement("div", {
       className: "e"
     }, "🏥"), "通院", React.createElement("small", null, yosu ? 'ようすを治す' : 'ようすなし'), yosu ? React.createElement("span", {
@@ -179650,9 +179780,10 @@ function MsxPlay({
     }, "!") : null), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => doAct({
-        kind: 'play'
-      })
+      onClick: () => {
+        setCareSel('play');
+        setSub('care');
+      }
     }, React.createElement("div", {
       className: "e"
     }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), (() => {
@@ -179700,7 +179831,11 @@ function MsxPlay({
       setRun: setRun,
       v: v,
       ev: ev,
-      onClose: () => setSub('main')
+      onClose: () => setSub('main'),
+      onOpenTech: id => {
+        setDetailTech(id);
+        setDetail(true);
+      }
     });
     if (sub === 'bag' || sub === 'stats') foot = React.createElement("div", {
       className: "v-ft"
@@ -179766,6 +179901,7 @@ function MsxPlay({
       power: ev.power,
       rank: ev.rank,
       SUC: SUC,
+      initialTech: detailTech,
       pick: typeof SUC.setTechPick === 'function' && s.techPick ? {
         sel: s.techPick,
         locked: c => SUC.techPickLocked(s, c),
@@ -179777,7 +179913,10 @@ function MsxPlay({
           });
         }
       } : null,
-      onClose: () => setDetail(false)
+      onClose: () => {
+        setDetail(false);
+        setDetailTech(null);
+      }
     });
   })() : null, sheet === 'dex' && typeof MsxDex === 'function' ? React.createElement(MsxDex, {
     aid: s.aid,
@@ -180237,7 +180376,8 @@ function MsxStats({
   setRun,
   v,
   ev,
-  onClose
+  onClose,
+  onOpenTech = null
 }) {
   const {
     SUC
@@ -180271,32 +180411,92 @@ function MsxStats({
     draftRef.current = list;
     setDraft(list);
   };
+  const [ptWarn, setPtWarn] = useState('');
   const plus = k => {
     const list = draftRef.current.slice();
     let w = replay(list);
-    const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit);
+    if (String(k).startsWith('m:')) {
+      const lim = msxPtLimitM(unitM, mCost);
+      let n = 0;
+      while (n < lim) {
+        const r = SUC.spendPts(w, k, 1);
+        if (!r.out.ok) break;
+        w = r.state;
+        list.push(k);
+        n += 1;
+      }
+      if (n) {
+        setPtWarn('');
+        setDraftNow(list);
+      }
+      return;
+    }
+    const budget = msxPtLimit(unit);
     let n = 0;
-    while (n < lim) {
-      if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break;
+    let spent = 0;
+    while (true) {
+      if (w.stats[k] >= capK(k)) break;
+      const c = SUC.ptsCost(w, k);
+      if (spent + c > budget) break;
       const r = SUC.spendPts(w, k, 1);
       if (!r.out.ok) break;
       w = r.state;
       list.push(k);
+      spent += c;
       n += 1;
     }
-    if (n) setDraftNow(list);
+    if (n) {
+      setPtWarn('');
+      setDraftNow(list);
+    } else if (budget !== Infinity && w.pts >= SUC.ptsCost(w, k) && w.stats[k] < capK(k)) setPtWarn(`「${unit}P」では足りないよ(この能力はいま ${SUC.ptsCost(w, k)}点で +1)`);
   };
   const minus = k => {
     const list = draftRef.current.slice();
-    const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit);
+    if (String(k).startsWith('m:')) {
+      const lim = msxPtLimitM(unitM, mCost);
+      let n = 0;
+      while (n < lim) {
+        const i = list.lastIndexOf(k);
+        if (i < 0) break;
+        list.splice(i, 1);
+        n += 1;
+      }
+      if (n) {
+        setPtWarn('');
+        setDraftNow(list);
+      }
+      return;
+    }
+    const budget = msxPtLimit(unit);
+    const costs = [];
+    let val = s.stats[k];
+    for (const x of list) {
+      if (x !== k) continue;
+      costs.push(SUC.ptsCost({
+        ...s,
+        stats: {
+          ...s.stats,
+          [k]: val
+        }
+      }, k));
+      val += 1;
+    }
     let n = 0;
-    while (n < lim) {
+    let back = 0;
+    while (costs.length) {
+      const c = costs[costs.length - 1];
+      if (back + c > budget) break;
       const i = list.lastIndexOf(k);
       if (i < 0) break;
       list.splice(i, 1);
+      costs.pop();
+      back += c;
       n += 1;
     }
-    if (n) setDraftNow(list);
+    if (n) {
+      setPtWarn('');
+      setDraftNow(list);
+    } else if (budget !== Infinity && costs.length) setPtWarn(`「${unit}P」では戻せないよ(最後の +1 は ${costs[costs.length - 1]}点ぶん)`);
   };
   const auto = () => {
     let w = replay(draft);
@@ -180373,9 +180573,18 @@ function MsxStats({
     setTab: setPtTab
   }), React.createElement(MsxPtUnits, {
     unit: ptTab === 'mastery' ? unitM : unit,
-    setUnit: ptTab === 'mastery' ? setUnitM : setUnit,
+    setUnit: x => {
+      if (ptTab === 'mastery') setUnitM(x);else setUnit(x);
+      setPtWarn('');
+    },
     mastery: ptTab === 'mastery'
-  }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+  }), ptWarn ? React.createElement("div", {
+    className: "msx-note",
+    style: {
+      color: '#fbbf24'
+    },
+    "data-msx-pt-warn": true
+  }, ptWarn) : null, ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
     SUC: SUC,
     s: s,
     ws: ws,
@@ -180385,7 +180594,7 @@ function MsxStats({
     minus: minus
   }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "msx-note"
-  }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
+  }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。刻みは使うポイントの合計(10Pなら合計10点ぶん)。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
     const n = addOf(k);
     const cost = SUC.ptsCost(ws, k);
     const over = lineOf != null && ws.stats[k] >= lineOf;
@@ -180467,7 +180676,18 @@ function MsxStats({
     "data-msx-ability-techs": true
   }, React.createElement("div", {
     className: "h2"
-  }, "⚔ 覚えている技 ", techs.length), techs.length ? React.createElement("div", null, techs.map(t => React.createElement("span", {
+  }, "⚔ 覚えている技 ", techs.length), techs.length ? React.createElement("div", null, techs.map(t => onOpenTech ? React.createElement("button", {
+    type: "button",
+    key: t.id,
+    className: "msx-ab-tech",
+    style: {
+      font: 'inherit',
+      color: 'inherit',
+      cursor: 'pointer'
+    },
+    onClick: () => onOpenTech(t.id),
+    "data-msx-ab-tech": t.id
+  }, t.kind === 'wise' ? '🧠' : '💪', t.name) : React.createElement("span", {
     key: t.id,
     className: "msx-ab-tech"
   }, t.kind === 'wise' ? '🧠' : '💪', t.name))) : React.createElement("div", {
@@ -180477,7 +180697,7 @@ function MsxStats({
     style: {
       marginTop: 4
     }
-  }, "新しい技は修行で覚える。技の性能は場面の「🔍 詳しく」で見られる")), React.createElement("div", {
+  }, "新しい技は修行で覚える。技の名前を押すと、その技の性能が見られる")), React.createElement("div", {
     className: "v-card"
   }, React.createElement("div", {
     className: "h2"
@@ -185178,6 +185398,7 @@ function MsxR3Retire({
   const [ptTab, setPtTab] = useState('stat');
   const [ptUnitM, setPtUnitM] = useMsxPtUnit(true);
   const [ptUnit, setPtUnit] = useMsxPtUnit();
+  const [ptWarn, setPtWarn] = useState('');
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
   const [fxDone, setFxDone] = useState(false);
@@ -185333,29 +185554,88 @@ function MsxR3Retire({
     const spend = k => {
       const list = ptListRef.current.slice();
       let w = replayPts(list);
-      const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10) : msxPtLimit(ptUnit);
+      if (String(k).startsWith('m:')) {
+        const lim = msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10);
+        let n = 0;
+        while (n < lim) {
+          const r = SUC.spendPts(w, k, 1);
+          if (!r.out.ok) break;
+          w = r.state;
+          list.push(k);
+          n += 1;
+        }
+        if (n) {
+          setPtWarn('');
+          setPtListNow(list);
+        }
+        return;
+      }
+      const budget = msxPtLimit(ptUnit);
       let n = 0;
-      while (n < lim) {
+      let spent = 0;
+      while (true) {
         if (w.stats[k] >= capOf(w, k)) break;
+        const c = SUC.ptsCost(w, k);
+        if (spent + c > budget) break;
         const r = SUC.spendPts(w, k, 1);
         if (!r.out.ok) break;
         w = r.state;
         list.push(k);
+        spent += c;
         n += 1;
       }
-      if (n) setPtListNow(list);
+      if (n) {
+        setPtWarn('');
+        setPtListNow(list);
+      } else if (budget !== Infinity && w.pts >= SUC.ptsCost(w, k) && w.stats[k] < capOf(w, k)) setPtWarn(`「${ptUnit}P」では足りないよ(この能力はいま ${SUC.ptsCost(w, k)}点で +1)`);
     };
     const undoK = k => {
       const list = ptListRef.current.slice();
-      const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10) : msxPtLimit(ptUnit);
+      if (String(k).startsWith('m:')) {
+        const lim = msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10);
+        let n = 0;
+        while (n < lim) {
+          const i = list.lastIndexOf(k);
+          if (i < 0) break;
+          list.splice(i, 1);
+          n += 1;
+        }
+        if (n) {
+          setPtWarn('');
+          setPtListNow(list);
+        }
+        return;
+      }
+      const budget = msxPtLimit(ptUnit);
+      const costs = [];
+      let val = s.stats[k];
+      for (const x of list) {
+        if (x !== k) continue;
+        costs.push(SUC.ptsCost({
+          ...s,
+          stats: {
+            ...s.stats,
+            [k]: val
+          }
+        }, k));
+        val += 1;
+      }
       let n = 0;
-      while (n < lim) {
+      let back = 0;
+      while (costs.length) {
+        const c = costs[costs.length - 1];
+        if (back + c > budget) break;
         const i = list.lastIndexOf(k);
         if (i < 0) break;
         list.splice(i, 1);
+        costs.pop();
+        back += c;
         n += 1;
       }
-      if (n) setPtListNow(list);
+      if (n) {
+        setPtWarn('');
+        setPtListNow(list);
+      } else if (budget !== Infinity && costs.length) setPtWarn(`「${ptUnit}P」では戻せないよ(最後の +1 は ${costs[costs.length - 1]}点ぶん)`);
     };
     const preset = kind => {
       let w = s;
@@ -185439,9 +185719,18 @@ function MsxR3Retire({
       setTab: setPtTab
     }), React.createElement(MsxPtUnits, {
       unit: ptTab === 'mastery' ? ptUnitM : ptUnit,
-      setUnit: ptTab === 'mastery' ? setPtUnitM : setPtUnit,
+      setUnit: x => {
+        if (ptTab === 'mastery') setPtUnitM(x);else setPtUnit(x);
+        setPtWarn('');
+      },
       mastery: ptTab === 'mastery'
-    }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+    }), ptWarn ? React.createElement("div", {
+      className: "msx-note",
+      style: {
+        color: '#fbbf24'
+      },
+      "data-msx-pt-warn": true
+    }, ptWarn) : null, ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
       SUC: SUC,
       s: s,
       ws: ws,
@@ -187999,7 +188288,7 @@ const monsucLendClaim = async () => {
   };
 };
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
-const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}.msa-tn-brk .msa-tn-s{white-space:normal;overflow-wrap:anywhere}`;
 const MSX_MANUAL_CSS = `
 .msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:6px 8px;margin-top:4px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
@@ -188074,12 +188363,14 @@ const msaFitTechNames = () => {
     }
     document.querySelectorAll('[data-msa-tn]').forEach(el => {
       el.style.fontSize = '';
+      el.classList.remove('msa-tn-brk');
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12,
         n = 0;
-      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) {
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 10 && n++ < 12) {
         fs -= 0.5;
         el.style.fontSize = `${fs}px`;
       }
+      if (el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
     });
   } catch (_) {}
 };
@@ -188116,7 +188407,7 @@ const MSA_DC_CSS = `
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
 .msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
-@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
@@ -188132,7 +188423,7 @@ const MSA_DC_CSS = `
 .msa-dc.a .msa-dc-ic .mv.kb{background:#f97316}
 .msa-dc.a .msa-dc-h,.msa-dc.a .msa-tn,.msa-dc.a .msa-dc-l{grid-column:2;min-width:0}
 .msa-dc.a .msa-tn{font-size:12px;line-height:1.15}
-@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(8px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(10px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
 .msa-dc.a .msa-dc-l{display:block;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;letter-spacing:-.01em;font-size:10px;color:#fde68a;font-weight:900}
 .msa-dc.a .msa-dc-l.g{font-size:9.5px;color:#cbd5e1;font-weight:800}
 .msa-dc.a .msa-dc-l.g b{color:#fff}
@@ -188546,14 +188837,14 @@ function MsxManualBar({
     onClick: () => go({
       type: 'guard'
     })
-  }, "🛡 ガード", React.createElement("small", null, "受けるダメージを減らす")), React.createElement("button", {
+  }, "🛡 ガード", React.createElement("small", null, "次の自分の手番まで守る")), React.createElement("button", {
     type: "button",
     className: `msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`,
     disabled: !opt.charge.ok || busy,
     onClick: () => go({
       type: 'charge'
     })
-  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン'))), React.createElement("div", {
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}（${Math.round(opt.guts)}→${opt.charge.after}）` : 'この番は合わせて16回復' : 'ガッツは満タン'))), React.createElement("div", {
     className: "msxm-row r3"
   }, (() => {
     const mvBtn = mv => React.createElement("button", {
