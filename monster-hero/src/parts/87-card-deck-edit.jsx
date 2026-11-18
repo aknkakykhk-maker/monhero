@@ -169,9 +169,10 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
-    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`}>
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2 ${land ? 'shrink-0' : ''}`}>
       <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
-      <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
+      {/* やめる(未保存なら確かめの窓つき)は見出し左上の戻ると同じ働きなので、下の帯からは外した
+          (戻る系ボタン統一・2026-11-18 社長決定。出口は見出しの左上だけ) */}
     </div>
   );
   const sortLabel = (CARD_DECK_SORTS.find((x) => x.id === sort) || CARD_DECK_SORTS[0]).label;

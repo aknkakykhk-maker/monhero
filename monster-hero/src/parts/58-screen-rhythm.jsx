@@ -19,7 +19,7 @@ function RhythmInfoScreen({
   return (
       <main data-rhythm-info className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="HOMEへ戻る" onClick={returnToHome} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="HOMEへ戻る" onClick={returnToHome} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">HOMEへ戻る</span></button>
           <div className="min-w-0"><small className="block text-[8px] font-black text-cyan-300">COMING SOON</small><h2 className="text-sm font-black tracking-widest text-cyan-200">モンヒロビート</h2></div>
         </header>
         <div className="flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
@@ -202,7 +202,7 @@ function RhythmSongSelectScreen({
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
           <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モード選びへ戻る'} title={debugAll?'デバッグへ戻る':'モード選びへ戻る'}
             onClick={onExit}
-            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -324,7 +324,7 @@ function RhythmSongSelectScreen({
                     <button type="button" onClick={()=>setQuickRunStopConfirm(false)}
                       className="min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]">続ける</button>
                     <button type="button" data-quick-run-stop-yes onClick={()=>{setQuickRunStopConfirm(false);void handleGiveUp();}}
-                      className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">やめる</button>
+                      className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">周回をやめる</button>
                   </div>
                 </div>
               : <button type="button" data-quick-run-stop onClick={()=>setQuickRunStopConfirm(true)}
@@ -502,7 +502,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
   return (
     <main data-rhythm-note-dex className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
       <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
         <div className="min-w-0 flex-1">
           <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
           <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📒 ノーツ図鑑</h2>
@@ -544,7 +544,7 @@ function RhythmHelpScreen({
       return (
       <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <div className="min-w-0 flex-1">
             <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
             <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">{topic?`${topic.emoji} ${topic.title}`:'📖 遊びかた'}</h2>
@@ -608,7 +608,7 @@ function RhythmMonstersScreen({
   return (
       <main data-rhythm-demo-monsters-screen className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);onBackToSongSelect();}} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
         </header>
         {/* 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
@@ -902,7 +902,7 @@ function RhythmRankingScreen({
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" onClick={onBackToSongSelect} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
@@ -1101,7 +1101,6 @@ function RhythmRankingScreen({
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
-                <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
               </div>
               {isTotal
                 ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
@@ -1150,6 +1149,7 @@ function RhythmRankingScreen({
                   {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
                 </p>
               </React.Fragment>)}
+              <button type="button" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
             </div>
           </div>);
         })()}

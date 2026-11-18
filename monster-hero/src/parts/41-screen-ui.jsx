@@ -59,19 +59,21 @@ const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-whit
 //   accent   … 名前の色のクラス(画面ごとの識別色。既定は白)
 //   note     … 名前の下の小さな補足(省略可)
 //   onBack   … 戻るときにすること(画面は自分の戻り先を知らない)
-//   backLabel… 読み上げ用のラベル。どこへ戻るのかを書く
+//   backLabel… 戻るボタンの言葉。そのまま画面に出る(「○○へ戻る」の形で、どこへ戻るのかを書く)
 //   right    … 右端へ置くもの(件数・所持数など。省略可)
 //   accentStyle … 名前の色を style で渡すとき(モードごとの色など、クラスで書けない色)
 //   compact  … 中身が詰まっている画面(バトルの入口など)用。下の余白を詰める
 //   wrapTitle… 名前が長い画面用。1行に収まらないときは切らずに折り返す(横画面の左の列は幅が狭い)
-// ★戻るは 44×44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
+// ★戻るは高さ44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
 //   「反応する戻る」と「反応しない戻る」が混ざっていると、押せていないように見える。
+// ★出口は「← ＋言葉」で画面に出す(戻る系ボタン統一・2026-11-18 社長決定)。矢印だけだと
+//   行き先が押すまで分からないので、backLabel をそのまま文字でも出す。
 const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = null, note = '', onBack = null, backLabel = '戻る', right = null, disabled = false, compact = false, wrapTitle = false }) => (
   <header className={`mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`}>
     {onBack && (
       <button type="button" aria-label={backLabel} onClick={onBack} disabled={disabled}
-        className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
-        <ArrowLeft size={20}/>
+        className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
+        <ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{backLabel}</span>
       </button>
     )}
     <div className="min-w-0 flex-1">
@@ -687,7 +689,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="やめる"/>
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -700,7 +702,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="やめる"/>
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
     </div>
   </ModalFrame>
 );

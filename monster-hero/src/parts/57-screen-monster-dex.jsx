@@ -91,7 +91,6 @@ const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
         style={{ paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-amber-100">色の見本にするマスモン</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5">
           {row('base', !current, false, face(null, mon.name), '元の色', <span>もとのイラストの色</span>, () => pick(null))}
@@ -106,6 +105,7 @@ const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
           })}
           {list.length === 0 && <p className="text-center text-[11px] font-bold text-slate-400 py-3">この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。</p>}
         </div>
+        <button type="button" onClick={onClose} className="shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
       </div>
     </div>
   );
@@ -118,7 +118,6 @@ const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onCl
     <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:500px)]:p-3 flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
       <div className="flex items-center justify-between shrink-0">
         <h3 className="text-sm font-black text-white">🎨 {mon.name}を染めてみる</h3>
-        <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
       </div>
       {/* 高さ500px以下の横画面では、絵と注意書きを左、色の札とボタンを右に並べる。
           縦に積むと絵の枠だけで窓の半分を使い、色の札が1段しか見えなかった(2026-10-27 見回り・844×390) */}
@@ -140,6 +139,7 @@ const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onCl
           </div>
         </div>
       </div>
+      <button type="button" onClick={onClose} className="shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
     </div>
   </div>
 );

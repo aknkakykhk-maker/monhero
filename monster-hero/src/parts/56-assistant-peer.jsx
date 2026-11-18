@@ -881,8 +881,8 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
-        <button type="button" data-assistant-peer-close aria-label="閉じる" onClick={ev => { ev.stopPropagation(); finish(cur); }}
-          className="h-7 w-7 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95">×</button>
+        <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
+          className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
       </div>
     </div>);
 }
@@ -945,7 +945,6 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
       <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2">
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
-          <button type="button" data-assistant-peer-album-close onClick={onClose} aria-label="閉じる" className="h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95">×</button>
         </div>
         <p className="mb-2 text-[10px] text-slate-400">{assistantPeerLvLabel(lv)}・見た掛け合い {talks.length}/{all}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -1006,6 +1005,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
                 : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)}</span>
             </button>))}
         </div>
+        <button type="button" data-assistant-peer-album-close onClick={onClose} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
       </div>
       {buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => { const x = assistantLifeGiftOf(buyKind); return x ? (
         <AssistantLifeBuyConfirm item={x} to={`${a.name}と${b.name}`} onClose={() => setBuyKind(null)}
