@@ -35,6 +35,7 @@
 | `mh_bgm_arrangement` | object / 既定の組み合わせ | 場面ごとに選んだBGMのtrack ID。読み込み時に正規化し、知らない項目・不正なIDは既定値で補う |
 | `mh_title_art` | string / `'auto'` | タイトル画像アレンジ。`'auto'`(おまかせ)・`'halloween'`・`'classic'`。無い・知らない値は `'auto'`。起動時の先読み(index.html)もこのキーを読む |
 | `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
+| `mh_home_assistant_comment_v1` | boolean / `true` | HOMEの助手コメント(吹き出しと「💬 おしゃべり」ボタン)の入/切。無い・壊れているときは「入」(今の見た目が既定) |
 | `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
 | `mh_time_of_day_v1` | object / `{ mood:'on', clock:'on', format:'24h' }` | 時間帯で変わる雰囲気、いまの時刻の札の入/切、時刻の表示形式(2026-11-07・2026-11-09・44-time-of-day.jsx)。`{ mood:'on'|'off', clock:'on'|'off', format:'24h'|'12h' }`。`format:'12h'` は `AM 9:05` / `PM 6:32` の形。読みは `normalizeTimeOfDaySettings` を通し、無い・壊れている・旧データは従来どおり mood/clock='on'・format='24h' に補う。見た目だけで、ほかの値には関わらない |
 | `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |

@@ -5,16 +5,16 @@
 // 観戦の画面(ambwFramesOf・AmbwPanel)は m.log をそのまま読める。保存は「種+手の列(choices)」だけで足りる(replay で同じ所まで進む)。
 // 公開の印 monheroSuccess(偽)の後ろで使う。この部品は単独では画面に出ない。
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
-const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}.msa-tn-brk .msa-tn-s{white-space:normal;overflow-wrap:anywhere}`;
 const MSX_MANUAL_CSS = `
-.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:8px;margin-top:6px;color:#fff;font-weight:700}
+.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:6px 8px;margin-top:4px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
 .msxm-top b{color:#fff}
 .msxm-g{flex:1;height:8px;border-radius:8px;background:#334155;overflow:hidden}.msxm-g i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15)}
-.msxm-sec{margin-top:6px}
-.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:3px}
+.msxm-sec{margin-top:5px}
+.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:2px}
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
-.msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:5px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.2}
+.msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:4px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.12}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msxm-nm{margin-bottom:1px}
@@ -25,8 +25,8 @@ ${MSA_TN_CSS}
 .msxm-btn.far{background:#221d3d;border-style:dashed}
 .msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
-.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
-.msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
+.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px}
+.msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:5px 12px;font-weight:900}
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
@@ -59,7 +59,7 @@ function MsaTechName({ name, icon = '', className = '' }) {
     </span>
   );
 }
-// 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(7px まで)
+// 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(最低 10px まで。Issue #6807 UI-5: それ以上は小さくせず、言葉の中で折って全文見せる)
 const msaFitTechNames = () => {
   try {
     // 字(フォント)が遅れて読み込まれると幅が変わるので、そのあとと、画面の向き・大きさが変わったときにも縮め直す(2026-11-14 社長「札から字がはみ出す」)
@@ -70,8 +70,11 @@ const msaFitTechNames = () => {
     }
     document.querySelectorAll('[data-msa-tn]').forEach((el) => {
       el.style.fontSize = '';
+      el.classList.remove('msa-tn-brk');
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
-      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 10 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      // 最低の大きさでも1つの言葉が入りきらないときは、切って隠さず、その言葉の中で折って全文見せる
+      if (el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
     });
   } catch (_) {}
 };
@@ -108,15 +111,15 @@ const MSA_DC_CSS = `
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
 .msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
-@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:56px;padding:3px 6px}
+.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:44px;padding:2px 5px}
 .msa-dc.a .msa-dc-c.none{display:block}
-.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:40px;height:40px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
+.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:34px;height:34px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
 .msa-dc.a .msa-dc-ic.wise{box-shadow:0 0 0 2px #22c55e}
 .msa-dc.a .msa-dc-ic .tg-img{width:100%;height:100%;display:block}
 .msa-dc.a .msa-dc-ic .k{position:absolute;right:0;bottom:0;font-style:normal;font-size:11px;line-height:1;padding:2px 2px 1px 3px;border-radius:6px 0 0 0;background:#1b1733}
@@ -124,7 +127,7 @@ const MSA_DC_CSS = `
 .msa-dc.a .msa-dc-ic .mv.kb{background:#f97316}
 .msa-dc.a .msa-dc-h,.msa-dc.a .msa-tn,.msa-dc.a .msa-dc-l{grid-column:2;min-width:0}
 .msa-dc.a .msa-tn{font-size:12px;line-height:1.15}
-@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(8px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(10px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
 .msa-dc.a .msa-dc-l{display:block;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;letter-spacing:-.01em;font-size:10px;color:#fde68a;font-weight:900}
 .msa-dc.a .msa-dc-l.g{font-size:9.5px;color:#cbd5e1;font-weight:800}
 .msa-dc.a .msa-dc-l.g b{color:#fff}
@@ -357,8 +360,8 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row">
-          <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>受けるダメージを減らす</small></button>
-          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン'}</small></button>
+          <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の自分の手番まで守る</small></button>
+          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? (Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}（${Math.round(opt.guts)}→${opt.charge.after}）` : 'この番は合わせて16回復') : 'ガッツは満タン'}</small></button>
         </div>
         {/* 移動の段(2026-11-15 社長 r1115-193): 横3つ「◀ 後退・💨 吹き飛ばし・前進 ▶」。自分は画面の左・相手は右なので、後退(離れる・step +1)は左、前進(近づく・step −1)は右。
             吹き飛ばし(r1115-110)は零距離だけ選べる。ほかの間合いでも押せない形で並べ、どこで使えるかを出す */}

@@ -28,7 +28,7 @@ function MsxBaseMons({ data, onClose }) {
         <div className="msx-bm-grid" data-msx-basemon-list>
           {unlocked.map((id) => (
             <button type="button" key={id} className="msx-bm" onClick={() => setSp(id)} data-msx-basemon={id}>
-              <img src={msxMonThumb(id)} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
+              <MsxMonFace species={id} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
             </button>))}
         </div>
         </div>

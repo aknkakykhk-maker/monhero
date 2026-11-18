@@ -6,15 +6,16 @@
 //   msxTfxKind(o) / msxTfxMs(o) … どの演出か・場面の長さ(ふつう 2.0秒)
 //   MsxTrainFinish({ run, o })   … MsxTrainAct の場面に重ねる決めの部分(音も時間を合わせて鳴らす)
 //   MsxTrainResFx({ run, o })    … 結果の画面の場面に重ねる飾り(放射線・ハート・顔つきのリボン・「伸び ×1.5」の札)
-//   msxTfxResSound(o)            … 結果の画面の音(重なりだけ大きい方のファンファーレ。ほかは今までどおり)
+//   msxTfxResSound(o)            … 結果の画面の音(重なりは大きい方のファンファーレ、タッグの成功もファンファーレ。ほかは今までどおり)
 // 軽さ: 端末の「動きを減らす」は場面を出さない(MsxTrainAct が見る)・結果の飾りは止め絵で出す。
 //   設定の画面の軽さが「軽め」「最軽量」なら粒を減らしてぼかしを使わない。「画面の揺れ」がオフなら揺らさない(どちらも読むだけ・mh_battle_fx_v1)
 const MSX_TFX_MS = Object.freeze({ base: 2000, tag: 2100, great: 2300, both: 2500 });
 // 決めの部分で鳴らす音(場面の id と、場面に入ってからのミリ秒)。はじめのカットインの friendTag は MsxActCrew が鳴らす
+// 2026-11-18 社長「友情タッグや大成功はSEも激しく」: 決めの瞬間に、衝撃(当たる音・爆発の連打)と閃光・きらめきを重ねた。新しい音源は入れていない
 const MSX_TFX_SE = Object.freeze({
-  tag: [['actTagJoin', 1300], ['actTagFin', 1560]],
-  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actHit', 1780]],
-  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actHit', 1920]],
+  tag: [['actTagJoin', 1300], ['actTagFin', 1560], ['actHit', 1560], ['actTagSpark', 1640]],
+  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actGreatFlash', 1500], ['actGreatBoom', 1590], ['actHit', 1780], ['actGreatSpark', 1840]],
+  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actGreatBoom', 1670], ['actHit', 1920], ['actGreatSpark', 1980]],
 });
 const msxTfxKind = (o) => {
   if (!o || !o.result) return 'base';
@@ -23,7 +24,7 @@ const msxTfxKind = (o) => {
   return great && tag ? 'both' : great ? 'great' : tag && o.result !== 'sab' ? 'tag' : 'base';
 };
 const msxTfxMs = (o) => MSX_TFX_MS[msxTfxKind(o)] || MSX_TFX_MS.base;
-const msxTfxResSound = (o) => (msxTfxKind(o) === 'both' ? 'trainGreatTag' : null);
+const msxTfxResSound = (o) => (msxTfxKind(o) === 'both' ? 'trainGreatTag' : msxTfxKind(o) === 'tag' && o && o.result === 'ok' ? 'trainTag' : null);
 // 設定の軽さ(読むだけ。無い・壊れているときは豪華・揺れあり)
 const msxTfxOpt = () => {
   let load = 'RICH'; let shake = true;
@@ -86,7 +87,7 @@ const MSX_TFX_CSS = `
 .msx .tfx .flash.mix{background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fde047dd 25%,#f9a8d499 45%,#67e8f966 60%,transparent 82%)}
 .msx .tfx .bit{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;font-style:normal;font-size:20px;opacity:0;animation:msxTfxBit .6s cubic-bezier(.1,.7,.3,1) var(--d,1.5s) both}
 .msx .tfx .word{position:absolute;left:0;right:0;text-align:center;font-weight:900;white-space:nowrap;opacity:0;line-height:1.1}
-.msx .tfx .word.kz{top:7%;font-size:min(34px,8.6vw);font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
+.msx .tfx .word.kz{top:6%;font-size:min(38px,9.8vw);letter-spacing:-.04em;font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
 .msx .tfx .word.gg{top:7%;font-size:min(30px,7.6vw);color:#fde047;text-shadow:0 0 10px #f59e0b,0 3px 0 #7c2d12;animation:msxTfxGogo var(--wd,.3s) linear var(--d,1.2s) both}
 .msx .tfx .word.don{top:5%;font-size:min(46px,11.6vw);color:#fff;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 0 20px #fde047;animation:msxTfxDon var(--wd,.28s) ease-out var(--d,1.5s) both}
 .msx .tfx .word.don.mix{font-size:min(40px,10vw);text-shadow:0 0 18px #fde047,0 0 26px #f472b6}
@@ -121,12 +122,16 @@ const MSX_TFX_CSS = `
 .msx .v-tfx .gstar{position:absolute;font-style:normal;color:#fef9c3;font-size:18px;text-shadow:0 0 8px #fde047,0 0 16px #f59e0b;animation:msxTfxTwinkle 1.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .17s)}
 .msx .v-tfx .rhrt{position:absolute;font-style:normal;font-size:var(--fs,18px);filter:drop-shadow(0 0 5px #fff);animation:msxTfxFloat 2.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .23s)}
 .msx .v-tfxtop{position:absolute;inset:0;z-index:4;pointer-events:none}
-.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:5px;max-width:calc(100% - 20px);padding:3px 12px 3px 4px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:13px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
+.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:6px;max-width:calc(100% - 20px);padding:4px 14px 4px 5px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:15px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
 .msx .v-tfx-rib.both{border-color:#fde047;box-shadow:0 0 16px #fde047,0 0 22px #f9a8d4,0 3px 0 #0006}
 .msx .v-tfx-rib .fcs{display:flex;flex:none}
-.msx .v-tfx-rib .fcs img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-7px;box-shadow:0 0 0 1.5px #db2777}
+.msx .v-tfx-rib .fcs img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-8px;box-shadow:0 0 0 1.5px #db2777}
 .msx .v-tfx-rib .fcs img:last-child{margin-right:0}
 .msx .v-tfx-rib .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.msx .v-tfx-rib .pct{margin-left:3px;padding:0 8px;border-radius:99px;background:#831843c9;font-size:16px;text-shadow:none;white-space:nowrap}
+/* 結果を開いた瞬間の大きな名乗り(2026-11-18 社長: タッグの見せ方を大きく)。軽減時は出さない(呼ぶ側で抑え、静かなリボンだけ残る) */
+.msx .v-tfx-flash{position:absolute;left:0;right:0;top:30%;z-index:6;text-align:center;font-size:min(43px,10.8vw);font-weight:900;font-style:italic;letter-spacing:.02em;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 16px #f472b6,0 0 26px #67e8f9,0 4px 0 #831843;opacity:0;pointer-events:none;animation:msxTfxTagWord 1.3s cubic-bezier(.2,1.3,.4,1) .12s both}
+@keyframes msxTfxTagWord{0%{opacity:0;transform:scale(2.3) rotate(-5deg)}16%{opacity:1;transform:scale(.95) rotate(-3deg)}26%{transform:scale(1) rotate(-3deg)}76%{opacity:1}100%{opacity:0;transform:scale(1.03) rotate(-3deg) translateY(-8px)}}
 .msx .v-tfx-badge{position:absolute;right:12px;top:calc(9% - 6px);font-weight:900;color:#7c2d12;background:linear-gradient(#fef9c3,#facc15 60%,#f59e0b);border:2.5px solid #fff;border-radius:10px;padding:1px 9px;font-size:15px;line-height:1.35;white-space:nowrap;box-shadow:0 0 14px #fde047,0 3px 0 #0007;transform:rotate(8deg);animation:msxTfxBadge .4s cubic-bezier(.2,1.6,.4,1) .3s both}
 .msx .v-stamp.tfx-gold{font-size:60px;animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1),msxTfxStampGlow 1.6s ease-in-out .4s infinite alternate}
 .msx .v-stamp.tfx-both{-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 18px #f472b6,0 0 30px #67e8f9,0 0 46px #fde047}
@@ -236,14 +241,17 @@ function MsxTrainResFx({ run, o, layer }) {
   // 手前: 顔つきのリボン(タッグ)・「伸び ×1.5」の札(大成功)。数は芯の結果から
   const team = s && Array.isArray(s.team) ? s.team : [];
   const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '');
-  const faces = [thumb(s && s.species)].concat(tags.filter((i) => Number.isInteger(i) && team[i]).slice(0, 3).map((i) => thumb(team[i].species)));
-  if (tags.includes('aid') && typeof msxFace === 'function' && s) faces.push(msxFace(s.aid, 'happy'));
+  // リボンの顔は切り取り方式で出す(染色も全身絵から焼く)。部品が無いときは今までどおり顔アイコンの絵
+  const faceNode = (sp, colors) => (!sp || !thumb(sp) ? null : (typeof MsxMonFace === 'function' ? <MsxMonFace species={sp} colors={colors}/> : <img src={thumb(sp)} alt=""/>));
+  const faces = [faceNode(s && s.species, run && run.colors)].concat(tags.filter((i) => Number.isInteger(i) && team[i]).slice(0, 3).map((i) => faceNode(team[i].species, team[i].colors)));
+  if (tags.includes('aid') && typeof msxFace === 'function' && s) { const af = msxFace(s.aid, 'happy'); if (af) faces.push(<img src={af} alt=""/>); }
   const tagPct = Number.isFinite(card.tag) ? Math.round(card.tag * 100) : 0;
   const R = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.RESULTS ? msxSuc.SUC.RESULTS : null;
   const gm = R && R.great && Number.isFinite(R.great.mult) ? R.great.mult : 1.5;
   return (
     <div className={`v-tfxtop${calm}`} data-msx-tfx-top={k}>
-      {k !== 'great' ? <div className={`v-tfx-rib${k === 'both' ? ' both' : ''}`} data-msx-tfx-rib={tags.length}><span className="fcs">{faces.filter(Boolean).slice(0, 5).map((f, i) => <img key={i} src={f} alt=""/>)}</span><span className="t">🤝 友情タッグ ×{tags.length}{tagPct > 0 ? `・伸び +${tagPct}%` : ''}</span></div> : null}
+      {!op.calm && k !== 'great' ? <div className="v-tfx-flash" aria-hidden="true">🤝 友情タッグ！</div> : null}
+      {k !== 'great' ? <div className={`v-tfx-rib${k === 'both' ? ' both' : ''}`} data-msx-tfx-rib={tags.length}><span className="fcs">{faces.filter(Boolean).slice(0, 5).map((f, i) => <React.Fragment key={i}>{f}</React.Fragment>)}</span><span className="t">🤝 友情タッグ ×{tags.length}</span>{tagPct > 0 ? <b className="pct">伸び +{tagPct}%</b> : null}</div> : null}
       {k !== 'tag' ? <div className="v-tfx-badge" data-msx-tfx-badge={gm}>伸び ×{gm}</div> : null}
     </div>);
 }

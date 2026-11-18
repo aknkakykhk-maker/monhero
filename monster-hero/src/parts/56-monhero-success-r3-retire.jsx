@@ -74,6 +74,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const [ptUnitM, setPtUnitM] = useMsxPtUnit(true);
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
+  const [ptWarn, setPtWarn] = useState(''); // 刻み(使うポイントの合計)では足りないときの知らせ(Issue #6807 UI-1。育成中の能力画面と同じ)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
   const [fxDone, setFxDone] = useState(false);
@@ -149,16 +150,27 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
     const capOf = capOfPt;
-    // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    // 刻みは「使うポイントの合計」(Issue #6807 UI-1: 10P = 合計10点ぶん。1点で+1の所と2点で+1の所をまたいでも合計で数える。
+    //   技の熟練は10点で+1なので今までどおり段数で数える)。1つずつ並びに積むので、「−」も同じ刻み(戻るポイントの合計)で戻せる
     const spend = (k) => {
-      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
-      if (n) setPtListNow(list);
+      const list = ptListRef.current.slice(); let w = replayPts(list);
+      if (String(k).startsWith('m:')) { const lim = msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10); let n = 0; while (n < lim) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; } if (n) { setPtWarn(''); setPtListNow(list); } return; }
+      const budget = msxPtLimit(ptUnit); let n = 0; let spent = 0;
+      while (true) { if (w.stats[k] >= capOf(w, k)) break; const c = SUC.ptsCost(w, k); if (spent + c > budget) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); spent += c; n += 1; }
+      if (n) { setPtWarn(''); setPtListNow(list); }
+      else if (budget !== Infinity && w.pts >= SUC.ptsCost(w, k) && w.stats[k] < capOf(w, k)) setPtWarn(`「${ptUnit}P」では足りないよ(この能力はいま ${SUC.ptsCost(w, k)}点で +1)`);
     };
     const undoK = (k) => {
-      const list = ptListRef.current.slice(); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
-      if (n) setPtListNow(list);
+      const list = ptListRef.current.slice();
+      if (String(k).startsWith('m:')) { const lim = msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10); let n = 0; while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; } if (n) { setPtWarn(''); setPtListNow(list); } return; }
+      const budget = msxPtLimit(ptUnit);
+      // 段ごとの値段は、振った順に はじめの状態から数え直す(2点で+1の段は2点ぶん戻る)
+      const costs = []; let val = s.stats[k];
+      for (const x of list) { if (x !== k) continue; costs.push(SUC.ptsCost({ ...s, stats: { ...s.stats, [k]: val } }, k)); val += 1; }
+      let n = 0; let back = 0;
+      while (costs.length) { const c = costs[costs.length - 1]; if (back + c > budget) break; const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); costs.pop(); back += c; n += 1; }
+      if (n) { setPtWarn(''); setPtListNow(list); }
+      else if (budget !== Infinity && costs.length) setPtWarn(`「${ptUnit}P」では戻せないよ(最後の +1 は ${costs[costs.length - 1]}点ぶん)`);
     };
     // まとめて振る: いままでの振り分けを消して、1ポイントずつ並びに積み直す(結果は前と同じ。並びに残るので、あとから「−」で個別に戻せる)
     const preset = (kind) => {
@@ -179,7 +191,8 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
       <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
-      <MsxPtUnits unit={ptTab === 'mastery' ? ptUnitM : ptUnit} setUnit={ptTab === 'mastery' ? setPtUnitM : setPtUnit} mastery={ptTab === 'mastery'}/>
+      <MsxPtUnits unit={ptTab === 'mastery' ? ptUnitM : ptUnit} setUnit={(x) => { if (ptTab === 'mastery') setPtUnitM(x); else setPtUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
+      {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>

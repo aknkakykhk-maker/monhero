@@ -196,7 +196,7 @@ ok('プレオープンで公開されている（うっかり非公開へ戻っ�
 // 略称は「モンビー」だが、画面・ヘルプ・説明には正式名称の「モンヒロビート」を使う
 // (2026-09-04にユーザーが「モンスタービート」から改称)。
 ok('HOMEの施設は「モンヒロビート」になっている',
-  game.includes('mh-home-facility rhythm')&&game.includes('🎵 モンヒロビート'));
+  game.includes('data-home-fac="rhythm"')&&game.includes('🎵 モンヒロビート'));
 // デバッグ画面の「修行テスト」は開発用に残す。ここで見るのはHOMEの施設だけ。
 ok('修行の施設はHOMEから外した',
   !game.includes('mh-home-facility training')&&!game.includes('aria-label="修行（準備中）"'));

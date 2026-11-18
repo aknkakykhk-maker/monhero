@@ -427,11 +427,15 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const s1 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['mag'], bag: { juice: 3, pack: 1 } });
   ok(s1.bag.juice === 1 && !s1.bag.pack, `始める前の物と育成中の袋を合わせて2つまでになっていない: ${JSON.stringify(s1.bag)}`);
   ok(SUC.ITEMS.guide.name === '博士の導き書' && SUC.ITEMS.juice.name === 'ガロエ印の野菜ジュース' && SUC.ITEMS.dango.name === 'モモのキビダンゴ', 'アイテムの名前が参考のままでない');
-  const u1 = SUC.useItem({ ...s0, hp: 5, bag: { juice: 1, pack: 1 } }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
-  ok(!SUC.useItem(u1.state, 'pack').out.ok, '1ターンに2個使えてしまう');
-  const u2 = SUC.useItem({ ...u1.state, turn: 2 }, 'pack').state; ok(u2.bag.oilyoil === 2 && u2.bag.herb === 1 && u2.bag.pack === 0, '詰め合わせの中身(オイリーオイル2・薬草1)が入らない');
+  const u1 = SUC.useItem({ ...s0, hp: 5, bag: { juice: 1, oil: 1 } }, 'juice'); ok(u1.out.ok && u1.state.hp === 120, '野菜ジュースで体力が全部戻らない');
+  ok(!SUC.useItem(u1.state, 'oil').out.ok, '1ターンに2個使えてしまう');
+  // オイリーパック(2026-11-18 社長): 開ける手間をなくし、持ちこんだ時点で中身を持っている扱い。袋にパックそのものは入らず、育成中に開けることもできない
+  const pk = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', bag: { pack: 1 } });
+  ok(!pk.bag.pack && pk.bag.oilyoil === 2 && pk.bag.herb === 1, `オイリーパックが持ちこんだ時点で中身になっていない: ${JSON.stringify(pk.bag)}`);
+  const rs = SUC.restore({ ...pk, bag: { pack: 2, oil: 1 } }); ok(rs && !rs.bag.pack && rs.bag.oilyoil === 4 && rs.bag.herb === 2 && rs.bag.oil === 1, `途中の育成に残っていた未開封のオイリーパックが中身にならない: ${rs && JSON.stringify(rs.bag)}`);
+  ok(!SUC.useItem({ ...s0, bag: { pack: 1 } }, 'pack').out.ok, 'オイリーパックを育成中に開ける手間が残っている');
   ok(SUC.useItem({ ...s0, hp: 0, bag: { oilyoil: 1 } }, 'oilyoil').state.hp === Math.round(s0.hpMax * 0.4) && SUC.useItem({ ...s0, hp: 0, bag: { oil: 1 } }, 'oil').state.hp === Math.round(s0.hpMax * 0.2), 'オイリーオイル(上限の40%)・オイル(上限の20%)の回復がずれている');
-  const u3 = SUC.useItem({ ...u2, turn: 3, hp: 0, yosu: { sabori: { visits: 0 }, utsu: { visits: 0 } }, bag: { powder: 1 } }, 'powder').state; ok(!u3.yosu.sabori && !u3.yosu.utsu && u3.hp === 36, '粉薬で悪いようすが治らない・体力が戻らない');
+  const u3 = SUC.useItem({ ...u1.state, turn: 3, hp: 0, yosu: { sabori: { visits: 0 }, utsu: { visits: 0 } }, bag: { powder: 1 } }, 'powder').state; ok(!u3.yosu.sabori && !u3.yosu.utsu && u3.hp === 36, '粉薬で悪いようすが治らない・体力が戻らない');
   const u4 = SUC.useItem({ ...s0, ama: 10, fear: 10, bag: { license: 1 } }, 'license').state; ok(u4.ama === 20 && u4.fear === 20, `ブリーダーライセンスで甘え度 +10・恐れ度 +10 にならない: ${u4.ama}/${u4.fear}`);
   // 研究ノート: 来られる最初のターンに博士が必ず来る/ルーペ: 実験が必ず成功
   const note = { ...SUC.newRun({ id: 'note', species: 'Mocchi', aid: 'mua', carry: ['guide'] }), turn: 12, acted: true };

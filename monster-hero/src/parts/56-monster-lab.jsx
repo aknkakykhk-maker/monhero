@@ -66,7 +66,7 @@ function MlabCard({ sp, mon, fuse, onClick }) {
   return (
     <button type="button" onClick={onClick} className={`relative rounded-xl border-2 bg-indigo-900/60 p-1 text-center active:scale-95 ${fuse ? 'border-purple-400/80' : mon ? 'border-indigo-400/60' : 'border-dashed border-sky-300/70'}`}>
       {fuse ? <span className="absolute left-0.5 top-0.5 rounded bg-purple-500 px-1 text-[9px] font-black text-white">合体</span> : mon ? <span className="absolute right-1 top-0.5 text-[11px] font-black text-pink-300">{mon.rank || ''}</span> : <span className="absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white">ベース</span>}
-      <img src={mlabThumb(sp)} alt="" className="mx-auto h-16 w-full object-contain" draggable={false}/>
+      {typeof MonsterFaceImage === 'function' && m ? <MonsterFaceImage baseId={sp} src={m.imgUrl} faceSrc={mlabThumb(sp)} masuColors={mon && Array.isArray(mon.colors) ? mon.colors : null} alt="" draggable={false} className="mx-auto h-16 w-full object-contain"/> : <img src={mlabThumb(sp)} alt="" className="mx-auto h-16 w-full object-contain" draggable={false}/>}
       <div className="truncate text-[10px] font-bold text-white">{mon ? (mon.nick || (m && m.name)) : (m && m.name)}</div>
       <div className="text-[9px] font-bold text-amber-200">{fuse ? '育成前' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'}</div>
     </button>

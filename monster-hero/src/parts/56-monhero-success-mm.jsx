@@ -43,12 +43,13 @@ const msxMmSorted = (mons, sort) => {
   return list.sort(by).map((x) => x.m);
 };
 // 子の絵(染色・覚醒のキラも出す)
+// 小さい枠(thumb)も全身絵で出す(2026-11-18 社長): 顔絵は染色の部位マスクが無く染められないので、顔で出すと染色した子だけ全身の染め焼きになり、並んだときの構図がそろわない。thumb は「小さい枠」の印として残し、キラの印(small)にだけ使う
 function MsxMmArt({ m, size, thumb = false }) {
-  const src = thumb ? msxMonThumb(m.species) : msxMonImg(m.species);
+  const src = msxMonImg(m.species);
   const dyed = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function';
   const img = dyed
     ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
-    : <img src={src} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: thumb ? 'cover' : 'contain' }}/>;
+    : <img src={src} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>;
   const kira = m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function';
   return <span className="mm-art" style={{ width: size, height: size }}>{kira ? <MsxKira kind={msxKiraOf(m.awake)} small={thumb}>{img}</MsxKira> : img}</span>;
 }
@@ -99,7 +100,7 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
-.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
+.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
 
 function MsxR3Box({ onClose }) {

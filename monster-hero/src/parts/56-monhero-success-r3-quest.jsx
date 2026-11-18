@@ -42,7 +42,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : shortOf(true) ? `超修行は体力が${hpOf(true)}いる。体力があと${shortOf(true)}足りない` : '';
   // 修行の内訳の表示(予告・結果で共用): 小数は1桁まで・整数はそのまま。顔は段演出(MsxQfxRows)と同じ出し方
   const shFmt = (n) => { const x = Math.round(Number(n) * 10) / 10; return Number.isInteger(x) ? String(x) : x.toFixed(1); };
-  const shThumb = (m) => (m ? (Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>) : null);
+  const shThumb = (m) => (m ? <MsxMonFace species={m.species} colors={m.colors}/> : null);
   const HACHI_PCT = Math.round((((SUC.GOOD || {}).shugyoGood || {}).shugyo || 0.2) * 100);
   // 倍率の1行: 出典(ハチマキ・修行効果アップ等) → 合算倍率を併記する。予告と結果で同じ形(値は途中で折れないよう塊ごとに nowrap)
   const mulLine = (mi, sup) => {
@@ -109,7 +109,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         </div>))}</div> : null}
       {(o.partsRaw || o.mulInfo) ? (() => { const rawP = o.partsRaw || {}; const fitP = o.parts || {}; const bdRows = MSX_STAT_KEYS_R3.map((k) => { const rp = rawP[k] || { base: 0, team: [] }; const raw = rp.base + (rp.team || []).reduce((a, x) => a + x.v, 0); const g = gains[k] || 0; if (!(raw > 0) && !g) return null; return { k, rp, g }; }).filter(Boolean); const maxG = Math.max(1, ...bdRows.map((x) => x.g)); return (
       <div className="q-bd" data-msx-r3-qbd>
-        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>修行の内訳（行き先の分・編成の分・倍率）<span className="q-tgl-t">{bdOpen ? 'とじる ▴' : 'ひらく ▾'}</span></button>
+        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>修行の内訳（行き先の分・編成の分・倍率）<span className="q-tgl-t">{bdOpen ? '閉じる ▴' : '開く ▾'}</span></button>
         {bdOpen ? <>{bdRows.map(({ k, rp, g }) => { const before = Math.round(Number((res.before || {})[k]) || 0); const after = Math.round(Number((s.stats || {})[k]) || 0); const segs = fitP[k] || []; return (
         <div className="q-bd-row" key={k}>
           <span className="q-bd-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
@@ -191,7 +191,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
       <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技を覚える</div></div>
       {pvRows.length ? <div className="q-pv" data-msx-r3-qpv>
-        <button type="button" className="q-pv-h q-tgl" onClick={() => setPvOpen(!pvOpen)} aria-expanded={pvOpen}>📈 上がる見込み{isSuper ? '（🔥超修行・2回分）' : ''}<span className="q-tgl-t">{pvOpen ? '内訳をとじる ▴' : '内訳をひらく ▾'}</span></button>
+        <button type="button" className="q-pv-h q-tgl" onClick={() => setPvOpen(!pvOpen)} aria-expanded={pvOpen}>📈 上がる見込み{isSuper ? '（🔥超修行・2回分）' : ''}<span className="q-tgl-t">{pvOpen ? '内訳を閉じる ▴' : '内訳を開く ▾'}</span></button>
         <div className="q-pv-grid">{pvRows.map(({ k, p, exp }) => (<div className="q-pv-c" key={k}>
           <div className="q-pv-r1"><span className="q-pv-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><b className="q-pv-t">+{exp}</b></div>
           {pvOpen ? <div className="q-pv-r2">

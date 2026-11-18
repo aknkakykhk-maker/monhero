@@ -322,7 +322,7 @@
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
-    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル（大）2個と夏美草(2026-11-13 社長: 案)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル（大）2個と夏美草(2026-11-13 社長: 案)。gives は中身の表で、袋に入る場所(newRun・restore)で中身へ開く(2026-11-18 社長「持ち込んだ時点で中身を持っていることに」)。育成中に開ける手間はない
     oil: { name: 'オイリーオイル（小）', use: 'during', hp: 0.2 },                     // 2026-11-14 社長「オイリーオイル(小)とかでいいよ」。 小さいオイル(体力 上限の20%。2026-11-13 社長)
     oilyoil: { name: 'オイリーオイル（大）', use: 'during', hp: 0.4 },                 // 大きいオイル(体力 上限の40%。2026-11-13 社長)
     herb: { name: '夏美草', use: 'during', stress: -20 },                          // 2026-11-14 社長「薬草は夏美草」。 詰め合わせの中身(ストレス −20)
@@ -773,6 +773,10 @@
     const trainLvAdd = (s, card) => (card && card.kind === 'train' ? withMax(s, card, 'trainlv') + (withMax(s, card, 'gyakkyo') && peakInfo(s).state !== 'in' ? 1 : 0) : 0);
     const superMaxOf = (s) => SHUGYO.superMax + (s && Array.isArray(s.team) ? stayNum(s, 'chokyo') : 0);
 
+    // 袋へ足す。詰め合わせ(gives を持つ物)は、入る時点で中身に開く(2026-11-18 社長: オイリーパックは開ける手間をなくし、持ちこんだ時点で中身を持っている扱い)。
+    //   袋に詰め合わせそのものは入らないので、育成中に「開ける」ことは起きない。途中の育成の読み直し(restore)でも同じ関数で開く
+    const addToBag = (bag, k, n) => { const it = ITEMS[k]; if (!it || !(n > 0)) return; if (it.gives) { for (const [gk, gv] of Object.entries(it.gives)) if (ITEMS[gk]) bag[gk] = num(bag[gk]) + n * gv; } else bag[k] = num(bag[k]) + n; };
+
     // ---- はじめる ----
     const newRun = (o) => {
       const src = o && typeof o === 'object' ? o : {};
@@ -795,7 +799,7 @@
       team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v * startMul, 0, cap[m.startAdd.stat]); });
       const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       const bag = {}; let room = CARRY_MAX - carry.length;
-      if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
+      if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { addToBag(bag, k, n); room -= n; } } // 詰め合わせは中身で入る(枠は詰め合わせ1つぶんのまま)
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
       carry.forEach(k => { const it = ITEMS[k]; if (it.good) good[it.good] = true; if (it.hpMax) hpMax = Math.min(HP_MAX_CAP, hpMax + it.hpMax); if (it.issaForce) issaForce = true; });
       const ty = stayLv(team, 'tairyoku'); if (ty) hpMax = Math.min(HP_MAX_CAP, hpMax + num(aOf('tairyoku', 'v', ty))); // 💪体力自慢
@@ -1396,6 +1400,20 @@
       let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
       return { gain, hp: Math.round(BASE.hp * (1 - Math.min(capOf('itawari', 60) / 100, it)) * (s.aid === 'kiki' ? 0.85 : 1)), stress: Math.round(BASE.stress * pol.stress * (BASE.stress * pol.stress > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)), fail: card.fail, great: card.great, sab: card.sab, lv: card.lv };
     };
+    // 休む・遊ぶ・通院の「選ぶ前の見込み」(Issue #6807 UI-2: 押す前に結果の範囲・確率・固定の変化を出す)。
+    //   数字は act() の実行と同式で出す(回復は上限で止まる分まで・確率は付きそい等の補正込み)。乱数は引かない
+    const carePreview = (s, kind) => {
+      if (!s || typeof s !== 'object') return null;
+      const gain = (frac) => Math.max(0, Math.min(s.hpMax, Math.round(s.hp + s.hpMax * frac)) - s.hp);
+      const stressOf = (base) => Math.round(base * (s.aid === 'mua' ? 1.3 : 1));
+      if (kind === 'rest') return { kind, list: REST.map((r) => ({ key: r.key, name: r.name, p: r.p, hp: gain(r.rec * (1 + stayNum(s, 'gussuri') / 100)) })), stress: stressOf(REST_STRESS) };
+      if (kind === 'play') { const asb = 1 + stayNum(s, 'asobi') / 100; return { kind, hp: gain(PLAY.rec * asb), stress: stressOf(PLAY.stress), ama: Math.round(PLAY.ama * asb), curesUtsu: !!(s.yosu && s.yosu.utsu) }; }
+      if (kind === 'clinic') {
+        const list = ['sabori', 'utsu'].filter((k) => s.yosu && s.yosu[k]).map((k) => { const y = s.yosu[k]; return { key: k, p: y.visits >= 1 ? 1 : Math.min(1, CLINIC.first + (s.aid === 'erubin' ? CLINIC.erubinAdd : 0) + stayNum(s, 'tsukisoi') / 100), again: y.visits >= 1 }; });
+        return list.length ? { kind, list, hp: gain(CLINIC.rec) } : null;
+      }
+      return null;
+    };
     // 保存から戻す: 形を確かめて直した s(だめなら null)。数は Number.isFinite・配列は Array.isArray・知らない値は既定
     const restore = (raw) => {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.id !== 'string') return null;
@@ -1420,7 +1438,8 @@
       { const sp0 = canonMastery(raw.masterySpent); out.masterySpent = {}; (out.techs || []).forEach(t => { const v = Math.round(n(sp0[t], 0, 0, MASTERY.max)); if (v > 0) out.masterySpent[t] = v; }); } // 熟練の使った量(あとでポイントに変える分・いまは 0)
       out.trainXp = {}; if (raw.trainXp && typeof raw.trainXp === 'object') Object.keys(raw.trainXp).forEach(key => { if (KEYS.some(k => key === `train:${k}`)) out.trainXp[key] = Math.round(n(raw.trainXp[key], 0, 0, 999)); });
       out.items = { sand: Math.round(n(raw.items && raw.items.sand, 0, 0, 99)), rainbow: Math.round(n(raw.items && raw.items.rainbow, 0, 0, 99)) };
-      out.bag = {}; if (raw.bag && typeof raw.bag === 'object') for (const [k, v] of Object.entries(raw.bag)) if (ITEMS[k] && ITEMS[k].use === 'during') out.bag[k] = Math.round(n(v, 0, 0, 99));
+      out.bag = {}; if (raw.bag && typeof raw.bag === 'object') { const es = Object.entries(raw.bag).filter(([k]) => ITEMS[k] && ITEMS[k].use === 'during'); for (const [k, v] of es) if (!ITEMS[k].gives) out.bag[k] = Math.round(n(v, 0, 0, 99)); for (const [k, v] of es) if (ITEMS[k].gives) addToBag(out.bag, k, Math.round(n(v, 0, 0, 99))); } // 詰め合わせは中身に開く(開ける手間をなくす前の保存に未開封が残っていても、中身を持っている扱いになる)。数が0の物は今までどおりキーごと残す
+      for (const k of Object.keys(out.bag)) out.bag[k] = Math.min(99, out.bag[k]);
       out.carry = Array.isArray(raw.carry) ? raw.carry.filter(k => ITEMS[k] && ITEMS[k].use === 'before').slice(0, CARRY_MAX) : [];
       out.good = {}; if (raw.good && typeof raw.good === 'object') Object.keys(GOOD).forEach(k => { if (raw.good[k]) out.good[k] = true; });
       out.yosu = {}; if (raw.yosu && typeof raw.yosu === 'object') for (const k of ['sabori', 'utsu']) if (raw.yosu[k]) out.yosu[k] = { visits: Math.round(n(raw.yosu[k].visits, 0, 0, 9)) };
@@ -1541,10 +1560,10 @@
       const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
     const stayV = (s, id) => (capSum(id) ? stayNum(s, id) : (() => { const lv = stayLv(s.team, id); return lv ? aOf(id, 'v', lv) : 0; })());
     const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (v > 0 ? 1 + stayNum(s, 'ninki') / 100 : 1) * (v > 0 && s.popTurn === s.turn ? POP_TURN_MULT : 1)); // 🌟人気者のお手本: 上がる分だけ
-    // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
+    // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)。詰め合わせ(gives)は袋に入らない(入る時点で中身に開く)ので、ここで開けることはしない
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
-      if (!it || it.use !== 'during' || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
+      if (!it || it.use !== 'during' || it.gives || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
       if (it.awake && !awakeItemOk(s, it.awake)) return { state: s0, out: { ok: false, why: 'awake' } };
       if (it.fruit && !fruitDayOk(s)) return { state: s0, out: { ok: false, why: 'fruit-day' } };
       s.bag[key] -= 1; s.itemTurn = s.turn;
@@ -1557,7 +1576,6 @@
       if (it.ama || it.fear) addLoyalRaw(s, num(it.ama), num(it.fear));
       if (it.stress) addStress(s, it.stress);
       if (it.issaSure) s.issaSure = true;
-      if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
       if (Number.isInteger(it.elixir)) s.elixir = { d: it.elixir, turn: s.turn };
       if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
       if (it.popTurn) s.popTurn = s.turn;
@@ -1569,7 +1587,7 @@
     const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
     // トレーニング用の実(このターンのトレーニングの伸び ×1.5)は、このターンにトレーニングできるときだけ(大会の日・もう動いた・体調不良・デビュー戦の再挑戦では無駄になるため。r1115-202 M7)
     const fruitDayOk = (s) => Boolean(s) && !s.battle && !s.acted && !s.cond && !(s.debutLoss > 0 && !s.debutWon);
-    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; if (it.fruit && !fruitDayOk(s)) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
+    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || it.gives || !s || s.over) return false; if (it.fruit && !fruitDayOk(s)) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
     // ---- ターンを閉じる(期末の強制大会・ヒーローズファイナル・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
@@ -1890,7 +1908,7 @@
       else if (star >= 4) { add(`elixir${topDistOf(s)}`, 1); add(`fruit_${topStatOf(s)}`, 1); }
       return o;
     };
-    const giveItems = (s, items, out) => { const e = Object.entries(items || {}); if (!e.length) return; e.forEach(([k, n]) => { s.bag[k] = num(s.bag[k]) + n; }); out.gotItems = { ...(out.gotItems || {}), ...items }; };
+    const giveItems = (s, items, out) => { const e = Object.entries(items || {}); if (!e.length) return; e.forEach(([k, n]) => { addToBag(s.bag, k, n); }); out.gotItems = { ...(out.gotItems || {}), ...items }; }; // 詰め合わせが渡されても中身で入る(addToBag)
     const exReward = (s, ex, out, ptsMul = 1) => {
       const rw = ex.rw || {}; const got = {};
       if (rw.all) KEYS.forEach(k => addStat(s, k, rw.all));
@@ -2220,7 +2238,7 @@
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
-      act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
+      act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, carePreview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
       AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo, itemUsable,

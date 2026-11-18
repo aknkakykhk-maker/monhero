@@ -1,7 +1,7 @@
 // ===== モンヒロサクセス: 始めるときの編成の選ぶ画面(r1115-096・2026-11-15 社長) =====
 // 参考: docs/reference/line-mf/team-select-2026-11-15/(01 デッキ選択・02 アシスト編成・03 アシストカード詳細・04 フレンドアシスト編成)。絵・名前・文は写さない
 //   編成の画面(MsxStart の2段目)は6枠を大きく並べるだけ。枠を押すとここの全画面へ飛ぶ
-//   MsxTeamPick   … 上に編成中の6体、下に持っている子(マスモンボックス・メモリアルモンスター・ベースモン)の大きな一覧。並べ替え・絞り込み・印。長押しで詳細(MsxMonDetail)。決定で戻る
+//   MsxTeamPick   … 上に編成中の6体、下に持っている子(マスモンボックス・メモリアルモンスター・ベースモン)の大きな一覧。並べ替え・絞り込み・印。タップは選ぶだけ、詳細は下の「効果・詳細」ボタンから(MsxMonDetail。2026-11-18 社長の実機報告で長押し詳細を廃止)。決定で戻る
 //   MsxFriendPick … フレンドの貸し出しの一覧。「アシスト重複」「編成不可」の印(いまの決まりで出せる所だけ)
 //   MsxTeamEffects… 編成全体のアシスト効果の一覧
 //   msxTeamAuto   … おまかせ(総合力の高い順に、マスモンボックス・メモリアルモンスターから6枠を埋める。フレンドのいる枠はそのまま)
@@ -45,17 +45,6 @@ const msxTpDupOf = (m, others) => {
   return m.assists.filter((a) => { if (!msxTpOneOnly(AT, a.id)) return false;
     const v = msxTpAssistVal(AT, a); return others.some((o) => o && Array.isArray(o.assists) && o.assists.some((b) => b.id === a.id && msxTpAssistVal(AT, b) >= v)); });
 };
-// 長押しで詳細・ふつうに押したら選ぶ(長押しのあとの「押した」は捨てる)
-function msxTpPress(onTap, onLong) {
-  let t = null; let long = false;
-  const clear = () => { if (t) { clearTimeout(t); t = null; } };
-  return {
-    onPointerDown: () => { long = false; clear(); t = setTimeout(() => { long = true; t = null; onLong(); }, 450); },
-    onPointerUp: clear, onPointerLeave: clear, onPointerCancel: clear,
-    onContextMenu: (e) => e.preventDefault(),
-    onClick: () => { if (long) { long = false; return; } onTap(); },
-  };
-}
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice(); while (n.length < 6) n.push(null);
@@ -134,6 +123,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
     const sorted = f.sort(by); // f はこの場で作った並びだけ。元の並び・保存データは並べ替えない
     return rev ? sorted.reverse() : sorted;
   }, [lists, tab, sort, only, q, rev]);
+  // 選んでいる候補の詳細用(いまのタブの並びにあればそれ、無ければ全タブから探して mem を付け直す。詳細 MsxTpDetail がそのまま使う)
+  const candItem = cand ? (items.find((x) => msxTpSame(x.slot, cand)) || [...lists.box, ...lists.memo, ...lists.base].map((x) => ({ ...x, mem: memOf(x.slot) })).find((x) => msxTpSame(x.slot, cand)) || null) : null;
   // いまの枠に選んでいる物を入れたときの6枠(上の段・印に使う)
   const view = slots.map((s, i) => (i === idx ? cand : msxTpSame(s, cand) ? null : s)); // ほかの枠から移す子は、元の枠を空けて見せる(決定で putSlot が同じように動かす)
   const raisedN = view.filter((s) => s && (s.box || s.assist)).length;
@@ -152,10 +143,10 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>詳しくは選んだ子の「効果・詳細」・長押し</small></div>
+        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>詳しくは、選んだモンスターの「効果・詳細」から</small></div>
         <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const sp = mm ? mm.species : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`}>
-            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? (Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={mm.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
+            <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? (Array.isArray(mm.colors) && mm.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={mm.colors} alt="" draggable={false}/> : <img src={msxMonImg(sp)} alt="" style={{ objectFit: 'contain' }}/>) : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
         <div className="msx-tp-bar">
@@ -168,22 +159,22 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
           {items.length ? items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; return (
             <div key={x.key} className="msx-tp-w">
             <button type="button" className={`msx-tp-c${on ? ' on' : ''}${mk && mk.lock ? ' lk' : ''}`} data-msx-tp-item={x.key} {...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {})}
-              {...msxTpPress(() => { if (!(mk && mk.lock)) setCand(on ? null : x.slot); }, () => setLook(x))}>
-              <span className="fc">{x.rec && typeof MsxMmArt === 'function' ? <MsxMmArt m={x.rec} size="100%" thumb/> : <img src={msxMonThumb(x.species)} alt=""/>}</span>
+              onClick={() => { if (!(mk && mk.lock)) setCand(on ? null : x.slot); }}>
+              <span className="fc">{x.rec && typeof MsxMmArt === 'function' ? <MsxMmArt m={x.rec} size="100%" thumb/> : <img src={msxMonImg(x.species)} alt=""/>}
+                {on ? <i className="ck" aria-hidden="true">✓</i> : null}
+                {mk ? <i className={`mk ${mk.c}`}>{mk.t}</i> : null}</span>
               {m && m.kind !== 'base' && m.rank ? <i className={`rk ${msxRankCls(m.rank)}`}>{m.rank}</i> : null}
-              {on ? <i className="ck" aria-hidden="true">✓</i> : null}
-              {mk ? <i className={`mk ${mk.c}`}>{mk.t}</i> : null}
               <b className="nm">{x.rec ? (x.rec.nick || msxMonName(x.species)) : msxMonName(x.species)}</b>
               <span className="tp">{m ? m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(m.bonus[k] || 0)}%`}</span>) : null}</span>
               <span className="lv">{x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : ''}</span>
             </button>
-            {on ? <button type="button" className="msx-tp-dt" data-msx-tp-detail={x.key} onClick={() => setLook(x)}>効果・詳細</button> : null}
             </div>); })
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
         </div>
         <div className="v-ft msx-tp-ft">
           <button type="button" onClick={onClose} data-msx-tp-back>戻る</button>
           <button type="button" onClick={() => setCand(null)} disabled={!cand} className={cand ? '' : 'off'} data-msx-tp-clear>外す</button>
+          {candItem ? <button type="button" onClick={() => setLook(candItem)} data-msx-tp-detail={candItem.key}>効果・詳細</button> : null}
           <button type="button" className="go" onClick={() => onDone(cand)} data-msx-tp-ok>決定</button>
         </div>
       </div>

@@ -313,7 +313,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
       const stopDexAttackPreview=onStopPreview;
       const go=(delta)=>{ stopDexAttackPreview(); const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; onSelectMonster(next.id); Audio_.se.tap(); };
       // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
-      const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
+      const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)} faceMon={(lineage && lineage.monId && typeof ALL_PLAYER_MONSTERS!=='undefined' && ALL_PLAYER_MONSTERS[lineage.monId])||null}/>;
       const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
       const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
       // 図鑑の1行。値は左揃えにする。
