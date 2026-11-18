@@ -28,7 +28,7 @@
   ].map(([key, name]) => fz({ key, name })));
 
   const STAT = [['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ'], ['life', 'ライフ']];
-  const STAT_ICON = { pow: '💥', wise: '📘', hit: '🎯', eva: '💨', tough: '🛡', life: '❤' };
+  const STAT_ICON = { pow: '🏋️', wise: '📖', hit: '🎯', eva: '👣', tough: '🛡️', life: '❤️' };
   const r3 = (x) => Math.round(x * 1000) / 1000;
 
 

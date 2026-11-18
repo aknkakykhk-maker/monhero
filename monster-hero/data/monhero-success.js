@@ -351,6 +351,10 @@
   // ---- 賞金(保存は fame)と修行チケット(社長 2026-11-12: チケットは大会でもらい、賞金が大きい大会ほど多い) ----
   // 賞金は TOURNAMENT §2 の星の賞金 × 期の倍率(ジュニア ×1・ミドル ×1.25・プロ ×1.5)。ヒーローズファイナルは 800/1500/3000
   // 2026-11-13 社長: 賞金の桁を参考に寄せる(千〜万G。銅2,500〜3,000・銀4,000・金5,000〜7,500・四大12,500・期末 6,000/7,000/8,000・最後の大会 8,000→9,000→10,000)
+  // 2026-11-18 社長「賞金額が渡した資料と違うものが多々ある」: 資料(docs/reference/line-mf/taikai/tournaments.json)の額に合わせた。
+  //   ジュニアのふだんの大会は資料の銀 2,500・銅 1,250(銅は銀の半分・案C のまま)。季節の賞はジュニア 5,500(資料)・プロ 7,000(TOURNAMENT §2b)。
+  //   能力の杯のジュニアは資料の IMa の額(銀 2,500・銅 1,250)。資料に無いミドル・プロの額は変更なし。
+  //   資料で金の2杯(ミス・マーメイド 3,500・ノーブル 5,000)は、当初は銀の位置のまま据え置いたが、2026-11-18 社長「金の大会に格上げして資料どおりに」で格上げした(CUP_GOLD)
   const PRIZE = Object.freeze({ debut: 1000, junior: 6000, middle: 7000, pro: 8000, summit: [8000, 9000, 10000] });
   // 修行チケットの数は桁を上げる前の賞金で決める(釣り合いを変えない): 100→1・750→2・1500→3・2250→4
   const TICKET_BASE = Object.freeze({ debut: 100, junior: 250, middle: 750, pro: 2250, summit: [800, 1500, 3000], cup: { 1: 100, 2: 250, 3: 600, 4: 1500 }, period: { junior: 1, middle: 1.25, pro: 1.5, final: 1.5 } });
@@ -433,8 +437,11 @@
   const beatOfPrize = (g) => { const n = Number(g); return Number.isFinite(n) && n > 0 ? Math.round(n / BEAT_PRIZE.per / BEAT_PRIZE.step) * BEAT_PRIZE.step : 0; };
   const BEAT_END = Object.freeze({ D: 50, C: 100, B: 150, A: 250, S: 400, 'S+': 400, SS: 600, 'SS+': 600, M: 600 });
   const beatOfEnd = (rank) => (Object.prototype.hasOwnProperty.call(BEAT_END, rank) ? BEAT_END[rank] : 0);
-  const CUP_PRIZE = Object.freeze({ 1: 1250, 2: 2500, 3: 3500, 4: 5000 });       // 優勝の賞金(ジュニア基準・G)
-  const PERIOD_PRIZE = Object.freeze({ junior: 1, middle: 1.2, pro: 1.5, final: 1.5 }); // ★ジュニア 1,250・★★ミドル 3,000・★★★プロ 5,250・👑 7,500
+  const CUP_PRIZE = Object.freeze({ 1: 2500, 2: 2500, 3: 3500, 4: 5000 });       // 優勝の賞金(ジュニア基準・G)。★ は資料の銀 2,500 に合わせた(2026-11-18)
+  // 資料で「金」のふだんの大会(2026-11-18 社長: 金の大会に格上げして資料どおりに)。額はジュニア基準で、期の倍率はほかの大会と同じ PERIOD_PRIZE。
+  //   格上げで変わるのは賞金と札の格(金)だけ。星・相手の強さ・出る条件はその期の星のまま(星を変えると大会の id と優勝の記録の意味が変わるため)
+  const CUP_GOLD = Object.freeze({ 'ミス・マーメイド杯': 3500, 'ノーブル杯': 5000 });
+  const PERIOD_PRIZE = Object.freeze({ junior: 1, middle: 1.2, pro: 1.5, final: 1.5 }); // ★ジュニア 2,500・★★ミドル 3,000・★★★プロ 5,250・👑 7,500
   const CUP_REWARD = Object.freeze({ pts: CUP_PTS, pop: { 2: 2, 3: 4, 4: 8 }, statUp: { 1: 4, 2: 8, 3: 12 }, crownAll: 4 });
   const CUP_NEED = Object.freeze({ stat: { 1: 150, 2: 300, 3: 500 }, fameNormal3: 9500, fameCrown: 18000 }); // 賞金の合計。桁を上げる前と同じ「その期の大会をあと何勝」で届く値(★★ 約1勝・★★★ 約1.5勝)
   // ---- 大会の第2版(2026-11-13 社長: 参考画像4・参考動画4から一式。名前・ロゴ・絵はうちの物) ----
@@ -471,7 +478,7 @@
   const GEM = Object.freeze({ attacker: ['ルビー記念', 2], tank: ['サファイア記念', 4], supporter: ['エメラルド記念', 6], healer: ['トパーズ記念', 8], shadow: ['アメジスト記念', 10] });
   // 季節の賞: 同じ月に3つ(同じ賞金・金の格)。名前と賞品(上がる能力)だけ違う(社長「名前だけ別で中身が同じ大会は賞品だけ同等の別物に」)
   const SEASON_PRIZE = Object.freeze([ // [期, 月, 季節, 賞品の能力3つ, 賞金]  月の季節に合わせる(春=3月・夏=6月・秋=9月。ジュニアは夏・ミドルは春・プロは秋)
-    ['junior', 6, '夏', ['pow', 'tough', 'life'], 2750], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 10500],
+    ['junior', 6, '夏', ['pow', 'tough', 'life'], 5500], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 7000],
   ]);
   const SEASON_NAMES = ['雪月花賞', '花水木賞', '桔梗賞'];
   const EX_CUPS = Object.freeze((() => {
@@ -500,7 +507,7 @@
     }));
     // 能力の杯(参考: 能力の杯×4。IMa は外したオリジナルの名前)。条件なし・賞品はその能力が上がる。賞金は「参考の比」(ふだんの銀に対する倍率)でそろえた
     //   [期, 月, 名前, 能力, 賞金, 格]  銀=その能力 +大きめ・実1つ/銅=その半分
-    [['junior', 5, 'バクレツ杯', 'pow', 1500, 'silver'], ['junior', 5, 'シャープネス杯', 'hit', 1500, 'silver'], ['junior', 5, 'パワフル杯', 'tough', 1500, 'bronze'], ['junior', 5, 'ブレーン杯', 'wise', 1500, 'bronze'],
+    [['junior', 5, 'バクレツ杯', 'pow', 2500, 'silver'], ['junior', 5, 'シャープネス杯', 'hit', 2500, 'silver'], ['junior', 5, 'パワフル杯', 'tough', 1250, 'bronze'], ['junior', 5, 'ブレーン杯', 'wise', 1250, 'bronze'],
       ['middle', 5, 'ノックアウトカップ', 'pow', 3250, 'silver'], ['middle', 5, 'インテリジェンスカップ', 'wise', 3250, 'silver'], ['middle', 5, 'エナジー杯', 'life', 2000, 'bronze'], ['middle', 5, 'クレバー杯', 'eva', 2000, 'bronze'],
       ['pro', 5, 'インパクトカップ', 'pow', 5600, 'silver'], ['pro', 5, 'アナライズカップ', 'wise', 5600, 'silver'], ['pro', 7, 'ヘラクレス杯', 'tough', 7500, 'silver'], ['pro', 7, 'アテナ杯', 'hit', 7500, 'silver'],
     ].forEach(([p, m, name, k, prize, grade], i) => {
@@ -1807,11 +1814,14 @@
     const peakTurn = (s) => { const pk = peakOfSuc(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
     // 大会の賞金を決める式は1つだけ(一覧・受付・参加確認と決着が同じ値を通る。r1115-207 N1)。
     //   ふだんの大会: 月の1つ目=銀(その期の星どおり)・2つ目=銅(銀の半分・50G で丸める。2026-11-14 社長 案C)。決まった大会は表の額。
+    //   例外: 月の1つ目で名前が CUP_GOLD の大会は金(ジュニア基準の額 × 期の倍率)。銅は今までどおり銀の半分(資料でも なないろ杯は銅 1,250)
     //   2つ目の sys は期・月ごとに1つに決まるので、保存の id(期:月:sys:星)と sys から決め直せる(途中の育成の保存は変えない)
     const CUP_SEASON_SYS = ['spring', 'summer', 'autumn', 'winter'];
     const secondCupSysOf = (pk, m) => { const yrow = CUP_STAR[pk] ? YEAR[m - 1] : null; if (!yrow || !yrow.length) return null; return CUP_SEASON_SYS.includes(yrow[1]) && pk !== 'junior' ? 'normal' : yrow[1]; };
+    const goldCupBaseOf = (pk, m, sys) => { const yrow = CUP_STAR[pk] ? YEAR[m - 1] : null; if (!yrow || yrow[0] !== sys) return 0; return CUP_GOLD[cupNameAt(pk, m, 0, sys)] || 0; }; // 金の大会なら ジュニア基準の額・なければ 0
     const cupPrizeOf = (pk, m, sys, star) => {
       const ex = EX_BY_SYS[sys]; if (ex) return num(ex.prize);
+      const gold = goldCupBaseOf(pk, m, sys); if (gold) return Math.round(gold * PERIOD_PRIZE[pk]);
       const base = Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[pk]);
       return sys === secondCupSysOf(pk, m) ? Math.round(base / 2 / 50) * 50 : base;
     };
@@ -1832,7 +1842,8 @@
       if (yrow.length && p.key === 'middle' && m === 7) { const t = TYPE_OF[s.species]; if (t && t.main && CUP_SYS[t.main]) sysList.push(t.main); }
       const list = sysList.map((sys, i) => {
         const star = sys === 'herosummer' ? 4 : CUP_STAR[p.key];
-        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: cupPrizeOf(p.key, m, sys, star), index: i };
+        const name = cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys;
+        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name, prize: cupPrizeOf(p.key, m, sys, star), index: i, ...(CUP_GOLD[name] ? { grade: 'gold' } : {}) }; // 金の大会は札の格も金にする
       });
       // 大会の第2版: 決まった期・月の大会(四大大会・季節の賞・間合いの2段・選抜→記念・宝石の記念・ジュニアの大一番)
       EX_CUPS.forEach((d) => { if (d.p === p.key && d.m === m) list.push({ id: `${p.key}:${m}:${d.sys}:${d.star}`, sys: d.sys, star: d.star, ex: true, name: d.name, grade: d.grade, hard: !!d.hard, prize: d.prize, index: list.length }); });
