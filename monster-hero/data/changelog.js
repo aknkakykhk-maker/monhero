@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-18 13:09", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'オイリーパックは、持ちこむと中身がそのまま持ち物に入るようになりました',
+    items:[
+      '今までは、育成中にオイリーパックを開ける手間があり、開けたターンは中身を使えませんでした。持ちこんだ時点で、オイリーオイル（大）2個と夏美草1個が持ち物に入るようになります。',
+      '育成の途中で、まだ開けていないオイリーパックを持っているときも、中身が持ち物に入った状態になります。',
+    ],
+  },
+  {
     date: "2026-11-18 11:47", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'育成の画面で、編成と育成方針の見え方を整えました',
     items:[
