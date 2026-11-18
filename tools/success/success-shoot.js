@@ -225,9 +225,10 @@ const makeRun = async (kind) => {
               const mid = selIdx();
               if (st === 'scrubup') { ev('pointerup', cx(4)); await new Promise((q) => setTimeout(q, 80)); }
               if (keep) Audio_.fgSe.tap = keep;
-              const fb = document.querySelectorAll('[data-msx-train-fail]').length; const ke = document.querySelectorAll('[data-msx-train-ok]').length;
-              window.__scrubInfo = { mid, tapN, fb, ke };
-              return mid === (st === 'scrub' ? 3 : 4) && tapN >= (st === 'scrub' ? 3 : 4) && fb === 1 && ke === 1 && selIdx() === mid;
+              const fb = document.querySelectorAll('[data-msx-train-fail]').length;
+              window.__scrubInfo = { mid, tapN, fb };
+              // 「選択中」マーカー(data-msx-train-ok)は 2026-11-18 のトレーニング札の表示整理で廃止したので、ここでは見ない
+              return mid === (st === 'scrub' ? 3 : 4) && tapN >= (st === 'scrub' ? 3 : 4) && fb === 1 && selIdx() === mid;
             }
             if (st === 'three') { // 選択肢を3つにして見る(撮るときだけ、最後の行を複製して字を替える)
               const box = document.querySelector('.msx .v-opts'); const last = box && box.lastElementChild; if (!last) return false;
