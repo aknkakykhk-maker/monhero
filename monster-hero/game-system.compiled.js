@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96f388ca4fbf4acc
+// source-sha256: 536d18327fba46d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189486,10 +189486,20 @@ const msaTechOf = (log, e) => {
 const msaTechInfo = (log, e) => {
   const t = msaTechOf(log, e);
   return {
+    id: e.move,
     name: e.name,
     kind: e.kind,
     guts: t ? t.guts : 0
   };
+};
+const MONSUC_MOTION_OVERRIDES = Object.freeze({
+  Mocchi: Object.freeze({
+    'sk-0404': 'Mocchi-n5'
+  })
+});
+const monsucMotionKind = (species, tech) => {
+  const kind = MONSUC_MOTION_OVERRIDES[species]?.[tech?.id];
+  return kind && typeof skillFxSpecOf === 'function' && skillFxSpecOf(kind) ? kind : msaMotionKind(species, tech);
 };
 const msaMotionMs = kind => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
@@ -189608,7 +189618,7 @@ const MSA_INTRO_MS = 2600;
 const MSA_AFTER_HIT = 1250;
 const MSA_AFTER_MISS = 800;
 const MSA_FAST_F = 0.35;
-const msaStepMs = (e, team, reduce, log, sf = 1) => {
+const msaStepMs = (e, team, reduce, log, sf = 1, motionKindOf = msaMotionKind) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   if (e.ev === 'start' && (Number(sf) || 1) <= MSA_FAST_F) return 700;
@@ -189616,7 +189626,7 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
     const f = Number(sf) || 1;
     const m = team && team.members && team.members[e.i] || {};
     const fx = msaFxOf(log, e, reduce, f);
-    const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
+    const mm = msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e)));
     const real = f <= MSA_FAST_F ? fx.pre + mm.hit + (e.hit ? 90 : 60) + (fx.fin ? 150 : 0) : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
     return real / f;
   }
@@ -189988,7 +189998,7 @@ function MsaFighter({
       }
     }));
   } else if (tech && me && !reduce) {
-    const kind = msaMotionKind(sp, e.tech);
+    const kind = e.motionKind;
     if (kind) {
       const w = foeX.w;
       const rawDx = (foeX.x - x) * w;
@@ -190010,7 +190020,7 @@ function MsaFighter({
       });
     }
   }
-  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(e.motionKind).hit : 0;
   if (tech && foe) {
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = React.createElement("div", {
@@ -190145,7 +190155,7 @@ function MsaFighter({
     "aria-hidden": "true"
   }), body, extra);
 }
-function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
+function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotionKind) {
   const lastRef = useRef(-1);
   const timers = useRef([]);
   useEffect(() => () => {
@@ -190167,7 +190177,7 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
     };
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
-      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
     } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
@@ -190315,12 +190325,12 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   });
   return out;
 };
-function useMsaShownFrame(log, frames, pos, teams, sf = 1, lite = false) {
+function useMsaShownFrame(log, frames, pos, teams, sf = 1, lite = false, motionKindOf = msaMotionKind) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [hitAt, setHitAt] = useState(-1);
   const e = log && log[pos] || {};
   const m = e.side && teams && teams[e.side] && teams[e.side].members ? teams[e.side].members[e.i] || {} : {};
-  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
+  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit : 0;
   useEffect(() => {
     if (!at) return undefined;
     const t = setTimeout(() => setHitAt(pos), at);
@@ -190417,7 +190427,8 @@ function MsaStage({
   fill = false,
   lite = false,
   wide = false,
-  liveGuts = null
+  liveGuts = null,
+  motionKindOf = msaMotionKind
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
@@ -190442,7 +190453,7 @@ function MsaStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1);
+  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1, motionKindOf);
   const endSaid = useRef(false);
   useEffect(() => {
     if (!ended || endSaid.current) return;
@@ -190461,7 +190472,7 @@ function MsaStage({
     const el = stageRef.current;
     if (!e1 || e1.ev !== 'tech' || !e1.hit || !fxNow.stop || !el || typeof el.getAnimations !== 'function') return undefined;
     const m = teams[e1.side] && teams[e1.side].members && teams[e1.side].members[e1.i] || {};
-    const at = fxNow.pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e1))).hit;
+    const at = fxNow.pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e1))).hit;
     let back = null;
     const t = setTimeout(() => {
       const inFighter = a => {
@@ -190498,11 +190509,13 @@ function MsaStage({
     const ms = t && t.members || [];
     return ms[Number.isFinite(i) ? i : f ? f.act[side] : 0] || ms[0] || null;
   };
+  const tech = msaTechInfo(log, e0);
+  const atkSp = e0.side ? (memberOf(e0.side, e0.i) || {}).species : '';
   const e = {
     ...e0,
     k: pos,
-    atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '',
-    tech: msaTechInfo(log, e0)
+    tech,
+    motionKind: e0.ev === 'tech' ? motionKindOf(atkSp, tech) : null
   };
   const gapOf = d => {
     if (wide) {
@@ -190550,12 +190563,12 @@ function MsaStage({
   };
   const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
-  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(e.motionKind).hit : 0;
   useEffect(() => {
     const el = camRef.current;
     const e1 = log[pos];
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
-    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
+    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1, motionKindOf) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
     const sx = sd => scrX(sd === 'A' ? xA : xB);
     let kf = null;
@@ -190988,7 +191001,7 @@ function MonsucArena({
         }
         return n;
       };
-      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
+      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f, monsucMotionKind) * sp.f));
       return () => clearTimeout(t);
     }
     if (done && (judgeIdx < 0 || judgeOk)) {
@@ -191063,7 +191076,7 @@ function MonsucArena({
       } : {})
     };
   }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
-  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
+  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f, false, monsucMotionKind);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
   }, React.createElement("p", {
@@ -191172,7 +191185,8 @@ function MonsucArena({
     speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
     fill: true,
     wide: true,
-    liveGuts: liveGuts
+    liveGuts: liveGuts,
+    motionKindOf: monsucMotionKind
   }), React.createElement("div", {
     className: "msa-say over",
     "data-msa-say": true
