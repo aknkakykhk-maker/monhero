@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-19 06:06", type:'fix', title:'助手が寝ているときの顔の表示を直しました', status:'new', group:'assistant',
+    items:[
+      '助手が寝ているとき、きゅうこの冬の装いなどで、閉じた目の線が顔からずれて重なって見えていたのを直しました。',
+    ],
+  },
+  {
     date: "2026-11-18 22:52", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'能力カードの上限表示が、実際の上限と違うことがあるのを直しました',
     items:[
