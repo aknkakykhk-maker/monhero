@@ -36,7 +36,7 @@
     { id: 'breeder-license', name: 'ブリーダーライセンス', kind: 'use', image: 'images/success/items/breeder-license.png?v=f8010ded1ace',
       text: '持ち込むと育成中にも使用できる。忠誠度が一定数上がる' },
     { id: 'oily-pack', name: 'オイリーパック', kind: 'use', image: 'images/success/items/oily-pack.png?v=2b1a9c15a29b',
-      text: 'オイリーオイル（大）2個と夏美草1個のセット。持ち込むと育成中にも使用できる' },
+      text: 'オイリーオイル（大）2個と夏美草1個のセット。持ち込むと中身がそのまま育成中の持ち物に入る' },
     { id: 'training-ticket', name: '修行チケット', kind: 'ticket', image: 'images/success/items/training-ticket.png?v=0fc3257c41b8',
       text: '修行に使うチケット。大会などでもらえる' },
     // 距離の汁(大会の賞品・2026-11-15 r1115-055)。汁ごとに色を分けた小瓶。画面の持ち物の絵は 56-monhero-success-main.jsx の MSX_ITEM_ICON

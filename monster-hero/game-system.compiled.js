@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1052c9282268e95
+// source-sha256: af6e58e9213c2555
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161144,7 +161144,7 @@ function MonsucShopList({
     if (!t) return null;
     const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
     const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
-    const when = t.when === 'before' ? '始める前に効く' : '育成中にも使える';
+    const when = offer.itemId === 'pack' ? '持ちこむと中身が使える' : t.when === 'before' ? '始める前に効く' : '育成中にも使える';
     const item = {
       id: offer.id,
       name: t.name,
@@ -173846,7 +173846,7 @@ const MSX_ITEMS = Object.freeze([{
 }, {
   id: 'pack',
   name: 'オイリーパック',
-  desc: 'オイリーオイル（大）2個と夏美草1個のセット',
+  desc: '持ちこむと中身がそのまま持ち物に入る。オイリーオイル（大）2個と夏美草1個のセット',
   when: 'both',
   e: '🧴'
 }, {
@@ -173919,7 +173919,7 @@ const msxItemFx = id => {
   if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
   if (it.gives) {
     const g = it.gives;
-    return Object.keys(g).map(k => `${S.ITEMS[k] && S.ITEMS[k].name || k}${g[k]}個(${msxItemFx(k)})`).join('・');
+    return `持ちこむと中身が初めから持ち物に入る(開けなくてよい): ${Object.keys(g).map(k => `${S.ITEMS[k] && S.ITEMS[k].name || k}${g[k]}個(${msxItemFx(k)})`).join('・')}`;
   }
   if (it.hp) return `体力を上限の${pc(it.hp)}回復`;
   if (it.stress) return `ストレス ${it.stress}`;
@@ -175671,7 +175671,7 @@ function MsxStart({
           ...JA_WRAP_STYLE,
           color: '#7dd3fc'
         }
-      }, jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')), React.createElement("small", {
+      }, jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : look === 'pack' ? 'いつ: 持ちこんだ時点で中身が持ち物に入っている。中身は育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')), React.createElement("small", {
         style: {
           ...JA_WRAP_STYLE,
           color: '#fcd34d'

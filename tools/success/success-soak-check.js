@@ -160,8 +160,12 @@ const checkState = (s, where) => {
 };
 
 // 持ちこみ(始める前の物 carry と、袋に入れて持ちこむ育成中の物)は合わせて CARRY_MAX まで。育成を始めた直後に1回だけ見る(r1115-172)
+// 詰め合わせ(オイリーパック)は持ちこんだ時点で中身に開く(2026-11-18)ので、袋の中身の組がそろっている分は1つの持ちこみとして数える
 const checkCarry = (s, where) => {
-  const n = s.carry.length + Object.values(s.bag || {}).reduce((a, v) => a + v, 0);
+  const bag = { ...(s.bag || {}) };
+  let n = (s.carry || []).length;
+  for (const it of Object.values(SUC.ITEMS)) { if (!it.gives) continue; const ks = Object.keys(it.gives); const sets = Math.min(...ks.map(k => Math.floor((bag[k] || 0) / it.gives[k]))); if (sets > 0) { ks.forEach(k => { bag[k] -= sets * it.gives[k]; }); n += sets; } }
+  n += Object.values(bag).reduce((a, v) => a + v, 0);
   if (n > SUC.CARRY_MAX) fail(`${where}: 持ちこみが ${SUC.CARRY_MAX} を超えた: ${n}(${JSON.stringify({ carry: s.carry, bag: s.bag })})`);
 };
 
