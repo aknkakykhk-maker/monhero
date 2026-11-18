@@ -1843,6 +1843,34 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "eiyuu_no_akashi": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-eiyuu-no-akashi.mp3",
+   "chartRevision": 40,
+   "audioSha256": "38f68104d0310ed32a06f84fd111598cd652948368a9cb0210f2d588d5abdbfd",
+   "durationMs": 122854,
+   "analyzedTiming": {
+    "bpm": 161.541,
+    "beatZeroMs": 1476.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "eiyuu_no_akashi_milktea": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-eiyuu-no-akashi-milktea.mp3",
+   "chartRevision": 40,
+   "audioSha256": "af00bdf4ef248258a37e35c4d98fec1b217b5157e1bfc6dfbcd04f5e4860dc9b",
+   "durationMs": 146416,
+   "analyzedTiming": {
+    "bpm": 192.11,
+    "beatZeroMs": 2391.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
