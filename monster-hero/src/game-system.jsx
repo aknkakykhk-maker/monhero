@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6127fc2f1fff6aae
+// generated-sha256: e3abebf75fb55ad0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23927,7 +23927,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -24450,6 +24450,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
       {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+      {/* ソロの曲えらび・横画面だけ、詳しい欄の下に残る空きへ「曲の情報」を出す
+          (2026-11-18・社長「モンビーのソロで縦横ボタンで横にした場合、右下の空きが気になる。何か有効活用できないかな？」)。
+          縦画面では出さない(landscape: でだけ出す。回して横にした場合も、ビルド時に回転用の規則へ
+          写されるので同じに出る)。マルチは detailInfoPanel を渡さないので、配置には一切触らない。
+          当初は難易度ごとの記録も並べていたが、選曲画面の既存の表示と重なるため廃止し、曲の情報だけにした
+          (2026-11-18・社長指示「難易度ごとの記録は上にもあるからいらない」) */}
+      {detailInfoPanel&&song&&difficulty&&chart&&(()=>{
+        const grid=typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
+        const bpm=grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;
+        const info=[bpm?`BPM ${bpm}`:'',rhythmSongLengthLabel(song,chart),
+          chart.totalNotes?`${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ`:''].filter(Boolean).join(' ・ ');
+        return <div data-rhythm-song-info-panel className="mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block">
+          {info&&<p data-rhythm-song-info-line className="whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200">{info}</p>}
+        </div>;
+      })()}
     </aside>
 
     {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}
@@ -44807,6 +44822,7 @@ function RhythmSongSelectScreen({
           onSongId={setRhythmSelectedSongId}
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
+          detailInfoPanel
           onPlay={onPlaySong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
@@ -89323,7 +89339,8 @@ const MSX_CSS = `
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
-.msx-md-kv>b{flex:none;min-width:6em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+/* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
 .msx-md-btabs{margin-top:6px}
 .msx-md-as .cap span{margin-left:auto}
@@ -91979,9 +91996,12 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
 // 育成中でないときの広場のにぎやかし(2026-11-18 あっくん「育ててるモンスターがいないとき画面が寂しい」)。
 //   マスモンボックスのモンスター(育てたものを優先に最大2体。1体もいなければ看板モンのモッチーとスエゾー)と、助手のみゅあを広場に出す。
 //   飾りだけの部品: 押せない(pointer-events:none)・保存や進行には一切触らない。育成中の表示(.mon)とは出す条件が重ならない
-//   みゅあの置き場(2026-11-18 実機で左端が切れた直し): 絵は 296×336(幅は高さの 0.88 倍)。場面 370×547(390×844)で
-//   高さ 32%・中心 21% だと絵の左端が場面の外に出て、呼吸の動き(scale 1.025)でさらに切れる。高さ 30%・中心 25% で
-//   左端に場面幅の約 5% の余白が残り、全身が入る(実測: 左端 20px・右端はモンの1体目と今までどおり少し重なる)
+//   みゅあの絵(2026-11-18 実機で「切れたまま」の再報告を受けて差し替え): 今までの立ち絵(stand-normal・
+//   296×336)は全身画から太ももまでで切り出した絵で、下端がまっすぐ断ち切れて見えていた(左端の幾何は
+//   高さ 30%・中心 25% で余白 17px 以上を実測済みで、残っていた「切れ」はこの下端)。全身画
+//   (fullbody・288×589・幅は高さの 0.489 倍)を使い、足元をモンの1体目と同じ地面(bottom 11%)に合わせる。
+//   置き場は高さ 34%・中心 23%: 場面の縦横比が 1.6 までなら呼吸(scale 1.025)込みで左端に約 9% の余白が
+//   残り、右端もモンの1体目(中心 57%)に届かない。全身画が無い服のときだけ今までの立ち絵+置き場に戻す
 function MsxHomeDeco({ data }) {
   const box = (data && data.box && Array.isArray(data.box.mons) ? data.box.mons : []).filter((m) => m && m.species && msxMon(m.species));
   const own = [...box.filter((m) => m.raised), ...box.filter((m) => !m.raised)].slice(0, 2);
@@ -91990,9 +92010,12 @@ function MsxHomeDeco({ data }) {
     { left: '57%', bottom: '11%', height: '28%' },
     { left: '82%', bottom: '10%', height: '21%' },
   ];
+  const muaWho = typeof msxWho === 'function' ? msxWho('mua') : null;
+  const muaFull = muaWho && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(muaWho, 'happy') : null;
+  const muaSpot = muaFull ? { left: '23%', bottom: '11%', height: '34%' } : { left: '25%', bottom: '12%', height: '30%' };
   return (
     <div className="v-hm-deco" aria-hidden="true">
-      <span className="v-hm-deco-a" style={{ left: '25%', bottom: '12%', height: '30%' }}><i className="gs"/><img src={msxBody('mua', 'happy')} alt="" draggable={false}/></span>
+      <span className="v-hm-deco-a" style={muaSpot}><i className="gs"/><img src={muaFull || msxBody('mua', 'happy')} alt="" draggable={false}/></span>
       {mons.map((m, i) => (
         <span key={`${m.sp}-${i}`} className="v-hm-deco-m" style={{ ...spots[i], animationDelay: `${i * 0.7}s` }}><i className="gs"/>{m.colors && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <DyedMonsterImage baseId={m.sp} src={msxMonImg(m.sp)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>

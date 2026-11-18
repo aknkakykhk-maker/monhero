@@ -48,6 +48,20 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-18 15:13", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'開始画面のみゅあが、足元まで見える全身で立つようになりました',
+    items:[
+      'モンヒロサクセスの開始画面で立っているみゅあの絵が、途中で切れて見える絵から、足元まで見える全身の絵に変わりました。モンスターたちと同じ地面に立っています。',
+    ],
+  },
+  {
+    date: "2026-11-18 15:13", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'技の詳しさで「クリティカル率」の値だけ右にずれていたのを直しました',
+    items:[
+      'モンスターの詳しさや編成の「効果・詳細」で技の性能を見るとき、「クリティカル率」の行だけ値が右にずれていました。項目の名前の列の幅をそろえて、すべての行で値の位置がそろうようにしました。',
+    ],
+  },
+  {
     date: "2026-11-18 14:50", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの大会で全モンスターに技ごとの動きがつきました',
     items:['地面から岩がせり上がる地震、星が降るコズミックバンなど、大会で技ごとの攻撃演出が楽しめます。'],
@@ -56,6 +70,14 @@ const CHANGELOG = [
     date: "2026-11-18 14:40", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'大会でモッチーの17の技にそれぞれの動きがつきました',
     items:['転がってぶつかる技、力をためて放つモッチ砲、足元から花びらが舞う宵闇ざくらなど、技ごとの動きを楽しめます。'],
+  },
+  {
+    date: "2026-11-18 13:14", type:'update', group:'rhythm', status:'new',
+    title:'モンヒロビートの曲選び（横画面・ソロ）で、曲の情報が見られるようになりました',
+    items:[
+      'ソロの曲選びを横画面にすると、選んでいる曲の詳しい欄の下に、その曲のBPM・長さ・選んでいる難易度のノーツ数が出るようになりました。',
+      '縦画面とマルチでは今までどおりです。',
+    ],
   },
   {
     date: "2026-11-18 13:09", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',

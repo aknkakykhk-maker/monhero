@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5a61ec23a929105
+// source-sha256: 87aa7518d3080a97
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38084,7 +38084,8 @@ const RhythmSongSelect = ({
   hideRandom = false,
   unlockAll = false,
   songLock = null,
-  scrollToSelected = false
+  scrollToSelected = false,
+  detailInfoPanel = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -38765,7 +38766,18 @@ const RhythmSongSelect = ({
   }, React.isValidElement(notice) ? React.cloneElement(notice, {
     oneLine: true,
     faceSize: 28
-  }) : notice)), buyAsk && songLock && React.createElement("div", {
+  }) : notice), detailInfoPanel && song && difficulty && chart && (() => {
+    const grid = typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
+    const bpm = grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
+    const info = [bpm ? `BPM ${bpm}` : '', rhythmSongLengthLabel(song, chart), chart.totalNotes ? `${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ` : ''].filter(Boolean).join(' ・ ');
+    return React.createElement("div", {
+      "data-rhythm-song-info-panel": true,
+      className: "mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block"
+    }, info && React.createElement("p", {
+      "data-rhythm-song-info-line": true,
+      className: "whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200"
+    }, info));
+  })()), buyAsk && songLock && React.createElement("div", {
     "data-rhythm-song-buy-modal": true,
     role: "dialog",
     "aria-modal": "true",
@@ -72868,6 +72880,7 @@ function RhythmSongSelectScreen({
     onSongId: setRhythmSelectedSongId,
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
+    detailInfoPanel: true,
     onPlay: onPlaySong,
     notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",
@@ -171861,7 +171874,8 @@ const MSX_CSS = `
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
-.msx-md-kv>b{flex:none;min-width:6em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+/* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
 .msx-md-btabs{margin-top:6px}
 .msx-md-as .cap span{margin-left:auto}
@@ -177984,20 +177998,27 @@ function MsxHomeDeco({
     bottom: '10%',
     height: '21%'
   }];
+  const muaWho = typeof msxWho === 'function' ? msxWho('mua') : null;
+  const muaFull = muaWho && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(muaWho, 'happy') : null;
+  const muaSpot = muaFull ? {
+    left: '23%',
+    bottom: '11%',
+    height: '34%'
+  } : {
+    left: '25%',
+    bottom: '12%',
+    height: '30%'
+  };
   return React.createElement("div", {
     className: "v-hm-deco",
     "aria-hidden": "true"
   }, React.createElement("span", {
     className: "v-hm-deco-a",
-    style: {
-      left: '25%',
-      bottom: '12%',
-      height: '30%'
-    }
+    style: muaSpot
   }, React.createElement("i", {
     className: "gs"
   }), React.createElement("img", {
-    src: msxBody('mua', 'happy'),
+    src: muaFull || msxBody('mua', 'happy'),
     alt: "",
     draggable: false
   })), mons.map((m, i) => React.createElement("span", {
