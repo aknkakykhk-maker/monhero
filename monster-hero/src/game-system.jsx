@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6127fc2f1fff6aae
+// generated-sha256: 66f9fa91cf0d1869
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89323,7 +89323,8 @@ const MSX_CSS = `
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
-.msx-md-kv>b{flex:none;min-width:6em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+/* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
 .msx-md-btabs{margin-top:6px}
 .msx-md-as .cap span{margin-left:auto}
@@ -91979,9 +91980,12 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
 // 育成中でないときの広場のにぎやかし(2026-11-18 あっくん「育ててるモンスターがいないとき画面が寂しい」)。
 //   マスモンボックスのモンスター(育てたものを優先に最大2体。1体もいなければ看板モンのモッチーとスエゾー)と、助手のみゅあを広場に出す。
 //   飾りだけの部品: 押せない(pointer-events:none)・保存や進行には一切触らない。育成中の表示(.mon)とは出す条件が重ならない
-//   みゅあの置き場(2026-11-18 実機で左端が切れた直し): 絵は 296×336(幅は高さの 0.88 倍)。場面 370×547(390×844)で
-//   高さ 32%・中心 21% だと絵の左端が場面の外に出て、呼吸の動き(scale 1.025)でさらに切れる。高さ 30%・中心 25% で
-//   左端に場面幅の約 5% の余白が残り、全身が入る(実測: 左端 20px・右端はモンの1体目と今までどおり少し重なる)
+//   みゅあの絵(2026-11-18 実機で「切れたまま」の再報告を受けて差し替え): 今までの立ち絵(stand-normal・
+//   296×336)は全身画から太ももまでで切り出した絵で、下端がまっすぐ断ち切れて見えていた(左端の幾何は
+//   高さ 30%・中心 25% で余白 17px 以上を実測済みで、残っていた「切れ」はこの下端)。全身画
+//   (fullbody・288×589・幅は高さの 0.489 倍)を使い、足元をモンの1体目と同じ地面(bottom 11%)に合わせる。
+//   置き場は高さ 34%・中心 23%: 場面の縦横比が 1.6 までなら呼吸(scale 1.025)込みで左端に約 9% の余白が
+//   残り、右端もモンの1体目(中心 57%)に届かない。全身画が無い服のときだけ今までの立ち絵+置き場に戻す
 function MsxHomeDeco({ data }) {
   const box = (data && data.box && Array.isArray(data.box.mons) ? data.box.mons : []).filter((m) => m && m.species && msxMon(m.species));
   const own = [...box.filter((m) => m.raised), ...box.filter((m) => !m.raised)].slice(0, 2);
@@ -91990,9 +91994,12 @@ function MsxHomeDeco({ data }) {
     { left: '57%', bottom: '11%', height: '28%' },
     { left: '82%', bottom: '10%', height: '21%' },
   ];
+  const muaWho = typeof msxWho === 'function' ? msxWho('mua') : null;
+  const muaFull = muaWho && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(muaWho, 'happy') : null;
+  const muaSpot = muaFull ? { left: '23%', bottom: '11%', height: '34%' } : { left: '25%', bottom: '12%', height: '30%' };
   return (
     <div className="v-hm-deco" aria-hidden="true">
-      <span className="v-hm-deco-a" style={{ left: '25%', bottom: '12%', height: '30%' }}><i className="gs"/><img src={msxBody('mua', 'happy')} alt="" draggable={false}/></span>
+      <span className="v-hm-deco-a" style={muaSpot}><i className="gs"/><img src={muaFull || msxBody('mua', 'happy')} alt="" draggable={false}/></span>
       {mons.map((m, i) => (
         <span key={`${m.sp}-${i}`} className="v-hm-deco-m" style={{ ...spots[i], animationDelay: `${i * 0.7}s` }}><i className="gs"/>{m.colors && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <DyedMonsterImage baseId={m.sp} src={msxMonImg(m.sp)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
