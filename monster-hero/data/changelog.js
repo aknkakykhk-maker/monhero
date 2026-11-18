@@ -35,6 +35,11 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-18 14:40", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'大会でモッチーの17の技にそれぞれの動きがつきました',
+    items:['転がってぶつかる技、力をためて放つモッチ砲、足元から花びらが舞う宵闇ざくらなど、技ごとの動きを楽しめます。'],
+  },
+  {
     date: "2026-11-18 13:09", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'オイリーパックは、持ちこむと中身がそのまま持ち物に入るようになりました',
     items:[

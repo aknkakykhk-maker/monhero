@@ -483,12 +483,33 @@ const msaTechOf = (log, e) => {
 };
 const msaTechInfo = (log, e) => { const t = msaTechOf(log, e); return { id: e.move, name: e.name, kind: e.kind, guts: t ? t.guts : 0 }; };
 // モンサク大会の技IDから、モンバトで使うモーションを指定する(表示名の違いに依存しない)。
-const MONSUC_MOTION_OVERRIDES = Object.freeze({
-  Mocchi: Object.freeze({ 'sk-0404': 'Mocchi-n5' }), // さくら吹雪 → 桜吹雪
+const MONSUC_MOCCHI_MOTIONS = Object.freeze({
+  'sk-0400': skm('roll', { c:'mocchi', over:'wave', ms:640, burst:'dust' }), // ローリンモッチ
+  'sk-0401': 'Mocchi-n1', // もちき
+  'sk-0402': skm('hop', { c:'mocchi', over:'fist', ms:520 }), // もんた
+  'sk-0403': skm('cast', { c:'mocchi', line:'ray', fx:skmFx('shot', 'spark', 1), over:'boom' }), // モッチ砲
+  'sk-0404': 'Mocchi-n5', // さくら吹雪
+  'sk-0405': skm('lick', { c:'pink', line:'tongue', burst:'heart' }), // ぺろりん
+  'sk-0406': 'Mocchi-n2', // ガッチョ
+  'sk-0407': skm('roll', { c:'gold', line:'arc', over:'wave', burst:'dust', hit2:true }), // 超ローリンモッチ
+  'sk-0408': 'Mocchi-n3', // もっちゃん
+  'sk-0409': 'Mocchi-n4', // ガッチャー
+  'sk-0410': skm('gather', { c:'mocchi', hit:610, ms:1020, line:'ray', fx:skmFx('shot', 'spark', 3, { start:310, step:38 }), over:'wave', burst:'star' }), // 大モッチ砲
+  'sk-0411': 'Mocchi-n7', // 枝垂ざくら
+  'sk-0412': 'Mocchi-n8', // もっさま
+  'sk-0413': skm('dive', { c:'mocchi', over:'boom', burst:'dust', hit2:true }), // 超ガッチョ
+  'sk-0414': skm('cast', { c:'gold', line:'ray', fx:skmFx('shot', 'spark', 5, { start:420, step:35, s:1.4 }), over:'pillar', burst:'star', hit2:true }), // 超モッチ砲
+  'sk-0415': skm('float', { c:'dark', hit:375, ms:980, fx:skmFx('rise', 'sakura', 12, { start:300, h:[315,335] }), over:'bloom', burst:'petal' }), // 宵闇ざくら
+  'sk-0416': skm('flip', { c:'gold', line:'arc', over:'pillar', burst:'star', hit2:true }), // もっさまん
 });
 const monsucMotionKind = (species, tech) => {
-  const kind = MONSUC_MOTION_OVERRIDES[species]?.[tech?.id];
-  return kind && typeof skillFxSpecOf === 'function' && skillFxSpecOf(kind) ? kind : msaMotionKind(species, tech);
+  const id = tech?.id;
+  if (species !== 'Mocchi' || !Object.prototype.hasOwnProperty.call(MONSUC_MOCCHI_MOTIONS, id)) return msaMotionKind(species, tech);
+  const motion = MONSUC_MOCCHI_MOTIONS[id];
+  if (typeof motion === 'string') return skillFxSpecOf(motion) ? motion : msaMotionKind(species, tech);
+  const kind = 'monsuc-Mocchi-' + id;
+  if (!SKILL_FX_SPEC_CACHE[kind]) SKILL_FX_SPEC_CACHE[kind] = skmNormalize(motion);
+  return kind;
 };
 const msaMotionMs = (kind) => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
