@@ -30,8 +30,8 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 10;          // 10 = 移動にガッツ(5×段)・吹き飛ばし・ためた番の合計16・自動ガッツ回復0.75倍・移動/ガードの上乗せなし・全試合で同じ決まり(r1115-110〜133)/ 9まで: 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
-  const VERSION_PLAIN = 10;    // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  const VERSION = 11; // 11 = 2距離移動と往復を避ける判断。          // 10 = 移動にガッツ(5×段)・吹き飛ばし・ためた番の合計16・自動ガッツ回復0.75倍・移動/ガードの上乗せなし・全試合で同じ決まり(r1115-110〜133)/ 9まで: 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION_PLAIN = 11;    // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   // 命中(版9・2026-11-14 社長の決め。案と試算: docs/spec/ASSISTANT_MASMON_BATTLE.md「命中とダメージ(版9)」)
   const HIT_STAT_A = 0.11;    // 能力差の効き: 当たりやすさの比 = exp(a·x + c·x|x|)、x = (命中−回避)/100
   const HIT_STAT_C = 0.028;
@@ -99,6 +99,8 @@
   //   段は子ごと。交代で出てきた子は0から。ふきとばし(零距離だけ)も同じ払い方・同じ段
   const MOVE_COST_STEP = 5;
   const moveCostOf = (u) => MOVE_COST_STEP * ((u && u.moveLv > 0 ? u.moveLv : 0) + 1);
+  const moveSteps = [-1, 1, -2, 2];
+  const stepCost = (u, step) => Math.abs(step) === 2 ? 2 * moveCostOf(u) + 2 * MOVE_COST_STEP : moveCostOf(u);
   // 全部の試合で同じ決まり(版10・2026-11-15 r1115-111・113・118・121 社長「全部同じにあわせてよ」):
   //   自動ガッツ回復は種の値の0.75倍(r1115-133。最初は半分) / 打ち切りは1体あたり30ターン(出場する体数の多い方 × 30)/ 判定は3つの比べ(r1115-058)。完全な同点は引き分け
   //   (モンサクの大会だけ judgeTie:'B' = 自分の負け)。roundLimit・gutsPlan.regen・judge:'life' を渡したときだけ、それに替わる(練習の設定)
@@ -499,17 +501,23 @@
     const canMove = u.guts >= mCost;
     const gutsAfterMove = Math.max(0, Math.min(GUTS_MAX, u.guts - mCost + u.regen));
     const costPain = mCost * 0.12 * sty.thrift * (1 - Math.min(1, danger) * 0.5) + (mCost > MOVE_COST_STEP ? (mCost - MOVE_COST_STEP) * 0.25 : 0);
-    for (const step of [-1, 1]) {
+    for (const step of moveSteps) {
       const nd = dist + step;
-      if (nd < 0 || nd > 3 || !canMove) continue;
-      const gain = bestThreat(u, f, nd, gutsAfterMove) - bestThreat(u, f, dist, gutsAfterMove);
+      const cost = stepCost(u, step);
+      if (nd < 0 || nd > 3 || cost > u.guts) continue;
+      const available = Math.min(GUTS_MAX, u.guts - cost + u.regen);
+      const gain = bestThreat(u, f, nd, available) - bestThreat(u, f, dist, available);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
       let score = (gain / f.maxHp * 100 * sty.aggr - risk / u.maxHp * 100 * sty.caution * (0.5 + 0.5 * skill)) * 0.9 * sty.mobility;
       score -= bestTech * 0.7 + 2 + costPain;   // 続けて動くほど払う量が上がって損(行ったり来たりを防ぐ)
       // どの技も届かない距離にいるなら、届く方へ
-      const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd));
+      const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd) && mv.guts <= available);
       if (toReach) score += 20;
+      score -= (cost - mCost) * (0.25 + 0.12 * sty.thrift);
+      // 一度は間合いを取り返せる。相手と同じ区間を往復し続ける手は、緊急退避を除いて評価を下げる。
+      const prev = st.lastWalk;
+      if (prev && prev.reversed && prev.side !== side && prev.from === nd && danger < 1) score -= 30;
       cands.push({ type: 'move', step, score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ふきとばし(零距離だけ): 相手が1手打ったあとに遠へ。遠の方が自分に得(自分の遠の技が強い・相手の零の技が怖い)なら選ぶ
@@ -746,6 +754,7 @@
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
         u.guts = Math.min(GUTS_MAX, u.guts + chargeAddOf(u));
+        state.lastWalk = null;
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; u.moveLv = Math.max(0, u.moveLv - 1); // 「ためる」と同じあと始末
         return;
@@ -753,6 +762,7 @@
       let c;
       if (ctl[side]) { const got = yield { kind: 'act', side }; c = Object.assign({}, got, { why: got.aiWhy || 'player' }); }
       else c = chooseAction(ctx, side);
+      if (c.type !== 'move') state.lastWalk = null;
       if (c.type === 'tech') {
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
@@ -782,7 +792,9 @@
           push({ ev: 'move', side, i: me.active, why: 'techMove', step: mv.moveTo > from ? 1 : -1, to: state.dist, guts: u.guts, byTech: mv.key });
         }
       } else if (c.type === 'move') {
-        const cost = moveCostOf(u);
+        const prev = state.lastWalk;
+        state.lastWalk = { side, from: state.dist, reversed: !!prev && prev.side !== side && prev.from === state.dist + c.step };
+        const cost = stepCost(u, c.step);
         u.guts = Math.max(0, u.guts - cost);
         state.dist = clamp(state.dist + c.step, 0, 3);
         push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts, cost });
@@ -810,7 +822,8 @@
       }
       u.swapCooldown = Math.max(0, u.swapCooldown - 1);
       u.moveStreak = c.type === 'move' || c.type === 'blow' ? u.moveStreak + 1 : 0;
-      if (c.type === 'move' || c.type === 'blow') u.moveLv++;
+      if (c.type === 'move') u.moveLv += Math.abs(c.step);
+      else if (c.type === 'blow') u.moveLv++;
       else if (c.type !== 'swap') u.moveLv = Math.max(0, u.moveLv - 1);
       else u.moveLv = 0;                               // 引っ込んだ子は戻ると0から
       // 倒れた → 次を出す / 全滅なら決着
@@ -849,6 +862,7 @@
           const bt = state.teams[bl.by];
           if (bt.active === bl.i && bt.units[bl.i].hp > 0 && state.dist !== 3) {
             const from = state.dist; state.dist = 3;
+            state.lastWalk = null;
             push({ ev: 'move', side, i: state.teams[side].active, why: 'blown', step: 3 > from ? 1 : -1, to: 3, guts: unitOf(side).guts, by: bl.by });
           }
         }
@@ -987,7 +1001,11 @@
       });
       // 移動・ふきとばしに払うガッツ(続けて動くほど上がる。r1115-110)。足りなければ選べない
       const mCost = moveCostOf(u);
-      const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, guts: mCost, ok: d + step >= 0 && d + step <= 3 && u.guts >= mCost }));
+      const move = moveSteps.filter(step => Math.abs(step) === 1 || (d + step >= 0 && d + step <= 3)).map(step => {
+        const to = d + step;
+        const guts = stepCost(u, step);
+        return { type: 'move', step, to, guts, ok: to >= 0 && to <= 3 && u.guts >= guts };
+      });
       const blowWait = !!(st.blow && st.blow.by === side);
       const blow = { type: 'blow', guts: mCost, near: d === 0, wait: blowWait, ok: d === 0 && u.guts >= mCost && !blowWait };
       const swap = me.units.map((x, i) => ({ type: 'swap', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp,

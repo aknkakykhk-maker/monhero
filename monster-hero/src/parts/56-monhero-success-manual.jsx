@@ -358,7 +358,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
       ) : null}
       <div className="msxm-sec">
-        <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
+        <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(1歩 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row">
           <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の自分の手番まで守る</small></button>
           <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? (Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}（${Math.round(opt.guts)}→${opt.charge.after}）` : 'この番は合わせて16回復') : 'ガッツは満タン'}</small></button>
@@ -369,7 +369,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           {(() => {
             const mvBtn = (mv) => (
               <button key={mv.step} type="button" data-msxm-move={mv.step} className={`msxm-btn ${isHint(mv) ? 'hint' : ''}`} disabled={!mv.ok || busy} onClick={() => go({ type: 'move', step: mv.step })}>
-                {mv.step < 0 ? '前進 ▶' : '◀ 後退'}<small>{mv.to < 0 || mv.to > 3 ? 'これ以上行けない' : Number.isFinite(mv.guts) ? `${MSX_MANUAL_DIST[mv.to]}へ・\u200bガッツ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `${MSX_MANUAL_DIST[mv.to]}へ`}</small>
+                {Math.abs(mv.step) === 2 ? '2歩' : ''}{mv.step < 0 ? '前進 ▶' : '◀ 後退'}<small>{mv.to < 0 || mv.to > 3 ? 'これ以上行けない' : Number.isFinite(mv.guts) ? `${MSX_MANUAL_DIST[mv.to]}へ・\u200bガッツ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `${MSX_MANUAL_DIST[mv.to]}へ`}</small>
               </button>
             );
             const back = opt.move.find((mv) => mv.step > 0); const fwd = opt.move.find((mv) => mv.step < 0);
@@ -379,7 +379,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
                 💨 吹き飛ばし<small>{!near ? '零で使える' : opt.blow.wait ? '相手の次の手のあと' : <><span className="nw">相手の手のあと遠へ・</span><span className="nw">{`ガッツ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`}</span></>}</small>
               </button>
             );
-            return [back ? mvBtn(back) : null, blow, fwd ? mvBtn(fwd) : null];
+            return [back ? mvBtn(back) : null, blow, fwd ? mvBtn(fwd) : null, ...opt.move.filter(mv => Math.abs(mv.step) === 2).map(mvBtn)];
           })()}
         </div>
       </div>
