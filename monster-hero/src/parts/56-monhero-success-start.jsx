@@ -701,12 +701,15 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   if (full) return full;
   return (
     <>
-      <MsxHd back={step ? '戻る' : 'やめる'} onBack={back} right={`${step + 1} / 6`}/>
+      {/* 出口は見出しの左上だけにそろえる(戻る系ボタン統一・2026-11-18 社長決定)。下の帯にも同じ
+          戻るがあったのを廃止し、言葉も段によらず「戻る」に固定する(同じ back() なのに言葉だけ
+          変わっていた)。step=0 の戻り先はシナリオ選択(無ければサクセスの入口)で、意味は一貫して「戻る」 */}
+      <MsxHd back="戻る" onBack={back} right={`${step + 1} / 6`}/>
       <div className="v-body">
         <MsxSteps n={step}/>
         {body}
       </div>
-      {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← 戻る' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
+      {go && <div className="v-ft"><button type="button" className="go" onClick={next}>{go}</button></div>}
       {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>) : null}
     </>
   );

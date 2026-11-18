@@ -174,7 +174,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
       <div className="flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5">
         <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← 戻る</button>
         <span className="text-[15px] font-black">{title}</span>
-        <button type="button" onClick={onClose} className="text-[13px] font-black text-indigo-200 active:scale-95">✕</button>
+        <span className="w-10"/>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {view === 'door' && (

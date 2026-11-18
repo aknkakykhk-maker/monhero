@@ -181,7 +181,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="flex min-h-[44px] min-w-[44px] items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
         {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
         {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
           className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
@@ -1397,7 +1397,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
-          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">やめる</button>
+          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">キャンセル</button>
           <button type="button" data-rhythm-song-buy-ok disabled={buyBusy} onClick={doBuy} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-black text-slate-950 disabled:opacity-40">{buyBusy?'買っています…':'買う'}</button>
         </div>
       </div>

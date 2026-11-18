@@ -344,7 +344,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
         <div className="flex items-center gap-1.5">
           <p className="text-[15px] font-black text-amber-200">📅 今日の予定表</p>
           {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">{typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'}</p>}
-          <button type="button" aria-label="閉じる" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200">✕</button>
+          <span className="ml-auto w-2"/>
         </div>
         {!land && <p className="px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>}
         <div className="min-h-0 overflow-y-auto">
@@ -359,6 +359,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
             </>}
         </div>
+        <button type="button" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="mt-2 min-h-[48px] w-full shrink-0 rounded-xl bg-slate-800 text-[13px] font-black text-slate-100 active:scale-[.98]">閉じる</button>
       </div>
     </div>);
 }

@@ -1126,9 +1126,9 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     <div {...(embedded ? { 'data-assistant-life-list': '' } : { 'data-assistant-life-screen': '' })} className={embedded ? 'relative' : 'fixed inset-0 flex justify-center bg-black/80'} style={embedded ? undefined : { zIndex: 9000 }}>
       <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+          <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} className="min-h-[44px] shrink-0 rounded-full border border-slate-600 px-3 text-[12px] font-black text-slate-300 active:scale-95">← 閉じる</button>
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
           <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
-          <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>}
         <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>
           {/* にぎわい(その日に遊んだ量)。家の中では上の帯に出す */}

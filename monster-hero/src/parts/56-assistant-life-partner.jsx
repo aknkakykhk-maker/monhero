@@ -62,7 +62,7 @@ function AssistantLifeTownPersonCard({ life = null, land = false }) {
               <span className="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-black text-slate-100" data-assistant-life-town-tag>町の人・まだ助手ではありません</span></p>
             {placeText && <p className="text-[11px] font-bold text-slate-300">{placeText}</p>}
           </div>
-          <button type="button" data-assistant-life-town-close onClick={close} aria-label="閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[18px] text-slate-200 active:bg-white/10">✕</button>
+          <button type="button" data-assistant-life-town-close onClick={close} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl px-3 text-[12px] font-black text-slate-200 active:bg-white/10">閉じる</button>
         </div>
         {line && <p data-assistant-life-town-line className="mt-2 rounded-xl bg-slate-800/90 px-3 py-2 text-[12.5px] font-bold leading-relaxed text-slate-100" style={ja}>{jw(`${who.name}「${line}」`)}</p>}
         {p && (

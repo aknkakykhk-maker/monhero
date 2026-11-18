@@ -552,7 +552,6 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
             <p className="text-sm font-black" style={{ color: accent }}>{assistant.name}とおしゃべり</p>
             <p data-assistant-chat-remaining className="text-[10px] font-bold text-slate-400">{remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`}</p>
           </div>
-          <button type="button" data-assistant-chat-close onClick={onClose} className="h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95" aria-label="閉じる">×</button>
         </div>
         <div ref={listRef} className="flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2" style={{ minHeight: 180 }}>
           {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{helpWrap(assistant.greeting || '話しかけてみてね')}</p>}
@@ -608,6 +607,9 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
             placeholder="話しかけてみよう(名前や住所などは書かないでね)" className="flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-white"/>
           <button type="button" data-assistant-chat-send disabled={sending || !loaded || !input.trim()} onClick={send}
             className="min-h-[44px] rounded-xl px-3 text-[12px] font-black text-white active:scale-95 disabled:opacity-40" style={{ background: accent }}>送る</button>
+        </div>
+        <div className="border-t border-slate-800 p-2 shrink-0">
+          <button type="button" data-assistant-chat-close onClick={onClose} className="min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
         </div>
       </div>
     </div>
