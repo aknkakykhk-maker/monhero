@@ -25,6 +25,7 @@
     // トレーニングの結果4種(曲は替えない)。演出のあと結果の字が出たときに鳴らす。2026-11-14 社長「大成功は派手に・失敗は残念そうに」で 大成功=ファンファーレ・成功=和音・サボり=低いブザーに替えた
     { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'rankFanfare' },
     { id: 'trainGreatTag', name: 'トレーニング: 大成功と友情タッグが重なった', se: 'rankFanfareGrand' }, // 2026-11-15 社長 r1115-069
+    { id: 'trainTag', name: 'トレーニング: 友情タッグ', se: 'rankFanfare' }, // 2026-11-18 社長「友情タッグはSEも激しく」。成功の和音からファンファーレへ
     { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGoal' },
     { id: 'trainFail', name: 'トレーニング: 失敗', se: 'trainingFail' },
     { id: 'trainSkip', name: 'トレーニング: サボり', se: 'trainingBad' },
@@ -47,10 +48,14 @@
     { id: 'actTag', name: 'トレーニングの場面: 友情タッグのカットイン', se: 'friendTag' }, // 2026-11-14 社長「友情タッグのときは、特別な演出や効果音を入れて」
     { id: 'actFlash', name: 'トレーニングの場面: Lv5の閃光', se: 'crit' },
     // 友情タッグ・大成功・重なりの決めの演出(56-monsuc-trainfx.jsx・2026-11-15 社長 r1115-067〜069)。新しい音源は入れず、いまある効果音を当てる
+    // 2026-11-18 社長「友情タッグや大成功はSEも激しく」で、決めの瞬間に重ねる音(きらめき・閃光)を足した
     { id: 'actTagJoin', name: 'トレーニングの場面: 仲間の光が集まる', se: 'join' },
     { id: 'actTagFin', name: 'トレーニングの場面: タッグフィニッシュ', se: 'fusion' },
+    { id: 'actTagSpark', name: 'トレーニングの場面: 友情タッグのきらめき', se: 'levelUp' },
     { id: 'actGreatCharge', name: 'トレーニングの場面: 大成功の溜め', se: 'enemyCharge' },
     { id: 'actGreatBoom', name: 'トレーニングの場面: 大成功の爆発', se: 'crit' },
+    { id: 'actGreatFlash', name: 'トレーニングの場面: 大成功の閃光', se: 'fusion' },
+    { id: 'actGreatSpark', name: 'トレーニングの場面: 大成功のきらめき', se: 'levelUp' },
     { id: 'actComboBoom', name: 'トレーニングの場面: 絆の大爆発', se: 'fusion' },
     // 持ち物を使ったときの演出(56-monsuc-itemfx.jsx・2026-11-15 社長 r1115-079)。使った音と、種類ごとの効いた音
     { id: 'itemUse', name: '持ち物: 使った', se: 'trainingTool' },
