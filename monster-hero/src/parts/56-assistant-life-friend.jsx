@@ -1166,10 +1166,10 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="absolute inset-0 flex flex-col" style={{ zIndex: 20, background: '#0b1020' }} data-alf-vview={vtab}>
       {vtab === 'where'
         ? <AssistantLifeTownMap life={null} ids={metIds} land={land} onBack={() => goTab('house')} onPick={() => {}} friendView={{ whereOf: fWhereOf, name: friend.name }}
-            nav={<div className="flex items-center gap-1"><button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-7 shrink-0 text-[18px] text-slate-100" onClick={() => goTab('house')}>←</button><div className="min-w-0 flex-1">{vIcons(true)}</div></div>}/>
+            nav={<div className="flex items-center gap-1"><button type="button" aria-label="戻る" data-alf-vview-back className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" onClick={() => goTab('house')}>← 戻る</button><div className="min-w-0 flex-1">{vIcons(true)}</div></div>}/>
         : <>
           <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
-            <button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-8 shrink-0 text-[19px] text-slate-100" onClick={() => goTab('house')}>←</button>
+            <button type="button" aria-label="戻る" data-alf-vview-back className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" onClick={() => goTab('house')}>← 戻る</button>
             <div className="min-w-0 flex-1"><p className="truncate text-[17px] font-black text-amber-100">🏘 ［プレイヤー］{friend.name}さんの助手ライフ</p><p className="text-[10px] font-bold text-slate-200">👀 見る専用です</p></div>
             {vIcons(false)}
           </div>
@@ -1181,7 +1181,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>) : null;
   const header = (
     <div className={`mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`} style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
-      <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
+      <button type="button" className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>← 戻る</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
@@ -1304,7 +1304,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => ask(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
         <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'}</p>
         <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => ask(i)}>{t}</button>)}</div>
-        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
+        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>キャンセル</button>
       </div>
     </div>) : null;
   const diarySheet = boardOpen ? (

@@ -93,7 +93,7 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
         <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2 [[data-mh-view-rotation=true]_&]:pb-2">
           <div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining.toLocaleString()}</span></div>
           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1">
-            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
+            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">キャンセル</button>
             <button type="button" data-unique-boost-commit disabled={draftCost <= 0} onClick={() => {
               const plan = {}; UNIQUE_BOOST_DEFINITIONS.forEach(def => { if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id); });
               if (onCommit(plan)) { setDraft({}); onClose(); }

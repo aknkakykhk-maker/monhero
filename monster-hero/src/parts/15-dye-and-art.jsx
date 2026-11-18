@@ -1996,7 +1996,6 @@ const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, 
       <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-white">🎨 {title}</h3>
-          <button type="button" aria-label="染色を閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white flex items-center justify-center active:scale-90"><X size={16}/></button>
         </div>
         {/* 横向きの低い画面では、左に全身・右にタブと色のボタンを並べる(縦に積むと色が1段しか見えない) */}
         <div className="flex-1 min-h-0 flex flex-col gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row">

@@ -139,7 +139,7 @@ function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, on
           <button type="button" className="mhl-btn bg-slate-700" data-alf-note-confirm-fix onClick={onFix}>✏️ 直す</button>
           <button type="button" className="mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40" data-alf-note-confirm-send disabled={busy || !!warn} onClick={onSend}>{busy ? '送っています…' : '✉️ 送る'}</button>
         </div>
-        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>やめる</button>
+        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>キャンセル</button>
       </div>
     </div>);
 }

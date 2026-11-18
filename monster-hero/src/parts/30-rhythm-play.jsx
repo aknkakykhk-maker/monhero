@@ -1159,7 +1159,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
       </div>;})}
     <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-1">
       <button type="button" data-rhythm-line-adjust-save onClick={adjust.onSaveTry} className="min-h-[40px] rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950">保存して試す</button>
-      <button type="button" data-rhythm-line-adjust-cancel onClick={adjust.onCancel} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black">やめる</button>
+      <button type="button" data-rhythm-line-adjust-cancel onClick={adjust.onCancel} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black">キャンセル</button>
     </div>
   </div>;
 };

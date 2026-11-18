@@ -250,7 +250,6 @@
     {"id":"item.juice.kyuko1","who":"kyuko","e":"happy","t":"野菜ジュースで全快。ここから詰めよw"},
     {"id":"item.akuyosan.kyuko1","who":"kyuko","e":"normal","t":"苦いけど効くやつ。これでスッキリするはず笑"},
     {"id":"item.license.kyuko1","who":"kyuko","e":"happy","t":"ライセンスかぁ。{mon}、ちゃんと信じてついてきてるよぉ"},
-    {"id":"item.oily.kyuko1","who":"kyuko","e":"normal","t":"オイリーパックね。中身は大事に使おw"},
     {"id":"turn.awake.omen.kyuko1","who":"kyuko","e":"surprise","t":"{mon}、うっすら光ってる。見立てだと…なにか来るよぉ笑"},
     {"id":"turn.awake.omen2.kyuko1","who":"kyuko","e":"surprise","t":"また光ってる。虹色…これは見立て以上かもねぇ"},
     {"id":"turn.awake.fire.kyuko1","who":"kyuko","e":"surprise","t":"ちょ、まぶしっ！ {mon}、なにが起きてるのぉ！？"},

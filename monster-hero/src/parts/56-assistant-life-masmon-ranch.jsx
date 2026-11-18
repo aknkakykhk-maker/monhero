@@ -268,7 +268,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             : `${plan.name}: ${amgrStatName(plan.main)}が上がる`}</p>
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>キャンセル</button>
             <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} 残り {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}

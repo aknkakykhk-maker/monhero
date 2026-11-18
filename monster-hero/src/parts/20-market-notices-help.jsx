@@ -551,7 +551,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
     {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
     <div className="mt-3 grid grid-cols-1 gap-2">
       <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
-      <MarketModalClose onClick={onCancel} label="やめる" disabled={pending}/>
+      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
     </div>
   </MarketModal>;
 };

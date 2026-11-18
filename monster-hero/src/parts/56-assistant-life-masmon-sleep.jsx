@@ -267,7 +267,7 @@ function AmgsDetail({ bed, onClose }) {
               <span className="shrink-0 rounded-lg bg-amber-700 px-1.5 text-[10px] font-black">入れ替え</span>
             </button>); })}
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgs-err>{err}</p>}
-          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
         </>)}
       </div>
     </div>);
@@ -286,7 +286,7 @@ function AmgsSleepButton({ aid, row }) {
         {beds.map(b => <button key={b.id} type="button" onClick={() => { const r = amgsSwap(b.id, row.slot); if (r === true) setOpen(false); else setErr(r); }} data-amgs-sleep-with={b.id} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left">
           {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}<span className="text-[12px] font-black">{b.row.nick} を起こす<small className="block text-[10px] text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''}</small></span></button>)}
         {err && <p className="mt-1 text-[11px] font-bold text-rose-200">{err}</p>}
-        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
       </div>
     </div>}
   </>);
@@ -340,7 +340,7 @@ function AmgsFuseSheet({ beds, onClose }) {
           <button type="button" onClick={go} disabled={!ready} data-amgs-fuse-go={sure} data-amgs-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{sure ? '本当に合体する' : '🧬 合体する'}</button>
           <button type="button" onClick={() => { setMat(null); setSure(0); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </>) : <p className="mt-2 text-[11px] font-bold text-slate-400">このマスモンどうしでは合体できません</p>}
-        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
+        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
     </div>);
 }

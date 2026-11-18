@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 242f290a8cb2a2a0
+// generated-sha256: c4b0c45e4b55b300
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9260,7 +9260,6 @@ const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, 
       <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-white">🎨 {title}</h3>
-          <button type="button" aria-label="染色を閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white flex items-center justify-center active:scale-90"><X size={16}/></button>
         </div>
         {/* 横向きの低い画面では、左に全身・右にタブと色のボタンを並べる(縦に積むと色が1段しか見えない) */}
         <div className="flex-1 min-h-0 flex flex-col gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row">
@@ -14128,7 +14127,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
     {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
     <div className="mt-3 grid grid-cols-1 gap-2">
       <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
-      <MarketModalClose onClick={onCancel} label="やめる" disabled={pending}/>
+      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
     </div>
   </MarketModal>;
 };
@@ -15275,7 +15274,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
                 <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
                 <div className="text-[12px] text-white leading-relaxed" style={bubbleWrapStyle()}>{bubbleWrap(text)}</div>
               </div>
-              <button onClick={()=>setOpen(false)} aria-label="説明を閉じる" className="mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
+              <button onClick={()=>setOpen(false)} className="mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5">
               {topic
@@ -23269,7 +23268,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="flex min-h-[44px] min-w-[44px] items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
         {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
         {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
           className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
@@ -24485,7 +24484,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
-          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">やめる</button>
+          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">キャンセル</button>
           <button type="button" data-rhythm-song-buy-ok disabled={buyBusy} onClick={doBuy} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-black text-slate-950 disabled:opacity-40">{buyBusy?'買っています…':'買う'}</button>
         </div>
       </div>
@@ -25929,7 +25928,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
       </div>;})}
     <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-1">
       <button type="button" data-rhythm-line-adjust-save onClick={adjust.onSaveTry} className="min-h-[40px] rounded-lg bg-amber-400 px-2 text-[12px] font-black text-slate-950">保存して試す</button>
-      <button type="button" data-rhythm-line-adjust-cancel onClick={adjust.onCancel} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black">やめる</button>
+      <button type="button" data-rhythm-line-adjust-cancel onClick={adjust.onCancel} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black">キャンセル</button>
     </div>
   </div>;
 };
@@ -38729,19 +38728,21 @@ const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-whit
 //   accent   … 名前の色のクラス(画面ごとの識別色。既定は白)
 //   note     … 名前の下の小さな補足(省略可)
 //   onBack   … 戻るときにすること(画面は自分の戻り先を知らない)
-//   backLabel… 読み上げ用のラベル。どこへ戻るのかを書く
+//   backLabel… 戻るボタンの言葉。そのまま画面に出る(「○○へ戻る」の形で、どこへ戻るのかを書く)
 //   right    … 右端へ置くもの(件数・所持数など。省略可)
 //   accentStyle … 名前の色を style で渡すとき(モードごとの色など、クラスで書けない色)
 //   compact  … 中身が詰まっている画面(バトルの入口など)用。下の余白を詰める
 //   wrapTitle… 名前が長い画面用。1行に収まらないときは切らずに折り返す(横画面の左の列は幅が狭い)
-// ★戻るは 44×44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
+// ★戻るは高さ44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
 //   「反応する戻る」と「反応しない戻る」が混ざっていると、押せていないように見える。
+// ★出口は「← ＋言葉」で画面に出す(戻る系ボタン統一・2026-11-18 社長決定)。矢印だけだと
+//   行き先が押すまで分からないので、backLabel をそのまま文字でも出す。
 const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = null, note = '', onBack = null, backLabel = '戻る', right = null, disabled = false, compact = false, wrapTitle = false }) => (
   <header className={`mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`}>
     {onBack && (
       <button type="button" aria-label={backLabel} onClick={onBack} disabled={disabled}
-        className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
-        <ArrowLeft size={20}/>
+        className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
+        <ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{backLabel}</span>
       </button>
     )}
     <div className="min-w-0 flex-1">
@@ -39357,7 +39358,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="やめる"/>
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -39370,7 +39371,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="やめる"/>
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
     </div>
   </ModalFrame>
 );
@@ -42164,7 +42165,7 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
   return (
     <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>{heading}</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
+        <div className="mh-dialog-head"><h3>{heading}</h3></div>
         <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
         {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
             shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
@@ -42199,7 +42200,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   return (
     <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>画面テーマ</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
+        <div className="mh-dialog-head"><h3>画面テーマ</h3></div>
         <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>
         <div className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
           <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
@@ -42331,7 +42332,6 @@ function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup, mode = nu
       <div className="w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border border-amber-300/60 bg-slate-900 p-4 shadow-2xl">
         <div className="mh-dialog-head flex items-start justify-between gap-2">
           <h3 className="text-[16px] font-black leading-snug text-white">{w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう')}</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95">✕</button>
         </div>
         <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">{w(inApp
           ? 'いまは X や LINE などのアプリの中で開いています。Safari で開いてホーム画面に追加すると、アプリのように画面が広くなり、ブラウザの操作が出なくなります。'
@@ -43960,7 +43960,6 @@ const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
         style={{ paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-amber-100">色の見本にするマスモン</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5">
           {row('base', !current, false, face(null, mon.name), '元の色', <span>もとのイラストの色</span>, () => pick(null))}
@@ -43975,6 +43974,7 @@ const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
           })}
           {list.length === 0 && <p className="text-center text-[11px] font-bold text-slate-400 py-3">この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。</p>}
         </div>
+        <button type="button" onClick={onClose} className="shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
       </div>
     </div>
   );
@@ -43987,7 +43987,6 @@ const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onCl
     <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:500px)]:p-3 flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
       <div className="flex items-center justify-between shrink-0">
         <h3 className="text-sm font-black text-white">🎨 {mon.name}を染めてみる</h3>
-        <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
       </div>
       {/* 高さ500px以下の横画面では、絵と注意書きを左、色の札とボタンを右に並べる。
           縦に積むと絵の枠だけで窓の半分を使い、色の札が1段しか見えなかった(2026-10-27 見回り・844×390) */}
@@ -44009,6 +44008,7 @@ const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onCl
           </div>
         </div>
       </div>
+      <button type="button" onClick={onClose} className="shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
     </div>
   </div>
 );
@@ -44406,7 +44406,7 @@ function RhythmInfoScreen({
   return (
       <main data-rhythm-info className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="HOMEへ戻る" onClick={returnToHome} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="HOMEへ戻る" onClick={returnToHome} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">HOMEへ戻る</span></button>
           <div className="min-w-0"><small className="block text-[8px] font-black text-cyan-300">COMING SOON</small><h2 className="text-sm font-black tracking-widest text-cyan-200">モンヒロビート</h2></div>
         </header>
         <div className="flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
@@ -44589,7 +44589,7 @@ function RhythmSongSelectScreen({
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
           <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モード選びへ戻る'} title={debugAll?'デバッグへ戻る':'モード選びへ戻る'}
             onClick={onExit}
-            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -44711,7 +44711,7 @@ function RhythmSongSelectScreen({
                     <button type="button" onClick={()=>setQuickRunStopConfirm(false)}
                       className="min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]">続ける</button>
                     <button type="button" data-quick-run-stop-yes onClick={()=>{setQuickRunStopConfirm(false);void handleGiveUp();}}
-                      className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">やめる</button>
+                      className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">周回をやめる</button>
                   </div>
                 </div>
               : <button type="button" data-quick-run-stop onClick={()=>setQuickRunStopConfirm(true)}
@@ -44889,7 +44889,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
   return (
     <main data-rhythm-note-dex className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
       <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
         <div className="min-w-0 flex-1">
           <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
           <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📒 ノーツ図鑑</h2>
@@ -44931,7 +44931,7 @@ function RhythmHelpScreen({
       return (
       <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <div className="min-w-0 flex-1">
             <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
             <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">{topic?`${topic.emoji} ${topic.title}`:'📖 遊びかた'}</h2>
@@ -44995,7 +44995,7 @@ function RhythmMonstersScreen({
   return (
       <main data-rhythm-demo-monsters-screen className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);onBackToSongSelect();}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);onBackToSongSelect();}} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
         </header>
         {/* 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
@@ -45289,7 +45289,7 @@ function RhythmRankingScreen({
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-          <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+          <button aria-label="戻る" onClick={onBackToSongSelect} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
@@ -45488,7 +45488,6 @@ function RhythmRankingScreen({
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
-                <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
               </div>
               {isTotal
                 ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
@@ -45537,6 +45536,7 @@ function RhythmRankingScreen({
                   {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
                 </p>
               </React.Fragment>)}
+              <button type="button" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
             </div>
           </div>);
         })()}
@@ -45961,7 +45961,7 @@ function MasuReincarnateScreen({
             {reincarnateError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{reincarnateError}</p>}
             <div className="mt-3 grid grid-cols-1 gap-2">
               <button type="button" disabled={busy||!preview?.ok} onClick={confirmBulk} className="mh-button mh-button-primary min-h-[52px] rounded-2xl bg-violet-600 font-black active:scale-[.98] disabled:opacity-30">{preview?.ok?`${preview.count}体を転生する`:'転生できません'}</button>
-              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="やめる" disabled={busy}/>
+              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="キャンセル" disabled={busy}/>
             </div>
             </div>
           </ModalFrame>}
@@ -46606,7 +46606,7 @@ function MasuSoulTraitsScreen({
 
         {selected&&<div className="fixed inset-0 z-[32000] flex items-end justify-center bg-black/70 p-3" role="dialog" aria-modal="true" aria-label={`${selected.name}の魂格特性強化`}>
           <div data-soul-trait-sheet data-soul-trait-upgrade-sheet className="w-full max-w-sm rounded-t-2xl border-2 border-sky-500/60 bg-slate-950 p-4 shadow-2xl" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-start justify-between gap-2"><div><div className="text-[10px] font-black text-sky-300">魂格特性</div><div className="text-lg font-black">{selected.name}</div><div className="mt-1 text-[10px] font-bold text-slate-400">{selected.desc}</div></div><button type="button" aria-label="強化画面を閉じる" onClick={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');}} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 active:scale-90"><X size={16}/></button></div>
+            <div className="flex items-start justify-between gap-2"><div><div className="text-[10px] font-black text-sky-300">魂格特性</div><div className="text-lg font-black">{selected.name}</div><div className="mt-1 text-[10px] font-bold text-slate-400">{selected.desc}</div></div><button type="button" onClick={()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');}} className="flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white/10 px-3 text-[11px] font-black text-slate-200 active:scale-90">閉じる</button></div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-center">
               <div className="rounded-xl border border-white/10 bg-black/30 p-2"><div className="text-[10px] text-slate-400 font-black">現在</div><div className="text-[13px] font-black text-white">Lv.{currentLevel}</div><div className="text-[10px] font-mono font-black text-sky-300">{formatSoulTraitEffect(selected,currentEffect)}</div></div>
               <div className="rounded-xl border border-emerald-500/60 bg-emerald-950/20 p-2"><div className="text-[10px] text-slate-400 font-black">強化後</div><div className="text-[13px] font-black text-white">Lv.{afterLevel}</div><div className="text-[10px] font-mono font-black text-emerald-300">{formatSoulTraitEffect(selected,afterEffect)}</div></div>
@@ -46642,7 +46642,7 @@ function MasuSoulTraitsScreen({
               <button type="button" data-soul-crystal-use-1 disabled={soulTraitProcessingRef.current||crystalHave<1} onClick={()=>commitSoulCrystalUse(masu.id,1)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1個使う(+1P)</button>
               {crystalHave>=10&&<button type="button" data-soul-crystal-use-10 disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,10)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">10個使う(+10P)</button>}
               {crystalHave>1&&<button type="button" data-soul-crystal-use-all disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,crystalHave)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">全部使う({crystalHave}個・+{crystalHave}P)</button>}
-              <button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulCrystalOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button>
+              <button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulCrystalOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">キャンセル</button>
             </div>
           </div>
         </div>}
@@ -46656,7 +46656,7 @@ function MasuSoulTraitsScreen({
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
             {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格の結晶</span><span className="text-fuchsia-300">{crystalHave} → {crystalHave+bonusPoints}個</span></div>}
             {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">このモンスターの魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
-            <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulTraitRespecOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button><button type="button" data-soul-trait-respec-confirm disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1冊使って再編</button></div>
+            <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulTraitRespecOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">キャンセル</button><button type="button" data-soul-trait-respec-confirm disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1冊使って再編</button></div>
           </div>
         </div>}
       </div>;
@@ -46759,7 +46759,7 @@ function UniqueBoostSheet({ masu, skillKey, onClose, onCommit }) {
         <div className="shrink-0 px-4 pt-2 pb-3 border-t border-white/10 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1 [@media(orientation:landscape)_and_(max-height:520px)]:pb-2 [[data-mh-view-rotation=true]_&]:pb-2">
           <div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining.toLocaleString()}</span></div>
           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 [[data-mh-view-rotation=true]_&]:mt-1">
-            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">やめる</button>
+            <button type="button" onClick={onClose} className="min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white">キャンセル</button>
             <button type="button" data-unique-boost-commit disabled={draftCost <= 0} onClick={() => {
               const plan = {}; UNIQUE_BOOST_DEFINITIONS.forEach(def => { if (targetOf(def.id) > (current[def.id] || 0)) plan[def.id] = targetOf(def.id); });
               if (onCommit(plan)) { setDraft({}); onClose(); }
@@ -46978,7 +46978,7 @@ function MasuTranscendEnhanceScreen({
             {!normalized.transcended&&<div data-transcend-not-yet className="rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] font-bold text-slate-400 leading-relaxed">この個体はまだ神殿で超越していませんが、超越強化はいつでも使えます。あとで正式に超越しても、ここで上げた基礎値と残っている超越ポイントはそのまま引き継がれます。<br/>神殿の「超越」（Lv上限400→500・超越マーク）は、これまでどおりLv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回が必要です。</div>}
           </div>
           <div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto grid grid-cols-2 gap-2`}>
-            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">やめる</button>
+            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">キャンセル</button>
             <button type="button" data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-sky-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95">この配分で確定（{planUsed}P）</button>
           </div>
           {/* 超越ポイントのリセット。何が何点戻るのかを出してから確定させる */}
@@ -46987,7 +46987,7 @@ function MasuTranscendEnhanceScreen({
               <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border-t border-x border-amber-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-black text-amber-200 flex items-center gap-1.5"><span aria-hidden="true">🌠</span>超越ポイントをリセットしますか？</h3>
-                  <button type="button" aria-label="閉じる" onClick={()=>setTranscendResetOpen(false)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button>
+
                 </div>
                 <div className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-1 text-[10px] font-black">
                   <div className="flex justify-between"><span className="text-slate-300">使用済み超越P</span><span className="font-mono text-white">{spentPoints}P</span></div>
@@ -46998,7 +46998,7 @@ function MasuTranscendEnhanceScreen({
                 <div className="text-[11px] font-bold text-slate-400 leading-relaxed">超越で上げた基礎ステータスと基礎の間合い適性が元へ戻り、そのぶんの超越ポイントが未使用へ返ります。絆レベル・絆経験値・Lv上限・超越済みかどうか・限界突破・転生回数・通常の強化は変わりません。<b className="text-amber-200">交換に使った虹のプシュケーは戻りません。</b></div>
                 {transcendResetError&&<div className="text-[10px] font-black text-red-400">{transcendResetError}</div>}
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={()=>setTranscendResetOpen(false)} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95">やめる</button>
+                  <button type="button" onClick={()=>setTranscendResetOpen(false)} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95">キャンセル</button>
                   <button type="button" data-transcend-reset-commit disabled={spentPoints<=0||resetScrollHave<=0} onClick={runReset} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-amber-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95">書を1冊使ってリセット</button>
                 </div>
               </div>
@@ -47010,7 +47010,7 @@ function MasuTranscendEnhanceScreen({
               <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-black text-fuchsia-200 flex items-center gap-1.5"><span aria-hidden="true">🌈</span>虹のプシュケーを変換</h3>
-                  <button type="button" aria-label="閉じる" onClick={()=>setTranscendExchangeOpen(false)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button>
+
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl bg-black/30 p-2.5 text-center"><div className="text-[10px] font-black text-slate-400">所持している虹のプシュケー</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
@@ -47047,7 +47047,7 @@ function MasuTranscendEnhanceScreen({
           {transcendFruitOpen&&(
             <div data-transcend-fruit-sheet role="dialog" aria-modal="true" aria-label="超越の実を使う" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendFruitOpen(false)}>
               <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border-t border-x border-emerald-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
-                <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-emerald-200">🍎 超越の実を使う</h3><button aria-label="閉じる" onClick={()=>setTranscendFruitOpen(false)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button></div>
+                <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-emerald-200">🍎 超越の実を使う</h3></div>
                 <p className="text-[11px] font-bold text-slate-400">使用する実を選んでください。虹の実が自動で代用されることはありません。</p>
                 <div className="grid grid-cols-2 gap-2">
                   {fruitChoices.map(({itemId,name,have})=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`mh-button mh-button-secondary min-h-[64px] rounded-xl border p-2 text-[11px] font-black active:scale-95 disabled:opacity-30 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
@@ -47056,7 +47056,7 @@ function MasuTranscendEnhanceScreen({
                   <div className="grid grid-cols-3 gap-2">{[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']].map(([amount,label])=><button key={label} data-transcend-fruit-amount={label} disabled={selectedFruitHave<amount||amount<=0} onClick={()=>requestFruitUse(amount)} className="min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30">{label}</button>)}</div>
                   <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"><div className="flex justify-between"><span className="text-slate-300">現在の超越ポイント</span><span className="font-mono">{points}P</span></div><div className="flex justify-between"><span className="text-slate-300">使用後（選択中）</span><span className="font-mono text-emerald-200">{points} → {points+(transcendFruitConfirmAmount||1)}P</span></div></div>
                 </>}
-                {transcendFruitConfirmAmount>1&&<div data-transcend-fruit-confirm className="rounded-xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"><div className="text-[11px] font-black text-amber-200">{selectedFruitName}を{transcendFruitConfirmAmount}個使いますか？</div><div className="text-[10px] font-bold text-slate-300">所持 ×{selectedFruitHave} → ×{selectedFruitHave-transcendFruitConfirmAmount}<br/>超越ポイント {points}P → {points+transcendFruitConfirmAmount}P</div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>setTranscendFruitConfirmAmount(0)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black active:scale-95">戻る</button><button type="button" data-transcend-fruit-commit onClick={runFruitUse} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[12px] font-black active:scale-95">使用を確定</button></div></div>}
+                {transcendFruitConfirmAmount>1&&<div data-transcend-fruit-confirm className="rounded-xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"><div className="text-[11px] font-black text-amber-200">{selectedFruitName}を{transcendFruitConfirmAmount}個使いますか？</div><div className="text-[10px] font-bold text-slate-300">所持 ×{selectedFruitHave} → ×{selectedFruitHave-transcendFruitConfirmAmount}<br/>超越ポイント {points}P → {points+transcendFruitConfirmAmount}P</div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>setTranscendFruitConfirmAmount(0)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black active:scale-95">← 戻る</button><button type="button" data-transcend-fruit-commit onClick={runFruitUse} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[12px] font-black active:scale-95">使用を確定</button></div></div>}
                 {transcendFruitError&&<div className="text-[10px] font-black text-red-400">{transcendFruitError}</div>}
                 <button type="button" onClick={()=>setTranscendFruitOpen(false)} className="mh-button mh-button-secondary min-h-[52px] w-full rounded-xl bg-slate-800 text-slate-200 text-[12px] font-black active:scale-95">閉じる</button>
               </div>
@@ -47770,7 +47770,7 @@ function SkipPickScreen({
     const slotMons=[skipFlow.hero,...(skipFlow.allies||[])];
     return(
     <div style={{position:'absolute',inset:0,backgroundColor:'#020617',zIndex:30000}} className="absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden">
-      <div className="mb-2 flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" onClick={closeBattleSkip} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest">スキップ・{label}</h2><div className="w-10"/></div>
+      <div className="mb-2 flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" onClick={closeBattleSkip} className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button><h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest">スキップ・{label}</h2><div className="w-[76px]"/></div>
       <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="skipPick" compact/></div>
       <div className="w-full max-w-md mx-auto shrink-0">
         <div className="grid grid-cols-4 gap-1.5">
@@ -48136,9 +48136,9 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選ぶ':'供モンを選ぶ'}</h2>
+      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選ぶ':'供モンを選ぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-[76px]"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -48440,10 +48440,10 @@ function PickProAlliesScreen({
     return (
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'.35rem'}}>
-        <button type="button" aria-label="戻る" onClick={returnToHero} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+        <button type="button" aria-label="戻る" onClick={returnToHero} className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
         <div className="min-w-0"><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
         <p data-pick-term-note className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">勇者モン＝主役 / 供モン＝一緒に戦う仲間(最大3体)</p></div>
-        <div className="w-10"></div>
+        <div className="w-[76px]"></div>
       </div>
       <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col">
         {proEditingAllyIndex===null?<>
@@ -49171,7 +49171,7 @@ function MasuRegisterModal({
         </div>
         <input type="text" value={masuNameInput} onChange={e=>setMasuNameInput(e.target.value.slice(0,12))} placeholder={mainHero?.name||'名前'} maxLength={12} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-black focus:outline-none focus:border-pink-400"/>
         <div className="flex gap-2">
-          <button onClick={()=>setShowMasuRegisterModal(false)} className="w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">やめる</button>
+          <button onClick={()=>setShowMasuRegisterModal(false)} className="w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">キャンセル</button>
           <button onClick={()=>{ registerMasuMon(masuNameInput); setShowMasuRegisterModal(false); }} className="w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95">登録する</button>
         </div>
       </div>
@@ -54208,7 +54208,7 @@ function MasuAutoEnhanceScreen({
                 )}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button type="button" data-auto-enhance-confirm onClick={confirmDraft} className="min-h-[52px] rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950 font-black text-[13px] active:scale-95">確定する</button>
-                  <button type="button" data-auto-enhance-cancel onClick={cancelDraft} className="min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95">やめる</button>
+                  <button type="button" data-auto-enhance-cancel onClick={cancelDraft} className="min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95">キャンセル</button>
                 </div>
               </div>
             )}
@@ -54475,7 +54475,7 @@ function RhythmHistoryScreen({
   return (
     <main data-mh-screen data-rhythm-history className="flex h-full flex-1 flex-col bg-slate-950 text-white">
       <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-        <button aria-label="戻る" data-rhythm-history-back onClick={()=>selected?onClearSelection():onBack()} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <button aria-label="戻る" data-rhythm-history-back onClick={()=>selected?onClearSelection():onBack()} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
         <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-amber-200">
           {selected?rhythmHistoryName(selected):'🕘 これまでの記録'}
         </h2>
@@ -57874,7 +57874,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
     <section data-rhythm-multi-chat className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-1.5">
         <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">💬 チャット<small className="ml-1.5 text-[10px] font-bold text-slate-400">ルームの{count}件</small></h3>
-        {onClose && <button data-rhythm-multi-chat-close type="button" aria-label="チャットを閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200">✕</button>}
+        {onClose && <button data-rhythm-multi-chat-close type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black text-slate-200">閉じる</button>}
       </div>
       {talkTip && (
         <div data-rhythm-buddy-talk-tip className="mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2 landscape:p-1.5">
@@ -58460,7 +58460,7 @@ function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeav
           : <button data-multi-away-return type="button" onClick={() => onReturn && onReturn()}
             className={`min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`}>{hot ? '対戦へ' : '戻る'}</button>}
         {onLeave && <button data-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
-          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>}
+          className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-700 px-2.5 text-[11px] font-black">部屋を出る</button>}
       </div>
     </div>
   );
@@ -58500,7 +58500,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
       <div data-rhythm-multi-record className="absolute inset-x-0 bottom-0 flex h-[82%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-3 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[55%] landscape:rounded-none landscape:rounded-l-2xl" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
         <div className="flex shrink-0 items-center gap-2">
           <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">📜 みんなで対戦の記録</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black">✕</button>
+          <button type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {!rec ? <p className="mt-3 text-xs font-bold text-slate-400">読み込んでいます…</p> : <>
           <div className="mt-2 grid shrink-0 grid-cols-4 gap-1.5 text-center">
@@ -58573,7 +58573,7 @@ function RhythmMultiBuddyInfoSheet({ m, masu, songName, resolveIconUrl, onClose 
         <section data-rhythm-multi-buddy-info className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:max-h-[92%] landscape:max-w-xl landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
           <header className="mb-2 flex shrink-0 items-center gap-2">
             <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">🎵 マスモンのステータス</h3>
-            <button data-rhythm-multi-buddy-info-close type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
+            <button data-rhythm-multi-buddy-info-close type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-full bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <RhythmBuddyDetail masu={masu} mon={state.mons[masu.id]} dayKey={dayKey} songName={songName} ownerName={m && m.name} onBack={null} />
@@ -59626,7 +59626,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
       {!playing && (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           <p data-rhythm-watch-message className="text-[14px] font-black leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(rhythmWatchPhaseText(v.phase))}</p>
-          <button type="button" onClick={close} className="min-h-[48px] w-full max-w-xs rounded-xl bg-slate-700 text-[14px] font-black">観戦をやめる</button>
+          {/* 観戦の出口は見出しの左上だけにそろえる(戻る系ボタン統一・2026-11-18 社長決定)。
+              待機中の真ん中にも同じボタンがあったのを廃止した */}
         </div>
       )}
       {playing && (
@@ -60490,7 +60491,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">💌</span>
           <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンドを招待する</b>
-          <button type="button" aria-label="閉じる" onClick={() => setInviteSheet(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+          <button type="button" onClick={() => setInviteSheet(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {inviteListBody}
       </div>
@@ -60621,7 +60622,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
                 <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100" style={JA_WRAP_STYLE}>{jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')}</p>
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
-                <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black">閉じる</button>
               </section>
             )}
             {ms.multi && buddyIntroSeen && !rankIntroSeen && (
@@ -60629,7 +60630,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <span aria-hidden="true" className="text-2xl leading-none">🏆</span>
                 <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">「ランキング」に「マスモンランキング」ができました。育てたマスモンのビートLvと最高スコアの順位が見られます</p>
                 <button type="button" onClick={() => closeRankIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">見てみる</button>
-                <button type="button" aria-label="閉じる" onClick={() => closeRankIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => closeRankIntro(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black">閉じる</button>
               </section>
             )}
             {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
@@ -60678,7 +60679,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🎮</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-fuchsia-100">フリーマッチ</b><small className="block text-[11px] font-bold text-slate-400">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></div>
-                <button type="button" aria-label="閉じる" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
               </div>
               {rejoinButton}
               {/* フレンドがいます(2026-11-08)。部屋を開いているフレンドは「入る」、いるが部屋の無いフレンドは「作って誘う」 */}
@@ -60735,7 +60736,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、フレンドだけと遊べます</small></div>
-                <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => setPrivateOpen(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">部屋を作る</b>
@@ -60877,7 +60878,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
                 {view && rankingWideButton('w-full')}
                 {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
-                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
+                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>ルームを出る</button>
                 </div>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>
@@ -61750,7 +61751,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
           <div className="flex items-center justify-between gap-2">
             <small className="text-[11px] font-black text-lime-100">🌱 性格の種 <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
-              className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
+              className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'キャンセル' : '性格を選び直す'}</button>
           </div>
           <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
           {seedOpen && (
@@ -64669,7 +64670,6 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
             <p className="text-sm font-black" style={{ color: accent }}>{assistant.name}とおしゃべり</p>
             <p data-assistant-chat-remaining className="text-[10px] font-bold text-slate-400">{remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`}</p>
           </div>
-          <button type="button" data-assistant-chat-close onClick={onClose} className="h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95" aria-label="閉じる">×</button>
         </div>
         <div ref={listRef} className="flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2" style={{ minHeight: 180 }}>
           {log.length === 0 && <p className="text-[11px] text-slate-400 leading-relaxed">{helpWrap(assistant.greeting || '話しかけてみてね')}</p>}
@@ -64725,6 +64725,9 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
             placeholder="話しかけてみよう(名前や住所などは書かないでね)" className="flex-1 resize-none rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-white"/>
           <button type="button" data-assistant-chat-send disabled={sending || !loaded || !input.trim()} onClick={send}
             className="min-h-[44px] rounded-xl px-3 text-[12px] font-black text-white active:scale-95 disabled:opacity-40" style={{ background: accent }}>送る</button>
+        </div>
+        <div className="border-t border-slate-800 p-2 shrink-0">
+          <button type="button" data-assistant-chat-close onClick={onClose} className="min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
         </div>
       </div>
     </div>
@@ -65748,8 +65751,8 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
-        <button type="button" data-assistant-peer-close aria-label="閉じる" onClick={ev => { ev.stopPropagation(); finish(cur); }}
-          className="h-7 w-7 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95">×</button>
+        <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
+          className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
       </div>
     </div>);
 }
@@ -65812,7 +65815,6 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
       <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2">
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
-          <button type="button" data-assistant-peer-album-close onClick={onClose} aria-label="閉じる" className="h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95">×</button>
         </div>
         <p className="mb-2 text-[10px] text-slate-400">{assistantPeerLvLabel(lv)}・見た掛け合い {talks.length}/{all}</p>
         <div className="grid grid-cols-2 gap-2">
@@ -65873,6 +65875,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
                 : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)}</span>
             </button>))}
         </div>
+        <button type="button" data-assistant-peer-album-close onClick={onClose} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
       </div>
       {buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => { const x = assistantLifeGiftOf(buyKind); return x ? (
         <AssistantLifeBuyConfirm item={x} to={`${a.name}と${b.name}`} onClose={() => setBuyKind(null)}
@@ -67827,9 +67830,9 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     <div {...(embedded ? { 'data-assistant-life-list': '' } : { 'data-assistant-life-screen': '' })} className={embedded ? 'relative' : 'fixed inset-0 flex justify-center bg-black/80'} style={embedded ? undefined : { zIndex: 9000 }}>
       <div className={embedded ? 'w-full' : 'flex h-full w-full max-w-md flex-col bg-slate-950'} style={embedded ? undefined : { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {!embedded && <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+          <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} className="min-h-[44px] shrink-0 rounded-full border border-slate-600 px-3 text-[12px] font-black text-slate-300 active:scale-95">← 閉じる</button>
           <p className="min-w-0 flex-1 text-[15px] font-black text-pink-200">助手ライフ</p>
           <span className="text-right text-[10px] font-bold leading-tight text-slate-400">いまは{assistantLifeSlotRange(slot)}の過ごし方<br/><span data-assistant-life-next-slot className="text-slate-300">{assistantLifeNextSlotText()}</span></span>
-          <button type="button" data-assistant-life-close onClick={assistantLifeCloseScreen} aria-label="閉じる" className="h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95">×</button>
         </div>}
         <div className={embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'}>
           {/* にぎわい(その日に遊んだ量)。家の中では上の帯に出す */}
@@ -69039,7 +69042,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
       <AssistantLifeStands ids={ids} sleepIds={scene.sleep || []}/>
       <div className="mhl-hdr absolute inset-x-0 top-0" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
         <div className="flex items-start gap-2">
-          <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
+          <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="min-h-[36px] shrink-0 whitespace-nowrap rounded-full bg-black/45 px-2.5 text-[12px] font-black text-slate-100">← 家へ戻る</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
         {scene.title && <p data-assistant-life-scene-rel-title className="mt-1 w-fit rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[12px] font-black text-white">{scene.title}</p>}
@@ -69379,7 +69382,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     <div className="mhl-hdr" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       {/* 入らないとき(🔄横 667 の狭い欄)は、時計の札が次の行の右端へ回る(切れない・2026-11-08 ミハリ) */}
       <div className="flex flex-wrap items-start gap-x-2">
-        <button type="button" data-assistant-life-close onClick={uiV2 ? backFromUiV2 : close} aria-label={uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'} className={uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[19px] text-slate-100 active:bg-white/10' : 'h-9 w-8 shrink-0 text-[19px] text-slate-100'}>←</button>
+        <button type="button" data-assistant-life-close onClick={uiV2 ? backFromUiV2 : close} aria-label={uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'} className={uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap rounded-xl px-2 text-[13px] font-black text-slate-100 active:bg-white/10' : 'min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100'}>← {uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'}</button>
         {/* 英字の小見出しは狭い横(🔄横 667)で縮んで省略する(時計の札を押し出さない・2026-11-08 ミハリ) */}
         <div className="min-w-0 shrink overflow-hidden" data-assistant-life-title><p className="mhl-en truncate whitespace-nowrap" style={land ? { letterSpacing: '.06em', fontSize: 8 } : undefined}>ASSISTANT LIFE · {tab === 'where' ? (uiV2 ? 'TOWN' : 'WHERE') : tab === 'friends' ? (uiV2 ? 'KIZUNA' : 'FRIENDS') : tab === 'items' ? 'ITEMS' : tab === 'visit' ? 'VISIT' : tab === 'profile' ? 'PROFILE' : 'HOUSE'}</p><p className="mhl-ti whitespace-nowrap" style={land ? { fontSize: 18 } : undefined}>助手ライフ</p></div>
         <div className="min-w-0 flex-1"/>
@@ -69510,13 +69513,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <div className="mt-1.5">{icons}</div>
           </div>
         </>)}
-        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる ✕</button></div><div className="max-h-[46vh] overflow-y-auto">{/* 行ごとに、いま何をしているか・声をかけると何が上がるか(2026-11-11 ミヤスサ点検 ⑩)。さみしそうな助手を先頭に枠で */}{Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => { const lonely = life.solo[id]?.reason === 'lonely'; const cw = assistantLifeWhereOf(life, id); const cd = cw && ASSISTANT_LIFE_DOINGS[cw.doing]; return <button type="button" key={id} data-assistant-life-call-row={id} className={`mb-2 flex min-h-[52px] w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left ${lonely ? 'border-pink-300 bg-pink-950/60' : 'border-white/15 bg-slate-800'}`} onClick={() => { setCallPicker(false); setRoomId(id); }}><span className="min-w-0 flex-1"><b className="block text-[14px] text-white">{nameOf(id)}</b><small className={`block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`}>{(() => { const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている'; return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing; })()}</small></span>{lonely && <span className="shrink-0 text-right text-[11px] font-black leading-tight text-amber-200">🤝 友情Lv<br/>のきっかけ</span>}<span className="shrink-0 text-slate-400" aria-hidden="true">›</span></button>; })}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
+        {callPicker && uiV2 && <div className="absolute inset-0 z-[22] flex items-end justify-center bg-black/60" data-assistant-life-call-picker><div className="w-full max-w-[480px] rounded-t-2xl border-t-2 border-sky-300 bg-slate-900 p-4" style={{paddingBottom:'calc(16px + env(safe-area-inset-bottom))'}}><div className="mb-3 flex items-center justify-between"><b>💬 声をかける助手を選ぶ</b><button type="button" className="min-h-[44px] px-3" onClick={() => setCallPicker(false)}>閉じる</button></div><div className="max-h-[46vh] overflow-y-auto">{/* 行ごとに、いま何をしているか・声をかけると何が上がるか(2026-11-11 ミヤスサ点検 ⑩)。さみしそうな助手を先頭に枠で */}{Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => { const lonely = life.solo[id]?.reason === 'lonely'; const cw = assistantLifeWhereOf(life, id); const cd = cw && ASSISTANT_LIFE_DOINGS[cw.doing]; return <button type="button" key={id} data-assistant-life-call-row={id} className={`mb-2 flex min-h-[52px] w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left ${lonely ? 'border-pink-300 bg-pink-950/60' : 'border-white/15 bg-slate-800'}`} onClick={() => { setCallPicker(false); setRoomId(id); }}><span className="min-w-0 flex-1"><b className="block text-[14px] text-white">{nameOf(id)}</b><small className={`block text-[11.5px] font-bold leading-snug ${lonely ? 'text-pink-200' : 'text-slate-300'}`}>{(() => { const doing = cw && cw.doing === 'sleep' ? '寝ている' : cd ? `ひとりで${cd.label}` : 'ひとりで過ごしている'; return lonely ? `💭 さみしそう・声をかけよう(${doing})` : doing; })()}</small></span>{lonely && <span className="shrink-0 text-right text-[11px] font-black leading-tight text-amber-200">🤝 友情Lv<br/>のきっかけ</span>}<span className="shrink-0 text-slate-400" aria-hidden="true">›</span></button>; })}</div><p className="mt-1 text-[11px] font-bold leading-snug text-slate-300" data-assistant-life-call-hint>💭 さみしそうな助手は、声をかけると次の時間にだれかの所へ行きます(🤝 友情Lv が育つきっかけ)</p></div></div>}
         {uiV2 && tab === 'where' && note && !roomId && <p data-assistant-life-note className="absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100" style={{ bottom: 'calc(44px + env(safe-area-inset-bottom))' }}>{note}</p>}
         {giftOpen && uiV2 && !roomId && !give && (
           <div className="absolute inset-0" style={{ zIndex: 21 }} data-assistant-life-gift-sheet>
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setGiftOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '56%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
-              <div className="flex items-center justify-between gap-2"><p className="text-[18px] font-black">🎁 贈る</p><button type="button" data-assistant-life-gift-sheet-close data-mhl-sheet-close onClick={() => setGiftOpen(false)} className="min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]">閉じる ✕</button></div>
+              <div className="flex items-center justify-between gap-2"><p className="text-[18px] font-black">🎁 贈る</p><button type="button" data-assistant-life-gift-sheet-close data-mhl-sheet-close onClick={() => setGiftOpen(false)} className="min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]">閉じる</button></div>
               {typeof AssistantLifeGiveWho === 'function' && <AssistantLifeGiveWho groups={(life.groups || []).map(g => ({ ...g, ids: (g.ids || []).filter(id => metSet.has(id)) })).filter(g => g.ids.length >= 2 && g.ids.every(partnerOk))} soloIds={ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id) && partnerOk(id))} pairLeft={typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0} soloLeft={soloLeft} canPair={canGive} soloOn={soloOn}
                 onPair={(g) => { setGiftOpen(false); openGive(g.ids); }} onSolo={(id) => { setGiftOpen(false); const g = (life.groups || []).find(x => (x.ids || []).includes(id)); openGiveSolo(id, g ? g.ids : [id]); }}/>}
               <button type="button" data-assistant-life-gift-items-toggle aria-expanded={giftItemsOpen} onClick={() => setGiftItemsOpen(v => !v)} className="mt-3 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-white/5 px-3 text-left text-[13px] font-black text-white active:scale-[.98]"><span>📦 道具の一覧 <span className="text-[11px] font-bold text-slate-300">持っている {itemsHave}個・手に入れ方</span></span><span className="text-[11px] font-bold text-amber-200">{giftItemsOpen ? '閉じる ▲' : '見る ▼'}</span></button>
@@ -71325,7 +71328,7 @@ function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onC
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 35%,rgba(10,6,30,.85) 78%)' }}/>
       {typeof AssistantLifeStands === 'function' && <AssistantLifeStands ids={plan.ids}/>}
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
-        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="家へ戻る" className="h-11 w-11 rounded-full bg-black/50 text-[18px] text-white">←</button>
+        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="家へ戻る" className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-black/50 px-3 text-[12px] font-black text-white">← 家へ戻る</button>
         <p className="rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100">{plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`}</p>
       </div>
       <div className="absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', maxHeight: '52%' }}
@@ -71650,7 +71653,7 @@ function AssistantLifeTownPersonCard({ life = null, land = false }) {
               <span className="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-black text-slate-100" data-assistant-life-town-tag>町の人・まだ助手ではありません</span></p>
             {placeText && <p className="text-[11px] font-bold text-slate-300">{placeText}</p>}
           </div>
-          <button type="button" data-assistant-life-town-close onClick={close} aria-label="閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[18px] text-slate-200 active:bg-white/10">✕</button>
+          <button type="button" data-assistant-life-town-close onClick={close} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl px-3 text-[12px] font-black text-slate-200 active:bg-white/10">閉じる</button>
         </div>
         {line && <p data-assistant-life-town-line className="mt-2 rounded-xl bg-slate-800/90 px-3 py-2 text-[12.5px] font-bold leading-relaxed text-slate-100" style={ja}>{jw(`${who.name}「${line}」`)}</p>}
         {p && (
@@ -73465,7 +73468,7 @@ function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose })
         {short > 0 && <p data-assistant-life-buy-short={short} className="mt-1.5 rounded-xl bg-rose-500/15 px-2 py-1 text-[11.5px] font-black text-rose-200">ビートPが足りません(あと{short.toLocaleString()}P)</p>}
         {(err || reason) && <p data-assistant-life-buy-err className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{err || reason}</p>}
         <div className="mt-2.5 flex gap-2">
-          <button type="button" data-assistant-life-buy-cancel disabled={busy} onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40">やめる</button>
+          <button type="button" data-assistant-life-buy-cancel disabled={busy} onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40">キャンセル</button>
           <button type="button" data-assistant-life-buy-go disabled={busy || !known || short > 0 || !!reason} onClick={go}
             className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{busy ? '…' : '🛒 買って贈る'}</button>
         </div>
@@ -73662,7 +73665,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         {lifeOn && have <= 0 && !buyable && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
         {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}
         <div className="sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5" data-assistant-life-give-actions style={{ bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
+          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">キャンセル</button>
           {buyable ? <button type="button" data-assistant-life-give-buy={info.kind} disabled={short > 0} onClick={() => setBuying(true)}
             className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98] disabled:opacity-40">{assistantLifeBuyLabel(info)}</button>
           : <button type="button" data-assistant-life-give-go disabled={!!reason || (!soloWho && pair.length !== 2)} onClick={() => onGive()}
@@ -78354,7 +78357,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
         <div className="flex items-center gap-1.5">
           <p className="text-[15px] font-black text-amber-200">📅 今日の予定表</p>
           {land && <p className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300">{typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'}</p>}
-          <button type="button" aria-label="閉じる" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200">✕</button>
+          <span className="ml-auto w-2"/>
         </div>
         {!land && <p className="px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300">次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。</p>}
         <div className="min-h-0 overflow-y-auto">
@@ -78369,6 +78372,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
             </>}
         </div>
+        <button type="button" data-assistant-life-plan-close onClick={assistantLifePlanClose} className="mt-2 min-h-[48px] w-full shrink-0 rounded-xl bg-slate-800 text-[13px] font-black text-slate-100 active:scale-[.98]">閉じる</button>
       </div>
     </div>);
 }
@@ -81988,7 +81992,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
             : `${plan.name}: ${amgrStatName(plan.main)}が上がる`}</p>
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
+            <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>キャンセル</button>
             <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} 残り {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}
@@ -82962,7 +82966,7 @@ function AmgsDetail({ bed, onClose }) {
               <span className="shrink-0 rounded-lg bg-amber-700 px-1.5 text-[10px] font-black">入れ替え</span>
             </button>); })}
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgs-err>{err}</p>}
-          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+          <button type="button" onClick={() => setPick(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
         </>)}
       </div>
     </div>);
@@ -82981,7 +82985,7 @@ function AmgsSleepButton({ aid, row }) {
         {beds.map(b => <button key={b.id} type="button" onClick={() => { const r = amgsSwap(b.id, row.slot); if (r === true) setOpen(false); else setErr(r); }} data-amgs-sleep-with={b.id} className="mt-1.5 flex min-h-[48px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-800 px-2 text-left">
           {typeof amgpMonIcon === 'function' ? amgpMonIcon(b.row.monster) : null}<span className="text-[12px] font-black">{b.row.nick} を起こす<small className="block text-[10px] text-slate-300">Lv {b.row.lv}{b.row.grow ? ` ・ ${b.row.grow}` : ''}</small></span></button>)}
         {err && <p className="mt-1 text-[11px] font-bold text-rose-200">{err}</p>}
-        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>
+        <button type="button" onClick={() => setOpen(false)} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
       </div>
     </div>}
   </>);
@@ -83035,7 +83039,7 @@ function AmgsFuseSheet({ beds, onClose }) {
           <button type="button" onClick={go} disabled={!ready} data-amgs-fuse-go={sure} data-amgs-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{sure ? '本当に合体する' : '🧬 合体する'}</button>
           <button type="button" onClick={() => { setMat(null); setSure(0); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </>) : <p className="mt-2 text-[11px] font-bold text-slate-400">このマスモンどうしでは合体できません</p>}
-        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
+        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
     </div>);
 }
@@ -83584,7 +83588,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
           <button type="button" onClick={() => { setMat(null); setSure(0); setErr(''); }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
-        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
+        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
     </div>);
 }
@@ -84752,7 +84756,7 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
+.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -84774,7 +84778,7 @@ const MSX_SCN_CSS = `
 .msx .scn-win p{margin:0 0 10px;font-size:13.5px;line-height:1.7}
 .msx .scn-win .k{font-size:14px;font-weight:900;color:#c2410c;margin-top:4px}
 .msx .scn-win .v{font-size:13.5px;line-height:1.6;margin-bottom:8px}
-.msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
+.msx .scn-win .cl{display:block;width:100%;margin:10px 0 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
 `;
 
 // ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)。ctx: みゅあの説明(tut.scn)に渡す呼び名など
@@ -84788,7 +84792,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
-      <div className="scn-hd"><span>📖 ストーリー選択</span><small>シナリオ {idx + 1}/{n}</small></div>
+      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span><small>シナリオ {idx + 1}/{n}</small></div>
       <div className="scn-sc">
         <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
         {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
@@ -84809,7 +84813,6 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         </> : null}
       </div>
       <div className="scn-ft">
-        <button type="button" className="bk" onClick={onBack} aria-label="戻る">↩</button>
         <button type="button" className="go" onClick={() => onNext(sc.id)} data-msx-scenario-next>次へ ▶</button>
         <button type="button" className="dt" onClick={() => setDetail(true)} data-msx-scenario-detail>ストーリー詳細</button>
       </div>
@@ -87283,10 +87286,10 @@ function AlfFriendHouseView({ friend, onClose }) {
     <div className="absolute inset-0 flex flex-col" style={{ zIndex: 20, background: '#0b1020' }} data-alf-vview={vtab}>
       {vtab === 'where'
         ? <AssistantLifeTownMap life={null} ids={metIds} land={land} onBack={() => goTab('house')} onPick={() => {}} friendView={{ whereOf: fWhereOf, name: friend.name }}
-            nav={<div className="flex items-center gap-1"><button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-7 shrink-0 text-[18px] text-slate-100" onClick={() => goTab('house')}>←</button><div className="min-w-0 flex-1">{vIcons(true)}</div></div>}/>
+            nav={<div className="flex items-center gap-1"><button type="button" aria-label="戻る" data-alf-vview-back className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" onClick={() => goTab('house')}>← 戻る</button><div className="min-w-0 flex-1">{vIcons(true)}</div></div>}/>
         : <>
           <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
-            <button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-8 shrink-0 text-[19px] text-slate-100" onClick={() => goTab('house')}>←</button>
+            <button type="button" aria-label="戻る" data-alf-vview-back className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" onClick={() => goTab('house')}>← 戻る</button>
             <div className="min-w-0 flex-1"><p className="truncate text-[17px] font-black text-amber-100">🏘 ［プレイヤー］{friend.name}さんの助手ライフ</p><p className="text-[10px] font-bold text-slate-200">👀 見る専用です</p></div>
             {vIcons(false)}
           </div>
@@ -87298,7 +87301,7 @@ function AlfFriendHouseView({ friend, onClose }) {
     </div>) : null;
   const header = (
     <div className={`mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`} style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
-      <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
+      <button type="button" className="min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>← 戻る</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
@@ -87421,7 +87424,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 disabled:opacity-40" data-alf-note-send disabled={!noteText.trim() || !alfNoteCheck(noteText).ok} onClick={() => ask(ALF_WORD_FREE)}>✉️ この言葉で送る</button>
         <p className="mt-2.5 text-[10.5px] font-bold text-slate-200" data-alf-word-hint>{noteText.trim() ? '💬 下の一言を押すと、「一言+書いた言葉」で届きます(送る前に確かめられます)' : '💬 決まった一言で送る(押すと届きます)'}</p>
         <div className="mt-1 flex flex-wrap gap-1.5">{ALF_WORD_TEXTS.map((t, i) => <button key={i} type="button" className="rounded-xl border border-amber-200/50 bg-slate-800 px-2 py-1.5 text-[12px] font-bold text-amber-50 disabled:opacity-40" data-alf-word={i} disabled={!alfNoteCheck(noteText).ok} onClick={() => ask(i)}>{t}</button>)}</div>
-        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>やめる</button>
+        <button type="button" data-mhl-sheet-close className="mhl-btn mt-3 w-full bg-slate-700" onClick={() => { setLeaving(null); setNoteWarn(''); }}>キャンセル</button>
       </div>
     </div>) : null;
   const diarySheet = boardOpen ? (
@@ -88212,7 +88215,7 @@ function AlfNoteConfirm({ friend, to, word, note, selfName, warn, busy, land, on
           <button type="button" className="mhl-btn bg-slate-700" data-alf-note-confirm-fix onClick={onFix}>✏️ 直す</button>
           <button type="button" className="mhl-btn bg-amber-500 text-slate-950 disabled:opacity-40" data-alf-note-confirm-send disabled={busy || !!warn} onClick={onSend}>{busy ? '送っています…' : '✉️ 送る'}</button>
         </div>
-        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>やめる</button>
+        <button type="button" data-mhl-sheet-close data-alf-note-confirm-cancel className="mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300" disabled={busy} onClick={onCancel}>キャンセル</button>
       </div>
     </div>);
 }
@@ -91273,12 +91276,15 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   if (full) return full;
   return (
     <>
-      <MsxHd back={step ? '戻る' : 'やめる'} onBack={back} right={`${step + 1} / 6`}/>
+      {/* 出口は見出しの左上だけにそろえる(戻る系ボタン統一・2026-11-18 社長決定)。下の帯にも同じ
+          戻るがあったのを廃止し、言葉も段によらず「戻る」に固定する(同じ back() なのに言葉だけ
+          変わっていた)。step=0 の戻り先はシナリオ選択(無ければサクセスの入口)で、意味は一貫して「戻る」 */}
+      <MsxHd back="戻る" onBack={back} right={`${step + 1} / 6`}/>
       <div className="v-body">
         <MsxSteps n={step}/>
         {body}
       </div>
-      {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← 戻る' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
+      {go && <div className="v-ft"><button type="button" className="go" onClick={next}>{go}</button></div>}
       {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>) : null}
     </>
   );
@@ -91983,9 +91989,9 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     return true;
   };
   // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
-  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => {
+  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: '育成をやめる', onYes: async () => {
     let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
-    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
     if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
     setRunLoaded(null); setView('home');
   } });
@@ -92038,7 +92044,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
         {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx} onDone={betaKeys.onDone}/> : null}
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
-          <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
+          <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>キャンセル</button></div></div>}
       </div>
     </div>
   );
@@ -95368,7 +95374,7 @@ function MsxR3Box({ onClose }) {
       })() : null}
     </>);
     foot = tab === 'bye'
-      ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>← やめる</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
+      ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>キャンセル</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
       : <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setMsg(''); }}>← 戻る</button></div>;
   }
   // ---- 名前と染色を変える ----
@@ -95389,7 +95395,7 @@ function MsxR3Box({ onClose }) {
           big names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[cur.species] ? ASSISTANT_MASMON_DYE_PARTS[cur.species].map((x) => x[0]) : null}/>
         : <div className="msx-note">染色はこの端末では使えません</div>}
     </div>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>やめる</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>キャンセル</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
   }
   else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← 戻る</button></div>; }
   return (<>
@@ -99143,7 +99149,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
       <div className="flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5">
         <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← 戻る</button>
         <span className="text-[15px] font-black">{title}</span>
-        <button type="button" onClick={onClose} className="text-[13px] font-black text-indigo-200 active:scale-95">✕</button>
+        <span className="w-10"/>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {view === 'door' && (
@@ -108608,7 +108614,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                   onClick={() => { const o = { ...bindAsk, bind: name }; setBindAsk(null); askUse(o); }}>{name}</button>
               ))}
             </div>
-            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>キャンセル</button>
           </div>
         </div>
       )}
@@ -108638,7 +108644,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               </div>
               <button type="button" data-card-toss-go disabled={!pick} className="mt-2 min-h-[44px] w-full rounded-xl text-[14px] font-black mh-button-primary disabled:opacity-40"
                 onClick={() => { setTossAsk(null); if (pick) askUse(pick, true); }}>{n ? `${n}枚捨てて使う(ダメージ+${n})` : '捨てずに使う'}</button>
-              <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setTossAsk(null)}>やめる</button>
+              <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setTossAsk(null)}>キャンセル</button>
             </div>
           </div>
         );
@@ -108655,7 +108661,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                 </button>
               ))}
             </div>
-            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setSplitAsk(null)}>やめる</button>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setSplitAsk(null)}>キャンセル</button>
           </div>
         </div>
       )}
@@ -108705,7 +108711,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className="mt-0.5 text-[12px] font-bold text-amber-100">{`(ガッツ 残り${guardAsk.guts})`}</div>
             <div className="mt-3 flex gap-2">
               <button type="button" data-card-guard-ask-yes className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black" onClick={guardYes}>これで守る</button>
-              <button type="button" data-card-guard-ask-no className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black" onClick={() => setGuardAsk(null)}>やめる</button>
+              <button type="button" data-card-guard-ask-no className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black" onClick={() => setGuardAsk(null)}>キャンセル</button>
             </div>
           </div>
         </div>
@@ -109151,7 +109157,7 @@ const CardAutoTicketSheet = ({ info, tickets, busy = false, onUse, onClose }) =>
         </>)}
         <div className={`${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
           {!why && <button type="button" data-card-auto-ticket-use={k} disabled={busy} onClick={() => { if (typeof onUse === 'function') onUse(k); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50">{`${k}枚使って+${k}回`}</button>}
-          <ModalCloseButton onClick={onClose} disabled={busy} label="やめる"/>
+          <ModalCloseButton onClick={onClose} disabled={busy} label="キャンセル"/>
         </div>
       </div>
     </ModalFrame>
@@ -110526,13 +110532,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   ? <div data-card-playlist-copy-confirm className="mt-2">
                       <p className="text-[11px] font-black leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('助手みんなの曲が、この曲に置き換わります。よろしいですか?')}</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                        <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                        <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">キャンセル</button>
                         <button type="button" data-card-playlist-copy-ok onClick={() => { const list = [...plCopy.list]; plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).filter((who) => cardFoeReleased(who)).map((who) => [who, list]))); setPlCopy(null); }}
                           className="min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900">置き換える</button>
                       </div>
                     </div>
                   : <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                      <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">キャンセル</button>
                       <button type="button" data-card-playlist-copy-go onClick={() => setPlCopy({ ...plCopy, confirm: true })} className="min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white">{jaWrap('全員に写す')}</button>
                     </div>}
               </div>
@@ -111010,9 +111016,10 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
-    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`}>
+    <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2 ${land ? 'shrink-0' : ''}`}>
       <button type="button" data-card-deck-save className={`mh-button mh-button-primary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl font-black active:scale-[.98]`} onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
-      <button type="button" className={`mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`} onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
+      {/* やめる(未保存なら確かめの窓つき)は見出し左上の戻ると同じ働きなので、下の帯からは外した
+          (戻る系ボタン統一・2026-11-18 社長決定。出口は見出しの左上だけ) */}
     </div>
   );
   const sortLabel = (CARD_DECK_SORTS.find((x) => x.id === sort) || CARD_DECK_SORTS[0]).label;
@@ -119244,14 +119251,14 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
     setBusy(false);
   };
   const footer = (left, right) => <div className={`${SCREEN_FOOTER_CLASS} flex gap-2`}>{left}{right}</div>;
-  const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">戻る</button>;
+  const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">← 戻る</button>;
   const headRight = onOpenList ? <button type="button" data-card-reg-list onClick={() => { Audio_.fgSe.tap(); onOpenList(); }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-black text-slate-200">持っている<br/>戦術カード</button> : null;
   const mineBox = mine ? (
     <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 py-2`}>
       <div className="flex items-center gap-2">
         <CardRegThumbs db={db} deck={mine.deck} h={36}/>
         <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
-        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">登録をやめる</button>
       </div>
       {onOpenReplays && <button type="button" data-card-reg-replays onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
         className="mt-1.5 w-full rounded-xl border-2 border-sky-400 bg-sky-950 py-2 text-[13px] font-black text-sky-50">戦われた試合を見る</button>}
@@ -140468,7 +140475,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {/* Lv.8(MAX)の技は、余った固有技Pでオリジナル強化を積める(2026-11-07 社長)。積んだ強化は行に小さく出す */}
           {maxed&&(()=>{const summary=uniqueBoostSummaryText(uniqueBoostStepsOf(normalized,choice.key));return <div className="mt-1 flex items-center justify-between gap-2 min-w-0"><span data-unique-boost-summary className={`min-w-0 text-[9px] font-black leading-tight ${summary?'text-amber-200':'text-slate-500'}`}>{summary?`✨ ${summary}`:'オリジナル強化:なし'}</span><button type="button" data-unique-boost-open aria-label={`${current?.name||choice.name}のオリジナル強化を開く`} onClick={()=>setUniqueBoostTarget({masuId:masu.id,skillKey:choice.key})} className="shrink-0 min-h-[40px] px-2.5 rounded-xl bg-gradient-to-b from-amber-500 to-orange-700 text-white text-[10px] font-black active:scale-95">✨ オリジナル強化</button></div>;})()}</div>
         );})}</div>
-        {normalized.uniqueSkillPoints>0&&<><div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">やめる</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}</>}
+        {normalized.uniqueSkillPoints>0&&<><div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}</>}
         <div className="mt-2 border-t border-white/10 pt-2">
           <button type="button" data-unique-setting-open aria-label={`${masu.name}の固有技設定を開く`} onClick={()=>setUniqueSettingMasuId(masu.id)} className="w-full min-h-[44px] px-2 rounded-xl bg-gradient-to-b from-violet-600 to-indigo-800 text-white text-[10px] font-black leading-tight active:scale-95 flex items-center justify-center gap-1.5"><List size={13}/><span>固有技設定（並び順・初期技）</span></button>
           <div className="text-[8px] text-slate-400 font-bold text-center mt-1 leading-tight">バトルでの並び順と、開始時に構える固有技を決められます</div>
@@ -140553,7 +140560,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               )}
               <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5"><span className={`min-w-0 text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</span>{/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。詳細の窓はどの画面もここを通る */}<MonsterTypeBadge monId={base.id || mon.id} /></div>
             </div>
-            {onClose && <button onClick={onClose} aria-label="閉じる" className="mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
+            {onClose && <button onClick={onClose} className="mh-hit-expand relative px-3 py-2 -m-1 bg-white/5 rounded-full text-[11px] font-black text-slate-200 active:scale-90 shrink-0">閉じる</button>}
           </div>
           {/* マスモンのいまの総合力は、札を押すと内わけが開く(2026-11-07 社長)。記録した時点の総合力(ランキング)は開かない */}
           {masu && powerOverride === undefined ? (()=>{
@@ -140836,7 +140843,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" {...settingsBackdropProps(closeChangelog)}>
-      <div className="mh-title-dialog"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3><button type="button" aria-label="閉じる" onClick={closeChangelog}><X size={18}/></button></div>
+      <div className="mh-title-dialog"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
         <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
@@ -140940,10 +140947,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </React.Fragment>);
             })];
           })()}</div>
+        <button type="button" className="mh-dialog-choice" onClick={closeChangelog}>閉じる</button>
       </div>
     </div>
   ) : showTitleSettings ? (
-    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowTitleSettings(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button type="button" aria-label="閉じる" onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowTitleSettings(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>setShowTitleSettings(false)}>閉じる</button></div></div>
   ) : showTitleArt ? (
     <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
   ) : showScreenTheme ? (
@@ -140951,9 +140959,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showHomeArt ? (
     <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。横画面では、どちらの絵も横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowAudioSettings(false))}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button type="button" aria-label="閉じる" onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}</div></div>
+    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowAudioSettings(false))}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<><AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/><ReloadLogPanel/></>}<button className="mh-dialog-choice mt-3" onClick={()=>setShowAudioSettings(false)}>閉じる</button></div></div>
   ) : showBgmArrangement ? (
-    <div className="mh-title-modal" {...settingsBackdropProps(closeBgmArrangement)}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button type="button" aria-label="閉じる" onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
+    <div className="mh-title-modal" {...settingsBackdropProps(closeBgmArrangement)}><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
         // 勇者モン選択などの準備中・WAVE後のリザルト・敗北も選べるようにした
         // (2026-09-07・ユーザー要望「せっかくだから全て場面のBGMアレンジをできるようにして」)。
@@ -140967,9 +140975,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
-   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
+   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button><button className="mh-dialog-choice" onClick={closeBgmArrangement}>閉じる</button></div></div>
   ) : showBackup ? (
-    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button type="button" aria-label="閉じる" onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
+    <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={()=>setShowBackup(false)}>閉じる</button></div></div>
   ) : null;
 
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return (
@@ -141282,7 +141290,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
-      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
+      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
           (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
@@ -141415,7 +141423,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
 
-        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head"><button onClick={returnToHome}><ArrowLeft/></button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section><footer className="mh-training-footer"><button onClick={returnToHome}>HOMEへ戻る</button></footer></main>}
+        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head" style={{gridTemplateColumns:'122px 1fr 122px'}}><button onClick={returnToHome} style={{whiteSpace:'nowrap'}}><ArrowLeft/> HOMEへ戻る</button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section></main>}
 
         {gameState==='TRAINING_SELECT'&&(()=>{const selected=masuMons.find(m=>String(m.id)===String(trainingSelectedId));return <main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('DEBUG_SETTINGS')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>所持マスモン選択</h2></div><i/></header>{selected&&<section className="mh-training-selected"><DyedMonsterImage baseId={selected.baseId} src={ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)}/><div><b>{selected.name}</b><span>絆Lv.{bondLevelInfo(selected.bondXp||0).level}</span></div></section>}<p className="mh-training-note">デバッグ修行に参加する所持マスモンを1体選択してください。</p><div className="mh-training-mon-list">{masuMons.map(m=><button key={m.id} className={String(m.id)===String(trainingSelectedId)?'active':''} onClick={()=>setTrainingSelectedId(m.id)}><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b><small>絆Lv.{bondLevelInfo(m.bondXp||0).level}</small></button>)}</div><footer className="mh-training-footer"><button disabled={!selected} onClick={()=>setGameState('TRAINING_DIFFICULTY')}>難易度選択へ</button></footer></main>})()}
 
@@ -141893,7 +141901,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {debugPassError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{debugPassError}</p>}
             <div className="mt-3 grid grid-cols-1 gap-2">
               <button type="submit" disabled={!debugPassText.trim()} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-40">開く</button>
-              <ModalCloseButton onClick={()=>setDebugPassOpen(false)} label="やめる"/>
+              <ModalCloseButton onClick={()=>setDebugPassOpen(false)} label="キャンセル"/>
             </div>
           </form>
         </ModalFrame>}
@@ -143858,7 +143866,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const entryImage=entry=><MonsterArtFrame baseId={entry.baseId} src={entry.base.iconUrl} alt="" masuColors={entry.type==='masu'?getMasuColors(entry.masu):null} className="h-full w-full"/>;
           const monsterCard=(entry,active,onClick,disabled=false,marker='')=><button key={entry.entryId} data-species-monster-card={entry.entryId} disabled={disabled} aria-pressed={active} onClick={onClick} className={`relative flex min-h-[72px] w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-2 text-left transition active:scale-[.98] disabled:opacity-30 ${active?'border-cyan-300 bg-cyan-900/80 shadow-lg shadow-cyan-950 ring-1 ring-white':'border-white/10 bg-slate-900/90'}`}><span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/40">{entryImage(entry)}</span><span className="min-w-0 flex-1"><b className="block break-words text-[11px] leading-tight text-white">{entry.name}</b><small className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-black ${entry.type==='masu'?'bg-fuchsia-900 text-fuchsia-200':'bg-indigo-900 text-indigo-200'}`}>{entry.type==='masu'?'Masu':'Base'}</small><small className="ml-1 text-[8px] text-slate-400">{entry.lineageName}</small></span>{marker&&<span className="shrink-0 rounded-full bg-cyan-500 px-2 py-1 text-[8px] font-black text-slate-950">{marker}</span>}</button>;
           return <main data-species-challenge-selection className="flex-1 flex min-h-0 flex-col overflow-hidden px-4 text-white" style={{paddingTop:'.75rem',paddingBottom:'.75rem'}}>
-            <header className="mb-2 flex shrink-0 items-center gap-2"><button aria-label="1つ前へ戻る" onClick={goBack} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="text-[8px] font-black tracking-[.18em] text-slate-400">BATTLE</small><h2 className="truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest">{titles[selection.step]}</h2></div>{/* DEBUGバッジはデバッグから入ったときだけ。通常プレイの画面には出さない */}
+            <header className="mb-2 flex shrink-0 items-center gap-2"><button aria-label="1つ前へ戻る" onClick={goBack} className="flex min-h-[44px] min-w-[44px] items-center gap-0.5 whitespace-nowrap rounded-xl px-2 text-slate-300 active:bg-white/10"><ArrowLeft size={20}/><span className="text-[11px] font-black">戻る</span></button><div className="min-w-0"><small className="text-[8px] font-black tracking-[.18em] text-slate-400">BATTLE</small><h2 className="truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest">{titles[selection.step]}</h2></div>{/* DEBUGバッジはデバッグから入ったときだけ。通常プレイの画面には出さない */}
               {selection.fromDebug&&(selection.saveProgress
                 ? <span data-species-save-badge className="ml-auto rounded-full border border-red-400/60 bg-red-950/80 px-2 py-1 text-[7px] font-black text-red-200">DEBUG・実進行を保存</span>
                 : <span className="ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200">DEBUG・保存なし</span>)}</header>
@@ -144147,7 +144155,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <label className="min-w-0 text-[10px] font-black text-slate-400">セット名<input key={`${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`} defaultValue={monsterPartySets.names[editingPartySetIndex]} maxLength={20} onBlur={e=>renameMonsterPartySet(editingPartySetIndex,e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="mt-0.5 block w-full min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-[12px] text-white"/></label>
                     <button onClick={()=>setPartySetCopyTarget(partySetCopyTarget==null?((editingPartySetIndex+1)%MONSTER_PARTY_SET_COUNT):null)} className="min-h-[44px] rounded-xl border border-amber-500/60 px-3 text-[10px] font-black text-amber-200 active:scale-95">編成をコピー</button>
                   </div>}
-                  {screenNoteOpen.partySetEdit===true&&partySetCopyTarget!=null&&<div className="mt-2 rounded-xl border border-white/10 bg-amber-950/40 p-2"><div className="text-[10px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[44px] max-w-[120px] truncate rounded-xl border px-2 text-[10px] font-black active:scale-95 ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-white/10 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95">やめる</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black active:scale-95">このセットへ上書き</button></div></div>}
+                  {screenNoteOpen.partySetEdit===true&&partySetCopyTarget!=null&&<div className="mt-2 rounded-xl border border-white/10 bg-amber-950/40 p-2"><div className="text-[10px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[44px] max-w-[120px] truncate rounded-xl border px-2 text-[10px] font-black active:scale-95 ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-white/10 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95">キャンセル</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black active:scale-95">このセットへ上書き</button></div></div>}
                 {/* 編成中のモンスターを小さいアイコンで並べ、タップで編成から外せる。
                     ★別の箱として下に置いていたが、枠と余白のぶんだけ一覧が押し下げられていたので
                       セットの箱の中へ入れた(2026-09-07・ユーザー指摘「1枚目 まだ窮屈」) */}
@@ -144532,7 +144540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2`}>
                 {!usedResult&&<button onClick={()=>{ const result=useBondXpTickets(item.id, masu.id, count); if(result){void saveMissionProgress('itemUse',count);setXpTicketUse({itemId:item.id,masuId:masu.id,count,usedCount:count,result});} }} disabled={have<=0} className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-30">{count}枚 使う</button>}
-                <ModalCloseButton onClick={()=>setXpTicketUse(null)} label={usedResult?'閉じる':'やめる'}/>
+                <ModalCloseButton onClick={()=>setXpTicketUse(null)} label={usedResult?'閉じる':'キャンセル'}/>
               </div>
             </div>
           );
@@ -144546,7 +144554,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}のトレーニング`}>
               <div className="bg-slate-900 border border-teal-500/50 rounded-3xl p-4 w-full max-w-sm shadow-2xl">
-                <div className="flex items-center justify-between gap-2 mb-1"><h3 className="text-sm font-black text-white">🎓 {masu.name}をトレーニング</h3><button type="button" aria-label="トレーニングを閉じる" onClick={()=>setDetailTrainingMasuId(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
+                <div className="flex items-center justify-between gap-2 mb-1"><h3 className="text-sm font-black text-white">🎓 {masu.name}をトレーニング</h3><button type="button" onClick={()=>setDetailTrainingMasuId(null)} className="px-3 py-2 bg-white/5 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button></div>
                 <p className="text-[9px] text-slate-400 font-bold mb-3">使うチケットを選んでください。対象はこのマスモンのままです。</p>
                 <div className="space-y-2">{tickets.map(item=>{const count=ownedItems[item.id]||0;return <button key={item.id} disabled={count<=0} onClick={()=>{setXpTicketUse({itemId:item.id,masuId:masu.id,count:1});setDetailTrainingMasuId(null);}} className="w-full min-h-[52px] flex items-center gap-3 rounded-2xl border border-teal-500/30 bg-teal-950/40 px-3 text-left active:scale-[.98] disabled:opacity-40"><span className="text-xl">{item.emoji}</span><span className="flex-1 min-w-0"><b className="block text-[11px] text-white truncate">{item.name}</b><small className="block text-[8px] text-teal-300">絆経験値 +{item.bondXp}</small></span><strong className="text-[10px] text-white">{count}枚</strong></button>;})}</div>
                 {tickets.every(item=>(ownedItems[item.id]||0)<=0)&&<p className="text-[9px] text-amber-300 font-bold text-center mt-3">チケットはマーケットで購入できます</p>}
@@ -144565,7 +144573,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')?90000:32500,paddingTop:'env(safe-area-inset-top)'}}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
                 <h3 className="text-base font-black text-white flex-1">並べ替え・表示設定</h3>
-                <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
+
               </div>
               <div className="flex gap-2 px-4 pt-3 shrink-0">
                 {[{key:'sort',label:'並べ替え'},{key:'lineage',label:'種族'},{key:'display',label:'表示設定'}].map(tab=>(
@@ -144776,7 +144784,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="text-[8px] font-black text-violet-300 uppercase tracking-widest">固有技設定</div>
                     <div className="text-[13px] font-black text-white truncate">{masu.name}</div>
                   </div>
-                  <button aria-label="固有技設定を閉じる" onClick={()=>setUniqueSettingMasuId(null)} className="shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={14}/></button>
+                  <button onClick={()=>setUniqueSettingMasuId(null)} className="shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
                 </div>
                 <div className="text-[9px] text-slate-300 font-bold leading-relaxed shrink-0">並び順はバトルで固有技を切り替えるときの順番になります。「初期技」に設定した技は、勇者モンでも供モンでも参加した時点で最初に構える固有技になります。</div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
@@ -144931,7 +144939,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {regionCount===1&&<div className="text-[9px] text-slate-400 font-bold px-2">このモンスターは全身一括の染色のみ対応しています</div>}
               </div>}
               footer={<div className="flex gap-2 shrink-0">
-                <button onClick={closeDyePicker} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">やめる</button>
+                <button onClick={closeDyePicker} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">キャンセル</button>
                 <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
               </div>}/>
           );
@@ -144966,7 +144974,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl">
                 <div className="flex items-center justify-between shrink-0">
                   <h3 className="text-sm font-black text-white">🎨 カスタムカラー</h3>
-                  <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 {masu&&base&&(
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
@@ -144975,7 +144982,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* この部位の濃さ(透け具合)も数字で出す。濃さは染色の画面のつまみで変える(色を決めても引き継ぐ) */}
                 <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">濃さ{colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
                 <div className="flex gap-2 mt-1 shrink-0">
-                  <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
+                  <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>
                 </div>
               </div>
@@ -145184,12 +145191,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <>
                   {/* 2ページ目: そのまとまりのお話(お話の順) */}
                   <div className="shrink-0 mb-1 flex items-center gap-2">
-                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
+                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true">{activeGroup.emoji} </span>{jaWrap(activeGroup.label)}</b>
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
-                    <span className="w-11 shrink-0" aria-hidden="true"/>
+                    <span className="w-[76px] shrink-0" aria-hidden="true"/>
                   </div>
                   <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5">お話の順に並んでいます。</p>
                   <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
@@ -145286,7 +145293,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <button type="button" data-message-save onClick={()=>saveProfileMessage(tempMessage)} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存する</button>
                 {profileMessage&&<button type="button" data-message-clear onClick={()=>saveProfileMessage('')} className="min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]">ひとことを消す</button>}
-                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="やめる"/>
+                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="キャンセル"/>
               </div>
             </div>
           </div>
@@ -145502,7 +145509,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div data-dex-zoom={x.id} style={{...shell,background:'#020617'}}>
                 <div style={{width:'100%',maxWidth:480,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px 4px',flexShrink:0}}>
                   <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
-                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                    className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
                   <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
                 </div>
                 {/* 真ん中の欄。絵が縦のおよそ真ん中に来るよう上をあける。長いとき(横向き)はこの欄だけスクロールする。横になぞると前後へ */}
@@ -145551,7 +145558,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div style={{width:'100%',maxWidth:520,display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
                 <div className="flex items-center gap-1.5 px-3.5 pt-3 pb-2">
                   <button type="button" data-dex-close aria-label="プロフィールへ戻る" onClick={closeDex}
-                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                    className="mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
                   <b className="min-w-0 flex-1 text-[17px] font-black">{jaWrap('アイコン・フレーム図鑑')}</b>
                 </div>
                 <div className="flex gap-2 px-3.5">{tabButton('icon','アイコン')}{tabButton('frame','フレーム')}</div>
@@ -146726,13 +146733,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-full border-2" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.9)',pointerEvents:'auto'}}>
                 <AssistantFace who={who} size={26} accent={who.accent} expression={battleTutorial.e}/>
                 <span className="text-[10px] font-black whitespace-nowrap" style={{color:who.accent}}>{battleTutorial.title||'光っているところを操作してね'}</span>
-                <button onClick={()=>endBattleTutorial(false)} className="px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95">やめる</button>
+                <button onClick={()=>endBattleTutorial(false)} className="px-2.5 min-h-[26px] whitespace-nowrap rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95">チュートリアルをやめる</button>
               </div>
             ):(
               <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.98)',pointerEvents:'auto',boxShadow:'0 6px 30px rgba(2,6,23,.9)'}}>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
-                  <button onClick={()=>endBattleTutorial(false)} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+                  <button onClick={()=>endBattleTutorial(false)} className="px-3 min-h-[30px] whitespace-nowrap rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">チュートリアルをやめる</button>
                 </div>
                 <div className="flex items-end gap-2">
                   <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
@@ -146872,7 +146879,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="text-2xl">{mode.emoji}</span>
               {/* 見出し・説明は「…」で切らず、言葉の切れ目で折る(320で「クラシックバトルと…」「モン/スター」になっていた。ダメダシ見回り 10/26 #6) */}
               <div className="flex-1 min-w-0"><h3 className="text-base font-black leading-tight" style={{color:mode.color,...JA_LABEL_STYLE}}>{jaWrap(`${mode.label}とは？`)}</h3><p className="text-[10px] text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(mode.tagline)}</p></div>
-              <button onClick={()=>setModeInfoId(null)} aria-label="説明を閉じる" className="mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
+              <button onClick={()=>setModeInfoId(null)} className="mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-2.5">
               {mode.points.map(([icon,title,text])=>(
@@ -147058,8 +147065,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
       {titleModal}
 
-      {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">やめる</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
-      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3" style={JA_WRAP_STYLE}>{jaWrap('最新のゲームデータを読み込み直します。')}<br/>{jaWrap('セーブデータは消えません。')}</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
+      {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">キャンセル</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3" style={JA_WRAP_STYLE}>{jaWrap('最新のゲームデータを読み込み直します。')}<br/>{jaWrap('セーブデータは消えません。')}</h3><div className="space-y-3 mt-6"><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">キャンセル</button><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん
@@ -147321,7 +147328,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="bg-slate-900 border-t-2 border-x-2 border-indigo-500 rounded-t-3xl p-4 w-full max-w-md max-h-[75vh] flex flex-col gap-2" onClick={e=>e.stopPropagation()} style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
               <div className="flex justify-between items-center border-b border-white/10 pb-2 shrink-0">
                 <h3 className="text-sm font-black text-white uppercase italic">{title}</h3>
-                <button onClick={()=>setSkillPicker(null)} className="p-1.5 bg-white/10 rounded-full active:scale-90"><X size={14}/></button>
+                <button onClick={()=>setSkillPicker(null)} className="px-3 py-1.5 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
               </div>
               {card.type==='unique'&&uniqueSources.length>1&&(
                 <div className="flex gap-1.5 pb-2 border-b border-white/10 shrink-0 overflow-x-auto">
@@ -147430,7 +147437,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl" onClick={e=>e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <h3 className="text-[13px] font-black text-white truncate">{skillEffectDetail.name}</h3>
-              <button onClick={()=>setSkillEffectDetail(null)} className="p-1.5 bg-white/10 rounded-full active:scale-90 shrink-0"><X size={14}/></button>
+              <button onClick={()=>setSkillEffectDetail(null)} className="px-3 py-1.5 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90 shrink-0">閉じる</button>
             </div>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-[10px] font-mono text-red-400 font-bold">威力 {skillEffectDetail.power}</span>
@@ -147445,7 +147452,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2">{/* 横向きの背の低い画面(844×390 など)は、絵と名前を左・数字の欄を右に並べる。縦に積むと欄が1段しか見えなかった(2026-10-27 バトル中の窓の見回り) */}{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl">{scanEnemy.name}</h4><section className="w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] font-black text-white active:scale-90">← 戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2">{/* 横向きの背の低い画面(844×390 など)は、絵と名前を左・数字の欄を右に並べる。縦に積むと欄が1段しか見えなかった(2026-10-27 バトル中の窓の見回り) */}{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl">{scanEnemy.name}</h4><section className="w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[180px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:content-start" style={{justifyContent:'safe center'}}>{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:mb-2 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-xl">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:max-w-none [@media(orientation:landscape)_and_(max-height:520px)]:p-4">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
@@ -147702,7 +147709,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
             <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3><button onClick={()=>setRosterSkillDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3></div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
                 {levels.map(info=>{const locked=isUnique&&info.lvl>currentLevel; const current=isUnique&&info.lvl===currentLevel; return <div key={info.lvl} className={`p-2 rounded-xl border ${locked?'bg-slate-950/70 border-slate-800 opacity-45':'bg-black/30'} ${current?'border-amber-400 ring-1 ring-amber-400/40':'border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${locked?'text-slate-500':'text-amber-300'}`}>{locked?'🔒 ':''}Lv.{info.lvl} {info.name}</span>{isUnique&&<span className={`text-[8px] font-black ${current?'text-amber-300':locked?'text-slate-600':'text-emerald-400'}`}>{current?'現在の技':locked?'未解放':'解放済み'}</span>}</div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費ガッツ {info.guts}</span></div>{isUnique&&<div className="text-[8px] text-slate-400 mt-1">{mon.unique.effectDesc}</div>}</div>;})}
               </div>

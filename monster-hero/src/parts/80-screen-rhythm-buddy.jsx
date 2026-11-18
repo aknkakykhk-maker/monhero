@@ -507,7 +507,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
           <div className="flex items-center justify-between gap-2">
             <small className="text-[11px] font-black text-lime-100">🌱 性格の種 <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
-              className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
+              className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'キャンセル' : '性格を選び直す'}</button>
           </div>
           <small className="mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400">1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)</small>
           {seedOpen && (

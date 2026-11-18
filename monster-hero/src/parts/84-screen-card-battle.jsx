@@ -2720,7 +2720,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                   onClick={() => { const o = { ...bindAsk, bind: name }; setBindAsk(null); askUse(o); }}>{name}</button>
               ))}
             </div>
-            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>キャンセル</button>
           </div>
         </div>
       )}
@@ -2750,7 +2750,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               </div>
               <button type="button" data-card-toss-go disabled={!pick} className="mt-2 min-h-[44px] w-full rounded-xl text-[14px] font-black mh-button-primary disabled:opacity-40"
                 onClick={() => { setTossAsk(null); if (pick) askUse(pick, true); }}>{n ? `${n}枚捨てて使う(ダメージ+${n})` : '捨てずに使う'}</button>
-              <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setTossAsk(null)}>やめる</button>
+              <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setTossAsk(null)}>キャンセル</button>
             </div>
           </div>
         );
@@ -2767,7 +2767,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
                 </button>
               ))}
             </div>
-            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setSplitAsk(null)}>やめる</button>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setSplitAsk(null)}>キャンセル</button>
           </div>
         </div>
       )}
@@ -2817,7 +2817,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className="mt-0.5 text-[12px] font-bold text-amber-100">{`(ガッツ 残り${guardAsk.guts})`}</div>
             <div className="mt-3 flex gap-2">
               <button type="button" data-card-guard-ask-yes className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black" onClick={guardYes}>これで守る</button>
-              <button type="button" data-card-guard-ask-no className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black" onClick={() => setGuardAsk(null)}>やめる</button>
+              <button type="button" data-card-guard-ask-no className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black" onClick={() => setGuardAsk(null)}>キャンセル</button>
             </div>
           </div>
         </div>
@@ -3263,7 +3263,7 @@ const CardAutoTicketSheet = ({ info, tickets, busy = false, onUse, onClose }) =>
         </>)}
         <div className={`${wide ? 'mt-2' : 'mt-3'} grid ${wide && !why ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
           {!why && <button type="button" data-card-auto-ticket-use={k} disabled={busy} onClick={() => { if (typeof onUse === 'function') onUse(k); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-50">{`${k}枚使って+${k}回`}</button>}
-          <ModalCloseButton onClick={onClose} disabled={busy} label="やめる"/>
+          <ModalCloseButton onClick={onClose} disabled={busy} label="キャンセル"/>
         </div>
       </div>
     </ModalFrame>
@@ -4638,13 +4638,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   ? <div data-card-playlist-copy-confirm className="mt-2">
                       <p className="text-[11px] font-black leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('助手みんなの曲が、この曲に置き換わります。よろしいですか?')}</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                        <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                        <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">キャンセル</button>
                         <button type="button" data-card-playlist-copy-ok onClick={() => { const list = [...plCopy.list]; plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).filter((who) => cardFoeReleased(who)).map((who) => [who, list]))); setPlCopy(null); }}
                           className="min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900">置き換える</button>
                       </div>
                     </div>
                   : <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                      <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">キャンセル</button>
                       <button type="button" data-card-playlist-copy-go onClick={() => setPlCopy({ ...plCopy, confirm: true })} className="min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white">{jaWrap('全員に写す')}</button>
                     </div>}
               </div>
