@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5320dc075d3d5ef9
+// source-sha256: a1294a1efce7f7de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10162,6 +10162,18 @@ const Audio_ = (() => {
         volume: -13
       }).connect(reverb);
       [[0.12, ['C5', 'E5']], [0.24, ['E5', 'G5']], [0.36, ['G5', 'C6']]].forEach(([tt, ns]) => duo.triggerAttackRelease(ns, '16n', t + tt));
+      const riser = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.09,
+          decay: 0.08,
+          sustain: 0
+        },
+        volume: -19
+      }).connect(seBus);
+      riser.triggerAttackRelease('16n', t + 0.38);
       const bell = new Tone.PolySynth(Tone.Synth, {
         oscillator: {
           type: 'sine'
@@ -10175,13 +10187,53 @@ const Audio_ = (() => {
         volume: -11
       }).connect(reverb);
       bell.triggerAttackRelease(['C6', 'E6', 'G6', 'C7'], '4n', t + 0.5);
+      const boom = new Tone.MembraneSynth({
+        pitchDecay: 0.04,
+        octaves: 6,
+        envelope: {
+          attack: 0.001,
+          decay: 0.32,
+          sustain: 0
+        },
+        volume: -7
+      }).connect(seBus);
+      boom.triggerAttackRelease('C2', '8n', t + 0.5);
+      const crash = new Tone.NoiseSynth({
+        noise: {
+          type: 'white'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.26,
+          sustain: 0
+        },
+        volume: -15
+      }).connect(reverb);
+      crash.triggerAttackRelease('8n', t + 0.5);
+      const bell2 = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.45,
+          sustain: 0,
+          release: 0.25
+        },
+        volume: -14
+      }).connect(reverb);
+      bell2.triggerAttackRelease(['E6', 'G6', 'C7', 'E7'], '8n', t + 0.68);
       setTimeout(() => {
         try {
           sw.dispose();
           duo.dispose();
+          riser.dispose();
           bell.dispose();
+          boom.dispose();
+          crash.dispose();
+          bell2.dispose();
         } catch (e) {}
-      }, 1800);
+      }, 2200);
     },
     fusion: async () => {
       if (!enabled) return;
@@ -10759,6 +10811,38 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const OBORO_FLOWER_BOXES = [[0.31, 0.06, 0.71, 0.455], [0.04, 0.24, 0.40, 0.575], [0.60, 0.24, 0.96, 0.575]];
 const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
+const MONSTER_FACE_CROP = {
+  Mocchi: [0.245, 0, 0.765, 0.52],
+  Suezo: [0.21, 0.16, 0.79, 0.74],
+  Golem: [0.355, 0, 0.645, 0.29],
+  Tiger: [0.26, 0.1, 0.73, 0.57],
+  Ham: [0.3, 0.13, 0.7, 0.53],
+  Pixie: [0.33, 0.055, 0.67, 0.395],
+  Mia: [0.28, 0.02, 0.72, 0.313],
+  Pandora: [0.27, 0.015, 0.73, 0.322],
+  Monol: [0.14, 0.02, 0.86, 0.74],
+  Oboro: [0.1, 0.07, 0.9, 0.87],
+  Plant: [0.11, 0.06, 0.89, 0.84],
+  Zan: [0.28, 0.01, 0.72, 0.45],
+  Eiki: [0.28, 0, 0.72, 0.37],
+  KenshiMocchi: [0.28, 0.06, 0.72, 0.5],
+  Mitarashi: [0.265, 0.06, 0.735, 0.53],
+  Ark: [0.22, 0.16, 0.78, 0.72],
+  Iblis: [0.175, 0.03, 0.825, 0.68],
+  Snegurochka: [0.295, 0.03, 0.705, 0.44],
+  Undine: [0.26, 0, 0.74, 0.32],
+  Yaobikuni: [0.25, 0, 0.75, 0.333],
+  Yggdrasil: [0.25, 0.02, 0.75, 0.434],
+  MelWhip: [0.24, 0.13, 0.74, 0.476],
+  Melody: [0.2, 0.03, 0.72, 0.449],
+  Kuromy: [0.225, 0.14, 0.775, 0.481],
+  Ghost: [0.08, 0, 0.92, 0.564],
+  Spooky: [0.1, 0.02, 0.88, 0.676],
+  Illumine: [0.225, 0.02, 0.775, 0.496],
+  Dreamy: [0.19, 0.01, 0.81, 0.443],
+  Kyubi: [0.27, 0.01, 0.73, 0.406],
+  Orihime: [0.25, 0, 0.75, 0.434]
+};
 const MASU_COLOR_REGION_HUES = {
   Mia: [{
     hue: 0,
@@ -12649,6 +12733,160 @@ const DyedMonsterImage = ({
       opacity: colorAlphaOf(colors[idx]) / 100
     }
   }) : null));
+};
+const FACE_BAKE_MAX_SIDE = 384;
+const _faceBakeCache = new Map();
+const bakeMonsterFaceImage = (baseId, src, masuColors) => {
+  const crop = baseId ? MONSTER_FACE_CROP[baseId] : null;
+  if (!crop || !src) return Promise.resolve(null);
+  const colors = _dyedColorsOf(baseId, masuColors);
+  const hasColor = colors.some(Boolean);
+  const key = `face|${baseId}|${src}|${hasColor ? colors.join('|') : '-'}`;
+  const hit = _faceBakeCache.get(key);
+  if (hit) {
+    _faceBakeCache.delete(key);
+    _faceBakeCache.set(key, hit);
+    return hit;
+  }
+  const promise = (async () => {
+    try {
+      if (typeof document === 'undefined') return null;
+      let fullUrl = src;
+      let overlay = null;
+      if (hasColor) {
+        const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+        if (hues.length) {
+          const masks = await getDyeRegionMasks(baseId, src);
+          if (!masks) return null;
+          const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
+          const entries = await Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url])));
+          const bakedOf = _dyedBakeOf(baseId, src, colors, masks, Object.fromEntries(entries));
+          if (!bakedOf.key || !bakedOf.layers) return null;
+          fullUrl = await _bakeDyedLayers(bakedOf.key, src, bakedOf.layers);
+          if (!fullUrl) return null;
+        } else {
+          const rec = await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0));
+          if (!rec) return null;
+          const alpha = colorAlphaOf(colors[0]);
+          if (alpha < MASU_COLOR_ALPHA_MAX) overlay = {
+            url: rec,
+            alpha: alpha / 100
+          };else fullUrl = rec;
+        }
+      }
+      _dyeBlobRetain(fullUrl);
+      const base = await _loadArtImage(fullUrl).finally(() => _dyeBlobRelease(fullUrl));
+      if (!base) return null;
+      const natW = base.naturalWidth || base.width,
+        natH = base.naturalHeight || base.height;
+      if (!(natW > 0) || !(natH > 0)) return null;
+      const sx = Math.round(crop[0] * natW),
+        sy = Math.round(crop[1] * natH);
+      const sw = Math.max(1, Math.round((crop[2] - crop[0]) * natW)),
+        sh = Math.max(1, Math.round((crop[3] - crop[1]) * natH));
+      const side = Math.max(1, Math.min(FACE_BAKE_MAX_SIDE, Math.max(sw, sh)));
+      const out = document.createElement('canvas');
+      out.width = side;
+      out.height = side;
+      const ctx = out.getContext('2d');
+      if (!ctx) return null;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(base, sx, sy, sw, sh, 0, 0, side, side);
+      if (overlay) {
+        const over = await _loadArtImage(overlay.url);
+        if (!over) return null;
+        ctx.globalAlpha = overlay.alpha;
+        ctx.drawImage(over, sx, sy, sw, sh, 0, 0, side, side);
+        ctx.globalAlpha = 1;
+      }
+      const blob = await new Promise(done => {
+        try {
+          out.toBlob(done, 'image/png');
+        } catch (_) {
+          done(null);
+        }
+      });
+      return blob && window.URL && typeof window.URL.createObjectURL === 'function' ? window.URL.createObjectURL(blob) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  _faceBakeCache.set(key, promise);
+  while (_faceBakeCache.size > DYED_BAKE_CACHE_MAX) {
+    const oldKey = _faceBakeCache.keys().next().value;
+    const old = _faceBakeCache.get(oldKey);
+    _faceBakeCache.delete(oldKey);
+    _dyeBlobEvict(old);
+  }
+  promise.then(url => {
+    if (!url && _faceBakeCache.get(key) === promise) _faceBakeCache.delete(key);
+  });
+  return promise;
+};
+const MonsterFaceImage = ({
+  baseId,
+  src,
+  faceSrc,
+  masuColors,
+  alt,
+  className,
+  style,
+  draggable
+}) => {
+  const crop = baseId ? MONSTER_FACE_CROP[baseId] : null;
+  const colors = _dyedColorsOf(baseId, masuColors);
+  const hasColor = colors.some(Boolean);
+  const colorKey = colors.join('|');
+  const faceKey = `${baseId}|${src}|${colorKey}`;
+  const [face, setFace] = useState({
+    key: '',
+    url: undefined
+  });
+  useEffect(() => {
+    const url = face.url;
+    if (!url) return undefined;
+    _dyeBlobRetain(url);
+    return () => _dyeBlobRelease(url);
+  }, [face.url]);
+  useEffect(() => {
+    if (!crop || !src) return undefined;
+    let cancelled = false;
+    bakeMonsterFaceImage(baseId, src, masuColors).then(url => {
+      if (!cancelled) setFace({
+        key: faceKey,
+        url: url || null
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseId, src, colorKey]);
+  const fallback = hasColor ? React.createElement(DyedMonsterImage, {
+    baseId: baseId,
+    src: src,
+    masuColors: masuColors,
+    alt: alt,
+    className: className,
+    style: style,
+    draggable: draggable
+  }) : React.createElement("img", {
+    src: faceSrc || src,
+    alt: alt,
+    draggable: draggable,
+    className: className,
+    style: style
+  });
+  if (!crop) return fallback;
+  const url = face.key === faceKey ? face.url : undefined;
+  if (url) return React.createElement("img", {
+    src: url,
+    alt: alt,
+    draggable: draggable,
+    className: className,
+    style: style
+  });
+  return fallback;
 };
 const warmDyedMonsterImage = async (baseId, src, masuColors) => {
   try {
@@ -19714,10 +19952,18 @@ const DexMonsterIcon = ({
   src,
   alt = '',
   hidden = false,
-  lineage = false
+  lineage = false,
+  faceMon = null
 }) => React.createElement("span", {
   className: `${lineage ? 'w-7 h-7' : 'w-14 h-14'} rounded-full overflow-hidden border ${lineage ? 'border-amber-300/40' : 'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`
-}, src ? React.createElement("img", {
+}, faceMon && !hidden && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[faceMon.id] ? React.createElement(MonsterFaceImage, {
+  baseId: faceMon.id,
+  src: faceMon.imgUrl,
+  faceSrc: src,
+  alt: alt,
+  draggable: false,
+  className: "w-full h-full object-cover"
+}) : src ? React.createElement("img", {
   src: src,
   alt: alt,
   draggable: false,
@@ -19737,13 +19983,15 @@ const DexMonsterIcon = ({
 }, "？"));
 const DexLineageChip = ({
   lineage,
-  iconUrl
+  iconUrl,
+  faceMon = null
 }) => React.createElement("span", {
   "data-dex-lineage": true,
   className: "flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1"
 }, iconUrl ? React.createElement(DexMonsterIcon, {
   src: iconUrl,
-  lineage: true
+  lineage: true,
+  faceMon: faceMon
 }) : React.createElement("span", {
   className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
 }, "血"), React.createElement("span", {
@@ -71688,7 +71936,8 @@ function MonsterDexDetailScreen({
   };
   const lineageChip = lineage => React.createElement(DexLineageChip, {
     lineage: lineage,
-    iconUrl: lineageIconUrl(lineage)
+    iconUrl: lineageIconUrl(lineage),
+    faceMon: lineage && lineage.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[lineage.monId] || null
   });
   const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
   const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
@@ -85721,6 +85970,15 @@ function AiCopyFace({
   size = 22
 }) {
   const url = src && (src.faceIconUrl || src.iconUrl || src.imgUrl) || '';
+  const cropFace = src && src.id && src.imgUrl && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[src.id] ? React.createElement(MonsterFaceImage, {
+    baseId: src.id,
+    src: src.imgUrl,
+    faceSrc: url,
+    masuColors: Array.isArray(src.colors) ? src.colors : null,
+    alt: "",
+    draggable: false,
+    className: "h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"
+  }) : null;
   return React.createElement("span", {
     "data-ai-copy-face": true,
     className: "relative inline-block shrink-0",
@@ -85728,7 +85986,7 @@ function AiCopyFace({
       width: size,
       height: size
     }
-  }, url ? React.createElement("img", {
+  }, cropFace || (url ? React.createElement("img", {
     src: url,
     alt: "",
     "aria-hidden": "true",
@@ -85736,7 +85994,7 @@ function AiCopyFace({
     className: "h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"
   }) : React.createElement("span", {
     className: "flex h-full w-full items-center justify-center rounded-full bg-black/30 text-[12px]"
-  }, "🤖"), url && React.createElement("span", {
+  }, "🤖")), url && React.createElement("span", {
     "aria-hidden": "true",
     className: "absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-emerald-900 ring-1 ring-emerald-300 leading-none",
     style: {
@@ -124635,7 +124893,13 @@ function AssistantLifeProfileSheet({
     }
   })), kv('呼び方', call), oshi && kv('推し', React.createElement("span", {
     className: "inline-flex items-center gap-1"
-  }, oshiMon && (oshiMon.faceIconUrl || oshiMon.iconUrl) ? React.createElement("img", {
+  }, oshiMon && (oshiMon.faceIconUrl || oshiMon.iconUrl) ? typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+    baseId: oshiMon.id,
+    src: oshiMon.imgUrl,
+    faceSrc: oshiMon.faceIconUrl || oshiMon.iconUrl,
+    alt: "",
+    className: "h-5 w-5 rounded-md object-contain"
+  }) : React.createElement("img", {
     src: oshiMon.faceIconUrl || oshiMon.iconUrl,
     alt: "",
     className: "h-5 w-5 rounded-md object-contain"
@@ -124648,7 +124912,14 @@ function AssistantLifeProfileSheet({
     return React.createElement("div", {
       key: i,
       className: `flex-1 rounded-xl border bg-slate-950/80 px-1 py-1.5 text-center ${t.lead ? 'border-amber-300' : 'border-white/10'}`
-    }, m && (m.faceIconUrl || m.iconUrl) ? React.createElement("img", {
+    }, m && (m.faceIconUrl || m.iconUrl) ? typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+      baseId: m.id,
+      src: m.imgUrl,
+      faceSrc: m.faceIconUrl || m.iconUrl,
+      masuColors: t && Array.isArray(t.colors) ? t.colors : null,
+      alt: "",
+      className: "mx-auto h-10 w-10 rounded-lg object-contain"
+    }) : React.createElement("img", {
       src: m.faceIconUrl || m.iconUrl,
       alt: "",
       className: "mx-auto h-10 w-10 rounded-lg object-contain"
@@ -146637,8 +146908,8 @@ const AMG_APT = Object.freeze({
   Kuromy: 'BACBDB',
   Ghost: 'EEBBBE',
   Spooky: 'EEBBBE',
-  Illumine: 'EEBCAE',
-  Dreamy: 'DEBCAD',
+  Illumine: 'DBEABC',
+  Dreamy: 'CBEAAC',
   Kyubi: 'CCAACD',
   Orihime: 'CDAACC'
 });
@@ -146669,8 +146940,8 @@ const AMG_INIT = Object.freeze({
   Kuromy: [135, 160, 110, 135, 85, 135],
   Ghost: [100, 90, 120, 140, 150, 80],
   Spooky: [100, 90, 120, 140, 150, 80],
-  Illumine: [60, 60, 135, 110, 160, 60],
-  Dreamy: [85, 60, 135, 110, 160, 85],
+  Illumine: [65, 120, 45, 150, 120, 85],
+  Dreamy: [85, 120, 45, 150, 150, 85],
   Kyubi: [110, 110, 160, 160, 110, 85],
   Orihime: [110, 85, 160, 160, 110, 110]
 });
@@ -160002,7 +160273,13 @@ function AssistantLifeTasteGiftPicker({
     "aria-expanded": open,
     onClick: () => setOpen(v => !v),
     className: "mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-900/70 px-2 text-left active:scale-[.98]"
-  }, atgFace(mon) ? React.createElement("img", {
+  }, atgFace(mon) ? typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+    baseId: mon,
+    src: (ALL_PLAYER_MONSTERS[mon] || {}).imgUrl || '',
+    faceSrc: atgFace(mon),
+    alt: "",
+    className: "h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"
+  }) : React.createElement("img", {
     src: atgFace(mon),
     alt: "",
     className: "h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"
@@ -160029,7 +160306,13 @@ function AssistantLifeTasteGiftPicker({
       setOpen(false);
     },
     className: `flex min-h-[56px] flex-col items-center justify-center rounded-lg border px-0.5 active:scale-95 ${m === mon ? 'border-pink-300 bg-pink-400/25' : 'border-white/10 bg-slate-800/60'}`
-  }, atgFace(m) ? React.createElement("img", {
+  }, atgFace(m) ? typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+    baseId: m,
+    src: (ALL_PLAYER_MONSTERS[m] || {}).imgUrl || '',
+    faceSrc: atgFace(m),
+    alt: "",
+    className: "h-8 w-8 rounded-full object-cover"
+  }) : React.createElement("img", {
     src: atgFace(m),
     alt: "",
     className: "h-8 w-8 rounded-full object-cover"
@@ -160999,9 +161282,9 @@ function MsxBest3({
       }
     }, React.createElement("b", {
       className: `pl p${i + 1}`
-    }, i + 1), thumb(e.species) ? React.createElement("img", {
-      src: thumb(e.species),
-      alt: ""
+    }, i + 1), thumb(e.species) ? React.createElement(MsxMonFace, {
+      species: e.species,
+      colors: e.colors
     }) : null, React.createElement("span", {
       className: "nm"
     }, name(e), me ? React.createElement("small", null, "今回") : null), React.createElement("span", {
@@ -162840,9 +163123,9 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
   rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの9段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
-    left: 'issa',
-    center: 'mua',
-    right: 'kiki'
+    left: 'Suezo',
+    center: 'Mocchi',
+    right: 'Ark'
   })
 })]);
 const msxScenarioId = id => MSX_STORIES.some(x => x.id === id) ? id : 'hero';
@@ -162853,12 +163136,11 @@ const MSX_SCN_CSS = `
 .msx .scn-hd small{font-size:14px;color:#fde68a}
 .msx .scn-sc{position:relative;flex:1 1 0;min-height:0;overflow:hidden}
 .msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
-.msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
-/* 左右の人物は画面の内側に全身を収める(端へ寄せすぎると細い絵ほど大半が切れる。2026-11-16 実機スクショ) */
-.msx .scn-sc .who.l{left:0;bottom:40%;height:36%;z-index:2}
-.msx .scn-sc .who.r{right:0;bottom:38%;height:40%;z-index:2}
-.msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
+.msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 3px #1a2e05aa)}
+/* モンスターはファーム背景の中央の草地に立てる。足元は手前の柵より奥(下から約1/4)、左右は少し奥で小さめ(遠近) */
+.msx .scn-sc .who.l{left:6%;bottom:28%;height:26%;z-index:2}
+.msx .scn-sc .who.r{right:5%;bottom:27%;height:28%;z-index:2}
+.msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:23%;height:35%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
 .msx .scn-tx{position:absolute;z-index:3;left:0;right:0;bottom:3%;display:flex;flex-direction:column;align-items:stretch}
@@ -162876,14 +163158,16 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
-.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:0;bottom:0;height:78%}
+.msx .land .scn-sc>.bg,.msx.land .scn-sc>.bg{object-position:center 68%}
+.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:19%;transform:none;bottom:2%;height:84%;animation:none}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:1%;bottom:2%;height:64%}
 .msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
 .msx .land .scn-bd,.msx.land .scn-bd{right:2%}
 @media (orientation:landscape) and (max-height:520px){
 .msx .scn-tx{right:42%}
-.msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .scn-sc .who.r{right:0;bottom:0;height:78%}
+.msx .scn-sc>.bg{object-position:center 68%}
+.msx .scn-sc .who.c{left:auto;right:19%;transform:none;bottom:2%;height:84%;animation:none}
+.msx .scn-sc .who.r{right:1%;bottom:2%;height:64%}
 .msx .scn-sc .who.l{display:none}
 }
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
@@ -162904,12 +163188,7 @@ function MsxScenarioSelect({
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
   const n = MSX_STORIES.length;
-  const art = aid => {
-    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
-    const ex = aid === 'mua' ? 'excited' : 'happy';
-    const who = typeof assistantById === 'function' ? assistantById(aid) : null;
-    return who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
-  };
+  const mon = mid => typeof msxMonImg === 'function' ? msxMonImg(mid) : '';
   const many = n > 1;
   return React.createElement("div", {
     className: "scn",
@@ -162920,21 +163199,19 @@ function MsxScenarioSelect({
     className: "scn-sc"
   }, React.createElement("img", {
     className: "bg",
-    src: "images/story-bg/monhero_town.jpg",
+    src: "images/story-bg/monsuc_farm.webp",
     alt: ""
-  }), React.createElement("div", {
-    className: "pl"
   }), sc.cast.left ? React.createElement("img", {
     className: "who l",
-    src: art(sc.cast.left),
+    src: mon(sc.cast.left),
     alt: ""
   }) : null, sc.cast.right ? React.createElement("img", {
     className: "who r",
-    src: art(sc.cast.right),
+    src: mon(sc.cast.right),
     alt: ""
   }) : null, sc.cast.center ? React.createElement("img", {
     className: "who c",
-    src: art(sc.cast.center),
+    src: mon(sc.cast.center),
     alt: ""
   }) : null, React.createElement("div", {
     className: "scn-bd"
@@ -163203,10 +163480,16 @@ function MsxTrainEvent({
     "aria-hidden": "true"
   }, React.createElement("div", {
     className: "band"
-  }, React.createElement("img", {
+  }, typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+    species: s.species,
+    colors: run.colors
+  }) : React.createElement("img", {
     src: msxMonThumb(s.species),
     alt: ""
-  }), React.createElement("b", null, name, "との出来事!"), React.createElement("img", {
+  }), React.createElement("b", null, name, "との出来事!"), m && typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+    species: m.species,
+    colors: m.colors
+  }) : React.createElement("img", {
     src: m ? msxMonThumb(m.species) : '',
     alt: ""
   }))) : null, style === 'c' ? React.createElement("div", {
@@ -163616,15 +163899,9 @@ function MsxQfxRows({
           '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length]
         },
         "data-msx-qg-part": x.src
-      }, m ? Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-        baseId: m.species,
-        src: msxMonImg(m.species),
-        masuColors: m.colors,
-        alt: "",
-        draggable: false
-      }) : React.createElement("img", {
-        src: msxMonThumb(m.species),
-        alt: ""
+      }, m ? React.createElement(MsxMonFace, {
+        species: m.species,
+        colors: m.colors
       }) : React.createElement("em", null, "⛰️"), React.createElement("b", null, "+", x.v), m ? React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意') : React.createElement("small", null, "行き先"), React.createElement("i", {
         className: "fly",
         "aria-hidden": "true"
@@ -164091,16 +164368,16 @@ const MSX_CREW_SPOT_AID = Object.freeze([{
   bottom: '72%'
 }]);
 const MSX_CREW_SPOT_TAG = Object.freeze([{
-  left: '22%',
+  left: '25%',
   bottom: '12%'
 }, {
-  left: '78%',
+  left: '75%',
   bottom: '12%'
 }, {
-  left: '12%',
+  left: '13%',
   bottom: '34%'
 }, {
-  left: '88%',
+  left: '87%',
   bottom: '34%'
 }]);
 const MSX_CREW_SPOT_TAG_AID = Object.freeze([{
@@ -164117,22 +164394,23 @@ const MSX_CREW_SPOT_TAG_AID = Object.freeze([{
   bottom: '56%'
 }]);
 const MSX_CREW_CSS = `
-.msx .msx-act .crew .cm.duo{height:27%;animation:msxCrewIn .3s cubic-bezier(.2,1.4,.4,1) both}
+.msx .msx-act .crew .cm.duo{height:31%;animation:msxCrewIn .3s cubic-bezier(.2,1.4,.4,1) both}
 .msx .msx-act .crew .cm.duo img{animation:msxCrewJump .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
 .msx .msx-act.tagx .me .mon{animation:msxCrewJumpMe .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
 .msx .msx-act .tagglow{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,#fde04755,#f59e0b22 45%,transparent 70%);animation:msxTagGlow .9s ease-in-out .1s 2 alternate both}
 .msx .msx-act .tagstar{position:absolute;z-index:5;pointer-events:none;font-style:normal;font-size:20px;left:calc(8% + var(--i) * 12%);top:calc(30% + (var(--i) * 37 % 40) * 1%);animation:msxTagStar .9s ease-out both;animation-delay:calc(.5s + var(--i) * .06s);filter:drop-shadow(0 0 6px #fde047)}
-.msx .msx-act .tagcut{position:absolute;left:-4%;right:-4%;top:9%;z-index:7;pointer-events:none;height:76px;transform:rotate(-4deg);background:linear-gradient(90deg,#78350fee,#f59e0bf2 30%,#fde047f5 50%,#f59e0bf2 70%,#78350fee);border-top:3px solid #fff7c2;border-bottom:3px solid #fff7c2;box-shadow:0 0 24px #fde047aa;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6%;animation:msxTagCut 1.25s cubic-bezier(.2,.9,.3,1) .05s both}
-.msx .msx-act .tagcut .fc{width:min(44px,11vw);height:min(44px,11vw);flex:none;border-radius:50%;background:#fff;border:3px solid #fff7c2;box-shadow:0 0 0 2px #b45309,0 3px 0 #0006;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx .msx-act .tagcut{position:absolute;left:-4%;right:-4%;top:8%;z-index:7;pointer-events:none;height:106px;transform:rotate(-4deg);background:repeating-linear-gradient(115deg,#ffffff00 0 16px,#ffffff17 16px 30px),linear-gradient(90deg,#78350fee,#f59e0bf2 30%,#fde047f5 50%,#f59e0bf2 70%,#78350fee);border-top:3px solid #fff7c2;border-bottom:3px solid #fff7c2;box-shadow:0 0 34px #fde047cc,0 6px 18px #0008;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6%;animation:msxTagCut 1.5s cubic-bezier(.2,.9,.3,1) .05s both}
+.msx .msx-act .tagcut .fc{width:min(56px,14vw);height:min(56px,14vw);flex:none;border-radius:50%;background:#fff;border:3px solid #fff7c2;box-shadow:0 0 0 2px #b45309,0 3px 0 #0006;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .msx .msx-act .tagcut .fc img{width:100%;height:100%;object-fit:cover}
-.msx .msx-act .tagcut .x{font-size:15px;font-weight:900;color:#7c2d12}
-.msx .msx-act .tagcut b{margin-left:4px;font-size:min(26px,6.6vw);font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;white-space:nowrap}
-.msx .msx-act .tagcut b small{display:block;font-size:12px;-webkit-text-stroke:0;text-shadow:none;color:#7c2d12;font-style:normal}
+.msx .msx-act .tagcut .x{font-size:17px;font-weight:900;color:#7c2d12}
+.msx .msx-act .tagcut b{margin-left:4px;font-size:min(37px,9.3vw);font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;white-space:nowrap;animation:msxTagCutPunch .5s cubic-bezier(.2,1.6,.4,1) .3s both}
+.msx .msx-act .tagcut b small{display:block;font-size:12.5px;-webkit-text-stroke:0;text-shadow:none;color:#7c2d12;font-style:normal}
 @keyframes msxCrewJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-34%) scale(1.05)}70%{transform:translateY(0) scaleY(.92)}}
 @keyframes msxCrewJumpMe{0%,100%{translate:0 0}40%{translate:0 -18%}70%{translate:0 0}}
 @keyframes msxTagGlow{from{opacity:.2}to{opacity:1}}
 @keyframes msxTagStar{0%{opacity:0;transform:scale(.3) rotate(0)}40%{opacity:1;transform:scale(1.2) rotate(90deg)}100%{opacity:0;transform:scale(.6) translateY(-30px) rotate(180deg)}}
-@keyframes msxTagCut{0%{opacity:0;transform:rotate(-4deg) translateX(-110%)}18%{opacity:1;transform:rotate(-4deg) translateX(0)}80%{opacity:1;transform:rotate(-4deg) translateX(0) scale(1)}100%{opacity:0;transform:rotate(-4deg) translateX(30%) scale(.96)}}
+@keyframes msxTagCut{0%{opacity:0;transform:rotate(-4deg) translateX(-110%)}14%{opacity:1;transform:rotate(-4deg) translateX(0)}84%{opacity:1;transform:rotate(-4deg) translateX(0) scale(1)}100%{opacity:0;transform:rotate(-4deg) translateX(30%) scale(.96)}}
+@keyframes msxTagCutPunch{0%{transform:scale(2.1);opacity:0}55%{transform:scale(.94);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-bchips{position:absolute;right:7px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:calc(100% - 14px);z-index:3}
 .msx .v-bchip{display:flex;align-items:center;gap:4px;max-width:100%;background:#0f0d24d0;border:1px solid #ffffff33;border-radius:99px;padding:1px 8px 1px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
 .msx .v-bchip img{width:20px;height:20px;flex:none;border-radius:50%;object-fit:cover;background:#ffffff22;border:1.5px solid #ffffff66}
@@ -164186,7 +164464,7 @@ function MsxActCrew({
   const tagMs = ms.filter(i => tags.includes(i)).slice(0, MSX_CREW_SPOT_TAG.length);
   const restMs = ms.filter(i => !tagMs.includes(i));
   const tagged = tagMs.length > 0 || tags.includes('aid');
-  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60], ['actTag', 330], ['actTagSpark', 620]] : [], []);
   const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
   const monImg = m => {
     const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : '';
@@ -164202,7 +164480,10 @@ function MsxActCrew({
       alt: ""
     });
   };
-  const faceImg = (sp, colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+  const faceImg = (sp, colors) => typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+    species: sp,
+    colors: colors
+  }) : Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
     baseId: sp,
     src: typeof msxMonImg === 'function' ? msxMonImg(sp) : '',
     masuColors: colors,
@@ -164306,7 +164587,10 @@ function MsxBondChips({
       key: i,
       className: `v-bchip${tag ? ' tag' : ''}`,
       "data-msx-bond-chip": tag ? 'tag' : 'm'
-    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    }, typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+      species: m.species,
+      colors: m.colors
+    }) : Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
       baseId: m.species,
       src: typeof msxMonImg === 'function' ? msxMonImg(m.species) : '',
       masuColors: m.colors,
@@ -164343,9 +164627,9 @@ const MSX_TFX_MS = Object.freeze({
   both: 2500
 });
 const MSX_TFX_SE = Object.freeze({
-  tag: [['actTagJoin', 1300], ['actTagFin', 1560]],
-  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actHit', 1780]],
-  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actHit', 1920]]
+  tag: [['actTagJoin', 1300], ['actTagFin', 1560], ['actHit', 1560], ['actTagSpark', 1640]],
+  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actGreatFlash', 1500], ['actGreatBoom', 1590], ['actHit', 1780], ['actGreatSpark', 1840]],
+  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actGreatBoom', 1670], ['actHit', 1920], ['actGreatSpark', 1980]]
 });
 const msxTfxKind = o => {
   if (!o || !o.result) return 'base';
@@ -164354,7 +164638,7 @@ const msxTfxKind = o => {
   return great && tag ? 'both' : great ? 'great' : tag && o.result !== 'sab' ? 'tag' : 'base';
 };
 const msxTfxMs = o => MSX_TFX_MS[msxTfxKind(o)] || MSX_TFX_MS.base;
-const msxTfxResSound = o => msxTfxKind(o) === 'both' ? 'trainGreatTag' : null;
+const msxTfxResSound = o => msxTfxKind(o) === 'both' ? 'trainGreatTag' : msxTfxKind(o) === 'tag' && o && o.result === 'ok' ? 'trainTag' : null;
 const msxTfxOpt = () => {
   let load = 'RICH';
   let shake = true;
@@ -164438,7 +164722,7 @@ const MSX_TFX_CSS = `
 .msx .tfx .flash.mix{background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fde047dd 25%,#f9a8d499 45%,#67e8f966 60%,transparent 82%)}
 .msx .tfx .bit{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;font-style:normal;font-size:20px;opacity:0;animation:msxTfxBit .6s cubic-bezier(.1,.7,.3,1) var(--d,1.5s) both}
 .msx .tfx .word{position:absolute;left:0;right:0;text-align:center;font-weight:900;white-space:nowrap;opacity:0;line-height:1.1}
-.msx .tfx .word.kz{top:7%;font-size:min(34px,8.6vw);font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
+.msx .tfx .word.kz{top:6%;font-size:min(38px,9.8vw);letter-spacing:-.04em;font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
 .msx .tfx .word.gg{top:7%;font-size:min(30px,7.6vw);color:#fde047;text-shadow:0 0 10px #f59e0b,0 3px 0 #7c2d12;animation:msxTfxGogo var(--wd,.3s) linear var(--d,1.2s) both}
 .msx .tfx .word.don{top:5%;font-size:min(46px,11.6vw);color:#fff;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 0 20px #fde047;animation:msxTfxDon var(--wd,.28s) ease-out var(--d,1.5s) both}
 .msx .tfx .word.don.mix{font-size:min(40px,10vw);text-shadow:0 0 18px #fde047,0 0 26px #f472b6}
@@ -164473,12 +164757,16 @@ const MSX_TFX_CSS = `
 .msx .v-tfx .gstar{position:absolute;font-style:normal;color:#fef9c3;font-size:18px;text-shadow:0 0 8px #fde047,0 0 16px #f59e0b;animation:msxTfxTwinkle 1.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .17s)}
 .msx .v-tfx .rhrt{position:absolute;font-style:normal;font-size:var(--fs,18px);filter:drop-shadow(0 0 5px #fff);animation:msxTfxFloat 2.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .23s)}
 .msx .v-tfxtop{position:absolute;inset:0;z-index:4;pointer-events:none}
-.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:5px;max-width:calc(100% - 20px);padding:3px 12px 3px 4px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:13px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
+.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:6px;max-width:calc(100% - 20px);padding:4px 14px 4px 5px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:15px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
 .msx .v-tfx-rib.both{border-color:#fde047;box-shadow:0 0 16px #fde047,0 0 22px #f9a8d4,0 3px 0 #0006}
 .msx .v-tfx-rib .fcs{display:flex;flex:none}
-.msx .v-tfx-rib .fcs img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-7px;box-shadow:0 0 0 1.5px #db2777}
+.msx .v-tfx-rib .fcs img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-8px;box-shadow:0 0 0 1.5px #db2777}
 .msx .v-tfx-rib .fcs img:last-child{margin-right:0}
 .msx .v-tfx-rib .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.msx .v-tfx-rib .pct{margin-left:3px;padding:0 8px;border-radius:99px;background:#831843c9;font-size:16px;text-shadow:none;white-space:nowrap}
+/* 結果を開いた瞬間の大きな名乗り(2026-11-18 社長: タッグの見せ方を大きく)。軽減時は出さない(呼ぶ側で抑え、静かなリボンだけ残る) */
+.msx .v-tfx-flash{position:absolute;left:0;right:0;top:30%;z-index:6;text-align:center;font-size:min(43px,10.8vw);font-weight:900;font-style:italic;letter-spacing:.02em;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 16px #f472b6,0 0 26px #67e8f9,0 4px 0 #831843;opacity:0;pointer-events:none;animation:msxTfxTagWord 1.3s cubic-bezier(.2,1.3,.4,1) .12s both}
+@keyframes msxTfxTagWord{0%{opacity:0;transform:scale(2.3) rotate(-5deg)}16%{opacity:1;transform:scale(.95) rotate(-3deg)}26%{transform:scale(1) rotate(-3deg)}76%{opacity:1}100%{opacity:0;transform:scale(1.03) rotate(-3deg) translateY(-8px)}}
 .msx .v-tfx-badge{position:absolute;right:12px;top:calc(9% - 6px);font-weight:900;color:#7c2d12;background:linear-gradient(#fef9c3,#facc15 60%,#f59e0b);border:2.5px solid #fff;border-radius:10px;padding:1px 9px;font-size:15px;line-height:1.35;white-space:nowrap;box-shadow:0 0 14px #fde047,0 3px 0 #0007;transform:rotate(8deg);animation:msxTfxBadge .4s cubic-bezier(.2,1.6,.4,1) .3s both}
 .msx .v-stamp.tfx-gold{font-size:60px;animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1),msxTfxStampGlow 1.6s ease-in-out .4s infinite alternate}
 .msx .v-stamp.tfx-both{-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 18px #f472b6,0 0 30px #67e8f9,0 0 46px #fde047}
@@ -164780,26 +165068,42 @@ function MsxTrainResFx({
   }
   const team = s && Array.isArray(s.team) ? s.team : [];
   const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
-  const faces = [thumb(s && s.species)].concat(tags.filter(i => Number.isInteger(i) && team[i]).slice(0, 3).map(i => thumb(team[i].species)));
-  if (tags.includes('aid') && typeof msxFace === 'function' && s) faces.push(msxFace(s.aid, 'happy'));
+  const faceNode = (sp, colors) => !sp || !thumb(sp) ? null : typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+    species: sp,
+    colors: colors
+  }) : React.createElement("img", {
+    src: thumb(sp),
+    alt: ""
+  });
+  const faces = [faceNode(s && s.species, run && run.colors)].concat(tags.filter(i => Number.isInteger(i) && team[i]).slice(0, 3).map(i => faceNode(team[i].species, team[i].colors)));
+  if (tags.includes('aid') && typeof msxFace === 'function' && s) {
+    const af = msxFace(s.aid, 'happy');
+    if (af) faces.push(React.createElement("img", {
+      src: af,
+      alt: ""
+    }));
+  }
   const tagPct = Number.isFinite(card.tag) ? Math.round(card.tag * 100) : 0;
   const R = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.RESULTS ? msxSuc.SUC.RESULTS : null;
   const gm = R && R.great && Number.isFinite(R.great.mult) ? R.great.mult : 1.5;
   return React.createElement("div", {
     className: `v-tfxtop${calm}`,
     "data-msx-tfx-top": k
-  }, k !== 'great' ? React.createElement("div", {
+  }, !op.calm && k !== 'great' ? React.createElement("div", {
+    className: "v-tfx-flash",
+    "aria-hidden": "true"
+  }, "🤝 友情タッグ！") : null, k !== 'great' ? React.createElement("div", {
     className: `v-tfx-rib${k === 'both' ? ' both' : ''}`,
     "data-msx-tfx-rib": tags.length
   }, React.createElement("span", {
     className: "fcs"
-  }, faces.filter(Boolean).slice(0, 5).map((f, i) => React.createElement("img", {
-    key: i,
-    src: f,
-    alt: ""
-  }))), React.createElement("span", {
+  }, faces.filter(Boolean).slice(0, 5).map((f, i) => React.createElement(React.Fragment, {
+    key: i
+  }, f))), React.createElement("span", {
     className: "t"
-  }, "🤝 友情タッグ ×", tags.length, tagPct > 0 ? `・伸び +${tagPct}%` : '')) : null, k !== 'tag' ? React.createElement("div", {
+  }, "🤝 友情タッグ ×", tags.length), tagPct > 0 ? React.createElement("b", {
+    className: "pct"
+  }, "伸び +", tagPct, "%") : null) : null, k !== 'tag' ? React.createElement("div", {
     className: "v-tfx-badge",
     "data-msx-tfx-badge": gm
   }, "伸び ×", gm) : null);
@@ -170793,6 +171097,9 @@ const MSX_CSS = `
 
 .msx{position:relative;overflow:hidden;color:#fff;font-weight:700;font-size:12px;line-height:1.45;
   background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%)}
+/* 大会まわりの全画面([data-msc-root] は overflow-y:auto だけだと overflow-x も auto になり、
+   数pxのはみ出しで横にも動いてしまう。2026-11-18 社長「縦だけでいい所が横にも動く」): 横は止める */
+.msc-root{overflow-x:hidden}
 .msx .in{padding:10px 12px 0}
 .msx .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;height:38px}
 .msx .hd .bk{background:#2b3348;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:900;white-space:nowrap}
@@ -170937,8 +171244,8 @@ const MSX_CSS = `
 .msx .v-ga .tr{margin-right:26px}
 .msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
-/* 選ぶ画面(育成開始)では場面を細くし、一覧に高さを譲る(選ぶ画面の統一。横向きの組み立てでは上の .land の指定が勝つ) */
-.msx .v-scene.sm{flex:none;height:112px}
+/* 選ぶ画面(育成開始)では場面を細い帯にし、一覧に高さを譲る(選ぶ画面の統一。2026-11-18 社長の実機報告でさらに細く。横向きの組み立てでは上の .land の指定が勝つ) */
+.msx .v-scene.sm{flex:none;height:68px}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
 .msx .v-scene.dk .sh{background:#0f0d2499}
@@ -170956,7 +171263,10 @@ const MSX_CSS = `
 .msx .v-party>small{font-size:10px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
 /* 育成メイン: 編成・持ち物・詳細を風景の下にまとめた帯(2026-11-16 UI改修) */
 .msx .v-under{display:flex;gap:6px;align-items:stretch;margin-top:6px}
-.msx .v-party.row{position:static;flex:1;flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+.msx .v-party.row{position:static;flex:1;flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:nowrap;min-width:0}
+.msx .v-party.row>small{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.msx .v-party.row .v-pf{flex:0 1 30px;min-width:0}
+.msx .v-party.row .v-pf img{width:100%;height:auto;aspect-ratio:1/1}
 .msx .v-bagb.st{position:relative;flex:0 0 auto}
 /* トレーニング: 実行ボタンの近くのまとめ(上がる能力・失敗率・体力消費。2026-11-16 UI改修) */
 .msx .v-trsum{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:6px;padding:6px 10px;border-radius:10px;background:#0f0d24d0;border:1px solid #ffffff2a;font-size:12px;font-weight:800;color:#e2e8f0}
@@ -170993,10 +171303,10 @@ const MSX_CSS = `
 .msx .v-st .msx-srk.rG{background:#94a3b8}.msx .v-st .msx-srk.rF{background:#a78bfa}.msx .v-st .msx-srk.rE{background:#60a5fa}.msx .v-st .msx-srk.rD{background:#7dd3fc}.msx .v-st .msx-srk.rC{background:#4ade80}.msx .v-st .msx-srk.rB{background:#f472b6}
 .msx .v-st .msx-srk.rA,.msx .v-st .msx-srk.rAp{background:#f87171}.msx .v-st .msx-srk.rS,.msx .v-st .msx-srk.rSp{background:#fbbf24}.msx .v-st .msx-srk.rM{background:linear-gradient(90deg,#f472b6,#fde047,#34d399,#38bdf8,#a78bfa)}
 /* 上限(/999)は数と同じ行ではなく棒の横に置く。同じ行だと4桁の能力でカードからはみ出すため */
-.msx .v-st .br{display:flex;align-items:center;gap:3px;margin:1px 5px 0}
+.msx .v-st .br{display:flex;align-items:center;gap:3px;margin:1px 5px 0;flex-wrap:wrap}
 .msx .v-st .br u{flex:1;min-width:0;margin:0}
 .msx .v-st .br .ap{flex:1;margin-top:0}
-.msx .v-st .br .cap{font-size:9px;color:#94a3b8;font-weight:800;flex:none}
+.msx .v-st .br .cap{font-size:10px;color:#94a3b8;font-weight:800;flex:none}
 .msx .msx-srk{font-style:normal;font-weight:900}
 .msx .msx-srk.rM{color:#e879f9}.msx .msx-srk.rSp,.msx .msx-srk.rS{color:#fde047}.msx .msx-srk.rAp,.msx .msx-srk.rA{color:#f87171}.msx .msx-srk.rB{color:#f472b6}.msx .msx-srk.rC{color:#4ade80}.msx .msx-srk.rD{color:#7dd3fc}.msx .msx-srk.rE{color:#60a5fa}.msx .msx-srk.rF{color:#a78bfa}.msx .msx-srk.rG{color:#94a3b8}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
@@ -171024,11 +171334,11 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
 .msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
-.msx .v-st.gs-a.zs div.up u.g,.msx .v-st.gs-a.zs div.dn u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zs div.up u.g,.msx .v-st.gs-a.zs div.dn u.g{height:12px;margin:2px 3px 1px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
-.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
-.msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+.msx .v-st.gs-a .br q.zl{quotes:none;flex:0 0 100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;margin-top:1px;pointer-events:none}
+.msx .v-st.gs-a .br q.zl::before,.msx .v-st.gs-a .br q.zl::after{content:none}
+@container (max-width:340px){.msx .v-st.gs-a .br q.zl{letter-spacing:-.05em}}
 @media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
@@ -171184,6 +171494,11 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
+.msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}
+.msx .v-ctag.main{border-width:2px}
+.msx .v-combo-a{color:#94a3b8;font-size:10px;font-weight:900}
 .msx .v-faces{display:flex;gap:5px;margin-top:6px}
 .msx .v-faces span,.msx .v-faces button{flex:1;min-width:0;position:relative}
 .msx .v-faces img{width:100%;aspect-ratio:1;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #475569;background:#312e5a}
@@ -171664,6 +171979,11 @@ const MSX_CSS = `
 .msx-st6 .n{display:block;font-size:10px;color:#cbd5e1}
 .msx-st6 b{display:block;font-size:20px;color:#fff;letter-spacing:.5px}
 .msx-st6 i{display:block;font-style:normal;font-size:10px;color:#fde047}.msx-st6 i.lo{color:#94a3b8}
+/* 育成開始の「初めの能力」は1行6列の帯にして、一覧に高さを譲る(2026-11-18 社長。詳しい能力は「詳しく」の詳細で見る) */
+.msx-st6.row6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.msx-st6.row6 .n{font-size:8.5px}
+.msx-st6.row6 b{font-size:14px;letter-spacing:0}
+.msx-st6.row6 i{font-size:8.5px}
 .msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
 .msx-dt-top{display:flex;align-items:flex-end;gap:8px}
 .msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
@@ -171850,11 +172170,11 @@ const MSX_CSS = `
 .msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
-.msx .msx-tp-tm .fc{flex:none;display:block;width:100%;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
+.msx .msx-tp-tm .fc{flex:none;display:block;width:100%;height:auto;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
 /* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
 .msx .msx-tp-tm .fc::before{content:'';display:block;padding-top:100%}
 .msx .msx-tp-tm .fc>img,.msx .msx-tp-tm .fc>div{position:absolute!important;inset:0;width:100%;height:100%}
-.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}.msx .msx-tp-tm .fc i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#64748b}
+.msx .msx-tp-tm .fc img{width:100%;height:100%;object-fit:contain}.msx .msx-tp-tm .fc i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#64748b}
 .msx .msx-tp-tm.on .fc{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
@@ -171875,7 +172195,7 @@ const MSX_CSS = `
 .msx .msx-tp>.msx-tp-list>.msx-tp-w{flex:none;width:calc((100% - 12px) / 3);display:flex;flex-direction:column;gap:3px;min-width:0}
 .msx .msx-tp>.msx-tp-list.one>.msx-tp-w{width:100%}
 .msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
-.msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
+.msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px;text-align:center}
 .msx .msx-md-sup{margin-top:8px}
 .msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 /* 選ぶ画面の組み立て(統一): 操作行は自然な高さにする。横に伸ばすのは横並びの帯(.msx-tp-bar)の中だけ(縦並びの画面で操作行が縦に伸びて一覧を潰していた) */
@@ -171901,20 +172221,24 @@ const MSX_CSS = `
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 0 2px #fde047,0 0 12px #fde04766}
 .msx .msx-tp-c.lk{opacity:.5}
-.msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;border-radius:10px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%)}
+/* 顔はボックス式の升目(.mmg)と同じ円+金の輪にする。height:auto を明示しないと汎用の .msx .fc{height:40px} が勝ち、正方形スペーサーが切れて顔が帯状に潰れる(2026-11-18 社長の実機報告「アシモン一覧の表示がおかしい」の原因) */
+.msx .msx-tp-c .fc{display:block;position:relative;flex:none;width:100%;height:auto;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.msx .msx-tp-c.on .fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 /* 正方形はスペーサーで決める(.v-grid6 と同じ方式。aspect-ratio に頼らない) */
 .msx .msx-tp-c .fc::before{content:'';display:block;padding-top:100%}
 .msx .msx-tp-c .fc>img,.msx .msx-tp-c .fc>.mm-art{position:absolute;inset:0;width:100%;height:100%}
-.msx .msx-tp-c .fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
+.msx .msx-tp-c .fc img{width:100%!important;height:100%!important;object-fit:contain}
 .msx .msx-tp-c .fc .mm-art{display:block;width:100%;height:100%}
 .msx .msx-tp-c .rk,.msx .msx-fp-r .rk{position:absolute;right:3px;top:3px;font-style:normal}
-.msx .msx-tp-c .ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:26px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
-.msx .msx-tp-c .mk{position:absolute;left:4px;right:4px;top:46%;font-style:normal}
+.msx .msx-tp-c .ck{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-style:normal;font-size:26px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000;z-index:2}
+.msx .msx-tp-c .mk{position:absolute;left:50%;transform:translateX(-50%);bottom:4px;max-width:94%;font-style:normal;z-index:2}
 .msx .mk{display:block;font-style:normal;font-size:10px;font-weight:900;line-height:16px;border-radius:8px;padding:0 4px;background:#0f0d24e6;color:#fff;border:1px solid #64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .msx .mk.in{border-color:#f472b6;color:#f9a8d4}.msx .mk.sp,.msx .mk.own{border-color:#fde047;color:#fde047}.msx .mk.lk{border-color:#94a3b8;color:#e2e8f0}.msx .mk.dup{border-color:#fb923c;color:#fdba74}
-.msx .msx-tp-c .nm{max-width:100%;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .msx-tp-c .nm{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 6px;line-height:15px;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .msx-tp-c .tp,.msx .msx-fp-r .tp{display:flex;flex-wrap:wrap;justify-content:center;column-gap:4px;font-size:10px;font-weight:900;color:#86efac;line-height:1.25}
-.msx .msx-tp-c .lv{font-size:10px;color:#cbd5e1;white-space:nowrap}
+/* カードの中身は行ごとに高さを固定し、印の有無や得意の折り返しで背丈がずれないようにする(2026-11-18 社長) */
+.msx .msx-tp-c .tp{flex-wrap:nowrap;height:13px;overflow:hidden;align-items:center}
+.msx .msx-tp-c .lv{font-size:10px;color:#cbd5e1;white-space:nowrap;line-height:13px;height:13px}
 .msx .msx-tp-none{width:100%;font-size:11.5px;color:#cbd5e1;text-align:center;padding:24px 8px}
 .msx .msx-fp-r{display:flex;align-items:center;gap:8px;min-width:0;min-height:64px;padding:6px 8px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:left}
 .msx .msx-fp-r.on{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 0 2px #fde047,0 0 12px #fde04766}.msx .msx-fp-r.lk{opacity:.6}
@@ -172653,6 +172977,36 @@ const msxMonThumb = id => {
   const m = msxMon(id);
   return m ? m.faceIconUrl || m.iconUrl || m.imgUrl : '';
 };
+const MsxMonFace = ({
+  species,
+  colors,
+  className,
+  style,
+  alt = ''
+}) => typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+  baseId: species,
+  src: msxMonImg(species),
+  faceSrc: msxMonThumb(species),
+  masuColors: Array.isArray(colors) ? colors : null,
+  alt: alt,
+  className: className,
+  style: style,
+  draggable: false
+}) : Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+  baseId: species,
+  src: msxMonImg(species),
+  masuColors: colors,
+  alt: alt,
+  className: className,
+  style: style,
+  draggable: false
+}) : React.createElement("img", {
+  src: msxMonThumb(species),
+  alt: alt,
+  className: className,
+  style: style,
+  draggable: false
+});
 const msxWho = aid => typeof assistantById === 'function' ? assistantById(aid) : null;
 const msxFace = (aid, ex = 'normal') => {
   const w = msxWho(aid);
@@ -172711,6 +173065,32 @@ function MsxRivalThumb({
 }) {
   const sp = rival && rival.species;
   const colors = rival && rival.colors;
+  if (sp && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[sp]) {
+    return React.createElement("span", {
+      style: {
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flex: 'none',
+        display: 'inline-block',
+        background: '#1e1a36',
+        verticalAlign: 'middle'
+      }
+    }, React.createElement(MonsterFaceImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      faceSrc: msxMonThumb(sp),
+      masuColors: Array.isArray(colors) ? colors : null,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover'
+      }
+    }));
+  }
   if (sp && Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
     return React.createElement("span", {
       style: {
@@ -173242,7 +173622,7 @@ function MonheroSuccessFarmMeal({
       className: "go",
       onClick: () => setResult(null),
       "data-mh-home-meal-close": true
-    }, "とじる"))));
+    }, "閉じる"))));
   }
   return React.createElement("div", {
     className: "mh-home-meal",
@@ -173352,7 +173732,7 @@ function MonheroSuccessFarmMeal({
       justifyContent: 'center',
       lineHeight: 1.15
     }
-  }, React.createElement("span", null, "あげずに おわる"), React.createElement("span", {
+  }, React.createElement("span", null, "あげずに 終わる"), React.createElement("span", {
     style: {
       fontSize: 9.5,
       opacity: 0.85
@@ -173959,9 +174339,10 @@ function MsxMonDetail({
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = id => mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null;
-  const capK = k => SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({
+  const capBase = k => SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({
     cap
   }, k) : cap && Number.isFinite(cap[k]) ? Math.max(999, cap[k]) : 999;
+  const capK = k => Math.max(capBase(k), Number(st && st[k]) || 0);
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return React.createElement("div", {
     className: "msx-ov msx-fade",
@@ -174381,8 +174762,8 @@ function MsxSlotPicker({
       onClick: () => onPick({
         base: sp
       })
-    }, React.createElement("img", {
-      src: msxMonThumb(sp),
+    }, React.createElement(MsxMonFace, {
+      species: sp,
       alt: ""
     }), React.createElement("b", null, msxMonName(sp)), React.createElement("small", {
       style: JA_LABEL_STYLE
@@ -174410,27 +174791,9 @@ function MsxSlotPicker({
       onClick: () => onPick({
         box: m.id
       })
-    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
-      style: {
-        ...thumb,
-        display: 'inline-block',
-        overflow: 'hidden',
-        flex: 'none'
-      }
-    }, React.createElement(DyedMonsterImage, {
-      baseId: m.species,
-      src: msxMonImg(m.species),
-      masuColors: m.colors,
-      alt: "",
-      draggable: false,
-      style: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain'
-      }
-    })) : React.createElement("img", {
-      src: msxMonThumb(m.species),
-      alt: "",
+    }, React.createElement(MsxMonFace, {
+      species: m.species,
+      colors: m.colors,
       style: thumb
     }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
       className: msxRankCls(m.rank)
@@ -174459,27 +174822,9 @@ function MsxSlotPicker({
       onClick: () => onPick({
         assist: m.id
       })
-    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
-      style: {
-        ...thumb,
-        display: 'inline-block',
-        overflow: 'hidden',
-        flex: 'none'
-      }
-    }, React.createElement(DyedMonsterImage, {
-      baseId: m.species,
-      src: msxMonImg(m.species),
-      masuColors: m.colors,
-      alt: "",
-      draggable: false,
-      style: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain'
-      }
-    })) : React.createElement("img", {
-      src: msxMonThumb(m.species),
-      alt: "",
+    }, React.createElement(MsxMonFace, {
+      species: m.species,
+      colors: m.colors,
       style: thumb
     }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
       className: msxRankCls(m.rank)
@@ -174535,15 +174880,9 @@ function MsxGatherTable({
       return React.createElement("div", {
         key: i,
         className: "msx-gt-mon"
-      }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-        baseId: m.species,
-        src: msxMonImg(m.species),
-        masuColors: m.colors,
-        alt: "",
-        draggable: false
-      }) : React.createElement("img", {
-        src: msxMonThumb(m.species),
-        alt: ""
+      }, React.createElement(MsxMonFace, {
+        species: m.species,
+        colors: m.colors
       }), React.createElement("span", {
         className: "nm"
       }, m.name), React.createElement("span", {
@@ -174890,8 +175229,8 @@ function MsxStart({
       onClick: () => setPick(x.pick)
     }, React.createElement("span", {
       className: "v-g6f"
-    }, React.createElement("img", {
-      src: msxMonThumb(x.sp),
+    }, React.createElement(MsxMonFace, {
+      species: x.sp,
       alt: msxMonName(x.sp)
     })), React.createElement("span", {
       className: "v-g6n"
@@ -174901,8 +175240,8 @@ function MsxStart({
         gridColumn: '1 / -1'
       }
     }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), scene({
-      mb: '12%',
-      h: '62%'
+      mb: '10%',
+      h: '88%'
     }, React.createElement("div", {
       className: "v-chips"
     }, React.createElement("span", {
@@ -174937,7 +175276,7 @@ function MsxStart({
     }, "初めの能力", React.createElement("span", {
       className: "msx-dt-sm"
     }, "(小さい字は素質)")), React.createElement("div", {
-      className: "msx-st6",
+      className: "msx-st6 row6",
       "data-msx-start-stats": true
     }, MSX_STATS.map((k, i) => React.createElement("div", {
       key: k
@@ -175026,15 +175365,9 @@ function MsxStart({
     }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
-      const img = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-        baseId: m.species,
-        src: msxMonImg(m.species),
-        masuColors: m.colors,
-        alt: "",
-        draggable: false
-      }) : React.createElement("img", {
-        src: msxMonThumb(m.species),
-        alt: ""
+      const img = React.createElement(MsxMonFace, {
+        species: m.species,
+        colors: m.colors
       });
       const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find(x => x.id === m.boxId) : null;
       return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
@@ -175216,7 +175549,28 @@ function MsxStart({
       className: "v-kv"
     }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk)), combo && React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
+    }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("div", {
+      className: "v-combo",
+      "data-msx-train-combo": true
+    }, MSX_STATS.map(k => React.createElement("div", {
+      key: k,
+      className: "v-combo-r"
+    }, React.createElement("span", {
+      className: "v-ctag main",
+      style: {
+        borderColor: MSX_STAT_COLOR[k],
+        color: MSX_STAT_COLOR[k],
+        background: `${MSX_STAT_COLOR[k]}1f`
+      }
+    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+      className: "v-combo-a"
+    }, "→"), combo[k].map(c => React.createElement("span", {
+      key: c,
+      className: "v-ctag",
+      style: {
+        color: MSX_STAT_COLOR[c]
+      }
+    }, "+", MSX_STAT_ICON[c], MSX_STAT_NAME[c])))))), React.createElement("div", {
       className: "v-kv"
     }, React.createElement("b", null, "初めの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
       className: "v-eps"
@@ -175506,15 +175860,9 @@ function MsxStart({
     }, "編成"), members.map((m, i) => React.createElement("span", {
       key: i,
       className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-      baseId: m.species,
-      src: msxMonImg(m.species),
-      masuColors: m.colors,
-      alt: "",
-      draggable: false
-    }) : React.createElement("img", {
-      src: msxMonThumb(m.species),
-      alt: ""
+    }, React.createElement(MsxMonFace, {
+      species: m.species,
+      colors: m.colors
     }))), React.createElement("span", {
       className: "ed"
     }, "変える")), typeof msxScenarioOf === 'function' ? React.createElement("button", {
@@ -175679,38 +176027,6 @@ const msxTpDupOf = (m, others) => {
     return others.some(o => o && Array.isArray(o.assists) && o.assists.some(b => b.id === a.id && msxTpAssistVal(AT, b) >= v));
   });
 };
-function msxTpPress(onTap, onLong) {
-  let t = null;
-  let long = false;
-  const clear = () => {
-    if (t) {
-      clearTimeout(t);
-      t = null;
-    }
-  };
-  return {
-    onPointerDown: () => {
-      long = false;
-      clear();
-      t = setTimeout(() => {
-        long = true;
-        t = null;
-        onLong();
-      }, 450);
-    },
-    onPointerUp: clear,
-    onPointerLeave: clear,
-    onPointerCancel: clear,
-    onContextMenu: e => e.preventDefault(),
-    onClick: () => {
-      if (long) {
-        long = false;
-        return;
-      }
-      onTap();
-    }
-  };
-}
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
@@ -175911,6 +176227,10 @@ function MsxTeamPick({
     const sorted = f.sort(by);
     return rev ? sorted.reverse() : sorted;
   }, [lists, tab, sort, only, q, rev]);
+  const candItem = cand ? items.find(x => msxTpSame(x.slot, cand)) || [...lists.box, ...lists.memo, ...lists.base].map(x => ({
+    ...x,
+    mem: memOf(x.slot)
+  })).find(x => msxTpSame(x.slot, cand)) || null : null;
   const view = slots.map((s, i) => i === idx ? cand : msxTpSame(s, cand) ? null : s);
   const raisedN = view.filter(s => s && (s.box || s.assist)).length;
   const otherIdx = slot => view.findIndex((s, i) => i !== idx && msxTpSame(s, slot));
@@ -175945,7 +176265,7 @@ function MsxTeamPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, "詳しくは選んだ子の「効果・詳細」・長押し")), React.createElement("div", {
+  }, React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, "詳しくは、選んだモンスターの「効果・詳細」から")), React.createElement("div", {
     className: "msx-tp-team",
     "data-msx-tp-team": true
   }, view.map((s, i) => {
@@ -175965,8 +176285,11 @@ function MsxTeamPick({
       alt: "",
       draggable: false
     }) : React.createElement("img", {
-      src: msxMonThumb(sp),
-      alt: ""
+      src: msxMonImg(sp),
+      alt: "",
+      style: {
+        objectFit: 'contain'
+      }
     }) : React.createElement("i", null, i + 1), fr ? React.createElement("b", {
       className: "fr"
     }, "🤝") : null));
@@ -176028,25 +176351,27 @@ function MsxTeamPick({
       "data-msx-tp-item": x.key
     }, x.kind === 'base' ? {
       'data-msx-pick-base': x.species
-    } : {}, msxTpPress(() => {
-      if (!(mk && mk.lock)) setCand(on ? null : x.slot);
-    }, () => setLook(x))), React.createElement("span", {
+    } : {}, {
+      onClick: () => {
+        if (!(mk && mk.lock)) setCand(on ? null : x.slot);
+      }
+    }), React.createElement("span", {
       className: "fc"
     }, x.rec && typeof MsxMmArt === 'function' ? React.createElement(MsxMmArt, {
       m: x.rec,
       size: "100%",
       thumb: true
     }) : React.createElement("img", {
-      src: msxMonThumb(x.species),
+      src: msxMonImg(x.species),
       alt: ""
-    })), m && m.kind !== 'base' && m.rank ? React.createElement("i", {
-      className: `rk ${msxRankCls(m.rank)}`
-    }, m.rank) : null, on ? React.createElement("i", {
+    }), on ? React.createElement("i", {
       className: "ck",
       "aria-hidden": "true"
     }, "✓") : null, mk ? React.createElement("i", {
       className: `mk ${mk.c}`
-    }, mk.t) : null, React.createElement("b", {
+    }, mk.t) : null), m && m.kind !== 'base' && m.rank ? React.createElement("i", {
+      className: `rk ${msxRankCls(m.rank)}`
+    }, m.rank) : null, React.createElement("b", {
       className: "nm"
     }, x.rec ? x.rec.nick || msxMonName(x.species) : msxMonName(x.species)), React.createElement("span", {
       className: "tp"
@@ -176054,12 +176379,7 @@ function MsxTeamPick({
       key: k
     }, `${MSX_STAT_ICON[k]}+${Math.round(m.bonus[k] || 0)}%`)) : null), React.createElement("span", {
       className: "lv"
-    }, x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : '')), on ? React.createElement("button", {
-      type: "button",
-      className: "msx-tp-dt",
-      "data-msx-tp-detail": x.key,
-      onClick: () => setLook(x)
-    }, "効果・詳細") : null);
+    }, x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : '')));
   }) : React.createElement("div", {
     className: "msx-tp-none"
   }, tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません')), React.createElement("div", {
@@ -176074,7 +176394,11 @@ function MsxTeamPick({
     disabled: !cand,
     className: cand ? '' : 'off',
     "data-msx-tp-clear": true
-  }, "外す"), React.createElement("button", {
+  }, "外す"), candItem ? React.createElement("button", {
+    type: "button",
+    onClick: () => setLook(candItem),
+    "data-msx-tp-detail": candItem.key
+  }, "効果・詳細") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: () => onDone(cand),
@@ -176450,8 +176774,8 @@ function MsxBaseMons({
     className: "msx-bm",
     onClick: () => setSp(id),
     "data-msx-basemon": id
-  }, React.createElement("img", {
-    src: msxMonThumb(id),
+  }, React.createElement(MsxMonFace, {
+    species: id,
     alt: ""
   }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない")))))), detail);
 }
@@ -176889,7 +177213,7 @@ function MsxBand({
   }, stGain > 0 ? `+${stGain}` : stGain) : null, React.createElement("b", null, s.stress, React.createElement("small", null, "/100")))), React.createElement("div", {
     className: "v-b3",
     "data-msx-band-loy": true
-  }, React.createElement("span", null, "🤝 忠誠 ", React.createElement("b", null, loy), React.createElement("small", null, "/100"), dTag(M.dl, M.tl)), React.createElement("span", null, "⭐ 人気 ", React.createElement("b", null, pop), dTag(M.dp, M.tp))));
+  }, React.createElement("span", null, "🤝 忠誠 ", React.createElement("b", null, loy), React.createElement("small", null, "/100"), dTag(M.dl, M.tl)), React.createElement("span", null, "⭐ 人気 ", React.createElement("b", null, pop), dTag(M.dp, M.tp)), React.createElement("span", null, "方針 ", React.createElement("b", null, MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]))));
 }
 const MSX_YOSU_NAME = {
   sabori: 'サボりグセ',
@@ -177047,9 +177371,7 @@ function MsxStRow({
         left: zp(after),
         width: `calc(${zp(before)} - ${zp(after)})`
       }
-    }), zoomS ? React.createElement("q", {
-      className: "zl"
-    }, React.createElement("span", null, lo), React.createElement("span", null, lo + span)) : null) : React.createElement("u", {
+    })) : React.createElement("u", {
       className: after > 999 ? 'ov' : undefined
     }, React.createElement("i", {
       style: {
@@ -177063,7 +177385,10 @@ function MsxStRow({
       }
     }) : null), aptOn ? null : React.createElement("small", {
       className: "cap"
-    }, "/", cap)), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
+    }, "/", cap), grow && u && zoomS && !aptOn ? React.createElement("q", {
+      className: "zl",
+      "aria-hidden": "true"
+    }, React.createElement("span", null, lo), React.createElement("span", null, lo + span)) : null), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
   }));
 }
 function MsxPf({
@@ -177089,15 +177414,9 @@ function MsxPf({
   const r = m.kind === 'base' ? 'G' : m.rank;
   return React.createElement("span", {
     className: `v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`
-  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-    baseId: m.species,
-    src: msxMonImg(m.species),
-    masuColors: m.colors,
-    alt: "",
-    draggable: false
-  }) : React.createElement("img", {
-    src: msxMonThumb(m.species),
-    alt: ""
+  }, React.createElement(MsxMonFace, {
+    species: m.species,
+    colors: m.colors
   }), React.createElement("i", {
     className: "af"
   }, React.createElement("b", {
@@ -177669,9 +177988,9 @@ function MsxHomeDeco({
   }, React.createElement("span", {
     className: "v-hm-deco-a",
     style: {
-      left: '21%',
+      left: '25%',
       bottom: '12%',
-      height: '32%'
+      height: '30%'
     }
   }, React.createElement("i", {
     className: "gs"
@@ -179222,7 +179541,7 @@ function MsxPlay({
       className: "v-chip ylw"
     }, cardIconNode(b.icon, 14), " ", b.name)) : null), React.createElement("span", {
       className: "v-nm"
-    }, run.nick, React.createElement("small", null, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]))), React.createElement("div", {
+    }, run.nick)), React.createElement("div", {
       className: "v-under"
     }, React.createElement("div", {
       className: "v-party row"
@@ -183991,15 +184310,9 @@ function MsxR3Shugyo({
     const x = Math.round(Number(n) * 10) / 10;
     return Number.isInteger(x) ? String(x) : x.toFixed(1);
   };
-  const shThumb = m => m ? Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-    baseId: m.species,
-    src: msxMonImg(m.species),
-    masuColors: m.colors,
-    alt: "",
-    draggable: false
-  }) : React.createElement("img", {
-    src: msxMonThumb(m.species),
-    alt: ""
+  const shThumb = m => m ? React.createElement(MsxMonFace, {
+    species: m.species,
+    colors: m.colors
   }) : null;
   const HACHI_PCT = Math.round((((SUC.GOOD || {}).shugyoGood || {}).shugyo || 0.2) * 100);
   const mulLine = (mi, sup) => {
@@ -184210,7 +184523,7 @@ function MsxR3Shugyo({
         "aria-expanded": bdOpen
       }, "修行の内訳（行き先の分・編成の分・倍率）", React.createElement("span", {
         className: "q-tgl-t"
-      }, bdOpen ? 'とじる ▴' : 'ひらく ▾')), bdOpen ? React.createElement(React.Fragment, null, bdRows.map(({
+      }, bdOpen ? '閉じる ▴' : '開く ▾')), bdOpen ? React.createElement(React.Fragment, null, bdRows.map(({
         k,
         rp,
         g
@@ -184472,7 +184785,7 @@ function MsxR3Shugyo({
     "aria-expanded": pvOpen
   }, "📈 上がる見込み", isSuper ? '（🔥超修行・2回分）' : '', React.createElement("span", {
     className: "q-tgl-t"
-  }, pvOpen ? '内訳をとじる ▴' : '内訳をひらく ▾')), React.createElement("div", {
+  }, pvOpen ? '内訳を閉じる ▴' : '内訳を開く ▾')), React.createElement("div", {
     className: "q-pv-grid"
   }, pvRows.map(({
     k,
@@ -185896,7 +186209,7 @@ function MsxMmArt({
   size,
   thumb = false
 }) {
-  const src = thumb ? msxMonThumb(m.species) : msxMonImg(m.species);
+  const src = msxMonImg(m.species);
   const dyed = Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function';
   const img = dyed ? React.createElement(DyedMonsterImage, {
     baseId: m.species,
@@ -185916,7 +186229,7 @@ function MsxMmArt({
     style: {
       width: '100%',
       height: '100%',
-      objectFit: thumb ? 'cover' : 'contain'
+      objectFit: 'contain'
     }
   });
   const kira = m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function';
@@ -186009,7 +186322,7 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
-.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
+.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
 function MsxR3Box({
   onClose
@@ -187110,20 +187423,14 @@ function MsxArcPick({
   const top = opp ? React.createElement("div", {
     className: "arc-foe",
     "data-msx-arc-foe": true
-  }, Array.isArray(opp.colors) && opp.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
-    baseId: opp.species,
-    src: msxMonImg(opp.species),
-    masuColors: opp.colors,
-    alt: "",
-    draggable: false,
+  }, React.createElement(MsxMonFace, {
+    species: opp.species,
+    colors: opp.colors,
     style: {
       height: 64,
       width: 64,
       margin: '0 auto'
     }
-  }) : React.createElement("img", {
-    src: msxMonThumb(opp.species),
-    alt: ""
   }), React.createElement("b", null, foe), React.createElement("small", null, opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)), React.createElement("div", {
     className: "why"
   }, "組み合わせ: ", MSX_ARC_PICK_WHY[opp.pick] || '相手')) : null;
@@ -187697,14 +188004,14 @@ const monsucLendClaim = async () => {
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
 const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
 const MSX_MANUAL_CSS = `
-.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:8px;margin-top:6px;color:#fff;font-weight:700}
+.msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:6px 8px;margin-top:4px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
 .msxm-top b{color:#fff}
 .msxm-g{flex:1;height:8px;border-radius:8px;background:#334155;overflow:hidden}.msxm-g i{display:block;height:100%;background:linear-gradient(90deg,#fde047,#facc15)}
-.msxm-sec{margin-top:6px}
-.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:3px}
+.msxm-sec{margin-top:5px}
+.msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:2px}
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
-.msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:5px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.2}
+.msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:4px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.12}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msxm-nm{margin-bottom:1px}
@@ -187715,8 +188022,8 @@ ${MSA_TN_CSS}
 .msxm-btn.far{background:#221d3d;border-style:dashed}
 .msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
-.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
-.msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
+.msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px}
+.msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:5px 12px;font-weight:900}
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
@@ -187818,9 +188125,9 @@ const MSA_DC_CSS = `
 .msa-dc-c.ng small.p{color:#fca5a5}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:56px;padding:3px 6px}
+.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:44px;padding:2px 5px}
 .msa-dc.a .msa-dc-c.none{display:block}
-.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:40px;height:40px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
+.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:34px;height:34px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
 .msa-dc.a .msa-dc-ic.wise{box-shadow:0 0 0 2px #22c55e}
 .msa-dc.a .msa-dc-ic .tg-img{width:100%;height:100%;display:block}
 .msa-dc.a .msa-dc-ic .k{position:absolute;right:0;bottom:0;font-style:normal;font-size:11px;line-height:1;padding:2px 2px 1px 3px;border-radius:6px 0 0 0;background:#1b1733}
@@ -188464,6 +188771,10 @@ const MSA_CSS = `
 .msa-dist span.cur{background:#fde047;color:#422006}
 .msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
 .msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
+/* 実況はステージの上に重ねる(2026-11-18 社長: 大会画面を極力1画面に。縦の行を返して操作に回す)。
+   間合いピル(下端 6px)の上に置き、押せない飾りにする */
+.msa-say.over{position:absolute;left:6px;right:6px;bottom:25px;z-index:9;min-height:0;padding:3px 10px;border-radius:9px;background:#0a0820c9;text-shadow:0 1px 2px #000;pointer-events:none}
+.msa-say.over .msa-call{margin:0;padding:0;background:none;text-shadow:0 1px 3px #000}
 .msa-tools{display:flex;gap:5px;align-items:center}
 .msa-tools button{flex:1;min-height:44px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
@@ -188472,6 +188783,12 @@ const MSA_CSS = `
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-tools button.msa-pause{flex:.55;min-width:44px}
+/* 手動の道具行は1行に集約(2026-11-18 社長: 極力1画面に)。速さは短い札、切替に幅を回す */
+.msa[data-msa-mode=manual] .msa-tools>button{flex:.8}
+.msa[data-msa-mode=manual] .msa-tools button.msa-pause{flex:.55}
+.msa[data-msa-mode=manual] .msa-tools .msa-ctlsw{flex:1.8}
+.msa[data-msa-mode=manual] .msa-tools .msa-bgsw{flex:1.6}
+.msa-tools .msa-ctl,.msa-tools .msa-bgt{white-space:nowrap}
 .msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
 .msa-cardsrow{flex:none}
 .msa-gtag{--msa-tx:-50%;position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
@@ -188650,11 +188967,12 @@ const MSA_CSS = `
 /* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
-.msa-stagebox{flex:1 1 auto;min-height:300px}
+.msa-stagebox{flex:1 1 auto;min-height:300px;position:relative}
 /* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
 .msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
 /* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
-.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,46vh,520px);min-height:300px}
+/* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
+.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -188678,7 +188996,7 @@ const MSA_CSS = `
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
 }
-/* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面すべてへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
+/* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面全てへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
 @media (orientation:portrait){
   .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
   .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
@@ -190567,14 +190885,14 @@ function MonsucArena({
     fill: true,
     wide: true,
     liveGuts: liveGuts
-  })), React.createElement("div", {
-    className: "msa-say",
+  }), React.createElement("div", {
+    className: "msa-say over",
     "data-msa-say": true
   }, call ? React.createElement("div", {
     key: `call-${call.at}`,
     className: `msa-call ${call.k}`,
     "data-msa-call": call.k
-  }, "🎙 ", call.t) : msaSay(e, nm, log))), React.createElement("div", {
+  }, "🎙 ", call.t) : msaSay(e, nm, log)))), React.createElement("div", {
     className: "msa-side",
     "data-msa-side": true
   }, cardsOn ? React.createElement("div", {
@@ -190649,11 +190967,22 @@ function MonsucArena({
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
+    "aria-label": `見せる速さ ${x.label}`,
     onClick: () => {
       msaSe('tap');
       setSpeed(x.id);
     }
-  }, "見せる速さ ", x.label))) : null, manual && !ended ? React.createElement("div", {
+  }, x.label)), React.createElement(MsaCtlToggle, {
+    ctl: ctl,
+    save: false,
+    onChange: v => {
+      msaCtlRunWrite(s && s.id, v);
+      setCtl(v);
+    }
+  }), React.createElement(MsaBgToggle, {
+    bg: bg,
+    onChange: setBg
+  })) : null, manual && auto && !ended ? React.createElement("div", {
     className: "msa-tools",
     "data-msa-tools2": true
   }, React.createElement(MsaCtlToggle, {
@@ -191060,6 +191389,20 @@ const monsucRankTechDetailOf = v => {
   }
   return out.length ? out : null;
 };
+const monsucRankCapDetailOf = v => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const out = {};
+  for (const k of MONSUC_RANK_STAT_KEYS) {
+    const n = monsucRankNum(v[k], NaN);
+    if (!Number.isFinite(n)) return null;
+    out[k] = monsucRankClamp(Math.round(n), 999, 99999);
+  }
+  return out;
+};
+const monsucRankAptDetailOf = v => {
+  if (!Array.isArray(v) || v.length !== 4) return null;
+  return v.every(g => MONSUC_RANK_APT.includes(g)) ? v.slice() : null;
+};
 const monsucRankTailOf = rawId => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
@@ -191182,6 +191525,9 @@ const monsucRankRowOf = ({
     id,
     m: run.mastery && run.mastery[id]
   })));
+  const SUC = monsucRankSuc();
+  const cap_detail = monsucRankCapDetailOf(SUC && typeof SUC.statCapOf === 'function' ? Object.fromEntries(MONSUC_RANK_STAT_KEYS.map(k => [k, SUC.statCapOf(run, k)])) : run.cap && typeof run.cap === 'object' ? Object.fromEntries(MONSUC_RANK_STAT_KEYS.map(k => [k, Math.max(999, monsucRankNum(run.cap[k], 999))])) : null);
+  const apt_detail = monsucRankAptDetailOf(SUC && typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(run) : null);
   return {
     run_id: monsucRankRunId(owner, run.id),
     user_name: String(userName || '').slice(0, 40),
@@ -191192,6 +191538,8 @@ const monsucRankRowOf = ({
     stats,
     techs,
     tech_detail,
+    cap_detail,
+    apt_detail,
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
@@ -191236,7 +191584,7 @@ const monsucRankPost = async (owner, key, row) => {
     if (timer) clearTimeout(timer);
   }
 };
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'cap_detail', 'apt_detail', 'lv', 'loyal', 'pop', 'engine_version'];
 const monsucRankCleanRow = e => {
   const r = {};
   for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k];
@@ -191398,8 +191746,10 @@ const monsucRankFlush = async () => {
     };
   }
 };
-const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail';
+const MONSUC_RANK_COLS = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail,cap_detail,apt_detail';
+const MONSUC_RANK_COLS_V5 = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place,loyal,pop,techs,tech_detail';
 const MONSUC_RANK_COLS_LEGACY = 'run_id,user_name,child_name,species,lineage,dye,stats,tech_count,lv,power,grade,place';
+const MONSUC_RANK_COLS_TRY = [MONSUC_RANK_COLS, MONSUC_RANK_COLS_V5, MONSUC_RANK_COLS_LEGACY];
 const monsucRankGet = async (path, withCount) => {
   try {
     const headers = withCount ? {
@@ -191443,8 +191793,11 @@ const monsucRankReadTop = async ({
     where,
     limit
   } = monsucRankViewOf(lineage);
-  let top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
-  if (!top) top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+  let top = null;
+  for (const cols of MONSUC_RANK_COLS_TRY) {
+    top = await monsucRankGet(`${view}?select=${cols}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
+    if (top) break;
+  }
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   return {
@@ -191463,8 +191816,11 @@ const monsucRankReadMine = async ({
     view,
     where
   } = monsucRankViewOf(lineage);
-  let m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
-  if (!m) m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS_LEGACY}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  let m = null;
+  for (const cols of MONSUC_RANK_COLS_TRY) {
+    m = await monsucRankGet(`${view}?select=${cols}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+    if (m) break;
+  }
   return m && m.rows[0] ? m.rows[0] : null;
 };
 const monsucRankRead = async ({
@@ -191504,7 +191860,15 @@ function MonsucRankMonImg({
       height: size
     },
     className: "shrink-0 flex items-center justify-center"
-  }, React.createElement(DyedMonsterImage, {
+  }, typeof MonsterFaceImage === 'function' ? React.createElement(MonsterFaceImage, {
+    baseId: mon.id,
+    src: mon.imgUrl,
+    faceSrc: mon.faceIconUrl || mon.iconUrl,
+    alt: mon.name || '',
+    masuColors: monsucRankDyeOf(dye),
+    className: "w-full h-full object-contain",
+    draggable: false
+  }) : React.createElement(DyedMonsterImage, {
     baseId: mon.id,
     src: mon.iconUrl || mon.imgUrl,
     alt: mon.name || '',
@@ -191601,6 +191965,8 @@ function MonsucRankDetail({
       const detail = monsucRankTechDetailOf(row.tech_detail);
       const known = detail ? detail.map(d => d.id) : null;
       const mastery = detail ? Object.fromEntries(detail.map(d => [d.id, d.m])) : null;
+      const capDetail = monsucRankCapDetailOf(row.cap_detail);
+      const aptDetail = monsucRankAptDetailOf(row.apt_detail);
       let grades = null;
       let peak = '';
       let type = null;
@@ -191608,7 +191974,7 @@ function MonsucRankDetail({
         id: 'peek',
         species: row.species
       }) : null;
-      if (peek && typeof SUC.aptGradesOf === 'function') grades = SUC.aptGradesOf(peek);
+      if (aptDetail) grades = aptDetail;else if (peek && typeof SUC.aptGradesOf === 'function') grades = SUC.aptGradesOf(peek);
       if (peek && typeof SUC.peakInfo === 'function' && typeof SUC.periodOf === 'function') {
         const pk = SUC.peakInfo(peek);
         if (pk && Number.isInteger(pk.from) && Number.isInteger(pk.to)) {
@@ -191624,6 +191990,8 @@ function MonsucRankDetail({
         if (Array.isArray(row.techs) && row.techs.length) info.push(['技の内訳(ランク・適性)', row.techs.slice(0, 99).map(t => t && typeof t === 'object' ? `ランク${monsucRankClamp(Math.round(monsucRankNum(t.r, 1)), 1, 5)}(${MONSUC_RANK_APT.includes(t.a) ? t.a : 'C'})` : `熟練${monsucRankClamp(Math.round(monsucRankNum(t)), 0, 100)}`).join('・')]);
         info.push(['技の名前と熟練', 'この登録には技の名前が保存されていないため、出せません(新しい登録から出ます)']);
       }
+      if (!capDetail) info.push(['能力の上限', 'この登録には上限が保存されていないため、目安の上限で出しています(新しい登録から実際の上限が出ます)']);
+      if (!aptDetail) info.push(['間合い適性', 'この登録には適性が保存されていないため、種類の素の適性を出しています(新しい登録から実際の適性が出ます)']);
       const art = mon.id ? React.createElement(DyedMonsterImage, {
         baseId: mon.id,
         src: mon.iconUrl || mon.imgUrl,
@@ -191654,6 +192022,7 @@ function MonsucRankDetail({
         name: row.child_name || mon.name || '？？？',
         art: art,
         st: row.stats || {},
+        cap: capDetail,
         apt: apt,
         type: type,
         peak: peak,
@@ -192127,7 +192496,15 @@ function MlabCard({
     className: "absolute right-1 top-0.5 text-[11px] font-black text-pink-300"
   }, mon.rank || '') : React.createElement("span", {
     className: "absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white"
-  }, "ベース"), React.createElement("img", {
+  }, "ベース"), typeof MonsterFaceImage === 'function' && m ? React.createElement(MonsterFaceImage, {
+    baseId: sp,
+    src: m.imgUrl,
+    faceSrc: mlabThumb(sp),
+    masuColors: mon && Array.isArray(mon.colors) ? mon.colors : null,
+    alt: "",
+    draggable: false,
+    className: "mx-auto h-16 w-full object-contain"
+  }) : React.createElement("img", {
     src: mlabThumb(sp),
     alt: "",
     className: "mx-auto h-16 w-full object-contain",
