@@ -140,7 +140,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
           <div className="tr"><i style={{ width: `${s.stress}%`, ...(grow(stFrom, s.stress) || {}) }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
           {stAdd ? <em className="pl">+{stAdd}</em> : stGain ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
-      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span></div>
+      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span></div>
     </div>
   );
 }
@@ -192,6 +192,9 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
   // 伸びる間だけ札を拡大し、上がる前の値の近くから拡大した目盛りで伸ばす(2026-11-13 社長 A 案)。約2.6秒で 0〜999 の目盛りへ戻す
   // 2026-11-14 社長「ステータスの上がるゲージの変動がへん」: 2.6秒で 0〜999 の目盛りへ戻すと、棒が一気に縮んで下がったように見えた。
   // 拡大した目盛り(両はしの数字つき)は結果のあいだずっと使い、2.6秒で戻すのは札の持ち上がりだけにする
+  // 2026-11-18 社長「5桁・6桁の数字は何？」: 目盛りの両はしの数字をゲージ(幅 約17px)の下に出すと、2つの数字がくっついて
+  //   「80140」のような1つの大きな数に読めた。当初は離して出す直しを入れたが、社長「その数値っているの？」→「外す」で確定し、
+  //   目盛りの両はしの数字そのものを出さない形にした(拡大した目盛りで棒を描く動きはそのまま)
   const zoomA = grow && !calm && !zout; // 札が持ち上がっている
   const zoomS = grow && !calm;          // 棒は拡大した目盛りで描く
   // 素質の表示(who = 育成の状態。種と id があるときだけ押せる)
@@ -218,7 +221,7 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
         const cap = who && who.cap && Number.isFinite(who.cap[k]) ? Math.max(999, who.cap[k]) : 999; // 能力の上限(育成開始時に決まる s.cap。無い古い育成・ほかの画面の子は 999)
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
           <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><span className="vl">{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(after)} data-msx-stat-rank={k}>{msxStatRankOf(after)}</i> : null}<b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b></span>
-          <span className="br">{aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
+          <span className="br">{aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}</u>
             : <u className={after > 999 ? 'ov' : undefined}><i style={{ width: pct(after) }}/>{after > 999 ? <b className="ov" data-msx-stat-over={after - 999} style={{ width: pct(after - 999) }}/> : null}</u>}{aptOn ? null : <small className="cap">/{cap}</small>}</span>
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
@@ -229,7 +232,7 @@ function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const tag = bond >= tagAt;
   if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
   const r = m.kind === 'base' ? 'G' : m.rank;
-  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>}<i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
+  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><MsxMonFace species={m.species} colors={m.colors}/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
 }
 // 育てるモンスターの絵。live のときは演出の部品 MsxLiveMon(#5752・待機のぴょこぴょこ・気分・反応)を箱いっぱいに置く。
 //   部品が無いときは絵だけ(live なら CSS で小さく弾む .msx-hop)。箱の大きさは className / style で決まる
@@ -429,6 +432,9 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
 // 育成中でないときの広場のにぎやかし(2026-11-18 あっくん「育ててるモンスターがいないとき画面が寂しい」)。
 //   マスモンボックスのモンスター(育てたものを優先に最大2体。1体もいなければ看板モンのモッチーとスエゾー)と、助手のみゅあを広場に出す。
 //   飾りだけの部品: 押せない(pointer-events:none)・保存や進行には一切触らない。育成中の表示(.mon)とは出す条件が重ならない
+//   みゅあの置き場(2026-11-18 実機で左端が切れた直し): 絵は 296×336(幅は高さの 0.88 倍)。場面 370×547(390×844)で
+//   高さ 32%・中心 21% だと絵の左端が場面の外に出て、呼吸の動き(scale 1.025)でさらに切れる。高さ 30%・中心 25% で
+//   左端に場面幅の約 5% の余白が残り、全身が入る(実測: 左端 20px・右端はモンの1体目と今までどおり少し重なる)
 function MsxHomeDeco({ data }) {
   const box = (data && data.box && Array.isArray(data.box.mons) ? data.box.mons : []).filter((m) => m && m.species && msxMon(m.species));
   const own = [...box.filter((m) => m.raised), ...box.filter((m) => !m.raised)].slice(0, 2);
@@ -439,7 +445,7 @@ function MsxHomeDeco({ data }) {
   ];
   return (
     <div className="v-hm-deco" aria-hidden="true">
-      <span className="v-hm-deco-a" style={{ left: '21%', bottom: '12%', height: '32%' }}><i className="gs"/><img src={msxBody('mua', 'happy')} alt="" draggable={false}/></span>
+      <span className="v-hm-deco-a" style={{ left: '25%', bottom: '12%', height: '30%' }}><i className="gs"/><img src={msxBody('mua', 'happy')} alt="" draggable={false}/></span>
       {mons.map((m, i) => (
         <span key={`${m.sp}-${i}`} className="v-hm-deco-m" style={{ ...spots[i], animationDelay: `${i * 0.7}s` }}><i className="gs"/>{m.colors && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <DyedMonsterImage baseId={m.sp} src={msxMonImg(m.sp)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
@@ -887,7 +893,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
-        <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
+        <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
