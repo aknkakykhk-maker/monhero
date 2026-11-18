@@ -165,6 +165,10 @@ const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
 // モノリスの専用アイコンは全身絵そのもの(全体を縮小した絵)なので、範囲は全体 [0, 0, 1, 1] とした。
 // ミタラシ・ウンディーネ・ヤオビクニ・スプーキー・ドリーミィの専用アイコンは全身絵と描き方が
 // 少し違う別イラストのため完全には一致しない。顔の大きさと中心位置を優先して寄せてある
+// 2026-11-18 ドリーミィ再修正: 実機で「顔アイコンがずれてる」と再報告。実測すると従来範囲は
+// 顔中心が専用アイコン比で右に+0.135・上に-0.136ずれ、帽子の右端が範囲外(1.102)にはみ出して
+// 切れていた。目・口・頭・帽子の位置を実測して最小二乗で寄せ直し、顔中心と帽子の収まりを優先した。
+// 縦位置は全身絵で耳が最上部にあるため専用アイコン(顔が下寄り)とは完全には一致させられない
 const MONSTER_FACE_CROP = {
   Mocchi: [0.244, 0.002, 0.739, 0.497],
   Suezo: [0.2, 0.164, 0.802, 0.766],
@@ -193,7 +197,7 @@ const MONSTER_FACE_CROP = {
   Ghost: [0.005, 0, 0.995, 0.665],
   Spooky: [0.06, 0, 0.815, 0.635],
   Illumine: [0.221, 0.006, 0.758, 0.47],
-  Dreamy: [0.087, 0, 0.707, 0.433],
+  Dreamy: [0.138, 0, 0.809, 0.469],
   Kyubi: [0.334, 0.061, 0.726, 0.398],
   Orihime: [0.364, 0.058, 0.75, 0.392],
 };
@@ -2028,17 +2032,19 @@ const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, 
 };
 // only: その部位だけを出す(染色の画面の部位タブ) / big: 色のボタンを大きくする(高さ48px・色の名前10px)。
 // どちらも省けば今までどおり(図鑑の「染めてみる」は全部位を並べる)
-const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = null, big = false, names = null }) => {
+const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = null, big = false, names = null, tone = 'pink' }) => {
   const regionCount = dyeRegionCount(baseId);
   const regionLabels = DYE_REGION_LABELS;
+  // 選択中のふちの色。モンサクでは「選択中=黄色ふち」の約束にそろえるため tone='yellow' を渡す(周回点検 第2回 低-7)
+  const selCls = tone === 'yellow' ? 'border-yellow-300 ring-2 ring-yellow-300' : 'border-fuchsia-400 ring-2 ring-fuchsia-400';
   return <div className="space-y-2">{Array.from({length:regionCount},(_,i)=>i).filter(i=>only==null||i===only).map((idx)=>(
     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
       <div className={names?'text-[12px] text-fuchsia-200 font-black mb-1':'text-[8px] text-fuchsia-300 font-black uppercase mb-1'}>{names&&names[idx]?`${regionLabels[idx]||idx+1} ${names[idx]}`:regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
       <div className={big?'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5':'grid grid-cols-6 gap-0.5'}>
-        <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
+        <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?selCls:'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
         {/* 色を選び直しても濃さは引き継ぐ(色だけ変えたいときに毎回つまみを直さなくてよいように) */}
-        {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,withColorAlpha(colorId,colorAlphaOf(colors[idx])))} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
-        <button onClick={()=>onCustom(idx)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(colors[idx])?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(colors[idx])?getColorSwatchHex(colors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/><span className="text-[5.5px] font-black">カスタム</span></button>
+        {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,withColorAlpha(colorId,colorAlphaOf(colors[idx])))} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base===colorId?selCls:'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
+        <button onClick={()=>onCustom(idx)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(colors[idx])?selCls:'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(colors[idx])?getColorSwatchHex(colors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/><span className="text-[5.5px] font-black">カスタム</span></button>
       </div>
       {/* 濃さ(透過率)。色を選んでいる部位にだけ出す。「元の色」には濃さの意味が無いため */}
       {colors[idx]&&<div className="mt-1.5 flex items-center gap-2">
@@ -2049,14 +2055,16 @@ const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = nul
         <span className="text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0">{colorAlphaOf(colors[idx])}%</span>
       </div>}
       {/* 濃さも1ずつ動かせる(2026-10-27 社長。表の「濃さ100%」などにぴったり合わせるため)。押しっぱなしで続けて動く */}
-      {colors[idx]&&<div data-dye-alpha-steppers className="mt-1 flex items-center justify-end gap-1.5">
+      {/* 並びはカスタム色の「−」「+」と同じ全幅(左に「−」・中央に数字・右に「+」)。右寄せ(justify-end)にすると左が大きく空く。
+          字の中央寄せは flex で明示する(.msx のボタン初期化 text-align:inherit に負けて「−」「+」が左端へ寄るため) */}
+      {colors[idx]&&<div data-dye-alpha-steppers className="mt-1 flex items-center gap-1.5">
         <RepeatStepButton data-dye-alpha-step="down" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1下げる`} disabled={colorAlphaOf(colors[idx])<=MASU_COLOR_ALPHA_MIN}
           onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])-1))}
-          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
-        <span className="w-14 text-center text-[11px] font-black text-white tabular-nums">濃さ{colorAlphaOf(colors[idx])}%</span>
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30">−</RepeatStepButton>
+        <span className="min-w-0 flex-1 text-center text-[11px] font-black text-white tabular-nums">濃さ{colorAlphaOf(colors[idx])}%</span>
         <RepeatStepButton data-dye-alpha-step="up" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1上げる`} disabled={colorAlphaOf(colors[idx])>=MASU_COLOR_ALPHA_MAX}
           onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])+1))}
-          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30">+</RepeatStepButton>
       </div>}
     </div>
   ))}</div>;

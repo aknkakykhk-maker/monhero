@@ -1485,7 +1485,19 @@ const msaBandsOf = (log, frames, k) => {
 // カメラ(参考動画: 攻め手に寄る → 当たる瞬間に受け手へ振る)。場の中身(.msa-cam)を寄せる。動きを減らす設定では動かさない
 //   x … 立ち位置(場の幅に対する割合) / s … 寄せる倍率。寄せた子が少しまん中へ来るように横へずらす
 // 横へのずらしは、寄せた分(はみ出した背景)の中に収める(場の端の外が見えない・背景を大きくしなくてよい)
-const msaCamAt = (x, s, w) => { const lim = Math.max(0, (s - 1) * w * 0.5 - 2); const t = Math.max(-lim, Math.min(lim, (0.5 - x) * w * s * 0.55)); return `translate(${Math.round(t)}px,0px) scale(${s})`; };
+//   ext … { l, r } 寄せ先の中心から、2体の両端(絵の半分+安全域)までの距離(px・倍率を掛ける前)。
+//   寄せた先で2体とも場に収まるよう、背景の被覆(lim)の範囲でずらしを足す(2026-11-18 あっくん「アップすぎて技ではみだす」)
+const msaCamAt = (x, s, w, ext) => {
+  const lim = Math.max(0, (s - 1) * w * 0.5 - 2);
+  let t = Math.max(-lim, Math.min(lim, (0.5 - x) * w * s * 0.55));
+  if (ext && w > 0) {
+    const c = 0.5 + (x - 0.5) * s + t / w; // 寄せ先の中心(画面上の割合)
+    const lo = ext.l * s / w; const hi = 1 - ext.r * s / w;
+    if (c < lo) t += Math.min((lo - c) * w, lim - t);
+    else if (c > hi) t -= Math.min((c - hi) * w, t + lim);
+  }
+  return `translate(${Math.round(t)}px,0px) scale(${s})`;
+};
 const msaCamFrames = (pts, total) => {
   // pts … [[ms, transform]]。はじめと終わりは寄せない。時刻は詰まりすぎないように前から順にそろえる
   const out = [{ offset: 0, transform: 'none' }]; let last = 0;
@@ -1607,22 +1619,33 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1, motionKindOf) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
     const sx = (sd) => scrX(sd === 'A' ? xA : xB);
+    // 画角の上限(2026-11-18 あっくん「アップすぎて技ではみだす」): 寄せる倍率は「2体とも(絵の半分+安全域)が場に収まる」所まで。
+    //   大きな場では頭が場の上端で切れない所まで(寄せの中心は場の高さの78%)。間合いが広い・絵が大きいほど寄せは小さくなる
+    const fwPx2 = wide ? bigFw : fill ? 140 : 96;
+    const hwPx = fwPx2 / 2 + MSA_SAFE;
+    const spanPx = Math.abs(sx('B') - sx('A')) * w + hwPx * 2;
+    let sCap = spanPx > 0 ? w / spanPx : 1;
+    if (wide && stageH > 0) { const topF = 0.64 - bigFh / stageH; if (topF < 0.7) sCap = Math.min(sCap, 0.78 / Math.max(0.2, 0.78 - topF)); }
+    sCap = Math.max(0.85, Math.min(1.6, sCap));
+    const cap = (v) => Math.min(v, sCap);
+    const extAt = (x) => ({ l: (x - Math.min(sx('A'), sx('B'))) * w + hwPx, r: (Math.max(sx('A'), sx('B')) - x) * w + hwPx });
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined; // 速くしていて間に合わないときは寄せない
-      const s1 = fx.big ? 1.34 : 1.2; const ax = sx(e1.side); const dx = sx(e1.side === 'A' ? 'B' : 'A');
-      const sw = fx.big ? 1.5 : 1.36; // 構えの一拍は攻め手にぐっと寄る
+      const s1 = cap(fx.big ? 1.34 : 1.2); const ax = sx(e1.side); const dx = sx(e1.side === 'A' ? 'B' : 'A');
+      const sw = cap(fx.big ? 1.5 : 1.36); // 構えの一拍は攻め手にぐっと寄る
+      const mid = ax * 0.55 + dx * 0.45;
       kf = msaCamFrames([
-        ...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []),
-        [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)],
-        [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)],
-        [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)],
-        [total - 280, msaCamAt(dx, s1 - 0.04, w)],
+        ...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w, extAt(ax))], [fx.pre, msaCamAt(ax, sw, w, extAt(ax))]] : []),
+        [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w, extAt(ax))],
+        [hitMs - 60, msaCamAt(mid, s1, w, extAt(mid))],
+        [hitMs + 110, msaCamAt(dx, e1.hit ? cap(s1 + 0.08) : s1, w, extAt(dx))],
+        [total - 280, msaCamAt(dx, s1 - 0.04, w, extAt(dx))],
       ], total);
     } else if (e1.ev === 'ko' && e1.side) {
-      kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
+      kf = msaCamFrames([[260, msaCamAt(sx(e1.side), cap(1.28), w, extAt(sx(e1.side)))], [total - 320, msaCamAt(sx(e1.side), cap(1.3), w, extAt(sx(e1.side)))]], total);
     } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap' || e1.ev === 'blow') && e1.side) { // 歩く行は寄せない(場の横送りが位置について行く)
-      kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
+      kf = msaCamFrames([[220, msaCamAt(sx(e1.side), cap(1.1), w, extAt(sx(e1.side)))], [total - 260, msaCamAt(sx(e1.side), cap(1.1), w, extAt(sx(e1.side)))]], total);
     }
     if (!kf) return undefined;
     let a = null; try { a = el.animate(kf, { duration: total, fill: 'none' }); } catch (_) { a = null; }
@@ -1703,7 +1726,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       {e.ev !== 'tech' && <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>}
       {e.ev === 'tech' && fx.cut > 0 && <MsaCutin key={`ci-${pos}`} e={e} rank={fx.rank} member={memberOf(e.side, e.i)} ms={fx.cut}/>}
       {e.ev === 'tech' && <div key={`c-${pos}`} className={`msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`} data-msa-cut={p == null ? '' : p} data-msa-rank={fx.rank || 1} style={fx.cut ? { animationDelay: `${fx.cut}ms` } : undefined}>
-        <div><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}{p != null ? `・命中 ${p}%` : ''}{e.tech.guts ? `・ガッツ −${e.tech.guts}` : ''}</small>
+        <div><small>{e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}{p != null ? `・命中 ${p}%` : ''}{e.tech.guts ? `・ガッツ −${e.tech.guts}` : ''}</small>
           <b>{big && e.side === 'B' ? <span className="msa-bigtag">大技</span> : null}{e.name}{big && e.side !== 'B' ? <span className="msa-bigtag">大技</span> : null}</b></div></div>}
       {e.ev === 'tech' && e.hit && !reduce && rkFx.flash > 0 && <MsaRankFlash key={`rf-${pos}`} kind={e.kind} a={rkFx.flash} delay={hitMs}/>}
       {e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && <i key={`fl-${pos}`} className={`msa-flash ${e.crit ? 'big' : 'fin'}`} aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}

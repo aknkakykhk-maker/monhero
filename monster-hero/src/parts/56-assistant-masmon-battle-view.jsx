@@ -244,7 +244,7 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
         const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d), ok = g >= mv.guts;
         const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
         const hp = ambwHitPct(catalog, teams, side, frame, mv.id);
-        return <span key={mv.id} className={`ambw-chip ${cls}`}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={mv.kind === 'pow' ? '💪' : '🧠'}/> : <>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}</>}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
+        return <span key={mv.id} className={`ambw-chip ${cls}`}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={mv.kind === 'pow' ? '🏋️' : '📖'}/> : <>{mv.kind === 'pow' ? '🏋️' : '📖'}{mv.name}</>}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
       })}</div>}
     </div>
   );
@@ -431,7 +431,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       );
     };
     const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
-    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
+    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => x.ev === 'ko' ? { k, side: x.side } : null).filter(Boolean);
     const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
     const tech = (side) => log.filter(x => x.ev === 'tech' && x.side === side);

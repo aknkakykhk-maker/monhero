@@ -25,7 +25,7 @@
 
 const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const MSC_STAT_JP = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
-const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
+const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '🏋️', wise: '📖', hit: '🎯', eva: '👣', tough: '🛡️' });
 const MSC_STARS = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1))));
 // ---- 試合の読み取り(Fable の点検①-7・2026-11-14 窓口の案) ----
 //   予想は、実際の試合の式(芯 simulate)を種だけ変えて数十回まわした勝ち数から出す(能力の合計の比では、比べと試合がつながらなかった)
@@ -257,13 +257,14 @@ const MSC_CSS = `
 .msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
 .msc-sheet.grow{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
-.msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
+.msc-st{display:grid;grid-template-columns:47px 1fr 60px 1fr 47px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
 .msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
 .msc-bar{height:9px;border-radius:5px;background:#1e1b3a;overflow:hidden;position:relative}
 .msc-bar i{position:absolute;top:0;bottom:0;border-radius:5px;transform:scaleX(0);animation:msc-grow .8s ease-out forwards}
-.msc-bar.l i{right:0;background:linear-gradient(90deg,#f472b6,#fb923c);transform-origin:right}
-.msc-bar.r i{left:0;background:linear-gradient(90deg,#60a5fa,#3b82f6);transform-origin:left}
+.msc-bar.l i{right:0;background:var(--bc,linear-gradient(90deg,#f472b6,#fb923c));transform-origin:right}
+.msc-bar.r i{left:0;background:var(--bc,linear-gradient(90deg,#60a5fa,#3b82f6));transform-origin:left}
+.msc-st b .msx-srk{font-size:10px;margin:0 2px}
 .msx .msc-st b.up{position:static;font-size:inherit;text-shadow:none;white-space:nowrap;color:#fde047}
 .msx .msc-btn{border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;min-height:44px;text-align:center}
 .msx .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -528,7 +529,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         : ahead.length
           ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
           : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
-  const aptRow = (sp, me) => <div className="msc-apt">{aptOf(sp, me).map((g, d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(g) ? 'S' : g}>{AMBW_DIST[d]}</span>)}</div>;
+  // 間合い適性のピルは、相手側を逆順(遠→零)にして左右で向き合う鏡像にする(回3の対戦前カード v-dist と同じ作法・周回点検 第2回 中-1)
+  const aptRow = (sp, me) => { const gs = aptOf(sp, me); const order = me ? [0, 1, 2, 3] : [3, 2, 1, 0]; return <div className="msc-apt">{order.map((d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(gs[d]) ? 'S' : gs[d]}>{AMBW_DIST[d]}</span>)}</div>; };
   return (
     <div className="msc-wrap" data-msc-card>
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
@@ -553,11 +555,11 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
             const a = mscNum(me[k]); const b = mscNum(op[k]);
             return (
               <div key={k} className="msc-st" data-msc-stat={k}>
-                <b className={a >= b ? 'up' : ''}>{a}</b>
-                <div className="msc-bar l"><i style={{ width: `${Math.round(a / mx * 100)}%`, animationDelay: `${j * 0.07}s` }}/></div>
+                <b className={a >= b ? 'up' : ''}>{a}{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(a)}>{msxStatRankOf(a)}</i> : null}</b>
+                <div className="msc-bar l"><i style={{ width: `${Math.round(a / mx * 100)}%`, animationDelay: `${j * 0.07}s`, '--bc': typeof MSX_STAT_COLOR !== 'undefined' ? MSX_STAT_COLOR[k] : undefined }}/></div>
                 <span className="lab">{MSC_STAT_ICON[k]} {MSC_STAT_JP[k]}</span>
-                <div className="msc-bar r"><i style={{ width: `${Math.round(b / mx * 100)}%`, animationDelay: `${j * 0.07}s` }}/></div>
-                <b className={b > a ? 'up' : ''}>{b}</b>
+                <div className="msc-bar r"><i style={{ width: `${Math.round(b / mx * 100)}%`, animationDelay: `${j * 0.07}s`, '--bc': typeof MSX_STAT_COLOR !== 'undefined' ? MSX_STAT_COLOR[k] : undefined }}/></div>
+                <b className={b > a ? 'up' : ''}>{typeof msxStatRankOf === 'function' ? <i className={msxStatRankCls(b)}>{msxStatRankOf(b)}</i> : null}{b}</b>
               </div>);
           })}
           <div className="msc-st"><b>{mscNum(s.pop)}</b><div className="msc-bar l"><i style={{ width: `${mscNum(s.pop)}%`, animationDelay: '.45s' }}/></div><span className="lab">⭐ 人気</span>{Number.isFinite(o.pop) ? <><div className="msc-bar r"><i style={{ width: `${o.pop}%`, animationDelay: '.45s' }}/></div><b className={o.pop > mscNum(s.pop) ? 'up' : ''}>{o.pop}</b></> : <><div/><b/></>}</div>
@@ -565,8 +567,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
           <div className="msc-aptrow">{aptRow(s.species, true)}<span className="lab">間合いの適性</span>{aptRow(o.species)}</div>
         </>}
         {tab === 'tech' && <div className="msc-tl">
-          <div>{myTechs.length ? myTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
-          <div>{foeTechs.length ? foeTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '💪' : '🧠'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
+          <div>{myTechs.length ? myTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '🏋️' : '📖'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
+          <div>{foeTechs.length ? foeTechs.map(t => <span key={t.id}>{t.kind === 'pow' ? '🏋️' : '📖'}{t.name}<small>{(t.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>) : <span>—</span>}</div>
         </div>}
         {tab === 'abl' && <div className="msc-tl">
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>

@@ -94,7 +94,7 @@ function MsxBetaMark() { return <span className="msx-beta-mk" data-msx-beta-mark
 
 const MSX_BETA_CSS = `
 .msx .msx-beta-mk{display:inline-block;margin-left:5px;padding:0 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;font-weight:900;line-height:17px;vertical-align:2px;letter-spacing:0}
-.msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px}
+.msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px;background:#0b092073}
 .msx .msx-beta-card{width:100%;max-width:420px;background:#1e1b3a;border:2px solid #f9a8d4;border-radius:14px;padding:10px 12px 8px;box-shadow:0 6px 24px #0008;cursor:pointer}
 .msx .msx-beta-tag{display:inline-block;font-size:10px;font-weight:900;color:#1e1b3a;background:#f9a8d4;border-radius:5px;padding:1px 7px;margin-bottom:6px}
 .msx .msx-beta-say{display:flex;gap:8px;align-items:flex-start}

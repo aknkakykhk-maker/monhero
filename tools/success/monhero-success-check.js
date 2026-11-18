@@ -454,6 +454,15 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const j = { ...s0, turn: 6, stats: { ...s0.stats, pow: 200 } };
   const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
   ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
+  // 金の大会(2026-11-18 社長: 資料で金の2杯を金の大会へ格上げ)。ジュニア3月=ミス・マーメイド杯 3,500G・5月=ノーブル杯 5,000G。星と大会の id はその期のまま・同じ月の銅は銀の半分のまま
+  const jm3 = SUC.cupsOf({ ...s0, turn: 8 }); const gold1 = jm3.find(c => c.name === 'ミス・マーメイド杯');
+  ok(gold1 && gold1.grade === 'gold' && gold1.prize === 3500 && gold1.star === 1 && gold1.id === 'junior:3:aim:1', `ミス・マーメイド杯が金の大会(3,500G・★はそのまま)になっていない: ${JSON.stringify(gold1)}`);
+  ok(jm3.filter(c => !c.ex)[1].prize === 1250, `金の大会の月の銅の賞金が変わっている: ${JSON.stringify(jm3.map(c => [c.name, c.prize]))}`);
+  const gold2 = SUC.cupsOf({ ...s0, turn: 10 }).find(c => c.name === 'ノーブル杯');
+  ok(gold2 && gold2.grade === 'gold' && gold2.prize === 5000 && gold2.star === 1, `ノーブル杯が金の大会(5,000G)になっていない: ${JSON.stringify(gold2)}`);
+  const pm3 = SUC.cupsOf({ ...s0, turn: 32 }).find(c => c.name === 'ミス・マーメイド杯'); const pm5 = SUC.cupsOf({ ...s0, turn: 34 }).find(c => c.name === 'ノーブル杯');
+  ok(pm3 && pm3.prize === 5250 && pm5 && pm5.prize === 7500, `プロ期の金の大会の賞金(ジュニア基準 × 期の倍率 1.5)がずれている: ${pm3 && pm3.prize}/${pm5 && pm5.prize}`);
+  ok(!SUC.cupsOf({ ...s0, turn: 20 }).some(c => c.grade === 'gold' && !c.ex), 'ミドル期のふだんの大会まで金の格が付いている');
   const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
   // ミドル1月は、月の並び2つ(銀・銅) + 第2版(間合いトーナメント4つ)。四大大会の1つ目(グレイテスト4)はミドル3月
   const cmRow = cm.filter(c => !c.ex);
@@ -784,7 +793,7 @@ if (SUC.ITEMS.awakeFruit && SUC.ITEMS.superAwakeFruit) {
   }));
   ok(n > 300 && half > 50, `賞金の突き合わせの数が少ない(${n}件・2つ目 ${half}件)`);
   const asa = SUC.cupsOf({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9 }).find((c) => c.name === 'あさがお杯');
-  if (asa) { const w = SUC.settle({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9, battle: { kind: 'cup', id: asa.id, sys: asa.sys, star: asa.star, round: 0 } }, [true]).out; ok(w.prize === 650 && w.beat === 10, `あさがお杯: 勝つと ${w.prize}G・ビートP ${w.beat}(650G・10 のはず)`); }
+  if (asa) { const w = SUC.settle({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9, battle: { kind: 'cup', id: asa.id, sys: asa.sys, star: asa.star, round: 0 } }, [true]).out; ok(w.prize === 1250 && w.beat === 30, `あさがお杯: 勝つと ${w.prize}G・ビートP ${w.beat}(1250G・30 のはず)`); }
 }
 function num0(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
 
