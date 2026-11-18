@@ -108,7 +108,7 @@
   const T = (s) => `いっしょにトレーニングすると、${s}`;
 
   // ---- トレーニング(いっしょ型) ----
-  add({ id: 'sokoji', icon: '🔥', name: 'トレ効果アップ', type: 'with', scene: 'train', unit: 1, max: 25, u: '%', v2: [5, 10, 15, 20, 25], text: T('伸びが{v}%上がる') });
+  add({ id: 'sokoji', icon: '🔥', name: 'トレ効果アップ', type: 'with', scene: 'train', unit: 1, max: 10, u: '%', v2: [5, 10, 15, 20, 25], text: T('伸びが{v}%上がる') });
   add({ id: 'kizuna', icon: '💞', name: '忠誠度効果アップ', type: 'with', scene: 'train', unit: 1, max: 20, u: '%', v2: [4, 8, 12, 16, 20], text: T('忠誠度が高いほど伸びが上がる(忠誠100で +{v}%)') });
   add({ id: 'hirameki', icon: '✨', name: '大成功率アップ', type: 'with', scene: 'train', unit: 1, max: 10, u: '点', v2: [2, 4, 6, 8, 10], text: T('大成功しやすくなる(+{v}点)') });
   add({ id: 'ochitsuki', icon: '🧘', name: '失敗率ダウン', type: 'with', scene: 'train', unit: 5, max: 10, u: '%', v2: [10, 20, 30, 40, 50], text: T('失敗しにくくなる(失敗の率 −{v}%)') });
