@@ -279,6 +279,9 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 育てた人が長いときだけ折り返す(名札はひとかたまりで割らない) */
+.msc-tl span.msc-brd-wrap{white-space:normal;overflow:visible}
+.msc-tl span .msc-lbl{font-style:normal;white-space:nowrap}
 /* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
@@ -492,6 +495,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
+  // 育てた人: 名札込みで長いと能力タブの右列が画面外へはみ出す(13文字の名前で実測)。「育てた人 ［プレイヤー］きき」までは1行に収まるので、それを超えたら折り返す
+  const brdLabel = o.breeder ? msxBreederLabel(o.breeder, o.rivalKind) : '';
+  const brdLong = brdLabel.length > 9;
   // 勝っている能力の上位2つと、いちばん得意な間合い(コーチの一言)
   const ahead = MSC_STAT_KEYS.map(k => ({ k, d: mscNum(me[k]) - mscNum(op[k]) })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
   const apt = aptOf(s.species, true); const rankOf = (g) => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
@@ -564,7 +570,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         </div>}
         {tab === 'abl' && <div className="msc-tl">
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
-          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${msxBreederLabel(o.breeder, o.rivalKind)}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
+          <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span className={brdLong ? 'msc-brd-wrap' : ''}>{o.breeder ? (brdLong ? <>育てた人 <em className="msc-lbl">{msxBreederLabel('', o.rivalKind)}</em>{o.breeder}</> : `育てた人 ${brdLabel}`) : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
