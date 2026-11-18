@@ -296,7 +296,6 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'item.juice.dra1', who:'dra', e:'happy', t:'野菜ジュースで全快だな。おでの膝にも効けばいいのに' },
   { id:'item.akuyosan.dra1', who:'dra', e:'normal', t:'苦いけど効くやつだ。これでスッキリするだろ' },
   { id:'item.license.dra1', who:'dra', e:'happy', t:'ライセンスか。{mon}、ちゃんと信じてついてきてるよ' },
-  { id:'item.oily.dra1', who:'dra', e:'normal', t:'オイリーパックか。中身は大事に使おう' },
 
   // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
   { id:'turn.awake.omen.dra1', who:'dra', e:'surprise', t:'{mon}の体が、うっすら光っているな……何か起きるぞ' },

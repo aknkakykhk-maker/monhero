@@ -293,7 +293,6 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'item.juice.momosuke1', who:'momosuke', e:'happy', t:'野菜ジュースで全快！！ お肌にもいいやつ♡' },
   { id:'item.akuyosan.momosuke1', who:'momosuke', e:'troubled', t:'にがっ w でも効くやつだから、がまんね' },
   { id:'item.license.momosuke1', who:'momosuke', e:'happy', t:'ライセンス見せたら、{mon}がキラキラした目で{name}見てる！！ 信じてるじゃん♡' },
-  { id:'item.oily.momosuke1', who:'momosuke', e:'normal', t:'オイリーパックね w 中身は大事に使お' },
 
   // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
   { id:'turn.awake.omen.momosuke1', who:'momosuke', e:'surprise', t:'ねえ見て！！ {mon}、ちょっと光ってない！？' },
