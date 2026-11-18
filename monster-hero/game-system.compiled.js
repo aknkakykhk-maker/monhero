@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96f388ca4fbf4acc
+// source-sha256: e4c0b9ce1508f546
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189486,10 +189486,1067 @@ const msaTechOf = (log, e) => {
 const msaTechInfo = (log, e) => {
   const t = msaTechOf(log, e);
   return {
+    id: e.move,
     name: e.name,
     kind: e.kind,
     guts: t ? t.guts : 0
   };
+};
+const MONSUC_MOCCHI_MOTIONS = Object.freeze({
+  'sk-0400': skm('roll', {
+    c: 'mocchi',
+    over: 'wave',
+    ms: 640,
+    burst: 'dust'
+  }),
+  'sk-0401': 'Mocchi-n1',
+  'sk-0402': skm('hop', {
+    c: 'mocchi',
+    over: 'fist',
+    ms: 520
+  }),
+  'sk-0403': skm('cast', {
+    c: 'mocchi',
+    line: 'ray',
+    fx: skmFx('shot', 'spark', 1),
+    over: 'boom'
+  }),
+  'sk-0404': 'Mocchi-n5',
+  'sk-0405': skm('lick', {
+    c: 'pink',
+    line: 'tongue',
+    burst: 'heart'
+  }),
+  'sk-0406': 'Mocchi-n2',
+  'sk-0407': skm('roll', {
+    c: 'gold',
+    line: 'arc',
+    over: 'wave',
+    burst: 'dust',
+    hit2: true
+  }),
+  'sk-0408': 'Mocchi-n3',
+  'sk-0409': 'Mocchi-n4',
+  'sk-0410': skm('gather', {
+    c: 'mocchi',
+    hit: 610,
+    ms: 1020,
+    line: 'ray',
+    fx: skmFx('shot', 'spark', 3, {
+      start: 310,
+      step: 38
+    }),
+    over: 'wave',
+    burst: 'star'
+  }),
+  'sk-0411': 'Mocchi-n7',
+  'sk-0412': 'Mocchi-n8',
+  'sk-0413': skm('dive', {
+    c: 'mocchi',
+    over: 'boom',
+    burst: 'dust',
+    hit2: true
+  }),
+  'sk-0414': skm('cast', {
+    c: 'gold',
+    line: 'ray',
+    fx: skmFx('shot', 'spark', 5, {
+      start: 420,
+      step: 35,
+      s: 1.4
+    }),
+    over: 'pillar',
+    burst: 'star',
+    hit2: true
+  }),
+  'sk-0415': skm('float', {
+    c: 'dark',
+    hit: 375,
+    ms: 980,
+    fx: skmFx('rise', 'sakura', 12, {
+      start: 300,
+      h: [315, 335]
+    }),
+    over: 'bloom',
+    burst: 'petal'
+  }),
+  'sk-0416': skm('flip', {
+    c: 'gold',
+    line: 'arc',
+    over: 'pillar',
+    burst: 'star',
+    hit2: true
+  })
+});
+const MONSUC_SHARED_MOTIONS = {
+  'eiki_o01': skm('dash', {
+    c: 'sakura',
+    over: 'claw',
+    fx: skmFx('shot', 'sakura', 2)
+  }),
+  'eiki_o18': skm('warp', {
+    c: 'blood',
+    over: 'xslash',
+    line: 'arc',
+    fx: skmFx('fall', 'sakura', 12),
+    burst: 'petal',
+    hit2: true
+  }),
+  'kenshimocchi_o05': skm('slash', {
+    c: 'red',
+    over: 'xslash',
+    line: 'arc',
+    burst: 'spark',
+    hit2: true
+  }),
+  'kenshimocchi_o18': skm('dash', {
+    c: 'cosmic',
+    over: 'xslash',
+    line: 'arc',
+    fx: skmFx('orbit', 'star', 9),
+    burst: 'star',
+    hit2: true
+  }),
+  'kuromy_o19': skm('cast', {
+    c: 'dark',
+    over: 'shadow',
+    fx: skmFx('shot', 'note', 4)
+  }),
+  'kuromy_o20': skm('dash', {
+    c: 'dark',
+    over: 'boom',
+    burst: 'dust'
+  }),
+  'melody_o19': skm('float', {
+    c: 'pink',
+    over: 'bloom',
+    fx: skmFx('fall', 'note', 9)
+  }),
+  'melody_o20': skm('jump', {
+    c: 'pink',
+    over: 'boom',
+    fx: skmFx('rise', 'heart', 4)
+  }),
+  'pandora_o03': skm('cast', {
+    c: 'dark',
+    over: 'thunder',
+    fx: skmFx('fall', 'bolt', 5)
+  }),
+  'pandora_o10': skm('cast', {
+    c: 'cosmic',
+    over: 'boom',
+    fx: skmFx('shot', 'fire', 2),
+    burst: 'spark',
+    hit2: true
+  }),
+  'pandora_o19': skm('jab', {
+    c: 'dark',
+    over: 'fist',
+    burst: 'spark',
+    hit2: true
+  }),
+  'pandora_o20': skm('kick', {
+    c: 'dark',
+    over: 'shadow',
+    fx: skmFx('rise', 'orb', 5)
+  }),
+  'pandora_o21': skm('toss', {
+    c: 'holy',
+    over: 'wave',
+    fx: skmFx('lob', 'feather', 4)
+  }),
+  'pandora_o22': skm('spin', {
+    c: 'dark',
+    over: 'tornado',
+    fx: skmFx('orbit', 'ghost', 7)
+  }),
+  'pandora_o23': skm('kick', {
+    c: 'holy',
+    over: 'bloom',
+    line: 'arc'
+  }),
+  'pandora_o24': skm('cast', {
+    c: 'holy',
+    over: 'boom',
+    fx: skmFx('shot', 'star', 3)
+  }),
+  'pandora_o25': skm('gather', {
+    c: 'dark',
+    over: 'boom',
+    fx: skmFx('rise', 'orb', 8)
+  }),
+  'pandora_o26': skm('float', {
+    c: 'cosmic',
+    over: 'pillar',
+    fx: skmFx('fall', 'meteor', 10)
+  }),
+  'sk-0001': skm('warp', {
+    c: 'holy',
+    over: 'aurora'
+  }),
+  'sk-0002': skm('dive', {
+    c: 'wind',
+    over: 'tornado',
+    fx: skmFx('rise', 'feather', 8)
+  }),
+  'sk-0018': skm('float', {
+    c: 'pink',
+    over: 'bloom',
+    fx: skmFx('orbit', 'heart', 4)
+  }),
+  'sk-0043': skm('cast', {
+    c: 'sky',
+    fx: skmFx('shot', 'spark', 4)
+  }),
+  'sk-0046': skm('warp', {
+    c: 'dark',
+    over: 'claw',
+    line: 'arc'
+  }),
+  'sk-0048': skm('float', {
+    c: 'dark',
+    over: 'shadow',
+    fx: skmFx('orbit', 'note', 6)
+  }),
+  'sk-0049': skm('spin', {
+    c: 'sky',
+    over: 'sword',
+    line: 'arc'
+  }),
+  'sk-0051': skm('gather', {
+    c: 'dark',
+    over: 'shadow',
+    line: 'ray',
+    fx: skmFx('fall', 'note', 8)
+  }),
+  'sk-0053': skm('toss', {
+    c: 'fire',
+    over: 'boom',
+    fx: skmFx('lob', 'fire', 1)
+  }),
+  'sk-0054': skm('dive', {
+    c: 'gold',
+    over: 'sword',
+    line: 'arc'
+  }),
+  'sk-0064': skm('bash', {
+    c: 'sky',
+    over: 'wave'
+  }),
+  'sk-0074': skm('jab', {
+    c: 'sky',
+    over: 'fist',
+    line: 'arc',
+    burst: 'dust',
+    hit2: true
+  }),
+  'sk-0078': skm('toss', {
+    c: 'cosmic',
+    fx: skmFx('shot', 'star', 1)
+  }),
+  'sk-0112': skm('cast', {
+    c: 'holy',
+    over: 'pillar',
+    line: 'ray'
+  }),
+  'sk-0113': skm('slash', {
+    c: 'holy',
+    over: 'sword',
+    line: 'arc',
+    fx: skmFx('shot', 'spark', 3)
+  }),
+  'sk-0117': skm('float', {
+    c: 'holy',
+    over: 'aurora',
+    fx: skmFx('rise', 'star', 5)
+  }),
+  'sk-0122': skm('gather', {
+    c: 'holy',
+    over: 'bloom',
+    fx: skmFx('orbit', 'star', 6)
+  }),
+  'sk-0123': skm('float', {
+    c: 'holy',
+    over: 'bloom',
+    fx: skmFx('fall', 'feather', 8)
+  }),
+  'sk-0124': skm('cast', {
+    c: 'fire',
+    over: 'pillar',
+    fx: skmFx('rise', 'fire', 8)
+  }),
+  'sk-0129': skm('gather', {
+    c: 'gold',
+    over: 'aurora',
+    line: 'ray',
+    fx: skmFx('fall', 'star', 10)
+  }),
+  'sk-0258': skm('cast', {
+    c: 'holy',
+    over: 'wave',
+    line: 'ray'
+  }),
+  'sk-0259': skm('cast', {
+    c: 'thunder',
+    over: 'thunder',
+    fx: skmFx('fall', 'bolt', 3)
+  }),
+  'sk-0260': skm('jab', {
+    c: 'pink',
+    over: 'fist'
+  }),
+  'sk-0261': skm('gather', {
+    c: 'holy',
+    over: 'boom',
+    line: 'ray'
+  }),
+  'sk-0265': skm('cast', {
+    c: 'fire',
+    over: 'boom',
+    fx: skmFx('shot', 'fire', 1)
+  }),
+  'sk-0266': skm('kick', {
+    c: 'pink',
+    over: 'bloom',
+    fx: skmFx('rise', 'heart', 4)
+  }),
+  'sk-0267': skm('float', {
+    c: 'holy',
+    over: 'pillar',
+    line: 'ray',
+    fx: skmFx('shot', 'spark', 4)
+  }),
+  'sk-0269': skm('gather', {
+    c: 'cosmic',
+    over: 'boom',
+    fx: skmFx('rise', 'star', 8)
+  }),
+  'sk-0270': skm('toss', {
+    c: 'wind',
+    over: 'wave',
+    line: 'arc'
+  }),
+  'sk-0271': skm('float', {
+    c: 'cosmic',
+    over: 'pillar',
+    line: 'ray',
+    fx: skmFx('orbit', 'star', 5)
+  }),
+  'sk-0272': skm('cast', {
+    c: 'cosmic',
+    over: 'boom',
+    fx: skmFx('fall', 'star', 8)
+  }),
+  'sk-0273': skm('spin', {
+    c: 'wind',
+    over: 'tornado',
+    fx: skmFx('orbit', 'dust', 6)
+  }),
+  'sk-0292': skm('jab', {
+    c: 'rock',
+    over: 'fist',
+    line: 'whip'
+  }),
+  'sk-0295': skm('bash', {
+    c: 'rock',
+    over: 'wave',
+    fx: skmFx('rise', 'rock', 5)
+  }),
+  'sk-0296': skm('spin', {
+    c: 'rock',
+    over: 'boom',
+    line: 'arc'
+  }),
+  'sk-0297': skm('jump', {
+    c: 'gold',
+    over: 'fist'
+  }),
+  'sk-0298': skm('jab', {
+    c: 'rock',
+    over: 'slash',
+    line: 'arc'
+  }),
+  'sk-0302': skm('dive', {
+    c: 'rock',
+    over: 'boom'
+  }),
+  'sk-0307': skm('bash', {
+    c: 'gold',
+    over: 'wave'
+  }),
+  'sk-0339': skm('jab', {
+    c: 'gold',
+    over: 'fist',
+    burst: 'dust',
+    hit2: true
+  }),
+  'sk-0347': skm('toss', {
+    c: 'gas',
+    over: 'gas',
+    fx: skmFx('shot', 'gas', 6)
+  }),
+  'sk-0350': skm('spin', {
+    c: 'gold',
+    over: 'fist',
+    line: 'arc'
+  }),
+  'sk-0384': skm('dash', {
+    c: 'rock',
+    over: 'boom'
+  }),
+  'sk-0385': skm('slash', {
+    c: 'white',
+    over: 'claw'
+  }),
+  'sk-0386': skm('dash', {
+    c: 'gold',
+    over: 'bite'
+  }),
+  'sk-0389': skm('jab', {
+    c: 'white',
+    over: 'fist',
+    burst: 'star',
+    hit2: true
+  }),
+  'sk-0394': skm('jab', {
+    c: 'thunder',
+    over: 'thunder',
+    fx: skmFx('fall', 'bolt', 4),
+    burst: 'spark',
+    hit2: true
+  }),
+  'sk-0399': skm('gather', {
+    c: 'thunder',
+    over: 'wave',
+    fx: skmFx('orbit', 'bolt', 6)
+  }),
+  'sk-0448': skm('cast', {
+    c: 'plant',
+    fx: skmFx('rise', 'leaf', 3)
+  }),
+  'sk-0450': skm('toss', {
+    c: 'gold',
+    over: 'bloom',
+    fx: skmFx('lob', 'orb', 3)
+  }),
+  'sk-0452': skm('cast', {
+    c: 'plant',
+    over: 'wave',
+    fx: skmFx('rise', 'leaf', 7),
+    burst: 'leaf',
+    hit2: true
+  }),
+  'sk-0454': skm('cast', {
+    c: 'sakura',
+    over: 'bloom',
+    fx: skmFx('fall', 'sakura', 9)
+  }),
+  'sk-0455': skm('jab', {
+    c: 'plant',
+    over: 'claw',
+    burst: 'leaf',
+    hit2: true
+  }),
+  'sk-0463': skm('gather', {
+    c: 'psy',
+    over: 'eye'
+  }),
+  'sk-0466': skm('cast', {
+    c: 'fire',
+    over: 'eye',
+    line: 'ray'
+  }),
+  'sk-0473': skm('hop', {
+    c: 'pink',
+    over: 'bloom',
+    fx: skmFx('orbit', 'heart', 5)
+  }),
+  'sk-0480': skm('lick', {
+    c: 'blue',
+    over: 'bloom',
+    fx: skmFx('shot', 'heart', 3)
+  }),
+  'sk-0481': skm('cast', {
+    c: 'blue',
+    over: 'wave',
+    fx: skmFx('rise', 'water', 5)
+  }),
+  'sk-0482': skm('cast', {
+    c: 'ice',
+    over: 'ice',
+    fx: skmFx('fall', 'ice', 9)
+  }),
+  'sk-0487': skm('cast', {
+    c: 'blue',
+    over: 'boom',
+    fx: skmFx('shot', 'water', 6)
+  }),
+  'sk-0488': skm('spin', {
+    c: 'ice',
+    over: 'tornado',
+    fx: skmFx('orbit', 'snow', 9)
+  }),
+  'sk-0489': skm('gather', {
+    c: 'blue',
+    over: 'wave',
+    fx: skmFx('rise', 'water', 8)
+  }),
+  'sk-0511': skm('shake', {
+    c: 'psy',
+    over: 'wave',
+    fx: skmFx('shot', 'orb', 2)
+  }),
+  'sk-0512': skm('dive', {
+    c: 'rock',
+    over: 'wave'
+  }),
+  'sk-0513': skm('dash', {
+    c: 'rock',
+    over: 'boom'
+  }),
+  'sk-0516': skm('slash', {
+    c: 'white',
+    over: 'claw'
+  }),
+  'sk-0517': skm('dash', {
+    c: 'sky',
+    over: 'claw',
+    line: 'arc'
+  }),
+  'sk-0520': skm('cast', {
+    c: 'psy',
+    over: 'aurora',
+    fx: skmFx('shot', 'orb', 6)
+  }),
+  'sk-0521': skm('dash', {
+    c: 'dark',
+    over: 'claw',
+    line: 'arc',
+    fx: skmFx('shot', 'spark', 3)
+  }),
+  'sk-0523': skm('roll', {
+    c: 'sky',
+    over: 'tornado',
+    line: 'arc'
+  }),
+  'sk-0524': skm('warp', {
+    c: 'cosmic',
+    over: 'aurora',
+    fx: skmFx('orbit', 'star', 6)
+  }),
+  'sk-0526': skm('bash', {
+    c: 'red',
+    over: 'boom',
+    fx: skmFx('rise', 'fire', 5)
+  }),
+  'sk-0573': 'ygAirDive',
+  'sk-0574': 'ygGreenLight',
+  'sk-0575': 'ygStarBomb',
+  'sk-0576': 'ygHeadbutt',
+  'sk-0577': 'ygWonderBlaze',
+  'sk-0578': 'ygTongue',
+  'sk-0579': 'ygManyWing',
+  'sk-0580': 'ygMoonDrop',
+  'sk-0581': 'ygRoll',
+  'sk-0582': 'ygMeteor',
+  'sk-0583': 'ygHeavyRain',
+  'sk-0584': 'ygPapillon',
+  'sk-0585': 'ygCandy',
+  'sk-0586': 'ygStrawberry',
+  'sk-0587': 'ygShadow',
+  'sk-0588': 'ygEternalArc',
+  'sk-0589': 'ygCosmo',
+  'sk-0590': 'ygAurora',
+  'sk-0593': skm('dash', {
+    c: 'thunder',
+    over: 'thunder',
+    line: 'arc'
+  }),
+  'sk-0596': skm('dive', {
+    c: 'red',
+    over: 'claw',
+    line: 'arc'
+  }),
+  'sk-0785': skm('spin', {
+    c: 'plant',
+    over: 'bloom',
+    fx: skmFx('orbit', 'leaf', 9)
+  }),
+  'sk-0787': 'ygRiceShower',
+  'sk-0788': 'ygCakeCut',
+  'sk-0797': skm('cast', {
+    c: 'sky',
+    fx: skmFx('shot', 'spark', 1)
+  }),
+  'sk-0799': skm('warp', {
+    c: 'dark',
+    over: 'xslash',
+    line: 'arc'
+  }),
+  'sk-0824': skm('gather', {
+    c: 'dark',
+    over: 'bloom',
+    fx: skmFx('rise', 'sakura', 8)
+  })
+};
+const MONSUC_SPECIES_MOTIONS = {
+  Mocchi: MONSUC_MOCCHI_MOTIONS,
+  MelWhip: {},
+  Yggdrasil: {},
+  Suezo: {
+    'sk-0461': 'Suezo-n1',
+    'sk-0462': 'Suezo-n0',
+    'sk-0460': 'Suezo-n2',
+    'sk-0464': 'Suezo-n5',
+    'sk-0465': 'Suezo-n4',
+    'sk-0468': 'Suezo-n3',
+    'sk-0467': 'Suezo-u0',
+    'sk-0469': 'Suezo-n8',
+    'sk-0470': 'Suezo-u4',
+    'sk-0471': 'Suezo-u3',
+    'sk-0472': 'Suezo-u2',
+    'sk-0474': 'Suezo-u5'
+  },
+  Golem: {
+    'sk-0293': 'Golem-n0',
+    'sk-0294': 'Golem-n2',
+    'sk-0301': 'Golem-u0',
+    'sk-0300': 'Golem-u1',
+    'sk-0299': 'Golem-n5',
+    'sk-0303': 'Golem-u2',
+    'sk-0305': 'Golem-n8',
+    'sk-0306': 'Golem-n7',
+    'sk-0304': 'Golem-u3'
+  },
+  Tiger: {
+    'sk-0390': 'Tiger-u0',
+    'sk-0387': 'Tiger-n4',
+    'sk-0388': 'Tiger-u1',
+    'sk-0393': 'Tiger-u2',
+    'sk-0392': 'Tiger-n8',
+    'sk-0391': 'Tiger-n5',
+    'sk-0395': 'Tiger-u3',
+    'sk-0396': 'Tiger-u4',
+    'sk-0397': 'Tiger-u5',
+    'sk-0398': 'Tiger-u7'
+  },
+  Ham: {
+    'sk-0340': 'Ham-n3',
+    'sk-0338': 'Ham-n1',
+    'sk-0343': 'Ham-u0',
+    'sk-0341': 'Ham-n2',
+    'sk-0342': 'Ham-n4',
+    'sk-0346': 'Ham-n6',
+    'sk-0344': 'Ham-n7',
+    'sk-0345': 'Ham-n5',
+    'sk-0348': 'Ham-u1',
+    'sk-0349': 'Ham-n8',
+    'sk-0351': 'Ham-u3'
+  },
+  Pixie: {
+    'sk-0260': 'Pixie-n0',
+    'sk-0259': 'Pixie-n2',
+    'sk-0258': 'Pixie-n1',
+    'sk-0263': 'Pixie-n3',
+    'sk-0262': 'Pixie-n5',
+    'sk-0261': 'Pixie-n6',
+    'sk-0264': 'Pixie-n7',
+    'sk-0266': 'Pixie-n4',
+    'sk-0267': 'Pixie-u1',
+    'sk-0268': 'Pixie-u2',
+    'sk-0269': 'Pixie-u3',
+    'sk-0274': 'Pixie-u4'
+  },
+  Mia: {
+    'sk-0263': 'Mia-n3',
+    'sk-0262': 'Mia-n5',
+    'sk-0264': 'Mia-n7',
+    'sk-0268': 'Mia-u2',
+    'sk-0274': 'Mia-u4'
+  },
+  Monol: {
+    'sk-0514': 'Monol-n3',
+    'sk-0515': 'Monol-u0',
+    'sk-0519': 'Monol-n2',
+    'sk-0518': 'Monol-u2',
+    'sk-0522': 'Monol-u6',
+    'sk-0525': 'Monol-u8'
+  },
+  Oboro: {
+    'sk-0447': 'Oboro-n1',
+    'sk-0448': 'Oboro-n2',
+    'sk-0446': 'Oboro-u0',
+    'sk-0449': 'Oboro-u4',
+    'sk-0451': 'Oboro-u1',
+    'sk-0453': 'Oboro-u5',
+    'sk-0459': 'Oboro-u7',
+    'sk-0458': 'Oboro-n3',
+    'sk-0456': 'Oboro-u6',
+    'sk-0457': 'Oboro-n4'
+  },
+  Plant: {
+    'sk-0447': 'Plant-n1',
+    'sk-0446': 'Plant-u0',
+    'sk-0449': 'Plant-u4',
+    'sk-0451': 'Plant-u1',
+    'sk-0453': 'Plant-u5',
+    'sk-0459': 'Plant-u7',
+    'sk-0458': 'Plant-n3',
+    'sk-0456': 'Plant-u6',
+    'sk-0457': 'Plant-n4'
+  },
+  Zan: {
+    'sk-0591': 'Zan-n1',
+    'sk-0592': 'Zan-n3',
+    'sk-0594': 'Zan-n4',
+    'sk-0595': 'Zan-n5',
+    'sk-0798': 'Zan-u2',
+    'sk-0597': 'Zan-u4',
+    'sk-0599': 'Zan-u6',
+    'sk-0598': 'Zan-u5'
+  },
+  Mitarashi: {
+    'sk-0402': MONSUC_MOCCHI_MOTIONS['sk-0402'],
+    'sk-0400': MONSUC_MOCCHI_MOTIONS['sk-0400'],
+    'sk-0401': 'Mitarashi-n1',
+    'sk-0405': MONSUC_MOCCHI_MOTIONS['sk-0405'],
+    'sk-0406': 'Mitarashi-n2',
+    'sk-0403': skm('cast', {
+      c: 'fire',
+      line: 'ray',
+      fx: skmFx('shot', 'fire', 1),
+      over: 'boom'
+    }),
+    'sk-0404': 'Mitarashi-n5',
+    'sk-0409': 'Mitarashi-n4',
+    'sk-0408': 'Mitarashi-n3',
+    'sk-0407': MONSUC_MOCCHI_MOTIONS['sk-0407'],
+    'sk-0413': MONSUC_MOCCHI_MOTIONS['sk-0413'],
+    'sk-0410': 'Mitarashi-u1',
+    'sk-0411': 'Mitarashi-n7',
+    'sk-0412': 'Mitarashi-n8',
+    'sk-0416': MONSUC_MOCCHI_MOTIONS['sk-0416'],
+    'sk-0415': 'Mitarashi-u5',
+    'sk-0414': 'Mitarashi-u2'
+  },
+  Ark: {
+    'sk-0125': 'Ark-n2',
+    'sk-0111': 'Ark-n0',
+    'sk-0110': 'Ark-n4',
+    'sk-0114': 'Ark-n6',
+    'sk-0115': 'Ark-u2',
+    'sk-0118': 'Ark-n8',
+    'sk-0116': 'Ark-u1',
+    'sk-0120': 'Ark-u4',
+    'sk-0119': 'Ark-u0',
+    'sk-0121': 'Ark-u6'
+  },
+  Iblis: {
+    'sk-0125': 'Iblis-n2',
+    'sk-0111': 'Iblis-n0',
+    'sk-0110': 'Iblis-n4',
+    'sk-0113': skm('slash', {
+      c: 'dark',
+      over: 'sword',
+      line: 'arc',
+      fx: skmFx('shot', 'spark', 3)
+    }),
+    'sk-0114': 'Iblis-n6',
+    'sk-0112': skm('cast', {
+      c: 'dark',
+      over: 'pillar',
+      line: 'ray'
+    }),
+    'sk-0115': 'Iblis-u2',
+    'sk-0118': 'Iblis-n8',
+    'sk-0117': skm('float', {
+      c: 'dark',
+      over: 'aurora',
+      fx: skmFx('rise', 'star', 5)
+    }),
+    'sk-0116': 'Iblis-u1',
+    'sk-0120': 'Iblis-u4',
+    'sk-0119': 'Iblis-u0',
+    'sk-0122': skm('gather', {
+      c: 'dark',
+      over: 'bloom',
+      fx: skmFx('orbit', 'star', 6)
+    }),
+    'sk-0124': skm('cast', {
+      c: 'fire',
+      over: 'pillar',
+      fx: skmFx('rise', 'fire', 8)
+    }),
+    'sk-0123': skm('float', {
+      c: 'dark',
+      over: 'bloom',
+      fx: skmFx('fall', 'feather', 8)
+    }),
+    'sk-0121': 'Iblis-u6',
+    'sk-0129': skm('gather', {
+      c: 'dark',
+      over: 'aurora',
+      line: 'ray',
+      fx: skmFx('fall', 'star', 10)
+    })
+  },
+  Snegurochka: {
+    'sk-0477': 'Snegurochka-n0',
+    'sk-0475': 'Snegurochka-n2',
+    'sk-0476': 'Snegurochka-n1',
+    'sk-0478': 'Snegurochka-u1',
+    'sk-0742': 'Snegurochka-u3',
+    'sk-0479': 'Snegurochka-u0',
+    'sk-0484': 'Snegurochka-n6',
+    'sk-0483': 'Snegurochka-u2',
+    'sk-0485': 'Snegurochka-n7',
+    'sk-0743': 'Snegurochka-n8',
+    'sk-0486': 'Snegurochka-u4',
+    'sk-0744': 'Snegurochka-u8',
+    'sk-0491': 'Snegurochka-u7',
+    'sk-0490': 'Snegurochka-u6'
+  },
+  Undine: {
+    'sk-0477': 'Undine-n0',
+    'sk-0475': 'Undine-n2',
+    'sk-0476': 'Undine-n1',
+    'sk-0478': 'Undine-u1',
+    'sk-0479': 'Undine-u0',
+    'sk-0480': 'Undine-u3',
+    'sk-0484': 'Undine-n6',
+    'sk-0483': 'Undine-u2',
+    'sk-0485': 'Undine-n7',
+    'sk-0486': 'Undine-u4',
+    'sk-0491': 'Undine-u7',
+    'sk-0490': 'Undine-u6'
+  },
+  Yaobikuni: {
+    'sk-0477': 'Yaobikuni-n0',
+    'sk-0475': 'Yaobikuni-n2',
+    'sk-0476': 'Yaobikuni-n1',
+    'sk-0478': 'Yaobikuni-u1',
+    'sk-0479': 'Yaobikuni-u0',
+    'sk-0480': 'Yaobikuni-u3',
+    'sk-0484': 'Yaobikuni-n6',
+    'sk-0483': 'Yaobikuni-u2',
+    'sk-0485': 'Yaobikuni-n7',
+    'sk-0486': 'Yaobikuni-u4',
+    'sk-0491': 'Yaobikuni-u7',
+    'sk-0490': 'Yaobikuni-u6'
+  },
+  Ghost: {
+    'sk-0065': 'Ghost-n1',
+    'sk-0066': 'Ghost-n0',
+    'sk-0077': 'Ghost-n2',
+    'sk-0068': 'Ghost-n3',
+    'sk-0069': 'Ghost-n4',
+    'sk-0078': 'Ghost-n5',
+    'sk-0067': 'Ghost-n6',
+    'sk-0070': 'Ghost-u0',
+    'sk-0071': 'Ghost-u1',
+    'sk-0072': 'Ghost-n7',
+    'sk-0073': 'Ghost-u2',
+    'sk-0080': 'Ghost-u3',
+    'sk-0079': 'Ghost-u4',
+    'sk-0074': 'Ghost-n8',
+    'sk-0075': 'Ghost-u5',
+    'sk-0084': 'Ghost-u6',
+    'sk-0076': 'Ghost-u7'
+  },
+  Spooky: {
+    'sk-0065': 'Spooky-n1',
+    'sk-0066': 'Spooky-n0',
+    'sk-0077': 'Spooky-n2',
+    'sk-0068': 'Spooky-n3',
+    'sk-0069': 'Spooky-n4',
+    'sk-0067': 'Spooky-n6',
+    'sk-0082': 'Spooky-n5',
+    'sk-0070': 'Spooky-u0',
+    'sk-0071': 'Spooky-u1',
+    'sk-0072': 'Spooky-n7',
+    'sk-0073': 'Spooky-u2',
+    'sk-0080': 'Spooky-u3',
+    'sk-0079': 'Spooky-u4',
+    'sk-0083': 'Spooky-n8',
+    'sk-0075': 'Spooky-u5',
+    'sk-0084': 'Spooky-u6',
+    'sk-0076': 'Spooky-u7'
+  },
+  Illumine: {
+    'sk-0040': 'Illumine-n0',
+    'sk-0039': 'Illumine-n1',
+    'sk-0064': 'Illumine-n2',
+    'sk-0041': 'Illumine-u0',
+    'sk-0042': 'Illumine-n4',
+    'sk-0045': 'Illumine-n3',
+    'sk-0046': 'Illumine-n5',
+    'sk-0044': 'Illumine-u1',
+    'sk-0043': 'Illumine-n6',
+    'sk-0047': 'Illumine-u2',
+    'sk-0048': 'Illumine-u3',
+    'sk-0049': 'Illumine-n7',
+    'sk-0054': 'Illumine-n8',
+    'sk-0050': 'Illumine-u5',
+    'sk-0052': 'Illumine-u4',
+    'sk-0051': 'Illumine-u8'
+  },
+  Dreamy: {
+    'sk-0040': 'Dreamy-n0',
+    'sk-0039': 'Dreamy-n1',
+    'sk-0055': 'Dreamy-u0',
+    'sk-0041': 'Dreamy-u1',
+    'sk-0042': 'Dreamy-n4',
+    'sk-0045': 'Dreamy-n3',
+    'sk-0044': 'Dreamy-u2',
+    'sk-0047': 'Dreamy-u3',
+    'sk-0050': 'Dreamy-u6',
+    'sk-0052': 'Dreamy-u5'
+  },
+  Kyubi: {
+    'sk-0005': 'Kyubi-n0',
+    'sk-0003': 'Kyubi-n2',
+    'sk-0004': 'Kyubi-n1',
+    'sk-0010': 'Kyubi-n3',
+    'sk-0008': 'Kyubi-n5',
+    'sk-0009': 'Kyubi-n4',
+    'sk-0018': 'Kyubi-u0',
+    'sk-0015': 'Kyubi-u2',
+    'sk-0017': 'Kyubi-u1',
+    'sk-0016': 'Kyubi-n6',
+    'sk-0026': 'Kyubi-u5',
+    'sk-0027': 'Kyubi-n7',
+    'sk-0028': 'Kyubi-n8',
+    'sk-0025': 'Kyubi-u3',
+    'sk-0037': 'Kyubi-u6',
+    'sk-0036': 'Kyubi-u7',
+    'sk-0002': 'Kyubi-u4',
+    'sk-0035': 'Kyubi-u8'
+  },
+  Orihime: {
+    'sk-0005': 'Orihime-n0',
+    'sk-0003': 'Orihime-n2',
+    'sk-0004': 'Orihime-n1',
+    'sk-0010': 'Orihime-n3',
+    'sk-0008': 'Orihime-n5',
+    'sk-0009': 'Orihime-n4',
+    'sk-0496': 'Orihime-u0',
+    'sk-0023': 'Orihime-u2',
+    'sk-0015': 'cardOrihime905',
+    'sk-0017': 'cardOrihime906',
+    'sk-0016': 'Orihime-n6',
+    'sk-0026': 'Orihime-u3',
+    'sk-0027': 'Orihime-n7',
+    'sk-0028': 'Orihime-n8',
+    'sk-0025': 'cardOrihime909',
+    'sk-0037': 'Orihime-u7',
+    'sk-0036': 'Orihime-u8',
+    'sk-0035': 'Orihime-u6'
+  },
+  Pandora: {
+    'pandora_o01': 'Pandora-n0',
+    'pandora_o02': 'Pandora-n1',
+    'pandora_o04': 'Pandora-n3',
+    'pandora_o05': 'Pandora-n4',
+    'pandora_o06': 'Pandora-n5',
+    'pandora_o07': 'Pandora-n6',
+    'pandora_o08': 'Pandora-n7',
+    'pandora_o09': 'Pandora-n8',
+    'pandora_o11': 'Pandora-u1',
+    'pandora_o12': 'Pandora-u2',
+    'pandora_o13': 'Pandora-u3',
+    'pandora_o14': 'Pandora-u4',
+    'pandora_o15': 'Pandora-u5',
+    'pandora_o16': 'Pandora-u6',
+    'pandora_o17': 'Pandora-u7',
+    'pandora_o18': 'Pandora-u8'
+  },
+  Eiki: {
+    'eiki_o02': 'Eiki-n1',
+    'eiki_o03': 'Eiki-n2',
+    'eiki_o04': 'Eiki-n3',
+    'eiki_o05': 'Eiki-n4',
+    'eiki_o06': 'Eiki-n5',
+    'eiki_o07': 'Eiki-n6',
+    'eiki_o08': 'Eiki-n7',
+    'eiki_o09': 'Eiki-n8',
+    'eiki_o10': 'Eiki-u0',
+    'eiki_o11': 'Eiki-u1',
+    'eiki_o12': 'Eiki-u2',
+    'eiki_o13': 'Eiki-u3',
+    'eiki_o14': 'Eiki-u4',
+    'eiki_o15': 'Eiki-u5',
+    'eiki_o16': 'Eiki-u6',
+    'eiki_o17': 'Eiki-u7'
+  },
+  KenshiMocchi: {
+    'kenshimocchi_o01': 'KenshiMocchi-n0',
+    'kenshimocchi_o02': 'KenshiMocchi-n1',
+    'kenshimocchi_o03': 'KenshiMocchi-n2',
+    'kenshimocchi_o04': 'KenshiMocchi-n3',
+    'kenshimocchi_o06': 'KenshiMocchi-n5',
+    'kenshimocchi_o07': 'KenshiMocchi-n6',
+    'kenshimocchi_o08': 'KenshiMocchi-n7',
+    'kenshimocchi_o09': 'KenshiMocchi-n8',
+    'kenshimocchi_o10': 'KenshiMocchi-u0',
+    'kenshimocchi_o11': 'KenshiMocchi-u1',
+    'kenshimocchi_o12': 'KenshiMocchi-u2',
+    'kenshimocchi_o13': 'KenshiMocchi-u3',
+    'kenshimocchi_o14': 'KenshiMocchi-u4',
+    'kenshimocchi_o15': 'KenshiMocchi-u5',
+    'kenshimocchi_o16': 'KenshiMocchi-u6',
+    'kenshimocchi_o17': 'KenshiMocchi-u7'
+  },
+  Melody: {
+    'melody_o01': 'Melody-n0',
+    'melody_o02': 'Melody-n1',
+    'melody_o03': 'Melody-n2',
+    'melody_o04': 'Melody-n3',
+    'melody_o05': 'Melody-n4',
+    'melody_o06': 'Melody-n5',
+    'melody_o07': 'Melody-n6',
+    'melody_o08': 'Melody-n7',
+    'melody_o09': 'Melody-n8',
+    'melody_o10': 'Melody-u0',
+    'melody_o11': 'Melody-u1',
+    'melody_o12': 'Melody-u2',
+    'melody_o13': 'Melody-u3',
+    'melody_o14': 'Melody-u4',
+    'melody_o15': 'Melody-u5',
+    'melody_o16': 'Melody-u6',
+    'melody_o17': 'Melody-u7',
+    'melody_o18': 'Melody-u8'
+  },
+  Kuromy: {
+    'kuromy_o01': 'Kuromy-n0',
+    'kuromy_o02': 'Kuromy-n1',
+    'kuromy_o03': 'Kuromy-n2',
+    'kuromy_o04': 'Kuromy-n3',
+    'kuromy_o05': 'Kuromy-n4',
+    'kuromy_o06': 'Kuromy-n5',
+    'kuromy_o07': 'Kuromy-n6',
+    'kuromy_o08': 'Kuromy-n7',
+    'kuromy_o09': 'Kuromy-n8',
+    'kuromy_o10': 'Kuromy-u0',
+    'kuromy_o11': 'Kuromy-u1',
+    'kuromy_o12': 'Kuromy-u2',
+    'kuromy_o13': 'Kuromy-u3',
+    'kuromy_o14': 'Kuromy-u4',
+    'kuromy_o15': 'Kuromy-u5',
+    'kuromy_o16': 'Kuromy-u6',
+    'kuromy_o17': 'Kuromy-u7',
+    'kuromy_o18': 'Kuromy-u8'
+  }
+};
+const monsucMotionKind = (species, tech) => {
+  const id = tech?.id;
+  const own = MONSUC_SPECIES_MOTIONS[species];
+  if (!own || !id) return msaMotionKind(species, tech);
+  const motion = own[id] || MONSUC_SHARED_MOTIONS[id];
+  if (!motion || typeof motion !== 'string' && !motion.body) return msaMotionKind(species, tech);
+  if (typeof motion === 'string') return skillFxSpecOf(motion) ? motion : msaMotionKind(species, tech);
+  const kind = 'monsuc-' + species + '-' + id;
+  if (!SKILL_FX_SPEC_CACHE[kind]) SKILL_FX_SPEC_CACHE[kind] = skmNormalize(motion);
+  return kind;
 };
 const msaMotionMs = kind => {
   const sp = kind && typeof skillFxSpecOf === 'function' ? skillFxSpecOf(kind) : null;
@@ -189608,7 +190665,7 @@ const MSA_INTRO_MS = 2600;
 const MSA_AFTER_HIT = 1250;
 const MSA_AFTER_MISS = 800;
 const MSA_FAST_F = 0.35;
-const msaStepMs = (e, team, reduce, log, sf = 1) => {
+const msaStepMs = (e, team, reduce, log, sf = 1, motionKindOf = msaMotionKind) => {
   if (!e) return 300;
   if (reduce) return e.ev === 'tech' ? 900 : e.ev === 'start' || e.ev === 'enter' ? 250 : 650;
   if (e.ev === 'start' && (Number(sf) || 1) <= MSA_FAST_F) return 700;
@@ -189616,7 +190673,7 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
     const f = Number(sf) || 1;
     const m = team && team.members && team.members[e.i] || {};
     const fx = msaFxOf(log, e, reduce, f);
-    const mm = msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e)));
+    const mm = msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e)));
     const real = f <= MSA_FAST_F ? fx.pre + mm.hit + (e.hit ? 90 : 60) + (fx.fin ? 150 : 0) : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
     return real / f;
   }
@@ -189988,7 +191045,7 @@ function MsaFighter({
       }
     }));
   } else if (tech && me && !reduce) {
-    const kind = msaMotionKind(sp, e.tech);
+    const kind = e.motionKind;
     if (kind) {
       const w = foeX.w;
       const rawDx = (foeX.x - x) * w;
@@ -190010,7 +191067,7 @@ function MsaFighter({
       });
     }
   }
-  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const delay = tech ? reduce ? 0 : fx.pre + msaMotionMs(e.motionKind).hit : 0;
   if (tech && foe) {
     const pose = !e.hit ? 'mh-card-dodge' : e.guarded ? 'mh-card-guard' : 'mh-card-hit';
     body = React.createElement("div", {
@@ -190145,7 +191202,7 @@ function MsaFighter({
     "aria-hidden": "true"
   }), body, extra);
 }
-function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
+function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotionKind) {
   const lastRef = useRef(-1);
   const timers = useRef([]);
   useEffect(() => () => {
@@ -190167,7 +191224,7 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1) {
     };
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
-      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit;
+      const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
       if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
       later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
     } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
@@ -190315,12 +191372,12 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   });
   return out;
 };
-function useMsaShownFrame(log, frames, pos, teams, sf = 1, lite = false) {
+function useMsaShownFrame(log, frames, pos, teams, sf = 1, lite = false, motionKindOf = msaMotionKind) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [hitAt, setHitAt] = useState(-1);
   const e = log && log[pos] || {};
   const m = e.side && teams && teams[e.side] && teams[e.side].members ? teams[e.side].members[e.i] || {} : {};
-  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e))).hit : 0;
+  const at = e.ev === 'tech' && !reduce ? msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit : 0;
   useEffect(() => {
     if (!at) return undefined;
     const t = setTimeout(() => setHitAt(pos), at);
@@ -190417,7 +191474,8 @@ function MsaStage({
   fill = false,
   lite = false,
   wide = false,
-  liveGuts = null
+  liveGuts = null,
+  motionKindOf = msaMotionKind
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
@@ -190442,7 +191500,7 @@ function MsaStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1);
+  useMsaSfx(log, pos, teams, reduce, sound, Number(speedF) || 1, motionKindOf);
   const endSaid = useRef(false);
   useEffect(() => {
     if (!ended || endSaid.current) return;
@@ -190461,7 +191519,7 @@ function MsaStage({
     const el = stageRef.current;
     if (!e1 || e1.ev !== 'tech' || !e1.hit || !fxNow.stop || !el || typeof el.getAnimations !== 'function') return undefined;
     const m = teams[e1.side] && teams[e1.side].members && teams[e1.side].members[e1.i] || {};
-    const at = fxNow.pre + msaMotionMs(msaMotionKind(m.species, msaTechInfo(log, e1))).hit;
+    const at = fxNow.pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e1))).hit;
     let back = null;
     const t = setTimeout(() => {
       const inFighter = a => {
@@ -190498,11 +191556,13 @@ function MsaStage({
     const ms = t && t.members || [];
     return ms[Number.isFinite(i) ? i : f ? f.act[side] : 0] || ms[0] || null;
   };
+  const tech = msaTechInfo(log, e0);
+  const atkSp = e0.side ? (memberOf(e0.side, e0.i) || {}).species : '';
   const e = {
     ...e0,
     k: pos,
-    atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '',
-    tech: msaTechInfo(log, e0)
+    tech,
+    motionKind: e0.ev === 'tech' ? motionKindOf(atkSp, tech) : null
   };
   const gapOf = d => {
     if (wide) {
@@ -190550,12 +191610,12 @@ function MsaStage({
   };
   const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
-  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
+  const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(e.motionKind).hit : 0;
   useEffect(() => {
     const el = camRef.current;
     const e1 = log[pos];
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
-    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
+    const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1, motionKindOf) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
     const sx = sd => scrX(sd === 'A' ? xA : xB);
     let kf = null;
@@ -190988,7 +192048,7 @@ function MonsucArena({
         }
         return n;
       };
-      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
+      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f, monsucMotionKind) * sp.f));
       return () => clearTimeout(t);
     }
     if (done && (judgeIdx < 0 || judgeOk)) {
@@ -191063,7 +192123,7 @@ function MonsucArena({
       } : {})
     };
   }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
-  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
+  const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f, false, monsucMotionKind);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
   }, React.createElement("p", {
@@ -191172,7 +192232,8 @@ function MonsucArena({
     speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
     fill: true,
     wide: true,
-    liveGuts: liveGuts
+    liveGuts: liveGuts,
+    motionKindOf: monsucMotionKind
   }), React.createElement("div", {
     className: "msa-say over",
     "data-msa-say": true
