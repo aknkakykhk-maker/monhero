@@ -443,6 +443,7 @@ function RhythmSongSelectScreen({
           onSongId={setRhythmSelectedSongId}
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
+          detailInfoPanel
           onPlay={onPlaySong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}

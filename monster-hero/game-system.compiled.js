@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe4a7b9445cf8326
+// source-sha256: 87aa7518d3080a97
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38084,7 +38084,8 @@ const RhythmSongSelect = ({
   hideRandom = false,
   unlockAll = false,
   songLock = null,
-  scrollToSelected = false
+  scrollToSelected = false,
+  detailInfoPanel = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -38765,7 +38766,18 @@ const RhythmSongSelect = ({
   }, React.isValidElement(notice) ? React.cloneElement(notice, {
     oneLine: true,
     faceSize: 28
-  }) : notice)), buyAsk && songLock && React.createElement("div", {
+  }) : notice), detailInfoPanel && song && difficulty && chart && (() => {
+    const grid = typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
+    const bpm = grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
+    const info = [bpm ? `BPM ${bpm}` : '', rhythmSongLengthLabel(song, chart), chart.totalNotes ? `${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ` : ''].filter(Boolean).join(' ・ ');
+    return React.createElement("div", {
+      "data-rhythm-song-info-panel": true,
+      className: "mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block"
+    }, info && React.createElement("p", {
+      "data-rhythm-song-info-line": true,
+      className: "whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200"
+    }, info));
+  })()), buyAsk && songLock && React.createElement("div", {
     "data-rhythm-song-buy-modal": true,
     role: "dialog",
     "aria-modal": "true",
@@ -72868,6 +72880,7 @@ function RhythmSongSelectScreen({
     onSongId: setRhythmSelectedSongId,
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
+    detailInfoPanel: true,
     onPlay: onPlaySong,
     notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",

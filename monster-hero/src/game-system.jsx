@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 66f9fa91cf0d1869
+// generated-sha256: e3abebf75fb55ad0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23927,7 +23927,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -24450,6 +24450,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </>}
       {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
       {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+      {/* ソロの曲えらび・横画面だけ、詳しい欄の下に残る空きへ「曲の情報」を出す
+          (2026-11-18・社長「モンビーのソロで縦横ボタンで横にした場合、右下の空きが気になる。何か有効活用できないかな？」)。
+          縦画面では出さない(landscape: でだけ出す。回して横にした場合も、ビルド時に回転用の規則へ
+          写されるので同じに出る)。マルチは detailInfoPanel を渡さないので、配置には一切触らない。
+          当初は難易度ごとの記録も並べていたが、選曲画面の既存の表示と重なるため廃止し、曲の情報だけにした
+          (2026-11-18・社長指示「難易度ごとの記録は上にもあるからいらない」) */}
+      {detailInfoPanel&&song&&difficulty&&chart&&(()=>{
+        const grid=typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
+        const bpm=grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;
+        const info=[bpm?`BPM ${bpm}`:'',rhythmSongLengthLabel(song,chart),
+          chart.totalNotes?`${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ`:''].filter(Boolean).join(' ・ ');
+        return <div data-rhythm-song-info-panel className="mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block">
+          {info&&<p data-rhythm-song-info-line className="whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200">{info}</p>}
+        </div>;
+      })()}
     </aside>
 
     {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}
@@ -44807,6 +44822,7 @@ function RhythmSongSelectScreen({
           onSongId={setRhythmSelectedSongId}
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
+          detailInfoPanel
           onPlay={onPlaySong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
