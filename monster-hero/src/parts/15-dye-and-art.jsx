@@ -153,6 +153,45 @@ const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.
 // オボロゲソウの花の範囲(上・左・右。縦横とも絵の幅を1とした割合)と、白い本体の範囲(2026-10-26 高画質の絵に合わせて実測)
 const OBORO_FLOWER_BOXES = [[0.31, 0.06, 0.71, 0.455], [0.04, 0.24, 0.40, 0.575], [0.60, 0.24, 0.96, 0.575]];
 const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
+// 顔アイコンの切り取り範囲(全身絵に対する割合 [左, 上, 右, 下]。2026-11-18 全種展開・社長決定)。
+// 顔アイコンは専用イラストではなく、(染めた)全身絵からこの範囲を切り取って出す。染色は全身絵の
+// 段階で焼くので、部位の色は全身表示と必ず一致する。無染色の子も切り取りにそろえる(構図を統一)。
+// 範囲は既存の専用顔アイコンの構図(顔の大きさ・どこまで含めるか)に合わせて種ごとに決めた実測値で、
+// ピクセルで正方形になるよう作ってある(横の割合×絵の幅 ≒ 縦の割合×絵の高さ)。
+// 双顔の種は専用顔アイコンと同じ顔を採る(ユグドラシル=少女、メルホイップ=少女、メロディー・クロミー=乗り手)。
+// モノリスは顔が無いので上部の帯。オボロゲソウ・プラントは下部の顔。顔の小さい種は顔中心に寄せる
+const MONSTER_FACE_CROP = {
+  Mocchi: [0.245, 0, 0.765, 0.52],
+  Suezo: [0.21, 0.16, 0.79, 0.74],
+  Golem: [0.355, 0, 0.645, 0.29],
+  Tiger: [0.26, 0.1, 0.73, 0.57],
+  Ham: [0.3, 0.13, 0.7, 0.53],
+  Pixie: [0.33, 0.055, 0.67, 0.395],
+  Mia: [0.28, 0.02, 0.72, 0.313],
+  Pandora: [0.27, 0.015, 0.73, 0.322],
+  Monol: [0.14, 0.02, 0.86, 0.74],
+  Oboro: [0.1, 0.07, 0.9, 0.87],
+  Plant: [0.11, 0.06, 0.89, 0.84],
+  Zan: [0.28, 0.01, 0.72, 0.45],
+  Eiki: [0.28, 0, 0.72, 0.37],
+  KenshiMocchi: [0.28, 0.06, 0.72, 0.5],
+  Mitarashi: [0.265, 0.06, 0.735, 0.53],
+  Ark: [0.22, 0.16, 0.78, 0.72],
+  Iblis: [0.175, 0.03, 0.825, 0.68],
+  Snegurochka: [0.295, 0.03, 0.705, 0.44],
+  Undine: [0.26, 0, 0.74, 0.32],
+  Yaobikuni: [0.25, 0, 0.75, 0.333],
+  Yggdrasil: [0.25, 0.02, 0.75, 0.434],
+  MelWhip: [0.24, 0.13, 0.74, 0.476],
+  Melody: [0.2, 0.03, 0.72, 0.449],
+  Kuromy: [0.225, 0.14, 0.775, 0.481],
+  Ghost: [0.08, 0, 0.92, 0.564],
+  Spooky: [0.1, 0.02, 0.88, 0.676],
+  Illumine: [0.225, 0.02, 0.775, 0.496],
+  Dreamy: [0.19, 0.01, 0.81, 0.443],
+  Kyubi: [0.27, 0.01, 0.73, 0.406],
+  Orihime: [0.25, 0, 0.75, 0.434],
+};
 const MASU_COLOR_REGION_HUES = {
   // ミーアは正解見本から埋め込んだ部位マップで境界を固定する。以下は3レイヤーを既存経路へ知らせる控え。
   Mia: [
@@ -1678,6 +1717,106 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: give
       ) : null)}
     </div>
   );
+};
+// 顔アイコン用の切り取り焼き: (染めた)全身絵から MONSTER_FACE_CROP の範囲だけを切り取った絵を blob: で返す。
+// 染めの材料は DyedMonsterImage と同じ控え(マスク・染め直し・焼き)を通すので、部位の色は全身表示と必ず一致する。
+// 控えの持ち方も焼きと同じ(名前で引き、古いものから捨てる。表示中の絵は使う側が retain する)。
+// 失敗したら null を返し、呼び出し側は今までの顔アイコンの出し方へ戻す
+const FACE_BAKE_MAX_SIDE = 384;
+const _faceBakeCache = new Map();
+const bakeMonsterFaceImage = (baseId, src, masuColors) => {
+  const crop = baseId ? MONSTER_FACE_CROP[baseId] : null;
+  if (!crop || !src) return Promise.resolve(null);
+  const colors = _dyedColorsOf(baseId, masuColors);
+  const hasColor = colors.some(Boolean);
+  const key = `face|${baseId}|${src}|${hasColor ? colors.join('|') : '-'}`;
+  const hit = _faceBakeCache.get(key);
+  if (hit) { _faceBakeCache.delete(key); _faceBakeCache.set(key, hit); return hit; }
+  const promise = (async () => {
+    try {
+      if (typeof document === 'undefined') return null;
+      let fullUrl = src;
+      let overlay = null; // 部位の無い子の単色染めで、濃さが最大でないときだけ上に薄く重ねる
+      if (hasColor) {
+        const hues = MASU_COLOR_REGION_HUES[baseId] || [];
+        if (hues.length) {
+          const masks = await getDyeRegionMasks(baseId, src);
+          if (!masks) return null;
+          const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
+          const entries = await Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])));
+          const bakedOf = _dyedBakeOf(baseId, src, colors, masks, Object.fromEntries(entries));
+          if (!bakedOf.key || !bakedOf.layers) return null;
+          fullUrl = await _bakeDyedLayers(bakedOf.key, src, bakedOf.layers);
+          if (!fullUrl) return null;
+        } else {
+          const rec = await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0));
+          if (!rec) return null;
+          const alpha = colorAlphaOf(colors[0]);
+          if (alpha < MASU_COLOR_ALPHA_MAX) overlay = { url: rec, alpha: alpha / 100 };
+          else fullUrl = rec;
+        }
+      }
+      _dyeBlobRetain(fullUrl);
+      const base = await _loadArtImage(fullUrl).finally(() => _dyeBlobRelease(fullUrl));
+      if (!base) return null;
+      const natW = base.naturalWidth || base.width, natH = base.naturalHeight || base.height;
+      if (!(natW > 0) || !(natH > 0)) return null;
+      const sx = Math.round(crop[0] * natW), sy = Math.round(crop[1] * natH);
+      const sw = Math.max(1, Math.round((crop[2] - crop[0]) * natW)), sh = Math.max(1, Math.round((crop[3] - crop[1]) * natH));
+      const side = Math.max(1, Math.min(FACE_BAKE_MAX_SIDE, Math.max(sw, sh)));
+      const out = document.createElement('canvas'); out.width = side; out.height = side;
+      const ctx = out.getContext('2d');
+      if (!ctx) return null;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(base, sx, sy, sw, sh, 0, 0, side, side);
+      if (overlay) {
+        const over = await _loadArtImage(overlay.url);
+        if (!over) return null;
+        ctx.globalAlpha = overlay.alpha;
+        ctx.drawImage(over, sx, sy, sw, sh, 0, 0, side, side);
+        ctx.globalAlpha = 1;
+      }
+      const blob = await new Promise((done) => { try { out.toBlob(done, 'image/png'); } catch (_) { done(null); } });
+      return blob && window.URL && typeof window.URL.createObjectURL === 'function' ? window.URL.createObjectURL(blob) : null;
+    } catch (e) { return null; }
+  })();
+  _faceBakeCache.set(key, promise);
+  while (_faceBakeCache.size > DYED_BAKE_CACHE_MAX) { const oldKey = _faceBakeCache.keys().next().value; const old = _faceBakeCache.get(oldKey); _faceBakeCache.delete(oldKey); _dyeBlobEvict(old); }
+  // 焼けなかったものは控えに残さない(次に描くときにもう一度試す)
+  promise.then((url) => { if (!url && _faceBakeCache.get(key) === promise) _faceBakeCache.delete(key); });
+  return promise;
+};
+// 顔アイコンの表示部品。MONSTER_FACE_CROP に範囲がある種は、(染めた)全身絵から顔を切り取って出す。
+// 範囲が無い種・切り取りを焼いている間・焼けなかったときは、今までどおりの出し方
+// (染色ありは DyedMonsterImage、無染色は専用顔アイコン faceSrc)へ戻す。
+// 切り取りには全身絵の大きさそろえ(monsterArtScale)は掛けない(範囲そのものが構図を決めるため)
+const MonsterFaceImage = ({ baseId, src, faceSrc, masuColors, alt, className, style, draggable }) => {
+  const crop = baseId ? MONSTER_FACE_CROP[baseId] : null;
+  const colors = _dyedColorsOf(baseId, masuColors);
+  const hasColor = colors.some(Boolean);
+  const colorKey = colors.join('|');
+  const faceKey = `${baseId}|${src}|${colorKey}`;
+  const [face, setFace] = useState({ key: '', url: undefined });
+  // 表示している切り取り絵は片づけない(控えから捨てられても、使い終わるまで残す)
+  useEffect(() => {
+    const url = face.url;
+    if (!url) return undefined;
+    _dyeBlobRetain(url);
+    return () => _dyeBlobRelease(url);
+  }, [face.url]);
+  useEffect(() => {
+    if (!crop || !src) return undefined;
+    let cancelled = false;
+    bakeMonsterFaceImage(baseId, src, masuColors).then((url) => { if (!cancelled) setFace({ key: faceKey, url: url || null }); });
+    return () => { cancelled = true; };
+  }, [baseId, src, colorKey]);
+  const fallback = hasColor
+    ? <DyedMonsterImage baseId={baseId} src={src} masuColors={masuColors} alt={alt} className={className} style={style} draggable={draggable}/>
+    : <img src={faceSrc || src} alt={alt} draggable={draggable} className={className} style={style}/>;
+  if (!crop) return fallback;
+  const url = face.key === faceKey ? face.url : undefined;
+  if (url) return <img src={url} alt={alt} draggable={draggable} className={className} style={style}/>;
+  return fallback;
 };
 // 染め絵を先に作って、控え(マスク・染め直し・焼きのキャッシュ)へ入れておく先読み。
 // 起動後の空き時間に自分のモンスターぶんを温めるのに使う(60-app の先読み)。

@@ -1146,10 +1146,14 @@ const aiCopySrcOf = (copy, slots) => {
 // 元の子の顔に「🤖」の印。顔の絵が無ければ立ち絵、それも無ければ 🤖 だけ
 function AiCopyFace({ src, size = 22 }) {
   const url = (src && (src.faceIconUrl || src.iconUrl || src.imgUrl)) || '';
+  // 切り取り範囲のある種は、顔アイコンを(染めた)全身絵からの切り取りで出す。元の子が個体(スロット)のときは種 id が合う場合だけ
+  const cropFace = src && src.id && src.imgUrl && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[src.id]
+    ? <MonsterFaceImage baseId={src.id} src={src.imgUrl} faceSrc={url} masuColors={Array.isArray(src.colors) ? src.colors : null} alt="" draggable={false} className="h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"/>
+    : null;
   return (
     <span data-ai-copy-face className="relative inline-block shrink-0" style={{ width: size, height: size }}>
-      {url ? <img src={url} alt="" aria-hidden="true" draggable="false" className="h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"/>
-        : <span className="flex h-full w-full items-center justify-center rounded-full bg-black/30 text-[12px]">🤖</span>}
+      {cropFace || (url ? <img src={url} alt="" aria-hidden="true" draggable="false" className="h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"/>
+        : <span className="flex h-full w-full items-center justify-center rounded-full bg-black/30 text-[12px]">🤖</span>)}
       {url && <span aria-hidden="true" className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-emerald-900 ring-1 ring-emerald-300 leading-none"
         style={{ width: Math.round(size * 0.62), height: Math.round(size * 0.62), fontSize: Math.round(size * 0.45) }}>🤖</span>}
     </span>

@@ -208,9 +208,14 @@ const makeRun = async (kind) => {
           check(`${label}: 自分の番のとき、上の帯と操作欄のガッツが同じ`, g.top != null && g.bar != null && Math.round(g.top) === g.bar, JSON.stringify(g));
           check(`${label}: 2ラウンド目の自分の番は、上の帯のラウンドも 2`, g.round === 2, JSON.stringify(g)); }
         if (name === 'G2' || name === 'MA1' || name === 'MA2') { const ov = await page.evaluate(() => { const box = document.querySelector('.msa-stagebox'); const bar = document.querySelector('[data-msxm] .msxm-top'); const say = document.querySelector('[data-msa-say]'); if (!box || !bar) return null;
-            const low = Math.max(...[...box.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }).map((e) => e.getBoundingClientRect().bottom), box.getBoundingClientRect().bottom);
-            const lowEl = [...box.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0]; return { boxBottom: Math.round(box.getBoundingClientRect().bottom), lowEl: lowEl ? String(lowEl.className && lowEl.className.baseVal != null ? lowEl.className.baseVal : lowEl.className).slice(0, 40) : '', sayTxt: say ? say.innerText.slice(0, 20) : '', stageLow: Math.round(low), sayTop: say ? Math.round(say.getBoundingClientRect().top) : null, barTop: Math.round(bar.getBoundingClientRect().top), boxH: Math.round(box.getBoundingClientRect().height) }; });
-          check(`${label}: 場(間合いの札まで)が実況・操作欄の見出しに重ならない`, ov && ov.stageLow <= (ov.sayTop != null ? ov.sayTop : ov.barTop) + 1 && ov.stageLow <= ov.barTop + 1, JSON.stringify(ov)); }
+            // 2026-11-18 社長「極力1画面に」: 実況は場の下の行から場の上への重ねに変わった。場の要素(実況の重ね自身を除く)が操作欄に重ならないことと、実況が場の中に収まることを見る
+            const inSay = (e) => say && (e === say || say.contains(e));
+            const cand = [...box.querySelectorAll('*')].filter((e) => !inSay(e));
+            const low = Math.max(...cand.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }).map((e) => e.getBoundingClientRect().bottom), box.getBoundingClientRect().bottom);
+            const lowEl = cand.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0];
+            const br = box.getBoundingClientRect(); const sr = say ? say.getBoundingClientRect() : null;
+            return { boxBottom: Math.round(br.bottom), lowEl: lowEl ? String(lowEl.className && lowEl.className.baseVal != null ? lowEl.className.baseVal : lowEl.className).slice(0, 40) : '', sayTxt: say ? say.innerText.slice(0, 20) : '', stageLow: Math.round(low), sayTop: sr ? Math.round(sr.top) : null, sayIn: sr ? (sr.top >= br.top - 1 && sr.bottom <= br.bottom + 1) : false, barTop: Math.round(bar.getBoundingClientRect().top), boxH: Math.round(br.height) }; });
+          check(`${label}: 場(間合いの札まで)が操作欄の見出しに重ならず、実況は場の中に重なる`, ov && ov.stageLow <= ov.barTop + 1 && ov.sayIn, JSON.stringify(ov)); }
         if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
           check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 ichika_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
           // 場面→曲の表: 試合の前の画面(cupPre=能力を見るバトルカード)と試合(cupMatch)は別の曲で、音源のファイルも別

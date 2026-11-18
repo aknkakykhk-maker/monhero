@@ -412,6 +412,16 @@ const msxMon = (id) => (typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MO
 const msxMonName = (id) => { const m = msxMon(id); return m ? m.name : id; };
 const msxMonImg = (id) => { const m = msxMon(id); return m ? m.imgUrl : ''; };
 const msxMonThumb = (id) => { const m = msxMon(id); return m ? (m.faceIconUrl || m.iconUrl || m.imgUrl) : ''; };
+// 顔アイコンの表示(切り取り方式。2026-11-18)。(染めた)全身絵から顔を切り取って出す MonsterFaceImage へ、
+// 種と色だけ渡すための薄い包み。範囲が無い種・部品が無いときは、今までの出し方
+// (染色ありは全身の染め絵、無染色は専用顔アイコン)と同じになる
+const MsxMonFace = ({ species, colors, className, style, alt = '' }) => (
+  typeof MonsterFaceImage === 'function'
+    ? <MonsterFaceImage baseId={species} src={msxMonImg(species)} faceSrc={msxMonThumb(species)} masuColors={Array.isArray(colors) ? colors : null} alt={alt} className={className} style={style} draggable={false}/>
+    : (Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+      ? <DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt={alt} className={className} style={style} draggable={false}/>
+      : <img src={msxMonThumb(species)} alt={alt} className={className} style={style} draggable={false}/>)
+);
 const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid) : null);
 const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
 // ---- ライバルの持ち主アイコン(2026-11-16 社長: ライバルはモンスターだけでなく持ち主のアイコンとセットで出す) ----
@@ -441,6 +451,10 @@ function MsxRivalOwnerIcon({ rival, size = 22 }) {
 function MsxRivalThumb({ rival, size = 20, imgStyle }) {
   const sp = rival && rival.species;
   const colors = rival && rival.colors;
+  // 切り取り方式の種は、丸い枠の中で顔切り取りを出す(染めた色も全身絵から焼くので必ず合う)
+  if (sp && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[sp]) {
+    return <span style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none', display: 'inline-block', background: '#1e1a36', verticalAlign: 'middle' }}><MonsterFaceImage baseId={sp} src={msxMonImg(sp)} faceSrc={msxMonThumb(sp)} masuColors={Array.isArray(colors) ? colors : null} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/></span>;
+  }
   if (sp && Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function') {
     return <span style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none', display: 'inline-block', background: '#1e1a36', verticalAlign: 'middle' }}><DyedMonsterImage baseId={sp} src={msxMonThumb(sp)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%' }}/></span>;
   }
@@ -710,7 +724,7 @@ function MonheroSuccessFarmMeal({ entryOpen }) {
             {bag ? <div className="msx-note" style={{ textAlign: 'center', marginTop: 6 }}>🎁 {bag}</div> : null}
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, result.skipped ? 'normal' : 'happy')} alt=""/><div className="bub f1">{result.skipped ? '「また次の優勝で、ごほうびを あげよう!」' : '「おいしそうに 食べてるよ! よく がんばったね」'}</div></div>
           </div>
-          <div className="v-ft"><button type="button" className="go" onClick={() => setResult(null)} data-mh-home-meal-close>とじる</button></div>
+          <div className="v-ft"><button type="button" className="go" onClick={() => setResult(null)} data-mh-home-meal-close>閉じる</button></div>
         </div>
       </div>
     );
@@ -729,7 +743,7 @@ function MonheroSuccessFarmMeal({ entryOpen }) {
           <div className="msx-note" data-mh-home-meal-detail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a', ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {}) }}>{pickKey && M[pickKey] ? `${M[pickKey].name}: ${fxLong(pickKey)}`.split(/(?<=[・:])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{typeof jaWrap === 'function' ? jaWrap(x) : x}</React.Fragment>) : 'ごはんを押すと、詳しい効き目が出ます'}</div>
           <div className="msx-note" data-mh-home-meal-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
         </div>
-        <div className="v-ft"><button type="button" disabled={busy} onClick={() => setDeferred(true)} data-mh-home-meal-later style={{ flex: '0.55' }}>あとで</button><button type="button" disabled={busy} onClick={skipMeal} data-mh-home-meal-skip style={{ flex: '1.25', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.15 }}><span>あげずに おわる</span><span style={{ fontSize: 9.5, opacity: 0.85 }}>恐れ度 +{SUC.MEAL_SKIP_FEAR || 1}</span></button><button type="button" className="go" disabled={busy || !(pickKey && can(pickKey))} onClick={give} data-mh-home-meal-give>{pickKey && can(pickKey) ? `${M[pickKey].name}をあげる` : 'ごはんを選んでね'}</button></div>
+        <div className="v-ft"><button type="button" disabled={busy} onClick={() => setDeferred(true)} data-mh-home-meal-later style={{ flex: '0.55' }}>あとで</button><button type="button" disabled={busy} onClick={skipMeal} data-mh-home-meal-skip style={{ flex: '1.25', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.15 }}><span>あげずに 終わる</span><span style={{ fontSize: 9.5, opacity: 0.85 }}>恐れ度 +{SUC.MEAL_SKIP_FEAR || 1}</span></button><button type="button" className="go" disabled={busy || !(pickKey && can(pickKey))} onClick={give} data-mh-home-meal-give>{pickKey && can(pickKey) ? `${M[pickKey].name}をあげる` : 'ごはんを選んでね'}</button></div>
       </div>
     </div>
   );

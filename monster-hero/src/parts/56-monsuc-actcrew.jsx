@@ -16,26 +16,27 @@ const MSX_CREW_SPOT_AID = Object.freeze([
   { left: '11%', bottom: '14%' }, { left: '86%', bottom: '60%' }, { left: '11%', bottom: '36%' }, { left: '64%', bottom: '70%' }, { left: '11%', bottom: '58%' }, { left: '36%', bottom: '72%' },
 ]);
 // タッグの子の置き場所(育てる子のすぐ横・手前)。3体目からは少し奥
-const MSX_CREW_SPOT_TAG = Object.freeze([{ left: '22%', bottom: '12%' }, { left: '78%', bottom: '12%' }, { left: '12%', bottom: '34%' }, { left: '88%', bottom: '34%' }]);
+const MSX_CREW_SPOT_TAG = Object.freeze([{ left: '25%', bottom: '12%' }, { left: '75%', bottom: '12%' }, { left: '13%', bottom: '34%' }, { left: '87%', bottom: '34%' }]);
 // 助手が来たときは右下を助手が使うので、タッグの子は左と右の奥へ
 const MSX_CREW_SPOT_TAG_AID = Object.freeze([{ left: '20%', bottom: '10%' }, { left: '10%', bottom: '33%' }, { left: '84%', bottom: '58%' }, { left: '14%', bottom: '56%' }]);
 const MSX_CREW_CSS = `
-.msx .msx-act .crew .cm.duo{height:27%;animation:msxCrewIn .3s cubic-bezier(.2,1.4,.4,1) both}
+.msx .msx-act .crew .cm.duo{height:31%;animation:msxCrewIn .3s cubic-bezier(.2,1.4,.4,1) both}
 .msx .msx-act .crew .cm.duo img{animation:msxCrewJump .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
 .msx .msx-act.tagx .me .mon{animation:msxCrewJumpMe .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
 .msx .msx-act .tagglow{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,#fde04755,#f59e0b22 45%,transparent 70%);animation:msxTagGlow .9s ease-in-out .1s 2 alternate both}
 .msx .msx-act .tagstar{position:absolute;z-index:5;pointer-events:none;font-style:normal;font-size:20px;left:calc(8% + var(--i) * 12%);top:calc(30% + (var(--i) * 37 % 40) * 1%);animation:msxTagStar .9s ease-out both;animation-delay:calc(.5s + var(--i) * .06s);filter:drop-shadow(0 0 6px #fde047)}
-.msx .msx-act .tagcut{position:absolute;left:-4%;right:-4%;top:9%;z-index:7;pointer-events:none;height:76px;transform:rotate(-4deg);background:linear-gradient(90deg,#78350fee,#f59e0bf2 30%,#fde047f5 50%,#f59e0bf2 70%,#78350fee);border-top:3px solid #fff7c2;border-bottom:3px solid #fff7c2;box-shadow:0 0 24px #fde047aa;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6%;animation:msxTagCut 1.25s cubic-bezier(.2,.9,.3,1) .05s both}
-.msx .msx-act .tagcut .fc{width:min(44px,11vw);height:min(44px,11vw);flex:none;border-radius:50%;background:#fff;border:3px solid #fff7c2;box-shadow:0 0 0 2px #b45309,0 3px 0 #0006;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx .msx-act .tagcut{position:absolute;left:-4%;right:-4%;top:8%;z-index:7;pointer-events:none;height:106px;transform:rotate(-4deg);background:repeating-linear-gradient(115deg,#ffffff00 0 16px,#ffffff17 16px 30px),linear-gradient(90deg,#78350fee,#f59e0bf2 30%,#fde047f5 50%,#f59e0bf2 70%,#78350fee);border-top:3px solid #fff7c2;border-bottom:3px solid #fff7c2;box-shadow:0 0 34px #fde047cc,0 6px 18px #0008;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6%;animation:msxTagCut 1.5s cubic-bezier(.2,.9,.3,1) .05s both}
+.msx .msx-act .tagcut .fc{width:min(56px,14vw);height:min(56px,14vw);flex:none;border-radius:50%;background:#fff;border:3px solid #fff7c2;box-shadow:0 0 0 2px #b45309,0 3px 0 #0006;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .msx .msx-act .tagcut .fc img{width:100%;height:100%;object-fit:cover}
-.msx .msx-act .tagcut .x{font-size:15px;font-weight:900;color:#7c2d12}
-.msx .msx-act .tagcut b{margin-left:4px;font-size:min(26px,6.6vw);font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;white-space:nowrap}
-.msx .msx-act .tagcut b small{display:block;font-size:12px;-webkit-text-stroke:0;text-shadow:none;color:#7c2d12;font-style:normal}
+.msx .msx-act .tagcut .x{font-size:17px;font-weight:900;color:#7c2d12}
+.msx .msx-act .tagcut b{margin-left:4px;font-size:min(37px,9.3vw);font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;white-space:nowrap;animation:msxTagCutPunch .5s cubic-bezier(.2,1.6,.4,1) .3s both}
+.msx .msx-act .tagcut b small{display:block;font-size:12.5px;-webkit-text-stroke:0;text-shadow:none;color:#7c2d12;font-style:normal}
 @keyframes msxCrewJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-34%) scale(1.05)}70%{transform:translateY(0) scaleY(.92)}}
 @keyframes msxCrewJumpMe{0%,100%{translate:0 0}40%{translate:0 -18%}70%{translate:0 0}}
 @keyframes msxTagGlow{from{opacity:.2}to{opacity:1}}
 @keyframes msxTagStar{0%{opacity:0;transform:scale(.3) rotate(0)}40%{opacity:1;transform:scale(1.2) rotate(90deg)}100%{opacity:0;transform:scale(.6) translateY(-30px) rotate(180deg)}}
-@keyframes msxTagCut{0%{opacity:0;transform:rotate(-4deg) translateX(-110%)}18%{opacity:1;transform:rotate(-4deg) translateX(0)}80%{opacity:1;transform:rotate(-4deg) translateX(0) scale(1)}100%{opacity:0;transform:rotate(-4deg) translateX(30%) scale(.96)}}
+@keyframes msxTagCut{0%{opacity:0;transform:rotate(-4deg) translateX(-110%)}14%{opacity:1;transform:rotate(-4deg) translateX(0)}84%{opacity:1;transform:rotate(-4deg) translateX(0) scale(1)}100%{opacity:0;transform:rotate(-4deg) translateX(30%) scale(.96)}}
+@keyframes msxTagCutPunch{0%{transform:scale(2.1);opacity:0}55%{transform:scale(.94);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-bchips{position:absolute;right:7px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:calc(100% - 14px);z-index:3}
 .msx .v-bchip{display:flex;align-items:center;gap:4px;max-width:100%;background:#0f0d24d0;border:1px solid #ffffff33;border-radius:99px;padding:1px 8px 1px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
 .msx .v-bchip img{width:20px;height:20px;flex:none;border-radius:50%;object-fit:cover;background:#ffffff22;border:1.5px solid #ffffff66}
@@ -83,11 +84,11 @@ function MsxActCrew({ run, o }) {
   const tagMs = ms.filter((i) => tags.includes(i)).slice(0, MSX_CREW_SPOT_TAG.length);
   const restMs = ms.filter((i) => !tagMs.includes(i));
   const tagged = tagMs.length > 0 || tags.includes('aid');
-  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60], ['actTag', 330], ['actTagSpark', 620]] : [], []);
   const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '');
   // 編成の子の絵(染色があれば染め絵で出す)
   const monImg = (m) => { const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''; if (!img) return null; return Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={img} masuColors={m.colors} alt="" draggable={false}/> : <img src={img} alt=""/>; };
-  const faceImg = (sp, colors) => (Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={typeof msxMonImg === 'function' ? msxMonImg(sp) : ''} masuColors={colors} alt="" draggable={false}/> : <img src={thumb(sp)} alt=""/>);
+  const faceImg = (sp, colors) => (typeof MsxMonFace === 'function' ? <MsxMonFace species={sp} colors={colors}/> : (Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={typeof msxMonImg === 'function' ? msxMonImg(sp) : ''} masuColors={colors} alt="" draggable={false}/> : <img src={thumb(sp)} alt=""/>));
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return (
@@ -122,7 +123,7 @@ function MsxBondChips({ s, card, add }) {
   return (
     <div className="v-bchips" data-msx-bond-chips={ms.length + (aid ? 1 : 0)}>
       {ms.map((i) => { const tag = tags.includes(i); const m = team[i]; return (
-        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''} masuColors={m.colors} alt="" draggable={false}/> : <img src={thumb(m)} alt=""/>}{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(m)}</span><span className="bc-up">親密度 +{add}</span></span>); })}
+        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}>{typeof MsxMonFace === 'function' ? <MsxMonFace species={m.species} colors={m.colors}/> : (Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''} masuColors={m.colors} alt="" draggable={false}/> : <img src={thumb(m)} alt=""/>)}{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(m)}</span><span className="bc-up">親密度 +{add}</span></span>); })}
       {aid ? <span className={`v-bchip${tags.includes('aid') ? ' tag' : ''}`} data-msx-bond-chip="aid"><img src={typeof msxFace === 'function' ? msxFace(s.aid, 'happy') : ''} alt=""/>{tags.includes('aid') ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{typeof msxAidName === 'function' ? msxAidName(s.aid) : ''}</span><span className="bc-up">親密度 +{add}</span></span> : null}
     </div>
   );

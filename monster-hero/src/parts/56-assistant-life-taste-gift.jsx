@@ -119,7 +119,7 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
       <p className="text-[11px] font-black text-pink-100">🧸 どのモンスターのぬいぐるみにする？</p>
       <button type="button" data-assistant-life-plush-open aria-expanded={open} onClick={() => setOpen(v => !v)}
         className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-900/70 px-2 text-left active:scale-[.98]">
-        {atgFace(mon) ? <img src={atgFace(mon)} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"/> : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[18px]" aria-hidden="true">🧸</span>}
+        {atgFace(mon) ? (typeof MonsterFaceImage === 'function' ? <MonsterFaceImage baseId={mon} src={(ALL_PLAYER_MONSTERS[mon] || {}).imgUrl || ''} faceSrc={atgFace(mon)} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"/> : <img src={atgFace(mon)} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"/>) : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[18px]" aria-hidden="true">🧸</span>}
         <span className="min-w-0 flex-1 truncate text-[13px] font-black text-white" data-assistant-life-plush-mon={mon}>{atgMonName(mon)}</span>
         <span className="shrink-0 text-[11px] font-black text-pink-200">{open ? '閉じる' : '選ぶ'}</span>
       </button>
@@ -127,7 +127,7 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
         {list.map(m => (
           <button key={m} type="button" data-assistant-life-plush-pick={m} aria-pressed={m === mon} onClick={() => { atgSetPick(who, { mon: m }); setOpen(false); }}
             className={`flex min-h-[56px] flex-col items-center justify-center rounded-lg border px-0.5 active:scale-95 ${m === mon ? 'border-pink-300 bg-pink-400/25' : 'border-white/10 bg-slate-800/60'}`}>
-            {atgFace(m) ? <img src={atgFace(m)} alt="" className="h-8 w-8 rounded-full object-cover"/> : <span className="text-[18px]" aria-hidden="true">🧸</span>}
+            {atgFace(m) ? (typeof MonsterFaceImage === 'function' ? <MonsterFaceImage baseId={m} src={(ALL_PLAYER_MONSTERS[m] || {}).imgUrl || ''} faceSrc={atgFace(m)} alt="" className="h-8 w-8 rounded-full object-cover"/> : <img src={atgFace(m)} alt="" className="h-8 w-8 rounded-full object-cover"/>) : <span className="text-[18px]" aria-hidden="true">🧸</span>}
             <span className="mt-0.5 block w-full truncate text-center text-[9.5px] font-black leading-tight text-white">{atgMonName(m)}</span>
           </button>))}
       </div>}

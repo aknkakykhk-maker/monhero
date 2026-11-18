@@ -12,6 +12,8 @@
 //   ⑧ 画面: 絵は ALL_PLAYER_MONSTERS[種族名] で引く/ほかの人の色は配列だけ(6つ・40字まで)に整えてから DyedMonsterImage に渡す
 //   ⑦ 端末の総合力の式(MASMON_CALC.power)とサーバの SQL の式の重みがそろっている
 //   ⑩ 詳細の完全版(作業H): 技ID・熟練は表示専用の tech_detail で送る(総合力には使わない)。サーバ未適用でも送る分は捨てられ、読む分は今までの列で読み直す
+//   ⑪ 詳細の上限・適性(ランキング v6): 実際に効いていた上限(cap_detail)と実際の適性(apt_detail)も表示専用で送る(総合力には使わない)。
+//      芯が引ければ芯の statCapOf・aptGradesOf、引けなければ上限だけ s.cap から整える。読む分は v6 の列→v5 の列→今までの列の順に読み直す
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -247,6 +249,45 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
     const mH = {}; const cH = loadCtx(mH, { server: (url) => (String(url).includes('tech_detail') ? { status: 400, body: '{}' } : { status: 200, body: '[]' }) });
     const topH = await cH.ctx.monsucRankReadTop({});
     check('⑩ 未適用の見え方では今までの列で読み直す', !!topH && Array.isArray(topH.rows) && cH.calls.some(c => c.url.includes('tech_detail')) && cH.calls.some(c => !c.url.includes('tech_detail')), JSON.stringify(topH));
+  }
+
+  // ⑪ ランキング詳細の上限・適性(ランキング v6・2026-11-18): 実際に効いていた上限(cap_detail)と実際の適性(apt_detail)も表示専用で送る(総合力の stats・techs には混ぜない)。
+  //    芯が引ければ芯の statCapOf・aptGradesOf、引けなければ上限だけ s.cap から整える(適性は芯なしでは送らない)。サーバ未適用でも、送る分は捨てられ、読む分は v5 の列→今までの列で読み直す
+  {
+    server(okServer);
+    // 芯が引けない・s.cap はある: 上限は s.cap から(999 が下限・端数は整数に)、適性は送らない
+    const rC = await S({ run: runOf({ id: 'runcap1abcd', cap: { life: 1299, pow: 999, wise: 2500.4, hit: 'x', eva: 1000, tough: 999 } }), ev, name: 'うわ' });
+    const rowC = calls[calls.length - 1].body.p_row;
+    check('⑪ cap_detail を送る(s.cap から・999 が下限)', rC.ok === true && JSON.stringify(rowC.cap_detail) === JSON.stringify({ life: 1299, pow: 999, wise: 2500, hit: 999, eva: 1000, tough: 999 }), JSON.stringify(rowC.cap_detail));
+    check('⑪ 適性は芯なしでは送らない・stats には混ぜない', rowC.apt_detail === null && JSON.stringify(rowC.stats) === JSON.stringify({ life: 500, pow: 1200, wise: 0, hit: 300, eva: 0, tough: 400 }), JSON.stringify([rowC.apt_detail, rowC.stats]));
+    // 芯が引ける: 上限は statCapOf・適性は aptGradesOf の結果が正(s.cap より芯を優先する)
+    const mC = {}; const cC = loadCtx(mC);
+    cC.ctx.msxSuc = { SUC: { statCapOf: (s, k) => ({ life: 1500, pow: 999, wise: 999, hit: 3200, eva: 999, tough: 1100 })[k], aptGradesOf: () => ['A', 'A', 'C', 'D'] } };
+    const rC2 = await cC.ctx.monsucRankSubmit({ run: runOf({ id: 'runcap2abcd', cap: { life: 1, pow: 1, wise: 1, hit: 1, eva: 1, tough: 1 } }), ev, name: 'しん' });
+    const rowC2 = cC.calls[cC.calls.length - 1].body.p_row;
+    check('⑪ 芯が引ければ statCapOf・aptGradesOf を送る', rC2.ok === true && JSON.stringify(rowC2.cap_detail) === JSON.stringify({ life: 1500, pow: 999, wise: 999, hit: 3200, eva: 999, tough: 1100 }) && JSON.stringify(rowC2.apt_detail) === JSON.stringify(['A', 'A', 'C', 'D']), JSON.stringify([rowC2.cap_detail, rowC2.apt_detail]));
+    // 読む側の整え方(ほかの人の行はだれでも入れられるので、必ず整える)
+    check('⑪ 読む側の整え方(上限)', JSON.stringify(ctx.monsucRankCapDetailOf({ life: 1500, pow: 999, wise: 999, hit: 3200, eva: 999, tough: 1100 })) === JSON.stringify({ life: 1500, pow: 999, wise: 999, hit: 3200, eva: 999, tough: 1100 })
+      && ctx.monsucRankCapDetailOf({ life: 500, pow: 999, wise: 999, hit: 999, eva: 999, tough: 999 }).life === 999
+      && ctx.monsucRankCapDetailOf({ life: 1500 }) === null && ctx.monsucRankCapDetailOf([1, 2, 3]) === null && ctx.monsucRankCapDetailOf(null) === null && ctx.monsucRankCapDetailOf('x') === null);
+    check('⑪ 読む側の整え方(適性)', JSON.stringify(ctx.monsucRankAptDetailOf(['S+', 'A', 'C', 'D'])) === JSON.stringify(['S+', 'A', 'C', 'D'])
+      && ctx.monsucRankAptDetailOf(['A', 'A', 'C']) === null && ctx.monsucRankAptDetailOf(['A', 'A', 'C', 'Z']) === null && ctx.monsucRankAptDetailOf('A') === null && ctx.monsucRankAptDetailOf(null) === null);
+    // 読みの3段: v6 の列が無い見え方では v5 の列、v5 の列も無ければ今までの列で読み直す
+    const mR = {}; const cR = loadCtx(mR, { server: (url) => (String(url).includes('cap_detail') ? { status: 400, body: '{}' } : { status: 200, body: '[]' }) });
+    const topR = await cR.ctx.monsucRankReadTop({});
+    check('⑪ v6 未適用の見え方では v5 の列で読み直す', !!topR && Array.isArray(topR.rows) && cR.calls.some(c => c.url.includes('cap_detail')) && cR.calls.some(c => c.url.includes('tech_detail') && !c.url.includes('cap_detail')), JSON.stringify(topR));
+    const mR2 = {}; const cR2 = loadCtx(mR2, { server: (url) => (String(url).includes('cap_detail') || String(url).includes('tech_detail') ? { status: 400, body: '{}' } : { status: 200, body: '[]' }) });
+    const topR2 = await cR2.ctx.monsucRankReadTop({});
+    check('⑪ v5 も未適用なら今までの列で読み直す', !!topR2 && Array.isArray(topR2.rows) && cR2.calls.some(c => !c.url.includes('tech_detail') && !c.url.includes('cap_detail')), JSON.stringify(topR2));
+    // 詳細の組み立て: 行の cap_detail・apt_detail を整えて MsxMonDetail へ渡し、適性は保存があればそれを使う
+    const rankSrc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-monsuc-rank.jsx'), 'utf8');
+    check('⑪ 詳細は行の上限・適性を MsxMonDetail へ渡す', rankSrc.includes('monsucRankCapDetailOf(row.cap_detail)') && rankSrc.includes('monsucRankAptDetailOf(row.apt_detail)') && rankSrc.includes('cap={capDetail}') && rankSrc.includes('if (aptDetail) grades = aptDetail'));
+    const v6 = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_V6_CAP_APT.sql'), 'utf8');
+    const v6m = fs.readFileSync(path.join(root, 'supabase/migrations/202611180001_monsuc_rank_v6_cap_apt.sql'), 'utf8');
+    check('⑪ docs/sql と migrations が同じ(V6)', v6 === v6m);
+    check('⑪ SQL は列と見え方と送信だけ(計算の関数は作り直さない・表は消さない)', v6.includes('add column if not exists cap_detail') && v6.includes('add column if not exists apt_detail') && !/create or replace function public\.monsuc_rank_power/.test(v6) && !/drop table/i.test(v6) && !/delete from/i.test(v6));
+    check('⑪ SQL の見え方に詳細の列(末尾)', v6.includes('as place, loyal, pop, techs, tech_detail, cap_detail, apt_detail'));
+    check('⑪ SQL の前提(v5 まで流してあること)', v6.includes('MONSUC_RANK_V5_TECH_DETAIL.sql まで流してあること'));
   }
 
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');

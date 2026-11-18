@@ -2,6 +2,9 @@
 // 2026-11-14 社長: シナリオは今後増やす。いまのシナリオの名前は「ヒーローへの道」。参考のストーリー選択の画面
 //   (docs/reference/line-mf/scenario-select-2026-11-14/)に合わせて、育成を始める前にシナリオを選ぶ段を作る。
 //   止め絵: docs/progress/player-raise/shots/scenario-2026-11-14/scenario-select-mock.png(社長に見せ済み・案のまま)
+// 2026-11-18 社長: キービジュアルは町の絵+助手のコラージュが「作りが雑」なので差し替え。
+//   背景はファームの絵(images/story-bg/monsuc_farm.webp。社長が承認した生成絵)にして、
+//   上に立てるのは助手ではなくゲーム本物のモンスター(cast はモンスターの id。msxMonImg で引く)
 // 保存: 途中の育成 mh_monsuc_run_v1 に scn(シナリオの id)を足すだけ。無い保存・知らない id は 'hero' として読む(msxScenarioId)
 const MSX_STORIES = Object.freeze([
   Object.freeze({
@@ -14,7 +17,7 @@ const MSX_STORIES = Object.freeze([
       ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'],
       ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。'],
     ]),
-    cast: Object.freeze({ left: 'issa', center: 'mua', right: 'kiki' }),
+    cast: Object.freeze({ left: 'Suezo', center: 'Mocchi', right: 'Ark' }),
   }),
 ]);
 const msxScenarioId = (id) => (MSX_STORIES.some((x) => x.id === id) ? id : 'hero');
@@ -26,12 +29,11 @@ const MSX_SCN_CSS = `
 .msx .scn-hd small{font-size:14px;color:#fde68a}
 .msx .scn-sc{position:relative;flex:1 1 0;min-height:0;overflow:hidden}
 .msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
-.msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
-/* 左右の人物は画面の内側に全身を収める(端へ寄せすぎると細い絵ほど大半が切れる。2026-11-16 実機スクショ) */
-.msx .scn-sc .who.l{left:0;bottom:40%;height:36%;z-index:2}
-.msx .scn-sc .who.r{right:0;bottom:38%;height:40%;z-index:2}
-.msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
+.msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 3px #1a2e05aa)}
+/* モンスターはファーム背景の中央の草地に立てる。足元は手前の柵より奥(下から約1/4)、左右は少し奥で小さめ(遠近) */
+.msx .scn-sc .who.l{left:6%;bottom:28%;height:26%;z-index:2}
+.msx .scn-sc .who.r{right:5%;bottom:27%;height:28%;z-index:2}
+.msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:23%;height:35%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
 .msx .scn-tx{position:absolute;z-index:3;left:0;right:0;bottom:3%;display:flex;flex-direction:column;align-items:stretch}
@@ -49,14 +51,16 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
-.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:0;bottom:0;height:78%}
+.msx .land .scn-sc>.bg,.msx.land .scn-sc>.bg{object-position:center 68%}
+.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:19%;transform:none;bottom:2%;height:84%;animation:none}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:1%;bottom:2%;height:64%}
 .msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
 .msx .land .scn-bd,.msx.land .scn-bd{right:2%}
 @media (orientation:landscape) and (max-height:520px){
 .msx .scn-tx{right:42%}
-.msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .scn-sc .who.r{right:0;bottom:0;height:78%}
+.msx .scn-sc>.bg{object-position:center 68%}
+.msx .scn-sc .who.c{left:auto;right:19%;transform:none;bottom:2%;height:84%;animation:none}
+.msx .scn-sc .who.r{right:1%;bottom:2%;height:64%}
 .msx .scn-sc .who.l{display:none}
 }
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
@@ -74,22 +78,17 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
   const n = MSX_STORIES.length;
-  const art = (aid) => { // 全身の絵(助手ごとの表情)。パスは助手の表(assistantFullBodyImage)から引く。無ければ今の立ち絵
-    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
-    const ex = aid === 'mua' ? 'excited' : 'happy'; const who = typeof assistantById === 'function' ? assistantById(aid) : null;
-    return (who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex)) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
-  };
+  const mon = (mid) => (typeof msxMonImg === 'function' ? msxMonImg(mid) : ''); // 背景に立てるモンスターの全身絵(ゲーム本物の絵)
   const many = n > 1;
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
       <div className="scn-hd"><span>📖 ストーリー選択</span><small>シナリオ {idx + 1}/{n}</small></div>
       <div className="scn-sc">
-        <img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/>
-        <div className="pl"/>
-        {sc.cast.left ? <img className="who l" src={art(sc.cast.left)} alt=""/> : null}
-        {sc.cast.right ? <img className="who r" src={art(sc.cast.right)} alt=""/> : null}
-        {sc.cast.center ? <img className="who c" src={art(sc.cast.center)} alt=""/> : null}
+        <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
+        {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
+        {sc.cast.right ? <img className="who r" src={mon(sc.cast.right)} alt=""/> : null}
+        {sc.cast.center ? <img className="who c" src={mon(sc.cast.center)} alt=""/> : null}
         <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
         <div className="scn-tx">
           <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>

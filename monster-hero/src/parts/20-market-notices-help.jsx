@@ -184,17 +184,19 @@ const dexIconArtScale = (src, lineage) => {
   const def = !lineage && typeof monsterArtScaleBySrc === 'function' ? monsterArtScaleBySrc(src) : null;
   return def ? { transform: monsterArtScaleTransform(def) } : null;
 };
-const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
+const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false, faceMon=null }) => (
   <span className={`${lineage?'w-7 h-7':'w-14 h-14'} rounded-full overflow-hidden border ${lineage?'border-amber-300/40':'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`}>
-    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(dexIconArtScale(src, lineage)||{}),...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
+    {faceMon && !hidden && typeof MonsterFaceImage === 'function' && typeof MONSTER_FACE_CROP !== 'undefined' && MONSTER_FACE_CROP[faceMon.id]
+      ? <MonsterFaceImage baseId={faceMon.id} src={faceMon.imgUrl} faceSrc={src} alt={alt} draggable={false} className="w-full h-full object-cover"/>
+      : src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(dexIconArtScale(src, lineage)||{}),...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
 // 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
 // 360pxでもウンディーネ・ユグドラシルが切れていた)。札の高さは顔アイコン(28px)で決まり、2行の字はその中に収まるので
 // 札の大きさは変わらない。5文字以上は少し小さい字にして、なるべく1行で読めるようにする
-const DexLineageChip = ({ lineage, iconUrl }) => (
+const DexLineageChip = ({ lineage, iconUrl, faceMon = null }) => (
   <span data-dex-lineage className="flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1">
-    {iconUrl?<DexMonsterIcon src={iconUrl} lineage/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
+    {iconUrl?<DexMonsterIcon src={iconUrl} lineage faceMon={faceMon}/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
     <span data-dex-lineage-name className={`${String(lineage.name||'').length>=5?'text-[10px]':'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`}>{lineage.name}</span>
   </span>
 );

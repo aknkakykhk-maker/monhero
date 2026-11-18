@@ -138,7 +138,8 @@ const LEVEL_V1_SONGS=Object.freeze(new Set([
   'stay_with_me_short', 'kiki_issen_short', 'crazy_party_night', 'crazy_party_night_full', 'emerald_rush', 'wrath_of_the_thorn_king',
   'monster', 'monster_short', 'anima', 'journey', 'sheriruth', 'grievous_lady',
   'against_my_own_shadow', 'rose', 'rose_short', 'sad_song', 'sad_song_short', 'toward_the_stars_short',
-  'atsu_cup_theme_debug_short', 'sheriruth_proto', 'sheriruth_stop_ref', 'sheriruth_stop_ref_trim'
+  'atsu_cup_theme_debug_short', 'sheriruth_proto', 'sheriruth_stop_ref', 'sheriruth_stop_ref_trim',
+  'seasons_of_a_little_plaza', 'seasons_of_a_little_plaza_hell_debug'
 ]));
 // --- さらに新しい測り方(v3・2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高いから難易度もっと重く見てほしい」
 //     「空中地上は基本は指を離した位置に置くのが基本」「見分けづらいってのが相当難易度高いんだよ」) ---
