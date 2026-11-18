@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1ae4216fb337c7f
+// source-sha256: 2294e53dac08689a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13213,21 +13213,21 @@ const DyeRegionColorControls = ({
     className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
   }, colorAlphaOf(colors[idx]), "%")), colors[idx] && React.createElement("div", {
     "data-dye-alpha-steppers": true,
-    className: "mt-1 flex items-center justify-end gap-1.5"
+    className: "mt-1 flex items-center gap-1.5"
   }, React.createElement(RepeatStepButton, {
     "data-dye-alpha-step": "down",
     "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1下げる`,
     disabled: colorAlphaOf(colors[idx]) <= MASU_COLOR_ALPHA_MIN,
     onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) - 1)),
-    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30"
   }, "−"), React.createElement("span", {
-    className: "w-14 text-center text-[11px] font-black text-white tabular-nums"
+    className: "min-w-0 flex-1 text-center text-[11px] font-black text-white tabular-nums"
   }, "濃さ", colorAlphaOf(colors[idx]), "%"), React.createElement(RepeatStepButton, {
     "data-dye-alpha-step": "up",
     "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1上げる`,
     disabled: colorAlphaOf(colors[idx]) >= MASU_COLOR_ALPHA_MAX,
     onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
-    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30"
   }, "+")))));
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
@@ -14438,7 +14438,7 @@ const CustomColorPicker = ({
       "aria-label": `${label}を1下げる`,
       disabled: value <= 0,
       onStep: () => step(-1),
-      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30"
     }, "−"), React.createElement("span", {
       className: "min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white"
     }, value), React.createElement(RepeatStepButton, {
@@ -14446,7 +14446,7 @@ const CustomColorPicker = ({
       "aria-label": `${label}を1上げる`,
       disabled: value >= max,
       onStep: () => step(1),
-      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white flex items-center justify-center active:scale-95 disabled:opacity-30"
     }, "+"));
   })));
 };
