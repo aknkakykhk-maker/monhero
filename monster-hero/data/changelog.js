@@ -43,6 +43,20 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-18 15:13", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'開始画面のみゅあが、足元まで見える全身で立つようになりました',
+    items:[
+      'モンヒロサクセスの開始画面で立っているみゅあの絵が、途中で切れて見える絵から、足元まで見える全身の絵に変わりました。モンスターたちと同じ地面に立っています。',
+    ],
+  },
+  {
+    date: "2026-11-18 15:13", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'技の詳しさで「クリティカル率」の値だけ右にずれていたのを直しました',
+    items:[
+      'モンスターの詳しさや編成の「効果・詳細」で技の性能を見るとき、「クリティカル率」の行だけ値が右にずれていました。項目の名前の列の幅をそろえて、すべての行で値の位置がそろうようにしました。',
+    ],
+  },
+  {
     date: "2026-11-18 14:50", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセスの大会で全モンスターに技ごとの動きがつきました',
     items:['地面から岩がせり上がる地震、星が降るコズミックバンなど、大会で技ごとの攻撃演出が楽しめます。'],
