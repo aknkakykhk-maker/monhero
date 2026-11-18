@@ -9,6 +9,7 @@ const AMG_MAX = 999; // 仕様書 §2 の仮案
 // 種族ごとの適性(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)。案: docs/progress/assistant-peer/masmon-grow/aptitude-draft.jpg(社長が見て決める)
 // 種族ごとの伸びやすさ(ライフ・ちから・かしこさ・命中・回避・丈夫さ の順に A〜E)と初めの値。2026-11-11 社長「モンスターファームを参考に」:
 //   モンスターファーム2の種族ランクと純血の初期値(appmedia.jp の MF2 攻略 wiki の種族ページ)。◇=近い血統の値・※=モンヒロ独自(MF2 に無い)・★=オリジナルの独自の素質(剣士モッチー・パンドラ・エイキ。社長 11-11)。表は docs/progress/assistant-peer/masmon-grow/aptitude-mf2.json
+//   イルミネ・ドリーミィは 2026-11-18 に、社長提供の LINEモンスターファーム原作の素質(能力の順序)に合わせて組み替えた(旧案は力・賢さが原作と逆転していた)。根拠は aptitude-mf2.json の src 欄
 const AMG_APT = Object.freeze({
   Mocchi: 'CCCBBB',
   Suezo: 'DCABDD',
@@ -36,8 +37,8 @@ const AMG_APT = Object.freeze({
   Kuromy: 'BACBDB',
   Ghost: 'EEBBBE',
   Spooky: 'EEBBBE',
-  Illumine: 'EEBCAE',
-  Dreamy: 'DEBCAD',
+  Illumine: 'DBEABC',
+  Dreamy: 'CBEAAC',
   Kyubi: 'CCAACD',
   Orihime: 'CDAACC',
 });
@@ -68,8 +69,8 @@ const AMG_INIT = Object.freeze({
   Kuromy: [135, 160, 110, 135, 85, 135],
   Ghost: [100, 90, 120, 140, 150, 80],
   Spooky: [100, 90, 120, 140, 150, 80],
-  Illumine: [60, 60, 135, 110, 160, 60],
-  Dreamy: [85, 60, 135, 110, 160, 85],
+  Illumine: [65, 120, 45, 150, 120, 85],
+  Dreamy: [85, 120, 45, 150, 150, 85],
   Kyubi: [110, 110, 160, 160, 110, 85],
   Orihime: [110, 85, 160, 160, 110, 110],
 });

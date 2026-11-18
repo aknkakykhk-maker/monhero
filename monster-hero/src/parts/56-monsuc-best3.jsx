@@ -47,7 +47,7 @@ function MsxBest3({ b, run }) {
         return (<div key={e.id} className={`row${me ? ' me' : ''}`} data-msx-best3-row={i + 1}
           style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8, transform: go ? 'translateY(0)' : `translateY(${startOf(i, e)}px)` }}>
           <b className={`pl p${i + 1}`}>{i + 1}</b>
-          {thumb(e.species) ? <img src={thumb(e.species)} alt=""/> : null}
+          {thumb(e.species) ? <MsxMonFace species={e.species} colors={e.colors}/> : null}
           <span className="nm">{name(e)}{me ? <small>今回</small> : null}</span>
           <span className="rk">{e.rank}</span>
           <b className="pw">{fmt(e.power)}</b>
