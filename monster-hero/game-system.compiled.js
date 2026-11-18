@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87aa7518d3080a97
+// source-sha256: 7ba9c4427e0cede5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -185463,7 +185463,9 @@ function MsxR3Retire({
         if (!alive || st !== 'sent') return;
         let place = null;
         if (typeof monsucRankRead === 'function') {
-          const d = await monsucRankRead({});
+          const d = await monsucRankRead({
+            beta: s.rankBeta === 2 ? 2 : 1
+          });
           if (d && d.mine) place = d.mine.place;
         }
         if (alive) setRankFix({
@@ -192913,14 +192915,15 @@ const monsucRankRowOf = ({
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
-    engine_version: monsucRankEngineVersion()
+    engine_version: monsucRankEngineVersion(),
+    rank_beta: run.rankBeta === 2 ? 2 : 1
   };
 };
 const monsucRankPost = async (owner, key, row) => {
   const ac = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ac ? setTimeout(() => ac.abort(), MONSUC_RANK_TIMEOUT_MS) : null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/monsuc_rank_submit`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${row.rank_beta === 2 ? 'monsuc_rank_submit_beta2' : 'monsuc_rank_submit'}`, {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
@@ -192954,7 +192957,7 @@ const monsucRankPost = async (owner, key, row) => {
     if (timer) clearTimeout(timer);
   }
 };
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'cap_detail', 'apt_detail', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'cap_detail', 'apt_detail', 'lv', 'loyal', 'pop', 'engine_version', 'rank_beta'];
 const monsucRankCleanRow = e => {
   const r = {};
   for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k];
@@ -193146,23 +193149,24 @@ const monsucRankGet = async (path, withCount) => {
     return null;
   }
 };
-const monsucRankViewOf = lineage => {
+const monsucRankViewOf = (lineage, beta) => {
   const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
   return {
     lin,
-    view: lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all',
+    view: (lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all') + (beta === 2 ? '_beta2' : ''),
     where: lin ? `&lineage=eq.${lin}` : '',
     limit: lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL
   };
 };
 const monsucRankReadTop = async ({
+  beta = 2,
   lineage = null
 } = {}) => {
   const {
     view,
     where,
     limit
-  } = monsucRankViewOf(lineage);
+  } = monsucRankViewOf(lineage, beta);
   let top = null;
   for (const cols of MONSUC_RANK_COLS_TRY) {
     top = await monsucRankGet(`${view}?select=${cols}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
@@ -193177,6 +193181,7 @@ const monsucRankReadTop = async ({
   };
 };
 const monsucRankReadMine = async ({
+  beta = 2,
   lineage = null,
   sent = []
 } = {}) => {
@@ -193185,7 +193190,7 @@ const monsucRankReadMine = async ({
   const {
     view,
     where
-  } = monsucRankViewOf(lineage);
+  } = monsucRankViewOf(lineage, beta);
   let m = null;
   for (const cols of MONSUC_RANK_COLS_TRY) {
     m = await monsucRankGet(`${view}?select=${cols}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
@@ -193194,13 +193199,16 @@ const monsucRankReadMine = async ({
   return m && m.rows[0] ? m.rows[0] : null;
 };
 const monsucRankRead = async ({
+  beta = 2,
   lineage = null
 } = {}) => {
   const top = await monsucRankReadTop({
+    beta,
     lineage
   });
   if (!top) return null;
   const mine = await monsucRankReadMine({
+    beta,
     lineage,
     sent: top.sent
   });
@@ -193543,6 +193551,7 @@ function MonsucRankLineageSheet({
 function MonsucRankScreen({
   onBack
 }) {
+  const [beta, setBeta] = React.useState(2);
   const [tab, setTab] = React.useState('all');
   const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
@@ -193587,14 +193596,18 @@ function MonsucRankScreen({
     }
     if (!flushed) return undefined;
     const lin = tab === 'lineage' ? lineage : null;
-    const key = `${tab}:${lin || ''}`;
+    const key = `${beta}:${tab}:${lin || ''}`;
     const cached = cacheRef.current[key] || null;
     if (cached) {
       setData(cached);
       setLoading(false);
-    } else setLoading(true);
+    } else {
+      setData(null);
+      setLoading(true);
+    }
     setFailed(false);
     monsucRankReadTop({
+      beta,
       lineage: lin
     }).then(top => {
       if (!alive) return;
@@ -193613,6 +193626,7 @@ function MonsucRankScreen({
       setData(merged);
       setLoading(false);
       monsucRankReadMine({
+        beta,
         lineage: lin,
         sent: top.sent
       }).then(mine => {
@@ -193630,7 +193644,7 @@ function MonsucRankScreen({
     return () => {
       alive = false;
     };
-  }, [on, flushed, tab, lineage, retryN]);
+  }, [on, flushed, beta, tab, lineage, retryN]);
   React.useEffect(() => {
     if (!detail && listRef.current) listRef.current.scrollTop = savedScrollRef.current;
   }, [detail]);
@@ -193683,7 +193697,23 @@ function MonsucRankScreen({
     className: "text-[18px] font-black"
   }, "🏆 総合力ランキング"), React.createElement("div", {
     className: "text-[11px] text-slate-300 leading-snug"
-  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("button", {
+  }, "育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別"), React.createElement("div", {
+    className: "flex gap-2 mt-2",
+    role: "group",
+    "aria-label": "育成ルール"
+  }, [2, 1].map(b => React.createElement("button", {
+    key: b,
+    type: "button",
+    "aria-pressed": beta === b,
+    onClick: () => {
+      if (b !== beta) {
+        setData(null);
+        setLoading(true);
+        setBeta(b);
+      }
+    },
+    className: 'flex-1 rounded-full py-2 font-bold ' + (beta === b ? 'bg-yellow-300 text-slate-900' : 'bg-slate-700 text-white')
+  }, "β", b))), React.createElement("button", {
     type: "button",
     "data-monsuc-rank-lineage-open": true,
     onClick: () => setLineagePickerOpen(true),

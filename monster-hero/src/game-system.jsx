@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3abebf75fb55ad0
+// generated-sha256: 00ccdf7f6dc92ff5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -94708,7 +94708,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
         if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
         let place = null;
-        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
+        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({ beta: s.rankBeta === 2 ? 2 : 1 }); if (d && d.mine) place = d.mine.place; }
         if (alive) setRankFix({ ok: true, placeAll: place });
       } catch (_) {}
     })();
@@ -98423,7 +98423,7 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
     lv: monsucRankClamp(Math.round(monsucRankNum(e.lv !== undefined ? e.lv : run.lv, 1)), 1, 99),
     loyal: monsucRankClamp(Math.round(monsucRankNum(e.loyal)), 0, 100),
     pop: monsucRankClamp(Math.round(monsucRankNum(e.pop !== undefined ? e.pop : run.pop)), 0, 100),
-    engine_version: monsucRankEngineVersion(),
+    engine_version: monsucRankEngineVersion(), rank_beta: run.rankBeta === 2 ? 2 : 1,
   };
 };
 
@@ -98432,7 +98432,7 @@ const monsucRankPost = async (owner, key, row) => {
   const ac = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ac ? setTimeout(() => ac.abort(), MONSUC_RANK_TIMEOUT_MS) : null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/monsuc_rank_submit`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${row.rank_beta === 2 ? 'monsuc_rank_submit_beta2' : 'monsuc_rank_submit'}`, {
       method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_owner: owner, p_key: key, p_row: row }), signal: ac ? ac.signal : undefined,
     });
     if (!r.ok) return { ok: false, reason: 'network' };
@@ -98445,7 +98445,7 @@ const monsucRankPost = async (owner, key, row) => {
   } finally { if (timer) clearTimeout(timer); }
 };
 // サーバへ送る中身は決まった項目だけ(登録待ちに付いた印などは送らない)
-const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'cap_detail', 'apt_detail', 'lv', 'loyal', 'pop', 'engine_version'];
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'tech_detail', 'cap_detail', 'apt_detail', 'lv', 'loyal', 'pop', 'engine_version', 'rank_beta'];
 const monsucRankCleanRow = (e) => { const r = {}; for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k]; return r; };
 // 登録待ちの1件を送る。run_id がまだ無ければ、いまの持ち主で作る(送る瞬間に作るのが決めごと)
 //   送れたら: 送れた印を付けて登録待ちから外す。形・上限・鍵で断られたものは送り直しても通らないので外す。電波・混雑は残す
@@ -98536,13 +98536,13 @@ const monsucRankGet = async (path, withCount) => {
   } catch (_) { return null; }
 };
 // lineage を渡すと血統別。上位の一覧と自分の順位は分けて読む(2026-11-16 UI改修: 一覧が届き次第出し、自分の順位は後から足す)
-const monsucRankViewOf = (lineage) => {
+const monsucRankViewOf = (lineage, beta) => {
   const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
-  return { lin, view: lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all', where: lin ? `&lineage=eq.${lin}` : '', limit: lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL };
+  return { lin, view: (lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all') + (beta === 2 ? '_beta2' : ''), where: lin ? `&lineage=eq.${lin}` : '', limit: lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL };
 };
 // 上位の一覧 { rows, total, sent }(失敗は null)
-const monsucRankReadTop = async ({ lineage = null } = {}) => {
-  const { view, where, limit } = monsucRankViewOf(lineage);
+const monsucRankReadTop = async ({ beta = 2, lineage = null } = {}) => {
+  const { view, where, limit } = monsucRankViewOf(lineage, beta);
   let top = null;
   for (const cols of MONSUC_RANK_COLS_TRY) { top = await monsucRankGet(`${view}?select=${cols}${where}&order=place.asc,run_id.asc&limit=${limit}`, true); if (top) break; } // v6 未適用なら v5 の列、v5 も未適用なら今までの列で読み直す
   if (!top) return null;
@@ -98550,19 +98550,19 @@ const monsucRankReadTop = async ({ lineage = null } = {}) => {
   return { rows: top.rows, total: top.total, sent };
 };
 // 自分の順位(自分の子のいちばん上の行。無い・失敗は null)
-const monsucRankReadMine = async ({ lineage = null, sent = [] } = {}) => {
+const monsucRankReadMine = async ({ beta = 2, lineage = null, sent = [] } = {}) => {
   const ids = (Array.isArray(sent) ? sent : []).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
   if (ids.length === 0) return null;
-  const { view, where } = monsucRankViewOf(lineage);
+  const { view, where } = monsucRankViewOf(lineage, beta);
   let m = null;
   for (const cols of MONSUC_RANK_COLS_TRY) { m = await monsucRankGet(`${view}?select=${cols}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false); if (m) break; } // v6 未適用なら v5 の列、v5 も未適用なら今までの列で読み直す
   return m && m.rows[0] ? m.rows[0] : null;
 };
 // { rows, total, mine, sent }(従来のまとめ読み)
-const monsucRankRead = async ({ lineage = null } = {}) => {
-  const top = await monsucRankReadTop({ lineage });
+const monsucRankRead = async ({ beta = 2, lineage = null } = {}) => {
+  const top = await monsucRankReadTop({ beta, lineage });
   if (!top) return null;
-  const mine = await monsucRankReadMine({ lineage, sent: top.sent });
+  const mine = await monsucRankReadMine({ beta, lineage, sent: top.sent });
   return { rows: top.rows, total: top.total, mine, sent: top.sent };
 };
 
@@ -98746,6 +98746,7 @@ function MonsucRankLineageSheet({ lineages, tab, lineage, q, setQ, onPick, onClo
 
 // R1 全モンスター / R2 血統別。onBack で戻る
 function MonsucRankScreen({ onBack }) {
+  const [beta, setBeta] = React.useState(2);
   const [tab, setTab] = React.useState('all');
   const lineages = React.useMemo(() => monsucRankLineageTabs(), []);
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
@@ -98779,24 +98780,24 @@ function MonsucRankScreen({ onBack }) {
     if (!on) { setLoading(false); return undefined; }
     if (!flushed) return undefined; // 送り直しを待ってから読む
     const lin = tab === 'lineage' ? lineage : null;
-    const key = `${tab}:${lin || ''}`;
+    const key = `${beta}:${tab}:${lin || ''}`;
     const cached = cacheRef.current[key] || null;
-    if (cached) { setData(cached); setLoading(false); } else setLoading(true);
+    if (cached) { setData(cached); setLoading(false); } else { setData(null); setLoading(true); }
     setFailed(false);
     // 上位の一覧が届き次第出し、自分の順位は後から足す
-    monsucRankReadTop({ lineage: lin }).then(top => {
+    monsucRankReadTop({ beta, lineage: lin }).then(top => {
       if (!alive) return;
       if (!top) { setLoading(false); setFailed(true); return; }
       const merged = { rows: top.rows, total: top.total, sent: top.sent, mine: cached && cached.sent === top.sent ? cached.mine : null };
       cacheRef.current[key] = merged; setData(merged); setLoading(false);
-      monsucRankReadMine({ lineage: lin, sent: top.sent }).then(mine => {
+      monsucRankReadMine({ beta, lineage: lin, sent: top.sent }).then(mine => {
         if (!alive || !mine) return;
         const cur = cacheRef.current[key]; if (!cur) return;
         const withMine = { ...cur, mine }; cacheRef.current[key] = withMine; setData(withMine);
       });
     });
     return () => { alive = false; };
-  }, [on, flushed, tab, lineage, retryN]);
+  }, [on, flushed, beta, tab, lineage, retryN]);
   // 詳細から戻ったら、一覧のスクロール位置を戻す
   React.useEffect(() => {
     if (!detail && listRef.current) listRef.current.scrollTop = savedScrollRef.current;
@@ -98820,6 +98821,11 @@ function MonsucRankScreen({ onBack }) {
     <div className="px-3 pt-2">
       <div className="text-[18px] font-black">🏆 総合力ランキング</div>
       <div className="text-[11px] text-slate-300 leading-snug">育て終えたモンスターの、育てたときの総合力。育てたモンスターごとに全部載る(同じ人が何体でも)・助手マスモンとは別</div>
+      <div className="flex gap-2 mt-2" role="group" aria-label="育成ルール">
+        {[2, 1].map(b => <button key={b} type="button" aria-pressed={beta === b}
+          onClick={() => { if (b !== beta) { setData(null); setLoading(true); setBeta(b); } }}
+          className={'flex-1 rounded-full py-2 font-bold ' + (beta === b ? 'bg-yellow-300 text-slate-900' : 'bg-slate-700 text-white')}>β{b}</button>)}
+      </div>
       <button type="button" data-monsuc-rank-lineage-open onClick={() => setLineagePickerOpen(true)}
         className="w-full rounded-full py-2 px-3 mt-2 flex items-center gap-2 border bg-slate-800/70 border-slate-600 active:scale-[.98]">
         <span className="shrink-0 text-[11px] font-bold text-slate-400">血統</span>
