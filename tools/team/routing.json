@@ -95,7 +95,7 @@
     {
       "id": "build",
       "名前": "段取りどおりに作る(中くらいの改修)",
-      "model": "claude-sonnet-5-5",
+      "model": "claude-opus-5-5",
       "語": [
         "段取り",
         "STEP",
