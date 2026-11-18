@@ -250,7 +250,6 @@
     {"id":"item.juice.momosuke1","who":"momosuke","e":"happy","t":"野菜ジュースで全快！！ お肌にもいいやつ♡"},
     {"id":"item.akuyosan.momosuke1","who":"momosuke","e":"troubled","t":"にがっ w でも効くやつだから、がまんね"},
     {"id":"item.license.momosuke1","who":"momosuke","e":"happy","t":"ライセンス見せたら、{mon}がキラキラした目で{name}見てる！！ 信じてるじゃん♡"},
-    {"id":"item.oily.momosuke1","who":"momosuke","e":"normal","t":"オイリーパックね w 中身は大事に使お"},
     {"id":"turn.awake.omen.momosuke1","who":"momosuke","e":"surprise","t":"ねえ見て！！ {mon}、ちょっと光ってない！？"},
     {"id":"turn.awake.omen2.momosuke1","who":"momosuke","e":"surprise","t":"{mon}がまた光ってる！！ しかも虹色だよ♡"},
     {"id":"turn.awake.fire.momosuke1","who":"momosuke","e":"surprise","t":"わわわっ！！ {mon}がピカーってなってる！！"},

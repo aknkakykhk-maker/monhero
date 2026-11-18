@@ -413,8 +413,6 @@
     {"id":"item.akuyosan.mua1b","who":"mua","e":"troubled","bond":[1,2],"t":"にがいお薬ですけど、がんばって飲みましょう！ …全部飲めましたね、えらいです！"},
     {"id":"item.license.mua1","who":"mua","e":"happy","t":"ライセンス見せたら、{mon}がキラキラした目で見てるｗ"},
     {"id":"item.license.mua1b","who":"mua","e":"happy","bond":[1,2],"t":"ライセンスを見せたら、{mon}がキラキラした目で{name}を見ています"},
-    {"id":"item.oily.mua1","who":"mua","e":"normal","t":"オイリーパック開けた！ 中身いっぱいで助かるー♪"},
-    {"id":"item.oily.mua1b","who":"mua","e":"normal","bond":[1,2],"t":"オイリーパックを開けました！ 中身がいっぱいで助かります♪"},
     {"id":"ev.daily.nut.mua1","who":"mua","e":"happy","t":"わ、おいしそー！ …でも誰かのかも。どうする？"},
     {"id":"ev.daily.rain.mua1","who":"mua","e":"troubled","t":"雨すごー💦 今日は屋根の下でやる？ それとも…？"},
     {"id":"ev.daily.night.mua1","who":"mua","e":"wink","t":"今日、星がめっちゃきれいなんだよね✨ ちょっとだけ見ちゃう？"},
