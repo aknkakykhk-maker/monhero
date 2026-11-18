@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a878de3c7699e39b
+// source-sha256: 75e7c24ca5bac4d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -181151,7 +181151,7 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
 .msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
 .msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center;min-height:29px;padding:2px 10px}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
@@ -181165,30 +181165,32 @@ const MSX_R3_CSS = `
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
 .msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
-.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
-.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
-.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
-.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot small{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:13px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:16px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:0;padding:0;font-size:9px;line-height:1.25;color:#e2e8f0}
 .msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
 .msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
 .msx .r3 .q-slot li em.no{background:#475569;color:#cbd5e1}
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
-/* 技の表と詳しさ欄は縦並び(表=全幅・詳しさは下)。横並びだと表が細くなり技名が切れるため(2026-11-18) */
-.msx .r3 .q-twrap{display:flex;flex-direction:column;gap:8px;align-items:stretch}
-.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%}
+/* ③は左に技の表・右に詳しさと入れ替えの欄(2026-11-18 あっくん: 一覧は左、タップした技の性能と入れ替えは右)。表のマスはアイコンが見えるよう大きめにし、技名は下の小さい帯に出す */
+.msx .r3 .q-twrap{display:flex;flex-direction:row;gap:8px;align-items:flex-start}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:2px;flex:none;width:auto}
+.msx .r3 .msx-md-tg.q .tc.foc{outline:2px solid #fff;outline-offset:-2px}
 .msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
-.msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
-.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
+.msx .r3 .msx-md-tg.q .tgh.apt{line-height:1.05}
+.msx .v-body.r3:has(> .q-say) .v-band{padding:2px 8px 3px;margin-top:3px}
+.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:22px}
 .msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
-.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
-.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
-.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:10px;font-weight:800;line-height:1.3;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
-.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:31px}
-.msx .r3 .msx-md-tg.q .tc .g{bottom:30px}
+.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:3px;gap:3px}
+.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:1px;font-size:10px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 1px 1px;background:rgba(18,12,6,.82);color:#fff;font-size:8.5px;font-weight:800;line-height:1.2;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:24px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:24px}
 .msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
 .msx .r3 .q-td.in-pop{margin:0 10px 8px}
 .msx .r3 .q-td.side{flex:1 1 0;min-width:0}
@@ -181200,9 +181202,25 @@ const MSX_R3_CSS = `
 .msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
 .msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
 .msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-td-act{display:flex;gap:5px;margin-top:6px}
+.msx .r3 .q-td-act button{flex:1 1 0;min-width:0;min-height:30px;border-radius:9px;border:1.5px solid #fde047;background:#3b2f0b;color:#fde047;font-size:11px;font-weight:900;padding:3px 4px;cursor:pointer;text-align:center}
+.msx .r3 .q-td-act button.off{border-color:#64748b;background:#1e293b;color:#cbd5e1}
+.msx .r3 .q-td-cond{margin-top:6px;font-size:10.5px}
+.msx .r3 .q-td .q-lock>div{background:#1e293b;color:#e2e8f0;border:1px solid #475569;padding:4px 6px;flex-wrap:wrap;gap:2px 6px}
+.msx .r3 .q-td .q-lock>div span{order:3;flex:1 1 100%}
+.msx .r3 .q-td .q-lock>div b{order:2;margin-left:auto}
+.msx .r3 .q-slot-nr{display:flex;align-items:baseline;gap:6px;min-width:0}
+.msx .r3 .q-slot-nr .n{flex:1;min-width:0}
+.msx .r3 .q-slot-nr .r{margin-left:auto}
+.msx .r3 .q-note[data-msx-r3-super],.msx .r3 .q-note[data-msx-r3-superwhy]{font-size:9.5px;line-height:1.25;margin-top:3px}
+.msx .r3 .q-list>.q-note{font-size:9.5px;line-height:1.25}
+.msx .r3 .q-td .q-lock>div.ok{background:#14532d;border-color:#16a34a}
+.msx .r3 .q-td .q-lock>div b{color:#fca5a5}.msx .r3 .q-td .q-lock>div.ok b{color:#86efac}
+.msx .r3 .q-td .q-lock p{color:#cbd5e1;font-size:10.5px}
 .msx .r3 .q-nw{white-space:nowrap}
-.msx .r3 .q-pv{margin-top:5px;padding:5px 7px 6px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
+.msx .r3 .q-pv{margin-top:3px;padding:3px 7px 4px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
 .msx .r3 .q-pv-h{font-size:10px;font-weight:900;color:#fed7aa;margin-bottom:3px}
+.msx .r3 .q-pv-sum{font-size:10px;font-weight:900;color:#fde047;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .msx .r3 .q-tgl{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:inherit}
 .msx .r3 .q-tgl-t{margin-left:auto;font-size:9px;font-weight:800;color:#fbbf24;white-space:nowrap}
 .msx .r3 .q-pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
@@ -181239,14 +181257,14 @@ const MSX_R3_CSS = `
 .msx .r3 .q-bd-mul{font-size:10px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .msx .r3 .q-bd-mul b{color:#fde047}
 .msx .r3 .q-say{margin-top:3px}
-.msx .r3 .q-say img{width:34px;height:34px}
-.msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
-.msx .r3 .q-sec{margin-top:5px;padding:5px 8px 6px}
-.msx .r3 .q-sec h3{margin-bottom:3px}
+.msx .r3 .q-say img{width:30px;height:30px}
+.msx .r3 .q-say p{padding:2px 8px;font-size:11px;line-height:1.25}
+.msx .r3 .q-sec{margin-top:3px;padding:4px 8px 4px}
+.msx .r3 .q-sec h3{margin-bottom:2px}
 .msx .r3 .q-sec .v-stg{margin-top:4px}
-.msx .r3 .q-sec .v-stg div{padding:2px 3px;font-size:10px}
+.msx .r3 .q-sec .v-stg div{padding:0 3px;font-size:10px}
 .msx .r3 .q-sec .v-stg div small{font-size:9px}
-.msx .r3 .q-slot{min-height:36px}
+.msx .r3 .q-slot{min-height:36px;padding:3px 6px}
 .msx .r3 .q-td .q-td-rows .kv b{color:#94a3b8;font-weight:800}
 .msx .r3 .q-td .q-td-rows .kv .gd{color:#fde68a;font-weight:900}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
@@ -184575,7 +184593,6 @@ function MsxR3Shugyo({
   const [res, setRes] = useState(null);
   const [fxDone, setFxDone] = useState(false);
   const [stOn, setStOn] = useState(false);
-  const [lockT, setLockT] = useState(null);
   const [focusT, setFocusT] = useState(null);
   const [pvOpen, setPvOpen] = useState(false);
   const [bdOpen, setBdOpen] = useState(false);
@@ -184637,6 +184654,12 @@ function MsxR3Shugyo({
     }, t))), "）") : null);
   };
   const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]);
+  const pickInto = (id, i) => setWant(w => {
+    const rest = w.filter(x => x !== id);
+    if (superWhy) return [id];
+    if (i === 0) return [id, ...rest].slice(0, 2);
+    return rest.length ? [rest[0], id] : [id];
+  });
   const go = () => {
     const r = SUC.act(s0, {
       kind: 'shugyo',
@@ -185010,12 +185033,14 @@ function MsxR3Shugyo({
     }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-', typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => {
       const a = SUC.techAptAdd(s0, t);
       return a ? `${a > 0 ? '+' : ''}${a}%` : '±0';
-    })()}` : ''), React.createElement("b", {
+    })()}` : ''), React.createElement("div", {
+      className: "q-slot-nr"
+    }, React.createElement("b", {
       className: "n"
     }, t.name), React.createElement("b", {
       className: "r",
       "data-msx-r3-qrate": true
-    }, Math.round(rate * 100), "%"), bc.length ? React.createElement("ul", {
+    }, Math.round(rate * 100), "%")), bc.length ? React.createElement("ul", {
       "data-msx-r3-qconds": true
     }, bc.slice(0, 4).map((c, i) => React.createElement("li", {
       key: `${c.type}${i}`,
@@ -185040,6 +185065,8 @@ function MsxR3Shugyo({
       exp
     };
   }).filter(Boolean) : [];
+  const pvTop = [...pvRows].sort((a, b) => b.exp - a.exp).slice(0, 2);
+  const focusTech = focusT || all.find(x => x.id === want[0]) || all[0] || null;
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
     v: v,
@@ -185079,9 +185106,14 @@ function MsxR3Shugyo({
     className: "q-pv-h q-tgl",
     onClick: () => setPvOpen(!pvOpen),
     "aria-expanded": pvOpen
-  }, "📈 上がる見込み", isSuper ? '（🔥超修行・2回分）' : '', React.createElement("span", {
+  }, "📈 上がる見込み", isSuper ? '（🔥超修行・2回分）' : '', pvOpen ? null : React.createElement("span", {
+    className: "q-pv-sum"
+  }, pvTop.map(({
+    k,
+    exp
+  }) => `${MSX_STAT_NAME[k]} +${exp}`).join('・'), pvRows.length > 2 ? ` ほか${pvRows.length - 2}つ` : ''), React.createElement("span", {
     className: "q-tgl-t"
-  }, pvOpen ? '内訳を閉じる ▴' : '内訳を開く ▾')), React.createElement("div", {
+  }, pvOpen ? '閉じる ▴' : '開く ▾')), pvOpen ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "q-pv-grid"
   }, pvRows.map(({
     k,
@@ -185096,16 +185128,16 @@ function MsxR3Shugyo({
     className: "q-pv-k"
   }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("b", {
     className: "q-pv-t"
-  }, "+", exp)), pvOpen ? React.createElement("div", {
+  }, "+", exp)), React.createElement("div", {
     className: "q-pv-r2"
   }, p.base > 0 ? React.createElement("span", {
     className: "q-pv-p course"
   }, "⛰️", React.createElement("b", null, "+", shFmt(p.base))) : null, (p.team || []).map((x, n) => React.createElement("span", {
     key: n,
     className: "q-pv-p team"
-  }, shThumb((s0.team || [])[x.i]), React.createElement("b", null, "+", shFmt(x.v)), React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意')))) : null))), pvMul ? React.createElement("div", {
+  }, shThumb((s0.team || [])[x.i]), React.createElement("b", null, "+", shFmt(x.v)), React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意'))))))), pvMul ? React.createElement("div", {
     className: "q-pv-mul msx-kp"
-  }, mulLine(pvMul, isSuper)) : null) : null, SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
+  }, mulLine(pvMul, isSuper)) : null) : null) : null, SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
     className: "q-note msx-kp",
     "data-msx-r3-qapt": true
   }, "📏 「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null), React.createElement("div", {
@@ -185125,7 +185157,7 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "タップで選ぶ・詳しさは下の欄")), all.length ? React.createElement("div", {
+  }, "タップで右に詳しさ・入れ替え")), all.length ? React.createElement("div", {
     className: "q-twrap"
   }, React.createElement(MsxTechGrid, {
     className: "q",
@@ -185144,14 +185176,11 @@ function MsxR3Shugyo({
       const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
       return React.createElement("button", {
         type: "button",
-        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`,
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}${focusTech && focusTech.id === t.id ? ' foc' : ''}`,
         "data-msx-r3-tech": t.id,
         "data-msx-cell": cellK,
         "aria-label": `${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`,
-        onClick: () => {
-          setFocusT(t);
-          if (ok && !got) toggle(t.id);else if (!got) setLockT(t);
-        }
+        onClick: () => setFocusT(t)
       }, React.createElement("span", {
         className: "ti",
         "aria-hidden": "true"
@@ -185189,11 +185218,12 @@ function MsxR3Shugyo({
       }, msxTechNm(t.name)));
     }
   }), (() => {
-    const ft = focusT || all.find(x => x.id === want[0]) || all[0];
+    const ft = focusTech;
     if (!ft) return null;
     const fGot = (s0.techs || []).includes(ft.id);
     const fSel = want.includes(ft.id);
     const fOk = rateOf[ft.id] != null;
+    const fConds = fOk || fGot ? [] : condsOf(ft);
     return React.createElement("div", {
       className: "q-td side msx-kp",
       "data-msx-r3-qtd": ft.id
@@ -185201,37 +185231,35 @@ function MsxR3Shugyo({
       className: "q-td-nm"
     }, React.createElement("b", null, ft.name), React.createElement("em", null, fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり')), React.createElement("div", {
       className: "q-td-rows"
-    }, tdRows(ft)));
+    }, tdRows(ft)), fGot ? null : fOk ? React.createElement("div", {
+      className: "q-td-act"
+    }, want[0] === ft.id ? React.createElement("button", {
+      type: "button",
+      className: "off",
+      onClick: () => toggle(ft.id)
+    }, "1つ目から外す") : React.createElement("button", {
+      type: "button",
+      onClick: () => pickInto(ft.id, 0)
+    }, superWhy && want.length ? 'この技に入れ替える' : '1つ目に入れる'), !superWhy && want.length ? want[1] === ft.id ? React.createElement("button", {
+      type: "button",
+      className: "off",
+      onClick: () => toggle(ft.id)
+    }, "2つ目から外す") : React.createElement("button", {
+      type: "button",
+      onClick: () => pickInto(ft.id, 1)
+    }, "2つ目に入れる") : null) : React.createElement("div", {
+      className: "q-lock q-td-cond"
+    }, full ? React.createElement("p", null, "覚えられる技は ", tkMax, "つまで。いまは いっぱいです") : null, fConds.map((c, i) => React.createElement("div", {
+      key: c.k,
+      className: c.ok ? 'ok' : ''
+    }, React.createElement("i", null, "条件", i + 1), React.createElement("span", {
+      className: "msx-kp"
+    }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && fConds.length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」になります") : null));
   })()) : React.createElement("div", {
     className: "q-note msx-kp"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "q-note msx-kp"
-  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。", typeof msxBetaAidOk !== 'function' || msxBetaAidOk('dra') ? '助手がドラだと、さらに覚えやすい' : '')), lockT ? React.createElement("div", {
-    className: "v-cupwin",
-    onClick: () => setLockT(null),
-    "data-msx-r3-qlock": true
-  }, React.createElement("div", {
-    className: "in",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "h"
-  }, "🔒 ", lockT.name), React.createElement("div", {
-    className: "q-td in-pop"
-  }, React.createElement("div", {
-    className: "q-td-rows"
-  }, tdRows(lockT))), React.createElement("div", {
-    className: "q-lock"
-  }, full ? React.createElement("p", null, "覚えられる技は ", tkMax, "つまで。いまは いっぱいです") : null, condsOf(lockT).map((c, i) => React.createElement("div", {
-    key: c.k,
-    className: c.ok ? 'ok' : ''
-  }, React.createElement("i", null, "条件", i + 1), React.createElement("span", {
-    className: "msx-kp"
-  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」カードになります") : null), React.createElement("div", {
-    className: "bt"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => setLockT(null)
-  }, "閉じる")))) : null);
+  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。", typeof msxBetaAidOk !== 'function' || msxBetaAidOk('dra') ? '助手がドラだと、さらに覚えやすい' : '')));
   const hpShort = shortOf(isSuper);
   const foot = React.createElement(React.Fragment, null, !want.length ? React.createElement("div", {
     className: "q-note msx-kp",

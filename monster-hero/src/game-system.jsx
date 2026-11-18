@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9dee692f32d47d45
+// generated-sha256: e0e3c2d6ba87dca5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92930,7 +92930,7 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
 .msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
 .msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center;min-height:29px;padding:2px 10px}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
@@ -92944,30 +92944,32 @@ const MSX_R3_CSS = `
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
 .msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
-.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
-.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
-.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
-.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot small{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:13px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:16px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:0;padding:0;font-size:9px;line-height:1.25;color:#e2e8f0}
 .msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
 .msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
 .msx .r3 .q-slot li em.no{background:#475569;color:#cbd5e1}
 .msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
 .msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
-/* 技の表と詳しさ欄は縦並び(表=全幅・詳しさは下)。横並びだと表が細くなり技名が切れるため(2026-11-18) */
-.msx .r3 .q-twrap{display:flex;flex-direction:column;gap:8px;align-items:stretch}
-.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%}
+/* ③は左に技の表・右に詳しさと入れ替えの欄(2026-11-18 あっくん: 一覧は左、タップした技の性能と入れ替えは右)。表のマスはアイコンが見えるよう大きめにし、技名は下の小さい帯に出す */
+.msx .r3 .q-twrap{display:flex;flex-direction:row;gap:8px;align-items:flex-start}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,46px));gap:2px;flex:none;width:auto}
+.msx .r3 .msx-md-tg.q .tc.foc{outline:2px solid #fff;outline-offset:-2px}
 .msx .r3 .msx-md-tg.q .tgh{padding-top:0;padding-bottom:1px}
-.msx .v-body.r3:has(> .q-say) .v-band{padding:4px 8px;margin-top:3px}
-.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:24px}
+.msx .r3 .msx-md-tg.q .tgh.apt{line-height:1.05}
+.msx .v-body.r3:has(> .q-say) .v-band{padding:2px 8px 3px;margin-top:3px}
+.msx .v-body.r3:has(> .q-say) .v-turn .n b{font-size:22px}
 .msx .v-body.r3:has(> .q-say) .v-turn .ph{padding:2px 7px}
-.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:4px}
-.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:2px;font-size:10px}
-.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:1px 1px 2px;background:rgba(18,12,6,.82);color:#fff;font-size:10px;font-weight:800;line-height:1.3;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
-.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:31px}
-.msx .r3 .msx-md-tg.q .tc .g{bottom:30px}
+.msx .v-body.r3:has(> .q-say) .v-b2{margin-top:3px;gap:3px}
+.msx .v-body.r3:has(> .q-say) .v-b3{margin-top:1px;font-size:10px}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 1px 1px;background:rgba(18,12,6,.82);color:#fff;font-size:8.5px;font-weight:800;line-height:1.2;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
+.msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:24px}
+.msx .r3 .msx-md-tg.q .tc .g{bottom:24px}
 .msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}
 .msx .r3 .q-td.in-pop{margin:0 10px 8px}
 .msx .r3 .q-td.side{flex:1 1 0;min-width:0}
@@ -92979,9 +92981,25 @@ const MSX_R3_CSS = `
 .msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
 .msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}
 .msx .r3 .q-td.side .q-td-rows .kv .vv{margin-left:auto;text-align:right}
+.msx .r3 .q-td-act{display:flex;gap:5px;margin-top:6px}
+.msx .r3 .q-td-act button{flex:1 1 0;min-width:0;min-height:30px;border-radius:9px;border:1.5px solid #fde047;background:#3b2f0b;color:#fde047;font-size:11px;font-weight:900;padding:3px 4px;cursor:pointer;text-align:center}
+.msx .r3 .q-td-act button.off{border-color:#64748b;background:#1e293b;color:#cbd5e1}
+.msx .r3 .q-td-cond{margin-top:6px;font-size:10.5px}
+.msx .r3 .q-td .q-lock>div{background:#1e293b;color:#e2e8f0;border:1px solid #475569;padding:4px 6px;flex-wrap:wrap;gap:2px 6px}
+.msx .r3 .q-td .q-lock>div span{order:3;flex:1 1 100%}
+.msx .r3 .q-td .q-lock>div b{order:2;margin-left:auto}
+.msx .r3 .q-slot-nr{display:flex;align-items:baseline;gap:6px;min-width:0}
+.msx .r3 .q-slot-nr .n{flex:1;min-width:0}
+.msx .r3 .q-slot-nr .r{margin-left:auto}
+.msx .r3 .q-note[data-msx-r3-super],.msx .r3 .q-note[data-msx-r3-superwhy]{font-size:9.5px;line-height:1.25;margin-top:3px}
+.msx .r3 .q-list>.q-note{font-size:9.5px;line-height:1.25}
+.msx .r3 .q-td .q-lock>div.ok{background:#14532d;border-color:#16a34a}
+.msx .r3 .q-td .q-lock>div b{color:#fca5a5}.msx .r3 .q-td .q-lock>div.ok b{color:#86efac}
+.msx .r3 .q-td .q-lock p{color:#cbd5e1;font-size:10.5px}
 .msx .r3 .q-nw{white-space:nowrap}
-.msx .r3 .q-pv{margin-top:5px;padding:5px 7px 6px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
+.msx .r3 .q-pv{margin-top:3px;padding:3px 7px 4px;border-radius:10px;background:rgba(15,23,42,.55);border:1px solid #ffffff1f}
 .msx .r3 .q-pv-h{font-size:10px;font-weight:900;color:#fed7aa;margin-bottom:3px}
+.msx .r3 .q-pv-sum{font-size:10px;font-weight:900;color:#fde047;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .msx .r3 .q-tgl{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:inherit}
 .msx .r3 .q-tgl-t{margin-left:auto;font-size:9px;font-weight:800;color:#fbbf24;white-space:nowrap}
 .msx .r3 .q-pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
@@ -93018,14 +93036,14 @@ const MSX_R3_CSS = `
 .msx .r3 .q-bd-mul{font-size:10px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .msx .r3 .q-bd-mul b{color:#fde047}
 .msx .r3 .q-say{margin-top:3px}
-.msx .r3 .q-say img{width:34px;height:34px}
-.msx .r3 .q-say p{padding:4px 8px;font-size:11.5px;line-height:1.35}
-.msx .r3 .q-sec{margin-top:5px;padding:5px 8px 6px}
-.msx .r3 .q-sec h3{margin-bottom:3px}
+.msx .r3 .q-say img{width:30px;height:30px}
+.msx .r3 .q-say p{padding:2px 8px;font-size:11px;line-height:1.25}
+.msx .r3 .q-sec{margin-top:3px;padding:4px 8px 4px}
+.msx .r3 .q-sec h3{margin-bottom:2px}
 .msx .r3 .q-sec .v-stg{margin-top:4px}
-.msx .r3 .q-sec .v-stg div{padding:2px 3px;font-size:10px}
+.msx .r3 .q-sec .v-stg div{padding:0 3px;font-size:10px}
 .msx .r3 .q-sec .v-stg div small{font-size:9px}
-.msx .r3 .q-slot{min-height:36px}
+.msx .r3 .q-slot{min-height:36px;padding:3px 6px}
 .msx .r3 .q-td .q-td-rows .kv b{color:#94a3b8;font-weight:800}
 .msx .r3 .q-td .q-td-rows .kv .gd{color:#fde68a;font-weight:900}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
@@ -94409,9 +94427,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [fxDone, setFxDone] = useState(false);
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
-  const [lockT, setLockT] = useState(null); // 🔒の札の条件をくわしく(選ぶ画面)
-  const [focusT, setFocusT] = useState(null); // 詳しさ欄に出す技(最後に押したカード。2026-11-17 あっくん「技詳細もほしい」)
-  const [pvOpen, setPvOpen] = useState(false); // 上がる見込みの内訳チップの開閉(既定は閉=合計だけ。2026-11-17 あっくん「内訳って閉じられるの?ないときのほうが見やすかった」)
+  const [focusT, setFocusT] = useState(null); // 右の欄に出す技(最後に押したカード。2026-11-17 あっくん「技詳細もほしい」→ 2026-11-18 あっくん「タップで右に性能と入れ替え」)
+  const [pvOpen, setPvOpen] = useState(false); // 上がる見込みパネルの開閉(既定は閉=見出しに要約だけ。1画面に収めるため。開けば合計+内訳チップ+倍率が全部出る)
   const [bdOpen, setBdOpen] = useState(false); // 結果の内訳パネルの開閉(既定は閉。開けば残るので後からでも見られる)
   // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
   useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
@@ -94452,6 +94469,13 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {tail.length ? <>（{tail.map((t, i) => <React.Fragment key={i}>{i ? '・' : ''}<span className="q-nw">{t}</span></React.Fragment>)}）</> : null}</span>);
   };
   const toggle = (id) => setWant((w) => (w.includes(id) ? w.filter((x) => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]));
+  // 右の欄から枠を指定して入れる(入れ替え)。超修行ができないときは技1つだけなので、入れると今の技と入れ替わる
+  const pickInto = (id, i) => setWant((w) => {
+    const rest = w.filter((x) => x !== id);
+    if (superWhy) return [id];
+    if (i === 0) return [id, ...rest].slice(0, 2);
+    return rest.length ? [rest[0], id] : [id];
+  });
   const go = () => {
     const r = SUC.act(s0, { kind: 'shugyo', course, techs: want });
     if (!r.out.ok) return;
@@ -94531,7 +94555,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
 
   // ---- 修行に出る(Q1)・案A(2026-11-14 社長が選んだ。参考 v3 20〜32秒・te-67・te-68) ----
   // ① 行き先(4つ)と、2段で上がる能力 → 技を覚える ② 覚えたい技の枠2つ(2つで超修行。札に覚える条件と「済」)
-  // ③ 覚えられる技を間合いごとの4列の札で(率・覚えた・🔒と覚えられる条件)。🔒の札を押すと条件をくわしく
+  // ③ 覚えられる技は左に間合いごとの4列の表(アイコン大きめ・技名は小さく)、押した技の性能と選ぶ/入れ替え・🔒の条件は右の欄に出す(2026-11-18 あっくん)
   const cur = SH.courses[course] || { stages: [] };
   // 間合いの見出しに、育てる子のその間合いの適性と、覚える率の増減(C が ±0・1段 5%。芯の techAptAdd と同じ数え方)(2026-11-15 社長 r1115-080)
   const aptG = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s0) : null; const GR = (SUC.DIST_UP && SUC.DIST_UP.grades) || [];
@@ -94567,7 +94591,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, { course, super: isSuper, picks: want }) : (rateOf[id] || 0);
     const BC = { n: (c) => `覚えた技 ${c.need}つ以上`, pop: (c) => `人気 ${c.need}以上`, sum: (c) => `選んだ技の段の合計 ${c.need}以上` };
     return (<div className="q-slot on msx-kp" onClick={() => toggle(id)} data-msx-r3-qslot={id}>
-      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}{typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => { const a = SUC.techAptAdd(s0, t); return a ? `${a > 0 ? '+' : ''}${a}%` : '±0'; })()}` : ''}</small><b className="n">{t.name}</b><b className="r" data-msx-r3-qrate>{Math.round(rate * 100)}%</b>
+      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}{typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => { const a = SUC.techAptAdd(s0, t); return a ? `${a > 0 ? '+' : ''}${a}%` : '±0'; })()}` : ''}</small><div className="q-slot-nr"><b className="n">{t.name}</b><b className="r" data-msx-r3-qrate>{Math.round(rate * 100)}%</b></div>
       {bc.length ? <ul data-msx-r3-qconds>{bc.slice(0, 4).map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>上乗せ</i><span>{(BC[c.type] || (() => ''))(c)}</span><em className={c.ok ? '' : 'no'}>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
     </div>);
   };
@@ -94575,6 +94599,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const pvParts = typeof SUC.shugyoPartsOf === 'function' ? SUC.shugyoPartsOf(s0, course) : null;
   const pvMul = typeof SUC.shugyoMulOf === 'function' ? SUC.shugyoMulOf(s0) : null;
   const pvRows = pvParts ? MSX_STAT_KEYS_R3.map((k) => { const p = pvParts[k] || { base: 0, team: [] }; const raw = p.base + (p.team || []).reduce((a, x) => a + x.v, 0); if (!(raw > 0)) return null; const exp = Math.round((raw * (pvMul ? pvMul.mulB : 1) + (pvMul ? pvMul.toku : 0)) * (pvMul ? pvMul.mulA : 1) * (isSuper ? 2 : 1)); return { k, p, exp }; }).filter(Boolean) : [];
+  const pvTop = [...pvRows].sort((a, b) => b.exp - a.exp).slice(0, 2); // 閉じているときの要約(上がる量の多い順に2つ)
+  const focusTech = focusT || all.find((x) => x.id === want[0]) || all[0] || null; // 右の欄に出す技(押した技 → 選んだ1つ目 → 表の1つ目)
   const body = (<>
     <MsxBand s={s0} v={v} ev={ev} use={hpOf(isSuper)}/>
     <div className="q-say"><img src={typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy')} alt=""/><p className="msx-kp" data-msx-r3-qsay>{say}</p></div>
@@ -94582,15 +94608,15 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
       <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技を覚える</div></div>
       {pvRows.length ? <div className="q-pv" data-msx-r3-qpv>
-        <button type="button" className="q-pv-h q-tgl" onClick={() => setPvOpen(!pvOpen)} aria-expanded={pvOpen}>📈 上がる見込み{isSuper ? '（🔥超修行・2回分）' : ''}<span className="q-tgl-t">{pvOpen ? '内訳を閉じる ▴' : '内訳を開く ▾'}</span></button>
-        <div className="q-pv-grid">{pvRows.map(({ k, p, exp }) => (<div className="q-pv-c" key={k}>
+        <button type="button" className="q-pv-h q-tgl" onClick={() => setPvOpen(!pvOpen)} aria-expanded={pvOpen}>📈 上がる見込み{isSuper ? '（🔥超修行・2回分）' : ''}{pvOpen ? null : <span className="q-pv-sum">{pvTop.map(({ k, exp }) => `${MSX_STAT_NAME[k]} +${exp}`).join('・')}{pvRows.length > 2 ? ` ほか${pvRows.length - 2}つ` : ''}</span>}<span className="q-tgl-t">{pvOpen ? '閉じる ▴' : '開く ▾'}</span></button>
+        {pvOpen ? <><div className="q-pv-grid">{pvRows.map(({ k, p, exp }) => (<div className="q-pv-c" key={k}>
           <div className="q-pv-r1"><span className="q-pv-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><b className="q-pv-t">+{exp}</b></div>
-          {pvOpen ? <div className="q-pv-r2">
+          <div className="q-pv-r2">
             {p.base > 0 ? <span className="q-pv-p course">⛰️<b>+{shFmt(p.base)}</b></span> : null}
             {(p.team || []).map((x, n) => <span key={n} className="q-pv-p team">{shThumb((s0.team || [])[x.i])}<b>+{shFmt(x.v)}</b><small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small></span>)}
-          </div> : null}
+          </div>
         </div>))}</div>
-        {pvMul ? <div className="q-pv-mul msx-kp">{mulLine(pvMul, isSuper)}</div> : null}
+        {pvMul ? <div className="q-pv-mul msx-kp">{mulLine(pvMul, isSuper)}</div> : null}</> : null}
       </div> : null}
       {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="q-note msx-kp" data-msx-r3-qapt>📏 「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
     </div>
@@ -94599,7 +94625,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {isSuper ? <div className="q-note y msx-kp" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
-    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">タップで選ぶ・詳しさは下の欄</span></h3>
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">タップで右に詳しさ・入れ替え</span></h3>
       {all.length ? <div className="q-twrap"><MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
         // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
         const gotOf = (x) => (s0.techs || []).includes(x.id);
@@ -94609,33 +94635,34 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
         const state = sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock';
         const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
-        return (<button type="button" className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`} data-msx-r3-tech={t.id} data-msx-cell={cellK}
+        return (<button type="button" className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}${focusTech && focusTech.id === t.id ? ' foc' : ''}`} data-msx-r3-tech={t.id} data-msx-cell={cellK}
           aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
-          onClick={() => { setFocusT(t); if (ok && !got) toggle(t.id); else if (!got) setLockT(t); }}>
+          onClick={() => setFocusT(t)}>
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
           {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
           {alts.length > 1 ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}{/* 同じマスに技が2つ以上ある印(r1115-146①)。押せない */}
           <span className="tg-nm" aria-hidden="true">{msxTechNm(t.name)}</span>{/* 技の名前帯(2026-11-17 あっくん「1画面でみにくい」。2026-11-18 表を全幅にして名前は折り返して全部出す) */}
         </button>);
-      }}/>{(() => { const ft = focusT || all.find((x) => x.id === want[0]) || all[0]; if (!ft) return null; const fGot = (s0.techs || []).includes(ft.id); const fSel = want.includes(ft.id); const fOk = rateOf[ft.id] != null; return (
+      }}/>{(() => { const ft = focusTech; if (!ft) return null; const fGot = (s0.techs || []).includes(ft.id); const fSel = want.includes(ft.id); const fOk = rateOf[ft.id] != null; const fConds = fOk || fGot ? [] : condsOf(ft); return (
         <div className="q-td side msx-kp" data-msx-r3-qtd={ft.id}>
           <div className="q-td-nm"><b>{ft.name}</b><em>{fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり'}</em></div>
           <div className="q-td-rows">{tdRows(ft)}</div>
+          {fGot ? null : fOk ? (
+          <div className="q-td-act">
+            {want[0] === ft.id ? <button type="button" className="off" onClick={() => toggle(ft.id)}>1つ目から外す</button>
+              : <button type="button" onClick={() => pickInto(ft.id, 0)}>{superWhy && want.length ? 'この技に入れ替える' : '1つ目に入れる'}</button>}
+            {!superWhy && want.length ? (want[1] === ft.id ? <button type="button" className="off" onClick={() => toggle(ft.id)}>2つ目から外す</button>
+              : <button type="button" onClick={() => pickInto(ft.id, 1)}>2つ目に入れる</button>) : null}
+          </div>) : (
+          <div className="q-lock q-td-cond">
+            {full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
+            {fConds.map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
+            {!full && fConds.length ? <p>条件を全て満たすと、緑の「覚えられる」になります</p> : null}
+          </div>)}
         </div>); })()}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="q-note msx-kp">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。{typeof msxBetaAidOk !== 'function' || msxBetaAidOk('dra') ? '助手がドラだと、さらに覚えやすい' : ''}</div>
     </div>
-    {lockT ? (
-      <div className="v-cupwin" onClick={() => setLockT(null)} data-msx-r3-qlock>
-        <div className="in" onClick={(e) => e.stopPropagation()}>
-          <div className="h">🔒 {lockT.name}</div>
-          <div className="q-td in-pop"><div className="q-td-rows">{tdRows(lockT)}</div></div>
-          <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
-            {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
-            {!full && condsOf(lockT).length ? <p>条件を全て満たすと、緑の「覚えられる」カードになります</p> : null}</div>
-          <div className="bt"><button type="button" onClick={() => setLockT(null)}>閉じる</button></div>
-        </div>
-      </div>) : null}
   </>);
   const hpShort = shortOf(isSuper);
   const foot = (<>
