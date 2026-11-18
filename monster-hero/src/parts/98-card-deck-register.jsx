@@ -466,14 +466,14 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
     setBusy(false);
   };
   const footer = (left, right) => <div className={`${SCREEN_FOOTER_CLASS} flex gap-2`}>{left}{right}</div>;
-  const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">戻る</button>;
+  const back = (to) => <button type="button" data-card-reg-back onClick={() => { Audio_.fgSe.tap(); setStep(to); }} className="mh-button min-h-[52px] flex-1 rounded-2xl font-black">← 戻る</button>;
   const headRight = onOpenList ? <button type="button" data-card-reg-list onClick={() => { Audio_.fgSe.tap(); onOpenList(); }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px] font-black text-slate-200">持っている<br/>戦術カード</button> : null;
   const mineBox = mine ? (
     <div data-card-reg-mine className={`${SCREEN_PANEL_CLASS} mb-2 py-2`}>
       <div className="flex items-center gap-2">
         <CardRegThumbs db={db} deck={mine.deck} h={36}/>
         <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200"><b className="block truncate text-white">{`登録中: ${cardShareNormalizeTactics(mine.tactics).name || 'デッキ'}`}</b>{`賢さ ${cardShareSmartText(mine.tactics)}・戦われた ${mine.battles}回`}</span>
-        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">やめる</button>
+        <button type="button" data-card-reg-unregister disabled={busy} onClick={() => { Audio_.fgSe.tap(); void unregister(); }} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300">登録をやめる</button>
       </div>
       {onOpenReplays && <button type="button" data-card-reg-replays onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
         className="mt-1.5 w-full rounded-xl border-2 border-sky-400 bg-sky-950 py-2 text-[13px] font-black text-sky-50">戦われた試合を見る</button>}

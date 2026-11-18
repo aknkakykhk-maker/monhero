@@ -110,7 +110,6 @@ function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup, mode = nu
       <div className="w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border border-amber-300/60 bg-slate-900 p-4 shadow-2xl">
         <div className="mh-dialog-head flex items-start justify-between gap-2">
           <h3 className="text-[16px] font-black leading-snug text-white">{w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう')}</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95">✕</button>
         </div>
         <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">{w(inApp
           ? 'いまは X や LINE などのアプリの中で開いています。Safari で開いてホーム画面に追加すると、アプリのように画面が広くなり、ブラウザの操作が出なくなります。'

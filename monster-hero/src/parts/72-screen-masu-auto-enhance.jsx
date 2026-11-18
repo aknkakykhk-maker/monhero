@@ -186,7 +186,7 @@ function MasuAutoEnhanceScreen({
                 )}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button type="button" data-auto-enhance-confirm onClick={confirmDraft} className="min-h-[52px] rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950 font-black text-[13px] active:scale-95">確定する</button>
-                  <button type="button" data-auto-enhance-cancel onClick={cancelDraft} className="min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95">やめる</button>
+                  <button type="button" data-auto-enhance-cancel onClick={cancelDraft} className="min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95">キャンセル</button>
                 </div>
               </div>
             )}

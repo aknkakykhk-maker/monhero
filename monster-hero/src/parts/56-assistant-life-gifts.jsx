@@ -537,7 +537,7 @@ function AssistantLifeBuyConfirm({ item, to, gains = [], check, give, onClose })
         {short > 0 && <p data-assistant-life-buy-short={short} className="mt-1.5 rounded-xl bg-rose-500/15 px-2 py-1 text-[11.5px] font-black text-rose-200">ビートPが足りません(あと{short.toLocaleString()}P)</p>}
         {(err || reason) && <p data-assistant-life-buy-err className="mt-1.5 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-300">{err || reason}</p>}
         <div className="mt-2.5 flex gap-2">
-          <button type="button" data-assistant-life-buy-cancel disabled={busy} onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40">やめる</button>
+          <button type="button" data-assistant-life-buy-cancel disabled={busy} onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40">キャンセル</button>
           <button type="button" data-assistant-life-buy-go disabled={busy || !known || short > 0 || !!reason} onClick={go}
             className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{busy ? '…' : '🛒 買って贈る'}</button>
         </div>
@@ -734,7 +734,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
         {lifeOn && have <= 0 && !buyable && <div className="mt-1.5"><AssistantLifeShopButton tab="item"/></div>}
         {/* やめる・贈るは、シートを下へ送らなくても押せるように下に貼り付ける(横で説明と重みが増えても隠れない) */}
         <div className="sticky -mx-3 mt-2 flex gap-2 bg-slate-900 px-3 pb-3 pt-1.5" data-assistant-life-give-actions style={{ bottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', marginBottom: 'calc(-0.75rem - env(safe-area-inset-bottom))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">やめる</button>
+          <button type="button" data-assistant-life-give-cancel data-mhl-sheet-close onClick={() => setGive(null)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">キャンセル</button>
           {buyable ? <button type="button" data-assistant-life-give-buy={info.kind} disabled={short > 0} onClick={() => setBuying(true)}
             className="min-h-[44px] flex-[2] rounded-xl border border-violet-300/80 bg-violet-600 text-[14px] font-black text-white active:scale-[.98] disabled:opacity-40">{assistantLifeBuyLabel(info)}</button>
           : <button type="button" data-assistant-life-give-go disabled={!!reason || (!soloWho && pair.length !== 2)} onClick={() => onGive()}

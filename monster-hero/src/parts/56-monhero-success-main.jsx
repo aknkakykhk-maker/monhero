@@ -367,9 +367,9 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     return true;
   };
   // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
-  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => {
+  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: '育成をやめる', onYes: async () => {
     let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
-    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「育成をやめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
     if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
     setRunLoaded(null); setView('home');
   } });
@@ -422,7 +422,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
         {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx} onDone={betaKeys.onDone}/> : null}
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
-          <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
+          <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>キャンセル</button></div></div>}
       </div>
     </div>
   );
