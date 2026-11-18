@@ -103,7 +103,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
         if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
         let place = null;
-        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
+        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({ beta: s.rankBeta === 2 ? 2 : 1 }); if (d && d.mine) place = d.mine.place; }
         if (alive) setRankFix({ ok: true, placeAll: place });
       } catch (_) {}
     })();
