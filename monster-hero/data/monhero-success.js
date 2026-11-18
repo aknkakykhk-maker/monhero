@@ -268,7 +268,7 @@
       wind: { name: '風の森', stages: [['eva', 'hit'], ['wise', 'pow']] },
       star: { name: '星の湖', stages: [['wise', 'life'], ['eva', 'pow']] },
     }),
-    fixed: Object.freeze({ base: 8, pct: Object.freeze([0.03, 0.01, 0.005]), overlap: 0.5 }), // 決まった数値(2026-11-14 社長): 行き先の基礎 +8・得意 1位3%/2位1%/3位0.5%・重なりは 1/2 ずつ
+    fixed: Object.freeze({ base: 8, pct: Object.freeze([0.02, 0.0075, 0.005]), overlap: 0.5 }), // 決まった数値(2026-11-14 社長): 行き先の基礎 +8・得意 1位2%/2位0.75%/3位0.5%・重なりは 1/2 ずつ
     gain: 0.9,                 // 1段で2つの能力に「軽いトレーニング1回ぶん」× 0.9 ずつ(2段で4能力ぶん)
     hp: 30, stress: 8,         // 体力を多めに使う
     ticket0: 1,                // はじめのチケット。期ごとの回数は決めず、チケットの数だけ行ける(社長 2026-11-12)
@@ -807,7 +807,7 @@
       const stayT = (id) => stayNumT(team, id);
       const sk = stayT('shoki'); if (sk) KEYS.forEach(k => { stats[k] = clamp(stats[k] + sk, 0, cap[k]); }); // 🌅初期ステータスアップ
       return {
-        v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, cap, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
+        v: VERSION, rankBeta: 2, id, species, aid, type: typeIdx, turn: 1, stats, cap, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: polOfBond(LOYAL.start[0], LOYAL.start[1]), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.aidStartMax), // 途中の育成は restore が保存の aidBond で上書きするので変わらない
         ...(src.techPick && typeof src.techPick === 'object' ? { techPick: techPickNorm(src.techPick, species) } : {}),
@@ -1420,6 +1420,7 @@
       if (!speciesList.includes(raw.species)) return null;
       const base = newRun({ id: raw.id, species: raw.species, aid: raw.aid, team: Array.isArray(raw.team) ? raw.team : [], type: Number.isInteger(raw.type) ? raw.type : undefined });
       const out = clone(base);
+      out.rankBeta = raw.rankBeta === 2 ? 2 : 1; // 更新前に始めた育成はβ1
       const n = (v, d, lo, hi) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? clamp(Number(v), lo, hi) : d);
       out.turn = Math.round(n(raw.turn, 1, 1, TOTAL_TURNS + 1));
       // 能力の上限アップ: 保存の cap がある育成だけ 999 を超えて読む(無い古い育成は 999 のまま)

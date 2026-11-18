@@ -46,12 +46,12 @@ const child = (assists) => ({ kind: 'raised', species: sp, stats: { life: 300, p
 const asOf = (S, a) => { try { return S.memberOf(child(a)).assists; } catch (e) { return 'THROW ' + e.message; } };
 const old = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 1 }, { id: 'shugyo', lv: 2 }];
 const up = (arr) => arr.map(p => ({ id: p.id, lv: AT.fromSaved(p), n: AT.fromSaved(p) })); // 第3版: 古い段 → 同じ効き目の目盛り
-check('③ 第1版・第2版の持ち物(段)は第3版で同じ効き目の目盛りに読み替わる/表なしは今までどおり', same(asOf(S2, old), up(old)) && same(asOf(S1, old), old) && same(up(old).map(p => S2.ASSISTS[p.id].v[p.n - 1]), old.map(p => AT.BY_ID[p.id].v2[p.lv - 1])));
+check('③ 第1版・第2版の持ち物(段)は第3版で同じ効き目の目盛りに読み替わる/表なしは今までどおり', same(asOf(S2, old), up(old)) && same(asOf(S1, old), old) && same(up(old).map(p => S2.ASSISTS[p.id].v[p.n - 1]), [10, 4, 4]));
 check('③ 段4・5は表が無くても削らない', same(asOf(S1, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 4 }]), [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 4 }]));
 check('③ 知らない id は計算から外すだけ(落ちない)', same(asOf(S2, [{ id: 'nope', lv: 3 }, { id: 'sokoji', lv: 2 }, { id: 'NOPE', lv: 1 }]), up([{ id: 'sokoji', lv: 2 }])));
 check('③ 11種は第3版で読める/表なしでは計算から外すだけ', same(asOf(S2, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), up([{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }])) && same(asOf(S1, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), [{ id: 'sokoji', lv: 2 }]));
 check('③ 壊れた値は既定へ(段が文字→段1・段9→段5・段−1→段1・目盛り99→満タン・重なり→1つ・配列でない→なし)',
-  same(asOf(S2, [{ id: 'sokoji', lv: 'x' }]), up([{ id: 'sokoji', lv: 1 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 9 }]), up([{ id: 'sokoji', lv: 5 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 1, n: 99 }]), [{ id: 'sokoji', lv: 25, n: 25 }])
+  same(asOf(S2, [{ id: 'sokoji', lv: 'x' }]), up([{ id: 'sokoji', lv: 1 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 9 }]), up([{ id: 'sokoji', lv: 5 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 1, n: 99 }]), [{ id: 'sokoji', lv: 10, n: 10 }])
   && same(asOf(S2, [{ id: 'sokoji', lv: -1 }]), up([{ id: 'sokoji', lv: 1 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 2 }, { id: 'sokoji', lv: 5 }]), up([{ id: 'sokoji', lv: 2 }]))
   && same(asOf(S2, 'abc'), []) && same(asOf(S2, null), []) && same(asOf(S2, [null, 3, { lv: 2 }]), []));
 check('③ 9種類以上は先の8つまで(第3版・1体8種類)', asOf(S2, [...V1_IDS, 'miharu'].map((id) => ({ id, lv: 1 }))).length === 8);
@@ -61,7 +61,7 @@ const eff = (S, lv) => { const m = S.memberOf(child(lv ? [{ id: 'sokoji', lv }] 
 const base2 = eff(S2, 0); const base1 = eff(S1, 0);
 const d2 = [1, 2, 3, 4, 5].map((lv) => Math.round((eff(S2, lv) - base2) * 100) / 100);
 const d1 = [1, 2, 3, 4, 5].map((lv) => Math.round((eff(S1, lv) - base1) * 100) / 100);
-check('④ 第2版: 底力 段1〜5 = 表の値', same(d2, AT.BY_ID.sokoji.v2), d2.join('/'));
+check('④ 第2版: 旧段1〜5のトレ効果は10%まで', same(d2, [5, 10, 10, 10, 10]), d2.join('/'));
 check('④ 第1版: 段4・5は段3と同じ値(頭打ち)', same(d1, [...S1.ASSISTS.sokoji.v, S1.ASSISTS.sokoji.v[2], S1.ASSISTS.sokoji.v[2]]), d1.join('/'));
 
 // ⑥ トレーニングに効く11種の効き目

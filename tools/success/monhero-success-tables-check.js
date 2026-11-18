@@ -50,7 +50,7 @@ for (const a of AS.LIST) {
   ok((a.type === 'battle') === (a.from === 'hint'), `${a.id}: お話のひらめきは試合型、ほかは試合型でない(社長 2026-11-12)`);
   if (a.type === 'battle') ok(Array.isArray(a.buff) && a.buff.length === a.max, `${a.id} に目盛りごとの buff がない`);
   // 古い子の段1〜5は、同じ効き目の目盛りに読み替わる(CLAUDE.md ⑦)
-  if (a.v2) for (let lv = 1; lv <= 5; lv++) { const n = AS.fromSaved({ id: a.id, lv }); ok(Math.abs(a.v[n - 1] - a.v2[lv - 1]) < 1e-9, `${a.id} 段${lv} が同じ効き目の目盛りに読み替わらない: ${a.v[n - 1]} / ${a.v2[lv - 1]}`); const sv = AS.toSaved(a.id, n); ok(sv.lv === lv && sv.n === n, `${a.id} 段${lv} の書き戻し(lv)がずれる`); }
+  if (a.v2) for (let lv = 1; lv <= 5; lv++) { const n = AS.fromSaved({ id: a.id, lv }); ok(Math.abs(a.v[n - 1] - Math.min(a.v[a.max - 1], a.v2[lv - 1])) < 1e-9, `${a.id} 段${lv} が同じ効き目の目盛りに読み替わらない: ${a.v[n - 1]} / ${a.v2[lv - 1]}`); const sv = AS.toSaved(a.id, n); ok(sv.lv === (a.id === 'sokoji' ? Math.min(lv, 2) : lv) && sv.n === n, `${a.id} 段${lv} の書き戻し(lv)がずれる`); }
 }
 ok(new Set(AS.LIST.map(a => a.name)).size === AS.LIST.length, 'アシスト効果の名前が重なる');
 ok(Math.min(...AS.LIST.map(a => a.cost[0])) <= AS.POINTS_MIN, 'ポイント最低の子が1つも取れない');
@@ -67,7 +67,7 @@ for (const a of AS.LIST) {
   ok(SCENE_HEAD.test(AS.describe(a.id, 1)), `${a.id} の説明の文頭が効く場面でない: ${AS.describe(a.id, 1)}`);
 }
 ok(AS.valueText('hirameki', 5) === '確率+5%' && AS.describe('hirameki', 5) === 'いっしょにトレーニングしたとき、大成功の確率 +5%' && AS.valueText('ochitsuki', 1) === 'しにくさ+5%' && AS.describe('ochitsuki', 1).includes('失敗しにくさ +5%') && AS.valueText('shokin', 5) === '+5%' && AS.valueText('itawari', 1) === '−1%' && !AS.LIST.some(x => /×/.test(AS.valueText(x.id, 1))) && AS.valueText('chokyo', 1) === '+1回', '型ごとの数字の書き方がおかしい');
-ok(AS.valueText('sokoji', 12) === '+12%' && AS.valueText('hitonatsu', 2) === '+10%', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
+ok(AS.valueText('sokoji', 12) === '+10%' && AS.valueText('hitonatsu', 2) === '+10%', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
 for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);
   ok(r.picks.length <= 8 && r.used <= pts && r.used > 0 && r.left < 13, `おまかせ(${pts})がポイント・8種類を超える/何も取らない/余りが多い: ${r.used}`);
@@ -77,8 +77,8 @@ ok(hinted.picks[0] && hinted.picks[0].id === 'miseba', 'おまかせがひらめ
 ok(!AS.candidates([]).some(a => a.from === 'hint'), 'ひらめきが無いのに、お話の能力が候補に出る');
 const np = AS.normPicks([{ id: 'sokoji', lv: 9 }, { id: 'nai' }, { id: 'sokoji', lv: 1 }, { id: 'hirameki', n: 3 }, { id: 'itawari', n: 1 }, { id: 'ochitsuki', n: 1 }, { id: 'atooshi', n: 1 },
   { id: 'miharu', n: 1 }, { id: 'kibarashi', n: 1 }, { id: 'ninzu', n: 1 }, { id: 'tsuika', n: 1 }], 400);
-ok(np.picks.length === 8 && np.picks[0].n === 25 && np.used <= 400, '確かめ方(段の読み替え・知らない id・8種類)がおかしい');
-ok(AS.normPicks([{ id: 'sokoji', n: 25 }], 99).picks.length === 0, 'ポイントを超えた効果が残る');
+ok(np.picks.length === 8 && np.picks[0].n === 10 && np.used <= 400, '確かめ方(段の読み替え・知らない id・8種類)がおかしい');
+ok(AS.normPicks([{ id: 'sokoji', n: 25 }], 39).picks.length === 0, 'ポイントを超えた効果が残る');
 
 // 試合型は対戦の芯の buffs に入る形・いちばん高い段だけ・範囲の中
 const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];

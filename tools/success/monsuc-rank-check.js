@@ -290,6 +290,21 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
     check('⑪ SQL の前提(v5 まで流してあること)', v6.includes('MONSUC_RANK_V5_TECH_DETAIL.sql まで流してあること'));
   }
 
+  // 更新前に始めた育成と登録待ちはβ1。新規育成は通信失敗をまたいでもβ2。
+  {
+    const c = loadCtx({}, { server: () => ({ status: 503, body: '{}' }) });
+    await c.ctx.monsucRankSubmit({ run: runOf({ rankBeta: 2 }), ev, name: 'β2' });
+    c.env.server = okServer;
+    await c.ctx.monsucRankFlush();
+    check('β2は送り直してもβ2の登録先', c.calls.length === 2 && c.calls.every(x => x.url.endsWith('/monsuc_rank_submit_beta2')));
+    for (const beta of [2, 1]) {
+      for (const lineage of [null, 'mocchi']) {
+        const view = (lineage ? 'monsuc_rank_lineage' : 'monsuc_rank_all') + (beta === 2 ? '_beta2' : '');
+        check('全体・血統別は指定された版の順位を使う', c.ctx.monsucRankViewOf(lineage, beta).view === view);
+      }
+    }
+  }
+
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.log('NG: 例外', e && e.stack); process.exit(1); });
