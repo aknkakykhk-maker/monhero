@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 794ecc078f836c4e
+// generated-sha256: 091b316b8442c413
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89211,6 +89211,7 @@ const MSX_CSS = `
 .msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
 .msx .v-tr .tn{display:block;font-size:10px;font-weight:800;color:#fde68a;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-height:2.3em;padding:0 1px;text-align:center}
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
+.msx .v-tr .pv{display:block;font-size:10px;font-weight:900;color:#86efac;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
 .msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
@@ -90712,7 +90713,7 @@ const msxStatRankCls = (v) => `msx-srk r${msxStatRankOf(v).replace('+', 'p')}`;
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 // mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null, initialTab = null, supportSummary = null, cap = null }) {
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null, initialTab = null, supportSummary = null, cap = null, initialTech = null }) {
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => (initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech')); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)。initialTab='assist' でアシストから開く(編成の効果確認)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
@@ -90728,7 +90729,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   //   同じ間合い・同じランクに技が2つ以上ある升は、並びの1つ目(または選んだ技)を出し、右上に「⇄」(選べる印)を付ける。そのランクの技が無い升は ×
   const tgAt = (r, d) => all.filter((t) => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
   const tgLines = [1, 2, 3, 4, 5];
-  const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
+  const [pickT, setPickT] = useState(() => { const ini = initialTech ? all.find((t) => t.id === initialTech) : null; return (ini || all.find(has) || all[0] || {}).id || null; }); // initialTech: 能力画面の技名から開いたとき、その技から見せる(Issue #6807 UI-4)
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = (id) => (mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null); // 熟練(渡されていなければ null = 出さない)
@@ -92070,6 +92071,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | 'dex'
   const [detail, setDetail] = useState(false); // 場面の「くわしく」= モンスターの詳細(見るだけ)。「能力」とは別の画面(2026-11-14 社長「役割で分ける」)
+  const [detailTech, setDetailTech] = useState(null); // 能力画面の技名から詳細を開いたとき、最初に見せる技(Issue #6807 UI-4)
+  const [careSel, setCareSel] = useState('rest'); // 休む・遊ぶ・通院を選ぶ画面で選んでいる行動(Issue #6807 UI-2)
   // 期末の大会・最後の大会の当日(2026-11-14 社長「参考資料どおりに」・参考 te-30〜34): 芯が battle を立てても、すぐ組み合わせ表へは行かない。
   //   ① 当日のメイン(ボタンは「能力」と「大会(本番)」だけ)→ ② 受付に1つだけ → ③ 参加の確認 →「はい」で ④ 紋章の入り → ⑤ 表(MsxR3Battle)
   //   「はい」を押した大会だけ preAt に持つ(保存しない。読み直したら当日のメインからもう一度)。やり直し・デビュー戦の再挑戦・勝ち負けのあとは挟まない
@@ -92393,10 +92396,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
       <div className="v-trs" data-msx-train-swipe-row data-msx-train-scrub {...scrubOn}>
         {trail && trail.pts.length > 1 ? <svg className={`v-trail${trail.live ? '' : ' out'}`} width={trail.w} height={trail.h} viewBox={`0 0 ${trail.w} ${trail.h}`} aria-hidden="true"><polyline points={trail.pts.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : null}
-        {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
+        {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); const cpv = c && typeof SUC.preview === 'function' ? SUC.preview(s, { kind: c.kind, stat: k }) : null; const cg = cpv && cpv.gain ? (cpv.gain[k] || 0) : 0; return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
             {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>選択中</span> : null}</button>); })}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{cg ? <small className="pv" data-msx-train-gain={k}>+{cg}</small> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>選択中</span> : null}</button>); })}
       </div>
       {/* 選ぶ操作と実行は分ける(2026-11-16 UI改修): 札は選ぶだけ。実行は下のボタンで、その近くに上がる能力・失敗率・体力消費を出す */}
       {card ? <div className="v-trsum" data-msx-train-sum>
@@ -92406,6 +92409,45 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div> : null}
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
+  }
+  // ---- 休む・遊ぶ・通院を選ぶ(Issue #6807 UI-2: 入口の1タップで即確定せず、選ぶ前に見込みを出し、共通位置の実行ボタンで確定。トレーニングと同じ形) ----
+  else if (sub === 'care') {
+    const canC = v.can || [];
+    const careKinds = [
+      { kind: 'rest', e: '🛌', nm: '休む', tn: '体力を回復', ok: true },
+      { kind: 'play', e: '🎈', nm: '遊ぶ', tn: '体力+・甘え+', ok: true },
+      { kind: 'clinic', e: '🏥', nm: '通院', tn: 'ようすを治す', ok: canC.includes('clinic') },
+    ];
+    const selCare = careKinds.find((c) => c.kind === careSel && c.ok) || careKinds[0];
+    const cp = typeof SUC.carePreview === 'function' ? SUC.carePreview(s, selCare.kind) : null;
+    const sgn = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
+    const yosuName = { sabori: 'サボりグセ', utsu: 'どんより' };
+    body = (<>
+      <MsxBand s={s} v={v} ev={ev}/>
+      <div className="v-scene" style={{ flex: '1 1 0' }}>
+        <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+        <div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%', opacity: .9 }} live/>
+      </div>
+      <div className="v-trs" data-msx-care-row style={{ display: 'flex', gap: 6 }}>
+        {careKinds.map((c) => (
+          <button type="button" key={c.kind} className={`v-tr${c.kind === selCare.kind ? ' sel' : ''}`} style={{ flex: 1 }} disabled={!c.ok} onClick={() => setCareSel(c.kind)} data-msx-care={c.kind}>
+            <div className="o">{c.e}</div><b className="nm">{c.nm}</b><small className="tn one">{c.tn}</small>{c.kind === selCare.kind ? <span className="ke" data-msx-care-ok>選択中</span> : null}</button>))}
+      </div>
+      <div className="v-trsum" data-msx-care-sum style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
+        {selCare.kind === 'rest' && cp ? <>
+          <span>体力の回復は抽選です</span>
+          {cp.list.map((r) => <span key={r.key}>{r.name}: 体力 <b>+{r.hp}</b>(<b>{Math.round(r.p * 100)}%</b>)</span>)}
+          <span>ストレス <b>{sgn(cp.stress)}</b></span>
+        </> : selCare.kind === 'play' && cp ? <>
+          <span>体力 <b>+{cp.hp}</b>・ストレス <b>{sgn(cp.stress)}</b>・甘え度 <b>{sgn(cp.ama)}</b></span>
+          {cp.curesUtsu ? <span>どんよりが治ります</span> : null}
+        </> : selCare.kind === 'clinic' && cp ? <>
+          {cp.list.map((r) => <span key={r.key}>{yosuName[r.key]}が治る見込み <b>{Math.round(r.p * 100)}%</b>{r.again ? '(前回治らなかったので、今回は必ず治ります)' : '(治らなくても、次は必ず治ります)'}</span>)}
+          <span>体力 <b>+{cp.hp}</b></span>
+        </> : <span>{selCare.nm}の見込みは出せません</span>}
+      </div>
+    </>);
+    foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button><button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
   }
   // ---- メイン ----
   else {
@@ -92440,7 +92482,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <div className="v-under">
         <div className="v-party row"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <button type="button" className="v-bagb st" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
-        <button type="button" className="v-bagb st" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>詳しく</small></button>
+        <button type="button" className="v-bagb st" data-msx-detail-open onClick={() => { setDetailTech(null); setDetail(true); }}>🔍<small>詳しく</small></button>
       </div>
       <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
@@ -92454,13 +92496,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'cond' })}>🛌 休む<small>{MSX_COND[s.cond && s.cond.kind] || '体調'}のため、このターンは休み</small></button></div>
       ) : (<>
         <div className="v-act" style={{ gridTemplateColumns: '1fr 2.3fr 1fr' }}>
-          <button type="button" className="v-p" onClick={() => doAct({ kind: 'rest' })}><div className="e">🛌</div>休む<small>体力を回復</small></button>
+          <button type="button" className="v-p" onClick={() => { setCareSel('rest'); setSub('care'); }}><div className="e">🛌</div>休む<small>体力を回復</small></button>
           <button type="button" className="v-p main" onClick={() => setSub('train')}>💪 トレーニング<small>{anyTag ? '🤝 友情タッグのチャンスあり' : '6つのトレーニングから選ぶ'}</small></button>
           <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力<small>技・型・編成</small>{s.pts ? <span className="bd">能力P {s.pts}</span> : null}</button>
         </div>
         <div className="v-act" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-          <button type="button" className={`v-p ${yosu ? 'hosp' : 'off'}`} disabled={!can.includes('clinic')} onClick={() => doAct({ kind: 'clinic' })}><div className="e">🏥</div>通院<small>{yosu ? 'ようすを治す' : 'ようすなし'}</small>{yosu ? <span className="bd r">!</span> : null}</button>
-          <button type="button" className="v-p" onClick={() => doAct({ kind: 'play' })}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
+          <button type="button" className={`v-p ${yosu ? 'hosp' : 'off'}`} disabled={!can.includes('clinic')} onClick={() => { setCareSel('clinic'); setSub('care'); }}><div className="e">🏥</div>通院<small>{yosu ? 'ようすを治す' : 'ようすなし'}</small>{yosu ? <span className="bd r">!</span> : null}</button>
+          <button type="button" className="v-p" onClick={() => { setCareSel('play'); setSub('care'); }}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
           {/* 体力が足りないと行けない(r1115-062)。押せない見た目にして足りない数を出す*/}
           {(() => { const sh = (v.shugyo && v.shugyo.short) || 0; return <button type="button" className={`v-p${sh ? ' off' : ''}`} disabled={sh > 0} onClick={() => setSub('shugyo')} data-msx-shugyo-hp={sh || undefined}><div className="e">⚔</div>修行{sh ? <small className="hpng">体力があと<b>{sh}</b><br/>足りない</small> : <small>技を覚える</small>}</button>; })()}
           <button type="button" className={`v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`} disabled={Array.isArray(v.cups) && !v.cups.length} onClick={() => setSub('cup')}><div className="e">🏆</div>大会<small>{Array.isArray(v.cups) && !v.cups.length ? (v.period.key === 'final' && v.period.at >= 3 ? 'HFは このあと' : '今月はなし') : '今月の大会'}</small></button>
@@ -92469,7 +92511,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 記録</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
-    if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
+    if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')} onOpenTech={(id) => { setDetailTech(id); setDetail(true); }}/>;
     if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))}>← 戻る</button></div>;
   }
 
@@ -92486,7 +92528,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
         const peak = pk && Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
         return <MsxMonDetail species={s.species} name={run.nick} sub={msxMonName(s.species)} art={<MsxMonArt run={run} noPeak/>} st={s.stats} cap={s.cap} apt={msxAptOf(s.species)} type={s.type} peak={peak}
-          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} mastery={s.mastery && typeof s.mastery === 'object' ? s.mastery : {}} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
+          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} mastery={s.mastery && typeof s.mastery === 'object' ? s.mastery : {}} power={ev.power} rank={ev.rank} SUC={SUC} initialTech={detailTech} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => { setDetail(false); setDetailTech(null); }}/>;
       })() : null}
       {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
       {sheet && sheet !== 'dex' && (
@@ -92631,7 +92673,7 @@ function MsxMasteryRows({ SUC, s, ws, techs, addOf, plus, minus }) {
 
 // ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
 let msxPtDraftN = 0; // 能力の画面の、決定していない振り分けの数(戻るときに聞くため。画面の外から見る)
-function MsxStats({ run, setRun, v, ev, onClose }) {
+function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
   // 育成中の「能力」: いじる物・育成中だけの物(能力ポイント・技・型・忠誠度と方針・編成の親密度)。能力の棒や図鑑は「くわしく」へ(2026-11-14 社長「役割で分ける」)
   const { SUC } = msxSuc;
   const s = run.s;
@@ -92649,16 +92691,27 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const draftRef = useRef(draft); draftRef.current = draft;
   msxPtDraftN = draft.length; useEffect(() => () => { msxPtDraftN = 0; }, []);
   const setDraftNow = (list) => { draftRef.current = list; setDraft(list); };
-  // 刻みの分(1・5・10・100・MAX)だけ続けて振る。ポイントが足りない・上限に着いたところで止まる
+  const [ptWarn, setPtWarn] = useState(''); // 刻み(使うポイントの合計)では足りないときの知らせ(Issue #6807 UI-1)
+  // 刻みは「使うポイントの合計」(UI-1: 10P = 合計10点ぶん。1点で+1の所と2点で+1の所をまたいでも合計で数える。技の熟練は10点で+1なので今までどおり段数で数える)
   const plus = (k) => {
-    const list = draftRef.current.slice(); let w = replay(list); const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit); let n = 0;
-    while (n < lim) { if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
-    if (n) setDraftNow(list);
+    const list = draftRef.current.slice(); let w = replay(list);
+    if (String(k).startsWith('m:')) { const lim = msxPtLimitM(unitM, mCost); let n = 0; while (n < lim) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; } if (n) { setPtWarn(''); setDraftNow(list); } return; }
+    const budget = msxPtLimit(unit); let n = 0; let spent = 0;
+    while (true) { if (w.stats[k] >= capK(k)) break; const c = SUC.ptsCost(w, k); if (spent + c > budget) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); spent += c; n += 1; }
+    if (n) { setPtWarn(''); setDraftNow(list); }
+    else if (budget !== Infinity && w.pts >= SUC.ptsCost(w, k) && w.stats[k] < capK(k)) setPtWarn(`「${unit}P」では足りないよ(この能力はいま ${SUC.ptsCost(w, k)}点で +1)`);
   };
   const minus = (k) => {
-    const list = draftRef.current.slice(); const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit); let n = 0;
-    while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
-    if (n) setDraftNow(list);
+    const list = draftRef.current.slice();
+    if (String(k).startsWith('m:')) { const lim = msxPtLimitM(unitM, mCost); let n = 0; while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; } if (n) { setPtWarn(''); setDraftNow(list); } return; }
+    const budget = msxPtLimit(unit);
+    // 戻す分も同じ刻み(使ったポイントの合計)で数える。段ごとの値段は、振った順に はじめの状態から数え直す(2点で+1の段は2点ぶん戻る)
+    const costs = []; let val = s.stats[k];
+    for (const x of list) { if (x !== k) continue; costs.push(SUC.ptsCost({ ...s, stats: { ...s.stats, [k]: val } }, k)); val += 1; }
+    let n = 0; let back = 0;
+    while (costs.length) { const c = costs[costs.length - 1]; if (back + c > budget) break; const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); costs.pop(); back += c; n += 1; }
+    if (n) { setPtWarn(''); setDraftNow(list); }
+    else if (budget !== Infinity && costs.length) setPtWarn(`「${unit}P」では戻せないよ(最後の +1 は ${costs[costs.length - 1]}点ぶん)`);
   };
   const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
   const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
@@ -92679,9 +92732,10 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>
         <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
-        <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={ptTab === 'mastery' ? setUnitM : setUnit} mastery={ptTab === 'mastery'}/>
+        <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={(x) => { if (ptTab === 'mastery') setUnitM(x); else setUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
+        {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
         {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
-        <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
+        <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。刻みは使うポイントの合計(10Pなら合計10点ぶん)。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
             <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
@@ -92695,8 +92749,10 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
         </div>
       </div>
       <div className="v-card" data-msx-ability-techs><div className="h2">⚔ 覚えている技 {techs.length}</div>
-        {techs.length ? <div>{techs.map((t) => <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
-        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の性能は場面の「🔍 詳しく」で見られる</div></div>
+        {techs.length ? <div>{techs.map((t) => onOpenTech
+          ? <button type="button" key={t.id} className="msx-ab-tech" style={{ font: 'inherit', color: 'inherit', cursor: 'pointer' }} onClick={() => onOpenTech(t.id)} data-msx-ab-tech={t.id}>{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</button>
+          : <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
+        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の名前を押すと、その技の性能が見られる</div></div>
       <div className="v-card"><div className="h2">🌱 成長の型 {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
         <div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : pk.state === 'soon' ? `あと${pk.in}ターンでピーク(伸びどき)が始まる` : peakSpan ? `伸びどき: ${peakSpan}` : ''}</div></div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
@@ -94595,6 +94651,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const [ptUnitM, setPtUnitM] = useMsxPtUnit(true);
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
+  const [ptWarn, setPtWarn] = useState(''); // 刻み(使うポイントの合計)では足りないときの知らせ(Issue #6807 UI-1。育成中の能力画面と同じ)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
   const [fxDone, setFxDone] = useState(false);
@@ -94670,16 +94727,27 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
     const capOf = capOfPt;
-    // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    // 刻みは「使うポイントの合計」(Issue #6807 UI-1: 10P = 合計10点ぶん。1点で+1の所と2点で+1の所をまたいでも合計で数える。
+    //   技の熟練は10点で+1なので今までどおり段数で数える)。1つずつ並びに積むので、「−」も同じ刻み(戻るポイントの合計)で戻せる
     const spend = (k) => {
-      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
-      if (n) setPtListNow(list);
+      const list = ptListRef.current.slice(); let w = replayPts(list);
+      if (String(k).startsWith('m:')) { const lim = msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10); let n = 0; while (n < lim) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; } if (n) { setPtWarn(''); setPtListNow(list); } return; }
+      const budget = msxPtLimit(ptUnit); let n = 0; let spent = 0;
+      while (true) { if (w.stats[k] >= capOf(w, k)) break; const c = SUC.ptsCost(w, k); if (spent + c > budget) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); spent += c; n += 1; }
+      if (n) { setPtWarn(''); setPtListNow(list); }
+      else if (budget !== Infinity && w.pts >= SUC.ptsCost(w, k) && w.stats[k] < capOf(w, k)) setPtWarn(`「${ptUnit}P」では足りないよ(この能力はいま ${SUC.ptsCost(w, k)}点で +1)`);
     };
     const undoK = (k) => {
-      const list = ptListRef.current.slice(); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
-      if (n) setPtListNow(list);
+      const list = ptListRef.current.slice();
+      if (String(k).startsWith('m:')) { const lim = msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10); let n = 0; while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; } if (n) { setPtWarn(''); setPtListNow(list); } return; }
+      const budget = msxPtLimit(ptUnit);
+      // 段ごとの値段は、振った順に はじめの状態から数え直す(2点で+1の段は2点ぶん戻る)
+      const costs = []; let val = s.stats[k];
+      for (const x of list) { if (x !== k) continue; costs.push(SUC.ptsCost({ ...s, stats: { ...s.stats, [k]: val } }, k)); val += 1; }
+      let n = 0; let back = 0;
+      while (costs.length) { const c = costs[costs.length - 1]; if (back + c > budget) break; const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); costs.pop(); back += c; n += 1; }
+      if (n) { setPtWarn(''); setPtListNow(list); }
+      else if (budget !== Infinity && costs.length) setPtWarn(`「${ptUnit}P」では戻せないよ(最後の +1 は ${costs[costs.length - 1]}点ぶん)`);
     };
     // まとめて振る: いままでの振り分けを消して、1ポイントずつ並びに積み直す(結果は前と同じ。並びに残るので、あとから「−」で個別に戻せる)
     const preset = (kind) => {
@@ -94700,7 +94768,8 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
       <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
-      <MsxPtUnits unit={ptTab === 'mastery' ? ptUnitM : ptUnit} setUnit={ptTab === 'mastery' ? setPtUnitM : setPtUnit} mastery={ptTab === 'mastery'}/>
+      <MsxPtUnits unit={ptTab === 'mastery' ? ptUnitM : ptUnit} setUnit={(x) => { if (ptTab === 'mastery') setPtUnitM(x); else setPtUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
+      {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
@@ -95666,7 +95735,7 @@ const monsucLendClaim = async () => {
 // 観戦の画面(ambwFramesOf・AmbwPanel)は m.log をそのまま読める。保存は「種+手の列(choices)」だけで足りる(replay で同じ所まで進む)。
 // 公開の印 monheroSuccess(偽)の後ろで使う。この部品は単独では画面に出ない。
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
-const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}.msa-tn-brk .msa-tn-s{white-space:normal;overflow-wrap:anywhere}`;
 const MSX_MANUAL_CSS = `
 .msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:6px 8px;margin-top:4px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
@@ -95720,7 +95789,7 @@ function MsaTechName({ name, icon = '', className = '' }) {
     </span>
   );
 }
-// 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(7px まで)
+// 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(最低 10px まで。Issue #6807 UI-5: それ以上は小さくせず、言葉の中で折って全文見せる)
 const msaFitTechNames = () => {
   try {
     // 字(フォント)が遅れて読み込まれると幅が変わるので、そのあとと、画面の向き・大きさが変わったときにも縮め直す(2026-11-14 社長「札から字がはみ出す」)
@@ -95731,8 +95800,11 @@ const msaFitTechNames = () => {
     }
     document.querySelectorAll('[data-msa-tn]').forEach((el) => {
       el.style.fontSize = '';
+      el.classList.remove('msa-tn-brk');
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
-      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 10 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      // 最低の大きさでも1つの言葉が入りきらないときは、切って隠さず、その言葉の中で折って全文見せる
+      if (el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
     });
   } catch (_) {}
 };
@@ -95769,7 +95841,7 @@ const MSA_DC_CSS = `
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
 .msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
-@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
@@ -95785,7 +95857,7 @@ const MSA_DC_CSS = `
 .msa-dc.a .msa-dc-ic .mv.kb{background:#f97316}
 .msa-dc.a .msa-dc-h,.msa-dc.a .msa-tn,.msa-dc.a .msa-dc-l{grid-column:2;min-width:0}
 .msa-dc.a .msa-tn{font-size:12px;line-height:1.15}
-@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(8px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(10px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
 .msa-dc.a .msa-dc-l{display:block;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;letter-spacing:-.01em;font-size:10px;color:#fde68a;font-weight:900}
 .msa-dc.a .msa-dc-l.g{font-size:9.5px;color:#cbd5e1;font-weight:800}
 .msa-dc.a .msa-dc-l.g b{color:#fff}
@@ -96018,8 +96090,8 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row">
-          <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>受けるダメージを減らす</small></button>
-          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン'}</small></button>
+          <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の自分の手番まで守る</small></button>
+          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? (Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}（${Math.round(opt.guts)}→${opt.charge.after}）` : 'この番は合わせて16回復') : 'ガッツは満タン'}</small></button>
         </div>
         {/* 移動の段(2026-11-15 社長 r1115-193): 横3つ「◀ 後退・💨 吹き飛ばし・前進 ▶」。自分は画面の左・相手は右なので、後退(離れる・step +1)は左、前進(近づく・step −1)は右。
             吹き飛ばし(r1115-110)は零距離だけ選べる。ほかの間合いでも押せない形で並べ、どこで使えるかを出す */}
