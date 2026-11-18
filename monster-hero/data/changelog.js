@@ -35,6 +35,11 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-18 14:50", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスの大会で全モンスターに技ごとの動きがつきました',
+    items:['地面から岩がせり上がる地震、星が降るコズミックバンなど、大会で技ごとの攻撃演出が楽しめます。'],
+  },
+  {
     date: "2026-11-18 14:40", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'大会でモッチーの17の技にそれぞれの動きがつきました',
     items:['転がってぶつかる技、力をためて放つモッチ砲、足元から花びらが舞う宵闇ざくらなど、技ごとの動きを楽しめます。'],

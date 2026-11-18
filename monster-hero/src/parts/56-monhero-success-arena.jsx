@@ -502,12 +502,546 @@ const MONSUC_MOCCHI_MOTIONS = Object.freeze({
   'sk-0415': skm('float', { c:'dark', hit:375, ms:980, fx:skmFx('rise', 'sakura', 12, { start:300, h:[315,335] }), over:'bloom', burst:'petal' }), // 宵闇ざくら
   'sk-0416': skm('flip', { c:'gold', line:'arc', over:'pillar', burst:'star', hit2:true }), // もっさまん
 });
+// 大会の共有技は技IDで一度だけ定義し、使い手の専用モーションを先に選ぶ。
+const MONSUC_SHARED_MOTIONS = {
+  'eiki_o01': skm('dash', { c:'sakura', over:'claw', fx:skmFx('shot', 'sakura', 2) }), // 桜牙
+  'eiki_o18': skm('warp', { c:'blood', over:'xslash', line:'arc', fx:skmFx('fall', 'sakura', 12), burst:'petal', hit2:true }), // 絶華緋閃・零桜
+  'kenshimocchi_o05': skm('slash', { c:'red', over:'xslash', line:'arc', burst:'spark', hit2:true }), // ガッチャー・クロス
+  'kenshimocchi_o18': skm('dash', { c:'cosmic', over:'xslash', line:'arc', fx:skmFx('orbit', 'star', 9), burst:'star', hit2:true }), // スターバースト・ストリーム
+  'kuromy_o19': skm('cast', { c:'dark', over:'shadow', fx:skmFx('shot', 'note', 4) }), // ドクロ音符ショット
+  'kuromy_o20': skm('dash', { c:'dark', over:'boom', burst:'dust' }), // バク突進ずつき
+  'melody_o19': skm('float', { c:'pink', over:'bloom', fx:skmFx('fall', 'note', 9) }), // 音符シャワー
+  'melody_o20': skm('jump', { c:'pink', over:'boom', fx:skmFx('rise', 'heart', 4) }), // ぞうさんスタンプ
+  'pandora_o03': skm('cast', { c:'dark', over:'thunder', fx:skmFx('fall', 'bolt', 5) }), // ナイトサンダー
+  'pandora_o10': skm('cast', { c:'cosmic', over:'boom', fx:skmFx('shot', 'fire', 2), burst:'spark', hit2:true }), // デュアルバン
+  'pandora_o19': skm('jab', { c:'dark', over:'fist', burst:'spark', hit2:true }), // ダブルはり手
+  'pandora_o20': skm('kick', { c:'dark', over:'shadow', fx:skmFx('rise', 'orb', 5) }), // アビスヒールレイド
+  'pandora_o21': skm('toss', { c:'holy', over:'wave', fx:skmFx('lob', 'feather', 4) }), // セラフ投げ飛ばし
+  'pandora_o22': skm('spin', { c:'dark', over:'tornado', fx:skmFx('orbit', 'ghost', 7) }), // カオスファイトクラウド
+  'pandora_o23': skm('kick', { c:'holy', over:'bloom', line:'arc' }), // セラフハイキック
+  'pandora_o24': skm('cast', { c:'holy', over:'boom', fx:skmFx('shot', 'star', 3) }), // ルミナスバン
+  'pandora_o25': skm('gather', { c:'dark', over:'boom', fx:skmFx('rise', 'orb', 8) }), // カオスビッグバン
+  'pandora_o26': skm('float', { c:'cosmic', over:'pillar', fx:skmFx('fall', 'meteor', 10) }), // ノヴァコズミックバン
+  'sk-0001': skm('warp', { c:'holy', over:'aurora' }), // 神域移動
+  'sk-0002': skm('dive', { c:'wind', over:'tornado', fx:skmFx('rise', 'feather', 8) }), // 八嵐天衝
+  'sk-0018': skm('float', { c:'pink', over:'bloom', fx:skmFx('orbit', 'heart', 4) }), // ゆうわく
+  'sk-0043': skm('cast', { c:'sky', fx:skmFx('shot', 'spark', 4) }), // アサルトアロー
+  'sk-0046': skm('warp', { c:'dark', over:'claw', line:'arc' }), // アサシンクロウ
+  'sk-0048': skm('float', { c:'dark', over:'shadow', fx:skmFx('orbit', 'note', 6) }), // ノクターン
+  'sk-0049': skm('spin', { c:'sky', over:'sword', line:'arc' }), // ブレードダンス
+  'sk-0051': skm('gather', { c:'dark', over:'shadow', line:'ray', fx:skmFx('fall', 'note', 8) }), // レクイエムエンド
+  'sk-0053': skm('toss', { c:'fire', over:'boom', fx:skmFx('lob', 'fire', 1) }), // グレネード
+  'sk-0054': skm('dive', { c:'gold', over:'sword', line:'arc' }), // バスターソード
+  'sk-0064': skm('bash', { c:'sky', over:'wave' }), // シールドバッシュ
+  'sk-0074': skm('jab', { c:'sky', over:'fist', line:'arc', burst:'dust', hit2:true }), // コンビネーション
+  'sk-0078': skm('toss', { c:'cosmic', fx:skmFx('shot', 'star', 1) }), // カード
+  'sk-0112': skm('cast', { c:'holy', over:'pillar', line:'ray' }), // 神光よ汚れを祓え
+  'sk-0113': skm('slash', { c:'holy', over:'sword', line:'arc', fx:skmFx('shot', 'spark', 3) }), // 翔べ震律の刃よ
+  'sk-0117': skm('float', { c:'holy', over:'aurora', fx:skmFx('rise', 'star', 5) }), // 導け神光の道標
+  'sk-0122': skm('gather', { c:'holy', over:'bloom', fx:skmFx('orbit', 'star', 6) }), // 聖光よ奇跡を灯せ
+  'sk-0123': skm('float', { c:'holy', over:'bloom', fx:skmFx('fall', 'feather', 8) }), // 天の慈悲よ示されよ
+  'sk-0124': skm('cast', { c:'fire', over:'pillar', fx:skmFx('rise', 'fire', 8) }), // 灰よ還りて聖火となれ
+  'sk-0129': skm('gather', { c:'gold', over:'aurora', line:'ray', fx:skmFx('fall', 'star', 10) }), // 黎明よ終焉を照らせ
+  'sk-0258': skm('cast', { c:'holy', over:'wave', line:'ray' }), // レイ
+  'sk-0259': skm('cast', { c:'thunder', over:'thunder', fx:skmFx('fall', 'bolt', 3) }), // サンダー
+  'sk-0260': skm('jab', { c:'pink', over:'fist' }), // はり手
+  'sk-0261': skm('gather', { c:'holy', over:'boom', line:'ray' }), // メガレイ
+  'sk-0265': skm('cast', { c:'fire', over:'boom', fx:skmFx('shot', 'fire', 1) }), // バン
+  'sk-0266': skm('kick', { c:'pink', over:'bloom', fx:skmFx('rise', 'heart', 4) }), // ヒールレイド
+  'sk-0267': skm('float', { c:'holy', over:'pillar', line:'ray', fx:skmFx('shot', 'spark', 4) }), // ギガレイ
+  'sk-0269': skm('gather', { c:'cosmic', over:'boom', fx:skmFx('rise', 'star', 8) }), // ビッグバン
+  'sk-0270': skm('toss', { c:'wind', over:'wave', line:'arc' }), // 投げ飛ばし
+  'sk-0271': skm('float', { c:'cosmic', over:'pillar', line:'ray', fx:skmFx('orbit', 'star', 5) }), // アストラルレイ
+  'sk-0272': skm('cast', { c:'cosmic', over:'boom', fx:skmFx('fall', 'star', 8) }), // コズミックバン
+  'sk-0273': skm('spin', { c:'wind', over:'tornado', fx:skmFx('orbit', 'dust', 6) }), // ファイトクラウド
+  'sk-0292': skm('jab', { c:'rock', over:'fist', line:'whip' }), // のびーるパンチ
+  'sk-0295': skm('bash', { c:'rock', over:'wave', fx:skmFx('rise', 'rock', 5) }), // 地震
+  'sk-0296': skm('spin', { c:'rock', over:'boom', line:'arc' }), // 大ビンタ
+  'sk-0297': skm('jump', { c:'gold', over:'fist' }), // アッパー
+  'sk-0298': skm('jab', { c:'rock', over:'slash', line:'arc' }), // ビンタ
+  'sk-0302': skm('dive', { c:'rock', over:'boom' }), // ハエたたき
+  'sk-0307': skm('bash', { c:'gold', over:'wave' }), // 掌打
+  'sk-0339': skm('jab', { c:'gold', over:'fist', burst:'dust', hit2:true }), // ワン・ツー
+  'sk-0347': skm('toss', { c:'gas', over:'gas', fx:skmFx('shot', 'gas', 6) }), // 大砲屁
+  'sk-0350': skm('spin', { c:'gold', over:'fist', line:'arc' }), // 超バックナックル
+  'sk-0384': skm('dash', { c:'rock', over:'boom' }), // 体当たり
+  'sk-0385': skm('slash', { c:'white', over:'claw' }), // ひっかき
+  'sk-0386': skm('dash', { c:'gold', over:'bite' }), // かみつき
+  'sk-0389': skm('jab', { c:'white', over:'fist', burst:'star', hit2:true }), // ワンツー
+  'sk-0394': skm('jab', { c:'thunder', over:'thunder', fx:skmFx('fall', 'bolt', 4), burst:'spark', hit2:true }), // 雷撃コンボ
+  'sk-0399': skm('gather', { c:'thunder', over:'wave', fx:skmFx('orbit', 'bolt', 6) }), // 終狼咆哮
+  'sk-0448': skm('cast', { c:'plant', fx:skmFx('rise', 'leaf', 3) }), // 根っこ
+  'sk-0450': skm('toss', { c:'gold', over:'bloom', fx:skmFx('lob', 'orb', 3) }), // ミツ
+  'sk-0452': skm('cast', { c:'plant', over:'wave', fx:skmFx('rise', 'leaf', 7), burst:'leaf', hit2:true }), // 連続根っこ
+  'sk-0454': skm('cast', { c:'sakura', over:'bloom', fx:skmFx('fall', 'sakura', 9) }), // 花吹雪
+  'sk-0455': skm('jab', { c:'plant', over:'claw', burst:'leaf', hit2:true }), // 連続つっつき
+  'sk-0463': skm('gather', { c:'psy', over:'eye' }), // テレパシー
+  'sk-0466': skm('cast', { c:'fire', over:'eye', line:'ray' }), // 熱視線
+  'sk-0473': skm('hop', { c:'pink', over:'bloom', fx:skmFx('orbit', 'heart', 5) }), // ラブインパクト
+  'sk-0480': skm('lick', { c:'blue', over:'bloom', fx:skmFx('shot', 'heart', 3) }), // アクアキッス
+  'sk-0481': skm('cast', { c:'blue', over:'wave', fx:skmFx('rise', 'water', 5) }), // スプラッシュ
+  'sk-0482': skm('cast', { c:'ice', over:'ice', fx:skmFx('fall', 'ice', 9) }), // クリスタルレイン
+  'sk-0487': skm('cast', { c:'blue', over:'boom', fx:skmFx('shot', 'water', 6) }), // アクアブラスト
+  'sk-0488': skm('spin', { c:'ice', over:'tornado', fx:skmFx('orbit', 'snow', 9) }), // ホワイトストーム
+  'sk-0489': skm('gather', { c:'blue', over:'wave', fx:skmFx('rise', 'water', 8) }), // アクアウォール
+  'sk-0511': skm('shake', { c:'psy', over:'wave', fx:skmFx('shot', 'orb', 2) }), // おんば
+  'sk-0512': skm('dive', { c:'rock', over:'wave' }), // たおれこみ
+  'sk-0513': skm('dash', { c:'rock', over:'boom' }), // 体当たり
+  'sk-0516': skm('slash', { c:'white', over:'claw' }), // ひっかき
+  'sk-0517': skm('dash', { c:'sky', over:'claw', line:'arc' }), // 針ぶっさし
+  'sk-0520': skm('cast', { c:'psy', over:'aurora', fx:skmFx('shot', 'orb', 6) }), // 超おんば
+  'sk-0521': skm('dash', { c:'dark', over:'claw', line:'arc', fx:skmFx('shot', 'spark', 3) }), // 超針ぶっさし
+  'sk-0523': skm('roll', { c:'sky', over:'tornado', line:'arc' }), // ドリルアタック
+  'sk-0524': skm('warp', { c:'cosmic', over:'aurora', fx:skmFx('orbit', 'star', 6) }), // オーロラゲート
+  'sk-0526': skm('bash', { c:'red', over:'boom', fx:skmFx('rise', 'fire', 5) }), // クリムゾンブレイク
+  'sk-0573': 'ygAirDive', // 空中脳天撃
+  'sk-0574': 'ygGreenLight', // グリーンライト
+  'sk-0575': 'ygStarBomb', // スターボム
+  'sk-0576': 'ygHeadbutt', // 頭突き
+  'sk-0577': 'ygWonderBlaze', // ワンダーブレイズ
+  'sk-0578': 'ygTongue', // ぴろぴろ舌
+  'sk-0579': 'ygManyWing', // メニーウィング
+  'sk-0580': 'ygMoonDrop', // 月面水爆
+  'sk-0581': 'ygRoll', // 大玉転がし
+  'sk-0582': 'ygMeteor', // メテオストーム
+  'sk-0583': 'ygHeavyRain', // ヘビーレイン
+  'sk-0584': 'ygPapillon', // パピヨンバースト
+  'sk-0585': 'ygCandy', // キャンディボム
+  'sk-0586': 'ygStrawberry', // 苺大噴
+  'sk-0587': 'ygShadow', // シャドウレギオン
+  'sk-0588': 'ygEternalArc', // エターナルアーク
+  'sk-0589': 'ygCosmo', // コスモフルーツ
+  'sk-0590': 'ygAurora', // オーロラハック
+  'sk-0593': skm('dash', { c:'thunder', over:'thunder', line:'arc' }), // スタナーブリッツ
+  'sk-0596': skm('dive', { c:'red', over:'claw', line:'arc' }), // アサルトレイド
+  'sk-0785': skm('spin', { c:'plant', over:'bloom', fx:skmFx('orbit', 'leaf', 9) }), // メニーウィング・翠
+  'sk-0787': 'ygRiceShower', // ライスシャワー
+  'sk-0788': 'ygCakeCut', // ケーキ入刀
+  'sk-0797': skm('cast', { c:'sky', fx:skmFx('shot', 'spark', 1) }), // シングルショット
+  'sk-0799': skm('warp', { c:'dark', over:'xslash', line:'arc' }), // フォルターブリッツ
+  'sk-0824': skm('gather', { c:'dark', over:'bloom', fx:skmFx('rise', 'sakura', 8) }), // デスブルーム
+};
+const MONSUC_SPECIES_MOTIONS = {
+  Mocchi: MONSUC_MOCCHI_MOTIONS,
+  MelWhip: {},
+  Yggdrasil: {},
+  Suezo: {
+    'sk-0461': 'Suezo-n1', // ツバはき
+    'sk-0462': 'Suezo-n0', // しっぽアタック
+    'sk-0460': 'Suezo-n2', // テレポート
+    'sk-0464': 'Suezo-n5', // かみつき
+    'sk-0465': 'Suezo-n4', // キッス
+    'sk-0468': 'Suezo-n3', // なめる
+    'sk-0467': 'Suezo-u0', // サイコキネシス
+    'sk-0469': 'Suezo-n8', // ベロビンタ
+    'sk-0470': 'Suezo-u4', // 歌う
+    'sk-0471': 'Suezo-u3', // クロノキネシス
+    'sk-0472': 'Suezo-u2', // 食う
+    'sk-0474': 'Suezo-u5', // 超熱視線
+  },
+  Golem: {
+    'sk-0293': 'Golem-n0', // でこぴん
+    'sk-0294': 'Golem-n2', // キック
+    'sk-0301': 'Golem-u0', // 合掌
+    'sk-0300': 'Golem-u1', // フライングプレス
+    'sk-0299': 'Golem-n5', // 大でこぴん
+    'sk-0303': 'Golem-u2', // 竜巻アタック
+    'sk-0305': 'Golem-n8', // 大ハエタタキ
+    'sk-0306': 'Golem-n7', // 大キック
+    'sk-0304': 'Golem-u3', // ぐるぐるアタック
+  },
+  Tiger: {
+    'sk-0390': 'Tiger-u0', // 雷撃
+    'sk-0387': 'Tiger-n4', // 影撃
+    'sk-0388': 'Tiger-u1', // 冷気弾
+    'sk-0393': 'Tiger-u2', // 超雷撃
+    'sk-0392': 'Tiger-n8', // コンビネーション
+    'sk-0391': 'Tiger-n5', // 空中回転アタック
+    'sk-0395': 'Tiger-u3', // ブリザード
+    'sk-0396': 'Tiger-u4', // 突き刺し
+    'sk-0397': 'Tiger-u5', // 落雷共鳴
+    'sk-0398': 'Tiger-u7', // ライジングブースト
+  },
+  Ham: {
+    'sk-0340': 'Ham-n3', // 正拳
+    'sk-0338': 'Ham-n1', // 飛び蹴り
+    'sk-0343': 'Ham-u0', // おなら
+    'sk-0341': 'Ham-n2', // バックナックル
+    'sk-0342': 'Ham-n4', // 後ろ蹴り
+    'sk-0346': 'Ham-n6', // ドラゴンパンチ
+    'sk-0344': 'Ham-n7', // 超飛び蹴り
+    'sk-0345': 'Ham-n5', // 回し蹴り
+    'sk-0348': 'Ham-u1', // 瞬撃
+    'sk-0349': 'Ham-n8', // ドラゴンキック
+    'sk-0351': 'Ham-u3', // 暗けい
+  },
+  Pixie: {
+    'sk-0260': 'Pixie-n0', // はり手
+    'sk-0259': 'Pixie-n2', // サンダー
+    'sk-0258': 'Pixie-n1', // レイ
+    'sk-0263': 'Pixie-n3', // ハイキック
+    'sk-0262': 'Pixie-n5', // ライトニング
+    'sk-0261': 'Pixie-n6', // メガレイ
+    'sk-0264': 'Pixie-n7', // なげキッス
+    'sk-0266': 'Pixie-n4', // ヒールレイド
+    'sk-0267': 'Pixie-u1', // ギガレイ
+    'sk-0268': 'Pixie-u2', // ギガサンダー
+    'sk-0269': 'Pixie-u3', // ビッグバン
+    'sk-0274': 'Pixie-u4', // ギガライトニング
+  },
+  Mia: {
+    'sk-0263': 'Mia-n3', // ハイキック
+    'sk-0262': 'Mia-n5', // ライトニング
+    'sk-0264': 'Mia-n7', // なげキッス
+    'sk-0268': 'Mia-u2', // ギガサンダー
+    'sk-0274': 'Mia-u4', // ギガライトニング
+  },
+  Monol: {
+    'sk-0514': 'Monol-n3', // わらわら
+    'sk-0515': 'Monol-u0', // トリオビームX
+    'sk-0519': 'Monol-n2', // 大たおれこみ
+    'sk-0518': 'Monol-u2', // トリオビームY
+    'sk-0522': 'Monol-u6', // トリオビームZ
+    'sk-0525': 'Monol-u8', // トリオビーム∞
+  },
+  Oboro: {
+    'sk-0447': 'Oboro-n1', // つっつき
+    'sk-0448': 'Oboro-n2', // 根っこ
+    'sk-0446': 'Oboro-u0', // 種ガン
+    'sk-0449': 'Oboro-u4', // 種マシンガン
+    'sk-0451': 'Oboro-u1', // 葉っぱブレード
+    'sk-0453': 'Oboro-u5', // フラワービーム
+    'sk-0459': 'Oboro-u7', // 蒼花爆散
+    'sk-0458': 'Oboro-n3', // コンビネーション
+    'sk-0456': 'Oboro-u6', // 乱れ咲き
+    'sk-0457': 'Oboro-n4', // 捕食
+  },
+  Plant: {
+    'sk-0447': 'Plant-n1', // つっつき
+    'sk-0446': 'Plant-u0', // 種ガン
+    'sk-0449': 'Plant-u4', // 種マシンガン
+    'sk-0451': 'Plant-u1', // 葉っぱブレード
+    'sk-0453': 'Plant-u5', // フラワービーム
+    'sk-0459': 'Plant-u7', // 蒼花爆散
+    'sk-0458': 'Plant-n3', // コンビネーション
+    'sk-0456': 'Plant-u6', // 乱れ咲き
+    'sk-0457': 'Plant-n4', // 捕食
+  },
+  Zan: {
+    'sk-0591': 'Zan-n1', // ミラージュシフト
+    'sk-0592': 'Zan-n3', // レッグアーク
+    'sk-0594': 'Zan-n4', // ソニックナイフ
+    'sk-0595': 'Zan-n5', // ダブルサマー
+    'sk-0798': 'Zan-u2', // メテオドライブ
+    'sk-0597': 'Zan-u4', // ライジングレイヴ
+    'sk-0599': 'Zan-u6', // ダークホウスト
+    'sk-0598': 'Zan-u5', // アクシズバレット
+  },
+  Mitarashi: {
+    'sk-0402': MONSUC_MOCCHI_MOTIONS['sk-0402'], // もんた
+    'sk-0400': MONSUC_MOCCHI_MOTIONS['sk-0400'], // ローリンモッチ
+    'sk-0401': 'Mitarashi-n1', // もちき
+    'sk-0405': MONSUC_MOCCHI_MOTIONS['sk-0405'], // ぺろりん
+    'sk-0406': 'Mitarashi-n2', // ガッチョ
+    'sk-0403': skm('cast', { c:'fire', line:'ray', fx:skmFx('shot', 'fire', 1), over:'boom' }), // モッチ砲
+    'sk-0404': 'Mitarashi-n5', // さくら吹雪
+    'sk-0409': 'Mitarashi-n4', // ガッチャー
+    'sk-0408': 'Mitarashi-n3', // もっちゃん
+    'sk-0407': MONSUC_MOCCHI_MOTIONS['sk-0407'], // 超ローリンモッチ
+    'sk-0413': MONSUC_MOCCHI_MOTIONS['sk-0413'], // 超ガッチョ
+    'sk-0410': 'Mitarashi-u1', // 大モッチ砲
+    'sk-0411': 'Mitarashi-n7', // 枝垂ざくら
+    'sk-0412': 'Mitarashi-n8', // もっさま
+    'sk-0416': MONSUC_MOCCHI_MOTIONS['sk-0416'], // もっさまん
+    'sk-0415': 'Mitarashi-u5', // 宵闇ざくら
+    'sk-0414': 'Mitarashi-u2', // 超モッチ砲
+  },
+  Ark: {
+    'sk-0125': 'Ark-n2', // 神剣よ断罪を下せ
+    'sk-0111': 'Ark-n0', // 我が瞳の真理を見よ
+    'sk-0110': 'Ark-n4', // 世界を揺らせ
+    'sk-0114': 'Ark-n6', // 白き誓い切なる願い
+    'sk-0115': 'Ark-u2', // 今こそ真なる目醒め
+    'sk-0118': 'Ark-n8', // 蒼き荊よ咎を穿て
+    'sk-0116': 'Ark-u1', // 裁きの光よ下れ
+    'sk-0120': 'Ark-u4', // 熾天の剣よ降り立て
+    'sk-0119': 'Ark-u0', // 祈れ輪廻の環よ
+    'sk-0121': 'Ark-u6', // 終焉に救いを与えよ
+  },
+  Iblis: {
+    'sk-0125': 'Iblis-n2', // 神剣よ断罪を下せ
+    'sk-0111': 'Iblis-n0', // 我が瞳の真理を見よ
+    'sk-0110': 'Iblis-n4', // 世界を揺らせ
+    'sk-0113': skm('slash', { c:'dark', over:'sword', line:'arc', fx:skmFx('shot', 'spark', 3) }), // 翔べ震律の刃よ
+    'sk-0114': 'Iblis-n6', // 白き誓い切なる願い
+    'sk-0112': skm('cast', { c:'dark', over:'pillar', line:'ray' }), // 神光よ汚れを祓え
+    'sk-0115': 'Iblis-u2', // 今こそ真なる目醒め
+    'sk-0118': 'Iblis-n8', // 蒼き荊よ咎を穿て
+    'sk-0117': skm('float', { c:'dark', over:'aurora', fx:skmFx('rise', 'star', 5) }), // 導け神光の道標
+    'sk-0116': 'Iblis-u1', // 裁きの光よ下れ
+    'sk-0120': 'Iblis-u4', // 熾天の剣よ降り立て
+    'sk-0119': 'Iblis-u0', // 祈れ輪廻の環よ
+    'sk-0122': skm('gather', { c:'dark', over:'bloom', fx:skmFx('orbit', 'star', 6) }), // 聖光よ奇跡を灯せ
+    'sk-0124': skm('cast', { c:'fire', over:'pillar', fx:skmFx('rise', 'fire', 8) }), // 灰よ還りて聖火となれ
+    'sk-0123': skm('float', { c:'dark', over:'bloom', fx:skmFx('fall', 'feather', 8) }), // 天の慈悲よ示されよ
+    'sk-0121': 'Iblis-u6', // 終焉に救いを与えよ
+    'sk-0129': skm('gather', { c:'dark', over:'aurora', line:'ray', fx:skmFx('fall', 'star', 10) }), // 黎明よ終焉を照らせ
+  },
+  Snegurochka: {
+    'sk-0477': 'Snegurochka-n0', // アイスブレード
+    'sk-0475': 'Snegurochka-n2', // アクアウェイブ
+    'sk-0476': 'Snegurochka-n1', // アクアウィップ
+    'sk-0478': 'Snegurochka-u1', // ダブルバレッド
+    'sk-0742': 'Snegurochka-u3', // プレゼントキッス
+    'sk-0479': 'Snegurochka-u0', // アイスアロー
+    'sk-0484': 'Snegurochka-n6', // ドルフィンブロー
+    'sk-0483': 'Snegurochka-u2', // アイスコフィン
+    'sk-0485': 'Snegurochka-n7', // ブラッドミスト
+    'sk-0743': 'Snegurochka-n8', // ジングルベル
+    'sk-0486': 'Snegurochka-u4', // クリスタルアロー
+    'sk-0744': 'Snegurochka-u8', // メリークリスマス
+    'sk-0491': 'Snegurochka-u7', // アクアドーム
+    'sk-0490': 'Snegurochka-u6', // ホワイトエレジー
+  },
+  Undine: {
+    'sk-0477': 'Undine-n0', // アイスブレード
+    'sk-0475': 'Undine-n2', // アクアウェイブ
+    'sk-0476': 'Undine-n1', // アクアウィップ
+    'sk-0478': 'Undine-u1', // ダブルバレッド
+    'sk-0479': 'Undine-u0', // アイスアロー
+    'sk-0480': 'Undine-u3', // アクアキッス
+    'sk-0484': 'Undine-n6', // ドルフィンブロー
+    'sk-0483': 'Undine-u2', // アイスコフィン
+    'sk-0485': 'Undine-n7', // ブラッドミスト
+    'sk-0486': 'Undine-u4', // クリスタルアロー
+    'sk-0491': 'Undine-u7', // アクアドーム
+    'sk-0490': 'Undine-u6', // ホワイトエレジー
+  },
+  Yaobikuni: {
+    'sk-0477': 'Yaobikuni-n0', // アイスブレード
+    'sk-0475': 'Yaobikuni-n2', // アクアウェイブ
+    'sk-0476': 'Yaobikuni-n1', // アクアウィップ
+    'sk-0478': 'Yaobikuni-u1', // ダブルバレッド
+    'sk-0479': 'Yaobikuni-u0', // アイスアロー
+    'sk-0480': 'Yaobikuni-u3', // アクアキッス
+    'sk-0484': 'Yaobikuni-n6', // ドルフィンブロー
+    'sk-0483': 'Yaobikuni-u2', // アイスコフィン
+    'sk-0485': 'Yaobikuni-n7', // ブラッドミスト
+    'sk-0486': 'Yaobikuni-u4', // クリスタルアロー
+    'sk-0491': 'Yaobikuni-u7', // アクアドーム
+    'sk-0490': 'Yaobikuni-u6', // ホワイトエレジー
+  },
+  Ghost: {
+    'sk-0065': 'Ghost-n1', // ソウルビーム
+    'sk-0066': 'Ghost-n0', // ピコピコハンマー
+    'sk-0077': 'Ghost-n2', // ハトのおとしもの
+    'sk-0068': 'Ghost-n3', // びっくり
+    'sk-0069': 'Ghost-n4', // 体当たり
+    'sk-0078': 'Ghost-n5', // カード
+    'sk-0067': 'Ghost-n6', // すてきステッキ
+    'sk-0070': 'Ghost-u0', // 連続カード
+    'sk-0071': 'Ghost-u1', // ドクロビーム
+    'sk-0072': 'Ghost-n7', // 大パンチ
+    'sk-0073': 'Ghost-u2', // 大きなおとしもの
+    'sk-0080': 'Ghost-u3', // びっくりドクロ
+    'sk-0079': 'Ghost-u4', // スリーセブン
+    'sk-0074': 'Ghost-n8', // コンビネーション
+    'sk-0075': 'Ghost-u5', // Woフォーチュン
+    'sk-0084': 'Ghost-u6', // RSF
+    'sk-0076': 'Ghost-u7', // 運命のコイン
+  },
+  Spooky: {
+    'sk-0065': 'Spooky-n1', // ソウルビーム
+    'sk-0066': 'Spooky-n0', // ピコピコハンマー
+    'sk-0077': 'Spooky-n2', // ハトのおとしもの
+    'sk-0068': 'Spooky-n3', // びっくり
+    'sk-0069': 'Spooky-n4', // 体当たり
+    'sk-0067': 'Spooky-n6', // すてきステッキ
+    'sk-0082': 'Spooky-n5', // カード・クラブ
+    'sk-0070': 'Spooky-u0', // 連続カード
+    'sk-0071': 'Spooky-u1', // ドクロビーム
+    'sk-0072': 'Spooky-n7', // 大パンチ
+    'sk-0073': 'Spooky-u2', // 大きなおとしもの
+    'sk-0080': 'Spooky-u3', // びっくりドクロ
+    'sk-0079': 'Spooky-u4', // スリーセブン
+    'sk-0083': 'Spooky-n8', // グリンネーション
+    'sk-0075': 'Spooky-u5', // Woフォーチュン
+    'sk-0084': 'Spooky-u6', // RSF
+    'sk-0076': 'Spooky-u7', // 運命のコイン
+  },
+  Illumine: {
+    'sk-0040': 'Illumine-n0', // プラズマ
+    'sk-0039': 'Illumine-n1', // ヴェノムエッジ
+    'sk-0064': 'Illumine-n2', // シールドバッシュ
+    'sk-0041': 'Illumine-u0', // エーテルアイス
+    'sk-0042': 'Illumine-n4', // モーニングスター
+    'sk-0045': 'Illumine-n3', // ストレート
+    'sk-0046': 'Illumine-n5', // アサシンクロウ
+    'sk-0044': 'Illumine-u1', // アルカナフレア
+    'sk-0043': 'Illumine-n6', // アサルトアロー
+    'sk-0047': 'Illumine-u2', // アルスマグナ
+    'sk-0048': 'Illumine-u3', // ノクターン
+    'sk-0049': 'Illumine-n7', // ブレードダンス
+    'sk-0054': 'Illumine-n8', // バスターソード
+    'sk-0050': 'Illumine-u5', // クリムゾンノヴァ
+    'sk-0052': 'Illumine-u4', // ミラージュクロウ
+    'sk-0051': 'Illumine-u8', // レクイエムエンド
+  },
+  Dreamy: {
+    'sk-0040': 'Dreamy-n0', // プラズマ
+    'sk-0039': 'Dreamy-n1', // ヴェノムエッジ
+    'sk-0055': 'Dreamy-u0', // おもちゃの爆弾
+    'sk-0041': 'Dreamy-u1', // エーテルアイス
+    'sk-0042': 'Dreamy-n4', // モーニングスター
+    'sk-0045': 'Dreamy-n3', // ストレート
+    'sk-0044': 'Dreamy-u2', // アルカナフレア
+    'sk-0047': 'Dreamy-u3', // アルスマグナ
+    'sk-0050': 'Dreamy-u6', // クリムゾンノヴァ
+    'sk-0052': 'Dreamy-u5', // ミラージュクロウ
+  },
+  Kyubi: {
+    'sk-0005': 'Kyubi-n0', // ひっかき
+    'sk-0003': 'Kyubi-n2', // 狐火
+    'sk-0004': 'Kyubi-n1', // ひのこ
+    'sk-0010': 'Kyubi-n3', // 下駄蹴り
+    'sk-0008': 'Kyubi-n5', // 提灯落とし
+    'sk-0009': 'Kyubi-n4', // 提灯投げ
+    'sk-0018': 'Kyubi-u0', // ゆうわく
+    'sk-0015': 'Kyubi-u2', // 超狐火
+    'sk-0017': 'Kyubi-u1', // なめろう
+    'sk-0016': 'Kyubi-n6', // 火炎車
+    'sk-0026': 'Kyubi-u5', // 陽炎
+    'sk-0027': 'Kyubi-n7', // 神光石火
+    'sk-0028': 'Kyubi-n8', // 九重神眼
+    'sk-0025': 'Kyubi-u3', // 神狐蒼火
+    'sk-0037': 'Kyubi-u6', // 煉獄九尾陣
+    'sk-0036': 'Kyubi-u7', // 天河天翔
+    'sk-0002': 'Kyubi-u4', // 八嵐天衝
+    'sk-0035': 'Kyubi-u8', // 炸裂気泡陣
+  },
+  Orihime: {
+    'sk-0005': 'Orihime-n0', // ひっかき
+    'sk-0003': 'Orihime-n2', // 狐火
+    'sk-0004': 'Orihime-n1', // ひのこ
+    'sk-0010': 'Orihime-n3', // 下駄蹴り
+    'sk-0008': 'Orihime-n5', // 提灯落とし
+    'sk-0009': 'Orihime-n4', // 提灯投げ
+    'sk-0496': 'Orihime-u0', // 求愛
+    'sk-0023': 'Orihime-u2', // 超狐火・星
+    'sk-0015': 'cardOrihime905', // 超狐火
+    'sk-0017': 'cardOrihime906', // なめろう
+    'sk-0016': 'Orihime-n6', // 火炎車
+    'sk-0026': 'Orihime-u3', // 陽炎
+    'sk-0027': 'Orihime-n7', // 神光石火
+    'sk-0028': 'Orihime-n8', // 九重神眼
+    'sk-0025': 'cardOrihime909', // 神狐蒼火
+    'sk-0037': 'Orihime-u7', // 煉獄九尾陣
+    'sk-0036': 'Orihime-u8', // 天河天翔
+    'sk-0035': 'Orihime-u6', // 炸裂気泡陣
+  },
+  Pandora: {
+    'pandora_o01': 'Pandora-n0', // デュアルスラップ
+    'pandora_o02': 'Pandora-n1', // ルミナスレイ
+    'pandora_o04': 'Pandora-n3', // セラフキック
+    'pandora_o05': 'Pandora-n4', // アビスレイド
+    'pandora_o06': 'Pandora-n5', // ホーリーライトニング
+    'pandora_o07': 'Pandora-n6', // カオスメガレイ
+    'pandora_o08': 'Pandora-n7', // エクリプスキッス
+    'pandora_o09': 'Pandora-n8', // デュアルキッス
+    'pandora_o11': 'Pandora-u1', // セイクリッドレイ
+    'pandora_o12': 'Pandora-u2', // アビスサンダー
+    'pandora_o13': 'Pandora-u3', // ツインビッグバン
+    'pandora_o14': 'Pandora-u4', // ダークライトニング
+    'pandora_o15': 'Pandora-u5', // カオスコズミック
+    'pandora_o16': 'Pandora-u6', // アストラルクロスレイ
+    'pandora_o17': 'Pandora-u7', // エクリプスノヴァ
+    'pandora_o18': 'Pandora-u8', // ダイスキライライ
+  },
+  Eiki: {
+    'eiki_o02': 'Eiki-n1', // 花裂き
+    'eiki_o03': 'Eiki-n2', // 桜風刃
+    'eiki_o04': 'Eiki-n3', // 花霞斬
+    'eiki_o05': 'Eiki-n4', // 桜月輪
+    'eiki_o06': 'Eiki-n5', // 桜嵐刃
+    'eiki_o07': 'Eiki-n6', // 千花連刃
+    'eiki_o08': 'Eiki-n7', // 桜閃爪
+    'eiki_o09': 'Eiki-n8', // 桜華絶閃爪
+    'eiki_o10': 'Eiki-u0', // 華影緋閃
+    'eiki_o11': 'Eiki-u1', // 氷花一閃
+    'eiki_o12': 'Eiki-u2', // 桜月斬華
+    'eiki_o13': 'Eiki-u3', // 緋雪乱刃
+    'eiki_o14': 'Eiki-u4', // 花氷双牙
+    'eiki_o15': 'Eiki-u5', // 千華氷嵐
+    'eiki_o16': 'Eiki-u6', // 緋桜六華閃
+    'eiki_o17': 'Eiki-u7', // 絶影桜華乱舞
+  },
+  KenshiMocchi: {
+    'kenshimocchi_o01': 'KenshiMocchi-n0', // エッジもんた
+    'kenshimocchi_o02': 'KenshiMocchi-n1', // もちき・リープ
+    'kenshimocchi_o03': 'KenshiMocchi-n2', // ガッチョスラント
+    'kenshimocchi_o04': 'KenshiMocchi-n3', // エアリアルもっちゃん
+    'kenshimocchi_o06': 'KenshiMocchi-n5', // 黒桜吹雪
+    'kenshimocchi_o07': 'KenshiMocchi-n6', // もっさんスピン
+    'kenshimocchi_o08': 'KenshiMocchi-n7', // 枝垂れクロス
+    'kenshimocchi_o09': 'KenshiMocchi-n8', // バーストもっさま
+    'kenshimocchi_o10': 'KenshiMocchi-u0', // ソニック・リープ
+    'kenshimocchi_o11': 'KenshiMocchi-u1', // ホリゾンタル・スクエア
+    'kenshimocchi_o12': 'KenshiMocchi-u2', // ヴォーパル・ストライク
+    'kenshimocchi_o13': 'KenshiMocchi-u3', // デュアル・サーキュラー
+    'kenshimocchi_o14': 'KenshiMocchi-u4', // ブラック・テンペスト
+    'kenshimocchi_o15': 'KenshiMocchi-u5', // ブラック・チェイン
+    'kenshimocchi_o16': 'KenshiMocchi-u6', // ナイトメア・レイド
+    'kenshimocchi_o17': 'KenshiMocchi-u7', // ジ・エクリプス
+  },
+  Melody: {
+    'melody_o01': 'Melody-n0', // ぞうさん頭突き
+    'melody_o02': 'Melody-n1', // ピアノパラソル脳天撃
+    'melody_o03': 'Melody-n2', // メロディタクトライト
+    'melody_o04': 'Melody-n3', // ぞうさんぴろぴろ鼻
+    'melody_o05': 'Melody-n4', // マリーランド大玉転がし
+    'melody_o06': 'Melody-n5', // ムーンサルトメロディー
+    'melody_o07': 'Melody-n6', // メロディキャンディボム
+    'melody_o08': 'Melody-n7', // メロディ苺クッキー
+    'melody_o09': 'Melody-n8', // ドリームパワー
+    'melody_o10': 'Melody-u0', // メロメロハート
+    'melody_o11': 'Melody-u1', // ピアノワルツ
+    'melody_o12': 'Melody-u2', // リボンウィング
+    'melody_o13': 'Melody-u3', // パウンドメテオ
+    'melody_o14': 'Melody-u4', // ピンクバースト
+    'melody_o15': 'Melody-u5', // キャンディレイン
+    'melody_o16': 'Melody-u6', // マリーランドアーチ
+    'melody_o17': 'Melody-u7', // メロディタクト
+    'melody_o18': 'Melody-u8', // スウィートパレード
+  },
+  Kuromy: {
+    'kuromy_o01': 'Kuromy-n0', // バク頭突き
+    'kuromy_o02': 'Kuromy-n1', // バク空中落下プレス
+    'kuromy_o03': 'Kuromy-n2', // ブラックノートライト
+    'kuromy_o04': 'Kuromy-n3', // バクパタパタ耳
+    'kuromy_o05': 'Kuromy-n4', // 巨大雪だるま転がし
+    'kuromy_o06': 'Kuromy-n5', // KUROMI'S5アタック
+    'kuromy_o07': 'Kuromy-n6', // ナイトメアらっきょうボム
+    'kuromy_o08': 'Kuromy-n7', // バコ・ベリースプラッシュ
+    'kuromy_o09': 'Kuromy-n8', // ダークパワー
+    'kuromy_o10': 'Kuromy-u0', // ドクロボム
+    'kuromy_o11': 'Kuromy-u1', // クロミーズ5突撃
+    'kuromy_o12': 'Kuromy-u2', // 夢くいウィング
+    'kuromy_o13': 'Kuromy-u3', // 恨み帳メテオ
+    'kuromy_o14': 'Kuromy-u4', // 黒音符バースト
+    'kuromy_o15': 'Kuromy-u5', // らっきょう大雨
+    'kuromy_o16': 'Kuromy-u6', // ナイトメアアーク
+    'kuromy_o17': 'Kuromy-u7', // ダークオーロラ
+    'kuromy_o18': 'Kuromy-u8', // 悪夢フィナーレ
+  },
+};
 const monsucMotionKind = (species, tech) => {
   const id = tech?.id;
-  if (species !== 'Mocchi' || !Object.prototype.hasOwnProperty.call(MONSUC_MOCCHI_MOTIONS, id)) return msaMotionKind(species, tech);
-  const motion = MONSUC_MOCCHI_MOTIONS[id];
+  const own = MONSUC_SPECIES_MOTIONS[species];
+  if (!own || !id) return msaMotionKind(species, tech);
+  const motion = own[id] || MONSUC_SHARED_MOTIONS[id];
+  if (!motion || (typeof motion !== 'string' && !motion.body)) return msaMotionKind(species, tech);
   if (typeof motion === 'string') return skillFxSpecOf(motion) ? motion : msaMotionKind(species, tech);
-  const kind = 'monsuc-Mocchi-' + id;
+  const kind = 'monsuc-' + species + '-' + id;
   if (!SKILL_FX_SPEC_CACHE[kind]) SKILL_FX_SPEC_CACHE[kind] = skmNormalize(motion);
   return kind;
 };
