@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d550a76a5df61484
+// generated-sha256: 794ecc078f836c4e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83672,7 +83672,7 @@ function MonsucShopList({ points = 0, busy = false, disabled = false, openSheet,
       if (!t) return null;
       const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
       const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
-      const when = t.when === 'before' ? '始める前に効く' : '育成中にも使える';
+      const when = offer.itemId === 'pack' ? '持ちこむと中身が使える' : t.when === 'before' ? '始める前に効く' : '育成中にも使える'; // オイリーパックは中身が初めから持ち物に入る(2026-11-18)
       const item = { id: offer.id, name: t.name, emoji: t.e, type: 'item', currency: 'beatPoint', cost: offer.cost, desc: `${when}。${desc}` };
       return <MarketProductCard key={offer.id} dataAttrs={{ 'data-monsuc-shop-offer': offer.itemId }}
         item={item} owned={false} comingSoon={false}
@@ -90519,7 +90519,7 @@ const MSX_ITEMS = Object.freeze([
   { id: 'juice', name: 'ガロエ印の野菜ジュース', desc: '体力を完全に回復する', when: 'both', e: '🥤' },
   { id: 'powder', name: '悪様散', desc: '悪いようすを治して、体力を回復する', when: 'both', e: '💊' },
   { id: 'license', name: 'ブリーダーライセンス', desc: '忠誠度が一定数 上がる', when: 'both', e: '🪪' },
-  { id: 'pack', name: 'オイリーパック', desc: 'オイリーオイル（大）2個と夏美草1個のセット', when: 'both', e: '🧴' },
+  { id: 'pack', name: 'オイリーパック', desc: '持ちこむと中身がそのまま持ち物に入る。オイリーオイル（大）2個と夏美草1個のセット', when: 'both', e: '🧴' },
   // 2026-11-13 社長「持ちこみに、育成中に使えるアイテムも足して」: 詰め合わせの中身を単品でも(芯の ITEMS にある物)
   { id: 'oil', name: 'オイリーオイル（小）', desc: '体力を上限の20%回復', when: 'both', e: '🫙' },
   { id: 'oilyoil', name: 'オイリーオイル（大）', desc: '体力を上限の40%回復', when: 'both', e: '🛢️' },
@@ -90550,7 +90550,7 @@ const msxItemFx = (id) => {
   if (it.cure) return `悪いようす(サボりグセ・どんよりなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
   if (it.loyal) return `忠誠度 +${it.loyal}`;
   if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
-  if (it.gives) { const g = it.gives; return Object.keys(g).map((k) => `${(S.ITEMS[k] && S.ITEMS[k].name) || k}${g[k]}個(${msxItemFx(k)})`).join('・'); }
+  if (it.gives) { const g = it.gives; return `持ちこむと中身が初めから持ち物に入る(開けなくてよい): ${Object.keys(g).map((k) => `${(S.ITEMS[k] && S.ITEMS[k].name) || k}${g[k]}個(${msxItemFx(k)})`).join('・')}`; }
   if (it.hp) return `体力を上限の${pc(it.hp)}回復`;
   if (it.stress) return `ストレス ${it.stress}`;
   return '';
@@ -91145,7 +91145,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div className="v-bsel" style={{ marginBottom: 6 }} data-msx-carry-look={look}><span className="e" style={{ fontSize: 30 }}>{t.e}</span><div style={{ minWidth: 0 }}>
             <b>{t.name}<span className="yel"> ×{n}</span></b>
             <small style={JA_WRAP_STYLE}>{jaWrap(msxItemDesc(look))}</small>
-            <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
+            <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : look === 'pack' ? 'いつ: 持ちこんだ時点で中身が持ち物に入っている。中身は育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
             <small style={{ ...JA_WRAP_STYLE, color: '#fcd34d' }}>{jaWrap(n > 0 ? (items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る') : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物')}</small>
           </div></div>); })() : <div className="msx-note" style={{ marginBottom: 6 }}>升目を押すと、効き目と手に入れ方が出ます</div>}
         {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
