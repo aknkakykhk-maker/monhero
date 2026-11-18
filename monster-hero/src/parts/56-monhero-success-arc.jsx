@@ -88,7 +88,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const SUM = msxSuc.SUC.SUMMIT || [];
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
-      <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
+      <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)}</small>
       <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}

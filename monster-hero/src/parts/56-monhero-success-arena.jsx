@@ -1842,7 +1842,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-main" data-msa-main>
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
-        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
+        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{msxBreederLabel(info.opp.breeder, info.opp.rivalKind)}</small> : null}</div>
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind}/>
         <div className="msa-say over" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
