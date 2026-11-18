@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75e7c24ca5bac4d2
+// source-sha256: 02c0735f1cbe86cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13086,14 +13086,7 @@ const DyeTabbedSheet = ({
     className: "flex items-center justify-between shrink-0"
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
-  }, "🎨 ", title), React.createElement("button", {
-    type: "button",
-    "aria-label": "染色を閉じる",
-    onClick: onClose,
-    className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white flex items-center justify-center active:scale-90"
-  }, React.createElement(X, {
-    size: 16
-  }))), React.createElement("div", {
+  }, "🎨 ", title)), React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row"
   }, React.createElement("div", {
     className: "shrink-0 h-[42%] flex flex-col gap-1 [@media(orientation:landscape)_and_(max-height:500px)]:h-full [@media(orientation:landscape)_and_(max-height:500px)]:w-[42%]"
@@ -20675,7 +20668,7 @@ const MarketPurchaseSheet = ({
     className: `mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`
   }, meta.verb, "する"), React.createElement(MarketModalClose, {
     onClick: onCancel,
-    label: "やめる",
+    label: "キャンセル",
     disabled: pending
   })));
 };
@@ -22022,11 +22015,8 @@ const AssistantBubble = ({
     style: bubbleWrapStyle()
   }, bubbleWrap(text))), React.createElement("button", {
     onClick: () => setOpen(false),
-    "aria-label": "説明を閉じる",
-    className: "mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("div", {
+    className: "mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
+  }, "閉じる")), React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5"
   }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
     key: i,
@@ -37040,10 +37030,12 @@ const RhythmOptions = ({
   }, React.createElement("button", {
     "aria-label": "戻る",
     onClick: requestBack,
-    className: "min-h-[44px] min-w-[44px] text-slate-300"
+    className: "flex min-h-[44px] min-w-[44px] items-center gap-0.5 px-1 text-slate-300"
   }, React.createElement(ArrowLeft, {
     size: 20
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("div", {
     className: wide ? 'flex items-baseline gap-2' : ''
   }, React.createElement("small", {
     className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
@@ -38816,7 +38808,7 @@ const RhythmSongSelect = ({
     disabled: buyBusy,
     onClick: () => setBuyAsk(null),
     className: "min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-rhythm-song-buy-ok": true,
     disabled: buyBusy,
@@ -42004,7 +41996,7 @@ const RhythmLineAdjustPanel = ({
     "data-rhythm-line-adjust-cancel": true,
     onClick: adjust.onCancel,
     className: "min-h-[40px] rounded-lg border border-white/25 bg-slate-800 px-3 text-[12px] font-black"
-  }, "やめる")));
+  }, "キャンセル")));
 };
 const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   length: 48
@@ -62916,10 +62908,12 @@ const ScreenHead = ({
   "aria-label": backLabel,
   onClick: onBack,
   disabled: disabled,
-  className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
+  className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
 }, React.createElement(ArrowLeft, {
   size: 20
-})), React.createElement("div", {
+}), React.createElement("span", {
+  className: "whitespace-nowrap text-[11px] font-black"
+}, backLabel)), React.createElement("div", {
   className: "min-w-0 flex-1"
 }, React.createElement("h2", {
   className: `flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`,
@@ -63656,7 +63650,7 @@ const NameEditModal = ({
   className: "mt-3 grid grid-cols-2 gap-2"
 }, React.createElement(ModalCloseButton, {
   onClick: onCancel,
-  label: "やめる"
+  label: "キャンセル"
 }), React.createElement("button", {
   type: "button",
   onClick: onSave,
@@ -63687,7 +63681,7 @@ const ConfirmSheet = ({
   className: `mh-button ${danger ? 'mh-button-danger' : 'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`
 }, confirmLabel), React.createElement(ModalCloseButton, {
   onClick: onCancel,
-  label: "やめる"
+  label: "キャンセル"
 })));
 const PHASE_STEP_LABELS = Object.freeze({
   training: 'トレーニング',
@@ -68448,12 +68442,7 @@ function ArtPickerModal({
     }
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, heading), React.createElement("button", {
-    onClick: onClose,
-    "aria-label": "閉じる"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("p", {
+  }, React.createElement("h3", null, heading)), React.createElement("p", {
     className: "shrink-0 text-[11px] font-bold leading-relaxed text-slate-300"
   }, note), React.createElement("button", {
     type: "button",
@@ -68535,12 +68524,7 @@ function ScreenThemeModal({
     }
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "画面テーマ"), React.createElement("button", {
-    onClick: onClose,
-    "aria-label": "閉じる"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("p", {
+  }, React.createElement("h3", null, "画面テーマ")), React.createElement("p", {
     className: "text-[11px] font-bold leading-relaxed text-slate-300"
   }, "画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。"), React.createElement("div", {
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2"
@@ -68691,12 +68675,7 @@ function HomeScreenGuideSheet({
     className: "mh-dialog-head flex items-start justify-between gap-2"
   }, React.createElement("h3", {
     className: "text-[16px] font-black leading-snug text-white"
-  }, w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう')), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: onClose,
-    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-full text-[18px] font-black text-slate-300 active:scale-95"
-  }, "✕")), React.createElement("p", {
+  }, w(inApp ? '📲 Safari で開いて、ホーム画面に追加しよう' : '📲 ホーム画面に追加して遊ぼう'))), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
   }, w(inApp ? 'いまは X や LINE などのアプリの中で開いています。Safari で開いてホーム画面に追加すると、アプリのように画面が広くなり、ブラウザの操作が出なくなります。' : 'アプリのように画面が広くなり、ブラウザの操作(画面の左端をなぞると戻る、など)が出なくなります。')), React.createElement("div", {
     "data-home-screen-guide-warning": true,
@@ -71526,12 +71505,7 @@ const DexMasuColorSheet = ({
     className: "flex items-center justify-between shrink-0"
   }, React.createElement("h3", {
     className: "text-sm font-black text-amber-100"
-  }, "色の見本にするマスモン"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: onClose,
-    className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90"
-  }, "✕")), React.createElement("div", {
+  }, "色の見本にするマスモン")), React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5"
   }, row('base', !current, false, face(null, mon.name), '元の色', React.createElement("span", null, "もとのイラストの色"), () => pick(null)), Array.isArray(value?.colors) && dexHasColors(value.colors) && row('try', true, false, face(value.colors, '染めてみた色'), '染めてみた色', React.createElement(React.Fragment, null, React.createElement(DexColorSwatches, {
     colors: value.colors
@@ -71548,7 +71522,11 @@ const DexMasuColorSheet = ({
     }));
   }), list.length === 0 && React.createElement("p", {
     className: "text-center text-[11px] font-bold text-slate-400 py-3"
-  }, "この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。"))));
+  }, "この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。")), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる")));
 };
 const DexTryDyeSheet = ({
   mon,
@@ -71578,12 +71556,7 @@ const DexTryDyeSheet = ({
   className: "flex items-center justify-between shrink-0"
 }, React.createElement("h3", {
   className: "text-sm font-black text-white"
-}, "🎨 ", mon.name, "を染めてみる"), React.createElement("button", {
-  type: "button",
-  "aria-label": "閉じる",
-  onClick: onClose,
-  className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90"
-}, "✕")), React.createElement("div", {
+}, "🎨 ", mon.name, "を染めてみる")), React.createElement("div", {
   "data-dex-try-dye-body": true,
   className: "flex-1 min-h-0 flex flex-col gap-2.5 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row [@media(orientation:landscape)_and_(max-height:500px)]:gap-3"
 }, React.createElement("div", {
@@ -71621,7 +71594,11 @@ const DexTryDyeSheet = ({
   "data-dex-try-apply": true,
   onClick: onApply,
   className: "flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95"
-}, "この色で見る"))))));
+}, "この色で見る")))), React.createElement("button", {
+  type: "button",
+  onClick: onClose,
+  className: "shrink-0 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+}, "閉じる")));
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
@@ -72285,10 +72262,12 @@ function RhythmInfoScreen({
   }, React.createElement("button", {
     "aria-label": "HOMEへ戻る",
     onClick: returnToHome,
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "HOMEへ戻る")), React.createElement("div", {
     className: "min-w-0"
   }, React.createElement("small", {
     className: "block text-[8px] font-black text-cyan-300"
@@ -72515,10 +72494,12 @@ function RhythmSongSelectScreen({
     "aria-label": debugAll ? 'モンヒロビートのデバッグへ戻る' : 'モード選びへ戻る',
     title: debugAll ? 'デバッグへ戻る' : 'モード選びへ戻る',
     onClick: onExit,
-    className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+    className: "flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"
   }, React.createElement(ArrowLeft, {
     size: 20
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, debugAll ? 'デバッグへ戻る' : 'モード選びへ戻る')), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
     className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
@@ -72700,7 +72681,7 @@ function RhythmSongSelectScreen({
       void handleGiveUp();
     },
     className: "min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]"
-  }, "やめる"))) : React.createElement("button", {
+  }, "周回をやめる"))) : React.createElement("button", {
     type: "button",
     "data-quick-run-stop": true,
     onClick: () => setQuickRunStopConfirm(true),
@@ -72987,10 +72968,12 @@ function RhythmNoteDexScreen({
     "aria-label": "戻る",
     "data-rhythm-note-dex-back": true,
     onClick: onBack,
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
     className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
@@ -73069,10 +73052,12 @@ function RhythmHelpScreen({
     onClick: () => {
       if (topic) setRhythmHelpTopicId(null);else onBackToSongSelect();
     },
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
     className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
@@ -73185,10 +73170,12 @@ function RhythmMonstersScreen({
       setRhythmMonsterPickerOpen(false);
       onBackToSongSelect();
     },
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("h2", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("h2", {
     className: "text-sm font-black tracking-widest text-fuchsia-200"
   }, "👾 マスモン設定")), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3",
@@ -73480,10 +73467,12 @@ function RhythmRankingScreen({
   }, React.createElement("button", {
     "aria-label": "戻る",
     onClick: onBackToSongSelect,
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("h2", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("h2", {
     className: "text-sm font-black tracking-widest text-amber-200"
   }, "🏆 全国ランキング"), React.createElement("button", {
     "aria-label": "更新",
@@ -73718,12 +73707,7 @@ function RhythmRankingScreen({
       className: "mb-2 flex items-center justify-between"
     }, React.createElement("h3", {
       className: "text-sm font-black text-amber-200"
-    }, rhythmRankingDetail.userName, " のリザルト"), React.createElement("button", {
-      "aria-label": "閉じる",
-      "data-rhythm-ranking-detail-close": true,
-      onClick: () => setRhythmRankingDetail(null),
-      className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
-    }, "✕")), isTotal ? React.createElement("p", {
+    }, rhythmRankingDetail.userName, " のリザルト")), isTotal ? React.createElement("p", {
       className: "text-[10px] text-slate-400"
     }, "総合 ", rhythmRankingDetail.songCount, "曲 / スコア ", shownScore.toLocaleString()) : (() => {
       const detailRank = rhythmRankForScore(baseScore === null ? shownScore : baseScore);
@@ -73804,7 +73788,12 @@ function RhythmRankingScreen({
       className: "mt-1 text-[8px] text-slate-500"
     }, jaWrap('JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。')), React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
-    }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
+    }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : '')), React.createElement("button", {
+      type: "button",
+      "data-rhythm-ranking-detail-close": true,
+      onClick: () => setRhythmRankingDetail(null),
+      className: "mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+    }, "閉じる")));
   })(), boardTab && eventDetailOpen && React.createElement("div", {
     "data-rhythm-event-detail": true,
     role: "dialog",
@@ -75034,7 +75023,7 @@ function MasuReincarnateScreen({
       className: "mh-button mh-button-primary min-h-[52px] rounded-2xl bg-violet-600 font-black active:scale-[.98] disabled:opacity-30"
     }, preview?.ok ? `${preview.count}体を転生する` : '転生できません'), React.createElement(ModalCloseButton, {
       onClick: () => setBulkConfirmOpen(false),
-      label: "やめる",
+      label: "キャンセル",
       disabled: busy
     })))));
   }
@@ -76773,16 +76762,13 @@ function MasuSoulTraitsScreen({
     className: "mt-1 text-[10px] font-bold text-slate-400"
   }, selected.desc)), React.createElement("button", {
     type: "button",
-    "aria-label": "強化画面を閉じる",
     onClick: () => {
       setSoulTraitSelectedId(null);
       setSoulTraitDraftLevels(0);
       setSoulTraitError('');
     },
-    className: "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 active:scale-90"
-  }, React.createElement(X, {
-    size: 16
-  }))), React.createElement("div", {
+    className: "flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white/10 px-3 text-[11px] font-black text-slate-200 active:scale-90"
+  }, "閉じる")), React.createElement("div", {
     className: "mt-3 grid grid-cols-2 gap-2 text-center"
   }, React.createElement("div", {
     className: "rounded-xl border border-white/10 bg-black/30 p-2"
@@ -76943,7 +76929,7 @@ function MasuSoulTraitsScreen({
     disabled: soulTraitProcessingRef.current,
     onClick: () => setSoulCrystalOpen(false),
     className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
-  }, "やめる")))), soulTraitRespecOpen && React.createElement("div", {
+  }, "キャンセル")))), soulTraitRespecOpen && React.createElement("div", {
     className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
     role: "dialog",
     "aria-modal": "true",
@@ -76989,7 +76975,7 @@ function MasuSoulTraitsScreen({
     disabled: soulTraitProcessingRef.current,
     onClick: () => setSoulTraitRespecOpen(false),
     className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-soul-trait-respec-confirm": true,
     disabled: soulTraitProcessingRef.current,
@@ -77160,7 +77146,7 @@ function UniqueBoostSheet({
     type: "button",
     onClick: onClose,
     className: "min-h-[48px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px] rounded-2xl bg-slate-800 text-[13px] font-black text-white"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-unique-boost-commit": true,
     disabled: draftCost <= 0,
@@ -77665,7 +77651,7 @@ function MasuTranscendEnhanceScreen({
     onClick: () => setTranscendPlan(null),
     disabled: planUsed <= 0,
     className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-transcend-commit": true,
     disabled: planUsed <= 0,
@@ -77695,14 +77681,7 @@ function MasuTranscendEnhanceScreen({
     className: "text-sm font-black text-amber-200 flex items-center gap-1.5"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🌠"), "超越ポイントをリセットしますか？"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: () => setTranscendResetOpen(false),
-    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("div", {
+  }, "🌠"), "超越ポイントをリセットしますか？")), React.createElement("div", {
     className: "rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-1 text-[10px] font-black"
   }, React.createElement("div", {
     className: "flex justify-between"
@@ -77740,7 +77719,7 @@ function MasuTranscendEnhanceScreen({
     type: "button",
     onClick: () => setTranscendResetOpen(false),
     className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-transcend-reset-commit": true,
     disabled: spentPoints <= 0 || resetScrollHave <= 0,
@@ -77770,14 +77749,7 @@ function MasuTranscendEnhanceScreen({
     className: "text-sm font-black text-fuchsia-200 flex items-center gap-1.5"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🌈"), "虹のプシュケーを変換"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: () => setTranscendExchangeOpen(false),
-    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("div", {
+  }, "🌈"), "虹のプシュケーを変換")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("div", {
     className: "rounded-xl bg-black/30 p-2.5 text-center"
@@ -77886,13 +77858,7 @@ function MasuTranscendEnhanceScreen({
     className: "flex items-center justify-between gap-2"
   }, React.createElement("h3", {
     className: "text-sm font-black text-emerald-200"
-  }, "🍎 超越の実を使う"), React.createElement("button", {
-    "aria-label": "閉じる",
-    onClick: () => setTranscendFruitOpen(false),
-    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("p", {
+  }, "🍎 超越の実を使う")), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400"
   }, "使用する実を選んでください。虹の実が自動で代用されることはありません。"), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
@@ -77952,7 +77918,7 @@ function MasuTranscendEnhanceScreen({
     type: "button",
     onClick: () => setTranscendFruitConfirmAmount(0),
     className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black active:scale-95"
-  }, "戻る"), React.createElement("button", {
+  }, "← 戻る"), React.createElement("button", {
     type: "button",
     "data-transcend-fruit-commit": true,
     onClick: runFruitUse,
@@ -79352,13 +79318,15 @@ function SkipPickScreen({
     type: "button",
     "aria-label": "戻る",
     onClick: closeBattleSkip,
-    className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"
   }, React.createElement(ArrowLeft, {
     size: 20
-  })), React.createElement("h2", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("h2", {
     className: "text-lg font-black italic text-teal-400 uppercase tracking-widest"
   }, "スキップ・", label), React.createElement("div", {
-    className: "w-10"
+    className: "w-[76px]"
   })), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
@@ -80166,10 +80134,12 @@ function PickHeroAllyScreen({
       "aria-label": "戻る",
       disabled: !!battleTutorial,
       onClick: onBack,
-      className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+      className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90 disabled:opacity-25"
     }, React.createElement(ArrowLeft, {
       size: 20
-    })), React.createElement("div", {
+    }), React.createElement("span", {
+      className: "whitespace-nowrap text-[11px] font-black"
+    }, "戻る")), React.createElement("div", {
       className: "min-w-0"
     }, React.createElement("h2", {
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
@@ -80177,7 +80147,7 @@ function PickHeroAllyScreen({
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。このモンスターの勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
-      className: "w-10"
+      className: "w-[76px]"
     })), pickMode === 'ally' && React.createElement("div", {
       className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
     }, React.createElement("span", {
@@ -80664,10 +80634,12 @@ function PickProAlliesScreen({
     type: "button",
     "aria-label": "戻る",
     onClick: returnToHero,
-    className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"
   }, React.createElement(ArrowLeft, {
     size: 20
-  })), React.createElement("div", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("div", {
     className: "min-w-0"
   }, React.createElement("h2", {
     className: "text-xl font-black italic uppercase tracking-widest truncate",
@@ -80678,7 +80650,7 @@ function PickProAlliesScreen({
     "data-pick-term-note": true,
     className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
   }, "勇者モン＝主役 / 供モン＝一緒に戦う仲間(最大3体)")), React.createElement("div", {
-    className: "w-10"
+    className: "w-[76px]"
   })), React.createElement("div", {
     className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
   }, proEditingAllyIndex === null ? React.createElement(React.Fragment, null, React.createElement("div", {
@@ -82207,7 +82179,7 @@ function MasuRegisterModal({
   }, React.createElement("button", {
     onClick: () => setShowMasuRegisterModal(false),
     className: "w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     onClick: () => {
       registerMasuMon(masuNameInput);
       setShowMasuRegisterModal(false);
@@ -91717,7 +91689,7 @@ function MasuAutoEnhanceScreen({
     "data-auto-enhance-cancel": true,
     onClick: cancelDraft,
     className: "min-h-[52px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 font-black text-[13px] active:scale-95"
-  }, "やめる"))), !dirty && appliedLines && appliedLines.length > 0 && React.createElement("div", {
+  }, "キャンセル"))), !dirty && appliedLines && appliedLines.length > 0 && React.createElement("div", {
     "data-auto-enhance-applied": true,
     className: "rounded-2xl border border-lime-400/60 bg-lime-950/30 p-3"
   }, React.createElement("div", {
@@ -92091,10 +92063,12 @@ function RhythmHistoryScreen({
     "aria-label": "戻る",
     "data-rhythm-history-back": true,
     onClick: () => selected ? onClearSelection() : onBack(),
-    className: "min-h-[44px] px-2 text-slate-400"
+    className: "flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"
   }, React.createElement(ArrowLeft, {
     size: 18
-  })), React.createElement("h2", {
+  }), React.createElement("span", {
+    className: "whitespace-nowrap text-[11px] font-black"
+  }, "戻る")), React.createElement("h2", {
     className: "min-w-0 flex-1 truncate text-sm font-black tracking-widest text-amber-200"
   }, selected ? rhythmHistoryName(selected) : '🕘 これまでの記録'), selected && React.createElement("button", {
     "aria-label": "更新",
@@ -97108,10 +97082,9 @@ function RhythmMultiChatPanel({
   }, "ルームの", count, "件")), onClose && React.createElement("button", {
     "data-rhythm-multi-chat-close": true,
     type: "button",
-    "aria-label": "チャットを閉じる",
     onClick: onClose,
-    className: "min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200"
-  }, "✕")), talkTip && React.createElement("div", {
+    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black text-slate-200"
+  }, "閉じる")), talkTip && React.createElement("div", {
     "data-rhythm-buddy-talk-tip": true,
     className: "mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2 landscape:p-1.5"
   }, React.createElement("span", {
@@ -98115,8 +98088,8 @@ function MultiAwayBar({
     type: "button",
     "aria-label": "ルームを出る",
     onClick: leave,
-    className: "min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "✕")));
+    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-700 px-2.5 text-[11px] font-black"
+  }, "部屋を出る")));
 }
 function RhythmMultiRecordSaver({
   entry
@@ -98177,10 +98150,9 @@ function RhythmMultiRecordSheet({
     className: "min-w-0 flex-1 text-sm font-black text-cyan-100"
   }, "📜 みんなで対戦の記録"), React.createElement("button", {
     type: "button",
-    "aria-label": "閉じる",
     onClick: onClose,
-    className: "min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black"
-  }, "✕")), !rec ? React.createElement("p", {
+    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black"
+  }, "閉じる")), !rec ? React.createElement("p", {
     className: "mt-3 text-xs font-bold text-slate-400"
   }, "読み込んでいます…") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mt-2 grid shrink-0 grid-cols-4 gap-1.5 text-center"
@@ -98307,10 +98279,9 @@ function RhythmMultiBuddyInfoSheet({
     }, "🎵 マスモンのステータス"), React.createElement("button", {
       "data-rhythm-multi-buddy-info-close": true,
       type: "button",
-      "aria-label": "閉じる",
       onClick: onClose,
-      className: "min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black"
-    }, "✕")), React.createElement("div", {
+      className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-full bg-slate-800 px-3 text-[12px] font-black"
+    }, "閉じる")), React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto"
     }, React.createElement(RhythmBuddyDetail, {
       masu: masu,
@@ -100204,11 +100175,7 @@ function RhythmWatchScreen({
     "data-rhythm-watch-message": true,
     className: "text-[14px] font-black leading-snug text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(rhythmWatchPhaseText(v.phase))), React.createElement("button", {
-    type: "button",
-    onClick: close,
-    className: "min-h-[48px] w-full max-w-xs rounded-xl bg-slate-700 text-[14px] font-black"
-  }, "観戦をやめる")), playing && React.createElement("div", {
+  }, jaWrap(rhythmWatchPhaseText(v.phase)))), playing && React.createElement("div", {
     className: `flex min-h-0 flex-1 gap-2 px-3 pb-1 ${wide ? 'flex-row' : 'flex-col'}`
   }, React.createElement("section", {
     "data-rhythm-watch-detail": true,
@@ -101515,10 +101482,9 @@ function RhythmMultiScreenBody({
     className: "min-w-0 flex-1 truncate text-base font-black text-pink-100"
   }, "フレンドを招待する"), React.createElement("button", {
     type: "button",
-    "aria-label": "閉じる",
     onClick: () => setInviteSheet(false),
-    className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-  }, "✕")), inviteListBody));
+    className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black"
+  }, "閉じる")), inviteListBody));
   const askBuddy = view ? (view.myCpus || []).map(c => view.members.find(m => m.id === c.id)).find(m => m && !m.as) : null;
   const askBuddyName = askBuddy ? askBuddy.name || 'マスモン' : '';
   const chatSheet = chatOpen && view && React.createElement("div", _extends({
@@ -101822,10 +101788,9 @@ function RhythmMultiScreenBody({
       className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
     }, "育ち具合を見る"), React.createElement("button", {
       type: "button",
-      "aria-label": "閉じる",
       onClick: () => closeBuddyIntro(false),
-      className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), ms.multi && buddyIntroSeen && !rankIntroSeen && React.createElement("section", {
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black"
+    }, "閉じる")), ms.multi && buddyIntroSeen && !rankIntroSeen && React.createElement("section", {
       "data-rhythm-buddy-rank-intro": true,
       className: "mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5"
     }, React.createElement("span", {
@@ -101839,10 +101804,9 @@ function RhythmMultiScreenBody({
       className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
     }, "見てみる"), React.createElement("button", {
       type: "button",
-      "aria-label": "閉じる",
       onClick: () => closeRankIntro(false),
-      className: "min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), ms.multi && React.createElement("div", {
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black"
+    }, "閉じる")), ms.multi && React.createElement("div", {
       "data-rhythm-mode-session": true,
       className: "mhms-in -my-1 flex items-center justify-center gap-x-2 whitespace-nowrap px-1 text-[10px] leading-none"
     }, React.createElement("b", {
@@ -101988,13 +101952,12 @@ function RhythmMultiScreenBody({
       className: "block text-[11px] font-bold text-slate-400"
     }, "だれとでも最大", RHYTHM_MULTI_ROOM_MAX, "人で協力")), React.createElement("button", {
       type: "button",
-      "aria-label": "閉じる",
       onClick: () => {
         setFreeOpen(false);
         setFreeList(false);
       },
-      className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), rejoinButton, !freeList && (() => {
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black"
+    }, "閉じる")), rejoinButton, !freeList && (() => {
       const list = beatFriendsOf(Array.isArray(freeRooms) ? freeRooms : []).filter(f => f.kind === 'room' || f.kind === 'here');
       if (!list.length) return null;
       return React.createElement("section", {
@@ -102166,10 +102129,9 @@ function RhythmMultiScreenBody({
       className: "block text-[11px] font-bold text-slate-400"
     }, "合言葉で、フレンドだけと遊べます")), React.createElement("button", {
       type: "button",
-      "aria-label": "閉じる",
       onClick: () => setPrivateOpen(false),
-      className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black"
-    }, "✕")), React.createElement("section", {
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black"
+    }, "閉じる")), React.createElement("section", {
       className: "space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3"
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-white"
@@ -102413,7 +102375,7 @@ function RhythmMultiScreenBody({
       type: "button",
       className: `${btn} w-full bg-slate-700`,
       onClick: leaveRoomAfterTap
-    }, view ? 'ルームを出る' : 'やめる')), message && React.createElement("p", {
+    }, "ルームを出る")), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
     }, message)))), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer);
   }
@@ -103871,7 +103833,7 @@ function RhythmBuddyDetail({
       setSeedPick('');
     },
     className: `min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`
-  }, seedOpen ? 'やめる' : '性格を選び直す')), React.createElement("small", {
+  }, seedOpen ? 'キャンセル' : '性格を選び直す')), React.createElement("small", {
     className: "mt-0.5 block break-keep text-[9px] font-bold leading-snug text-slate-400"
   }, "1個使うと、性格を全部の中から選び直せます。選んだ性格は遊び方では変わりません(もう一度たねを使えば変えられます)"), seedOpen && React.createElement("div", {
     className: "mt-1 space-y-1"
@@ -108493,13 +108455,7 @@ function AssistantChatWindow({
   }, assistant.name, "とおしゃべり"), React.createElement("p", {
     "data-assistant-chat-remaining": true,
     className: "text-[10px] font-bold text-slate-400"
-  }, remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`)), React.createElement("button", {
-    type: "button",
-    "data-assistant-chat-close": true,
-    onClick: onClose,
-    className: "h-9 w-9 rounded-full border border-slate-600 text-slate-300 text-lg font-black active:scale-95",
-    "aria-label": "閉じる"
-  }, "×")), React.createElement("div", {
+  }, remaining == null ? '1日に話せる回数には上限があります' : `今日あと${remaining}回`))), React.createElement("div", {
     ref: listRef,
     className: "flex-1 overflow-y-auto mh-scroll px-3 py-2 space-y-2",
     style: {
@@ -108617,7 +108573,14 @@ function AssistantChatWindow({
     style: {
       background: accent
     }
-  }, "送る"))));
+  }, "送る")), React.createElement("div", {
+    className: "border-t border-slate-800 p-2 shrink-0"
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-chat-close": true,
+    onClick: onClose,
+    className: "min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる"))));
 }
 function AssistantCallnameToast({
   assistant,
@@ -110188,13 +110151,12 @@ function AssistantPeerTalk({
   }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
-    "aria-label": "閉じる",
     onClick: ev => {
       ev.stopPropagation();
       finish(cur);
     },
-    className: "h-7 w-7 rounded-full border border-slate-600 text-[13px] font-black text-slate-300 active:scale-95"
-  }, "×"))));
+    className: "min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95"
+  }, "閉じる"))));
 }
 const ASSISTANT_PEER_PHOTO_W = 400,
   ASSISTANT_PEER_PHOTO_H = 300;
@@ -110317,13 +110279,7 @@ function AssistantPeerAlbum({
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[13px] font-black text-amber-200"
-  }, a.name, "と", b.name, "の思い出アルバム"), React.createElement("button", {
-    type: "button",
-    "data-assistant-peer-album-close": true,
-    onClick: onClose,
-    "aria-label": "閉じる",
-    className: "h-8 w-8 rounded-full border border-slate-600 text-[14px] font-black text-slate-300 active:scale-95"
-  }, "×")), React.createElement("p", {
+  }, a.name, "と", b.name, "の思い出アルバム")), React.createElement("p", {
     className: "mb-2 text-[10px] text-slate-400"
   }, assistantPeerLvLabel(lv), "・見た掛け合い ", talks.length, "/", all), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
@@ -110424,7 +110380,12 @@ function AssistantPeerAlbum({
     "aria-hidden": "true"
   }, t.special ? '✦' : t.kind === 'event' ? '🎪' : t.kind === 'trio' ? '👥' : t.kind === 'quarrel' || t.kind === 'makeup' ? '🤝' : t.choice ? '💬' : '▶'), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
-  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)))))), buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => {
+  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t))))), React.createElement("button", {
+    type: "button",
+    "data-assistant-peer-album-close": true,
+    onClick: onClose,
+    className: "mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる")), buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => {
     const x = assistantLifeGiftOf(buyKind);
     return x ? React.createElement(AssistantLifeBuyConfirm, {
       item: x,
@@ -114107,20 +114068,19 @@ function AssistantLifeScreenBody({
     }
   }, !embedded && React.createElement("div", {
     className: "flex items-center gap-2 border-b border-white/10 px-3 py-2"
-  }, React.createElement("p", {
+  }, React.createElement("button", {
+    type: "button",
+    "data-assistant-life-close": true,
+    onClick: assistantLifeCloseScreen,
+    className: "min-h-[44px] shrink-0 rounded-full border border-slate-600 px-3 text-[12px] font-black text-slate-300 active:scale-95"
+  }, "← 閉じる"), React.createElement("p", {
     className: "min-w-0 flex-1 text-[15px] font-black text-pink-200"
   }, "助手ライフ"), React.createElement("span", {
     className: "text-right text-[10px] font-bold leading-tight text-slate-400"
   }, "いまは", assistantLifeSlotRange(slot), "の過ごし方", React.createElement("br", null), React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "text-slate-300"
-  }, assistantLifeNextSlotText())), React.createElement("button", {
-    type: "button",
-    "data-assistant-life-close": true,
-    onClick: assistantLifeCloseScreen,
-    "aria-label": "閉じる",
-    className: "h-9 w-9 rounded-full border border-slate-600 text-[15px] font-black text-slate-300 active:scale-95"
-  }, "×")), React.createElement("div", {
+  }, assistantLifeNextSlotText()))), React.createElement("div", {
     className: embedded ? 'pb-2' : 'min-h-0 flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-2'
   }, !embedded && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-life-tier": tier.id,
@@ -117684,8 +117644,8 @@ function AssistantLifeScene({
       onClose();
     },
     "aria-label": "家へ戻る",
-    className: "h-9 w-9 text-[18px] text-slate-100"
-  }, "←"), React.createElement("div", {
+    className: "min-h-[36px] shrink-0 whitespace-nowrap rounded-full bg-black/45 px-2.5 text-[12px] font-black text-slate-100"
+  }, "← 家へ戻る"), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "mhl-en"
@@ -118414,8 +118374,8 @@ function AssistantLifeHouse({
     "data-assistant-life-close": true,
     onClick: uiV2 ? backFromUiV2 : close,
     "aria-label": uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる',
-    className: uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[19px] text-slate-100 active:bg-white/10' : 'h-9 w-8 shrink-0 text-[19px] text-slate-100'
-  }, "←"), React.createElement("div", {
+    className: uiV2 ? 'min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap rounded-xl px-2 text-[13px] font-black text-slate-100 active:bg-white/10' : 'min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100'
+  }, "← ", uiV2 && tab !== 'house' ? '家へ戻る' : '閉じる'), React.createElement("div", {
     className: "min-w-0 shrink overflow-hidden",
     "data-assistant-life-title": true
   }, React.createElement("p", {
@@ -118850,7 +118810,7 @@ function AssistantLifeHouse({
     type: "button",
     className: "min-h-[44px] px-3",
     onClick: () => setCallPicker(false)
-  }, "閉じる ✕")), React.createElement("div", {
+  }, "閉じる")), React.createElement("div", {
     className: "max-h-[46vh] overflow-y-auto"
   }, Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).sort((x, y) => (life.solo[y]?.reason === 'lonely') - (life.solo[x]?.reason === 'lonely')).map(id => {
     const lonely = life.solo[id]?.reason === 'lonely';
@@ -118919,7 +118879,7 @@ function AssistantLifeHouse({
     "data-mhl-sheet-close": true,
     onClick: () => setGiftOpen(false),
     className: "min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]"
-  }, "閉じる ✕")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
+  }, "閉じる")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
     groups: (life.groups || []).map(g => ({
       ...g,
       ids: (g.ids || []).filter(id => metSet.has(id))
@@ -123434,8 +123394,8 @@ function AssistantLifeDailySceneView({
     "data-assistant-life-daily-scene-back": true,
     onClick: onClose,
     "aria-label": "家へ戻る",
-    className: "h-11 w-11 rounded-full bg-black/50 text-[18px] text-white"
-  }, "←"), React.createElement("p", {
+    className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-black/50 px-3 text-[12px] font-black text-white"
+  }, "← 家へ戻る"), React.createElement("p", {
     className: "rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100"
   }, plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`)), React.createElement("div", {
     className: "absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white",
@@ -124085,9 +124045,8 @@ function AssistantLifeTownPersonCard({
     type: "button",
     "data-assistant-life-town-close": true,
     onClick: close,
-    "aria-label": "閉じる",
-    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-[18px] text-slate-200 active:bg-white/10"
-  }, "✕")), line && React.createElement("p", {
+    className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-xl px-3 text-[12px] font-black text-slate-200 active:bg-white/10"
+  }, "閉じる")), line && React.createElement("p", {
     "data-assistant-life-town-line": true,
     className: "mt-2 rounded-xl bg-slate-800/90 px-3 py-2 text-[12.5px] font-bold leading-relaxed text-slate-100",
     style: ja
@@ -138060,7 +138019,7 @@ function AssistantLifeBuyConfirm({
     disabled: busy,
     onClick: onClose,
     className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98] disabled:opacity-40"
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     "data-assistant-life-buy-go": true,
     disabled: busy || !known || short > 0 || !!reason,
@@ -138471,7 +138430,7 @@ function AssistantLifeGiftSheet({
     "data-mhl-sheet-close": true,
     onClick: () => setGive(null),
     className: "min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
-  }, "やめる"), buyable ? React.createElement("button", {
+  }, "キャンセル"), buyable ? React.createElement("button", {
     type: "button",
     "data-assistant-life-give-buy": info.kind,
     disabled: short > 0,
@@ -149480,13 +149439,9 @@ function AssistantLifePlanHost({
     className: "text-[15px] font-black text-amber-200"
   }, "📅 今日の予定表"), land && React.createElement("p", {
     className: "min-w-0 flex-1 truncate text-[11px] font-bold text-slate-300"
-  }, typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    "data-assistant-life-plan-close": true,
-    onClick: assistantLifePlanClose,
-    className: "ml-auto grid h-[40px] w-[44px] place-items-center rounded-xl bg-white/10 text-[17px] font-black text-amber-200"
-  }, "✕")), !land && React.createElement("p", {
+  }, typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? 'マスを押すと行き先・名前を押すと疲れ・ストレス' : 'マスを押して、助手に行き先をお願いできます'), React.createElement("span", {
+    className: "ml-auto w-2"
+  })), !land && React.createElement("p", {
     className: "px-0.5 pb-1 text-[11.5px] font-bold leading-snug text-slate-300"
   }, "次の移動で、助手に行き先をお願いできます。たいてい聞いてくれますが、気分で別の場所へ行くこともあります。"), React.createElement("div", {
     className: "min-h-0 overflow-y-auto"
@@ -149530,7 +149485,12 @@ function AssistantLifePlanHost({
     className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100"
   }, assistantLifePlanName(who), "を 全部おまかせに"), who && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-pink-200"
-  }, "💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約", Math.round(assistantLifePlanTrust(lv) * 100), "%)")))));
+  }, "💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約", Math.round(assistantLifePlanTrust(lv) * 100), "%)"))), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-plan-close": true,
+    onClick: assistantLifePlanClose,
+    className: "mt-2 min-h-[48px] w-full shrink-0 rounded-xl bg-slate-800 text-[13px] font-black text-slate-100 active:scale-[.98]"
+  }, "閉じる")));
 }
 function AssistantLifePlanBand({
   ids = [],
@@ -157127,7 +157087,7 @@ function AssistantMasmonRanchSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: `${btn} bg-slate-700`
-  }, "やめる"), React.createElement("button", {
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     disabled: !!block,
     onClick: use,
@@ -159553,7 +159513,7 @@ function AmgsDetail({
     onClick: () => setPick(false),
     "data-mhl-sheet-close": true,
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "やめる"))));
+  }, "キャンセル"))));
 }
 function AmgsSleepButton({
   aid,
@@ -159602,7 +159562,7 @@ function AmgsSleepButton({
     onClick: () => setOpen(false),
     "data-mhl-sheet-close": true,
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "やめる"))));
+  }, "キャンセル"))));
 }
 function AmgsFuseSheet({
   beds,
@@ -159730,7 +159690,7 @@ function AmgsFuseSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "やめる")));
+  }, "キャンセル")));
 }
 const ASSISTANT_TASTE_KEY = 'mh_assistant_life_taste_v1';
 const AMT_LIKE_AT = 40;
@@ -160890,7 +160850,7 @@ function MonsucFuseSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "やめる")));
+  }, "キャンセル")));
 }
 const MONSUC_FUSE_STEPS = Object.freeze([1500, 1500, 700]);
 const monsucFuseImg = sp => {
@@ -163190,7 +163150,7 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
+.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -163212,7 +163172,7 @@ const MSX_SCN_CSS = `
 .msx .scn-win p{margin:0 0 10px;font-size:13.5px;line-height:1.7}
 .msx .scn-win .k{font-size:14px;font-weight:900;color:#c2410c;margin-top:4px}
 .msx .scn-win .v{font-size:13.5px;line-height:1.6;margin-bottom:8px}
-.msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
+.msx .scn-win .cl{display:block;width:100%;margin:10px 0 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
 `;
 function MsxScenarioSelect({
   value,
@@ -163231,7 +163191,11 @@ function MsxScenarioSelect({
     "data-msx-scenario": sc.id
   }, React.createElement("style", null, MSX_SCN_CSS), React.createElement("div", {
     className: "scn-hd"
-  }, React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "シナリオ ", idx + 1, "/", n)), React.createElement("div", {
+  }, React.createElement("button", {
+    type: "button",
+    className: "bk",
+    onClick: onBack
+  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "シナリオ ", idx + 1, "/", n)), React.createElement("div", {
     className: "scn-sc"
   }, React.createElement("img", {
     className: "bg",
@@ -163301,11 +163265,6 @@ function MsxScenarioSelect({
   }, "▶")) : null), React.createElement("div", {
     className: "scn-ft"
   }, React.createElement("button", {
-    type: "button",
-    className: "bk",
-    onClick: onBack,
-    "aria-label": "戻る"
-  }, "↩"), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: () => onNext(sc.id),
@@ -168184,9 +168143,9 @@ function AlfFriendHouseView({
       type: "button",
       "aria-label": "戻る",
       "data-alf-vview-back": true,
-      className: "h-9 w-7 shrink-0 text-[18px] text-slate-100",
+      className: "min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100",
       onClick: () => goTab('house')
-    }, "←"), React.createElement("div", {
+    }, "← 戻る"), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, vIcons(true)))
   }) : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -168198,9 +168157,9 @@ function AlfFriendHouseView({
     type: "button",
     "aria-label": "戻る",
     "data-alf-vview-back": true,
-    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    className: "min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100",
     onClick: () => goTab('house')
-  }, "←"), React.createElement("div", {
+  }, "← 戻る"), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("p", {
     className: "truncate text-[17px] font-black text-amber-100"
@@ -168230,11 +168189,11 @@ function AlfFriendHouseView({
     }
   }, React.createElement("button", {
     type: "button",
-    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    className: "min-h-[36px] shrink-0 whitespace-nowrap px-1 text-[13px] font-black text-slate-100",
     "aria-label": "戻る",
     "data-alf-visit-close": true,
     onClick: onClose
-  }, "←"), React.createElement("div", {
+  }, "← 戻る"), React.createElement("div", {
     className: "min-w-0",
     style: {
       maxWidth: land ? '100%' : '48%'
@@ -168669,7 +168628,7 @@ function AlfFriendHouseView({
       setLeaving(null);
       setNoteWarn('');
     }
-  }, "やめる"))) : null;
+  }, "キャンセル"))) : null;
   const diarySheet = boardOpen ? React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -170487,7 +170446,7 @@ function AlfNoteConfirm({
     className: "mhl-btn mt-2 w-full bg-slate-800 text-[12px] text-slate-300",
     disabled: busy,
     onClick: onCancel
-  }, "やめる")));
+  }, "キャンセル")));
 }
 const ALF_MS_TABLE = 'alf_masmon_share';
 const ALF_MS_SENT_KEY = 'mh_alf_masmon_share_sent_v1';
@@ -175970,7 +175929,7 @@ function MsxStart({
   }
   if (full) return full;
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
-    back: step ? '戻る' : 'やめる',
+    back: "戻る",
     onBack: back,
     right: `${step + 1} / 6`
   }), React.createElement("div", {
@@ -175980,9 +175939,6 @@ function MsxStart({
   }), body), go && React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
-    type: "button",
-    onClick: back
-  }, step ? '← 戻る' : '← やめる'), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next
@@ -177827,7 +177783,7 @@ function MonheroSuccessScreen({
   };
   const quit = () => setAsk({
     text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)',
-    yes: 'やめる',
+    yes: '育成をやめる',
     onYes: async () => {
       let res = false;
       try {
@@ -177837,7 +177793,7 @@ function MonheroSuccessScreen({
       }
       if (res === false) {
         setAsk({
-          text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください',
+          text: '保存できませんでした。育成は消えていません。もう一度「育成をやめる」を押してください',
           yes: 'OK',
           onYes: () => {}
         });
@@ -177993,7 +177949,7 @@ function MonheroSuccessScreen({
     type: "button",
     className: "msx-btn sub",
     onClick: () => setAsk(null)
-  }, "やめておく")))));
+  }, "キャンセル")))));
   return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
 }
 function MsxHomeDeco({
@@ -187367,7 +187323,7 @@ function MsxR3Box({
         setTab('list');
         setPick([]);
       }
-    }, "← やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       type: "button",
       className: "go",
       disabled: !pick.length,
@@ -187471,7 +187427,7 @@ function MsxR3Box({
         setEdit(null);
         setPage('detail');
       }
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: saveEdit,
@@ -194215,11 +194171,9 @@ function MonsterLabScreen({
     className: "text-[13px] font-black text-pink-200 active:scale-95"
   }, "← 戻る"), React.createElement("span", {
     className: "text-[15px] font-black"
-  }, title), React.createElement("button", {
-    type: "button",
-    onClick: onClose,
-    className: "text-[13px] font-black text-indigo-200 active:scale-95"
-  }, "✕")), React.createElement("div", {
+  }, title), React.createElement("span", {
+    className: "w-10"
+  })), React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
   }, view === 'door' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "m-2.5 rounded-xl bg-[#f5ead0] p-2.5 text-[13px] font-bold text-[#3b2a10]"
@@ -209915,7 +209869,7 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: bindCancel
-  }, "やめる"))), tossAsk && (() => {
+  }, "キャンセル"))), tossAsk && (() => {
     const base = tossAsk.base;
     const main = cardOf(db, me.hand[base.hand[0]]);
     const n = tossAsk.picks.length;
@@ -209966,7 +209920,7 @@ const CardBattleBoard = ({
       type: "button",
       className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
       onClick: () => setTossAsk(null)
-    }, "やめる")));
+    }, "キャンセル")));
   })(), splitAsk && React.createElement("div", {
     "data-card-split-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
@@ -209996,7 +209950,7 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
-  }, "やめる"))), mode === 'pray' && prayUse && !bigCard && (() => {
+  }, "キャンセル"))), mode === 'pray' && prayUse && !bigCard && (() => {
     const fc = cardOf(db, st.pendingPray.no);
     return React.createElement("div", {
       "data-card-pray": true,
@@ -210098,7 +210052,7 @@ const CardBattleBoard = ({
     "data-card-guard-ask-no": true,
     className: "mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black",
     onClick: () => setGuardAsk(null)
-  }, "やめる")))), confirm && React.createElement(ConfirmSheet, {
+  }, "キャンセル")))), confirm && React.createElement(ConfirmSheet, {
     title: confirm.label,
     message: confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : '',
     confirmLabel: confirm.kind === 'use' ? '使う' : '終わる',
@@ -210806,7 +210760,7 @@ const CardAutoTicketSheet = ({
   }, `${k}枚使って+${k}回`), React.createElement(ModalCloseButton, {
     onClick: onClose,
     disabled: busy,
-    label: "やめる"
+    label: "キャンセル"
   }))));
 };
 const CardBattleScreen = ({
@@ -213700,7 +213654,7 @@ const CardBattleScreen = ({
       "data-card-playlist-copy-cancel": true,
       onClick: () => setPlCopy(null),
       className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       type: "button",
       "data-card-playlist-copy-ok": true,
       onClick: () => {
@@ -213716,7 +213670,7 @@ const CardBattleScreen = ({
       "data-card-playlist-copy-cancel": true,
       onClick: () => setPlCopy(null),
       className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       type: "button",
       "data-card-playlist-copy-go": true,
       onClick: () => setPlCopy({
@@ -214756,7 +214710,7 @@ const CardDeckEditor = ({
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = React.createElement("div", {
-    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2 ${land ? 'shrink-0' : ''}`
+    className: `${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2 ${land ? 'shrink-0' : ''}`
   }, React.createElement("button", {
     type: "button",
     "data-card-deck-save": true,
@@ -214768,11 +214722,7 @@ const CardDeckEditor = ({
         name: (deck.name || '').trim() || 'デッキ'
       });
     }
-  }, "保存する"), React.createElement("button", {
-    type: "button",
-    className: `mh-button mh-button-secondary ${land ? 'min-h-[44px]' : 'min-h-[52px]'} rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]`,
-    onClick: () => changed ? setLeave(true) : onCancel()
-  }, "やめる"));
+  }, "保存する"));
   const sortLabel = (CARD_DECK_SORTS.find(x => x.id === sort) || CARD_DECK_SORTS[0]).label;
   const canAsk = !!advisor && cardAiTalkOn() && deck.monsters.length > 0;
   const consult = async () => {
@@ -230344,7 +230294,7 @@ const CardDeckRegister = ({
       setStep(to);
     },
     className: "mh-button min-h-[52px] flex-1 rounded-2xl font-black"
-  }, "戻る");
+  }, "← 戻る");
   const headRight = onOpenList ? React.createElement("button", {
     type: "button",
     "data-card-reg-list": true,
@@ -230376,7 +230326,7 @@ const CardDeckRegister = ({
       void unregister();
     },
     className: "shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] font-black text-slate-300"
-  }, "やめる")), onOpenReplays && React.createElement("button", {
+  }, "登録をやめる")), onOpenReplays && React.createElement("button", {
     type: "button",
     "data-card-reg-replays": true,
     onClick: () => {
@@ -257209,7 +257159,7 @@ function MonsterHeroGame() {
       disabled: allocated <= 0,
       onClick: clearDraft,
       className: "min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30"
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       disabled: allocated <= 0,
       onClick: () => {
         const updated = spendUniqueSkillPoint(masu.id, draft);
@@ -257407,11 +257357,8 @@ function MonsterHeroGame() {
       monId: base.id || mon.id
     }))), onClose && React.createElement("button", {
       onClick: onClose,
-      "aria-label": "閉じる",
-      className: "mh-hit-expand relative p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
-    }, React.createElement(X, {
-      size: 16
-    }))), masu && powerOverride === undefined ? (() => {
+      className: "mh-hit-expand relative px-3 py-2 -m-1 bg-white/5 rounded-full text-[11px] font-black text-slate-200 active:scale-90 shrink-0"
+    }, "閉じる")), masu && powerOverride === undefined ? (() => {
       const open = String(powerBreakdownMasuId) === String(masu.id);
       const parts = monsterPowerParts(mon);
       const row = (label, value, extra = null) => React.createElement("div", {
@@ -257836,13 +257783,7 @@ function MonsterHeroGame() {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "✦ 更新履歴"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: closeChangelog
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("div", {
+  }, React.createElement("h3", null, "✦ 更新履歴")), React.createElement("div", {
     className: "mh-changelog-tabs"
   }, [{
     key: 'update',
@@ -258071,19 +258012,17 @@ function MonsterHeroGame() {
         rel: "noopener noreferrer"
       }, c.link && c.link.label || '詳しく見る', " ↗"))))));
     })];
-  })()))) : showTitleSettings ? React.createElement("div", _extends({
+  })()), React.createElement("button", {
+    type: "button",
+    className: "mh-dialog-choice",
+    onClick: closeChangelog
+  }, "閉じる"))) : showTitleSettings ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowTitleSettings(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "設定"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: () => setShowTitleSettings(false)
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("button", {
+  }, React.createElement("h3", null, "設定")), React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: () => {
       setShowTitleSettings(false);
@@ -258131,7 +258070,10 @@ function MonsterHeroGame() {
     }
   }, "🛡️ データ引き継ぎ ", React.createElement(ChevronRight, {
     size: 18
-  })))) : showTitleArt ? React.createElement(ArtPickerModal, {
+  })), React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => setShowTitleSettings(false)
+  }, "閉じる"))) : showTitleArt ? React.createElement(ArtPickerModal, {
     pickerId: "title",
     heading: "タイトル画像アレンジ",
     note: "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。",
@@ -258167,13 +258109,7 @@ function MonsterHeroGame() {
     }
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "音量設定"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: () => setShowAudioSettings(false)
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("button", {
+  }, React.createElement("h3", null, "音量設定")), React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: toggleQuickMute
   }, audioMuted ? '🔇 音がオフです' : '🔊 音はオンです'), React.createElement(VolumeSlider, {
@@ -258201,7 +258137,10 @@ function MonsterHeroGame() {
     onTest: testAudioOutput,
     onRepair: repairAudioOutput,
     repairing: audioRepairing
-  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", _extends({
+  }), React.createElement(ReloadLogPanel, null)), React.createElement("button", {
+    className: "mh-dialog-choice mt-3",
+    onClick: () => setShowAudioSettings(false)
+  }, "閉じる"))) : showBgmArrangement ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(closeBgmArrangement)), React.createElement("div", {
     className: "mh-title-dialog",
@@ -258211,13 +258150,7 @@ function MonsterHeroGame() {
     }
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "BGMアレンジ"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: closeBgmArrangement
-  }, React.createElement(X, {
-    size: 18
-  }))), (() => {
+  }, React.createElement("h3", null, "BGMアレンジ")), (() => {
     const categories = [{
       id: 'basic',
       label: '基本',
@@ -258311,19 +258244,16 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"))) : showBackup ? React.createElement("div", _extends({
+  }, "デフォルトに戻す"), React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: closeBgmArrangement
+  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
-  }, React.createElement("h3", null, "データ引き継ぎ"), React.createElement("button", {
-    type: "button",
-    "aria-label": "閉じる",
-    onClick: () => setShowBackup(false)
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("div", {
+  }, React.createElement("h3", null, "データ引き継ぎ")), React.createElement("div", {
     className: "mh-changelog-tabs"
   }, React.createElement("button", {
     className: backupTab === 'export' ? 'active' : '',
@@ -258447,7 +258377,13 @@ function MonsterHeroGame() {
       ...JA_LABEL_STYLE,
       textAlign: 'center'
     }
-  }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
+  }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg), React.createElement("button", {
+    className: "mh-dialog-choice justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: () => setShowBackup(false)
+  }, "閉じる"))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, React.createElement("div", {
@@ -259027,11 +258963,7 @@ function MonsterHeroGame() {
       className: "text-sm font-black text-white"
     }, "BGM / 音量"), React.createElement("div", {
       className: "text-[10px] text-slate-400"
-    }, ultraEcoSession ? '超省エネ中：SEはOFF固定' : autoBattle || autoRepeat ? 'AUTO中のBGMを一時変更' : 'このバトル中のBGMを一時変更')), React.createElement("button", {
-      type: "button",
-      onClick: () => setShowAutoBgmPicker(false),
-      className: "min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black"
-    }, "×")), React.createElement("div", {
+    }, ultraEcoSession ? '超省エネ中：SEはOFF固定' : autoBattle || autoRepeat ? 'AUTO中のBGMを一時変更' : 'このバトル中のBGMを一時変更'))), React.createElement("div", {
       className: "mb-2"
     }, ultraEcoSession ? React.createElement("div", {
       className: "rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400"
@@ -259067,7 +258999,11 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && !runBackgroundAllowed && gameState === runStage && React.createElement("div", {
+    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"), React.createElement("button", {
+      type: "button",
+      onClick: () => setShowAutoBgmPicker(false),
+      className: "mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+    }, "閉じる"))), ultraEcoSession && !runBackgroundAllowed && gameState === runStage && React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -259302,20 +259238,22 @@ function MonsterHeroGame() {
     }), gameState === 'TRAINING_INFO' && React.createElement("main", {
       className: "mh-training-screen"
     }, React.createElement("header", {
-      className: "mh-training-head"
+      className: "mh-training-head",
+      style: {
+        gridTemplateColumns: '122px 1fr 122px'
+      }
     }, React.createElement("button", {
-      onClick: returnToHome
-    }, React.createElement(ArrowLeft, null)), React.createElement("div", null, React.createElement("small", null, "COMING SOON"), React.createElement("h2", null, "修行")), React.createElement("i", null)), React.createElement("section", {
+      onClick: returnToHome,
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, React.createElement(ArrowLeft, null), " HOMEへ戻る"), React.createElement("div", null, React.createElement("small", null, "COMING SOON"), React.createElement("h2", null, "修行")), React.createElement("i", null)), React.createElement("section", {
       className: "mh-training-confirm"
     }, React.createElement("div", {
       className: "text-6xl text-center my-6"
     }, "🎲"), React.createElement("h3", null, "修行は準備中です"), React.createElement("p", null, "マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。"), React.createElement("div", {
       className: "mh-training-ticket"
-    }, React.createElement("b", null, "正式実装前のお知らせ"), React.createElement("small", null, "通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。"))), React.createElement("footer", {
-      className: "mh-training-footer"
-    }, React.createElement("button", {
-      onClick: returnToHome
-    }, "HOMEへ戻る"))), gameState === 'TRAINING_SELECT' && (() => {
+    }, React.createElement("b", null, "正式実装前のお知らせ"), React.createElement("small", null, "通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。")))), gameState === 'TRAINING_SELECT' && (() => {
       const selected = masuMons.find(m => String(m.id) === String(trainingSelectedId));
       return React.createElement("main", {
         className: "mh-training-screen"
@@ -260433,7 +260371,7 @@ function MonsterHeroGame() {
       className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98] disabled:opacity-40"
     }, "開く"), React.createElement(ModalCloseButton, {
       onClick: () => setDebugPassOpen(false),
-      label: "やめる"
+      label: "キャンセル"
     })))), reincarnateAnimation && React.createElement(MasuReincarnateAnimation, {
       reincarnateAnimation: reincarnateAnimation
     }), donationAnimation && React.createElement(MasuDonationAnimation, {
@@ -265766,10 +265704,12 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         "aria-label": "1つ前へ戻る",
         onClick: goBack,
-        className: "min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"
+        className: "flex min-h-[44px] min-w-[44px] items-center gap-0.5 whitespace-nowrap rounded-xl px-2 text-slate-300 active:bg-white/10"
       }, React.createElement(ArrowLeft, {
         size: 20
-      })), React.createElement("div", {
+      }), React.createElement("span", {
+        className: "text-[11px] font-black"
+      }, "戻る")), React.createElement("div", {
         className: "min-w-0"
       }, React.createElement("small", {
         className: "text-[8px] font-black tracking-[.18em] text-slate-400"
@@ -266302,7 +266242,7 @@ function MonsterHeroGame() {
     }, React.createElement("button", {
       onClick: () => setPartySetCopyTarget(null),
       className: "flex-1 min-h-[44px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95"
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       onClick: () => copyMonsterPartySet(partySetCopyTarget),
       className: "flex-1 min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black active:scale-95"
     }, "このセットへ上書き"))), React.createElement("div", {
@@ -266970,7 +266910,7 @@ function MonsterHeroGame() {
         className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-30"
       }, count, "枚 使う"), React.createElement(ModalCloseButton, {
         onClick: () => setXpTicketUse(null),
-        label: usedResult ? '閉じる' : 'やめる'
+        label: usedResult ? '閉じる' : 'キャンセル'
       })));
     })(), detailTrainingMasuId && (() => {
       const masu = getMasuMon(detailTrainingMasuId);
@@ -266997,12 +266937,9 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-white"
       }, "🎓 ", masu.name, "をトレーニング"), React.createElement("button", {
         type: "button",
-        "aria-label": "トレーニングを閉じる",
         onClick: () => setDetailTrainingMasuId(null),
-        className: "p-2 bg-white/5 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 16
-      }))), React.createElement("p", {
+        className: "px-3 py-2 bg-white/5 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
+      }, "閉じる")), React.createElement("p", {
         className: "text-[9px] text-slate-400 font-bold mb-3"
       }, "使うチケットを選んでください。対象はこのマスモンのままです。"), React.createElement("div", {
         className: "space-y-2"
@@ -267050,12 +266987,7 @@ function MonsterHeroGame() {
         className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10"
       }, React.createElement("h3", {
         className: "text-base font-black text-white flex-1"
-      }, "並べ替え・表示設定"), React.createElement("button", {
-        onClick: () => setShowSortFilterModal(false),
-        className: "p-2.5 bg-white/5 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 18
-      }))), React.createElement("div", {
+      }, "並べ替え・表示設定")), React.createElement("div", {
         className: "flex gap-2 px-4 pt-3 shrink-0"
       }, [{
         key: 'sort',
@@ -267416,12 +267348,9 @@ function MonsterHeroGame() {
       }, "固有技設定"), React.createElement("div", {
         className: "text-[13px] font-black text-white truncate"
       }, masu.name)), React.createElement("button", {
-        "aria-label": "固有技設定を閉じる",
         onClick: () => setUniqueSettingMasuId(null),
-        className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 14
-      }))), React.createElement("div", {
+        className: "shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
+      }, "閉じる")), React.createElement("div", {
         className: "text-[9px] text-slate-300 font-bold leading-relaxed shrink-0"
       }, "並び順はバトルで固有技を切り替えるときの順番になります。「初期技」に設定した技は、勇者モンでも供モンでも参加した時点で最初に構える固有技になります。"), React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5"
@@ -267651,7 +267580,7 @@ function MonsterHeroGame() {
         }, React.createElement("button", {
           onClick: closeDyePicker,
           className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs"
-        }, "やめる"), React.createElement("button", {
+        }, "キャンセル"), React.createElement("button", {
           onClick: () => {
             useDyeItem(masu.id, dyePreviewColors);
             closeDyePicker();
@@ -267706,12 +267635,7 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between shrink-0"
       }, React.createElement("h3", {
         className: "text-sm font-black text-white"
-      }, "🎨 カスタムカラー"), React.createElement("button", {
-        onClick: () => setCustomColorPicker(null),
-        className: "p-2 bg-white/5 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 16
-      }))), masu && base && React.createElement("div", {
+      }, "🎨 カスタムカラー")), masu && base && React.createElement("div", {
         className: "w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"
       }, React.createElement(DyedMonsterImage, {
         baseId: masu.baseId,
@@ -267739,7 +267663,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
         className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "やめる"), React.createElement("button", {
+      }, "キャンセル"), React.createElement("button", {
         onClick: applyCustom,
         className: "flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95"
       }, "この色に決定"))));
@@ -268161,10 +268085,12 @@ function MonsterHeroGame() {
         "data-event-replay-back": true,
         "aria-label": "イベントの一覧へ戻る",
         onClick: () => setEventReplayGroupId(null),
-        className: "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"
+        className: "flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"
       }, React.createElement(ArrowLeft, {
         size: 18
-      })), React.createElement("span", {
+      }), React.createElement("span", {
+        className: "text-[11px] font-black"
+      }, "戻る")), React.createElement("span", {
         className: "min-w-0 flex-1 text-center"
       }, React.createElement("b", {
         className: "block text-[14px] font-black text-white leading-tight",
@@ -268177,7 +268103,7 @@ function MonsterHeroGame() {
           color: activeGroup.color
         }
       }, "見たお話 ", seenOf(activeGroup), "/", activeGroup.events.length)), React.createElement("span", {
-        className: "w-11 shrink-0",
+        className: "w-[76px] shrink-0",
         "aria-hidden": "true"
       })), React.createElement("p", {
         className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5"
@@ -268363,7 +268289,7 @@ function MonsterHeroGame() {
       className: "min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]"
     }, "ひとことを消す"), React.createElement(ModalCloseButton, {
       onClick: () => setShowMessageEditor(false),
-      label: "やめる"
+      label: "キャンセル"
     })))), showFavoritePicker && (() => {
       const closeFav = () => {
         setShowFavoritePicker(false);
@@ -268766,10 +268692,12 @@ function MonsterHeroGame() {
           "data-dex-zoom-close": true,
           "aria-label": "一覧へ戻る",
           onClick: () => setLookDexZoom(null),
-          className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+          className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"
         }, React.createElement(ArrowLeft, {
           size: 20
-        })), React.createElement("span", {
+        }), React.createElement("span", {
+          className: "whitespace-nowrap text-[11px] font-black"
+        }, "戻る")), React.createElement("span", {
           className: "text-[12px] font-bold text-slate-400"
         }, lookDexZoom + 1, " / ", n)), React.createElement("div", {
           "data-dex-zoom-body": true,
@@ -268903,10 +268831,12 @@ function MonsterHeroGame() {
         "data-dex-close": true,
         "aria-label": "プロフィールへ戻る",
         onClick: closeDex,
-        className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+        className: "mh-button mh-button-secondary -ml-1 flex shrink-0 items-center gap-0.5 p-3 text-slate-400 active:scale-90"
       }, React.createElement(ArrowLeft, {
         size: 20
-      })), React.createElement("b", {
+      }), React.createElement("span", {
+        className: "whitespace-nowrap text-[11px] font-black"
+      }, "戻る")), React.createElement("b", {
         className: "min-w-0 flex-1 text-[17px] font-black"
       }, jaWrap('アイコン・フレーム図鑑'))), React.createElement("div", {
         className: "flex gap-2 px-3.5"
@@ -271065,8 +270995,8 @@ function MonsterHeroGame() {
         }
       }, battleTutorial.title || '光っているところを操作してね'), React.createElement("button", {
         onClick: () => endBattleTutorial(false),
-        className: "px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95"
-      }, "やめる")) : React.createElement("div", {
+        className: "px-2.5 min-h-[26px] whitespace-nowrap rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95"
+      }, "チュートリアルをやめる")) : React.createElement("div", {
         className: "w-full max-w-md rounded-3xl border-2 p-3",
         style: {
           borderColor: who.accent,
@@ -271083,8 +271013,8 @@ function MonsterHeroGame() {
         }
       }, "れんしゅう ", battleTutorialStep + 1, " / ", total), React.createElement("button", {
         onClick: () => endBattleTutorial(false),
-        className: "px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
-      }, "やめる")), React.createElement("div", {
+        className: "px-3 min-h-[30px] whitespace-nowrap rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
+      }, "チュートリアルをやめる")), React.createElement("div", {
         className: "flex items-end gap-2"
       }, React.createElement(AssistantFace, {
         who: who,
@@ -271376,11 +271306,8 @@ function MonsterHeroGame() {
         style: JA_LABEL_STYLE
       }, jaWrap(mode.tagline))), React.createElement("button", {
         onClick: () => setModeInfoId(null),
-        "aria-label": "説明を閉じる",
-        className: "mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 18
-      }))), React.createElement("div", {
+        className: "mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
+      }, "閉じる")), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-2.5"
       }, mode.points.map(([icon, title, text]) => React.createElement("div", {
         key: title,
@@ -271710,7 +271637,7 @@ function MonsterHeroGame() {
     }, React.createElement("button", {
       onClick: () => setShowOfficialTitleConfirm(false),
       className: "w-full bg-slate-800 py-3 rounded-xl font-black"
-    }, "やめる"), React.createElement("button", {
+    }, "キャンセル"), React.createElement("button", {
       onClick: returnToOfficialTitle,
       className: "w-full bg-red-600 py-3 rounded-xl font-black"
     }, "タイトルへ戻る")))), showGameUpdateConfirm && React.createElement("div", {
@@ -271733,14 +271660,14 @@ function MonsterHeroGame() {
     }, jaWrap('最新のゲームデータを読み込み直します。'), React.createElement("br", null), jaWrap('セーブデータは消えません。')), React.createElement("div", {
       className: "space-y-3 mt-6"
     }, React.createElement("button", {
-      onClick: reloadLatestVersion,
-      disabled: gameUpdatePending,
-      className: "w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50"
-    }, gameUpdatePending ? '更新しています…' : '更新する'), React.createElement("button", {
       onClick: () => setShowGameUpdateConfirm(false),
       disabled: gameUpdatePending,
       className: "w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50"
-    }, "やめる")))), rankingPartyDetail && (() => {
+    }, "キャンセル"), React.createElement("button", {
+      onClick: reloadLatestVersion,
+      disabled: gameUpdatePending,
+      className: "w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50"
+    }, gameUpdatePending ? '更新しています…' : '更新する')))), rankingPartyDetail && (() => {
       const entry = rankingPartyDetail;
       const finite = v => v == null || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null;
       const score = finite(entry?.score),
@@ -272168,10 +272095,8 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-white uppercase italic"
       }, title), React.createElement("button", {
         onClick: () => setSkillPicker(null),
-        className: "p-1.5 bg-white/10 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 14
-      }))), card.type === 'unique' && uniqueSources.length > 1 && React.createElement("div", {
+        className: "px-3 py-1.5 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
+      }, "閉じる")), card.type === 'unique' && uniqueSources.length > 1 && React.createElement("div", {
         className: "flex gap-1.5 pb-2 border-b border-white/10 shrink-0 overflow-x-auto"
       }, uniqueSources.map(opt => {
         const isActiveSource = activeSlotUniqueKey(slotUniqueChoice, card.ownerSlotIdx, slots[card.ownerSlotIdx]) === opt.key;
@@ -272358,10 +272283,8 @@ function MonsterHeroGame() {
       className: "text-[13px] font-black text-white truncate"
     }, skillEffectDetail.name), React.createElement("button", {
       onClick: () => setSkillEffectDetail(null),
-      className: "p-1.5 bg-white/10 rounded-full active:scale-90 shrink-0"
-    }, React.createElement(X, {
-      size: 14
-    }))), React.createElement("div", {
+      className: "px-3 py-1.5 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90 shrink-0"
+    }, "閉じる")), React.createElement("div", {
       className: "flex items-center gap-3 mb-3"
     }, React.createElement("span", {
       className: "text-[10px] font-mono text-red-400 font-bold"
@@ -272413,8 +272336,8 @@ function MonsterHeroGame() {
         onClick: () => {
           if (waveScanPreview) setWaveScanPreview(null);else setShowEnemyInfo(false);
         },
-        className: "min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
-      }, "戻る")), React.createElement("div", {
+        className: "min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] font-black text-white active:scale-90"
+      }, "← 戻る")), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2"
@@ -273181,12 +273104,7 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between border-b border-white/10 pb-3 shrink-0"
       }, React.createElement("h3", {
         className: "text-sm font-black text-white uppercase"
-      }, title), React.createElement("button", {
-        onClick: () => setRosterSkillDetail(null),
-        className: "p-2 bg-white/5 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 16
-      }))), React.createElement("div", {
+      }, title)), React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5"
       }, levels.map(info => {
         const locked = isUnique && info.lvl > currentLevel;
