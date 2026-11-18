@@ -70,6 +70,25 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     for (const [w, sp] of [[390, 'Mocchi'], [320, 'Mocchi'], [390, 'Pandora'], [320, 'Pandora']]) {
       const { page } = await open(browser, 'no-preference', w, sp);
       await page.waitForFunction(() => document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
+      if (w === 390 && sp === 'Mocchi') {
+        const issues = await page.evaluate(() => {
+          const errors = [];
+          for (const [species, moves] of Object.entries(ASSISTANT_MASMON_TECHS.species)) {
+            const seen = new Set();
+            for (const tech of moves) {
+              const kind = monsucMotionKind(species, { id: tech.id });
+              const spec = skillFxSpecOf(kind);
+              const signature = JSON.stringify(spec);
+              if (!spec || /^(cardBash|cardOrb)(@|$)/.test(kind) || seen.has(signature) || !(spec.hit > 0 && spec.ms > spec.hit)) {
+                errors.push(species + '/' + tech.name);
+              }
+              seen.add(signature);
+            }
+          }
+          return errors;
+        });
+        check('大会の全技はIDから専用の動きと着弾時刻を引け、同じ種族の中で動きが重ならない', !issues.length, issues.join('・'));
+      }
       await page.waitForTimeout(500);
       const ov = await page.evaluate(() => {
         const bad = [];

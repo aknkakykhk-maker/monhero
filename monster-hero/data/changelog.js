@@ -35,12 +35,27 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-18 14:50", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスの大会で全モンスターに技ごとの動きがつきました',
+    items:['地面から岩がせり上がる地震、星が降るコズミックバンなど、大会で技ごとの攻撃演出が楽しめます。'],
+  },
+  {
+    date: "2026-11-18 14:40", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'大会でモッチーの17の技にそれぞれの動きがつきました',
+    items:['転がってぶつかる技、力をためて放つモッチ砲、足元から花びらが舞う宵闇ざくらなど、技ごとの動きを楽しめます。'],
+  },
+  {
     date: "2026-11-18 13:09", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'オイリーパックは、持ちこむと中身がそのまま持ち物に入るようになりました',
     items:[
       '今までは、育成中にオイリーパックを開ける手間があり、開けたターンは中身を使えませんでした。持ちこんだ時点で、オイリーオイル（大）2個と夏美草1個が持ち物に入るようになります。',
       '育成の途中で、まだ開けていないオイリーパックを持っているときも、中身が持ち物に入った状態になります。',
     ],
+  },
+  {
+    date: "2026-11-18 12:24", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    title:'モンヒロサクセスの大会で「さくら吹雪」に花びらが舞うようになりました',
+    items:['モッチーが大会で「さくら吹雪」を使うと、桜の花びらが舞います。'],
   },
   {
     date: "2026-11-18 12:10", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
