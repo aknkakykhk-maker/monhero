@@ -133,8 +133,8 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
     else { setErr(r); setSure(0); }
   };
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-monsuc-fuse>
-      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'max(24px, var(--mh-sa-bottom))' }}>{/* 下のボタンがホームバーに近づかないよう safe-area を見る(2026-11-16)。選ぶ段は検索を上に固定し、一覧だけをスクロールさせる(選ぶ画面の統一) */}
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80" data-monsuc-fuse>
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white shadow-[0_-10px_36px_rgba(0,0,0,.55)]" style={{ maxHeight: '92dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 'max(24px, var(--mh-sa-bottom))' }}>{/* 下のボタンがホームバーに近づかないよう safe-area を見る(2026-11-16)。選ぶ段は検索を上に固定し、一覧だけをスクロールさせる(選ぶ画面の統一) */}
         <p className="text-[16px] font-black">🧬 合体する</p>
         {show ? <MonsucFuseShow a={show.a} b={show.b} child={show.child} childName={show.name} onDone={() => setShow(null)}/> : null}
         {!SUC ? <p className="mt-2 text-[11px] font-bold text-slate-400">まだ使えません</p>

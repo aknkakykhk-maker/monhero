@@ -853,7 +853,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
       );
     };
     const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
-    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
+    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => (x.ev === 'ko' ? { k, side: x.side } : null)).filter(Boolean);
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
     const stat = (side) => { const t = log.filter(x => x.ev === 'tech' && x.side === side); return { n: t.length, hit: t.filter(x => x.hit).length, crit: t.filter(x => x.crit).length, dmg: t.reduce((a, x) => a + (x.dmg || 0), 0), ko: log.filter(x => x.ev === 'ko' && x.side !== side).length }; };

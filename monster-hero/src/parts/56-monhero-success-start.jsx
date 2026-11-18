@@ -295,8 +295,11 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
-                  // 升に出す技: 覚えた技があればそれ → 選んだ技 → 並びの1つ目
-                  const t = alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id && !has(x)) || alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+                  // 升に出す技: 覚えた技(はじめからの技を含む)があればそれ → 選んだ技 → 並びの1つ目。
+                  //   選んだ未習得の技を先に出すと、その升のはじめからの技が隠れて「初めから使える技 N」の数と
+                  //   光る升の数が食い違う(2026-11-18 実機報告: 剣士モッチーの 1-2 の升。エアリアルもっちゃんが
+                  //   もちき・リープを選んだ途端に見えなくなった)。選んだ技は ⇄ の窓で「選択中」と分かる
+                  const t = alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
                   const got = has(t); const canAlt = !!pick && alts.length > 1;
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
@@ -323,7 +326,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           </div>
         </div>
         {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts.find(has) || alts[0];
-          return (<div className="msx-ov msx-fade" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
+          return (<div className="msx-ov msx-fade msx-ov-deep" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
               <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)}</div>
@@ -666,7 +669,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       </label>
       {nameErr && <div className="msx-note" style={{ color: '#fca5a5' }}>{nameErr}</div>}
       <div className="v-card" style={{ maxHeight: '34%', overflowY: 'auto' }}>
-        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom} big names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map((x) => x[0]) : null}/> : <div className="msx-note">染色はこの端末では使えません</div>}
+        {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom} big tone="yellow" names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map((x) => x[0]) : null}/> : <div className="msx-note">染色はこの端末では使えません</div>}
       </div>
     </>);
     go = 'これで決める ▶';

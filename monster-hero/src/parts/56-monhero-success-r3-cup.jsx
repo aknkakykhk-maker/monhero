@@ -160,7 +160,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   ] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = { t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]), e: null };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク9段(2026-11-14・r1115-085 で参考の9段)
-  const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
+  const kindOf = (c) => (c.scenario ? 'シナリオ' : (c.ex || c.grade) ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
   const wc = win ? cups.find((c) => c.id === win) : null;
   const wcOk = !!(wc && now && wc.entry && wc.entry.ok);
   const body = (<>
@@ -180,7 +180,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
       {cups.length ? cups.map((c) => {
         const ok = now && c.entry && c.entry.ok;
         const fc = (now && oddsBy[c.id]) || (typeof SUC.forecastOf === 'function' ? SUC.forecastOf(s, c) : null);
-        const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
+        const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : c.grade ? ` g-${c.grade}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
         return (
           <button type="button" key={c.id} className={`v-cup v-cup2 ${cls}`} onClick={() => { if (ok) setPick(c.id); setWin(c.id); }} data-msx-r3-cup={c.id}>
             <div className="lg"><span className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</span>{fc ? <span className={`fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`}>{fc.key === 'none' ? 'ほぼ無理' : fc.label}</span> : null}</div>
@@ -262,7 +262,7 @@ function MsxR3Watch({ fight, onDone }) {
       <div className="ambw-ring">
         <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
         <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
+        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}</small><b>{e.name}</b></div>}
       </div>
     </div>
   );
@@ -752,7 +752,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       </div>
       {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['rematch']} ctx={{ ...actx, bond: bondLv || 1 }}/> : null}
     </>);
-    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="on" style={{ flex: 2 }}>えらんでね</button></div>}/>;
+    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><span className="v-wait">えらんでね</span></div>}/>;
   }
 
   // ---- 観戦 ----

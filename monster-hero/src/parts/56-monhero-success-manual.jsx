@@ -15,6 +15,7 @@ const MSX_MANUAL_CSS = `
 .msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:2px}
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
 .msxm-row.r3{flex-wrap:nowrap;margin-top:5px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:4px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.12}
+.msxm-row.gc .msxm-btn{text-align:center}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msxm-nm{margin-bottom:1px}
@@ -26,6 +27,7 @@ ${MSA_TN_CSS}
 .msxm-btn small.p{color:#fde68a}
 .msxm-none{font-size:11px;color:#94a3b8}
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px}
+.msxm.busy .msxm-sec{opacity:.5}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:5px 12px;font-weight:900}
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
@@ -132,7 +134,7 @@ const MSA_DC_CSS = `
 .msa-dc.a .msa-dc-l.g{font-size:9.5px;color:#cbd5e1;font-weight:800}
 .msa-dc.a .msa-dc-l.g b{color:#fff}
 .msa-dc.a .msa-dc-c.ng .msa-dc-l{color:#fca5a5}
-.msa-dc.a .msa-dc-c.far{opacity:.7}
+.msa-dc.a .msa-dc-c.far{opacity:.55}
 .msa-dc-c.use{background:#fde047;color:#422006;border-color:#fde047;opacity:1}
 .msa-dc-c.use small,.msa-dc-c.use small.p,.msa-dc-c.use .msa-dc-h{color:#422006}
 .msa-dc-c.hint{outline:2px solid #fde047;outline-offset:1px}
@@ -186,7 +188,7 @@ function MsaTechGrades({ base }) {
     })}</span>
   );
 }
-const msaKindIcon = (t) => (t && t.kind === 'pow' ? '💪' : '🧠');
+const msaKindIcon = (t) => (t && t.kind === 'pow' ? '🏋️' : '📖');
 // 4枚の札。dist … いまの間合い(無ければどれも「いま」にしない)/guts … いまのガッツ(足りない札は命中を赤く)
 //   hitAt(t, d) … その間合いで撃つ前の命中%(無ければ t.hit)/lastMove … いま使った技(その札を光らせる)/hintId … 助手のおすすめの技
 //   onOpen(d) … 押したら一覧(無ければ見るだけの札)
@@ -205,16 +207,16 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
         const ng = t && Number.isFinite(guts) && guts < t.guts;
         const cls = `msa-dc-c ${now ? 'now' : dist == null ? '' : 'far'} ${used ? 'use' : ''} ${ng ? 'ng' : ''} ${t && now && hintId && at.some((x) => x.id === hintId) ? 'hint' : ''} ${t ? '' : 'none'}`;
         if (look === 'a') {
-          // 案A: 絵(ちから=金・かしこさ=緑のふち、右下に 💪/🧠、使ったあと動く技は左上に ↪零=自分が移る/💨遠=相手を飛ばす)・技名・「命中率○%・消ガ○」・「ダメ○・命○・ガ○・クリ○」(段は技の欄と同じ)
+          // 案A: 絵(ちから=金・かしこさ=緑のふち、右下に 🏋️/📖、使ったあと動く技は左上に ↪零=自分が移る/💨遠=相手を飛ばす)・技名・「命中率○%・消ガ○」・「ダメ○・命○・ガ○・クリ○」(段は技の欄と同じ)
           const b = t && t.base ? t.base : null;
           const mvTo = t && Number.isInteger(t.moveTo) ? t.moveTo : null;
           const kb = mvTo != null && Array.isArray(t.dist) && t.dist.length && mvTo > Math.min(...t.dist);
           return (
             <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
-              {t ? <span className={`msa-dc-ic ${t.kind === 'wise' ? 'wise' : 'pow'}`} aria-hidden="true">{typeof MsxSkillArt === 'function' ? <MsxSkillArt t={t} uid={`dc${dataSide}${d}`}/> : null}<i className="k">{t.kind === 'wise' ? '🧠' : '💪'}</i>{mvTo != null ? <i className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</i> : null}</span> : null}
+              {t ? <span className={`msa-dc-ic ${t.kind === 'wise' ? 'wise' : 'pow'}`} aria-hidden="true">{typeof MsxSkillArt === 'function' ? <MsxSkillArt t={t} uid={`dc${dataSide}${d}`}/> : null}<i className="k">{t.kind === 'wise' ? '📖' : '🏋️'}</i>{mvTo != null ? <i className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</i> : null}</span> : null}
               <span className="msa-dc-h">{MSA_DC_DIST[d]}{now ? <em>いま</em> : null}<i>{at.length ? `${at.length}技` : ''}</i></span>
               {t ? <MsaTechName name={t.name}/> : <span className="msa-dc-none">届く技なし</span>}
-              {t ? <span className="msa-dc-l" data-msa-dc-l1>{`命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`}</span> : null}
+              {t ? <span className="msa-dc-l" data-msa-dc-l1>{dist != null && !now ? (Array.isArray(t.dist) && t.dist.length === 1 ? `${MSA_DC_DIST[t.dist[0]]}でのみ届く` : `届く間合い: ${(Array.isArray(t.dist) ? t.dist : []).map((x) => MSA_DC_DIST[x]).join('・')}`) : `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`}</span> : null}
               {b ? <span className="msa-dc-l g" data-msa-dc-l2>ダメ<b>{msaTechGrade('power', b.power)}</b>・命<b>{msaTechGrade('hit', b.hit)}</b>・{'\u200b'}ガ<b>{msaTechGrade('gd', b.gd)}</b>・クリ<b>{msaTechGrade('crit', b.crit)}</b></span> : null}
             </button>
           );
@@ -337,7 +339,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
   const sd = sheet === 'all' ? null : sheet;
   const useHere = !busy && (sd == null || sd === opt.dist);
   return (
-    <div className="msxm" data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
+    <div className={`msxm${busy ? ' busy' : ''}`} data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
       <div className="msxm-top">
         <span>{busy ? '相手の番…' : 'あなたの番'}</span>
         <b>間合い {MSX_MANUAL_DIST[opt.dist]}</b>
@@ -359,7 +361,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       ) : null}
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
-        <div className="msxm-row">
+        <div className="msxm-row gc">
           <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の自分の手番まで守る</small></button>
           <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? (Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}（${Math.round(opt.guts)}→${opt.charge.after}）` : 'この番は合わせて16回復') : 'ガッツは満タン'}</small></button>
         </div>
@@ -376,7 +378,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
             const near = !!(opt.blow && opt.blow.near);
             const blow = (
               <button key="blow" type="button" data-msxm-blow={near ? '' : 'far'} className={`msxm-btn ${near && isHint(opt.blow) ? 'hint' : ''}`} disabled={!near || !opt.blow.ok || busy} onClick={() => { if (near) go({ type: 'blow' }); }}>
-                💨 吹き飛ばし<small>{!near ? '零で使える' : opt.blow.wait ? '相手の次の手のあと' : <><span className="nw">相手の手のあと遠へ・</span><span className="nw">{`ガッツ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`}</span></>}</small>
+                💨 吹き飛ばし<small>{!near ? <><span className="nw">零の間合いでのみ</span><span className="nw">使える</span></> : opt.blow.wait ? '相手の次の手のあと' : <><span className="nw">相手の手のあと遠へ・</span><span className="nw">{`ガッツ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`}</span></>}</small>
               </button>
             );
             return [back ? mvBtn(back) : null, blow, fwd ? mvBtn(fwd) : null];

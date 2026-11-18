@@ -289,7 +289,7 @@ const MSX_R3_CSS = `
 .msx .r3-chip{text-align:center} /* .msx button の text-align:inherit に負けて左へ寄るのを止める(札・タブは中央) */
 .msx .r3 .v-cup{cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
 .msx .r3 .v-cup.ng{cursor:default}
-.msx .r3 .v-pa button{width:26px;height:26px;border-radius:50%;background:#334155;color:#fff;font-weight:900;border:0}
+.msx .r3 .v-pa button:not(.chip){width:26px;height:26px;border-radius:50%;background:#334155;color:#fff;font-weight:900;border:0}
 .msx .r3 .v-pa button:disabled{opacity:.35}
 .msx .r3 .v-a{cursor:pointer}.msx .r3 .v-a .lv span{cursor:pointer}
 .msx .r3 .r3-watch{position:relative;margin-top:6px}

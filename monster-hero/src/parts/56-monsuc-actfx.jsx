@@ -316,7 +316,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .qg-p img{width:22px;height:22px;border-radius:50%;background:#fff;object-fit:contain}.msx .msx-qst .qg-p em{font-style:normal;font-size:15px;width:22px;text-align:center}
 .msx .msx-qst .qg-p b{font-size:12.5px;font-weight:900;color:var(--c)}.msx .msx-qst .qg-p small{font-size:9.5px;font-weight:800;color:#cbd5e1}
 .msx .msx-qst .qg-p .fly{position:absolute;left:8px;top:-4px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
-.msx .msx-qst .qg-cap{position:absolute;left:8px;right:8px;bottom:4px;text-align:center;font-size:10px;font-weight:800;color:#f8fafc;text-shadow:0 1px 2px #000;z-index:4}
+.msx .msx-qst .qg-cap{position:absolute;left:8px;right:8px;bottom:8px;text-align:center;font-size:11.5px;font-weight:800;color:#f8fafc;text-shadow:0 1px 2px #000;z-index:4;background:#0b0920a6;border-radius:8px;padding:3px 6px}
 .msx .msx-qst .qlot{position:absolute;left:8px;right:8px;bottom:24px;display:grid;gap:6px;z-index:4}
 .msx .msx-qst .ql{display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"ti nm rs" "lb lb lb";column-gap:8px;row-gap:5px;align-items:center;background:#0f172ae6;border:2px solid #64748b;border-radius:12px;padding:6px 9px;animation:msxActBan .3s ease-out var(--d) both}
 .msx .msx-qst .ql .ti{grid-area:ti;width:40px;height:40px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1e293b}.msx .msx-qst .ql .ti svg,.msx .msx-qst .ql .ti img{width:100%;height:100%}
@@ -329,7 +329,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .ql.hit{animation:msxActBan .3s ease-out var(--d) both,msxQlWin .5s ease-out calc(var(--d) + 1.3s) both}
 @media (max-height:700px){.msx .msx-qst .ban.q2{font-size:14px;padding:2px 0 3px}.msx .msx-qst .ban.q2 small{font-size:17px}.msx .msx-qst .ban.q2 em{font-size:10px;margin-top:0}
   .msx .msx-qst .qg{gap:3px;bottom:18px}.msx .msx-qst .qg-row{padding:3px 7px;row-gap:2px}.msx .msx-qst .qg-p img{width:18px;height:18px}.msx .msx-qst .qg-p b{font-size:11.5px}.msx .msx-qst .qg-p small{display:none}
-  .msx .msx-qst .qg-cap{bottom:2px;font-size:9.5px}.msx .msx-qst .qlot{bottom:18px;gap:4px}.msx .msx-qst .ql{padding:4px 8px;row-gap:3px}.msx .msx-qst .skip{display:none}}
+  .msx .msx-qst .qg-cap{bottom:6px;font-size:10.5px}.msx .msx-qst .qlot{bottom:18px;gap:4px}.msx .msx-qst .ql{padding:4px 8px;row-gap:3px}.msx .msx-qst .skip{display:none}}
 @keyframes msxQgGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes msxQgPop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
 @keyframes msxQgIn{from{opacity:0;transform:translateY(8px) scale(.8)}to{opacity:1;transform:none}}

@@ -113,7 +113,7 @@ const MSX_CSS = `
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 /* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
-.msx .v-band.pk{padding-top:15px}
+
 .msx.land .v-scene .rcv-myua{top:56px!important;bottom:auto!important;height:420px!important;left:4%!important}
 .msx .v-ft{flex-wrap:wrap}.msx .v-ft>button{min-width:0}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
@@ -267,6 +267,7 @@ const MSX_CSS = `
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}
 .msx .v-ft{flex:none;height:40px;background:#0b0920;border-top:1px solid #3b3566;display:flex;align-items:center;gap:5px;padding:0 10px}
+.msx .v-ft .v-wait{flex:1 1 0;text-align:center;font-size:12.5px;font-weight:900;color:#fde68a}
 .msx .v-ft span,.msx .v-ft button{flex:1;text-align:center;background:#2b3348;border-radius:99px;padding:5px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
 .msx .v-ft span.on,.msx .v-ft button.on{background:#fde047;color:#422006}
 .msx .v-ft span.go,.msx .v-ft button.go{flex:2.4;background:linear-gradient(90deg,#fb923c,#f97316);font-size:13px;padding:7px 2px;box-shadow:0 3px 0 #9a3412}
@@ -284,18 +285,23 @@ const MSX_CSS = `
 .msx .v-tr .fs .no{font-size:10px;color:#64748b;font-weight:700;line-height:1.2;padding-bottom:3px}
 .msx .v-tr .o{width:48px;height:48px;max-width:100%;border-radius:50%;margin:3px auto 0;background:linear-gradient(180deg,#3b4a66,#1e293b);border:2px solid #64748b;border-bottom-width:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:1;position:relative}
 .msx .v-tr .o small{font-size:10px;font-weight:900;margin-top:2px;white-space:nowrap}
-.msx .v-tr .o .lv{position:absolute;left:-4px;top:-5px;background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:10px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal}
+.msx .v-tr .o .lv{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);background:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:10px;font-weight:900;padding:0 3px;line-height:1.4;font-style:normal;white-space:nowrap;z-index:2}
 .msx .v-tr .x{font-size:10px;font-weight:900;color:#86efac;margin-top:1px;white-space:nowrap}
 .msx .v-tr.tag .o{border-color:#fde047;background:linear-gradient(180deg,#6b5310,#3b2f0b);box-shadow:0 0 0 2px #fde04755,0 0 12px #fde047}
 .msx .v-tr.tag .x{color:#fde047}
 .msx .v-tr.sel .o{border-color:#fff;background:linear-gradient(160deg,#f472b6,#fb923c);box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6;transform:translateY(-6px) scale(1.08)}
 .msx .v-tr.sel .fs{transform:translateY(-5px)}
 .msx .v-tr .tgb{position:absolute;left:50%;top:0;transform:translateX(-50%);background:linear-gradient(90deg,#fde047,#fb923c);color:#422006;border-radius:99px;padding:0 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.5;z-index:2;box-shadow:0 0 8px #fde047}
-/* 下限は下の効き目パネル(.v-fx)の高さぶん空ける。全員ぶんが入らないときは、この中でスクロールして全員に届くようにする(2026-11-17 社長「編成の一覧が切れて全部見えない」) */
-.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 132px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
-.msx .v-cm{display:flex;align-items:center;gap:6px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:4px 6px;min-width:0}
+/* 下限は下の効き目パネル(.v-fx)の高さぶん空ける。カードを詰めて、最大の7枚(編成6人+助手)でもスクロールなしで全員が効き目パネルの上に収まるようにする(2026-11-18 あっくん「メンバーカードが切れる・スライドなしで全員表示」) */
+.msx .v-come{position:absolute;right:6px;top:6px;width:44%;max-width:176px;display:flex;flex-direction:column;gap:2px;max-height:calc(100% - 88px)}
+.msx .v-cm{display:flex;align-items:center;gap:5px;background:#0f0d24e6;border:1px solid #475569;border-radius:11px;padding:1px 5px;min-width:0}
+.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:24px}.msx .v-cm .v-pf img{height:24px;border-radius:7px}
+.msx .v-cm .v-pf .af{display:none}
+.msx .v-cm .tx .r1{display:flex;align-items:baseline;gap:4px;min-width:0}
+.msx .v-cm .tx .r1 b{flex:0 1 auto;min-width:0}
+.msx .v-cm .tx .r1 small{display:inline;flex:none}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
-.msx .v-cm .tx{flex:1;min-width:0;line-height:1.2}
+.msx .v-cm .tx{flex:1;min-width:0;line-height:1.1}
 .msx .v-cm .tx b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cm .tx small{display:block;font-size:10px;color:#86efac;font-weight:900;white-space:nowrap}
 .msx .v-cm.tag .tx small{color:#fde047}
@@ -378,7 +384,7 @@ const MSX_CSS = `
 .msx .v-grid6 .v-g6f{width:100%}
 .msx .v-grid6 .v-g6f::before{content:'';display:block;padding-top:100%}
 .msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
-.msx .v-grid6 .v-g6n{font-size:9.5px;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.msx .v-grid6 .v-g6n{font-size:9.5px;font-weight:800;color:#e2e8f0;white-space:nowrap;overflow:visible;letter-spacing:-.03em;line-height:1.3;transform:scaleX(.92)}
 .msx .v-grid6 button.on .v-g6n{color:#fde047}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
@@ -466,8 +472,10 @@ const MSX_CSS = `
 /* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
 .msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
-.msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
-.msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
+.msx .v-a3 .ex{font-size:11px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.5}
+.msx .v-a3 .ex b{color:#fff}
+.msx .v-a3 .ex .exd{display:block;font-size:9.5px;color:#94a3b8;font-weight:700;margin-top:1px}
+.msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button:not(.chip){flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
 .msx .v-a3 .ctl button:disabled{opacity:.35}
 .msx .v-a3 .gauge{flex:1 1 auto;height:12px;border-radius:6px;background:#3a3054;position:relative;overflow:hidden;cursor:pointer}.msx .v-a3 .gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f59e0b,#fde68a)}
 .msx .v-a3 .gauge s{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,10,30,.55)}
@@ -531,6 +539,9 @@ const MSX_CSS = `
 .msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
 .msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
 .msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
+.msx.s320 .v-scene.sm{height:32px}
+.msx.s320 .v-grid6 .v-g6n{transform:scaleX(.86)}
+.msx.s320 .v-h small{font-size:9.5px}
 .msx.s320 .v-chips .bad{display:none}.msx.s320 .v-side{bottom:48px}
 .msx.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
 .msx .v-scene.low{flex:0 0 220px}
@@ -661,10 +672,8 @@ const MSX_CSS = `
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
-.msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:4px;white-space:nowrap}
+.msx .v-tr .nm{display:block;font-size:10.5px;font-weight:900;margin-top:7px;white-space:nowrap}
 .msx .v-tr .tn{display:block;font-size:10px;font-weight:800;color:#fde68a;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-height:2.3em;padding:0 1px;text-align:center}
-.msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
-.msx .v-tr .pv{display:block;font-size:10px;font-weight:900;color:#86efac;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
 .msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
@@ -743,6 +752,7 @@ const MSX_CSS = `
 .msx .v-ft button.on{background:#fde047;color:#1e1b4b}
 .msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
+.msx-ov.msx-ov-deep{z-index:41;background:#0b0920f7}
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
@@ -987,7 +997,7 @@ const MSX_CSS = `
 .msx .v-hm-deco-m img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 4px #0007)}
 .msx .v-hm-deco-a{position:absolute;transform:translateX(-50%);animation:msx-breathe 3.6s ease-in-out infinite}
 .msx .v-hm-deco-a img{display:block;height:100%;width:auto;filter:drop-shadow(0 6px 4px #0007)}
-.msx .v-hm-logo .msx-beta-mk{position:absolute;right:2%;bottom:6%}
+.msx .v-hm-logo .msx-beta-mk{position:absolute;right:0;top:-4px;transform:rotate(10deg);border:2px solid #fff;box-shadow:0 2px 6px #0007;padding:1px 7px}
 .msx .v-hm-cont{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;margin-top:8px;border-radius:18px;padding:10px 10px 9px;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;line-height:1.3;min-width:0}
 .msx .v-hm-cont .t{font-size:21px;font-weight:900;white-space:nowrap}
 .msx .v-hm-cont .d{font-size:12.5px;font-weight:900;max-width:100%;overflow-wrap:anywhere;text-align:center}
