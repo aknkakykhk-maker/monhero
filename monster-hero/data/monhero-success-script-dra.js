@@ -251,7 +251,6 @@
     {"id":"item.juice.dra1","who":"dra","e":"happy","t":"野菜ジュースで全快だな。おでの膝にも効けばいいのに"},
     {"id":"item.akuyosan.dra1","who":"dra","e":"normal","t":"苦いけど効くやつだ。これでスッキリするだろ"},
     {"id":"item.license.dra1","who":"dra","e":"happy","t":"ライセンスか。{mon}、ちゃんと信じてついてきてるよ"},
-    {"id":"item.oily.dra1","who":"dra","e":"normal","t":"オイリーパックか。中身は大事に使おう"},
     {"id":"turn.awake.omen.dra1","who":"dra","e":"surprise","t":"{mon}の体が、うっすら光っているな……何か起きるぞ"},
     {"id":"turn.awake.omen2.dra1","who":"dra","e":"surprise","t":"また光っているな。今度は虹色だ……これは大きいぞ"},
     {"id":"turn.awake.fire.dra1","who":"dra","e":"surprise","t":"なんだ、この光は……！？ {mon}、大丈夫か！"},
