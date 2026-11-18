@@ -341,6 +341,21 @@
   "sparkling_pink_overture/hard": "38c215d6aa668641",
   "sparkling_pink_overture/expert": "0ccd5bde4a94c38a",
   "sparkling_pink_overture/master": "9cc472d9133927e5",
+  "seasons_of_a_little_plaza/easy": "dcffa9b818f7ddc3",
+  "seasons_of_a_little_plaza/normal": "d8564dea79aaa9b7",
+  "seasons_of_a_little_plaza/hard": "733a46245fa315df",
+  "seasons_of_a_little_plaza/expert": "f31795761b911b33",
+  "seasons_of_a_little_plaza/master": "f91e9037880a348a",
+  "eiyuu_no_akashi/easy": "ebbf44c5ea4e39ef",
+  "eiyuu_no_akashi/normal": "a54b3f0fddc263b8",
+  "eiyuu_no_akashi/hard": "7e57a616442e8481",
+  "eiyuu_no_akashi/expert": "d0b7d1ce624da77b",
+  "eiyuu_no_akashi/master": "13806fdc3e483416",
+  "eiyuu_no_akashi_milktea/easy": "b7b5951772d1e83a",
+  "eiyuu_no_akashi_milktea/normal": "07096a903b4cf246",
+  "eiyuu_no_akashi_milktea/hard": "61ff0d0a8f7e9cbc",
+  "eiyuu_no_akashi_milktea/expert": "ea17016caa3ade61",
+  "eiyuu_no_akashi_milktea/master": "7f3793d9493533e2",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -419,6 +434,9 @@
   "hopes_and_dreams/hell": "d7cd72e96a947098",
   "hopes_and_dreams_short/hell": "b1707946774bf475",
   "sparkling_pink_overture/hell": "6d0111a19d406016",
+  "seasons_of_a_little_plaza/hell": "9f3b62407a73e3bc",
+  "eiyuu_no_akashi/hell": "a73c1a84d3eb4839",
+  "eiyuu_no_akashi_milktea/hell": "ddf4040c131fa5b6",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -857,6 +875,30 @@
     "sparkling_pink_overture/expert",
     "sparkling_pink_overture/master",
     "sparkling_pink_overture/hell"
+   ]
+  },
+  {
+   "at": "2026-11-19 01:16",
+   "reason": "新曲「英雄の証」2バージョン(戦闘版・ミラクル☆ミルクティ版)の譜面を新規追加",
+   "changed": [
+    "seasons_of_a_little_plaza/easy",
+    "seasons_of_a_little_plaza/normal",
+    "seasons_of_a_little_plaza/hard",
+    "seasons_of_a_little_plaza/expert",
+    "seasons_of_a_little_plaza/master",
+    "eiyuu_no_akashi/easy",
+    "eiyuu_no_akashi/normal",
+    "eiyuu_no_akashi/hard",
+    "eiyuu_no_akashi/expert",
+    "eiyuu_no_akashi/master",
+    "eiyuu_no_akashi_milktea/easy",
+    "eiyuu_no_akashi_milktea/normal",
+    "eiyuu_no_akashi_milktea/hard",
+    "eiyuu_no_akashi_milktea/expert",
+    "eiyuu_no_akashi_milktea/master",
+    "seasons_of_a_little_plaza/hell",
+    "eiyuu_no_akashi/hell",
+    "eiyuu_no_akashi_milktea/hell"
    ]
   }
  ]

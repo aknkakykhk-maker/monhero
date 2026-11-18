@@ -2808,6 +2808,76 @@
    "fastSameSide": 14,
    "heldHandSwitch": 0
   },
+  "eiyuu_no_akashi/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 38,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 14,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2944,6 +3014,11 @@
    "at": "2026-11-17T14:22",
    "reason": "新曲 seasons_of_a_little_plaza の難易度を challengeFactor 1.15 に再生成したため、自曲の行だけ件数を更新",
    "changed": 3
+  },
+  {
+   "at": "2026-11-18T16:17",
+   "reason": "新曲「英雄の証」2バージョンの譜面を新規追加",
+   "changed": 10
   }
  ]
 }
