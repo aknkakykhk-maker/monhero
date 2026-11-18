@@ -994,7 +994,9 @@
         ok: i !== me.active && x.hp > 0 && u.swapCooldown <= 0 && !flow.ctx.noSwap })).filter(x => x.to !== me.active);
       return { kind: 'act', side, round: st.round, dist: d, guts: u.guts, hp: u.hp, maxHp: u.maxHp,
         tech, guard: { type: 'guard', ok: true }, move, blow, moveCost: mCost, moveLv: u.moveLv,
-        blowed: st.blow ? { by: st.blow.by } : null, charge: { type: 'charge', ok: u.guts < GUTS_MAX }, swap,
+        blowed: st.blow ? { by: st.blow.by } : null,
+        // charge の add/after/regen は表示用(ためるボタンの「+○(今→実行後)」。記録・指紋には入らない。Issue #6807 B-1: 合計16の内訳を分けて出す)
+        charge: { type: 'charge', ok: u.guts < GUTS_MAX, add: Math.max(0, Math.min(GUTS_MAX, u.guts + chargeAddOf(u)) - u.guts), after: Math.min(GUTS_MAX, u.guts + chargeAddOf(u)), regen: u.regen, total: CHARGE_TOTAL }, swap,
         swapWait: Math.max(0, u.swapCooldown), hint: hintOf(side) };
     };
     // 渡された手が、いまの手番で選べるか(選べない手は進めない)

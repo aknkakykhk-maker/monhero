@@ -1396,6 +1396,20 @@
       let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
       return { gain, hp: Math.round(BASE.hp * (1 - Math.min(capOf('itawari', 60) / 100, it)) * (s.aid === 'kiki' ? 0.85 : 1)), stress: Math.round(BASE.stress * pol.stress * (BASE.stress * pol.stress > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)), fail: card.fail, great: card.great, sab: card.sab, lv: card.lv };
     };
+    // 休む・遊ぶ・通院の「選ぶ前の見込み」(Issue #6807 UI-2: 押す前に結果の範囲・確率・固定の変化を出す)。
+    //   数字は act() の実行と同式で出す(回復は上限で止まる分まで・確率は付きそい等の補正込み)。乱数は引かない
+    const carePreview = (s, kind) => {
+      if (!s || typeof s !== 'object') return null;
+      const gain = (frac) => Math.max(0, Math.min(s.hpMax, Math.round(s.hp + s.hpMax * frac)) - s.hp);
+      const stressOf = (base) => Math.round(base * (s.aid === 'mua' ? 1.3 : 1));
+      if (kind === 'rest') return { kind, list: REST.map((r) => ({ key: r.key, name: r.name, p: r.p, hp: gain(r.rec * (1 + stayNum(s, 'gussuri') / 100)) })), stress: stressOf(REST_STRESS) };
+      if (kind === 'play') { const asb = 1 + stayNum(s, 'asobi') / 100; return { kind, hp: gain(PLAY.rec * asb), stress: stressOf(PLAY.stress), ama: Math.round(PLAY.ama * asb), curesUtsu: !!(s.yosu && s.yosu.utsu) }; }
+      if (kind === 'clinic') {
+        const list = ['sabori', 'utsu'].filter((k) => s.yosu && s.yosu[k]).map((k) => { const y = s.yosu[k]; return { key: k, p: y.visits >= 1 ? 1 : Math.min(1, CLINIC.first + (s.aid === 'erubin' ? CLINIC.erubinAdd : 0) + stayNum(s, 'tsukisoi') / 100), again: y.visits >= 1 }; });
+        return list.length ? { kind, list, hp: gain(CLINIC.rec) } : null;
+      }
+      return null;
+    };
     // 保存から戻す: 形を確かめて直した s(だめなら null)。数は Number.isFinite・配列は Array.isArray・知らない値は既定
     const restore = (raw) => {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw) || typeof raw.id !== 'string') return null;
@@ -2220,7 +2234,7 @@
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
-      act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
+      act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, carePreview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
       AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo, itemUsable,
