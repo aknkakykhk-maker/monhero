@@ -13,12 +13,26 @@
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500, gourmet_race_64: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
+// 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
+const rhythmSongBundleIds = (songId) => {
+  const owner = rhythmSongOwnerId(songId);
+  return Object.keys(RHYTHM_SONG_BUNDLE_OWNER).filter((id) => RHYTHM_SONG_BUNDLE_OWNER[id] === owner && id !== owner);
+};
+// 購入で一緒に開く版の名前(版の切り替えボタンの名前)。購入の案内文に使う
+const rhythmSongBundleLabels = (songId) => rhythmSongBundleIds(songId)
+  .map((id) => (typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(id) : '')).filter(Boolean);
+// 購入で一緒に開く版も含めた曲データ(持ち主→版の順)。ジャケットが版ごとに違う曲で、買うときに全部の絵を見せるために使う
+const rhythmSongBundleSongs = (songId) => {
+  if (typeof RHYTHM_SONGS === 'undefined') return [];
+  const owner = rhythmSongOwnerId(songId);
+  return [owner, ...rhythmSongBundleIds(owner)].map((id) => RHYTHM_SONGS.find((song) => song && song.songId === id)).filter(Boolean);
+};
 
 const rhythmSongPrice = (songId) => {
   const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
@@ -139,7 +153,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
     {/* 文は、言葉のまとまりごとに折れるようにする(語の途中・「short ver.」の途中で折れない) */}
     <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
       <span className="inline-block">買うと、その曲を全部の難易度で遊べます。</span>{' '}
-      {anyBundle && <><span className="inline-block">short ver. も一緒に遊べます。</span>{' '}</>}
+      {anyBundle && <><span className="inline-block">{`${[...new Set(songs.flatMap((song) => rhythmSongBundleLabels(song.songId)))].join('・')} も一緒に遊べます。`}</span>{' '}</>}
       <span className="inline-block">みんなで対戦なら、</span><span className="inline-block">持っていなくてもその回だけ遊べます</span>
     </p>
     {songs.map((song) => {
@@ -148,22 +162,41 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
       const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
       const meta = rhythmSongShopMeta(song);
       const bundle = rhythmSongHasBundle(song.songId);
-      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? `新曲(全難易度・${rhythmSongBundleLabels(song.songId).join('・')} もセット)` : '新曲(全難易度で遊べます)' };
       const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
       const canBuy = !has && points >= price && !busy && !disabled;
       const listening = playingId === song.songId;
       return <div key={song.songId} data-rhythm-song-offer={song.songId}
         className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
-        <div className="w-full [container-type:inline-size]">
-          {typeof RhythmSongArt === 'function'
-            ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
-            : null}
-        </div>
+        {(() => {
+          // ジャケットが版ごとに違う曲は、買う前に全部の版の絵を並べて見せる(2026-11-18 社長指示)。絵が同じ版しかない曲は今までどおり1枚
+          const bundleArts = rhythmSongBundleSongs(song.songId)
+            .map((entry) => ({ entry, artSrc: typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(entry) : '' }))
+            .filter((x) => x.artSrc);
+          if (bundleArts.length < 2 || new Set(bundleArts.map((x) => x.artSrc.split('?')[0])).size < 2) {
+            return <div className="w-full [container-type:inline-size]">
+              {typeof RhythmSongArt === 'function'
+                ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
+                : null}
+            </div>;
+          }
+          return <div className="flex w-full flex-1 items-center gap-1">{bundleArts.map(({ entry, artSrc }) => {
+            const subItem = { ...item, id: `song_${entry.songId}`, name: rhythmSongFullName(entry), icon: artSrc };
+            return <div key={entry.songId} className="min-w-0 flex-1">
+              <div className="[container-type:inline-size]">
+                {typeof RhythmSongArt === 'function'
+                  ? <RhythmSongArt song={entry} large onZoom={onZoomIcon ? () => onZoomIcon(subItem) : null} />
+                  : null}
+              </div>
+              <span className="mt-0.5 block text-center text-[9px] font-black text-slate-300">{rhythmSongVersionLabel(entry.songId) || '原曲'}</span>
+            </div>;
+          })}</div>;
+        })()}
         <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{item.name}</b>
         <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
           {meta.creator && <span className="block">{meta.creator}</span>}
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
-          {bundle && <span className="block text-lime-300">short ver. つき</span>}
+          {bundle && <span className="block text-lime-300">{`${rhythmSongBundleLabels(song.songId).join('・')} つき`}</span>}
         </small>
         {/* 試し聴きと値段(所持済み)は、札の下にひとまとめにそろえる。作者の行が折れる・「short ver. つき」の有無で札ごとにずれない(r1115-162) */}
         <div data-rhythm-song-offer-foot className="mt-auto flex w-full flex-col items-center gap-1">

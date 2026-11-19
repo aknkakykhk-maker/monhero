@@ -88,6 +88,21 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_eiyuu_no_akashi_v1', type:'content' },
   },
   {
+    // 新曲「グルメレース」(2026-11-18 あっくん持込。64 ver. と DX ver. の2バージョン・作曲は石川淳・ビートP500で両バージョンが付く。Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-19 02:31", type:'update', group:'rhythm', title:'新曲「グルメレース」を追加しました', status:'new',
+    image:'images/song-art/gourmet-race-64.jpg?v=455fd3f450af',
+    items:[
+      'モンヒロビートに「グルメレース」を追加しました。64 ver.（2分23秒・BPM 187）と DX ver.（1分56秒・BPM 160）の2つのバージョンが入っています。作曲は 石川淳 です。',
+      '64 ver. のレベルは EASY Lv.10 ／ NORMAL Lv.14 ／ HARD Lv.18 ／ EXPERT Lv.27 ／ MASTER Lv.33 ／ HELL Lv.69 です。',
+      '64 ver. のノーツ数は 385 ／ 449 ／ 559 ／ 658 ／ 761 ／ 875 です。',
+      'DX ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.22 ／ MASTER Lv.29 ／ HELL Lv.38 です。',
+      'DX ver. のノーツ数は 166 ／ 194 ／ 266 ／ 318 ／ 355 ／ 369 です。',
+      'この曲はビートP500で買って遊びます。買うと64 ver. と DX ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      'ジャケットの絵はバージョンごとに違います。買うときの確認画面と交換所で、両方の絵を見てから買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_gourmet_race_v1', type:'content' },
+  },
+  {
     date: "2026-11-18 22:52", type:'fix', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'能力カードの上限表示が、実際の上限と違うことがあるのを直しました',
     items:[

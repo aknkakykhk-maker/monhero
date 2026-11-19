@@ -1871,6 +1871,34 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "gourmet_race_64": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-gourmet-race-64.mp3",
+   "chartRevision": 40,
+   "audioSha256": "8d110d3430e46e6f2bfbe1eaf68db9ac559bf198cb7df498a516770ee4ade6af",
+   "durationMs": 143472,
+   "analyzedTiming": {
+    "bpm": 186.768,
+    "beatZeroMs": 2031.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "gourmet_race_dx": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-gourmet-race-dx.mp3",
+   "chartRevision": 40,
+   "audioSha256": "cb6d19e5ff52fa3408359e01033d130b4d243e585bb3a4d1828d11e7e6bdac84",
+   "durationMs": 116184,
+   "analyzedTiming": {
+    "bpm": 160.304,
+    "beatZeroMs": 424,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2b6ba96273a82c0e
+// generated-sha256: 0109592c231a3f47
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4874,6 +4874,8 @@ const BGM_TRACKS = [
   { id:'melo_seasons_of_a_little_plaza', name:'僕たちのページは晴れ模様', creator:'きき', src:'audio/bgm-seasons-of-a-little-plaza.mp3', gain:1, loop:true },
   { id:'melo_eiyuu_no_akashi', name:'英雄の証', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi.mp3', gain:1, loop:true },
   { id:'melo_eiyuu_no_akashi_milktea', name:'英雄の証（ミラクル☆ミルクティ版）', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi-milktea.mp3', gain:1, loop:true },
+  { id:'melo_gourmet_race_64', name:'グルメレース 64 ver.', creator:'石川淳', src:'audio/bgm-gourmet-race-64.mp3', gain:1, loop:true },
+  { id:'melo_gourmet_race_dx', name:'グルメレース DX ver.', creator:'石川淳', src:'audio/bgm-gourmet-race-dx.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6299,6 +6301,8 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-gourmet-race-64.mp3": "8d110d3430e4",
+    "audio/bgm-gourmet-race-dx.mp3": "cb6d19e5ff52",
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
@@ -24524,7 +24528,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
       <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
         <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
-        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongHasBundle==='function'&&rhythmSongHasBundle(buyAsk.songId)?'short ver. もいっしょに遊べます。':''}`)}</p>
+        {/* ジャケットが版ごとに違う曲は、買う前に全部の版の絵を並べて見せる(2026-11-18 社長指示)。絵が同じ版しかない曲・版が1つだけの曲では出さない */}
+        {(()=>{const bundleArts=(typeof rhythmSongBundleSongs==='function'?rhythmSongBundleSongs(buyAsk.songId):[])
+          .map((entry)=>({entry,artSrc:typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(entry):''})).filter((x)=>x.artSrc);
+          if(bundleArts.length<2||new Set(bundleArts.map((x)=>x.artSrc.split('?')[0])).size<2)return null;
+          return <div className="mt-2 flex justify-center gap-2">{bundleArts.map(({entry,artSrc})=>(
+            <figure key={entry.songId} className="w-20 shrink-0">
+              <img src={artSrc} alt="" className="aspect-square w-full rounded-lg border border-white/20 object-cover"/>
+              <figcaption className="mt-0.5 text-center text-[10px] font-black text-slate-300">{typeof rhythmSongVersionLabel==='function'?(rhythmSongVersionLabel(entry.songId)||'原曲'):''}</figcaption>
+            </figure>))}</div>;})()}
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongBundleLabels==='function'&&rhythmSongBundleLabels(buyAsk.songId).length?`${rhythmSongBundleLabels(buyAsk.songId).join('・')} もいっしょに遊べます。`:''}`)}</p>
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
@@ -33046,6 +33059,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
     'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
+    'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
+    'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -33131,6 +33146,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
     'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
+    'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
+    'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -33216,6 +33233,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
     'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
+    'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -33301,6 +33320,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
     'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
+    'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
+    'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -33386,6 +33407,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
     'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
+    'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
+    'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -33471,6 +33494,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
     'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
+    'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
+    'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
@@ -33556,6 +33581,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
     'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
+    'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
+    'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
@@ -33641,6 +33668,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
     'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
+    'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
+    'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
@@ -37913,12 +37942,26 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500, gourmet_race_64: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
+// 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
+const rhythmSongBundleIds = (songId) => {
+  const owner = rhythmSongOwnerId(songId);
+  return Object.keys(RHYTHM_SONG_BUNDLE_OWNER).filter((id) => RHYTHM_SONG_BUNDLE_OWNER[id] === owner && id !== owner);
+};
+// 購入で一緒に開く版の名前(版の切り替えボタンの名前)。購入の案内文に使う
+const rhythmSongBundleLabels = (songId) => rhythmSongBundleIds(songId)
+  .map((id) => (typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(id) : '')).filter(Boolean);
+// 購入で一緒に開く版も含めた曲データ(持ち主→版の順)。ジャケットが版ごとに違う曲で、買うときに全部の絵を見せるために使う
+const rhythmSongBundleSongs = (songId) => {
+  if (typeof RHYTHM_SONGS === 'undefined') return [];
+  const owner = rhythmSongOwnerId(songId);
+  return [owner, ...rhythmSongBundleIds(owner)].map((id) => RHYTHM_SONGS.find((song) => song && song.songId === id)).filter(Boolean);
+};
 
 const rhythmSongPrice = (songId) => {
   const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
@@ -38039,7 +38082,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
     {/* 文は、言葉のまとまりごとに折れるようにする(語の途中・「short ver.」の途中で折れない) */}
     <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
       <span className="inline-block">買うと、その曲を全部の難易度で遊べます。</span>{' '}
-      {anyBundle && <><span className="inline-block">short ver. も一緒に遊べます。</span>{' '}</>}
+      {anyBundle && <><span className="inline-block">{`${[...new Set(songs.flatMap((song) => rhythmSongBundleLabels(song.songId)))].join('・')} も一緒に遊べます。`}</span>{' '}</>}
       <span className="inline-block">みんなで対戦なら、</span><span className="inline-block">持っていなくてもその回だけ遊べます</span>
     </p>
     {songs.map((song) => {
@@ -38048,22 +38091,41 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
       const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
       const meta = rhythmSongShopMeta(song);
       const bundle = rhythmSongHasBundle(song.songId);
-      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? `新曲(全難易度・${rhythmSongBundleLabels(song.songId).join('・')} もセット)` : '新曲(全難易度で遊べます)' };
       const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
       const canBuy = !has && points >= price && !busy && !disabled;
       const listening = playingId === song.songId;
       return <div key={song.songId} data-rhythm-song-offer={song.songId}
         className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
-        <div className="w-full [container-type:inline-size]">
-          {typeof RhythmSongArt === 'function'
-            ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
-            : null}
-        </div>
+        {(() => {
+          // ジャケットが版ごとに違う曲は、買う前に全部の版の絵を並べて見せる(2026-11-18 社長指示)。絵が同じ版しかない曲は今までどおり1枚
+          const bundleArts = rhythmSongBundleSongs(song.songId)
+            .map((entry) => ({ entry, artSrc: typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(entry) : '' }))
+            .filter((x) => x.artSrc);
+          if (bundleArts.length < 2 || new Set(bundleArts.map((x) => x.artSrc.split('?')[0])).size < 2) {
+            return <div className="w-full [container-type:inline-size]">
+              {typeof RhythmSongArt === 'function'
+                ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
+                : null}
+            </div>;
+          }
+          return <div className="flex w-full flex-1 items-center gap-1">{bundleArts.map(({ entry, artSrc }) => {
+            const subItem = { ...item, id: `song_${entry.songId}`, name: rhythmSongFullName(entry), icon: artSrc };
+            return <div key={entry.songId} className="min-w-0 flex-1">
+              <div className="[container-type:inline-size]">
+                {typeof RhythmSongArt === 'function'
+                  ? <RhythmSongArt song={entry} large onZoom={onZoomIcon ? () => onZoomIcon(subItem) : null} />
+                  : null}
+              </div>
+              <span className="mt-0.5 block text-center text-[9px] font-black text-slate-300">{rhythmSongVersionLabel(entry.songId) || '原曲'}</span>
+            </div>;
+          })}</div>;
+        })()}
         <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{item.name}</b>
         <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
           {meta.creator && <span className="block">{meta.creator}</span>}
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
-          {bundle && <span className="block text-lime-300">short ver. つき</span>}
+          {bundle && <span className="block text-lime-300">{`${rhythmSongBundleLabels(song.songId).join('・')} つき`}</span>}
         </small>
         {/* 試し聴きと値段(所持済み)は、札の下にひとまとめにそろえる。作者の行が折れる・「short ver. つき」の有無で札ごとにずれない(r1115-162) */}
         <div data-rhythm-song-offer-foot className="mt-auto flex w-full flex-col items-center gap-1">
