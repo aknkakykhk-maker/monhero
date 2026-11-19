@@ -149,7 +149,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 受付を開いた合図の効果音は鳴らさない(押したボタンの決定音だけ。社長「大会のボタンを押すと謎のSE」= join だった・点検 Q-1-1)
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   // 受付のひとこと: 「上の星が開いた」の台本(turn.cup.open)は毎月は合わないので使わない。出られる数に合わせて、月ごとに言い回しを替える(2026-11-14 点検 ①-14: 毎回同じ台詞)
   const openTexts = nOk ? [
@@ -497,7 +497,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 決まった日の大会の受付も、開いた合図の効果音は鳴らさない(点検 Q-1-1)
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;

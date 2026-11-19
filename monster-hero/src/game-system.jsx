@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 016c8993dd526411
+// generated-sha256: 2b1b474e5b941970
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7112,6 +7112,7 @@ const Audio_ = (() => {
 // モンヒロサクセスの音を鳴らす口(2026-11-12 開発部)
 // 割り当て表は data/success-sounds.js。ここは「場面の id を渡すと、表どおりに曲と効果音を鳴らす」だけ。
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
+// 効果音は「意味」で鳴らす(SuccessSound.sfx('matchGo') など。意味の表は data/success-sounds.js の SUCCESS_SFX)。fgSe の名前を画面に書かない(2026-11-19 r1119 ①音)
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
 //   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
@@ -7134,6 +7135,7 @@ const SuccessSound = (() => {
   const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
   const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = (id) => (typeof successSoundScene === 'function' ? successSoundScene(id) : null);
 
   // 画面に入る。入る前の曲と印を覚える。二重に入っても1回ぶんだけ覚える
   const enter = () => {
@@ -7192,16 +7194,27 @@ const SuccessSound = (() => {
     return key;
   };
 
-  // 場面の効果音を1回鳴らす。delayMs で待たせたあと、画面を離れていたら鳴らさない
-  const se = (sceneId, delayMs = 0) => {
-    const a = audio(); if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+  // 効果音を1回鳴らす(fgSe の名前)。delayMs で待たせたあと、画面を離れていたら鳴らさない
+  //   needActive … モンサクの画面に入っているときだけ鳴らす(場面の音)。sfx はモンサクの外(助手マスモン対戦の試合の部品)からも呼ぶので偽
+  const fireSe = (name, delayMs, needActive) => {
+    const a = audio(); if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
-    const my = epoch;
-    const fire = () => { if (!active || my !== epoch) return; try { a.fgSe[name](); } catch (e) {} };
+    const my = epoch; const wasActive = active;
+    const fire = () => { if ((wasActive || needActive) && (!active || my !== epoch)) return; try { a.fgSe[name](); } catch (e) {} };
     const wait = Number(delayMs);
     if (Number.isFinite(wait) && wait > 0) { setTimeout(fire, Math.min(wait, 10000)); } else { fire(); }
     return name;
+  };
+  // 場面の効果音を1回鳴らす(場面の表の mean を意味の表で引く)
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  // 意味で効果音を1回鳴らす(SUCCESS_SFX の id)。モンサクの画面・部品はこれを使い、fgSe の名前を書かない
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
   };
 
   // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
@@ -7214,24 +7227,31 @@ const SuccessSound = (() => {
     const a = audio();
     let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
-    if (!(rest > 0)) { scene(sceneId, opts); return () => {}; }
+    if (!(rest > 0)) { playScene(sceneId, opts, true); return () => {}; }
+    // ジングルが鳴っているあいだに入った場面は、ジングルのあとに曲だけ替える(効果音はジングルと重ねない・点検 Q-1-6)
     const my = epoch;
-    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) playScene(sceneId, opts, false); }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => { if (laterTimer === timer) { clearTimeout(timer); laterTimer = null; } };
   };
 
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
   // 場面が替わったら、ジングル後の予約はもう要らないので消す(古い画面のタイマーが移動先の曲を上書きしない)
+  //   表で afterJingle の場面(期の区切り)は、ジングルが鳴っている途中なら sceneAfterOnce と同じに待つ
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) { sceneAfterOnce(sceneId, opts); return; }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, isActive: () => active };
+  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, sfx, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -83747,7 +83767,7 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
 // 案: docs/progress/player-raise/PLAN.md §3「合体」・§9。計算は芯 MONHERO_SUCCESS(data/monhero-success.js)の fusePlan だけを使う。
 // ★この部品は保存枠(mh_monsuc_box_v1)の読み書きを持たない。箱は回3の保存枠の部品から受け取る:
-//     <MonsucFuseSheet box={msxR3ReadBox() の箱} onSave={(次の箱) => storeSet(MSX_KEYS.box, 次の箱)} locked={[編成・貸し出し・育成中の id]} onDone onClose/>
+//     <MonsucFuseSheet box={msxR3ReadBox() の箱} onSave={(次の箱) => storeSet(MSX_KEYS.box, 次の箱)} locked={[育成中の編成・貸し出し・育成中の id]} lockWhy={{ id: 使えない理由 }} onDone onClose/>
 //   (saveBox という名前でも受ける。保存の失敗は false でも例外でもよい)
 //   readBox={() => msxR3ReadBox()} を渡すと、書く直前に箱を読み直し、その箱に合体を当てて書く(開いたあとに箱が変わっても上書きで消さない・ミハリ5)
 //   箱の形は回3(56-monhero-success-r3-store.jsx・PLAN.md §9): { v:1, cap, mons:[{ id, species, nick, colors, gen, parents:[id,id], st, techs, mast:[techs と同じ順],
@@ -83813,7 +83833,7 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '育成中の編成・貸し出し中・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId); const mat = mons.find(m => m.id === matId);
   const plan = SUC.fusePlan(main, mat);
@@ -83845,7 +83865,7 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
 };
 
 
-function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
+function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy = null, onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
   const [nm, setNm] = React.useState(''); const [nmErr, setNmErr] = React.useState(''); const [named, setNamed] = React.useState(null); // 生まれた子の名前(合体したその場で決める・2026-11-14 社長 r1114-126)
@@ -83856,6 +83876,14 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  // 育て終えたのに使えない子は、理由を添えて一覧の下に出す(B-6: 黙って消えると「固定されたまま」に見える)
+  const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
+  const lockedEl = lockedRaised.length ? (
+    <div className="mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2" data-monsuc-fuse-locked>
+      <p className="text-[11px] font-black text-slate-300">🔒 いまは合体に使えないモンスター</p>
+      {lockedRaised.map(m => <p key={m.id} className="mt-0.5 text-[10.5px] font-bold text-slate-400" data-monsuc-fuse-locked-mon={m.id} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(m)}：{(lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id]) || '育成中の編成・貸し出し中のモンスターは使えません'}</p>)}
+      {lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? <p className="mt-0.5 text-[10px] font-bold text-slate-500">育成が終わると使えるようになります</p> : null}
+    </div>) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
@@ -83910,10 +83938,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
           <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+            {lockedEl}
           </div>
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
-          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)</p>}
+          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)</p>}
         </div>) : !mat ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
           <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
           {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
@@ -92824,7 +92853,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         }
         const i = scrubIdx(e); const p = scrubPt(e);
         setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
-        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select'); }
       },
       onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
       onPointerCancel: () => { scrubRef.current = null; setTrail(null); },
@@ -94137,7 +94166,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 受付を開いた合図の効果音は鳴らさない(押したボタンの決定音だけ。社長「大会のボタンを押すと謎のSE」= join だった・点検 Q-1-1)
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   // 受付のひとこと: 「上の星が開いた」の台本(turn.cup.open)は毎月は合わないので使わない。出られる数に合わせて、月ごとに言い回しを替える(2026-11-14 点検 ①-14: 毎回同じ台詞)
   const openTexts = nOk ? [
@@ -94485,7 +94514,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 決まった日の大会の受付も、開いた合図の効果音は鳴らさない(点検 Q-1-1)
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
@@ -95562,6 +95591,7 @@ function MsxR3Box({ onClose }) {
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
+  const [runOn, setRunOn] = useState(null); // 進行中の育成があるか(B-6)。null = まだ読めていない(読めるまでは固定しておく)
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null); // { nick, colors, err }
   const [top, setTop] = useState('base'); // 詳細の右上のタブ base / feat / apt
@@ -95581,7 +95611,12 @@ function MsxR3Box({ onClose }) {
     msxReadAssist().then((a) => { if (alive) setAssist(a); }).catch(() => {});
     storeGet(MSX_MM_FAV_KEY, []).then((v) => { if (alive) setFav(msxMmNormFav(v)); }).catch(() => {});
     storeGet(MSX_MM_VIEW_KEY, null).then((v) => { if (alive) setViewState(msxMmNormView(v)); }).catch(() => {});
-    storeGet(MSX_KEYS.run, null).then((r) => { if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box); }).catch(() => {});
+    storeGet(MSX_KEYS.run, null).then((r) => {
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => { if (alive) setRunOn(true); }); // 読めなかったときは安全のため固定のまま
     return () => { alive = false; };
   }, []);
   const setView = (v) => { const n = msxMmNormView(v); setViewState(n); storeSet(MSX_MM_VIEW_KEY, n).catch(() => {}); };
@@ -95589,7 +95624,9 @@ function MsxR3Box({ onClose }) {
   const cur = box && sel ? box.mons.find((m) => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [];
+  // 合体に使えないのは「いま進行中の育成の編成」の子だけ(B-6)。meta.team は次の育成の初期値なので、育成していないときは固定しない。
+  // meta.team は育成を始めたときだけ書かれるので、育成中はその育成の編成と同じ(run の編成は box の id を持たない)。保存の形は変えない
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [];
   // お別れで選べない子: ハートの子・貸し出し中・育成中の元の子
   const byeLock = (m) => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async (id) => { const m = { ...(await msxR3ReadMeta()), lend: id }; await storeSet(MSX_KEYS.meta, m); setMeta(m); };
@@ -95625,8 +95662,12 @@ function MsxR3Box({ onClose }) {
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
+    const lockWhy = {}; // 使えない理由(合体の窓に出す)
+    teamIds.forEach((id) => { lockWhy[id] = '育成中の編成に入っています'; });
+    if (lendId) lockWhy[lendId] = 'フレンドに貸し出し中です';
+    if (runFrom) lockWhy[runFrom] = 'いま育成中です';
     fuseEl = (<>
-      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `メモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方はメモリアルモンスターがいっぱいなので残りません`; })()}
+      <MonsucFuseSheet box={box} locked={locked} lockWhy={lockWhy} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `メモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方はメモリアルモンスターがいっぱいなので残りません`; })()}
         keptOf={() => (fuseKept.current)}
         onSave={async (n) => { let old = null; try { old = await msxR3ReadBox(); } catch (e) { old = null; } const r = await storeSet(MSX_KEYS.box, n); if (r === true && old && n && Array.isArray(n.mons)) { try { const left = old.mons.filter((m) => !n.mons.some((x) => x.id === m.id)); const k = await msxAssistKeep(left, 'fuse'); fuseKept.current = k ? k.kept : 0; if (k && k.assist) setAssist(k.assist); } catch (e) {} } return r; }} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setPage('gate'); msxR3ReadBox().then(setBox); }}/>
     </>);
@@ -128258,7 +128299,8 @@ function MonsterHeroGame() {
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
   useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  // モンヒロサクセスの画面も裏の音を止める印が立つので、ボタンの音は fgSe で鳴らす(立てたままだとモンサクのボタンが全部無音だった・2026-11-19 点検 Q-1-3)
+  quickAnywhereSeQuietRef.current = (quickAnywhereScreenOpen && !cardScreenOpen) || successScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)

@@ -130,6 +130,7 @@ function MsxR3Box({ onClose }) {
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
+  const [runOn, setRunOn] = useState(null); // 進行中の育成があるか(B-6)。null = まだ読めていない(読めるまでは固定しておく)
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null); // { nick, colors, err }
   const [top, setTop] = useState('base'); // 詳細の右上のタブ base / feat / apt
@@ -149,7 +150,12 @@ function MsxR3Box({ onClose }) {
     msxReadAssist().then((a) => { if (alive) setAssist(a); }).catch(() => {});
     storeGet(MSX_MM_FAV_KEY, []).then((v) => { if (alive) setFav(msxMmNormFav(v)); }).catch(() => {});
     storeGet(MSX_MM_VIEW_KEY, null).then((v) => { if (alive) setViewState(msxMmNormView(v)); }).catch(() => {});
-    storeGet(MSX_KEYS.run, null).then((r) => { if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box); }).catch(() => {});
+    storeGet(MSX_KEYS.run, null).then((r) => {
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => { if (alive) setRunOn(true); }); // 読めなかったときは安全のため固定のまま
     return () => { alive = false; };
   }, []);
   const setView = (v) => { const n = msxMmNormView(v); setViewState(n); storeSet(MSX_MM_VIEW_KEY, n).catch(() => {}); };
@@ -157,7 +163,9 @@ function MsxR3Box({ onClose }) {
   const cur = box && sel ? box.mons.find((m) => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [];
+  // 合体に使えないのは「いま進行中の育成の編成」の子だけ(B-6)。meta.team は次の育成の初期値なので、育成していないときは固定しない。
+  // meta.team は育成を始めたときだけ書かれるので、育成中はその育成の編成と同じ(run の編成は box の id を持たない)。保存の形は変えない
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [];
   // お別れで選べない子: ハートの子・貸し出し中・育成中の元の子
   const byeLock = (m) => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async (id) => { const m = { ...(await msxR3ReadMeta()), lend: id }; await storeSet(MSX_KEYS.meta, m); setMeta(m); };
@@ -193,8 +201,12 @@ function MsxR3Box({ onClose }) {
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
+    const lockWhy = {}; // 使えない理由(合体の窓に出す)
+    teamIds.forEach((id) => { lockWhy[id] = '育成中の編成に入っています'; });
+    if (lendId) lockWhy[lendId] = 'フレンドに貸し出し中です';
+    if (runFrom) lockWhy[runFrom] = 'いま育成中です';
     fuseEl = (<>
-      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `メモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方はメモリアルモンスターがいっぱいなので残りません`; })()}
+      <MonsucFuseSheet box={box} locked={locked} lockWhy={lockWhy} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `メモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方はメモリアルモンスターがいっぱいなので残りません`; })()}
         keptOf={() => (fuseKept.current)}
         onSave={async (n) => { let old = null; try { old = await msxR3ReadBox(); } catch (e) { old = null; } const r = await storeSet(MSX_KEYS.box, n); if (r === true && old && n && Array.isArray(n.mons)) { try { const left = old.mons.filter((m) => !n.mons.some((x) => x.id === m.id)); const k = await msxAssistKeep(left, 'fuse'); fuseKept.current = k ? k.kept : 0; if (k && k.assist) setAssist(k.assist); } catch (e) {} } return r; }} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setPage('gate'); msxR3ReadBox().then(setBox); }}/>
     </>);

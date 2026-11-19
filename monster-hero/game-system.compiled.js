@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: de6bc93bc6f9fb10
+// source-sha256: 48a4f7c80ad8564f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10424,6 +10424,7 @@ const SuccessSound = (() => {
   const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
   const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = id => typeof successSoundScene === 'function' ? successSoundScene(id) : null;
   const enter = () => {
     const a = audio();
     if (!a) return;
@@ -10515,14 +10516,15 @@ const SuccessSound = (() => {
     } catch (e) {}
     return key;
   };
-  const se = (sceneId, delayMs = 0) => {
+  const fireSe = (name, delayMs, needActive) => {
     const a = audio();
-    if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+    if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
     const my = epoch;
+    const wasActive = active;
     const fire = () => {
-      if (!active || my !== epoch) return;
+      if ((wasActive || needActive) && (!active || my !== epoch)) return;
       try {
         a.fgSe[name]();
       } catch (e) {}
@@ -10535,6 +10537,14 @@ const SuccessSound = (() => {
     }
     return name;
   };
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
+  };
   const ONCE_MS = 7200;
   const sceneAfterOnce = (sceneId, opts = null) => {
     if (!active) enter();
@@ -10546,13 +10556,13 @@ const SuccessSound = (() => {
     } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
     if (!(rest > 0)) {
-      scene(sceneId, opts);
+      playScene(sceneId, opts, true);
       return () => {};
     }
     const my = epoch;
     const timer = setTimeout(() => {
       if (laterTimer === timer) laterTimer = null;
-      if (active && my === epoch) scene(sceneId, opts);
+      if (active && my === epoch) playScene(sceneId, opts, false);
     }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => {
@@ -10563,11 +10573,19 @@ const SuccessSound = (() => {
     };
   };
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) {
+      sceneAfterOnce(sceneId, opts);
+      return;
+    }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
   return {
     enter,
@@ -10577,6 +10595,7 @@ const SuccessSound = (() => {
     bgm,
     keep,
     se,
+    sfx,
     isActive: () => active
   };
 })();
@@ -160977,7 +160996,7 @@ const monsucFuse = async ({
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '育成中の編成・貸し出し中・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId);
   const mat = mons.find(m => m.id === matId);
@@ -161049,6 +161068,7 @@ function MonsucFuseSheet({
   onSave,
   readBox,
   locked = [],
+  lockWhy = null,
   onDone,
   onClose,
   suc = null,
@@ -161073,6 +161093,23 @@ function MonsucFuseSheet({
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
+  const lockedEl = lockedRaised.length ? React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2",
+    "data-monsuc-fuse-locked": true
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "🔒 いまは合体に使えないモンスター"), lockedRaised.map(m => React.createElement("p", {
+    key: m.id,
+    className: "mt-0.5 text-[10.5px] font-bold text-slate-400",
+    "data-monsuc-fuse-locked-mon": m.id,
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseNick(m), "：", lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id] || '育成中の編成・貸し出し中のモンスターは使えません')), lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-500"
+  }, "育成が終わると使えるようになります") : null) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF;
   const main = mons.find(m => m.id === mainId) || null;
@@ -161258,12 +161295,12 @@ function MonsucFuseSheet({
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), lockedEl), usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
+  }, "育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -179780,7 +179817,7 @@ function MsxPlay({
         if (i !== st.last) {
           st.last = i;
           setSel(MSX_STATS[i]);
-          if (typeof msaSe === 'function') msaSe('tap');
+          if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select');
         }
       },
       onPointerUp: () => {
@@ -182970,9 +183007,6 @@ function MsxR3Cup({
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = {
@@ -183828,9 +183862,6 @@ function MsxR3PreDesk({
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
@@ -187250,6 +187281,7 @@ function MsxR3Box({
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
+  const [runOn, setRunOn] = useState(null);
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null);
   const [top, setTop] = useState('base');
@@ -187287,8 +187319,13 @@ function MsxR3Box({
       if (alive) setViewState(msxMmNormView(v));
     }).catch(() => {});
     storeGet(MSX_KEYS.run, null).then(r => {
-      if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
-    }).catch(() => {});
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => {
+      if (alive) setRunOn(true);
+    });
     return () => {
       alive = false;
     };
@@ -187306,7 +187343,7 @@ function MsxR3Box({
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
   const byeLock = m => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async id => {
     const m = {
@@ -187387,9 +187424,16 @@ function MsxR3Box({
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
+    const lockWhy = {};
+    teamIds.forEach(id => {
+      lockWhy[id] = '育成中の編成に入っています';
+    });
+    if (lendId) lockWhy[lendId] = 'フレンドに貸し出し中です';
+    if (runFrom) lockWhy[runFrom] = 'いま育成中です';
     fuseEl = React.createElement(React.Fragment, null, React.createElement(MonsucFuseSheet, {
       box: box,
       locked: locked,
+      lockWhy: lockWhy,
       readBox: msxR3ReadBox,
       onName: async (id, nick, cols) => {
         const r = await msxR3EditMon(id, nick, cols);
@@ -241534,7 +241578,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen || successScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
