@@ -51,7 +51,7 @@ node tools/ctx.js handoff <部> --write     docs/progress/handoff/<部>-<日付>
 1. 下書きの「手で書く所」だけ埋める(やりかけ・返事待ち・はまった所・窓口に頼んだまま済んでいないもの。無ければ「なし」)。
    最近の公開・残りの仕事・社長の決めごとは道具が埋めてある
 2. コミットして公開する(メモだけなら検査は `node tools/run-checks.js --changed`)
-3. 窓口へ send_message: 「会話を替えてほしい。メモは docs/progress/handoff/<部>-<日付>.md」
+3. 会話の最後の発言に「会話を替えてほしい。メモは docs/progress/handoff/<部>-<日付>.md」と書いて止まる(send_message は使わない・r1119-015。窓口が見回って読む)
 
 **窓口**
 

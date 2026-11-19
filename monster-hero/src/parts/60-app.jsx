@@ -6758,7 +6758,8 @@ function MonsterHeroGame() {
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
   useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  // モンヒロサクセスの画面も裏の音を止める印が立つので、ボタンの音は fgSe で鳴らす(立てたままだとモンサクのボタンが全部無音だった・2026-11-19 点検 Q-1-3)
+  quickAnywhereSeQuietRef.current = (quickAnywhereScreenOpen && !cardScreenOpen) || successScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)

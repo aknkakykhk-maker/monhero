@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 612398cfa8187957
+// source-sha256: 716a63125b3e1f20
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6462,6 +6462,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_dr_wily_stage_1',
+  name: 'Dr.WILY STAGE 1',
+  creator: 'Takashi Tateishi',
+  src: 'audio/bgm-dr-wily-stage-1.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dr_wily_stage_1_okkussenman',
+  name: 'Dr.WILY STAGE 1（おっくせんまん版）',
+  creator: 'ゴム',
+  src: 'audio/bgm-dr-wily-stage-1-okkussenman.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8245,6 +8259,8 @@ const Audio_ = (() => {
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
+    "audio/bgm-dr-wily-stage-1-okkussenman.mp3": "1653c82ce75e",
+    "audio/bgm-dr-wily-stage-1.mp3": "80f1ad0c564c",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "b51e196625c4",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
@@ -10408,6 +10424,7 @@ const SuccessSound = (() => {
   const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
   const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = id => typeof successSoundScene === 'function' ? successSoundScene(id) : null;
   const enter = () => {
     const a = audio();
     if (!a) return;
@@ -10499,14 +10516,15 @@ const SuccessSound = (() => {
     } catch (e) {}
     return key;
   };
-  const se = (sceneId, delayMs = 0) => {
+  const fireSe = (name, delayMs, needActive) => {
     const a = audio();
-    if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+    if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
     const my = epoch;
+    const wasActive = active;
     const fire = () => {
-      if (!active || my !== epoch) return;
+      if ((wasActive || needActive) && (!active || my !== epoch)) return;
       try {
         a.fgSe[name]();
       } catch (e) {}
@@ -10519,6 +10537,14 @@ const SuccessSound = (() => {
     }
     return name;
   };
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
+  };
   const ONCE_MS = 7200;
   const sceneAfterOnce = (sceneId, opts = null) => {
     if (!active) enter();
@@ -10530,13 +10556,13 @@ const SuccessSound = (() => {
     } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
     if (!(rest > 0)) {
-      scene(sceneId, opts);
+      playScene(sceneId, opts, true);
       return () => {};
     }
     const my = epoch;
     const timer = setTimeout(() => {
       if (laterTimer === timer) laterTimer = null;
-      if (active && my === epoch) scene(sceneId, opts);
+      if (active && my === epoch) playScene(sceneId, opts, false);
     }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => {
@@ -10547,11 +10573,19 @@ const SuccessSound = (() => {
     };
   };
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) {
+      sceneAfterOnce(sceneId, opts);
+      return;
+    }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
   return {
     enter,
@@ -10561,6 +10595,7 @@ const SuccessSound = (() => {
     bgm,
     keep,
     se,
+    sfx,
     isActive: () => active
   };
 })();
@@ -53919,6 +53954,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
     'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
+    'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
+    'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -54006,6 +54043,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
     'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
+    'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -54093,6 +54132,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
+    'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
+    'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -54180,6 +54221,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
     'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
+    'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -54267,6 +54310,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
+    'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
+    'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -54354,6 +54399,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
+    'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
+    'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
@@ -54441,6 +54488,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
     'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
+    'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
@@ -54528,6 +54577,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
     'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
+    'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
@@ -61603,7 +61654,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   sparkling_pink_overture: 500,
   seasons_of_a_little_plaza: 500,
   eiyuu_no_akashi: 500,
-  gourmet_race_64: 500
+  gourmet_race_64: 500,
+  dr_wily_stage_1: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -61611,7 +61663,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   midnight_studio_short: 'midnight_studio',
   hopes_and_dreams_short: 'hopes_and_dreams',
   gourmet_race_dx: 'gourmet_race_64',
-  eiyuu_no_akashi_milktea: 'eiyuu_no_akashi'
+  eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
+  dr_wily_stage_1_okkussenman: 'dr_wily_stage_1'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -160788,7 +160841,7 @@ const monsucFuse = async ({
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '育成中の編成・貸し出し中・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId);
   const mat = mons.find(m => m.id === matId);
@@ -160860,6 +160913,7 @@ function MonsucFuseSheet({
   onSave,
   readBox,
   locked = [],
+  lockWhy = null,
   onDone,
   onClose,
   suc = null,
@@ -160884,6 +160938,23 @@ function MonsucFuseSheet({
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
+  const lockedEl = lockedRaised.length ? React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2",
+    "data-monsuc-fuse-locked": true
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "🔒 いまは合体に使えないモンスター"), lockedRaised.map(m => React.createElement("p", {
+    key: m.id,
+    className: "mt-0.5 text-[10.5px] font-bold text-slate-400",
+    "data-monsuc-fuse-locked-mon": m.id,
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseNick(m), "：", lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id] || '育成中の編成・貸し出し中のモンスターは使えません')), lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-500"
+  }, "育成が終わると使えるようになります") : null) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF;
   const main = mons.find(m => m.id === mainId) || null;
@@ -161069,12 +161140,12 @@ function MonsucFuseSheet({
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), lockedEl), usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
+  }, "育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -179582,7 +179653,7 @@ function MsxPlay({
         if (i !== st.last) {
           st.last = i;
           setSel(MSX_STATS[i]);
-          if (typeof msaSe === 'function') msaSe('tap');
+          if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select');
         }
       },
       onPointerUp: () => {
@@ -182773,9 +182844,6 @@ function MsxR3Cup({
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = {
@@ -183631,9 +183699,6 @@ function MsxR3PreDesk({
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
@@ -187053,6 +187118,7 @@ function MsxR3Box({
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
+  const [runOn, setRunOn] = useState(null);
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null);
   const [top, setTop] = useState('base');
@@ -187090,8 +187156,13 @@ function MsxR3Box({
       if (alive) setViewState(msxMmNormView(v));
     }).catch(() => {});
     storeGet(MSX_KEYS.run, null).then(r => {
-      if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
-    }).catch(() => {});
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => {
+      if (alive) setRunOn(true);
+    });
     return () => {
       alive = false;
     };
@@ -187109,7 +187180,7 @@ function MsxR3Box({
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
   const byeLock = m => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async id => {
     const m = {
@@ -187190,9 +187261,16 @@ function MsxR3Box({
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
+    const lockWhy = {};
+    teamIds.forEach(id => {
+      lockWhy[id] = '育成中の編成に入っています';
+    });
+    if (lendId) lockWhy[lendId] = 'フレンドに貸し出し中です';
+    if (runFrom) lockWhy[runFrom] = 'いま育成中です';
     fuseEl = React.createElement(React.Fragment, null, React.createElement(MonsucFuseSheet, {
       box: box,
       locked: locked,
+      lockWhy: lockWhy,
       readBox: msxR3ReadBox,
       onName: async (id, nick, cols) => {
         const r = await msxR3EditMon(id, nick, cols);
@@ -241363,7 +241441,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen || successScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
