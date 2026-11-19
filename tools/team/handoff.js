@@ -107,7 +107,7 @@ function main() {
   if (fs.existsSync(full)) { console.error(`NG: ${rel} はもうあります(上書きしません。直すならそのファイルを)。`); process.exit(1); }
   fs.writeFileSync(full, text);
   console.log(`OK: ${rel} に下書きを書いた。`);
-  console.log('次: ①「手で書く所」を埋める ②コミットして公開(PR → マージ) ③窓口へ「会話を替えてほしい」と send_message(メモの場所を書く)');
+  console.log('次: ①「手で書く所」を埋める ②コミットして公開(PR → マージ) ③会話の最後の発言に「会話を替えてほしい」とメモの場所を書いて止まる(send_message は使わない・r1119-015)');
   console.log(`窓口は: node tools/ctx.js newsession ${d.id} "<続きの仕事>" の出力で新しい会話を作る`);
 }
 
