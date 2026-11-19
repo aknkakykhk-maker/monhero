@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "04349ba0f4d5",
-  "packs": {"beat":{"bytes":247256864,"count":145},"battle":{"bytes":278180554,"count":1559},"card":{"bytes":38155544,"count":1048},"all":{"bytes":563592962,"count":2752},"core":{"bytes":24293734,"count":24}},
+  "id": "3bb27ef638ab",
+  "packs": {"beat":{"bytes":247256864,"count":145},"battle":{"bytes":278266153,"count":1559},"card":{"bytes":38155544,"count":1048},"all":{"bytes":563678561,"count":2752},"core":{"bytes":24293734,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
