@@ -223,7 +223,13 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
               : null}
           </div>
         )}
-        <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{cardName}</b>
+        {/* 曲名は題名と副題を別のかたまりで描き、折れるのは境目だけにする(RhythmSongName)。
+            幅に合わせて字を縮め(11px→8px)、それでも入らないときだけ境目で2行にする。
+            重ね表示の札の表示名は曲組の名前(cardName)なので、測る文字列も cardName にそろえ、
+            版名はジャケット下で見分ける決まりどおり曲名には副題を付けない */}
+        <div className="w-full [container-type:inline-size]">
+          <b data-rhythm-song-offer-name className="block w-full text-center font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere', fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(cardName, 11, 8) : undefined }}>{multiJacket ? cardName : (typeof RhythmSongName === 'function' ? <RhythmSongName song={song}/> : cardName)}</b>
+        </div>
         <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
           {meta.creator && <span className="block">{meta.creator}</span>}
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
