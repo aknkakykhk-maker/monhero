@@ -185,7 +185,8 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
         className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
         {multiJacket ? (() => {
           // ジャケットが版ごとに違う曲は、2枚をずらして重ねて大きく見せる(2026-11-19 あっくん指示)。
-          // 手前が大きく、後ろは右上にはみ出して見える。札のタップで手前と後ろが入れ替わり、
+          // 手前が大きく、後ろは右上にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
+          // 札のタップで手前と後ろが入れ替わり、入れ替わった後も後ろになった方が斜めになる。
           // 拡大は手前のジャケットの虫めがねだけから(タップと競合させない)。絵が同じ版しかない曲は今までどおり1枚
           const frontItem = { ...item, id: `song_${frontEntry.entry.songId}`, name: rhythmSongFullName(frontEntry.entry), icon: frontEntry.artSrc };
           const frontLabel = typeof rhythmSongVersionLabel === 'function' ? (rhythmSongVersionLabel(frontEntry.entry.songId) || '原曲') : '';
@@ -194,7 +195,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
             <div className="relative w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
               aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
               onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
-              <div className="absolute right-0 top-0 w-[76%] brightness-[0.7]">
+              <div className="absolute right-0 top-0 w-[76%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
                 <div className="[container-type:inline-size]">
                   {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={backEntry.entry} large /> : null}
                 </div>
