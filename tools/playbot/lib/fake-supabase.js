@@ -43,7 +43,7 @@ const matches = (row, { key, op, value }) => {
 
 const sortRows = (rows, order) => {
   if (!order) return rows;
-  const [col, dir] = order.split('.');
+  const [col, dir] = order.split(',')[0].split('.'); // 「place.asc,run_id.asc」のように並べたときは1つ目で並べる
   const sign = dir === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     const x = a[col], y = b[col];

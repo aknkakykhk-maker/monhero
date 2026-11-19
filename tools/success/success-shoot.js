@@ -73,7 +73,8 @@ const makeRun = async (kind) => {
   const sizesAll = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [390, 664, 'ip'], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
   const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
-  const sizes = onlySizes.length ? sizesAll.filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
+  // s568 = 小さい横 568×320(見た目の点検 visual-shoot.js --monsuc-deep が名指しするときだけ撮る。r1119-014 PR3 の続き)
+  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
