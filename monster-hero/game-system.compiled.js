@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4446faaa28d0d9bc
+// source-sha256: 8aabbd09ca020bd3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172298,6 +172298,7 @@ const MSX_CSS = `
 .msx.land .v-body.lg3>.v-lmain>*{flex:none}
 .msx.land .v-body.lg3>.v-lmain>.v-card{max-height:none!important;overflow:visible!important}
 .msx.land .v-body.lg3>.v-scene{min-height:0}
+.msx.land .v-body.lg3>.v-lmain>.v-big{position:sticky;bottom:0;z-index:2;flex:none}
 .msx .v-faces .v-soon1{flex:3;align-self:center;min-height:52px;display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:14px;border:1px dashed #64748b;background:#1e1a36;cursor:pointer}
 .msx .v-faces .v-soon1 .fs{display:flex;flex:none}
 .msx .v-faces .lk.soon.v-soon1 .fs img{filter:grayscale(1) brightness(.75);width:34px;height:34px;margin-left:-8px;border-width:1.5px}.msx .v-faces .v-soon1 .fs img:first-child{margin-left:0}

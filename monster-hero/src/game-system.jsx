@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f390b78c122ed746
+// generated-sha256: 0bf090ad02c1bd2b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89564,6 +89564,7 @@ const MSX_CSS = `
 .msx.land .v-body.lg3>.v-lmain>*{flex:none}
 .msx.land .v-body.lg3>.v-lmain>.v-card{max-height:none!important;overflow:visible!important}
 .msx.land .v-body.lg3>.v-scene{min-height:0}
+.msx.land .v-body.lg3>.v-lmain>.v-big{position:sticky;bottom:0;z-index:2;flex:none}
 .msx .v-faces .v-soon1{flex:3;align-self:center;min-height:52px;display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:14px;border:1px dashed #64748b;background:#1e1a36;cursor:pointer}
 .msx .v-faces .v-soon1 .fs{display:flex;flex:none}
 .msx .v-faces .lk.soon.v-soon1 .fs img{filter:grayscale(1) brightness(.75);width:34px;height:34px;margin-left:-8px;border-width:1.5px}.msx .v-faces .v-soon1 .fs img:first-child{margin-left:0}
