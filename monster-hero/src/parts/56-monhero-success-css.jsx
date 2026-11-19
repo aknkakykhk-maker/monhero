@@ -1222,5 +1222,9 @@ const MSX_CSS = `
 .msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
 .msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
 .msx .chip::after{content:"";position:absolute;inset:-10px -2px}
+/* M-6 の残り(2026-11-19 r1119-013 ⑥): 詳しくのタブ(高さ24)・図鑑の分類の札と助手の札(24)・詳しくを開く札(22)・大会の月の ◀ ▶(30) */
+.msx .msx-md-tabs button,.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-dt-more,.msx .ar{position:relative}
+.msx .msx-md-tabs button::after,.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-dt-more::after{content:"";position:absolute;inset:-10px -2px}
+.msx .ar::after{content:"";position:absolute;inset:-7px 0}
 `;
 
