@@ -73,7 +73,7 @@ const labelOf = (tool, code) => { for (const [re, l] of LABELS[tool] || []) if (
 // 場面のまとまりと、添える参考の止め絵(docs/reference/line-mf/ の止め絵。REF-MAP.md の行に合わせた)
 const REF = 'docs/reference/line-mf';
 const AREAS = [
-  { key: 'home', re: /^home:|^msx:(H|RW|HB|OV)/, name: '入口・モンサクのホーム', ref: `${REF}/master-monster-2026-11-14/01-lab-menu.png` },
+  { key: 'home', re: /^home:monsuc-(story|home|new|basemon)$|^msx:(H|RW|HB|OV)/, name: '入口・モンサクのホーム', ref: `${REF}/master-monster-2026-11-14/01-lab-menu.png` },
   { key: 'rank', re: /^home:monsuc-rank/, name: 'ランキング', ref: null },
   { key: 'help', re: /^home:monsuc-(help|assistant)/, name: 'ヘルプ・助手の説明', ref: null },
   { key: 'dex', re: /^home:monsuc-dex|^msx:DX/, name: 'イベント図鑑', ref: null },
@@ -201,11 +201,18 @@ const writeFindings = (results, usd) => {
   if ((has('--send') || has('--fetch')) && gw.ensureProxyEnv()) return;
   if (has('--fetch')) {
     const b = JSON.parse(fs.readFileSync(path.join(OUT, 'batch.json'), 'utf8'));
-    const r = await gw.send({ action: 'batch_get', batch_id: b.batch_id });
-    if (r.status !== 200 || !r.json?.ok) { console.log(`受け取れない: ${r.status} ${JSON.stringify(r.json).slice(0, 200)}`); process.exit(1); }
-    if (!r.json.results) { console.log(`まだ終わっていない: ${r.json.processing_status} ${JSON.stringify(r.json.request_counts || {})}`); process.exit(3); }
-    fs.writeFileSync(path.join(OUT, 'batch-results.json'), JSON.stringify(r.json, null, 1));
-    writeFindings(r.json.results, r.json.usd ?? r.json.usd_actual ?? '?');
+    const results = [];
+    let usd = 0, waiting = 0;
+    for (const x of b.batches || [b]) {
+      const r = await gw.send({ action: 'batch_get', batch_id: x.batch_id });
+      if (r.status !== 200 || !r.json?.ok) { console.log(`受け取れない: ${r.status} ${JSON.stringify(r.json).slice(0, 200)}`); process.exit(1); }
+      if (!r.json.results) { waiting++; console.log(`  まだ: ${(x.custom_ids || []).join(',')} ${r.json.processing_status} ${JSON.stringify(r.json.request_counts || {})}`); continue; }
+      results.push(...r.json.results);
+      usd += Number(r.json.usd) || 0;
+    }
+    if (waiting) { console.log(`まだ終わっていないバッチ ${waiting}本`); process.exit(3); }
+    fs.writeFileSync(path.join(OUT, 'batch-results.json'), JSON.stringify({ results }, null, 1));
+    writeFindings(results, Math.round(usd * 10000) / 10000);
     return;
   }
   const only = opt('--only').split(',').filter(Boolean);
@@ -240,8 +247,17 @@ const writeFindings = (results, usd) => {
     writeFindings(results, Math.round(spent * 10000) / 10000);
     return;
   }
-  const r = await gw.send({ action: 'batch_submit', kind: 'ui-check', label: 'monsuc-visual', requests: reqs.map((q) => ({ custom_id: q.custom_id, request: q.request })) });
-  if (r.status !== 200 || !r.json?.ok) { console.log(`断られた・失敗: ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`); process.exit(1); }
-  fs.writeFileSync(path.join(OUT, 'batch.json'), JSON.stringify({ batch_id: r.json.batch_id, id: r.json.id, usd_est: r.json.usd_est, requests: r.json.requests }, null, 1));
-  console.log(`バッチを頼んだ: ${r.json.requests}本・見積り $${r.json.usd_est}。結果は --fetch で受け取る(終わるまで数分〜1時間)`);
+  // 入り口(Edge Function)は1回に受け取れる大きさに限りがある(35本・約70MB を一度に送ると WORKER_RESOURCE_LIMIT)。
+  // --per-batch 本ずつ(既定 3本 ≒ 6MB)に分けて頼む。batch.json に全部の batch_id を残す
+  const PER = Number(opt('--per-batch', '3'));
+  const sent = [];
+  for (let i = 0; i < reqs.length; i += PER) {
+    const part = reqs.slice(i, i + PER);
+    const r = await gw.send({ action: 'batch_submit', kind: 'ui-check', label: `monsuc-visual-${part[0].custom_id}`, requests: part.map((q) => ({ custom_id: q.custom_id, request: q.request })) });
+    if (r.status !== 200 || !r.json?.ok) { console.log(`${part[0].custom_id} から断られた・失敗: ${r.status} ${JSON.stringify(r.json).slice(0, 300)}`); break; }
+    sent.push({ batch_id: r.json.batch_id, id: r.json.id, usd_est: r.json.usd_est, custom_ids: part.map((q) => q.custom_id) });
+    fs.writeFileSync(path.join(OUT, 'batch.json'), JSON.stringify({ batches: sent }, null, 1));
+    console.log(`  ${part.map((q) => q.custom_id).join(',')} を頼んだ(見積り $${r.json.usd_est})`);
+  }
+  console.log(`バッチを ${sent.length}本 頼んだ。結果は --fetch で受け取る(終わるまで数分〜1時間)`);
 })().catch((e) => { console.error(e.message); process.exit(1); });
