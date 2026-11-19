@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1ee97581375fe352
+// source-sha256: 66b75bbf14d99457
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -186140,7 +186140,7 @@ function MsxR3GameOver({
   }, "もう1回 初めから ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "はじめの画面へ",
+    back: "初めの画面へ",
     onBack: onPause,
     body: body,
     foot: foot
@@ -186315,7 +186315,7 @@ function MsxR3Retire({
     }));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: s.pts > 0 ? '戻る' : 'はじめの画面へ',
+      back: s.pts > 0 ? '戻る' : '初めの画面へ',
       onBack: s.pts > 0 ? () => setStep('e3') : onPause,
       right: right,
       body: body,
@@ -186595,7 +186595,7 @@ function MsxR3Retire({
     }, "決定 ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "はじめの画面へ",
+      back: "初めの画面へ",
       onBack: onPause,
       right: right,
       body: body,
@@ -186979,7 +186979,7 @@ function MsxR3Retire({
     }, "この記録はランキングに載せられませんでした")) : null);
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "はじめの画面へ",
+      back: "初めの画面へ",
       onBack: () => {
         setRun(null);
         onPause();
