@@ -604,6 +604,9 @@ const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 // きゅうこの冬服のお話「冬支度 ～きゅうこの模様替え～」(2026-11-16 社長)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
 const KYUKO_WINTER_STORY_ID = 'kyuko_winter_2026_11';
+// ききのツインテールのお話「イメチェン ～ききのツインテール～」(2026-11-20 社長)。id は data/assistants.js の EVENT_REPLAYS と同じ。
+// 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
+const KIKI_TWINTAIL_STORY_ID = 'kiki_twintail_2026_11';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
 // ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。

@@ -28,6 +28,7 @@ HEADS = {
     'atsu': dict(ref_h=775, name='atsu', stand='stand-normal', prefix='atsu', top=30, eye=100, chin=128, chin_frac=0.43, above=None),
     'kyuko': dict(ref_h=776, name='kyuko', stand='stand-normal', prefix='kyuko', top=20, eye=100, chin=135, chin_frac=0.43, above=None),
     'kyuko:winter': dict(ref_h=2924, name='kyuko_winter', stand='stand-winter', prefix='kyuko', top=25, eye=442, chin=572, chin_frac=0.43, above=None),
+    'kiki:twintail': dict(ref_h=2812, name='kiki_twintail', stand='stand-twintail', prefix='kiki', top=322, eye=521, chin=691, chin_frac=0.43, above=0.95),
     'sorashido': dict(ref_h=769, name='sorashido', stand='stand-normal', prefix='sorashido', top=12, eye=89, chin=131, chin_frac=0.43, above=None),  # 馬骨(2026-11-15)。補正(いままでの絵)は stand-hosei へ移した(作り直さない)
 }
 
