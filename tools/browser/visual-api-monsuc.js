@@ -37,7 +37,7 @@ try { sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp')); } catc
 
 const PROMPT_FILE = path.join(__dirname, 'prompts', 'monsuc-ui-check.md');
 const MAX_SCENES_PER_REQ = 6; // 1つの頼みに 6場面 × 3つの大きさ = 18枚 + 参考 1枚(入り口の上限は20枚)
-const MAX_TOKENS = 12000;
+const MAX_TOKENS = Number(opt('--max-tokens', '24000')); // 12000 だと考えに使って 35本中12本が途中で切れた(2026-11-19)
 const EFFORT = opt('--effort', 'high');
 const MAX_USD = Number(opt('--max-usd', '15'));
 const SIZE_OF = { '': 'tate', land: 'yoko', s568: 'yoko-s' };
@@ -172,6 +172,10 @@ const parseJson = (text) => {
   try { const j = JSON.parse(t); return Array.isArray(j) ? j : []; } catch (e) {}
   const s = t.indexOf('['), e = t.lastIndexOf(']');
   if (s >= 0 && e > s) { try { const j = JSON.parse(t.slice(s, e + 1)); return Array.isArray(j) ? j : []; } catch (e2) {} }
+  // 出力の上限で切れた返事は、最後まで閉じた1件までを読む
+  for (let k = t.lastIndexOf('}'); s >= 0 && k > s; k = t.lastIndexOf('}', k - 1)) {
+    try { const j = JSON.parse(t.slice(s, k + 1) + ']'); if (Array.isArray(j)) return j; } catch (e3) {}
+  }
   return null;
 };
 
@@ -218,7 +222,10 @@ const writeFindings = (results, usd) => {
   const only = opt('--only').split(',').filter(Boolean);
   let scenes = collect();
   if (only.length) scenes = scenes.filter((s) => only.some((o) => s.key.includes(o) || s.label.includes(o)));
-  const reqs = await buildRequests(scenes);
+  let reqs = await buildRequests(scenes);
+  // --groups g002,g003 … 前に送った頼みのうち、その番号だけ送り直す(同じ止め絵なら番号は同じになる)
+  const groups = opt('--groups').split(',').filter(Boolean);
+  if (groups.length) reqs = reqs.filter((q) => groups.includes(q.custom_id));
   let usd = 0;
   for (const q of reqs) {
     const e = await gw.estimate(q.request, { batch: !has('--message') });
