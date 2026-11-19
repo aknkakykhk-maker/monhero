@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7a8559cfd8bef9f
+// source-sha256: 8993c71f55d72b38
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15545,6 +15545,52 @@ const grantCompensationGifts = (gifts, now = Date.now(), waivedIds = []) => {
   return {
     granted: true,
     gifts: [...added, ...list]
+  };
+};
+const OUTAGE_COMPENSATION_20261119 = Object.freeze({
+  id: 'gift_compensation_20261119_outage',
+  title: 'お詫びのしるし',
+  description: '11月19日のサーバー障害のお詫びです。ご迷惑をおかけしました。対象は11月19日13:00までにログインされた方です。',
+  rewards: Object.freeze([{
+    type: 'diamond',
+    amount: 5000000
+  }]),
+  windowStartMs: Date.parse('2026-11-19T00:00:00+09:00'),
+  windowEndMs: Date.parse('2026-11-19T13:00:00+09:00')
+});
+const giftTimestampInOutageWindow = value => {
+  const t = Date.parse(value || '');
+  return Number.isFinite(t) && t >= OUTAGE_COMPENSATION_20261119.windowStartMs && t <= OUTAGE_COMPENSATION_20261119.windowEndMs;
+};
+const outageCompensationEligible = gifts => (Array.isArray(gifts) ? gifts : []).some(gift => giftTimestampInOutageWindow(gift?.createdAt) || giftTimestampInOutageWindow(gift?.claimedAt));
+const grantOutageCompensationGift = (gifts, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const def = OUTAGE_COMPENSATION_20261119;
+  if (list.some(item => item?.id === def.id)) return {
+    granted: false,
+    gifts: list
+  };
+  if (!outageCompensationEligible(list)) return {
+    granted: false,
+    gifts: list
+  };
+  const createdAt = new Date(now).toISOString();
+  const expiresAt = new Date(Number(now) + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const gift = {
+    id: def.id,
+    source: 'compensation',
+    title: def.title,
+    description: def.description,
+    rewards: def.rewards.map(r => ({
+      ...r
+    })),
+    createdAt,
+    expiresAt,
+    claimedAt: null
+  };
+  return {
+    granted: true,
+    gifts: [gift, ...list]
   };
 };
 const PLAYER_COMPENSATION_GIFTS = [{
@@ -241846,11 +241892,12 @@ function MonsterHeroGame() {
         }
       }
       const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
+      const outageGrant = grantOutageCompensationGift(compensationGrant.gifts, Date.now());
       let currentPlayerId = '';
       try {
         currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
       } catch {}
-      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(outageGrant.gifts, currentPlayerId);
       const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
       const grandOpenGrant = grantGrandOpenAllGift(playerCompensationGrant0.gifts, {
         done: grandOpenAllDone,

@@ -7572,11 +7572,14 @@ function MonsterHeroGame() {
         }
       }
       const compensationGrant = grantCompensationGifts(loginGrant.gifts, Date.now(), waivedCompensationIds);
+      // 2026-11-19のサーバー障害のお詫び。対象期間(00:00〜13:00)にログインした時刻入りの
+      // 記録が端末に残っている人だけに届ける(判定は17の grantOutageCompensationGift)
+      const outageGrant = grantOutageCompensationGift(compensationGrant.gifts, Date.now());
       // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
       // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
       let currentPlayerId = '';
       try { currentPlayerId = window.localStorage.getItem('mh_player_id') || ''; } catch {}
-      const playerCompensationGrant0 = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      const playerCompensationGrant0 = grantPlayerCompensationGifts(outageGrant.gifts, currentPlayerId);
       // モンヒロビート本オープン記念ギフト(すでに遊んでいる人全員へ1回だけ・2026-11-07)。本オープンの印が偽のあいだは何もしない。
       // ギフトを足してから印を立てる(足す前に閉じられても、次の起動で配り直せる。同じidがあれば足さない)
       const grandOpenAllDone = await storeGet(GRAND_OPEN_ALL_GIFT_KEY, false, false);
