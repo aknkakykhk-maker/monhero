@@ -1,0 +1,235 @@
+// 見た目の点検(r1119-014 PR3): モンヒロ全体の「撮る場面」の一覧。
+//
+// どの場面も、ボット用のまっさらなブラウザに「しばらく遊んでいる人」の種(tools/playbot/lib/seeds.js の veteranSeed)を入れ、
+// HOME から人と同じボタンを押して開く。デバッグの合言葉・DEBUG MENU は使わない。通信はにせの Supabase が受け止める
+// (本番の保存・ランキングへは送らない。tools/playbot/lib/session.js)。
+//
+// 1件 = { id(英数字・止め絵のファイル名), area(画面のまとまり), name(日本語の名前), go(s) … HOME から開く手順 }
+//   go は true/false を返す(開けなかったら false。報告に「開けなかった」と出る)。
+//   steps(正規表現の並び)だけで足りる場面は via([...]) で書く。
+// group: 'monsuc' の場面は既定では撮らない(モンサクは直しの公開のあとに回す。--with-monsuc で撮る)。
+// モンサクの奥の画面(育成の途中・大会・合体など約200場面)は、既存の撮影の道具を使う(下の MONSUC_DEEP。visual-shoot.js --monsuc-deep)。
+'use strict';
+
+// 正規表現の並びを、HOME から順に押す
+// ★小さい横(568×320)ではボタンが画面の下に隠れていることが多いので、見えていなければスクロールして出してから押す
+const tapAny = async (s, re) => {
+  if (await s.tapLabel(re, 1500)) return true;
+  const hit = await s.page.evaluate((src) => {
+    const re = new RegExp(src);
+    const els = [...document.querySelectorAll('button, [role="button"], a[href]')].filter((el) => !el.disabled && el.getClientRects().length);
+    const el = els.find((x) => re.test((x.getAttribute('aria-label') || x.innerText || '').replace(/\s+/g, ' ').trim()));
+    if (!el) return false;
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    return true;
+  }, re.source).catch(() => false);
+  if (!hit) return false;
+  await s.wait(500);
+  return s.tapLabel(re, 1500);
+};
+const via = (steps) => async (s) => {
+  for (const re of steps) {
+    if (!(await tapAny(s, re))) return false;
+    await s.dismissOverlays(6);
+  }
+  return true;
+};
+
+// HOME の札をラベル(aria-label か文字)で押す
+const homeBtn = (label) => async (s) => {
+  const ok = await s.page.evaluate((l) => {
+    const b = [...document.querySelectorAll('button')].find((x) => (x.getAttribute('aria-label') || x.innerText || '').trim() === l);
+    if (b) b.click();
+    return !!b;
+  }, label);
+  await s.wait(1800);
+  await s.dismissOverlays(10);
+  return ok;
+};
+const then = (first, steps) => async (s) => (await first(s)) && via(steps)(s);
+
+// モンヒロバトルの仕組み(クラシック・タクティクス・クイック)の画面
+const battleSystem = (id) => async (s) => {
+  if (!(await homeBtn('モンヒロバトル')(s))) return false;
+  const ok = await s.page.evaluate((x) => { const b = document.querySelector(`[data-battle-system="${x}"]`); if (b && !b.disabled) b.click(); return !!b && !b.disabled; }, id);
+  await s.wait(1500);
+  await s.dismissOverlays(40);
+  return ok;
+};
+
+// 対戦の画面まで進む(仕組み → モードの「難易度を選ぶ」 → 挑戦できる難易度 → 先頭の子 → 勇者モンに選ぶ → 距離 → アシストカードを1枚覚える)。
+// ★playbot の enterQuickBattle は勇者モンの札の探し方が今の画面と合わず(「くわしく見る」が札の中に無い)一覧で止まり、
+//   小さい横では画面の外のボタンを押せないので、ここでは全部 tapAny(見えなければスクロールして押す)で進む
+const pickMode = (mode) => async (s) => {
+  const r = await s.page.evaluate((id) => {
+    const cards = [...document.querySelectorAll(`[data-battle-mode="${id}"]`)];
+    const card = cards[0];
+    if (!card) return 'no-card';
+    card.scrollIntoView({ block: 'center', inline: 'center' });
+    const b = [...card.querySelectorAll('button')].find((x) => /難易度を選ぶ|遊ぶ|挑戦/.test(x.textContent));
+    if (!b) return 'no-button';
+    if (b.disabled) return 'locked';
+    b.click();
+    return 'ok';
+  }, mode);
+  await s.wait(1500);
+  await s.dismissOverlays(10);
+  return r === 'ok';
+};
+// ★横・PC では難易度の札が何枚も並んで見え、選ばれていない札のボタンを押すと「その札を選ぶ」だけで始まらない。
+//   選ばれた札(article.on)のボタンを押し、勇者モンの画面へ進んだかを見る。進まなければ前の難易度へ送ってやり直す
+const pickDifficulty = async (s) => {
+  for (let i = 0; i < 10; i++) {
+    const r = await s.page.evaluate(() => {
+      const card = document.querySelector('article[data-difficulty-card].on') || document.querySelector('article[data-difficulty-card]');
+      const b = card && [...card.querySelectorAll('button')].find((x) => /この難易度で挑戦/.test(x.innerText || ''));
+      if (!b) return 'none';
+      if (b.disabled) return 'locked';
+      b.scrollIntoView({ block: 'center', inline: 'center' });
+      b.click();
+      return 'ok';
+    }).catch(() => 'none');
+    if (r === 'none' && !(await tapAny(s, /この難易度で挑戦/))) return false;
+    await s.wait(1500);
+    await s.dismissOverlays(6);
+    if (/勇者モン|編成|枠/.test(await s.screenName()) || (await s.page.evaluate(() => !!document.querySelector('[data-pro-party]')))) return true;
+    if (r === 'locked' && !(await tapAny(s, /^前の難易度$/))) return false;
+  }
+  return false;
+};
+const startBattle = async (s, system, mode = 'challenge') => {
+  if (!(await battleSystem(system)(s))) return false;
+  if (system !== 'systemQuick' && !(await pickMode(mode)(s))) return false;
+  if (!(await pickDifficulty(s))) return false;
+  await s.dismissOverlays(6);
+  if (!(await tapAny(s, /総合力/))) return false;
+  await tapAny(s, /勇者モンに選ぶ/);
+  await tapAny(s, /^(零|近|中|遠)距離/);
+  await s.dismissOverlays();
+  if (await tapAny(s, /新規習得/)) await tapAny(s, /^習得する$/);
+  await s.wait(2500);
+  await s.dismissOverlays(6);
+  return s.page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]'));
+};
+// タクティクスプロの編成(上の枠へ入れる → 勇者モンを選ぶ → 置き場所・アシストカード)を、playbot の tactics.js と同じ順で押して対戦まで進む
+const startTactics = async (s) => {
+  if (!(await battleSystem('systemTactics')(s)) || !(await pickMode('tacticsPro')(s)) || !(await pickDifficulty(s))) return false;
+  for (let i = 0; i < 40; i++) {
+    if (await s.page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'))) return true;
+    await s.dismissOverlays(4);
+    const step = await s.page.evaluate(() => {
+      const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
+      const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
+      if (document.querySelector('[data-pro-party]')) {
+        const done = document.querySelector('[data-pro-party-done]');
+        if (done) {
+          if (!done.disabled) { done.click(); return 'done'; }
+          const h = document.querySelector('[data-pro-party-slot][aria-label$="を勇者モンにする"]');
+          if (h) { h.click(); return 'hero'; }
+        }
+        const next = document.querySelector('[data-pro-party-next]');
+        if (next && !next.disabled) { next.click(); return 'next'; }
+        const put = live.find((x) => /を枠に入れる$/.test(x.getAttribute('aria-label') || ''));
+        if (put) { put.click(); return 'put'; }
+        const chosen = new Set([...document.querySelectorAll('[data-pro-party-slot][aria-label$="を枠から外す"]')].map((x) => x.getAttribute('aria-label').replace(/を枠から外す$/, '')));
+        const t = [...document.querySelectorAll('[data-pro-pick-scroll] button[aria-label$="を見る"]')].find((x) => !x.disabled && !chosen.has(x.getAttribute('aria-label').replace(/を見る$/, '')));
+        if (t) { t.click(); return 'focus'; }
+      }
+      const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|(?:始|はじ)める|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
+      const c = pick(/^(習得する|強化する)$/) || pick(/新規習得|強化後/) || pick(/^(零|近|中|遠)距離/); if (c) { c.click(); return 'c'; }
+      const m = live.find((x) => /総合力/.test(x.textContent) && !/DEBUG/.test(x.textContent)); if (m) { m.click(); return 'mon'; }
+      return null;
+    }).catch(() => null);
+    if (!step) break;
+    await s.wait(900);
+  }
+  return s.page.evaluate(() => /WAVE 1\/\d+/.test(document.body.innerText) && !!document.querySelector('[data-battle-action]'));
+};
+const heroSelect = async (s) => {
+  if (!(await battleSystem('systemClassic')(s)) || !(await pickMode('challenge')(s)) || !(await pickDifficulty(s))) return false;
+  await s.dismissOverlays(6);
+  return /勇者モン/.test(await s.screenName());
+};
+
+const SCENES = [
+  // ---- HOME まわり ----
+  { id: 'home', area: 'HOME', name: 'HOME', go: async () => true },
+  { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/]) },
+  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: via([/の説明を開く$/]) },
+  { id: 'profile', area: 'HOME', name: 'プロフィール', go: via([/^プロフィールを開く$/]) },
+  { id: 'mission', area: 'HOME', name: 'ミッション', go: via([/^ミッション/]) },
+  { id: 'gift', area: 'HOME', name: 'ギフト', go: via([/^ギフト/]) },
+  { id: 'temple', area: 'HOME', name: '神殿', go: via([/^神殿$/]) },
+  // ---- マーケット ----
+  { id: 'market', area: 'マーケット', name: 'マーケット', go: via([/^マーケット$/]) },
+  { id: 'market-diamond', area: 'マーケット', name: 'ダイヤショップ', go: via([/^マーケット$/, /^ダイヤショップ$/]) },
+  // ---- カードバトル(モンヒロバトル) ----
+  { id: 'battle-menu', area: 'カードバトル', name: 'モンヒロバトル(仕組みを選ぶ)', go: homeBtn('モンヒロバトル') },
+  { id: 'battle-rule', area: 'カードバトル', name: 'クラシックバトルの詳しいルール', go: then(homeBtn('モンヒロバトル'), [/^クラシックバトルの詳しいルール$/]) },
+  { id: 'battle-classic', area: 'カードバトル', name: 'クラシック(モード選択)', go: battleSystem('systemClassic') },
+  { id: 'battle-quick', area: 'カードバトル', name: 'クイックモード(難易度)', go: battleSystem('systemQuick') },
+  { id: 'battle-ranking', area: 'カードバトル', name: 'ランキング', go: then(homeBtn('モンヒロバトル'), [/ランキング$/]) },
+  { id: 'battle-hero', area: 'カードバトル', name: '勇者モンを選ぶ', go: heroSelect },
+  { id: 'battle-play', area: 'カードバトル', name: 'クラシックの対戦中', go: (s) => startBattle(s, 'systemClassic') },
+  { id: 'battle-play-quick', area: 'カードバトル', name: 'クイックの対戦中', go: (s) => startBattle(s, 'systemQuick') },
+  // ---- タクティクス ----
+  { id: 'tactics-mode', area: 'タクティクス', name: 'タクティクス(モード選択)', go: battleSystem('systemTactics') },
+  // タクティクスは「プロ」だけ遊べる(ほかは準備中。2026-11-19)
+  { id: 'tactics-diff', area: 'タクティクス', name: 'タクティクスプロ(難易度)', go: async (s) => (await battleSystem('systemTactics')(s)) && pickMode('tacticsPro')(s) },
+  { id: 'tactics-play', area: 'タクティクス', name: 'タクティクスプロの対戦中', go: startTactics },
+  // ---- モンヒロビート ----
+  { id: 'beat-top', area: 'モンヒロビート', name: 'モンヒロビート', go: homeBtn('モンヒロビート') },
+  { id: 'beat-songs', area: 'モンヒロビート', name: '曲えらび(ソロライブ)', go: async (s) => {
+    if (!(await homeBtn('モンヒロビート')(s))) return false;
+    if (!(await s.tapLabel(/ソロライブ/, 2000))) return false;
+    await s.dismissOverlays(6);
+    for (let k = 0; k < 3 && (await s.tapLabel(/^この案内を閉じる$/, 500)); k++);
+    return true;
+  } },
+  // ---- MFバトルカード ----
+  { id: 'card-top', area: 'カードバトル', name: 'MFバトルカード', go: homeBtn('MFバトルカード') },
+  // ---- 助手ライフ ----
+  { id: 'life-top', area: '助手ライフ', name: '助手ライフ', go: homeBtn('助手ライフ') },
+  { id: 'life-chat', area: '助手ライフ', name: 'おしゃべり', go: via([/おしゃべり$/]) },
+  // ---- M/B管理・図鑑 ----
+  { id: 'mb', area: '図鑑', name: 'M/B管理', go: via([/^M\/B管理$/]) },
+  { id: 'mb-base', area: '図鑑', name: 'ベースモン一覧', go: via([/^M\/B管理$/, /^ベースモン一覧/]) },
+  { id: 'mb-master', area: '図鑑', name: 'マスモン一覧(バトル)', go: via([/^M\/B管理$/, /^マスモン一覧\(バトル\)/]) },
+  { id: 'mb-master-beat', area: '図鑑', name: 'マスモン一覧(モンヒロビート)', go: via([/^M\/B管理$/, /^マスモン一覧\(モンヒロビート\)/]) },
+  { id: 'mb-dex', area: '図鑑', name: 'モンスター図鑑', go: via([/^M\/B管理$/, /^モンスター図鑑/]) },
+  { id: 'mb-party', area: '図鑑', name: 'モンスター編成', go: via([/^M\/B管理$/, /^モンスター編成/]) },
+  { id: 'mb-ranch', area: '図鑑', name: '放牧設定', go: via([/^M\/B管理$/, /^放牧設定/]) },
+  { id: 'mb-auto', area: '図鑑', name: 'AUTO設定', go: via([/^M\/B管理$/, /^AUTO設定/]) },
+  { id: 'mb-assist', area: '図鑑', name: 'アシストカード', go: via([/^M\/B管理$/, /^アシストカード$/]) },
+  // ---- 設定 ----
+  { id: 'settings', area: '設定', name: '設定', go: via([/^設定$/]) },
+  { id: 'settings-battle', area: '設定', name: 'バトル設定', go: via([/^設定$/, /^バトル設定/]) },
+  { id: 'settings-sound', area: '設定', name: '音量設定', go: via([/^設定$/, /^音量設定/]) },
+  { id: 'settings-bgm', area: '設定', name: 'BGMアレンジ', go: via([/^設定$/, /^BGMアレンジ/]) },
+  { id: 'settings-title', area: '設定', name: 'タイトル画像アレンジ', go: via([/^設定$/, /^タイトル画像アレンジ/]) },
+  { id: 'settings-home', area: '設定', name: 'ホーム画面アレンジ', go: via([/^設定$/, /^ホーム画面アレンジ/]) },
+  { id: 'settings-theme', area: '設定', name: '画面テーマ', go: via([/^設定$/, /^画面テーマ/]) },
+  // ---- ヘルプ ----
+  { id: 'help', area: 'ヘルプ', name: 'ヘルプ(モンヒロバトルから)', go: then(homeBtn('モンヒロバトル'), [/ヘルプ$/]) },
+  // ---- モンサク(既定では撮らない) ----
+  { id: 'monsuc-home', area: 'モンサク', group: 'monsuc', name: 'モンサクのホーム', go: homeBtn('モンヒロサクセス β') },
+  { id: 'monsuc-box', area: 'モンサク', group: 'monsuc', name: 'マスモンボックス(モンサク)', go: via([/^M\/B管理$/, /^マスモンボックス\(モンサク\)/]) },
+];
+
+// 4つの大きさ(依頼文: 縦 390×844・横 844×390・小さい横 568×320・PC 1280×800)
+const SIZES = [
+  { tag: 'tate', w: 390, h: 844, name: '縦' },
+  { tag: 'yoko', w: 844, h: 390, name: '横' },
+  { tag: 'yoko-s', w: 568, h: 320, name: '小さい横' },
+  { tag: 'pc', w: 1280, h: 800, name: 'PC' },
+];
+
+// モンサクの奥の画面は既存の道具で撮る(どれも画面の部品を直接置いて開く。合言葉は使わない)。
+// その道具が持つ大きさの名札だけ渡せる(568×320・PC はまだ無い。足すときはモンサクの部と相談)
+const MONSUC_DEEP = [
+  { tool: 'tools/success/success-shoot.js', env: { SHOT_SIZES: 'base,land,s320' }, note: '回2 約105場面' },
+  { tool: 'tools/success/success-r3-shoot.js', env: {}, note: '回3(大会・修行・引退・保存枠・合体) 約85場面・縦390 と 320' },
+  { tool: 'tools/success/success-arc-shoot.js', env: {}, note: 'みゅあ編 16場面' },
+];
+
+module.exports = { SCENES, SIZES, MONSUC_DEEP, tapAny };
