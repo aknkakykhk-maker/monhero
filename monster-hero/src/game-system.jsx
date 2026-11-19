@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 96ae6861a9f695a8
+// generated-sha256: d64bb0f7df47046d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84900,17 +84900,24 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   const aw = open && open.awake && typeof msxPickLine === 'function' ? msxPickLine({ ...c2 }, scene, { bondLv: 10 }) : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? (nick || 'モンスター') : (typeof msxAidName === 'function' ? msxAidName(l.who) : l.who));
   const chOf = (x) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[x.id] : null; return e && e.ch && (e.ch.a || e.ch.b) ? Object.keys(e.ch) : x.ep ? ['a', 'b'] : x.id === 'issa' && typeof MSX_ISSA_KEYS !== 'undefined' ? MSX_ISSA_KEYS.map((k) => k.key) : []; };
+  // 2026-11-20 社長「見た目悪い」: 種類は1列の横に流れるタブ、助手は顔の大きい別の見た目の列、一覧は 読んだ・まだ・準備中 を見分ける形に(閉じるは ModalSheet)
+  const aidOpen = (a) => (typeof msxBetaAidOk !== 'function' || msxBetaAidOk(a)); // 遊べる助手(β はみゅあだけ・56-monsuc-beta.jsx)
+  const eps = msxSuc && msxSuc.SUC && msxSuc.SUC.ASTORY ? msxSuc.SUC.ASTORY.eps : [];
+  const subOf = (x) => { if (x.ep === 'special') return '最後の期・仲良し度 Lv5 から'; const e = Number.isInteger(x.ep) ? eps[x.ep - 1] : null; if (e && typeof msxSuc.SUC.periodOf === 'function') return `${msxSuc.SUC.periodOf(e.turn).name}・${e.turn}ターン目`; return x.aid && /\.uq\./.test(x.id) ? '助手の日々' : ''; };
+  const TAB_ICON = { story: '📕', daily: '☀️', team: '🤝', self: '🌱', season: '🎐', cup: '🏆', issa: '🧪', awake: '✨' };
+  const aids = [...new Set(list.story.map((x) => x.aid))];
   return (
-    <div className="msx-ov msx-fade msx-dex" onClick={onClose} data-msx-dex>
-      <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
-        <h3>📖 イベント図鑑<span className="msx-dex-all">{got} / {all.length}</span></h3>
-        <div className="msx-dex-bar"><i style={{ width: `${all.length ? (got / all.length) * 100 : 0}%` }}/></div>
-        <div className="msx-dex-tabs">{MSX_DEX_TABS.map((t) => { const L = list[t.key] || []; const n = L.filter((x) => seen.ev[x.id]).length; return (
-          <button type="button" key={t.key} className={t.key === tab ? 'on' : ''} onClick={() => { setTab(t.key); setOpen(null); }} data-msx-dex-tab={t.key}>{t.name}<small>{n}/{L.length}</small></button>); })}</div>
-        {tab === 'story' ? <div className="msx-dex-aids">{[...new Set(list.story.map((x) => x.aid))].map((a) => { const L = list.story.filter((x) => x.aid === a); return (
-          <button type="button" key={a} className={a === pickAid ? 'on' : ''} onClick={() => { setPickAid(a); setOpen(null); }}>{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{typeof msxAidName === 'function' ? msxAidName(a) : a}<small>{L.filter((x) => seen.ev[x.id]).length}/{L.length}</small></button>); })}</div> : null}
-        {open ? (
-          <div className="msx-dex-read" data-msx-dex-read={open.id}>
+    <ModalSheet title={<span className="mdx-ttl">📖 イベント図鑑<b>{got}<small> / {all.length}</small></b></span>} label="イベント図鑑" onClose={onClose} dataProps={{ 'data-msx-dex': '' }} bodyClassName="mdx">
+      <div className="mdx-bar"><i style={{ width: `${all.length ? (got / all.length) * 100 : 0}%` }}/></div>
+      <div className="mdx-tabs" role="tablist">{MSX_DEX_TABS.map((tb) => { const L = list[tb.key] || []; const n = L.filter((x) => seen.ev[x.id]).length; return (
+        <button type="button" role="tab" aria-selected={tb.key === tab} key={tb.key} className={tb.key === tab ? 'on' : ''} onClick={() => { setTab(tb.key); setOpen(null); }} data-msx-dex-tab={tb.key}>
+          <span className="i">{TAB_ICON[tb.key] || '📄'}</span><span className="n">{tb.name}</span><small>{n}/{L.length}</small></button>); })}</div>
+      {tab === 'story' && !open ? <div className="mdx-aids">{aids.map((a) => { const L = list.story.filter((x) => x.aid === a); const op = aidOpen(a); return (
+        <button type="button" key={a} className={`${a === pickAid ? 'on' : ''}${op ? '' : ' lock'}`} onClick={() => { setPickAid(a); setOpen(null); }} data-msx-dex-aid={a}>
+          <span className="f">{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{op ? null : <em>🔒</em>}</span>
+          <b>{typeof msxAidName === 'function' ? msxAidName(a) : a}</b><small>{op ? `${L.filter((x) => seen.ev[x.id]).length}/${L.length}` : '準備中'}</small></button>); })}</div> : null}
+      {open ? (
+          <div className="mdx-read msx-dex-read" data-msx-dex-read={open.id}>
             <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => (chosen ? setChosen(null) : setOpen(null))} data-msx-dex-back>← 戻る</button></div>
             {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
@@ -84923,18 +84930,74 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
               <div key={c} className={`ch${known && ev0 && ev0.choices && open.id !== 'issa' ? ' tap' : ''}`} {...(known && ev0 && ev0.choices && open.id !== 'issa' ? { role: 'button', tabIndex: 0, onClick: () => setChosen(c), 'data-msx-dex-ch': c } : {})}><b>{known ? t : '？？？'}{known && ev0 && ev0.choices && open.id !== 'issa' ? <small className="msx-dex-go"> 続きを読む ▶</small> : null}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
             {chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? <div className="msx-note" style={{ fontSize: 10 }}>{MSX_FX_NOTE}</div> : null}
           </div>
-        ) : (
-          <div className="msx-dex-list">{rows.length ? rows.map((x) => { const known = Boolean(seen.ev[x.id]); return (
-            <button type="button" key={x.id} className={`msx-dex-row${known ? '' : ' no'}`} disabled={!known} onClick={() => setOpen(x)} data-msx-dex-row={x.id}>
-              <span>{known ? x.title : '？？？'}</span><small>{known ? '読む ▶' : 'まだ見ていない'}</small></button>); }) : <div className="msx-note">まだありません</div>}</div>
-        )}
-        <button type="button" className="msx-btn" onClick={onClose}>閉じる</button>
-      </div>
-    </div>
+      ) : (
+        <div className="mdx-list">{rows.length ? rows.map((x) => { const known = Boolean(seen.ev[x.id]); const lock = x.aid && !aidOpen(x.aid); const st = known ? 'got' : lock ? 'lock' : 'no'; const sub = subOf(x); return (
+          <button type="button" key={x.id} className={`mdx-row ${st}`} disabled={!known} onClick={() => setOpen(x)} data-msx-dex-row={x.id}>
+            <span className="ic">{st === 'got' ? (x.aid && typeof msxFace === 'function' ? <img src={msxFace(x.aid, 'happy')} alt=""/> : (TAB_ICON[tab] || '📄')) : st === 'lock' ? '🔒' : '？'}</span>
+            <span className="tx"><b>{known ? x.title : x.ep ? x.title : '？？？'}</b>{sub ? <small>{sub}</small> : null}</span>
+            <em>{st === 'got' ? '読む ▶' : st === 'lock' ? '準備中' : 'まだ'}</em></button>); }) : <div className="mdx-none">まだありません</div>}</div>
+      )}
+    </ModalSheet>
   );
 }
 
 const MSX_DEX_CSS = `
+.mdx-ttl{display:flex;align-items:baseline;gap:10px;width:100%}
+.mdx-ttl b{margin-left:auto;font-size:17px;color:#fde047}.mdx-ttl b small{font-size:12px;color:#cbd5e1}
+.mdx{display:flex;flex-direction:column;gap:8px;color:#f1f5f9}
+.mdx-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;flex:none}
+.mdx-bar i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.mdx-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid #334155;flex:none;margin:0 -2px}
+.mdx-tabs::-webkit-scrollbar{display:none}
+.mdx-tabs button{flex:0 0 auto;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 8px 5px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;color:#94a3b8;font-weight:900}
+.mdx-tabs button .i{font-size:17px;line-height:1}.mdx-tabs button .n{font-size:12px;white-space:nowrap}.mdx-tabs button small{font-size:10px;color:#64748b}
+.mdx-tabs button.on{color:#fff;border-bottom-color:#fb923c;background:linear-gradient(180deg,#0000,#fb923c22)}
+.mdx-tabs button.on small{color:#fdba74}
+.mdx-aids{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;flex:none}
+.mdx-aids::-webkit-scrollbar{display:none}
+.mdx-aids button{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;color:#e2e8f0}
+.mdx-aids .f{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#1e1a36;border:3px solid #334155;box-sizing:border-box}
+.mdx-aids .f img{width:100%;height:100%;object-fit:cover}
+.mdx-aids .f em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172acc;font-style:normal;font-size:18px}
+.mdx-aids b{font-size:11.5px;font-weight:900;white-space:nowrap}.mdx-aids small{font-size:10px;color:#94a3b8}
+.mdx-aids button.on .f{border-color:#fde047;box-shadow:0 0 0 2px #fde04755,0 4px 10px #0008}
+.mdx-aids button.on b{color:#fde047}
+.mdx-aids button.lock b{color:#64748b}
+.mdx-list,.mdx-read{display:flex;flex-direction:column;gap:6px}
+.mdx-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;text-align:left;color:#fff}
+.mdx-row .ic{flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;background:#0f172a;overflow:hidden}
+.mdx-row .ic img{width:100%;height:100%;object-fit:cover}
+.mdx-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.mdx-row .tx b{font-size:13px;font-weight:900;line-height:1.3}.mdx-row .tx small{font-size:10.5px;color:#94a3b8;font-weight:800}
+.mdx-row em{flex:none;font-style:normal;font-size:11px;font-weight:900;padding:3px 9px;border-radius:999px}
+.mdx-row.got{border-color:#a78bfa;background:linear-gradient(90deg,#2e1065,#1e1a36)}.mdx-row.got em{background:#7c3aed;color:#fff}
+.mdx-row.no{opacity:.85}.mdx-row.no .ic{color:#64748b;border:1.5px dashed #475569}.mdx-row.no .tx b{color:#94a3b8}.mdx-row.no em{background:#334155;color:#cbd5e1}
+.mdx-row.lock{opacity:.6}.mdx-row.lock em{background:#1f2937;color:#94a3b8}
+.mdx-none{font-size:12px;color:#94a3b8;text-align:center;padding:12px}
+.mdx-read .h{display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:8px}
+.mdx-read .h .chip{flex:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:900;border:1.5px solid #475569;background:#1e1a36;color:#fff}
+.mdx-read .ln{font-size:12.5px;line-height:1.6;font-weight:700;color:#e2e8f0}
+.mdx-read .who{color:#f9a8d4;font-weight:900;margin-right:2px}
+.mdx-read .chs{display:grid;gap:4px;margin-top:4px}
+.mdx-read .ch{padding:6px 10px;border-radius:10px;background:#0f172a;border:1px solid #334155;font-size:11.5px;line-height:1.45}
+.mdx-read .ch b{display:block;color:#fde047}.mdx-read .ch span{color:#cbd5e1;font-weight:700}
+.mdx-read .ch.tap{border-color:#7dd3fc;cursor:pointer}.mdx-read .ch .msx-dex-go{color:#7dd3fc;font-size:10px;font-weight:800}
+.mdx-read .msx-dex-picked{color:#fde047;font-weight:900}
+.mdx .msx-note{font-size:11px;color:#94a3b8}
+.mh-msheet-bd.mdx{height:min(72vh,640px);min-height:0}
+@media (max-height:460px){
+.mh-msheet-bd.mdx{height:auto}.mdx{gap:5px}
+.mdx-bar{display:none}
+.mdx-tabs button{flex-direction:row;gap:4px;min-width:0;padding:4px 9px 4px}
+.mdx-tabs button .i{font-size:14px}.mdx-tabs button small{margin-left:2px}
+.mdx-aids{gap:6px;padding:0 2px 2px}
+.mdx-aids button{flex:0 0 auto;flex-direction:row;gap:4px;padding:2px 8px 2px 2px;border-radius:999px;border:1.5px solid #334155}
+.mdx-aids .f{width:30px;height:30px;border-width:2px}
+.mdx-aids .f em{font-size:12px}
+.mdx-aids button.on{border-color:#fde047;background:#3f3a0a}
+.mdx-aids button.on .f{box-shadow:none}
+.mdx-row{padding:5px 9px}.mdx-row .ic{width:28px;height:28px}
+}
 .msx .msx-optrow{display:flex;gap:6px;align-items:stretch}
 .msx .msx-optrow>.v-opt{flex:1;min-width:0}
 .msx .msx-info{flex:none;width:38px;border-radius:13px;background:#1e1a36;border:1.5px solid #7dd3fc;border-bottom-width:3px;color:#7dd3fc;font-size:16px;font-weight:900}
