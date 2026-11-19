@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6e1d87c066d3f43
+// generated-sha256: 37739e22d248a21e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -96715,7 +96715,7 @@ const MSA_CSS = `
 @media (prefers-reduced-motion:reduce){.msa-foe .msa-dc-c.now{animation:none!important}}
 .msa-foe .msa-dc-c.now .msa-dc-h em{background:#f43f5e;color:#fff}
 .msa-foe[data-msa-danger="0"] .msa-dc-c.now{border-color:#64748b;background:#1b1733;box-shadow:none;animation:none}
-/* 使った技は、その子が次に技を出すまで札に白い点線の印を残す */
+/* 使った技は、そのモンスターが次に技を出すまで札に白い点線の印を残す */
 .msa-dc-c.use{outline:2px dashed #ffffffcc;outline-offset:-3px}
 /* 実況は場の外・場のすぐ下の1行(技名の札・数字に重ならない) */
 .msc-wrap.msa>.msa-main>.msa-say,.msc-wrap.msa .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
