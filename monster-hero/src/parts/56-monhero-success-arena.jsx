@@ -388,6 +388,8 @@ const MSA_CSS = `
   .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
   .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
   .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msc-wrap.msa .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){

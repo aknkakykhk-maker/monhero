@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4409af532d0b5d9f
+// generated-sha256: 130562e2df541d53
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -96966,6 +96966,8 @@ const MSA_CSS = `
   .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
   .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
   .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msc-wrap.msa .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){

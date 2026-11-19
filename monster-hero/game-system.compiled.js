@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7c220242d7bc8eda
+// source-sha256: d54e425ce7f8e2a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189933,6 +189933,8 @@ const MSA_CSS = `
   .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
   .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
   .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msc-wrap.msa .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){
