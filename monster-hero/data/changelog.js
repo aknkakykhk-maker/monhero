@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-19 09:38", type:'update', title:'モンヒロサクセスの助手のお話を、毎回最後まで見られるようにしました', status:'new', group:'success',
+    items:[
+      '助手のお話の第1話〜第4話は、育成の3・11・23・39ターン目に必ず出るようになりました。親密度が低くても、お話が途中で止まりません。',
+      '大会の日などでそのターンに出せないときは、次のターンに出ます。',
+      '1つのターンに出る出来事は2つまでにしました。お話のあとに別の出来事が続けて出ることが減ります。',
+    ],
+  },
+  {
     date: "2026-11-19 06:06", type:'fix', title:'助手が寝ているときの顔の表示を直しました', status:'new', group:'assistant',
     items:[
       '助手が寝ているとき、きゅうこの冬の装いなどで、閉じた目の線が顔からずれて重なって見えていたのを直しました。',
@@ -49,7 +57,7 @@ const CHANGELOG = [
   {
     date: "2026-11-19 01:16", type:'update', group:'rhythm', status:'new',
     title:'「英雄の証 ミラクル☆ミルクティ版」を追加しました',
-    image:'images/song-art/eiyuu-no-akashi-milktea.jpg',
+    image:'images/song-art/eiyuu-no-akashi-milktea.jpg?v=9afc0934b41a',
     items:[
       'モンヒロビートに「英雄の証」の別アレンジ「ミラクル☆ミルクティ版」（2分26秒）を追加しました。BPM 192 の、明るくて速い曲です。',
       'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.19 ／ EXPERT Lv.30 ／ MASTER Lv.34 ／ HELL Lv.52 です。',
@@ -63,7 +71,7 @@ const CHANGELOG = [
   {
     date: "2026-11-19 00:58", type:'update', group:'rhythm', status:'new',
     title:'新曲「英雄の証」を追加しました',
-    image:'images/song-art/eiyuu-no-akashi.jpg',
+    image:'images/song-art/eiyuu-no-akashi.jpg?v=9fad188e4ac8',
     items:[
       'モンヒロビートに「英雄の証」（2分3秒）を追加しました。BPM 162 の、戦闘の勢いそのままの曲です。',
       'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.17 ／ MASTER Lv.20 ／ HELL Lv.30 です。',
