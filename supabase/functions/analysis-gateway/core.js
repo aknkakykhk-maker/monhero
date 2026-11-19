@@ -19,6 +19,7 @@
 // 上限(r1119-014 社長の選択): 1回 $20・1日 $25(日本時間の0時区切り)。
 //   呼ぶ前に「多めの見積り」(入力は文字のバイト数と絵の大きさから多めに数え、出力は max_tokens を全部使った額)で確かめる。
 //   1回の見積りが上限を超えたら呼ばずに断る。1日は「終わった物は実際の額・まだの物は見積り」の合計に足して超えるなら断る。
+//   API がエラーで終わった物は、請求されたかが分からないので見積りの額で数える(多めの側)。
 //   DB の analysis_gateway_reserve が日ごとの錠をかけて数えるので、同時に頼まれても超えない。
 // モデル: claude-opus-5-5(考えは adaptive・effort は既定 high)。message は断られたとき claude-opus-4-8 へ回す(server-side fallback)。
 //   見積りは高い方(opus-4-8)の値段で出す。バッチは半額で、回し先は付けない(断られた物は refused で返す)。
@@ -241,7 +242,8 @@ export const handle = async ({ token, expectedToken, body, limits = DEFAULT_LIMI
         .stream({ ...built.params, betas: [FALLBACK_BETA], fallbacks: [{ model: FALLBACK_MODEL }] })
         .finalMessage();
     } catch (e) {
-      await db.finish(r.id, { status: 'error', usdActual: 0, usage: ZERO_USAGE, model: null });
+      // 途中まで使われて請求されたかは分からないので、見積りの額で数える(多めの側・ミハリ #6874)
+      await db.finish(r.id, { status: 'error', usdActual: usdEst, usage: ZERO_USAGE, model: null });
       log({ event: 'api_error', kind, status: e?.status ?? null });
       return reply(502, { ok: false, error: 'api', id: r.id });
     }
@@ -280,7 +282,8 @@ export const handle = async ({ token, expectedToken, body, limits = DEFAULT_LIMI
     try {
       batch = await client.messages.batches.create({ requests });
     } catch (e) {
-      await db.finish(r.id, { status: 'error', usdActual: 0, usage: ZERO_USAGE, model: null });
+      // 途中まで使われて請求されたかは分からないので、見積りの額で数える(多めの側・ミハリ #6874)
+      await db.finish(r.id, { status: 'error', usdActual: usdEst, usage: ZERO_USAGE, model: null });
       log({ event: 'api_error', kind, status: e?.status ?? null });
       return reply(502, { ok: false, error: 'api', id: r.id });
     }

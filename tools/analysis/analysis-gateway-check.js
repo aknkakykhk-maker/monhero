@@ -7,7 +7,7 @@
 //   ② message: モデルは claude-opus-5-5・考えは adaptive・effort・回し先(opus-4-8)。呼ぶ側がモデル等を変えられない
 //   ③ 絵(png・jpeg)を受けて base64 のまま渡す。絵の大きさを見積りに入れる。url の絵・道具の欄などは断る
 //   ④ 1回の見積りが $20 を超える → 呼ばずに 400 / 1日の上限 → 呼ばずに 429
-//   ⑤ 使った額を実際の使用量で記録(エラーは 0 ドル・断られたら refused)
+//   ⑤ 使った額を実際の使用量で記録(エラーは見積りの額・断られたら refused)
 //   ⑥ バッチ: 半額で見積り・頼んだ番号を記録・終わったら1回だけ額を書く(2回目は書かない)・ほかのバッチは 404
 //   ⑦ SQL は新しい表と関数だけ(既存の表を変えない・消さない)・ゲーム(anon)からは使えない
 //   ⑧ 入口(index.ts)に CORS が無い・合言葉の値が書かれていない / 送り口の見積りが入り口と同じ
@@ -172,7 +172,10 @@ const textReq = (extra = {}) => ({ system: 'あなたは分析役です。', mes
   {
     const db = fakeDb(); const client = fakeClient({ streamError: Object.assign(new Error('x'), { status: 529 }) });
     const r = await run({ body: { action: 'message', kind: 'balance', request: textReq() }, db, client });
-    check('⑤ API エラー → 502・0 ドルで error を記録', r.status === 502 && db.rows[0].status === 'error' && db.rows[0].usd_actual === 0);
+    check('⑤ API エラー → 502・見積りの額で error を記録(多めの側)', r.status === 502 && db.rows[0].status === 'error' && db.rows[0].usd_actual === db.rows[0].usdEst && db.rows[0].usd_actual > 0, `記録 ${db.rows[0].usd_actual}`);
+    const dbB = fakeDb(); const failBatch = fakeClient(); failBatch.messages.batches.create = async () => { throw Object.assign(new Error('x'), { status: 500 }); };
+    const rb = await run({ body: { action: 'batch_submit', kind: 'ui-check', requests: [{ custom_id: 'a1', request: textReq() }] }, db: dbB, client: failBatch });
+    check('⑤ バッチを頼むのが失敗 → 502・見積りの額で error を記録', rb.status === 502 && dbB.rows[0].status === 'error' && dbB.rows[0].usd_actual === dbB.rows[0].usdEst && dbB.rows[0].usd_actual > 0);
     const db2 = fakeDb();
     const refusal = { ...OK_MESSAGE, stop_reason: 'refusal', content: [] };
     const r2 = await run({ body: { action: 'message', kind: 'balance', request: textReq() }, db: db2, client: fakeClient({ message: refusal }) });

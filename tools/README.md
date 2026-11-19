@@ -641,6 +641,8 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 | `node browser/feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
 | `node browser/perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
 | `node browser/smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |
+| `node browser/visual-shoot.js` | 見た目の点検(r1119-014)。モンヒロ全体の場面(`browser/visual-scenes.js`・`--list` で一覧)を縦390×844・横844×390・小さい横568×320・PC1280×800で撮り、機械の見つけ方(画面の文の undefined・NaN・null・`${`・字と字/字と絵の重なり・読みにくい色・横はみ出し・文字の折れ・コンソールのエラー・前の版との差)をかける。HOME から人と同じボタンで開き、デバッグの合言葉は使わない。にせの Supabase なので本番の保存・ランキングへは送らない。結果は `tools/out/visual/<日時>/summary.md`。モンサクは `--with-monsuc`(入口)・`--monsuc-deep`(既存の撮影の道具) |
+| `node browser/visual-api-send.js <結果>` | 上の止め絵を分析の入り口(Edge Function)経由で Claude API(claude-opus-5-5)に見てもらう送る口。既定は量と費用の見込みだけ出す(`--flagged` で機械が見つけた絵だけ・`--write-payload` で中身を書く・`--send` は `VISUAL_API_URL`/`VISUAL_API_PASS` があるときだけ)。1回 $20 を超える見込みなら送らない |
 
 `dye-baseline.json` は「現在正しいとされている染色結果」の記録なので、
 染色を意図的に変更したときだけ `--save-baseline` で更新すること。

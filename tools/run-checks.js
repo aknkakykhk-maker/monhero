@@ -234,6 +234,9 @@ const FORCE_CHECKS = [
     checks: ['battle/battle-fx-lint-check.js'], why: 'バトルの飾りの書き方(描き直し・マスク)と重さの見張り' },
   { re: /^monster-hero\/src\/parts\/(10-core|60-app|67-screen-pick|68-screen-run-result|70-bootstrap|71-screen-battle)\.jsx$/,
     checks: ['battle/battle-perf-budget-check.js'], why: 'バトル画面の重さの予算と「重いときは自動で軽く」' },
+  // モンサクの試合の場の大きさ・間合い(2026-11-19 社長「でかすぎて演出が見えない・距離感が機能していない」段1)
+  { re: /^monster-hero\/src\/parts\/56-monhero-success-arena\.jsx$|^tools\/battle\/msa-layout-check\.js$/,
+    checks: ['battle/msa-layout-check.js'], why: '試合の場: 絵は場の約25%・間合いは絵の幅の倍数・零で重ならない・場の外へ出ない' },
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },

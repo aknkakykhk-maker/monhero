@@ -13,12 +13,12 @@
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
 // 2026-11-19 Dr.WILY STAGE 1 も同じ形(おっくせんまん版 → 原曲。曲組500P・両版開放で、交換所では1枚のカードだけ出す)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi', dr_wily_stage_1_okkussenman: 'dr_wily_stage_1', erfolg_piano: 'erfolg' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 // 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
@@ -189,13 +189,15 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
           // 後ろは手前より少し大きく、右下にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
           // 札のタップで手前と後ろが入れ替わり、入れ替わった後も後ろになった方が斜めになる。
           // 拡大は手前のジャケットの虫めがねだけから(タップと競合させない)。絵が同じ版しかない曲は今までどおり1枚
+          // タップの範囲は、ジャケットの重なりと下の「⇄ 版名」の行まで含める(2026-11-19 あっくん実機報告
+          // 「小さすぎて押しづらすぎる」)。目印の行も押せる所に入れて、狙う場所を広くする
           const frontItem = { ...item, id: `song_${frontEntry.entry.songId}`, name: rhythmSongFullName(frontEntry.entry), icon: frontEntry.artSrc };
           const frontLabel = typeof rhythmSongVersionLabel === 'function' ? (rhythmSongVersionLabel(frontEntry.entry.songId) || '原曲') : '';
           const swapFront = () => setFrontBySong((prev) => ({ ...prev, [song.songId]: backEntry.entry.songId }));
-          return <div className="w-full">
-            <div className="relative w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
-              aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
-              onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
+          return <div className="w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
+            aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
+            onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
+            <div className="relative w-full">
               <div className="absolute bottom-0 right-0 w-[86%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
                 <div className="[container-type:inline-size]">
                   {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={backEntry.entry} large /> : null}
@@ -208,13 +210,17 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
                 {onZoomIcon && <button type="button" data-rhythm-song-art-zoom
                   onClick={(e) => { e.stopPropagation(); onZoomIcon(frontItem); }}
                   aria-label={`${frontItem.name}のジャケットを大きく見る`}
-                  className="absolute bottom-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-slate-950/70 text-[11px] leading-none shadow">🔍</button>}
+                  className="absolute bottom-1 right-1 z-20 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950/70 text-base leading-none shadow">🔍</button>}
               </div>
             </div>
-            {/* 手前の版名。長い版名(ミラクル☆ミルクティ版)は、札の幅に合わせて字を縮めて1行に収める */}
-            <div className="w-full [container-type:inline-size]">
-              <span className="mt-0.5 block whitespace-nowrap text-center font-black text-slate-300"
-                style={{ fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 9, 7) : 9 }}>{`⇄ ${frontLabel}`}</span>
+            {/* 手前の版名。長い版名(ミラクル☆ミルクティ版)は、札の幅に合わせて字を縮めて1行に収める。
+                字は以前(最大9px)より大きくし、幅が足りない長い版名だけ自動で縮む(2026-11-19 押しづらさの直し)。
+                置き場所は札の余白(p-2)の分まで広げて測る。長い版名が札の縁で切れないようにするためで、
+                札の padding を変えたらここの広げ幅も合わせること。行の高さは字を大きくしても札が伸びないよう
+                詰めてある(伸びると同じ段の他の札の中に大きな空きができて、売り場の検査で落ちる) */}
+            <div className="-ml-2 w-[calc(100%+1rem)] [container-type:inline-size]">
+              <span className="mt-0.5 block whitespace-nowrap text-center font-black leading-[1.1] text-slate-300"
+                style={{ fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 12, 8) : 12 }}>{`⇄ ${frontLabel}`}</span>
             </div>
           </div>;
         })() : (

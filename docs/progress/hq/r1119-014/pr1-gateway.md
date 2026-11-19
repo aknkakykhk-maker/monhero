@@ -10,7 +10,7 @@
 | `supabase/functions/analysis-gateway/core.js` | 中身。頼みの形の確かめ・見積り・Claude の呼び出し・額の計算 |
 | `supabase/migrations/202611190001_analysis_gateway.sql` | 記録の表 `analysis_gateway_usage` と関数4つ(**新しい物だけ**。既存の表は変えない) |
 | `tools/analysis/gateway-client.js` | 道具から送る口(`usage` / `message` / `batch-get` / `batch-cancel` / `--dry-run` で見積りだけ) |
-| `tools/analysis/analysis-gateway-check.js` | 偽物の Claude・DB で 49 項目を確かめる検査 |
+| `tools/analysis/analysis-gateway-check.js` | 偽物の Claude・DB で 50 項目を確かめる検査 |
 
 ## 決まり(コードの中で守っている)
 
@@ -20,7 +20,7 @@
   - 急がない物は `batch_submit`(Message Batches・半額)。結果は `batch_get` で受け取る
 - 受ける物: 文字と絵(png・jpeg を base64。1つの頼みに20枚・1枚5MBまで)。道具・文書・url の絵は断る
 - 上限: 1回 $20・1日 $25(日本時間の0時区切り)。呼ぶ前の**多めの見積り**(出力は max_tokens を全部使った額)で確かめ、超えたら呼ばずに断る。
-  1日の分は DB の錠つきの関数で数えるので、同時に頼まれても超えない。終わった物は実際の額で数え直す
+  1日の分は DB の錠つきの関数で数えるので、同時に頼まれても超えない。終わった物は実際の額で数え直す。API がエラーで終わった物は見積りの額で数える(多めの側)
 - 記録: 1回ごとに 種類・見積り・実際の額・トークン数・モデル。**中身(文や絵)は残さない**。ログも額とトークン数だけ
 - ゲームからは呼ばない(CORS なし)。表は RLS あり・ポリシーなし、関数は service_role だけ
 
