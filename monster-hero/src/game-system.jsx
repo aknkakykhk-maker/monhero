@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fda85b77716b88fb
+// generated-sha256: f390b78c122ed746
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10723,6 +10723,9 @@ const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 // きゅうこの冬服のお話「冬支度 ～きゅうこの模様替え～」(2026-11-16 社長)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
 const KYUKO_WINTER_STORY_ID = 'kyuko_winter_2026_11';
+// ききのツインテールのお話「イメチェン ～ききのツインテール～」(2026-11-20 社長)。id は data/assistants.js の EVENT_REPLAYS と同じ。
+// 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
+const KIKI_TWINTAIL_STORY_ID = 'kiki_twintail_2026_11';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
 // ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。
@@ -69289,6 +69292,9 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
+  // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
+  twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.1966, eye: 0.3225, chin: 0.43, m: 0.8, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
@@ -70786,6 +70792,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'sorashido_normal.PNG', 'face/sorashido_normal.PNG', // 2026-11-15 ソラシド『馬骨』の寝顔(社長から)
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
   'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', // きゅうこ『冬の装い』の寝顔(2026-11-19 部屋の画面で、冬服に SVG の目がずれて重なっていた)
+  'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG', // きき『ツインテール』の寝顔(2026-11-20)
 ]));
 // SVG の閉じた目・眼鏡を外した顔は、その目の位置の表を測った絵(その助手の ふだんの服の全身 / 顔アイコン)にだけ重ねる。
 //   着替え・立ち絵(stand-*)・全身画など別の絵では位置がちがい、ずれた目が出る(2026-11-19 社長「寝顔じゃない顔を無理やり寝顔にしようとしてる」)。ずれた目を出すより出さない
@@ -89205,6 +89212,7 @@ const MSX_CSS = `
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
+.msx .v-body.st{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 /* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
@@ -89951,6 +89959,11 @@ const MSX_CSS = `
 .msx-sheet{overscroll-behavior:contain}
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
+/* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。窓を画面いっぱいに出す
+   縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
+   本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
+.msx .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -90103,6 +90116,9 @@ const MSX_CSS = `
 .msx-st6.row6 b{font-size:14px;letter-spacing:0}
 .msx-st6.row6 i{font-size:8.5px}
 .msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+/* 詳細の窓の送り箱も伸び縮みさせる(上の .msx-dt>* が flex:none にしていたため、送り箱が縮まず窓ごと送る形になり、
+   低い画面で「貸し出す・お別れ・閉じる」が送った先にあった。2026-11-19 r1119-013 ⑥ U-12) */
+.msx-dt>.msx-md-scroll{flex:1 1 auto;min-height:0}
 .msx-dt-top{display:flex;align-items:flex-end;gap:8px}
 .msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
 .msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
@@ -91928,7 +91944,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
           戻るがあったのを廃止し、言葉も段によらず「戻る」に固定する(同じ back() なのに言葉だけ
           変わっていた)。step=0 の戻り先はシナリオ選択(無ければサクセスの入口)で、意味は一貫して「戻る」 */}
       <MsxHd back="戻る" onBack={back} right={`${step + 1} / 6`}/>
-      <div className={`v-body${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`}>
+      {/* 中身が画面より長い段(持ちこみ・確認・低い画面)は本体ごと縦に流す(st)。指定が無いと中身が下の帯の後ろへはみ出し、
+          最後まで読めず触れなかった(r1119 社長の実機「スライドできない・裏と表になってる」)。p1/one/lg3 は段ごとの並べ方(r1119 ⑦) */}
+      <div className={`v-body st${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`}>
         <MsxSteps n={step}/>
         {body}
       </div>
@@ -95848,6 +95866,8 @@ function MsxR3Box({ onClose }) {
   const fuseKept = React.useRef(null); // 合体でメモリアルモンスターとして残った親の数(生まれたあとの文に使う)
   const [apick, setApick] = useState([]); // 置き場で、外すために選んだ子の id
   const [aAsk, setAAsk] = useState(false); // 外す確かめ
+  const [atab, setAtab] = useState('list'); // メモモンの一覧のタブ 'list'(押すと詳細)/ 'rm'(外す子をまとめて選ぶ)。マスモンボックスの 一覧/お別れ と同じ形(r1119-006)
+  const [asel, setAsel] = useState(null); // 詳細を開いているメモモンの id
   const [menu, setMenu] = useState(null); // 'sort' / 'label' の小窓
   const [bq, setBq] = useState(''); // 一覧の検索・逆順(表示だけの絞り込み。並び替えは今までの view.sort を使う)
   const [brev, setBrev] = useState(false);
@@ -95919,6 +95939,35 @@ function MsxR3Box({ onClose }) {
     if (meta && meta.lend === cur.id && typeof monsucLendSet === 'function') { try { await monsucLendSet(r.mon, {}); } catch (e) {} }
   };
   const SUC = msxSuc && msxSuc.SUC;
+  // ---- 詳細の中身(マスモンボックスとメモモンで同じ部品・同じ並び。r1119-006: メモモンでもアシスト効果・得意な能力を見られるように) ----
+  const detailInfo = (m, extra = []) => {
+    const endAt = Number.isFinite(m.endAt) ? new Date(m.endAt) : null;
+    return [
+      ['忠誠 / 人気', `${Math.round(m.loy || 0)} / ${Math.round(m.pop || 0)}`],
+      Array.isArray(m.fav) && m.fav.length ? ['得意な能力', m.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
+      m.awake ? ['覚醒', m.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null,
+      Array.isArray(m.titles) && m.titles.length ? ['称号', m.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
+      m.coach ? ['育てた助手', msxAidName(m.coach)] : null,
+      ['世代', `第${Math.max(1, Math.round(Number(m.gen) || 1))}世代`],
+      endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
+      m.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[m.ending] || m.ending] : null,
+      ...extra,
+    ];
+  };
+  const detailBase = (m) => {
+    const assists = Array.isArray(m.assists) ? m.assists : [];
+    return {
+      species: m.species, name: msxMmName(m), art: <MsxMmArt m={m} size="100%"/>,
+      st: MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((m.st && m.st[k]) || 0) }), {}),
+      apt: typeof msxAptOf === 'function' ? msxAptOf(m.species) : ['C', 'C', 'C', 'C', 'C', 'C'], type: m.gt,
+      grades: SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(m); } catch (e) { return null; } })() : null,
+      known: Array.isArray(m.techs) ? m.techs : [],
+      mastery: m.raised !== false && Array.isArray(m.techs) ? Object.fromEntries(m.techs.map((t, i) => [t, Array.isArray(m.mast) ? Number(m.mast[i]) || 0 : 0])) : null,
+      power: m.raised === false ? null : msxMmPow(m), rank: m.grade ? null : m.rank, grade: m.grade, SUC,
+      assists, initialTab: assists.length ? 'assist' : null,
+      peak: (() => { try { return msxStartPreview(SUC, m.species, Number.isInteger(m.gt) ? m.gt : null, m.aptBase, m.st).peak; } catch (e) { return ''; } })(),
+    };
+  };
   // 入口の助手: いちばん新しく育てたマスモンの助手(いなければみゅあ)
   const aid = (box && box.mons.length && typeof box.mons[box.mons.length - 1].coach === 'string' && box.mons[box.mons.length - 1].coach) || 'mua';
 
@@ -95956,7 +96005,7 @@ function MsxR3Box({ onClose }) {
         <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
-    foot = <div className="v-ft"><button type="button" onClick={onClose}>← 戻る</button></div>;
+    foot = null; // 戻るは左上の1つ(2026-11-19 r1119-013 ⑥ B-3。下の帯にも同じ「← 戻る」があった)
   }
   // ---- メモリアルモンスター(合体の親・お別れしたモンスター。育成には使えない・編成にだけ入れる。外すと消える) ----
   else if (page === 'assist') {
@@ -95965,23 +96014,38 @@ function MsxR3Box({ onClose }) {
     const stockSorted = msxMmSorted(stock, asort); // 並び替えはボックス一覧と同じ処理。写しだけを並べ替え、元の並び・保存データは変えない
     const stockF = aq.trim() && typeof msxMatchQ === 'function' ? stockSorted.filter((m) => msxMatchQ(aq, msxMmName(m), msxMonName(m.species))) : stockSorted;
     const stockList = arev ? stockF.slice().reverse() : stockF;
+    const acur = asel ? stock.find((m) => m.id === asel) : null;
+    const aName = (ids) => ids.length === 1 && stock.find((x) => x.id === ids[0]) ? msxMmName(stock.find((x) => x.id === ids[0])) : `${ids.length}体`;
     body = (<>
-      <div className="mm-hint msx-kp">合体の親にしたモンスター・お別れしたモンスターが残っています。{'\u200b'}育成には使えず、{'\u200b'}育成を始めるときの編成にだけ入れられます。{'\u200b'}アシスト効果と得意な能力が効きます</div>
+      {/* 升の見せ方はマスモンボックスの一覧と同じ(名前に札を重ねない。メモモンであることは見出しと下の数で分かる・r1119-006) */}
+      <div className="mm-tabs"><button type="button" className={atab === 'list' ? 'on' : ''} onClick={() => { setAtab('list'); setApick([]); }} data-msx-assist-tab-list>一覧</button>
+        <button type="button" className={atab === 'rm' ? 'on' : ''} onClick={() => { setAtab('rm'); setApick([]); setMsg(''); }} data-msx-assist-tab-rm>外す</button></div>
+      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}育成には使えず、{'​'}編成にだけ入れられます。{'​'}押すと、{'​'}アシスト効果と得意な能力が見られます</>}</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
         {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length}/> : null}
       </div>
-      <div className="mm-gridw">{stockList.length ? <MsxMmGrid mons={stockList} label={view.label} mark={() => 'メモモン'} isOn={(m) => apick.includes(m.id)}
-        attrs={(m) => ({ 'data-msx-assist-mon': m.id })} onPick={(m) => setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id])}/>
+      <div className="mm-gridw">{stockList.length ? <MsxMmGrid mons={stockList} label={view.label} isOn={(m) => atab === 'rm' && apick.includes(m.id)}
+        attrs={(m) => ({ 'data-msx-assist-mon': m.id })}
+        onPick={(m) => { if (atab === 'rm') setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id]); else { setAsel(m.id); setMsg(''); } }}/>
         : <div className="msx-note" style={{ padding: 8 }}>{stock.length ? '検索に当てはまるモンスターがいません' : 'まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります'}</div>}</div>
-      <div className="mm-bar"><span className="cnt">メモモン <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span>
-        <button type="button" className="mm-sel" disabled={!apick.length} onClick={() => setAAsk(true)} data-msx-assist-remove>外す({apick.length}体)</button></div>
+      <div className="mm-bar"><span className="cnt">メモモン <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span></div>
+      {acur && atab === 'list' && typeof MsxMonDetail === 'function' ? (() => {
+        const kp = acur.keep && typeof acur.keep === 'object' ? acur.keep : null;
+        const kAt = kp && Number.isFinite(kp.at) ? new Date(kp.at) : null;
+        return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
+          info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
+          foot={<><div className="mm-hint msx-kp" data-msx-assist-why>メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。{'​'}育成を始めるときの編成に入れると、{'​'}アシスト効果と得意な能力が効きます</div>
+            <div className="mm-acts"><button type="button" onClick={() => { setApick([acur.id]); setAAsk(true); }} data-msx-assist-detail-rm>外す</button></div></>}
+          onClose={() => { setAsel(null); setMsg(''); }}/>);
+      })() : null}
       {aAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
-        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{apick.length}体をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません</div>
-        <button type="button" className="msx-btn go" data-msx-assist-remove-yes onClick={async () => { try { const a = await msxAssistRemove(apick); setAssist(a); setMsg(`${apick.length}体を外しました`); } catch (e) { setMsg('外せませんでした'); } setApick([]); setAAsk(false); }}>外す</button>
-        <button type="button" className="msx-btn sub" onClick={() => setAAsk(false)}>やめておく</button></div></div> : null}
+        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{aName(apick)}をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません</div>
+        <button type="button" className="msx-btn go" data-msx-assist-remove-yes onClick={async () => { const nm = aName(apick); try { const a = await msxAssistRemove(apick); setAssist(a); setMsg(`${nm}を外しました`); } catch (e) { setMsg('外せませんでした'); } setApick([]); setAAsk(false); setAsel(null); setAtab('list'); }}>外す</button>
+        <button type="button" className="msx-btn sub" onClick={() => { setAAsk(false); if (atab !== 'rm') setApick([]); }}>やめておく</button></div></div> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setApick([]); }}>← 戻る</button></div>;
+    // 戻るは左上の1つ(B-3)。外すのタブで選んでいるときだけ、下の帯にその画面の主な操作「外す(n体)」を出す(お別れのタブと同じ形・B-9・B-10)
+    foot = atab === 'rm' ? <div className="v-ft"><button type="button" className="go" disabled={!apick.length} onClick={() => setAAsk(true)} data-msx-assist-remove>外す({apick.length}体)</button></div> : null;
   }
   // ---- 一覧(mm-03) ----
   else if (page === 'list' || (page === 'detail' && cur)) {
@@ -96025,28 +96089,15 @@ function MsxR3Box({ onClose }) {
       {page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
         // 詳細は、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail(社長の手本 monster-detail-basic・r1114-039/046)。マスモンボックスの分だけ差し込む
         const lock = byeLock(cur);
-        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : (a.name || a.id); }).join('・') : '';
-        const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-        const more = [
-          ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
-          Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
-          cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null,
-          Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
-          cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null,
-          ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`],
-          endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
-          cur.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending] : null,
+        const more = detailInfo(cur, [
           lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null,
           cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null,
-        ];
-        return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
-          art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
-          apt={typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C']} type={cur.gt} grades={SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null}
-          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
+        ]);
+        return (<MsxMonDetail {...detailBase(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
+          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
-          info={more} assists={Array.isArray(cur.assists) ? cur.assists : []} initialTab={Array.isArray(cur.assists) && cur.assists.length ? 'assist' : null}
-          peak={(() => { try { return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak; } catch (e) { return ''; } })()}
+          info={more}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
             {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
             <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}
@@ -96054,8 +96105,8 @@ function MsxR3Box({ onClose }) {
       })() : null}
     </>);
     foot = tab === 'bye'
-      ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>キャンセル</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setMsg(''); }}>← 戻る</button></div>;
+      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← やめる」(B-9) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
+      : null; // 戻るは左上の1つ(B-3)
   }
   // ---- 名前と染色を変える ----
   else if (page === 'edit' && cur && edit) {
@@ -96077,10 +96128,16 @@ function MsxR3Box({ onClose }) {
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>キャンセル</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
   }
-  else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← 戻る</button></div>; }
+  else { body = <div className="msx-note">見つかりませんでした</div>; foot = null; }
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
-    <MsxHd back="戻る" onBack={page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
+    {/* 左上の戻るは、その画面の1つだけの出口(B-3・B-9)。メモモンは入口へ戻る(前は下の帯と行き先が違い、一覧へ戻っていた) */}
+    <MsxHd back={(page === 'list' && tab === 'bye') || (page === 'assist' && atab === 'rm') ? 'やめる' : '戻る'} onBack={page === 'gate' ? onClose
+      : page === 'list' && tab === 'bye' ? () => { setTab('list'); setPick([]); }
+      : page === 'list' ? () => { setPage('gate'); setMsg(''); }
+      : page === 'assist' && atab === 'rm' ? () => { setAtab('list'); setApick([]); }
+      : page === 'assist' ? () => { setPage('gate'); setApick([]); setAsel(null); setAtab('list'); }
+      : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
     <div className="v-body r3 mm" data-msx-mm={page}>{body}</div>
     {foot}
     {fuseEl}
@@ -96555,6 +96612,17 @@ const MSX_MANUAL_CSS = `
 .msxm-row.gc .msxm-btn{text-align:center}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+/* 詰めた形(look c・2026-11-19 段2): 上の帯(ガッツ)は場の上の帯にあるので出さない。操作は1段に4つ(零では吹き飛ばしを足して5つ) */
+.msxm.c{padding:5px 6px;margin-top:0}
+.msxm.c .msxm-top{display:none}
+.msxm.c .msxm-sec{margin-top:0}
+.msxm.c .msxm-h{font-size:11px}
+.msxm-row.cc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:5px}
+.msxm-row.cc.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.msxm-row.cc .msxm-btn{min-height:40px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
+.msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
+.msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
@@ -96876,7 +96944,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
   const sd = sheet === 'all' ? null : sheet;
   const useHere = !busy && (sd == null || sd === opt.dist);
   return (
-    <div className={`msxm${busy ? ' busy' : ''}`} data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
+    <div className={`msxm${busy ? ' busy' : ''}${look === 'c' ? ' c' : ''}`} data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
       <div className="msxm-top">
         <span>{busy ? '相手の番…' : 'あなたの番'}</span>
         <b>間合い {MSX_MANUAL_DIST[opt.dist]}</b>
@@ -96885,10 +96953,10 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>⚔ 攻撃{reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}</span>
+          <span>{look === 'c' ? '自分の技' : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
-        <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual" look={look}/>
+        <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual" look={look === 'c' ? '' : look}/>
       </div>
       {sheetOn ? (
         <MsaTechSheet title={`${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`} list={items} d={sd} dist={opt.dist} rep={ids} hitAt={hitAt} hintId={hintId}
@@ -96896,6 +96964,21 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           usable={(t) => t.ok} useNote={(t) => (!t.reach ? '(いまは届かない)' : `(あと${t.need})`)}
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
       ) : null}
+      {look === 'c' ? (() => {
+        // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す
+        const back = opt.move.find((mv) => mv.step > 0); const fwd = opt.move.find((mv) => mv.step < 0);
+        const near = !!(opt.blow && opt.blow.near);
+        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガ${mv.guts}` : ''}`);
+        return (
+          <div className={`msxm-row cc ${near ? 'n5' : ''}`} data-msxm-ops>
+            {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : null}
+            {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : null}
+            <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで</small></button>
+            <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
+            {near ? <button type="button" data-msxm-blow="" className={`msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`} disabled={!opt.blow.ok || busy} onClick={() => go({ type: 'blow' })}>💨 吹き飛ばし<small>{opt.blow.wait ? '相手の手のあと' : `遠へ・ガ${opt.blow.guts}`}</small></button> : null}
+          </div>
+        );
+      })() : (
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row gc">
@@ -96922,6 +97005,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           })()}
         </div>
       </div>
+      )}
       {opt.swap.length ? (
         <div className="msxm-sec">
           <div className="msxm-h">🔁 交代{opt.swapWait > 0 ? `(あと${opt.swapWait}手番)` : ''}</div>
@@ -97074,6 +97158,27 @@ const MSA_CSS = `
 .msa-tools .msa-ctl,.msa-tools .msa-bgt{white-space:nowrap}
 .msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
 .msa-cardsrow{flex:none}
+/* 段2(2026-11-19・docs/progress/monsuc-battle-redesign/layout2): 相手の技の枠/場/実況/自分の技の枠。どちらの枠も零近中遠に1技ずつ(同じ形) */
+.msa-rowh{display:flex;align-items:baseline;gap:6px;font-size:11px;font-weight:900;color:#cbd5e1;margin:0 2px 2px}
+.msa-rowh small{font-size:9.5px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa-foe{flex:none}
+.msa-foe .msa-dc-c{border-color:#155e75;background:#0f2530}
+/* 相手の、いまの間合いの枠を光らせる。危なさの段は光の強さだけで分ける(字は出さない) */
+.msa-foe .msa-dc-c.now{border-color:#f43f5e;background:#3b1424;color:#fff;box-shadow:0 0 0 1px #f43f5e88 inset,0 0 6px #f43f5e66}
+.msa-foe[data-msa-danger="2"] .msa-dc-c.now{box-shadow:0 0 0 2px #f43f5e inset,0 0 12px #f43f5eaa}
+.msa-foe[data-msa-danger="3"] .msa-dc-c.now{box-shadow:0 0 0 2px #fb7185 inset,0 0 18px #f43f5e;animation:msaDanger 1.1s ease-in-out infinite}
+@keyframes msaDanger{50%{box-shadow:0 0 0 2px #fda4af inset,0 0 26px #f43f5e}}
+@media (prefers-reduced-motion:reduce){.msa-foe .msa-dc-c.now{animation:none!important}}
+.msa-foe .msa-dc-c.now .msa-dc-h em{background:#f43f5e;color:#fff}
+.msa-foe[data-msa-danger="0"] .msa-dc-c.now{border-color:#64748b;background:#1b1733;box-shadow:none;animation:none}
+/* 使った技は、そのモンスターが次に技を出すまで札に白い点線の印を残す */
+.msa-dc-c.use{outline:2px dashed #ffffffcc;outline-offset:-3px}
+/* 実況は場の外・場のすぐ下の1行(技名の札・数字に重ならない) */
+.msc-wrap.msa>.msa-main>.msa-say,.msc-wrap.msa .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.msc-wrap.msa .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 技名の札は場の上(体力の帯の下)へ。零近中遠の字はいつも下のまん中 */
+.msa-stage.big .msa-plate{bottom:auto;top:62px}
+.msa-stage.big .msa-dist.sA,.msa-stage.big .msa-dist.sB{justify-content:center;padding:0}
 .msa-gtag{--msa-tx:-50%;position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
 .msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
@@ -97257,7 +97362,7 @@ const MSA_CSS = `
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
-.msc-wrap.msa .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
+.msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -97281,6 +97386,37 @@ const MSA_CSS = `
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+  /* 段2(2026-11-19): 自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)。枠は4つを縦に並べる */
+  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
+  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
+  .msc-wrap.msa .msa-main>.msa-topline{grid-column:1/3}
+  .msc-wrap.msa .msa-main>.msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
+  .msc-wrap.msa .msa-main>.msa-say{grid-column:1;grid-row:3}
+  .msc-wrap.msa .msa-main>.msa-foe{grid-column:2;grid-row:2/4;overflow:auto}
+  .msc-wrap.msa .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
+  .msc-wrap.msa .msa-dc-c{min-height:0;padding:2px 4px}
+  /* 横は枠の列を細くするため、札のダメージ・移る間合いの行を省く(ミハリ #6883: 場を画面の約2/3に) */
+  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{font-size:10.5px}
+  .msc-wrap.msa .msxm-row.cc,.msc-wrap.msa .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .msc-wrap.msa .msa-rowh small{display:none}
+  .msc-wrap.msa .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
+  .msc-wrap.msa .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
+  .msc-wrap.msa .msxm.c .msxm-h{flex-wrap:wrap}
+}
+/* 小さい横(高さ340px以下): 札はダメージの行を省き、技名の札を小さく上へ寄せる */
+@media (max-height:340px) and (orientation:landscape){
+  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
+  .msc-wrap.msa .msa-dc-c{padding:2px 4px}
+  .msa-stage.big .msa-plate{top:48px;padding:2px 12px 3px}
+  .msa-stage.big .msa-plate b{font-size:15px}
+  .msa-stage.big .msa-plate.big b{font-size:17px}
+  .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
+  .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
+  .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msc-wrap.msa .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){
@@ -98747,6 +98883,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const judgeIdx = useMemo(() => log.findIndex(x => x && x.ev === 'judge' && x.mode === 'three'), [log.length]);
   const [paused, setPaused] = useState(false);   // ⏸ 試合を止める(段C 2026-11-14: 助手マスモン対戦と同じ操作)
   const [techSheet, setTechSheet] = useState(null); // 技の札を押して開く、いまの間合いの一覧(見るだけ)
+  const [foeSheet, setFoeSheet] = useState(null); // 相手の技の枠を押して開く、その間合いの相手の技の一覧(見るだけ。2026-11-19 段2)
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
   const frames = useMemo(() => (log.length ? ambwFramesOf(log) : []), [log.length, manual ? mm.tick : 0]);
@@ -98837,6 +98974,20 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const itemsA = typeof ambwTechItems === 'function' && Array.isArray(mvA) ? ambwTechItems(catalog, mbA, mvA) : null;
   const hitAtA = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'A', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
   const cardsOn = Boolean(itemsA && itemsA.length && typeof MsaDistCards === 'function' && !ended && !showBar);
+  // 相手の技の枠(2026-11-19 段2・社長「相手の技が分からないと、その距離が危険かどうか分からない」): 零近中遠に1技ずつ・いつも出す。
+  //   いまの間合いの枠を光らせ、光の強さで危なさを3段に分ける(字は出さない r1119 B②)。使った技は次にその子が技を出すまで札に残す
+  const mvB = (st.bMoves || [])[f.act.B], mbB = teams.B && teams.B.members ? teams.B.members[f.act.B] : null;
+  const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(catalog, mbB, mvB) : null;
+  const hitAtB = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
+  const lastTechOf = (side) => { for (let k = pos; k >= 1; k--) { const r = log[k] || {}; if (r.ev === 'tech' && r.side === side) return r.move || null; if (r.ev === 'swap' && r.side === side) return null; } return null; };
+  const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
+  const foeDanger = (() => {
+    if (!foeOn || typeof msaRepOf !== 'function') return 0;
+    const t = msaRepOf(itemsB, f.d, null); if (!t) return 0;
+    const sc = (x) => (Number(hitAtB(x, f.d)) || 0) * (Number(x.power) || 0);
+    const top = Math.max(1, ...itemsB.map(sc)); const r = sc(t) / top;
+    return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
+  })();
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
@@ -98845,14 +98996,15 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{msxBreederLabel(info.opp.breeder, info.opp.rivalKind)}</small> : null}</div>
+      {foeOn ? <div className="msa-foe" data-msa-foe data-msa-danger={foeDanger}><div className="msa-rowh">相手の技<small>押すと、その間合いの技が見られます</small></div><MsaDistCards list={itemsB} rep={msaRepIds(itemsB, null)} dist={f.d} guts={f.g.B} lastMove={lastTechOf('B')} dataSide="B" hitAt={hitAtB} onOpen={(d) => setFoeSheet(d)}/></div> : null}
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind}/>
-        <div className="msa-say over" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       </div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       </div>
       <div className="msa-side" data-msa-side>
-      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards look="a" list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
-      <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="a"/> : null}</div>
+      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><div className="msa-rowh">自分の技</div><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={lastTechOf('A')} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
+      <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="c"/> : null}</div>
       {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
       {(!manual || auto) && !ended ? (
         <div className="msa-tools">
@@ -98874,6 +99026,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       {manual && auto && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
       </div>
       {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
+      {foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`} list={itemsB} d={foeSheet} dist={f.d} rep={msaRepIds(itemsB, null)} hitAt={hitAtB} onClose={() => setFoeSheet(null)}/> : null}
       {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
     </div>
   );
@@ -127416,7 +127569,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -127901,6 +128054,15 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_WINTER_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || KYUKO_WINTER_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ききのツインテールのお話(2026-11-20 社長)。衣装『ツインテール』と一緒に出る。
+  //   ほかのお話・告知と同じ入口: 更新のあとに初めてゲームを開いて HOME に着いたとき、だれにでも1回だけ流す
+  //   (ほかのお話が先に流れようとしていたら待つ)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(KIKI_TWINTAIL_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || KIKI_TWINTAIL_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ソラシドの加入のお話を見たら、マーケットにカード「ソラシド」が並ぶ(data/breeder.js の sorashidoCardOnSale。公開の印 assistantSorashido も要る)。
   // お話を流すのは上の加入のお話の所
@@ -131143,6 +131305,7 @@ function MonsterHeroGame() {
     monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     kyukoWinterStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_WINTER_STORY_ID),
+    kikiTwintailStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -153934,7 +154097,7 @@ const createAnimationStyle = () => {
     @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
     @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
     @media(orientation:landscape) and (max-height:600px){
-      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      .mh-home-event-strip{position:absolute;left:39%;right:104px;top:calc(66px + env(safe-area-inset-top));margin:0}
       /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
          ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
          施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
@@ -153947,7 +154110,10 @@ const createAnimationStyle = () => {
       .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
       .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
       .mh-home-side-ic{width:34px;height:34px}
-      .mh-home-side-lb{display:none}
+      /* 横は字を印の左に並べる(2026-11-19 r1119-013 ⑥ U-23。前は高さを節約するため字を消していて、丸い印と数字だけでは何のボタンか分からなかった)。
+         高さは縦に積んだときと変えない */
+      .mh-home-side-btn{flex-direction:row-reverse;align-items:center;gap:5px}
+      .mh-home-side-lb{display:block;font-size:10px;line-height:1.2;white-space:nowrap}
     }
     /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
        全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */

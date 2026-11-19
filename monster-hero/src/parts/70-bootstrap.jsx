@@ -5478,7 +5478,7 @@ const createAnimationStyle = () => {
     @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
     @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
     @media(orientation:landscape) and (max-height:600px){
-      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      .mh-home-event-strip{position:absolute;left:39%;right:104px;top:calc(66px + env(safe-area-inset-top));margin:0}
       /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
          ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
          施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
@@ -5491,7 +5491,10 @@ const createAnimationStyle = () => {
       .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
       .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
       .mh-home-side-ic{width:34px;height:34px}
-      .mh-home-side-lb{display:none}
+      /* 横は字を印の左に並べる(2026-11-19 r1119-013 ⑥ U-23。前は高さを節約するため字を消していて、丸い印と数字だけでは何のボタンか分からなかった)。
+         高さは縦に積んだときと変えない */
+      .mh-home-side-btn{flex-direction:row-reverse;align-items:center;gap:5px}
+      .mh-home-side-lb{display:block;font-size:10px;line-height:1.2;white-space:nowrap}
     }
     /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
        全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */
