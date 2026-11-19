@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f1dc346a213b28d
+// source-sha256: 2e47e52a49c9328f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187417,6 +187417,8 @@ function MsxR3Box({
   const fuseKept = React.useRef(null);
   const [apick, setApick] = useState([]);
   const [aAsk, setAAsk] = useState(false);
+  const [atab, setAtab] = useState('list');
+  const [asel, setAsel] = useState(null);
   const [menu, setMenu] = useState(null);
   const [bq, setBq] = useState('');
   const [brev, setBrev] = useState(false);
@@ -187564,6 +187566,53 @@ function MsxR3Box({
     }
   };
   const SUC = msxSuc && msxSuc.SUC;
+  const detailInfo = (m, extra = []) => {
+    const endAt = Number.isFinite(m.endAt) ? new Date(m.endAt) : null;
+    return [['忠誠 / 人気', `${Math.round(m.loy || 0)} / ${Math.round(m.pop || 0)}`], Array.isArray(m.fav) && m.fav.length ? ['得意な能力', m.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, m.awake ? ['覚醒', m.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, Array.isArray(m.titles) && m.titles.length ? ['称号', m.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, m.coach ? ['育てた助手', msxAidName(m.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(m.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, m.ending ? ['エンディング', {
+      super: 'スーパー',
+      good: 'グッド',
+      bad: 'ふつう'
+    }[m.ending] || m.ending] : null, ...extra];
+  };
+  const detailBase = m => {
+    const assists = Array.isArray(m.assists) ? m.assists : [];
+    return {
+      species: m.species,
+      name: msxMmName(m),
+      art: React.createElement(MsxMmArt, {
+        m: m,
+        size: "100%"
+      }),
+      st: MSX_STATS.reduce((o, k) => ({
+        ...o,
+        [k]: Math.round(m.st && m.st[k] || 0)
+      }), {}),
+      apt: typeof msxAptOf === 'function' ? msxAptOf(m.species) : ['C', 'C', 'C', 'C', 'C', 'C'],
+      type: m.gt,
+      grades: SUC && typeof SUC.aptGradesOf === 'function' ? (() => {
+        try {
+          return SUC.aptGradesOf(m);
+        } catch (e) {
+          return null;
+        }
+      })() : null,
+      known: Array.isArray(m.techs) ? m.techs : [],
+      mastery: m.raised !== false && Array.isArray(m.techs) ? Object.fromEntries(m.techs.map((t, i) => [t, Array.isArray(m.mast) ? Number(m.mast[i]) || 0 : 0])) : null,
+      power: m.raised === false ? null : msxMmPow(m),
+      rank: m.grade ? null : m.rank,
+      grade: m.grade,
+      SUC,
+      assists,
+      initialTab: assists.length ? 'assist' : null,
+      peak: (() => {
+        try {
+          return msxStartPreview(SUC, m.species, Number.isInteger(m.gt) ? m.gt : null, m.aptBase, m.st).peak;
+        } catch (e) {
+          return '';
+        }
+      })()
+    };
+  };
   const aid = box && box.mons.length && typeof box.mons[box.mons.length - 1].coach === 'string' && box.mons[box.mons.length - 1].coach || 'mua';
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
@@ -187691,9 +187740,30 @@ function MsxR3Box({
     const stockSorted = msxMmSorted(stock, asort);
     const stockF = aq.trim() && typeof msxMatchQ === 'function' ? stockSorted.filter(m => msxMatchQ(aq, msxMmName(m), msxMonName(m.species))) : stockSorted;
     const stockList = arev ? stockF.slice().reverse() : stockF;
+    const acur = asel ? stock.find(m => m.id === asel) : null;
+    const aName = ids => ids.length === 1 && stock.find(x => x.id === ids[0]) ? msxMmName(stock.find(x => x.id === ids[0])) : `${ids.length}体`;
     body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "mm-tabs"
+    }, React.createElement("button", {
+      type: "button",
+      className: atab === 'list' ? 'on' : '',
+      onClick: () => {
+        setAtab('list');
+        setApick([]);
+      },
+      "data-msx-assist-tab-list": true
+    }, "一覧"), React.createElement("button", {
+      type: "button",
+      className: atab === 'rm' ? 'on' : '',
+      onClick: () => {
+        setAtab('rm');
+        setApick([]);
+        setMsg('');
+      },
+      "data-msx-assist-tab-rm": true
+    }, "外す")), React.createElement("div", {
       className: "mm-hint msx-kp"
-    }, "合体の親にしたモンスター・お別れしたモンスターが残っています。", '\u200b', "育成には使えず、", '\u200b', "育成を始めるときの編成にだけ入れられます。", '\u200b', "アシスト効果と得意な能力が効きます"), msg ? React.createElement("div", {
+    }, atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : React.createElement(React.Fragment, null, "合体の親・お別れしたモンスターです。", '​', "育成には使えず、", '​', "編成にだけ入れられます。", '​', "押すと、", '​', "アシスト効果と得意な能力が見られます")), msg ? React.createElement("div", {
       className: "mm-hint ok"
     }, msg) : null, React.createElement("div", {
       className: "mm-ops"
@@ -187712,12 +187782,16 @@ function MsxR3Box({
     }, stockList.length ? React.createElement(MsxMmGrid, {
       mons: stockList,
       label: view.label,
-      mark: () => 'メモモン',
-      isOn: m => apick.includes(m.id),
+      isOn: m => atab === 'rm' && apick.includes(m.id),
       attrs: m => ({
         'data-msx-assist-mon': m.id
       }),
-      onPick: m => setApick(apick.includes(m.id) ? apick.filter(x => x !== m.id) : [...apick, m.id])
+      onPick: m => {
+        if (atab === 'rm') setApick(apick.includes(m.id) ? apick.filter(x => x !== m.id) : [...apick, m.id]);else {
+          setAsel(m.id);
+          setMsg('');
+        }
+      }
     }) : React.createElement("div", {
       className: "msx-note",
       style: {
@@ -187727,13 +187801,31 @@ function MsxR3Box({
       className: "mm-bar"
     }, React.createElement("span", {
       className: "cnt"
-    }, "メモモン ", React.createElement("b", null, stock.length), "/", MSX_ASSIST_CAP, "体"), React.createElement("button", {
-      type: "button",
-      className: "mm-sel",
-      disabled: !apick.length,
-      onClick: () => setAAsk(true),
-      "data-msx-assist-remove": true
-    }, "外す(", apick.length, "体)")), aAsk ? React.createElement("div", {
+    }, "メモモン ", React.createElement("b", null, stock.length), "/", MSX_ASSIST_CAP, "体")), acur && atab === 'list' && typeof MsxMonDetail === 'function' ? (() => {
+      const kp = acur.keep && typeof acur.keep === 'object' ? acur.keep : null;
+      const kAt = kp && Number.isFinite(kp.at) ? new Date(kp.at) : null;
+      return React.createElement(MsxMonDetail, _extends({}, detailBase(acur), {
+        sub: `Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`,
+        info: detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null]),
+        foot: React.createElement(React.Fragment, null, React.createElement("div", {
+          className: "mm-hint msx-kp",
+          "data-msx-assist-why": true
+        }, "メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。", '​', "育成を始めるときの編成に入れると、", '​', "アシスト効果と得意な能力が効きます"), React.createElement("div", {
+          className: "mm-acts"
+        }, React.createElement("button", {
+          type: "button",
+          onClick: () => {
+            setApick([acur.id]);
+            setAAsk(true);
+          },
+          "data-msx-assist-detail-rm": true
+        }, "外す"))),
+        onClose: () => {
+          setAsel(null);
+          setMsg('');
+        }
+      }));
+    })() : null, aAsk ? React.createElement("div", {
       className: "msx-ov msx-fade"
     }, React.createElement("div", {
       className: "msx-sheet"
@@ -187743,27 +187835,41 @@ function MsxR3Box({
         fontWeight: 900,
         lineHeight: 1.6
       }
-    }, apick.length, "体をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません"), React.createElement("button", {
+    }, aName(apick), "をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません"), React.createElement("button", {
       type: "button",
       className: "msx-btn go",
       "data-msx-assist-remove-yes": true,
       onClick: async () => {
+        const nm = aName(apick);
         try {
           const a = await msxAssistRemove(apick);
           setAssist(a);
-          setMsg(`${apick.length}体を外しました`);
+          setMsg(`${nm}を外しました`);
         } catch (e) {
           setMsg('外せませんでした');
         }
         setApick([]);
         setAAsk(false);
+        setAsel(null);
+        setAtab('list');
       }
     }, "外す"), React.createElement("button", {
       type: "button",
       className: "msx-btn sub",
-      onClick: () => setAAsk(false)
+      onClick: () => {
+        setAAsk(false);
+        if (atab !== 'rm') setApick([]);
+      }
     }, "やめておく"))) : null);
-    foot = null;
+    foot = atab === 'rm' ? React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      disabled: !apick.length,
+      onClick: () => setAAsk(true),
+      "data-msx-assist-remove": true
+    }, "外す(", apick.length, "体)")) : null;
   } else if (page === 'list' || page === 'detail' && cur) {
     const listAll = msxMmSorted(box.mons, view.sort);
     const listF = bq.trim() && typeof msxMatchQ === 'function' ? listAll.filter(m => msxMatchQ(bq, msxMmName(m), msxMonName(m.species))) : listAll;
@@ -187905,37 +188011,9 @@ function MsxR3Box({
       onClick: () => setByeAsk(null)
     }, "やめておく"))) : null, page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
       const lock = byeLock(cur);
-      const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => {
-        const T3 = msxR3T().assist;
-        return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : a.name || a.id;
-      }).join('・') : '';
-      const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
-        super: 'スーパー',
-        good: 'グッド',
-        bad: 'ふつう'
-      }[cur.ending] || cur.ending] : null, lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null, cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null];
-      return React.createElement(MsxMonDetail, {
-        species: cur.species,
-        name: msxMmName(cur),
+      const more = detailInfo(cur, [lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null, cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null]);
+      return React.createElement(MsxMonDetail, _extends({}, detailBase(cur), {
         sub: `Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`,
-        art: React.createElement(MsxMmArt, {
-          m: cur,
-          size: "100%"
-        }),
-        st: MSX_STATS.reduce((o, k) => ({
-          ...o,
-          [k]: Math.round(cur.st && cur.st[k] || 0)
-        }), {}),
-        apt: typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C'],
-        type: cur.gt,
-        grades: SUC && typeof SUC.aptGradesOf === 'function' ? (() => {
-          try {
-            return SUC.aptGradesOf(cur);
-          } catch (e) {
-            return null;
-          }
-        })() : null,
         pick: cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => {
           const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species);
           return {
@@ -187962,12 +188040,6 @@ function MsxR3Box({
             }
           };
         })() : null,
-        known: Array.isArray(cur.techs) ? cur.techs : [],
-        mastery: cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null,
-        power: cur.raised === false ? null : msxMmPow(cur),
-        rank: cur.grade ? null : cur.rank,
-        grade: cur.grade,
-        SUC: SUC,
         head: React.createElement(React.Fragment, null, React.createElement("button", {
           type: "button",
           className: `mm-fav${fav.includes(cur.id) ? ' on' : ''}`,
@@ -187989,15 +188061,6 @@ function MsxR3Box({
           "data-msx-r3-edit": true
         }, "✏")),
         info: more,
-        assists: Array.isArray(cur.assists) ? cur.assists : [],
-        initialTab: Array.isArray(cur.assists) && cur.assists.length ? 'assist' : null,
-        peak: (() => {
-          try {
-            return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak;
-          } catch (e) {
-            return '';
-          }
-        })(),
         foot: React.createElement(React.Fragment, null, msg ? React.createElement("div", {
           className: "mm-hint ok"
         }, msg) : null, React.createElement("div", {
@@ -188021,7 +188084,7 @@ function MsxR3Box({
           setPage('list');
           setMsg('');
         }
-      });
+      }));
     })() : null);
     foot = tab === 'bye' ? React.createElement("div", {
       className: "v-ft"
@@ -188134,16 +188197,21 @@ function MsxR3Box({
     foot = null;
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: page === 'list' && tab === 'bye' ? 'やめる' : '戻る',
+    back: page === 'list' && tab === 'bye' || page === 'assist' && atab === 'rm' ? 'やめる' : '戻る',
     onBack: page === 'gate' ? onClose : page === 'list' && tab === 'bye' ? () => {
       setTab('list');
       setPick([]);
     } : page === 'list' ? () => {
       setPage('gate');
       setMsg('');
+    } : page === 'assist' && atab === 'rm' ? () => {
+      setAtab('list');
+      setApick([]);
     } : page === 'assist' ? () => {
       setPage('gate');
       setApick([]);
+      setAsel(null);
+      setAtab('list');
     } : page === 'edit' ? () => {
       setEdit(null);
       setPage('detail');
