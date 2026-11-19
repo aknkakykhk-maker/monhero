@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38cced816d55e148
+// source-sha256: 276042ea3d629c85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61829,7 +61829,10 @@ function RhythmSongShopList({
           }
         }
       }, React.createElement("div", {
-        className: "absolute right-0 top-0 w-[76%] brightness-[0.7]"
+        className: "absolute right-0 top-0 w-[76%] brightness-[0.7]",
+        style: {
+          transform: 'rotate(8deg)'
+        }
       }, React.createElement("div", {
         className: "[container-type:inline-size]"
       }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
