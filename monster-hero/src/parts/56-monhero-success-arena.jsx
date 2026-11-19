@@ -336,7 +336,6 @@ const MSA_CSS = `
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
 .msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
-.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{height:clamp(300px,47vh,420px)}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -361,14 +360,17 @@ const MSA_CSS = `
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
   /* 段2(2026-11-19): 自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)。枠は4つを縦に並べる */
-  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(116px,19vw,170px)}
-  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(116px,19vw,170px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
+  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
+  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
   .msc-wrap.msa .msa-main>.msa-topline{grid-column:1/3}
   .msc-wrap.msa .msa-main>.msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
   .msc-wrap.msa .msa-main>.msa-say{grid-column:1;grid-row:3}
   .msc-wrap.msa .msa-main>.msa-foe{grid-column:2;grid-row:2/4;overflow:auto}
   .msc-wrap.msa .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
-  .msc-wrap.msa .msa-dc-c{min-height:0}
+  .msc-wrap.msa .msa-dc-c{min-height:0;padding:2px 4px}
+  /* 横は枠の列を細くするため、札のダメージ・移る間合いの行を省く(ミハリ #6883: 場を画面の約2/3に) */
+  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{font-size:10.5px}
   .msc-wrap.msa .msxm-row.cc,.msc-wrap.msa .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .msc-wrap.msa .msa-rowh small{display:none}
   .msc-wrap.msa .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
