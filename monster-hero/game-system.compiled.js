@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4d07a93e92123e03
+// source-sha256: 73877d8eed4fa2f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162386,14 +162386,16 @@ function MsxIssaMeet({
       aspectRatio: '1',
       objectFit: 'contain'
     }
-  })), React.createElement("div", {
-    className: "v-ev-h msx-is-band",
+  })), React.createElement(MsxEvHead, {
+    kind: "issa",
+    className: "msx-is-band",
     style: {
       top: 'auto',
       bottom: 8,
       borderRadius: '0 99px 99px 0'
-    }
-  }, React.createElement("small", null, "大きな賭け"), "イッサ博士があらわれた!"), React.createElement("div", {
+    },
+    title: "イッサ博士があらわれた!"
+  }), React.createElement("div", {
     className: "v-ibub msx-is-bub",
     style: MSX_IS_WRAP
   }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`))), React.createElement("div", {
@@ -162938,7 +162940,7 @@ const MSX_EV_TITLE = Object.freeze({
 });
 const MSX_DEX_TABS = Object.freeze([{
   key: 'story',
-  name: '助手のお話'
+  name: 'メインストーリー'
 }, {
   key: 'daily',
   name: 'ふだん',
@@ -162995,10 +162997,10 @@ const msxDexList = () => {
       title: '特別な1話',
       ep: 'special'
     });
-    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter(u => u.aid === aid).forEach(u => out.story.push({
+    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter(u => u.aid === aid).forEach((u, i) => out.story.push({
       id: u.id,
       aid,
-      title: u.title || 'お話',
+      title: `日々 その${i + 1}「${u.title || 'お話'}」`,
       scene: u.id
     }));
   });
@@ -163865,9 +163867,11 @@ function MsxTrainEvent({
     style: JA_LABEL_STYLE
   }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
     className: "who"
-  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement("div", {
-    className: "v-ev-h"
-  }, React.createElement("small", null, "編成のモンスターのイベント"), title), React.createElement("div", {
+  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement(MsxEvHead, {
+    kind: "team",
+    label: e.story ? `編成のモンスターのイベント その${e.story}` : undefined,
+    title: e.story ? `${name}との出来事` : title
+  }), React.createElement("div", {
     className: "tev-bond"
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
@@ -163917,7 +163921,9 @@ function MsxTrainEvent({
       position: 'static',
       animationDelay: `${0.9 + i * 0.15}s`
     }
-  }, t))));
+  }, t))), e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? React.createElement(MsxEvNext, {
+    text: `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`
+  }) : null);
 }
 const MSX_TEV_CSS = `
 .msx .msx-tev .tev-pal{transform:translateX(-50%) scaleX(-1)}
@@ -165944,9 +165950,11 @@ function MsxRunIntro({
     className: "msx-intro-aid",
     src: msxBody(s.aid, l.who === s.aid ? l.e || 'happy' : 'happy'),
     alt: ""
+  }), React.createElement(MsxEvHead, {
+    kind: "story",
+    label: "メインストーリー 序章",
+    title: `${msxAidName(s.aid)}編のはじまり`
   }), React.createElement("div", {
-    className: "v-ev-h"
-  }, React.createElement("small", null, "メインのお話"), msxAidName(s.aid), "編のはじまり"), React.createElement("div", {
     className: "v-talk msx-intro-talk"
   }, who ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "who"
@@ -171849,6 +171857,18 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+.msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
+.msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
+.msx .v-ev-h.k-ikusei{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.msx .v-ev-h.k-cup{background:linear-gradient(90deg,#b45309,#facc15)}
+.msx .v-ev-h.k-issa{background:linear-gradient(90deg,#6d28d9,#a78bfa)}
+.msx .msx-ev-tc{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none;background:radial-gradient(ellipse at center,#7c2d12cc,#0000 70%);animation:msxEvTc 1.6s ease-out both}
+.msx .msx-ev-tc small{font-size:15px;font-weight:900;color:#fed7aa;letter-spacing:.1em}
+.msx .msx-ev-tc b{font-size:40px;font-weight:900;color:#fff;text-shadow:0 3px 0 #c2410c,0 0 18px #fb923c}
+@keyframes msxEvTc{0%{opacity:0;transform:scale(1.15)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion: reduce){.msx .msx-ev-tc{display:none}}
+.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:center}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
@@ -173689,6 +173709,37 @@ const msxScriptLoad = aid => {
   const se = msxSuc && msxSuc.script;
   return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false);
 };
+const MSX_EV_KIND = Object.freeze({
+  story: 'メインストーリー',
+  days: '日々',
+  team: '編成のモンスターのイベント',
+  ikusei: '育成イベント',
+  cup: '大会イベント',
+  issa: '大きな賭け'
+});
+function MsxEvHead({
+  kind = 'ikusei',
+  label,
+  title,
+  className = '',
+  style
+}) {
+  const k = MSX_EV_KIND[kind] ? kind : 'ikusei';
+  const lb = label || MSX_EV_KIND[k];
+  return React.createElement("div", {
+    className: `v-ev-h k-${k}${className ? ` ${className}` : ''}`,
+    style: style,
+    "data-msx-ev-kind": k
+  }, lb && lb !== title ? React.createElement("small", null, lb) : null, title);
+}
+function MsxEvNext({
+  text
+}) {
+  return text ? React.createElement("div", {
+    className: "msx-ev-next",
+    "data-msx-ev-next": true
+  }, "つづく ▶ ", text) : null;
+}
 const msxPickLine = (ctx, scene, opt = {}) => {
   const se = msxSuc && msxSuc.script;
   if (!se || typeof se.say !== 'function') return null;
@@ -181411,14 +181462,34 @@ function MsxEvent({
       objectFit: 'contain',
       objectPosition: 'right bottom'
     }
-  }) : null, view && view.id === 'ev.self.peakin' && !picked ? React.createElement("div", {
+  }) : null, isStory && !picked ? React.createElement("div", {
+    className: "msx-ev-tc",
+    "aria-hidden": "true",
+    "data-msx-ev-title": true
+  }, React.createElement("small", null, msxAidName(s.aid), "のお話"), React.createElement("b", null, o.ep === 'special' ? '特別な1話' : `第${o.ep}話`)) : null, view && view.id === 'ev.self.peakin' && !picked ? React.createElement("div", {
     className: "msx-peak-card msx-pop",
     "data-msx-peak-start": true
   }, "🔥 ピークが始まった!") : null, (() => {
-    const cat = isStory || isUniq ? 'メインのお話' : view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント';
-    return React.createElement("div", {
-      className: "v-ev-h"
-    }, head !== cat ? React.createElement("small", null, cat) : null, head);
+    const an = msxAidName(s.aid);
+    if (isStory) return React.createElement(MsxEvHead, {
+      kind: "story",
+      label: `メインストーリー ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}`,
+      title: `${an}のお話`
+    });
+    if (isUniq) {
+      const arc = globalThis.MONHERO_SUCCESS_ARC && globalThis.MONHERO_SUCCESS_ARC.ARC && globalThis.MONHERO_SUCCESS_ARC.ARC[s.aid];
+      const n = arc && Array.isArray(arc.uniq) ? arc.uniq.findIndex(u => u.id === view.id) + 1 : 0;
+      return React.createElement(MsxEvHead, {
+        kind: "days",
+        label: `${an}の日々${n > 0 ? ` その${n}` : ''}`,
+        title: view.title ? `「${view.title}」` : 'お話'
+      });
+    }
+    const k = view && view.kind === 'team' ? 'team' : view && view.kind === 'cup' ? 'cup' : 'ikusei';
+    return React.createElement(MsxEvHead, {
+      kind: k,
+      title: head
+    });
   })(), React.createElement("div", {
     className: "v-talk"
   }, shown.length ? shown.map((l, i) => React.createElement("div", {
@@ -181435,6 +181506,8 @@ function MsxEvent({
   }) : null, typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? React.createElement(MsxEvResult, {
     delta: picked.delta,
     hasStats: Object.keys(ups).length > 0
+  }) : null, isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? React.createElement(MsxEvNext, {
+    text: `第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`
   }) : null, isStory && picked.branch ? React.createElement("div", {
     className: "v-log",
     "data-msx-story-branch": true
@@ -188009,6 +188082,9 @@ const MSX_ARC_CSS = `
 .msx .r3 .arc-end{position:absolute;left:0;right:0;top:5%;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:1.5px #9a3412;text-shadow:0 3px 0 #9a3412,0 0 22px #fb923c}
 .msx .r3 .arc-end.bad{color:#bfdbfe;-webkit-text-stroke:1.5px #1e3a8a;text-shadow:0 3px 0 #1e3a8a,0 0 18px #60a5fa}
 .msx .r3 .arc-end small{display:block;font-size:12px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:4px}
+.msx .arc-out{display:none}
+.msx.land .v-body>.v-talk.arc-out{display:block;position:relative;left:auto;right:auto;bottom:auto;margin-top:16px;grid-column:2}
+.msx.land .v-scene .v-talk.arc-in{display:none}
 `;
 const MSX_ARC_END = Object.freeze({
   bad: {
@@ -188113,11 +188189,7 @@ function MsxArcTalk({
     back: "中断",
     onBack: onPause,
     right: "",
-    body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement(MsxBand, {
-      s: s,
-      v: v,
-      ev: ev
-    }), React.createElement("div", {
+    body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement("div", {
       className: `v-scene ${dark ? 'dk' : ''}`,
       style: {
         flex: '1 1 0',
@@ -188157,15 +188229,22 @@ function MsxArcTalk({
         objectFit: 'contain',
         objectPosition: 'right bottom'
       }
-    }), top, head ? React.createElement("div", {
-      className: "v-ev-h"
-    }, React.createElement("small", null, "メインのお話"), head) : null, React.createElement("div", {
-      className: "v-talk"
+    }), top, head ? React.createElement(MsxEvHead, {
+      kind: "story",
+      title: head
+    }) : null, React.createElement("div", {
+      className: "v-talk arc-in"
     }, shown.map((l, i) => React.createElement("div", {
       key: `${page}-${i}`
     }, who(l) ? React.createElement("span", {
       className: "who"
-    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t))))),
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)))), React.createElement("div", {
+      className: "v-talk arc-out"
+    }, shown.map((l, i) => React.createElement("div", {
+      key: `o-${page}-${i}`
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)))),
     foot: React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -188338,12 +188417,18 @@ function MsxArcSpecial({
     }, "💖 ", title, " 💖")), React.createElement("div", {
       className: "arc-flash"
     }), React.createElement("div", {
-      className: "v-talk"
+      className: "v-talk arc-in"
     }, shown.map((l, i) => React.createElement("div", {
       key: `${page}-${i}`
     }, who(l) ? React.createElement("span", {
       className: "who"
-    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t))))),
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)))), React.createElement("div", {
+      className: "v-talk arc-out"
+    }, shown.map((l, i) => React.createElement("div", {
+      key: `o-${page}-${i}`
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)))),
     foot: React.createElement("div", {
       className: "v-ft"
     }, ready || page > 0 ? React.createElement("button", {
@@ -188353,11 +188438,10 @@ function MsxArcSpecial({
       "data-msx-arc-next": true
     }, page + 1 < pages ? '次へ ▶' : '引退へ ▶') : React.createElement("button", {
       type: "button",
-      className: "on",
-      style: {
-        flex: 2
-      }
-    }, "…"))
+      className: "go",
+      disabled: true,
+      "data-msx-arc-wait": true
+    }, pages > 1 ? '次へ ▶' : '引退へ ▶'))
   });
 }
 function MsxArcEnding({

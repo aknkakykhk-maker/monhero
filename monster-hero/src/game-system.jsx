@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 92adcd5f789fb7cb
+// generated-sha256: c1fdc1a15a5cc6a9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84443,7 +84443,7 @@ function MsxIssaMeet({ run, v, ev, ctx, onChoose }) {
       <span className="msx-is-spark" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--i': i }}/>)}</span>
       <img className="v-issa msx-is-in" src={MSX_ISSA_ART} alt="イッサ博士"/>
       <div className="v-machine msx-is-mc">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
-      <div className="v-ev-h msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }}><small>大きな賭け</small>イッサ博士があらわれた!</div>
+      <MsxEvHead kind="issa" className="msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }} title="イッサ博士があらわれた!"/>
       <div className="v-ibub msx-is-bub" style={MSX_IS_WRAP}>{msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)}</div>
     </div>
     <div className="v-six msx-is-six">
@@ -84696,7 +84696,7 @@ const MSX_EV_TITLE = Object.freeze({
   issa: 'イッサ博士があらわれた', 'aw.awake': '覚醒', 'aw.super': '超覚醒',
 });
 const MSX_DEX_TABS = Object.freeze([
-  { key: 'story', name: '助手のお話' }, { key: 'daily', name: 'ふだん', kinds: ['daily', 'small'] }, { key: 'team', name: '編成のモンスター', kinds: ['team'] },
+  { key: 'story', name: 'メインストーリー' }, { key: 'daily', name: 'ふだん', kinds: ['daily', 'small'] }, { key: 'team', name: '編成のモンスター', kinds: ['team'] },
   { key: 'self', name: '育成モンスター', kinds: ['self', 'body', 'goal'] }, { key: 'season', name: '季節の行事', kinds: ['season'] }, { key: 'cup', name: '大会まわり', kinds: ['cup'] },
   { key: 'issa', name: 'イッサ博士' }, { key: 'awake', name: '覚醒・超覚醒' },
 ]);
@@ -84709,7 +84709,7 @@ const msxDexList = () => {
   aids.forEach((aid) => {
     [1, 2, 3, 4].forEach((n) => out.story.push({ id: `story.${aid}.ep${n}`, aid, title: `第${n}話`, ep: n }));
     out.story.push({ id: `story.${aid}.special`, aid, title: '特別な1話', ep: 'special' });
-    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter((u) => u.aid === aid).forEach((u) => out.story.push({ id: u.id, aid, title: u.title || 'お話', scene: u.id }));
+    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter((u) => u.aid === aid).forEach((u, i) => out.story.push({ id: u.id, aid, title: `日々 その${i + 1}「${u.title || 'お話'}」`, scene: u.id })); // 見出しの帯と同じ言い方(段2)
   });
   out.issa.push({ id: 'issa', title: MSX_EV_TITLE.issa, scene: 'issa' });
   out.awake.push({ id: 'aw.awake', title: '覚醒', scene: 'turn.awake.fire', awake: 1 }, { id: 'aw.super', title: '超覚醒', scene: 'turn.awake.fire2', awake: 2 });
@@ -85164,7 +85164,7 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
       <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
       {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
       <div className="v-talk tev-talk" style={JA_LABEL_STYLE}>{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{jaWrap(line.t)}」</div> : <div>{jaWrap(line.t)}</div>) : <div>{jaWrap(`${name}と、すこし特別な時間をすごした。`)}</div>}</div>
-      <div className="v-ev-h"><small>編成のモンスターのイベント</small>{title}</div>
+      <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={e.story ? `${name}との出来事` : title}/>
       <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%`, transition: 'width .9s ease-out' }}/></i><em data-msx-tev-bond>{bondShow}{e.d && e.d.bond ? <small> ({e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond})</small> : null}</em></div>
       {/* 入り方 */}
       {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
@@ -85173,6 +85173,7 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
     </div>
     {ups ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
     <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
+    {e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? <MsxEvNext text={`その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`}/> : null}
   </>);
 }
 
@@ -86231,7 +86232,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
-        <div className="v-ev-h"><small>メインのお話</small>{msxAidName(s.aid)}編のはじまり</div>
+        <MsxEvHead kind="story" label="メインストーリー 序章" title={`${msxAidName(s.aid)}編のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
@@ -89213,6 +89214,18 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+.msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
+.msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
+.msx .v-ev-h.k-ikusei{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.msx .v-ev-h.k-cup{background:linear-gradient(90deg,#b45309,#facc15)}
+.msx .v-ev-h.k-issa{background:linear-gradient(90deg,#6d28d9,#a78bfa)}
+.msx .msx-ev-tc{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none;background:radial-gradient(ellipse at center,#7c2d12cc,#0000 70%);animation:msxEvTc 1.6s ease-out both}
+.msx .msx-ev-tc small{font-size:15px;font-weight:900;color:#fed7aa;letter-spacing:.1em}
+.msx .msx-ev-tc b{font-size:40px;font-weight:900;color:#fff;text-shadow:0 3px 0 #c2410c,0 0 18px #fb923c}
+@keyframes msxEvTc{0%{opacity:0;transform:scale(1.15)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion: reduce){.msx .msx-ev-tc{display:none}}
+.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:center}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
@@ -90602,6 +90615,18 @@ const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
 // ---- 台詞(台本エンジン MONHERO_SUCCESS_SCRIPT_ENGINE から1本。並びは育成の id + 場面で決まり、ターンでずれる) ----
 // msxScriptLoad(助手) … 共通 + その助手の台本を読む(2回目からはすぐ)。読み終わるまで台詞は null(画面は代わりの一言を出す)
 const msxScriptLoad = (aid) => { const se = msxSuc && msxSuc.script; return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false); };
+// ---- イベントの見出しの共通の型(r1119-009 段2・docs/progress/monsuc-event-story-design/README.md 4-1) ----
+//   1行目 = 種類の帯(色が種類で決まる)+ 連続物の番号 / 2行目 = 題。どの画面のイベントも、この部品で見出しを出す
+const MSX_EV_KIND = Object.freeze({ story: 'メインストーリー', days: '日々', team: '編成のモンスターのイベント', ikusei: '育成イベント', cup: '大会イベント', issa: '大きな賭け' });
+function MsxEvHead({ kind = 'ikusei', label, title, className = '', style }) {
+  const k = MSX_EV_KIND[kind] ? kind : 'ikusei';
+  const lb = label || MSX_EV_KIND[k];
+  return <div className={`v-ev-h k-${k}${className ? ` ${className}` : ''}`} style={style} data-msx-ev-kind={k}>{lb && lb !== title ? <small>{lb}</small> : null}{title}</div>;
+}
+// 連続物の「つづく」の1行(話の終わりに出す)
+function MsxEvNext({ text }) {
+  return text ? <div className="msx-ev-next" data-msx-ev-next>つづく ▶ {text}</div> : null;
+}
 const msxPickLine = (ctx, scene, opt = {}) => {
   const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
   const c = { ...ctx, bond: opt.bondLv != null ? opt.bondLv : ctx.bond };
@@ -93170,14 +93195,23 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? (Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={s.team[cheerIdx].species} src={msxMonImg(s.team[cheerIdx].species)} masuColors={s.team[cheerIdx].colors} alt="" draggable={false} className="mon" style={{ left: '70%', bottom: '30%', height: '36%' }}/> : <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>)
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-3%', bottom: '17%', height: '88%', width: '56%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+      {isStory && !picked ? <div className="msx-ev-tc" aria-hidden="true" data-msx-ev-title><small>{msxAidName(s.aid)}のお話</small><b>{o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}</b></div> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
-      {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
+      {(() => { // 見出しの共通の型(段2): 種類の帯の色と番号・題
+        const an = msxAidName(s.aid);
+        if (isStory) return <MsxEvHead kind="story" label={`メインストーリー ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}`} title={`${an}のお話`}/>;
+        if (isUniq) { const arc = globalThis.MONHERO_SUCCESS_ARC && globalThis.MONHERO_SUCCESS_ARC.ARC && globalThis.MONHERO_SUCCESS_ARC.ARC[s.aid]; const n = arc && Array.isArray(arc.uniq) ? arc.uniq.findIndex((u) => u.id === view.id) + 1 : 0;
+          return <MsxEvHead kind="days" label={`${an}の日々${n > 0 ? ` その${n}` : ''}`} title={view.title ? `「${view.title}」` : 'お話'}/>; }
+        const k = view && view.kind === 'team' ? 'team' : view && view.kind === 'cup' ? 'cup' : 'ikusei';
+        return <MsxEvHead kind={k} title={head}/>;
+      })()}
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`gfx-${s.turn}-${picked.scenes.join('|')}`} items={msxGfxItemsOf(picked, s)}/> : null}
       {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? <MsxEvNext text={`第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`}/> : null}
       {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
@@ -95792,6 +95826,9 @@ const MSX_ARC_CSS = `
 .msx .r3 .arc-end{position:absolute;left:0;right:0;top:5%;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:1.5px #9a3412;text-shadow:0 3px 0 #9a3412,0 0 22px #fb923c}
 .msx .r3 .arc-end.bad{color:#bfdbfe;-webkit-text-stroke:1.5px #1e3a8a;text-shadow:0 3px 0 #1e3a8a,0 0 18px #60a5fa}
 .msx .r3 .arc-end small{display:block;font-size:12px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:4px}
+.msx .arc-out{display:none}
+.msx.land .v-body>.v-talk.arc-out{display:block;position:relative;left:auto;right:auto;bottom:auto;margin-top:16px;grid-column:2}
+.msx.land .v-scene .v-talk.arc-in{display:none}
 `;
 const MSX_ARC_END = Object.freeze({
   bad: { name: 'くやしさも、いっしょに', sub: 'ヒーローズファイナル出場', /* 見出しを「バッドエンディング」にしない(r1115-202 L7) */ bg: 'images/story-bg/monhero_plaza_evening.jpg' },
@@ -95835,15 +95872,17 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   return (
     <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
-      <MsxBand s={s} v={v} ev={ev}/>
+      {/* U-9: お話・エンディングの場面は数字の帯を出さない(参考 v4 128〜154秒) */}
       <div className={`v-scene ${dark ? 'dk' : ''}`} style={{ flex: '1 1 0', minHeight: 300 }} data-msx-arc-talk>
         <img className="bg" src={bg || msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
         {mon ? <><div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '24%' }} live/></> : null}
         <img src={msxBody(aid, lastFace)} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
         {top}
-        {head ? <div className="v-ev-h"><small>メインのお話</small>{head}</div> : null}
-        <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+        {head ? <MsxEvHead kind="story" title={head}/> : null}
+        <div className="v-talk arc-in">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
+      {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
+      <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
     </>)} foot={<div className="v-ft"><button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : doneText}</button></div>}/>
   );
 }
@@ -95898,9 +95937,11 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
           <div className="cap">💖 {title} 💖</div>
         </div>
         <div className="arc-flash"/>
-        <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+        <div className="v-talk arc-in">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="on" style={{ flex: 2 }}>…</button>}</div>}/>
+      {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
+      <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go" disabled data-msx-arc-wait>{pages > 1 ? '次へ ▶' : '引退へ ▶'}</button>}</div>}/>
   );
 }
 

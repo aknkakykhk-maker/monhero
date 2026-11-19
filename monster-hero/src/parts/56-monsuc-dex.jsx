@@ -120,7 +120,7 @@ const MSX_EV_TITLE = Object.freeze({
   issa: 'イッサ博士があらわれた', 'aw.awake': '覚醒', 'aw.super': '超覚醒',
 });
 const MSX_DEX_TABS = Object.freeze([
-  { key: 'story', name: '助手のお話' }, { key: 'daily', name: 'ふだん', kinds: ['daily', 'small'] }, { key: 'team', name: '編成のモンスター', kinds: ['team'] },
+  { key: 'story', name: 'メインストーリー' }, { key: 'daily', name: 'ふだん', kinds: ['daily', 'small'] }, { key: 'team', name: '編成のモンスター', kinds: ['team'] },
   { key: 'self', name: '育成モンスター', kinds: ['self', 'body', 'goal'] }, { key: 'season', name: '季節の行事', kinds: ['season'] }, { key: 'cup', name: '大会まわり', kinds: ['cup'] },
   { key: 'issa', name: 'イッサ博士' }, { key: 'awake', name: '覚醒・超覚醒' },
 ]);
@@ -133,7 +133,7 @@ const msxDexList = () => {
   aids.forEach((aid) => {
     [1, 2, 3, 4].forEach((n) => out.story.push({ id: `story.${aid}.ep${n}`, aid, title: `第${n}話`, ep: n }));
     out.story.push({ id: `story.${aid}.special`, aid, title: '特別な1話', ep: 'special' });
-    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter((u) => u.aid === aid).forEach((u) => out.story.push({ id: u.id, aid, title: u.title || 'お話', scene: u.id }));
+    (E && Array.isArray(E.UNIQ) ? E.UNIQ : []).filter((u) => u.aid === aid).forEach((u, i) => out.story.push({ id: u.id, aid, title: `日々 その${i + 1}「${u.title || 'お話'}」`, scene: u.id })); // 見出しの帯と同じ言い方(段2)
   });
   out.issa.push({ id: 'issa', title: MSX_EV_TITLE.issa, scene: 'issa' });
   out.awake.push({ id: 'aw.awake', title: '覚醒', scene: 'turn.awake.fire', awake: 1 }, { id: 'aw.super', title: '超覚醒', scene: 'turn.awake.fire2', awake: 2 });
