@@ -130,7 +130,7 @@ function MsxR3Box({ onClose }) {
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
-  const [runTeam, setRunTeam] = useState(null); // 進行中の育成の編成の子(box の id)。育成していなければ null(B-6)
+  const [runOn, setRunOn] = useState(null); // 進行中の育成があるか(B-6)。null = まだ読めていない(読めるまでは固定しておく)
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null); // { nick, colors, err }
   const [top, setTop] = useState('base'); // 詳細の右上のタブ base / feat / apt
@@ -151,10 +151,11 @@ function MsxR3Box({ onClose }) {
     storeGet(MSX_MM_FAV_KEY, []).then((v) => { if (alive) setFav(msxMmNormFav(v)); }).catch(() => {});
     storeGet(MSX_MM_VIEW_KEY, null).then((v) => { if (alive) setViewState(msxMmNormView(v)); }).catch(() => {});
     storeGet(MSX_KEYS.run, null).then((r) => {
-      if (!alive || !r || typeof r !== 'object') return;
-      if (r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
-      setRunTeam(Array.isArray(r.team) ? r.team.filter((t) => t && typeof t.boxId === 'string').map((t) => t.boxId) : []);
-    }).catch(() => {});
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => { if (alive) setRunOn(true); }); // 読めなかったときは安全のため固定のまま
     return () => { alive = false; };
   }, []);
   const setView = (v) => { const n = msxMmNormView(v); setViewState(n); storeSet(MSX_MM_VIEW_KEY, n).catch(() => {}); };
@@ -163,8 +164,8 @@ function MsxR3Box({ onClose }) {
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
   // 合体に使えないのは「いま進行中の育成の編成」の子だけ(B-6)。meta.team は次の育成の初期値なので、育成していないときは固定しない。
-  // 育成中は、始めたときに書いた meta.team と run の編成の両方を見る(保存の形は変えない)
-  const teamIds = runTeam ? [...new Set([...runTeam, ...(meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [])])] : [];
+  // meta.team は育成を始めたときだけ書かれるので、育成中はその育成の編成と同じ(run の編成は box の id を持たない)。保存の形は変えない
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter((t) => t && typeof t.box === 'string').map((t) => t.box) : [];
   // お別れで選べない子: ハートの子・貸し出し中・育成中の元の子
   const byeLock = (m) => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async (id) => { const m = { ...(await msxR3ReadMeta()), lend: id }; await storeSet(MSX_KEYS.meta, m); setMeta(m); };

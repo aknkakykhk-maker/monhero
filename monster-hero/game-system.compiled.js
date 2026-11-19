@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f70b1d868980687
+// source-sha256: e7a6eef49fb795fc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187105,7 +187105,7 @@ function MsxR3Box({
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
-  const [runTeam, setRunTeam] = useState(null);
+  const [runOn, setRunOn] = useState(null);
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null);
   const [top, setTop] = useState('base');
@@ -187143,10 +187143,13 @@ function MsxR3Box({
       if (alive) setViewState(msxMmNormView(v));
     }).catch(() => {});
     storeGet(MSX_KEYS.run, null).then(r => {
-      if (!alive || !r || typeof r !== 'object') return;
-      if (r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
-      setRunTeam(Array.isArray(r.team) ? r.team.filter(t => t && typeof t.boxId === 'string').map(t => t.boxId) : []);
-    }).catch(() => {});
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => {
+      if (alive) setRunOn(true);
+    });
     return () => {
       alive = false;
     };
@@ -187164,7 +187167,7 @@ function MsxR3Box({
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = runTeam ? [...new Set([...runTeam, ...(meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [])])] : [];
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
   const byeLock = m => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async id => {
     const m = {
