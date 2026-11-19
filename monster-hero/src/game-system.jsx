@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0109592c231a3f47
+// generated-sha256: e016da29e01c8db9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11042,15 +11042,25 @@ const grantCompensationGifts = (gifts, now=Date.now(), waivedIds=[]) => {
 // 【判定できない範囲】同じログインボーナス期間の2回目以降の起動は時刻の記録が
 //   残らないため、その回しか窓の証拠がない人は対象と確定できない。推測では配らない。
 // 【二重防止】通常のお詫びと同じく id で判定する。ギフト一覧に id があれば
-//   (受取済みでも)二度は入れない。この項目は消さない(消すと再配布されてしまう)。
+//   (受取済みでも)本体は二度は入れない。この項目は消さない(消すと再配布されてしまう)。
+// 【増額(2026-11-19・500万→5000万)】当初500万で配り始めたが、同日中に5000万へ増額した。
+//   既に届いている人には窓の判定をやり直さず(届いた時点で対象は確定)、次の扱いで揃える:
+//   ・未受取 … そのギフトの金額だけを5000万へ書き換える(作成・期限の時刻は維持)
+//   ・受取済み … 差額4500万を別ギフト(OUTAGE_COMPENSATION_20261119_EXTRA)で1回だけ足す
 const OUTAGE_COMPENSATION_20261119 = Object.freeze({
   id: 'gift_compensation_20261119_outage',
   title: 'お詫びのしるし',
   description: '11月19日のサーバー障害のお詫びです。ご迷惑をおかけしました。対象は11月19日13:00までにログインされた方です。',
-  rewards: Object.freeze([{ type:'diamond', amount:5000000 }]),
+  rewards: Object.freeze([{ type:'diamond', amount:50000000 }]),
   // 対象の窓(+09:00 で判定)。終わりは「13:00ちょうどまで」なので 13:00:00 を含む
   windowStartMs: Date.parse('2026-11-19T00:00:00+09:00'),
   windowEndMs: Date.parse('2026-11-19T13:00:00+09:00'),
+});
+// 受取済みの人へ増額の差額を届けるための別ギフト。id が一覧にあれば二重には入れない
+const OUTAGE_COMPENSATION_20261119_EXTRA = Object.freeze({
+  id: 'gift_compensation_20261119_outage_extra',
+  title: 'お詫びのしるし',
+  description: '11月19日のサーバー障害のお詫びの増額ぶんです。すでに500万ダイヤをお受け取りいただいた方へ、差額をお届けします。',
 });
 const giftTimestampInOutageWindow = (value) => {
   const t = Date.parse(value || '');
@@ -11062,7 +11072,30 @@ const outageCompensationEligible = (gifts) => (Array.isArray(gifts) ? gifts : []
 const grantOutageCompensationGift = (gifts, now=Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const def = OUTAGE_COMPENSATION_20261119;
-  if (list.some(item => item?.id === def.id)) return { granted:false, gifts:list };
+  const newAmount = def.rewards.find(r => r.type === 'diamond')?.amount || 0;
+  const diamondAmountOf = (gift) => (Array.isArray(gift?.rewards) ? gift.rewards : [])
+    .filter(r => r?.type === 'diamond')
+    .reduce((sum, r) => sum + (Math.floor(Number(r.amount) || 0)), 0);
+  const existing = list.find(item => item?.id === def.id);
+  if (existing) {
+    // 既に届いている人。届いた時点で対象は確定しているので、窓の判定はやり直さない。
+    // 増額(500万→5000万)に追いつかせるだけ
+    const currentAmount = diamondAmountOf(existing);
+    if (currentAmount >= newAmount) return { granted:false, gifts:list };
+    if (!existing.claimedAt) {
+      // 未受取: 金額だけを増額後の額へ書き換える(作成・期限の時刻はそのまま)
+      if (!existing.rewards?.some(r => r?.type === 'diamond')) return { granted:false, gifts:list };
+      const upgraded = { ...existing, rewards: existing.rewards.map(r => r?.type === 'diamond' ? { ...r, amount:newAmount } : r) };
+      return { granted:true, gifts: list.map(item => item === existing ? upgraded : item) };
+    }
+    // 受取済み: 差額を別ギフトで1回だけ足す(差額ギフトが既にあれば何もしない)
+    const extraDef = OUTAGE_COMPENSATION_20261119_EXTRA;
+    if (list.some(item => item?.id === extraDef.id)) return { granted:false, gifts:list };
+    const createdAt = new Date(now).toISOString();
+    const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
+    const extra = { id:extraDef.id, source:'compensation', title:extraDef.title, description:extraDef.description, rewards:[{ type:'diamond', amount:newAmount - currentAmount }], createdAt, expiresAt, claimedAt:null };
+    return { granted:true, gifts:[extra, ...list] };
+  }
   if (!outageCompensationEligible(list)) return { granted:false, gifts:list };
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
@@ -128839,7 +128872,7 @@ function MonsterHeroGame() {
       setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
+      if (loginGrant.granted || compensationGrant.granted || outageGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
       if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);

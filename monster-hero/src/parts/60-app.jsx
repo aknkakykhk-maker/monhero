@@ -7591,7 +7591,7 @@ function MonsterHeroGame() {
       setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
+      if (loginGrant.granted || compensationGrant.granted || outageGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
       if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
