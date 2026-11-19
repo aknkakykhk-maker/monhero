@@ -1192,7 +1192,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
   const used = s.pts - ws.pts;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
-  const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
+  const techs = typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean); // 受け継いだ技も(r1119-016)
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null };
   const peakSpan = Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
   return (<>

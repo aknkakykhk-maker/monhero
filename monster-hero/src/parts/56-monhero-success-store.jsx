@@ -190,6 +190,8 @@ const msxNormBoxMon = (m) => {
   return {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))), techs: tm.techs,
+    // 受け継いだ技の元の種(r1119-016・足すだけ)。文字の組だけ残し、持っている技のものに絞る。無ければ持たない
+    ...(msxIsObj(m.techFrom) ? (() => { const o = {}; Object.entries(m.techFrom).slice(0, 64).forEach(([id, sp]) => { const cid = msxTechCanon(id); if (typeof cid === 'string' && typeof sp === 'string' && sp.length <= 24 && tm.techs.includes(cid)) o[cid] = sp; }); return Object.keys(o).length ? { techFrom: o } : { techFrom: undefined }; })() : {}),
     mast: tm.mast, fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),

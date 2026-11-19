@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 96ae6861a9f695a8
+// generated-sha256: d3807f1cd395975a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81185,7 +81185,7 @@ const monsucCupInfo = (suc, s, me) => {
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
 const monsucTeams = (catalog, suc, s, info) => {
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
-  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop), ...(s.awake ? { awake: s.awake } : {}) }; // awake … 覚醒の印(見せる側のキラだけ。試合の芯は読まない)
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), ...(s.techFrom && typeof s.techFrom === 'object' ? { techFrom: s.techFrom } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop), ...(s.awake ? { awake: s.awake } : {}) }; // awake … 覚醒の印(見せる側のキラだけ。試合の芯は読まない)
   const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
   const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
   const n = Math.max(1, mscNum(o.techs, 2));
@@ -81520,7 +81520,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
   const aptOf = (sp, me) => (me && typeof suc.aptGradesOf === 'function' ? suc.aptGradesOf(s) : (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C']);
   const techsOf = (sp, ids) => { const all = (catalog && catalog.species[sp] && catalog.species[sp].techs) || []; return ids.map(id => all.find(t => t.id === id)).filter(Boolean); };
-  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const myTechs = typeof suc.techsOfRun === 'function' ? suc.techsOfRun(s) : techsOf(s.species, Array.isArray(s.techs) ? s.techs : []); // 受け継いだ技も(r1119-016)
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
@@ -85268,7 +85268,7 @@ const msxTevChanges = (s, o) => {
     if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
-    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find((t) => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
     if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
     return out;
   }
@@ -85280,7 +85280,7 @@ const msxTevChanges = (s, o) => {
     out.push(`🤝 親密度 +${st ? st.bond : 10}`);
     if (e.story === 1) out.push(`${stat} 小アップ`);
     else if (e.story === 2) { out.push(`${stat} 中アップ`); out.push('❤️ 体力 −10'); }
-    else { out.push(`${stat} 中アップ`); out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10'); }
+    else { out.push(`${stat} 中アップ`); out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find((t) => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10'); }
   } else {
     const k = e.lottery;
     if (k === 'self') { out.push(`${stat} 小アップ`); out.push('🤝 親密度 +5'); }
@@ -90430,6 +90430,8 @@ const msxNormBoxMon = (m) => {
   return {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))), techs: tm.techs,
+    // 受け継いだ技の元の種(r1119-016・足すだけ)。文字の組だけ残し、持っている技のものに絞る。無ければ持たない
+    ...(msxIsObj(m.techFrom) ? (() => { const o = {}; Object.entries(m.techFrom).slice(0, 64).forEach(([id, sp]) => { const cid = msxTechCanon(id); if (typeof cid === 'string' && typeof sp === 'string' && sp.length <= 24 && tm.techs.includes(cid)) o[cid] = sp; }); return Object.keys(o).length ? { techFrom: o } : { techFrom: undefined }; })() : {}),
     mast: tm.mast, fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
@@ -91101,7 +91103,7 @@ const msxAptOf = (sp) => { const a = typeof AMG_APT !== 'undefined' && AMG_APT &
 const msxTeamSrc = (slot, box, own, assist) => {
   // メモリアルモンスター(合体の親・お別れしたモンスター。mh_monsuc_assist_v1)も、マスモンボックスの子と同じ形で編成に入る
   if (slot && slot.assist) { const a = ((assist && assist.mons) || []).find((x) => x.id === slot.assist); if (a) { const t = msxTeamSrc({ box: a.id }, { mons: [a] }, own); return { ...t, boxId: null, assistId: a.id }; } }
-  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, colors: m.colors, boxId: m.id }; }
+  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, ...(m.techFrom ? { techFrom: m.techFrom } : {}), ...(typeof m.teachTech === 'string' ? { teachTech: m.teachTech } : {}), aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, colors: m.colors, boxId: m.id }; }
   const sp = slot && slot.base ? slot.base : 'Mocchi';
   // 育てる子と同じ種のベースモンは「(ベースモン)」をつけ、育てる子と取り違えない(2026-11-14)
   return { kind: 'base', species: sp, name: sp === own ? `${msxMonName(sp)}(ベースモン)` : msxMonName(sp) };
@@ -93264,7 +93266,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
   const used = s.pts - ws.pts;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
-  const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
+  const techs = typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean); // 受け継いだ技も(r1119-016)
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null };
   const peakSpan = Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
   return (<>
@@ -93851,7 +93853,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const sp = spOf(s.species); const own = (cat.species[sp].techs || []).map((t) => t.id);
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
-  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
+  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.techFrom && typeof s.techFrom === 'object' ? { techFrom: s.techFrom } : {}), ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
     ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
   const osp = spOf(opp.species);
   // ライバルは芯が選んだ技(techIds)をそのまま使う。無い相手は今までどおり種の技表の先頭から個数ぶん(r1116-002)
@@ -93914,6 +93916,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: msxR3AssistsToSave(assists),
   ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some((t) => s.masterySpent[t] > 0) ? { mastSpent: s.techs.slice(0, 99).map((t) => Math.round(s.masterySpent[t] || 0)) } : {}), // 熟練の使った量(techs と同じ並び・あとでポイントに変える分。2026-11-13・足すだけ)
+  ...(s.techFrom && typeof s.techFrom === 'object' && Object.keys(s.techFrom).length ? { techFrom: { ...s.techFrom } } : {}), // 受け継いだ技の元の種(r1119-016・足すだけ。techs の技 id → 種)
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
   ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}),
   ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}),
@@ -94851,7 +94854,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const better = MSX_STATS.filter((k) => s.stats[k] >= opp.stats[k]).map((k) => MSX_STAT_NAME[k]);
     const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
     const lvA = (g) => ({ M: 3, 'SS+': 3, SS: 3, 'S+': 3, S: 3, A: 3, B: 2, C: 1 }[g] || 0);
-    const techA = (Array.isArray(s.techs) ? s.techs : []).map((id) => { const t = (SUC.techsOf(s.species) || []).find((x) => x.id === id); return t ? t.name : null; }).filter(Boolean);
+    const techA = (typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : []).map((t) => t.name); // 受け継いだ技も(r1119-016)
     // 相手の技は、実際の試合(msxR3Fight)と同じ決め方で出す: techIds があれば種の技表で実在する物だけ → 無ければ種の技表の先頭から個数ぶん(最低1つ・無指定は2つ)。
     //   決め方が試合とズレると「見た技と違う技で戦う」事故になるので、r3-store の msxR3Fight と突き合わせて同じにする
     const oppTechTable = typeof SUC.techsOf === 'function' ? (SUC.techsOf(opp.species) || []) : [];

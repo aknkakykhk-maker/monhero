@@ -771,7 +771,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const better = MSX_STATS.filter((k) => s.stats[k] >= opp.stats[k]).map((k) => MSX_STAT_NAME[k]);
     const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || []; const distB = (msxMon(opp.species) || {}).distAptitude || [];
     const lvA = (g) => ({ M: 3, 'SS+': 3, SS: 3, 'S+': 3, S: 3, A: 3, B: 2, C: 1 }[g] || 0);
-    const techA = (Array.isArray(s.techs) ? s.techs : []).map((id) => { const t = (SUC.techsOf(s.species) || []).find((x) => x.id === id); return t ? t.name : null; }).filter(Boolean);
+    const techA = (typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : []).map((t) => t.name); // 受け継いだ技も(r1119-016)
     // 相手の技は、実際の試合(msxR3Fight)と同じ決め方で出す: techIds があれば種の技表で実在する物だけ → 無ければ種の技表の先頭から個数ぶん(最低1つ・無指定は2つ)。
     //   決め方が試合とズレると「見た技と違う技で戦う」事故になるので、r3-store の msxR3Fight と突き合わせて同じにする
     const oppTechTable = typeof SUC.techsOf === 'function' ? (SUC.techsOf(opp.species) || []) : [];

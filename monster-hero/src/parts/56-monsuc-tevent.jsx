@@ -17,7 +17,7 @@ const msxTevChanges = (s, o) => {
     if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
-    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find((t) => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
     if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
     return out;
   }
@@ -29,7 +29,7 @@ const msxTevChanges = (s, o) => {
     out.push(`🤝 親密度 +${st ? st.bond : 10}`);
     if (e.story === 1) out.push(`${stat} 小アップ`);
     else if (e.story === 2) { out.push(`${stat} 中アップ`); out.push('❤️ 体力 −10'); }
-    else { out.push(`${stat} 中アップ`); out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10'); }
+    else { out.push(`${stat} 中アップ`); out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find((t) => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10'); }
   } else {
     const k = e.lottery;
     if (k === 'self') { out.push(`${stat} 小アップ`); out.push('🤝 親密度 +5'); }

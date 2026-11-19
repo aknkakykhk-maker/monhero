@@ -304,9 +304,15 @@ const __mod = { exports: {} };
     }
     return out;
   };
-  const buildMoves = (catalog, speciesId, techIds, mastery, techBoost) => {
+  // 受け継いだ技(モンサク r1119-016): 種の表に無い技は、元の種の表から引く(techFrom = { 技id: 種 }。無ければ今までと同じ)
+  const foreignTechs = (catalog, speciesId, techIds, techFrom) => {
+    if (!Array.isArray(techIds) || !techFrom || typeof techFrom !== 'object') return [];
+    const own = catalog.species[speciesId].techs;
+    return techIds.filter(id => !own.some(t => t.id === id)).map((id) => { const f = techFrom[id]; const fs = typeof f === 'string' && catalog.species[f] ? catalog.species[f] : null; return fs ? fs.techs.find(t => t.id === id) || null : null; }).filter(Boolean);
+  };
+  const buildMoves = (catalog, speciesId, techIds, mastery, techBoost, techFrom) => {
     const sp = catalog.species[speciesId];
-    const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)) : startTechs(sp);
+    const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)).concat(foreignTechs(catalog, speciesId, techIds, techFrom)) : startTechs(sp);
     const list = known.length ? known : (sp.techs.some(t => t.start) ? startTechs(sp) : [sp.techs[0]]);
     return list.map(t => {
       const m = clamp(Number(mastery && mastery[t.id]) || 0, 0, 100);
@@ -368,14 +374,19 @@ const __mod = { exports: {} };
     const techs = Array.isArray(src.techs) ? src.techs.filter(x => typeof x === 'string') : null;
     const mastery = {};
     const ms = src.mastery && typeof src.mastery === 'object' ? src.mastery : {};
-    for (const k of [...catalog.species[species].techs.map(t => t.id), 'guard', 'dist', 'swap']) mastery[k] = toInt(ms[k], 0, 100, 0);
+    // 受け継いだ技の元の種(任意・モンサク r1119-016)。その種の表にその技があるものだけ残す
+    let techFrom = null;
+    if (techs && src.techFrom && typeof src.techFrom === 'object' && !Array.isArray(src.techFrom)) {
+      for (const id of techs) { const f = src.techFrom[id]; if (typeof f === 'string' && catalog.species[f] && !catalog.species[species].techs.some(t => t.id === id) && catalog.species[f].techs.some(t => t.id === id)) (techFrom = techFrom || {})[id] = f; }
+    }
+    for (const k of [...catalog.species[species].techs.map(t => t.id), ...(techFrom ? Object.keys(techFrom) : []), 'guard', 'dist', 'swap']) mastery[k] = toInt(ms[k], 0, 100, 0);
     const loy = toInt(src.loy, 0, 100, 100); // 忠誠度(無ければ100)
     const pop = toInt(src.pop, 0, 100, 0);   // 人気(無ければ0)
     const aptUp = normAptUp(src.aptUp);        // 上げた間合い適性(無ければ 0 段)
     // 技ごとの強化(覚えている技だけ。techs が無ければはじめの技)
     const known = techs || startTechs(catalog.species[species]).map(t => t.id);
-    const techBoost = normTechBoost(src.techBoost, catalog.species[species].techs.map(t => t.id).filter(id => known.includes(id)));
-    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp, techBoost };
+    const techBoost = normTechBoost(src.techBoost, catalog.species[species].techs.map(t => t.id).concat(techFrom ? Object.keys(techFrom) : []).filter(id => known.includes(id)));
+    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp, techBoost, ...(techFrom ? { techFrom } : {}) };
   };
   const normalizeTeam = (t, catalog, statMax = STAT_MAX) => {
     const src = t && typeof t === 'object' ? t : {};
@@ -614,7 +625,7 @@ const __mod = { exports: {} };
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: applyAptUp(catalog.species[m.species].apt, m.aptUp || [0, 0, 0, 0]),
-            moves: buildMoves(catalog, m.species, m.techs, m.mastery, m.techBoost), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
+            moves: buildMoves(catalog, m.species, m.techs, m.mastery, m.techBoost, m.techFrom), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, moveLv: 0, loy: m.loy, pop: m.pop };
         }),
       };
@@ -1088,7 +1099,7 @@ const __mod = { exports: {} };
 
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
-    FEATURES: Object.freeze({ techBoost: true, moveGuts: true, blow: true }),
+    FEATURES: Object.freeze({ techBoost: true, moveGuts: true, blow: true, techFrom: true }), // techFrom: 種の表に無い技を元の種で引く(モンサク r1119-016)
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, STAT_MAX_RULE, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_MUL, ROUND_PER_UNIT, regenEff, CHARGE_TOTAL, chargeAddOf, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,

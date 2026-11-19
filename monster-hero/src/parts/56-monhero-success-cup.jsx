@@ -157,7 +157,7 @@ const monsucCupInfo = (suc, s, me) => {
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
 const monsucTeams = (catalog, suc, s, info) => {
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 100;
-  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop), ...(s.awake ? { awake: s.awake } : {}) }; // awake … 覚醒の印(見せる側のキラだけ。試合の芯は読まない)
+  const mine = { species: s.species, name: info.meName, lv: mscNum(s.lv, 1), stats: s.stats, ...(typeof suc.aptSendOf === 'function' ? { aptUp: suc.aptSendOf(s) } : {}), ...(s.techFrom && typeof s.techFrom === 'object' ? { techFrom: s.techFrom } : {}), techs: Array.isArray(s.techs) ? s.techs.slice() : undefined, mastery: s.mastery || {}, loy, pop: mscNum(s.pop), ...(s.awake ? { awake: s.awake } : {}) }; // awake … 覚醒の印(見せる側のキラだけ。試合の芯は読まない)
   const o = info.opp || { species: s.species, stats: s.stats, techs: 2, mastery: 20, tactics: 10 };
   const all = (catalog && catalog.species[o.species] && catalog.species[o.species].techs) || [];
   const n = Math.max(1, mscNum(o.techs, 2));
@@ -492,7 +492,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
   const aptOf = (sp, me) => (me && typeof suc.aptGradesOf === 'function' ? suc.aptGradesOf(s) : (catalog && catalog.species[sp] && catalog.species[sp].apt) || ['C', 'C', 'C', 'C']);
   const techsOf = (sp, ids) => { const all = (catalog && catalog.species[sp] && catalog.species[sp].techs) || []; return ids.map(id => all.find(t => t.id === id)).filter(Boolean); };
-  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const myTechs = typeof suc.techsOfRun === 'function' ? suc.techsOfRun(s) : techsOf(s.species, Array.isArray(s.techs) ? s.techs : []); // 受け継いだ技も(r1119-016)
   const foeTechs = ((catalog && catalog.species[o.species] && catalog.species[o.species].techs) || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);

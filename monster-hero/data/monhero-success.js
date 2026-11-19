@@ -736,7 +736,10 @@
       const colors = base ? [] : (Array.isArray(o.colors) ? o.colors.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : []);
       const assists = base ? [] : normAssists(o.assists);
       const own = techsOf(sp).map(t => t.id);
-      const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
+      // 受け継いだ技(r1119-016): 元の種(o.techFrom)が分かる技は、種の表に無くても持つ
+      const tFrom = {}; if (!base && o.techFrom && typeof o.techFrom === 'object' && !Array.isArray(o.techFrom)) Object.entries(o.techFrom).slice(0, 64).forEach(([id, f]) => { const cid = canonTechList([id])[0]; if (cid && !own.includes(cid) && typeof f === 'string' && techById(f, cid)) tFrom[cid] = f; });
+      const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t) || tFrom[t]).slice(0, TECH_MAX) : startTechs(sp));
+      const teachTech = !base && typeof o.teachTech === 'string' && techs.includes(canonTechList([o.teachTech])[0]) ? canonTechList([o.teachTech])[0] : null; // 持ち主が選んだ「受け継がせる技」
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
       const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[srank])); });
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
@@ -744,6 +747,7 @@
       return {
         ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
         ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs, colors,
+        ...(Object.keys(tFrom).length ? { techFrom: tFrom } : {}), ...(teachTech ? { teachTech } : {}),
         tag: base ? TAG_POWER.base : TAG_POWER[srank], bond0: clamp((base ? BOND_START.base : BOND_START[srank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
       };
@@ -940,6 +944,13 @@
     };
     // ---- 技を覚える(修行のくじ・連続イベントの伝授) ----
     const techById = (sp, id) => techsOf(sp).find(t => t.id === id) || null;
+    // ---- 受け継いだ技(r1119-016 社長 A): 育てる子の種の表に無い技も持てる ----
+    //   どの種の技かは s.techFrom = { 技id: 種 }(新しい項目・無ければ持たない)。同じ id でも種で数が違う技があるので、元の種で引く。
+    //   元の種が分からないときは、その技を持つ最初の種で引く。育てる子の種の表にある技は、いままでどおり自分の表で引く
+    const techAnySp = (id) => Object.keys(TECHS).find(sp => techById(sp, id)) || null;
+    const techFromOf = (s, id) => { const f = s && s.techFrom && typeof s.techFrom === 'object' ? s.techFrom[id] : null; return typeof f === 'string' && techById(f, id) ? f : null; };
+    const techOfRun = (s, id) => techById(s.species, id) || (techFromOf(s, id) ? techById(techFromOf(s, id), id) : null) || (techAnySp(id) ? techById(techAnySp(id), id) : null);
+    const techsOfRun = (s) => (Array.isArray(s && s.techs) ? s.techs : []).map(id => techOfRun(s, id)).filter(Boolean);
     // ---- 技の升(ランク×間合い)の選び(2026-11-14 社長 r1114-128・131 → 2026-11-17 社長 方式Cで見直し) ----
     // 升 = `${ランク}-${間合い}`。1つの升に技が2つ以上ある所は、プレイヤーが「いま覚える候補にする1つ」を選ぶ。
     // 選んでいない技は候補に出ないが、選び直しはいつでもでき(覚えたあとでも)、もう片方も覚え直せる。前に覚えた技と熟練は残るので、同じ升の技を両方持てる。
@@ -992,7 +1003,7 @@
     const techBoostConds = (s, t, picks) => {
       const list = SHUGYO.cond.byRank[clamp(techRank(t), 1, 5) - 1] || [];
       const ids = Array.isArray(picks) && picks.length ? picks : [t.id];
-      const sum = ids.reduce((a, id) => { const x = techById(s.species, id); return a + (x ? techRank(x) : 0); }, 0);
+      const sum = ids.reduce((a, id) => { const x = techOfRun(s, id); return a + (x ? techRank(x) : 0); }, 0);
       return list.map(([type, need]) => { const now = type === 'n' ? s.techs.length : type === 'pop' ? Math.round(num(s.pop)) : sum; return { type, need, now, ok: now >= need }; });
     };
     // 覚える率(0〜0.99)。o.course … 行き先 / o.super … 超修行
@@ -1006,7 +1017,7 @@
     };
     const superLeft = (s) => clamp(Math.round(num(s && s.superLeft, superMaxOf(s))), 0, superMaxOf(s)); // 🌋超修行アップで回数が増える
     const learnable = (s, course) => techsOf(s.species).filter(t => canLearn(s, t)).map(t => ({ id: t.id, name: t.name, role: t.role, power: t.power, rank: techRank(t), miss: techMissOf(s, t.id), rate: r2(techRate(s, t, { course })), superRate: r2(techRate(s, t, { course, super: true })) }));
-    const learnTech = (s, id) => { s.techs.push(id); s.mastery[id] = 0; };
+    const learnTech = (s, id, from) => { s.techs.push(id); s.mastery[id] = 0; if (from && !techById(s.species, id) && techById(from, id)) s.techFrom = { ...(s.techFrom && typeof s.techFrom === 'object' ? s.techFrom : {}), [id]: from }; };
     // 修行で上がる決まった数値(①行き先の基礎 + ②編成の得意。③の倍率はかける前)。画面の見通しにも使う
     const shugyoGainOf = (s, course) => {
       const F = SHUGYO.fixed; const o = Object.fromEntries(KEYS.map(k => [k, 0]));
@@ -1061,15 +1072,17 @@
     // 連続イベントの3話「受け継ぐもの」: その編成の子が持つ技を伝授する。育てる子の種がその技を持てないときは、
     // 育てる子の種の「同じ役割(小技・大技…)」の技を覚える。それも無ければ熟練 +10 と能力 中+
     const teachFrom = (s, m) => {
-      const mine = techsOf(s.species);
-      for (const id of m.techs.slice().reverse()) {
-        const same = mine.find(t => t.id === id && !s.techs.includes(t.id));
-        if (same && s.techs.length < TECH_MAX) return same.id;
-        const src = techById(m.species, id); if (!src) continue;
-        const alt = mine.find(t => t.role === src.role && !s.techs.includes(t.id));
-        if (alt && s.techs.length < TECH_MAX) return alt.id;
-      }
-      return null;
+      // r1119-005・r1119-016: 教える子の技そのものを覚える(同じ役割の別の技への読み替えはやめた)。育てる子の種の表に無い技も、元の種ごと覚える。
+      //   教える技は、持ち主が選んだ技(m.teachTech)。選んでいない・消えたときは、いちばん大きい技(段)で、同じなら最後に覚えた技
+      if (!m || !Array.isArray(m.techs) || s.techs.length >= TECH_MAX) return null;
+      const mf = (id) => (m.techFrom && typeof m.techFrom[id] === 'string' && techById(m.techFrom[id], id) ? m.techFrom[id] : null);
+      const own = (id) => techById(m.species, id) || (mf(id) && techById(mf(id), id)) || (techAnySp(id) && techById(techAnySp(id), id));
+      const list = m.techs.filter(id => typeof id === 'string' && own(id));
+      const order = list.map((id, i) => ({ id, i, r: techRank(own(id)) })).sort((a, b) => b.r - a.r || b.i - a.i).map(x => x.id);
+      const chosen = typeof m.teachTech === 'string' && list.includes(m.teachTech) ? m.teachTech : order[0];
+      if (!chosen) return null;
+      if (s.techs.includes(chosen)) return { id: null, why: 'known', want: chosen };
+      return { id: chosen, from: techById(s.species, chosen) ? null : (techById(m.species, chosen) ? m.species : mf(chosen) || techAnySp(chosen)) };
     };
 
     const peek = (s) => {
@@ -1138,8 +1151,10 @@
         if (ep === 0) addStat(s, fk, unitOf(s, fk) * 0.5);
         else if (ep === 1) { addStat(s, fk, unitOf(s, fk)); s.hp = clamp(s.hp - 10, 0, s.hpMax); }
         else { // 技の伝授(社長 2026-11-12: 技を覚える道は修行と、編成の子の連続イベントの2つ)
-          const tid = m.kind === 'base' ? null : teachFrom(s, m);
-          if (tid) { learnTech(s, tid); s.log.taught += 1; out.taught = tid; } else s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 10, 0, 100); });
+          const tk = m.kind === 'base' ? null : teachFrom(s, m);
+          // 覚えられなかったわけ(画面に出す): base = ベースモンは技を教えられない / full = 技がいっぱい / known = もう覚えている / none = 教える技が無い
+          out.teach = { from: m.species, id: tk && tk.id ? tk.id : null, want: tk ? (tk.id || tk.want) : null, why: m.kind === 'base' ? 'base' : s.techs.length >= TECH_MAX ? 'full' : tk && tk.why ? tk.why : tk ? null : 'none' };
+          if (tk && tk.id) { learnTech(s, tk.id, tk.from); s.log.taught += 1; out.taught = tk.id; } else s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 10, 0, 100); });
           addStat(s, fk, unitOf(s, fk) * (s.good && s.good.uketsugu ? GOOD.uketsugu.teach : 1));
         }
         out.event = { who: i, story: ep + 1, d: dOf() };
@@ -1443,6 +1458,9 @@
       if (Array.isArray(raw.bond)) out.bond = out.bond.map((d, i) => Math.round(n(raw.bond[i], d, 0, BOND.max)));
       if (Array.isArray(raw.story)) out.story = out.story.map((d, i) => Math.round(n(raw.story[i], d, 0, 3)));
       const okTech = techsOf(raw.species).map(t => t.id);
+      // 受け継いだ技の元の種(r1119-016)。種の名前と、その種の表にその技があるものだけ残す
+      if (raw.techFrom && typeof raw.techFrom === 'object' && !Array.isArray(raw.techFrom)) { const tf = {}; Object.entries(raw.techFrom).slice(0, 64).forEach(([id, sp]) => { const cid = canonTechList([id])[0]; if (typeof cid === 'string' && typeof sp === 'string' && techById(sp, cid) && !okTech.includes(cid)) tf[cid] = sp; }); if (Object.keys(tf).length) out.techFrom = tf; }
+      if (out.techFrom) okTech.push(...Object.keys(out.techFrom));
       if (Array.isArray(raw.techs)) { const rm = canonMastery(raw.mastery); out.techs = canonTechList(raw.techs).filter(t => okTech.includes(t)).slice(0, TECH_MAX); out.mastery = Object.fromEntries(out.techs.map(t => [t, Math.round(n(rm[t], 0, 0, 100))])); }
       { const sp0 = canonMastery(raw.masterySpent); out.masterySpent = {}; (out.techs || []).forEach(t => { const v = Math.round(n(sp0[t], 0, 0, MASTERY.max)); if (v > 0) out.masterySpent[t] = v; }); } // 熟練の使った量(あとでポイントに変える分・いまは 0)
       out.trainXp = {}; if (raw.trainXp && typeof raw.trainXp === 'object') Object.keys(raw.trainXp).forEach(key => { if (KEYS.some(k => key === `train:${k}`)) out.trainXp[key] = Math.round(n(raw.trainXp[key], 0, 0, 999)); });
@@ -1692,8 +1710,8 @@
     const aptSendOf = (s) => { const b = aptBaseNorm(s && s.aptBase); const w = aptAwakeNorm(s && s.aptAwake); return aptUpOf(s).map((n, i) => n + b[i] + w[i]); };
     // ---- 総合力(モンサク・TECH_POWER)。技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }(ランキングの行もこの形で送る) ----
     const techRowsOf = (s) => {
-      const G = DIST_UP.grades; const grades = aptGradesOf(s); const own = techsOf(s.species);
-      return (Array.isArray(s.techs) ? s.techs : []).slice(0, TECH_MAX).map(id => own.find(t => t && t.id === id)).filter(Boolean).map((t) => {
+      const G = DIST_UP.grades; const grades = aptGradesOf(s);
+      return (Array.isArray(s.techs) ? s.techs : []).slice(0, TECH_MAX).map(id => techOfRun(s, id)).filter(Boolean).map((t) => {
         const ds = (Array.isArray(t.dist) ? t.dist : []).filter(d => Number.isInteger(d) && d >= 0 && d <= 3);
         const a = ds.length ? ds.map(d => grades[d]).sort((x, y) => G.indexOf(y) - G.indexOf(x))[0] : TECH_POWER.aptMid;
         return { r: techRank(t), a };
@@ -1765,7 +1783,7 @@
     };
     // 上げる間合い: いまの適性が高い順 → 覚えている技が多く届く順 → 近・中・遠・零。M の間合いは飛ばす
     const awakePick = (s, n) => {
-      const G = DIST_UP.grades; const g = aptGradesOf(s); const own = techsOf(s.species).filter(t => (s.techs || []).includes(t.id));
+      const G = DIST_UP.grades; const g = aptGradesOf(s); const own = techsOfRun(s);
       const reach = [0, 1, 2, 3].map(d => own.filter(t => Array.isArray(t.dist) && t.dist.includes(d)).length);
       const room = AWAKE.aptMax - aptAwakeNorm(s.aptAwake).reduce((a, b) => a + b, 0);
       return AWAKE.order.filter(d => g[d] !== 'M').sort((a, b) => (G.indexOf(g[b]) - G.indexOf(g[a])) || (reach[b] - reach[a]) || (AWAKE.order.indexOf(a) - AWAKE.order.indexOf(b))).slice(0, Math.max(0, Math.min(n, room)));
@@ -2251,7 +2269,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, techOfRun, techsOfRun, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, carePreview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

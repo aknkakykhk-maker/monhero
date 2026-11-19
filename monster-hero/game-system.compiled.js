@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ce0b1fc28184859
+// source-sha256: 789664c6aa9ac196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155023,6 +155023,9 @@ const monsucTeams = (catalog, suc, s, info) => {
     ...(typeof suc.aptSendOf === 'function' ? {
       aptUp: suc.aptSendOf(s)
     } : {}),
+    ...(s.techFrom && typeof s.techFrom === 'object' ? {
+      techFrom: s.techFrom
+    } : {}),
     techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
     mastery: s.mastery || {},
     loy,
@@ -155540,7 +155543,7 @@ function MonsucBattleCard({
     const all = catalog && catalog.species[sp] && catalog.species[sp].techs || [];
     return ids.map(id => all.find(t => t.id === id)).filter(Boolean);
   };
-  const myTechs = techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
+  const myTechs = typeof suc.techsOfRun === 'function' ? suc.techsOfRun(s) : techsOf(s.species, Array.isArray(s.techs) ? s.techs : []);
   const foeTechs = (catalog && catalog.species[o.species] && catalog.species[o.species].techs || []).slice(0, Math.max(1, mscNum(o.techs, 2)));
   const loy = typeof suc.loyalOf === 'function' ? suc.loyalOf(s) : 0;
   const sumMe = MSC_STAT_KEYS.reduce((a, k) => a + mscNum(me[k]), 0);
@@ -163933,7 +163936,7 @@ const msxTevChanges = (s, o) => {
     if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
-    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find(t => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
     if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
     return out;
   }
@@ -163950,7 +163953,7 @@ const msxTevChanges = (s, o) => {
       out.push('❤️ 体力 −10');
     } else {
       out.push(`${stat} 中アップ`);
-      out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+      out.push(o.taught ? `⚔ 技「${((SUC.techOfRun ? SUC.techOfRun(s, o.taught) : SUC.techsOf(s.species).find(t => t.id === o.taught)) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
     }
   } else {
     const k = e.lottery;
@@ -173247,6 +173250,18 @@ const msxNormBoxMon = m => {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))),
     techs: tm.techs,
+    ...(msxIsObj(m.techFrom) ? (() => {
+      const o = {};
+      Object.entries(m.techFrom).slice(0, 64).forEach(([id, sp]) => {
+        const cid = msxTechCanon(id);
+        if (typeof cid === 'string' && typeof sp === 'string' && sp.length <= 24 && tm.techs.includes(cid)) o[cid] = sp;
+      });
+      return Object.keys(o).length ? {
+        techFrom: o
+      } : {
+        techFrom: undefined
+      };
+    })() : {}),
     mast: tm.mast,
     fav: Array.isArray(m.fav) ? m.fav.filter(k => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter(x => typeof x === 'string').slice(0, 64) : [],
@@ -174660,6 +174675,12 @@ const msxTeamSrc = (slot, box, own, assist) => {
       lv: m.lv,
       masteries: m.masteries,
       techs: m.techs,
+      ...(m.techFrom ? {
+        techFrom: m.techFrom
+      } : {}),
+      ...(typeof m.teachTech === 'string' ? {
+        teachTech: m.teachTech
+      } : {}),
       aptUp: m.aptUp,
       aptBase: m.aptBase,
       aptAwake: m.aptAwake,
@@ -181202,7 +181223,7 @@ function MsxStats({
   const used = s.pts - ws.pts;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
-  const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
+  const techs = typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
     state: null
   };
@@ -182306,6 +182327,9 @@ const msxR3Fight = (engine, SUC, run) => {
     stats: s.stats,
     loy,
     pop: s.pop,
+    ...(s.techFrom && typeof s.techFrom === 'object' ? {
+      techFrom: s.techFrom
+    } : {}),
     ...(s.awake ? {
       awake: s.awake
     } : {}),
@@ -182485,6 +182509,11 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   assists: msxR3AssistsToSave(assists),
   ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some(t => s.masterySpent[t] > 0) ? {
     mastSpent: s.techs.slice(0, 99).map(t => Math.round(s.masterySpent[t] || 0))
+  } : {}),
+  ...(s.techFrom && typeof s.techFrom === 'object' && Object.keys(s.techFrom).length ? {
+    techFrom: {
+      ...s.techFrom
+    }
   } : {}),
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? {
     ending: s.ending.kind
@@ -184987,10 +185016,7 @@ function MsxR3Battle({
       B: 2,
       C: 1
     })[g] || 0;
-    const techA = (Array.isArray(s.techs) ? s.techs : []).map(id => {
-      const t = (SUC.techsOf(s.species) || []).find(x => x.id === id);
-      return t ? t.name : null;
-    }).filter(Boolean);
+    const techA = (typeof SUC.techsOfRun === 'function' ? SUC.techsOfRun(s) : []).map(t => t.name);
     const oppTechTable = typeof SUC.techsOf === 'function' ? SUC.techsOf(opp.species) || [] : [];
     const oppTechIds0 = Array.isArray(opp.techIds) && opp.techIds.length ? opp.techIds.filter(id => oppTechTable.some(t => t.id === id)) : [];
     const oppTechIds = oppTechIds0.length ? oppTechIds0 : oppTechTable.slice(0, Math.max(1, opp.techs || 2)).map(t => t.id);

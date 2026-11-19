@@ -296,12 +296,28 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     const old = SUC.restore(JSON.parse(JSON.stringify({ ...base, techMiss: undefined, superLeft: undefined })));
     ok(old && JSON.stringify(old.techMiss) === '{}' && old.superLeft === SUC.SHUGYO.superMax, '古い保存(外した回数・超修行の残りなし)が 0回・2回残りで読めない');
   }
-  // 編成の子からの伝授: 同じ種ならその技、違う種なら同じ役割の技
+  // 編成の子からの伝授(r1119-005・r1119-016): 教える子の技そのもの。種の表に無い技も元の種ごと覚え、保存して読み直しても残る
   const sameSp = SUC.memberOf({ kind: 'raised', species: 'Mocchi', stats: { life: 300, pow: 500, wise: 300, hit: 300, eva: 300, tough: 300 }, techs: SUC.techsOf('Mocchi').map(t => t.id) });
-  const tid = SUC.teachFrom(j, sameSp); ok(tid && !j.techs.includes(tid) && SUC.techsOf('Mocchi').some(t => t.id === tid), `同じ種の子から技を教わらない: ${tid}`);
+  const tk1 = SUC.teachFrom(j, sameSp); ok(tk1 && tk1.id && !j.techs.includes(tk1.id) && tk1.from === null && SUC.techsOf('Mocchi').some(t => t.id === tk1.id), `同じ種の子から技を教わらない: ${JSON.stringify(tk1)}`);
   const other = SUC.memberOf({ kind: 'raised', species: 'Golem', stats: { life: 300, pow: 500, wise: 300, hit: 300, eva: 300, tough: 300 }, techs: SUC.techsOf('Golem').map(t => t.id) });
-  const tid2 = SUC.teachFrom(j, other); const role = (SUC.techsOf('Golem').find(t => SUC.techsOf('Mocchi').find(m => m.id === tid2 && m.role === t.role)) || null);
-  ok(tid2 && role, `違う種の子から同じ役割の技を教わらない: ${tid2}`);
+  const tk2 = SUC.teachFrom(j, other);
+  ok(tk2 && tk2.id && SUC.techsOf('Golem').some(t => t.id === tk2.id) && !SUC.techsOf('Mocchi').some(t => t.id === tk2.id) && tk2.from === 'Golem', `違う種の子から、その子の技そのもの(種の表に無い技)を教わらない: ${JSON.stringify(tk2)}`);
+  { const pick = SUC.techsOf('Golem')[0].id; const tk3 = SUC.teachFrom(j, { ...other, teachTech: pick }); ok(tk3 && tk3.id === pick, '持ち主が選んだ技を教えない'); }
+  { const jj = JSON.parse(JSON.stringify(j)); jj.techs = jj.techs.slice(0, 2).concat([tk2.id]); jj.mastery[tk2.id] = 0; jj.techFrom = { [tk2.id]: 'Golem' };
+    const back = SUC.restore(JSON.parse(JSON.stringify(jj)));
+    ok(back && back.techs.includes(tk2.id) && back.techFrom && back.techFrom[tk2.id] === 'Golem', '受け継いだ技(種の表に無い技)が、保存して読み直すと消える');
+    ok(SUC.techOfRun(back, tk2.id) && SUC.techOfRun(back, tk2.id).id === tk2.id && SUC.techsOfRun(back).some((x) => x.id === tk2.id), '受け継いだ技を techOfRun で引けない');
+    const bad = SUC.restore(JSON.parse(JSON.stringify({ ...jj, techFrom: { [tk2.id]: 'NoSuchMon', x: 3 } })));
+    ok(bad && !(bad.techFrom && bad.techFrom.x), '壊れた techFrom を読み込んでしまう');
+    const old = SUC.restore(JSON.parse(JSON.stringify({ ...j, techFrom: undefined })));
+    ok(old && !old.techFrom, '古い保存(techFrom なし)に techFrom が付く'); }
+  // 受け継いだ技が試合でも使える技になる(試合の芯 assistant-masmon-battle.js の techFrom)。渡さないときは今までと同じ技だけ
+  { const bl = require('../masmon-battle/load.js').load(); const I = bl.engine._internal;
+    const u = I.normalizeUnit({ species: 'Mocchi', stats: {}, techs: SUC.techsOf('Mocchi').slice(0, 2).map(t => t.id).concat([tk2.id]), techFrom: { [tk2.id]: 'Golem' } }, bl.catalog);
+    const mv = I.buildMoves(bl.catalog, u.species, u.techs, u.mastery, u.techBoost, u.techFrom);
+    ok(bl.engine.FEATURES.techFrom && mv.some(m => m.key === tk2.id) && mv.length === 3, `受け継いだ技が試合の技にならない: ${mv.map(m => m.key).join(',')}`);
+    const u0 = I.normalizeUnit({ species: 'Mocchi', stats: {}, techs: SUC.techsOf('Mocchi').slice(0, 2).map(t => t.id).concat([tk2.id]) }, bl.catalog);
+    ok(!u0.techFrom && I.buildMoves(bl.catalog, u0.species, u0.techs, u0.mastery, u0.techBoost, u0.techFrom).length === 2, '元の種を渡さないのに、表に無い技が試合に入る(今までと変わってしまう)'); }
   // 大会の賞金で賞金ランクが上がるとチケットと名声。負けると準優勝などの一部の賞金だけ
   const b = SUC.settle({ ...s0, turn: 5, acted: false, battle: { kind: 'debut', round: 0 } }, [true]).state;
   ok(b.tickets === s0.tickets + 2 && b.fame === SUC.PRIZE.debut && b.fameRank === 2, `デビュー戦に勝っても賞金ランク2段ぶんのチケット・名声が入らない: ${b.tickets - s0.tickets}`);
