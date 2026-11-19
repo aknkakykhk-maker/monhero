@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8aeda9306c8bb792
+// generated-sha256: cafba2841cfc45f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89800,6 +89800,11 @@ const MSX_CSS = `
 .msx-sheet{overscroll-behavior:contain}
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
+/* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。窓を画面いっぱいに出す
+   縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
+   本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
+.msx .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -89952,6 +89957,9 @@ const MSX_CSS = `
 .msx-st6.row6 b{font-size:14px;letter-spacing:0}
 .msx-st6.row6 i{font-size:8.5px}
 .msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+/* 詳細の窓の送り箱も伸び縮みさせる(上の .msx-dt>* が flex:none にしていたため、送り箱が縮まず窓ごと送る形になり、
+   低い画面で「貸し出す・お別れ・閉じる」が送った先にあった。2026-11-19 r1119-013 ⑥ U-12) */
+.msx-dt>.msx-md-scroll{flex:1 1 auto;min-height:0}
 .msx-dt-top{display:flex;align-items:flex-end;gap:8px}
 .msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
 .msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
@@ -95761,7 +95769,7 @@ function MsxR3Box({ onClose }) {
         <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
-    foot = <div className="v-ft"><button type="button" onClick={onClose}>← 戻る</button></div>;
+    foot = null; // 戻るは左上の1つ(2026-11-19 r1119-013 ⑥ B-3。下の帯にも同じ「← 戻る」があった)
   }
   // ---- メモリアルモンスター(合体の親・お別れしたモンスター。育成には使えない・編成にだけ入れる。外すと消える) ----
   else if (page === 'assist') {
@@ -95786,7 +95794,7 @@ function MsxR3Box({ onClose }) {
         <button type="button" className="msx-btn go" data-msx-assist-remove-yes onClick={async () => { try { const a = await msxAssistRemove(apick); setAssist(a); setMsg(`${apick.length}体を外しました`); } catch (e) { setMsg('外せませんでした'); } setApick([]); setAAsk(false); }}>外す</button>
         <button type="button" className="msx-btn sub" onClick={() => setAAsk(false)}>やめておく</button></div></div> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setApick([]); }}>← 戻る</button></div>;
+    foot = null; // 戻るは左上の1つ(B-3)。下の帯が無くなり、小さい横で「外す」がもぐらない(B-10)
   }
   // ---- 一覧(mm-03) ----
   else if (page === 'list' || (page === 'detail' && cur)) {
@@ -95859,8 +95867,8 @@ function MsxR3Box({ onClose }) {
       })() : null}
     </>);
     foot = tab === 'bye'
-      ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>キャンセル</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setMsg(''); }}>← 戻る</button></div>;
+      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← やめる」(B-9) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
+      : null; // 戻るは左上の1つ(B-3)
   }
   // ---- 名前と染色を変える ----
   else if (page === 'edit' && cur && edit) {
@@ -95882,10 +95890,15 @@ function MsxR3Box({ onClose }) {
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>キャンセル</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
   }
-  else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← 戻る</button></div>; }
+  else { body = <div className="msx-note">見つかりませんでした</div>; foot = null; }
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
-    <MsxHd back="戻る" onBack={page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
+    {/* 左上の戻るは、その画面の1つだけの出口(B-3・B-9)。メモモンは入口へ戻る(前は下の帯と行き先が違い、一覧へ戻っていた) */}
+    <MsxHd back={page === 'list' && tab === 'bye' ? 'やめる' : '戻る'} onBack={page === 'gate' ? onClose
+      : page === 'list' && tab === 'bye' ? () => { setTab('list'); setPick([]); }
+      : page === 'list' ? () => { setPage('gate'); setMsg(''); }
+      : page === 'assist' ? () => { setPage('gate'); setApick([]); }
+      : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
     <div className="v-body r3 mm" data-msx-mm={page}>{body}</div>
     {foot}
     {fuseEl}
@@ -153917,7 +153930,7 @@ const createAnimationStyle = () => {
     @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
     @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
     @media(orientation:landscape) and (max-height:600px){
-      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      .mh-home-event-strip{position:absolute;left:39%;right:104px;top:calc(66px + env(safe-area-inset-top));margin:0}
       /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
          ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
          施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
@@ -153930,7 +153943,10 @@ const createAnimationStyle = () => {
       .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
       .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
       .mh-home-side-ic{width:34px;height:34px}
-      .mh-home-side-lb{display:none}
+      /* 横は字を印の左に並べる(2026-11-19 r1119-013 ⑥ U-23。前は高さを節約するため字を消していて、丸い印と数字だけでは何のボタンか分からなかった)。
+         高さは縦に積んだときと変えない */
+      .mh-home-side-btn{flex-direction:row-reverse;align-items:center;gap:5px}
+      .mh-home-side-lb{display:block;font-size:10px;line-height:1.2;white-space:nowrap}
     }
     /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
        全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */
