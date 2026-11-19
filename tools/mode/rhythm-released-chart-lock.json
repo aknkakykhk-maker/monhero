@@ -356,6 +356,16 @@
   "eiyuu_no_akashi_milktea/hard": "61ff0d0a8f7e9cbc",
   "eiyuu_no_akashi_milktea/expert": "ea17016caa3ade61",
   "eiyuu_no_akashi_milktea/master": "7f3793d9493533e2",
+  "gourmet_race_64/easy": "77cb35294e27b29b",
+  "gourmet_race_64/normal": "8ebe0fcefc1e1552",
+  "gourmet_race_64/hard": "c29de14a932ab177",
+  "gourmet_race_64/expert": "835b8f9a29e323be",
+  "gourmet_race_64/master": "90bd0e01451c7b8f",
+  "gourmet_race_dx/easy": "08207a0b44275834",
+  "gourmet_race_dx/normal": "63f9676fbbe155bd",
+  "gourmet_race_dx/hard": "4435e59338a68518",
+  "gourmet_race_dx/expert": "53b3b2a91838d7cf",
+  "gourmet_race_dx/master": "58a1a834e0c9b328",
   "dr_wily_stage_1/easy": "6d2d390a2ed8f0c9",
   "dr_wily_stage_1/normal": "2208e14f5fef8cc7",
   "dr_wily_stage_1/hard": "0d36e7fc4854d1b0",
@@ -366,6 +376,16 @@
   "dr_wily_stage_1_okkussenman/hard": "1f9277bb2708a608",
   "dr_wily_stage_1_okkussenman/expert": "c1987b93e214767e",
   "dr_wily_stage_1_okkussenman/master": "88a2555e2ba59d41",
+  "erfolg/easy": "4a98ae9ca7624081",
+  "erfolg/normal": "61c9f08b2d62608b",
+  "erfolg/hard": "96b318d885711a72",
+  "erfolg/expert": "67bc97b0e9ffe1e1",
+  "erfolg/master": "812c35b188ad30a8",
+  "erfolg_piano/easy": "7e26bdee9bd4943c",
+  "erfolg_piano/normal": "36e216637dbb5b70",
+  "erfolg_piano/hard": "88a9b6891e13e530",
+  "erfolg_piano/expert": "27f5f35124c1aeef",
+  "erfolg_piano/master": "031cc81580b212e3",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -447,8 +467,12 @@
   "seasons_of_a_little_plaza/hell": "9f3b62407a73e3bc",
   "eiyuu_no_akashi/hell": "a73c1a84d3eb4839",
   "eiyuu_no_akashi_milktea/hell": "ddf4040c131fa5b6",
+  "gourmet_race_64/hell": "fd9417c47720af8a",
+  "gourmet_race_dx/hell": "cd2df00e8ffce607",
   "dr_wily_stage_1/hell": "5cddbefed26a3f8b",
   "dr_wily_stage_1_okkussenman/hell": "3ac9515e935debaa",
+  "erfolg/hell": "38991ec2bf0b2a01",
+  "erfolg_piano/hell": "af6f6690583fc26c",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -947,6 +971,18 @@
     "dr_wily_stage_1_okkussenman/expert",
     "dr_wily_stage_1_okkussenman/master",
     "dr_wily_stage_1_okkussenman/hell"
+   ]
+  },
+  {
+   "at": "2026-11-19 21:44",
+   "reason": "新曲 Erfolg を公開",
+   "changedCount": 24
+  },
+  {
+   "at": "2026-11-19 21:51",
+   "reason": "新曲 Erfolg を公開",
+   "changed": [
+    "erfolg/hell"
    ]
   }
  ]

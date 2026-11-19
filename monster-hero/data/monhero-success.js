@@ -551,12 +551,13 @@
     sorashido: { good: { hint: 'assist', name: '検証' }, bitter: { pts: 10 }, special: { noInjury: true, guts: 5 } },
     erubin: { good: { hint: 'assist', name: '見守り' }, bitter: { loyal: 10 }, special: { noSulk: true } },
   });
-  // 話の進み方(EVENTS ②: どの助手も同じ形)。bond = 育成中の助手の親密度・lv = 助手ライフの仲良し度の段で見られる話の上限
+  // 話の進み方(EVENTS ②: どの助手も同じ形)。lv = 助手ライフの仲良し度の段で見られる話の上限
+  //   2026-11-19 社長 r1119-009: 第1〜4話は決まったターン(3・11・23・39)に必ず出す。親密度の門と出る率はやめる(親密度は3話の分かれ道と超グッドエンディングにだけ効く)。
+  //   そのターンに出せない(大会の日・けが・家出)ときは、次に出せるターンへ回す(期をまたいでも消えない)。period は見出しの期の名前のためだけに残す
   const ASTORY = Object.freeze({
-    eps: Object.freeze([{ ep: 1, period: 'debut', bond: 0 }, { ep: 2, period: 'junior', bond: 30 }, { ep: 3, period: 'middle', bond: 50 }, { ep: 4, period: 'pro', bond: 70 }]),
+    eps: Object.freeze([{ ep: 1, period: 'debut', turn: 3 }, { ep: 2, period: 'junior', turn: 11 }, { ep: 3, period: 'middle', turn: 23 }, { ep: 4, period: 'pro', turn: 39 }]),
     // 1〜4話は助手ライフの仲良し度 Lv に関係なく見られる・特別な1話だけ Lv5〜(社長 2026-11-13。前は Lv1〜2 が1話だけ・Lv3〜4 が3話まで)
     lvMax: () => 4, specialLv: 5,
-    rate: 0.4,                                       // 条件に届いたターンに出る率(期の最後のターンは必ず)
   });
   const STORY_GOOD_ALL = 1.75; // いい結末の全能力 = トレーニング1回ぶん × 1.75(EVENTS §3 の「特大」)
   const STORY_BIG = 2;         // ほろ苦い結末の「大+」= トレーニング2回ぶん
@@ -1128,7 +1129,7 @@
       const i = cand.find(j => s.story[j] < 3) !== undefined ? cand.find(j => s.story[j] < 3) : cand[0];
       const m = s.team[i]; const fk = m.top[0];
       const ep = s.story[i]; const st = STORY[ep];
-      s.log.events += 1;
+      s.log.events += 1; s.tevAt = s.turn; // 編成の子のイベントが出たターン(このターンはトレーニングのあとのランダムの出来事を出さない。r1119-009)
       // 画面で「実際に動いた数」を出すため、前の値を覚えておく(出来事の外へ d として渡すだけ・保存の形は変えない)
       const b0 = { st: s.stats[fk], bond: s.bond[i], hp: s.hp, stress: s.stress };
       const dOf = () => ({ stat: fk, up: Math.round(s.stats[fk] - b0.st), bondFrom: b0.bond, bondTo: s.bond[i], bond: Math.round(s.bond[i] - b0.bond), hp: Math.round(s.hp - b0.hp), stress: Math.round(s.stress - b0.stress) });
@@ -1461,6 +1462,7 @@
       out.cond = raw.cond && typeof raw.cond === 'object' && ['injury', 'ill', 'away'].includes(raw.cond.kind) ? { kind: raw.cond.kind, left: Math.round(n(raw.cond.left, 1, 1, 9)) } : null;
       out.over = ['done', 'lost', 'gameover'].includes(raw.over) ? raw.over : null;
       out.storyEnd = ['good', 'bitter'].includes(raw.storyEnd) ? raw.storyEnd : null;
+      if (Number.isInteger(raw.tevAt) && raw.tevAt >= 0 && raw.tevAt <= 60) out.tevAt = raw.tevAt; // 編成の子のイベントが出たターン(無ければ持たない)
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
       out.rivalMetId = typeof raw.rivalMetId === 'string' && raw.rivalMetId ? raw.rivalMetId.slice(0, 96) : null; // 会ったライバルの個体の印(r1116-002・無い古いセーブは名前で引く)
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
@@ -1472,7 +1474,7 @@
       out.awake = Math.round(n(raw.awake, 0, 0, 2)); out.awakeTurn = Math.round(n(raw.awakeTurn, 0, 0, TOTAL_TURNS + 1)); out.aptAwake = aptAwakeNorm(raw.aptAwake);
       out.omen = raw.omen && typeof raw.omen === 'object' && (raw.omen.k === 1 || raw.omen.k === 2) && raw.omen.k === out.awake + 1 ? { k: raw.omen.k, turn: Math.round(n(raw.omen.turn, out.turn, 1, TOTAL_TURNS)) } : null;
       out.aptLog = Object.fromEntries(Object.keys(DIST_UP.src).map(k => [k, Math.round(n(raw.aptLog && raw.aptLog[k], 0, 0, DIST_UP.src[k]))]));
-      out.astory = raw.astory && typeof raw.astory === 'object' ? { ep: Math.round(n(raw.astory.ep, 0, 0, 4)), path: ['good', 'bitter'].includes(raw.astory.path) ? raw.astory.path : null, done: raw.astory.done === true } : out.astory;
+      out.astory = raw.astory && typeof raw.astory === 'object' ? { ep: Math.round(n(raw.astory.ep, 0, 0, 4)), path: ['good', 'bitter'].includes(raw.astory.path) ? raw.astory.path : null, done: raw.astory.done === true, ...(Number.isInteger(raw.astory.at) && raw.astory.at >= 0 && raw.astory.at <= 60 ? { at: raw.astory.at } : {}) } : out.astory;
       out.hints = Array.isArray(raw.hints) ? raw.hints.filter(h => h && typeof h === 'object' && typeof h.name === 'string').slice(0, 8).map(h => ({ aid: String(h.aid || ''), type: h.type === 'tech' ? 'tech' : 'assist', name: h.name.slice(0, 24) })) : [];
       out.battle = raw.battle && typeof raw.battle === 'object' && ['debut', 'junior', 'middle', 'pro', 'summit', 'cup'].includes(raw.battle.kind) ? clone(raw.battle) : null;
       out.last = raw.last && typeof raw.last === 'object' ? clone(raw.last) : null;
@@ -1490,13 +1492,13 @@
     };
     // 助手の連続イベント(EVENTS ②)。そのターンに出る話(1〜4・'special')か null。画面はターンのはじめに見せる
     const storyDue = (s) => {
-      const a = s.astory || { ep: 0 }; if (s.over || s.cond || s.battle) return null;
+      const a = s.astory || { ep: 0 }; if (s.over || s.battle) return null;
+      // けが・病気・家出のあいだは出さない。ただし第4話は、ヒーローズファイナル(44ターン目〜)の前の最後のターンなら出す(結末が付かなくならないように・ミハリ #6869)
+      if (s.cond && !(a.ep === 3 && s.turn >= 43)) return null;
       const p = periodOf(s.turn); const max = ASTORY.lvMax(num(s.aidLv, 1));
       if (a.ep >= 4 && !a.done && num(s.aidLv, 1) >= ASTORY.specialLv && s.storyEnd === 'good' && p.key === 'final' && p.at <= 2) return 'special';
       const next = ASTORY.eps[a.ep]; if (!next || next.ep > max) return null;
-      if (p.key !== next.period || s.aidBond < next.bond) return null;
-      if (next.ep === 1 && s.turn < 2) return null;
-      return (p.left === 1 || rngOf(s.id, s.turn, 'astory')() < ASTORY.rate) ? next.ep : null;
+      return s.turn >= next.turn ? next.ep : null; // 決まったターンから(過ぎていれば次に出せるターンで)必ず出す(r1119-009)
     };
     // 話を見て2択を選ぶ(choice = 'a' | 'b')。3話の選び方で4話がいい結末(a)/ほろ苦い結末(b)に分かれる
     //   1話: a = 素質のいちばん高い能力 中+ / b = 忠誠 小+   2話: a = 体力 大+・助手の親密度 +10 / b = 主の能力 中+・ストレス 中+
@@ -1514,6 +1516,7 @@
       else if (ep === 4) { const r = storyEnd(s, s.astory.path || 'bitter'); s = r.state; out.end = s.storyEnd; }
       else if (ep === 'special') { s = markSpecial(s).state; s.astory.done = true; }
       if (ep !== 'special') s.astory.ep = ep;
+      s.astory.at = s.turn; // お話を見たターン(このターンは、はじめの出来事を出さない・1ターンに見せるイベントは最大2つ。r1119-009)
       if ((ep === 4 && num(s.aidLv, 1) < ASTORY.specialLv) || ep === 'special' || (ep === 4 && s.storyEnd !== 'good')) s.astory.done = true;
       s.log.astory = (s.log.astory || 0) + 1;
       // 画面に出す動いた数(能力は画面が前後の差で出す)。出来事の out.delta と同じ形

@@ -50,7 +50,10 @@ for(const [w,h,rot,lab] of [[844,390,false,'横画面'],[667,375,false,'小さ�
 // 押すと説明が開く(1行にしても、全文は「詳しく」で読める)
 await page.setViewportSize({width:844,height:390});await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));await page.waitForTimeout(800);
 // 起動の窓を自動で閉じる仕掛けを止めてから押す(開いた説明まで閉じてしまうため)
-const opened=await page.evaluate(async()=>{window.__noAutoClose=true;await new Promise((r)=>setTimeout(r,300));const n=[...document.querySelectorAll('[data-rhythm-song-notice-landscape] [aria-label$="の説明を開く"]')].filter((e)=>e.getBoundingClientRect().width>0)[0];if(!n)return '押すところが無い';n.click();await new Promise((r)=>setTimeout(r,400));return document.querySelector('[aria-label="説明を閉じる"]')?'':'開かない';});
+const opened=await page.evaluate(async()=>{window.__noAutoClose=true;await new Promise((r)=>setTimeout(r,300));const n=[...document.querySelectorAll('[data-rhythm-song-notice-landscape] [aria-label$="の説明を開く"]')].filter((e)=>e.getBoundingClientRect().width>0)[0];if(!n)return '押すところが無い';n.click();await new Promise((r)=>setTimeout(r,400));return document.querySelector('[role="dialog"][aria-label$="の説明"]')?'':'開かない';});
+// ↑開いた印は「○○の説明」という名前のダイアログ(role=dialog)で見る。以前見ていた閉じるボタンの
+// aria-label「説明を閉じる」は、戻る・閉じる統一(2026-11-19・PR #6833)で文字の「閉じる」ボタンへ
+// 替わって消えた。吹き出し自体は押せて説明も開く(実タップで確認済み)ので、見る印だけを替えた
 check('曲えらび(横画面): 1行の吹き出しを押すと、詳しい説明が開く',opened==='',opened);
 check('ページのエラーが出ない',errs.length===0,errs.slice(0,3).join(' / '));
 await browser.close();server.close();

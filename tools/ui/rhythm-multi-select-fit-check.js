@@ -126,7 +126,10 @@ const MEASURE = () => {
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.waitForTimeout(2500);
       for (let i = 0; i < 12; i++) { const hit = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /^(スキップ|受け取る|閉じる|OK)$/.test((e.innerText || '').trim())); if (x) { x.click(); return true; } return false; }); if (!hit) break; await page.waitForTimeout(500); }
-      await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /モンヒロビート/.test(e.innerText || '')); x && x.click(); });
+      // ホームの入口は施設ボタン(data-home-fac="rhythm")を直接押す。言葉で探すと、イベントの札
+      // (「🎉 モンヒロビート 本オープン記念 開催中」のバナー)が先に当たってモードえらびへ進めない
+      // (2026-11-19・実際に30秒待ちで止まったので直した)
+      await page.evaluate(() => { const x = document.querySelector('button[data-home-fac="rhythm"]'); x && x.click(); });
       await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
       await page.waitForTimeout(800);
       if (rot) await page.evaluate(() => { try { RHYTHM_VIEW_ROTATION.set(90); } catch (e) {} });
