@@ -7,7 +7,7 @@
 //
 //   ① 公開のあとの最初の HOME で、ひとりでに流れる(はじまりに題字ロゴの絵 MSX_LOGO_ART とβの札)
 //   ② 最後まで送れて、行の数が台本どおり(あつを解放した人 46行・まだの人 43行)。まだの人には、あつが一度も出ない
-//   ③ おわりの札に次回予告「第2話 ～ヒーローへの道～」「モンヒロサクセス β版 近日公開」。モンサクへ行くボタンは無い
+//   ③ おわりの札に次回予告は出さない(第2話は公開済み・社長の判断 2026-11-19)。モンサクへ行くボタンは無い
 //   ④ 見終えると見た印(mh_rhythm_event_story_v1 に monsuc_beta_ep1)が付き、開き直しても二度は流れない・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -124,9 +124,10 @@ const CLIMAX = 'ヒーローズファイナル';
       const ending = page.locator('[data-story-ending]');
       await ending.waitFor({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(3500);
-      const teaser = await page.locator('[data-story-ending-teaser]').innerText().catch(() => '');
-      check(`③ ${label}: おわりの札に次回予告`, teaser.includes('第2話') && teaser.includes('ヒーローへの道') && teaser.includes('近日公開'), teaser.replace(/\s+/g, ' '));
       const endText = await ending.innerText().catch(() => '');
+      // 第2話は公開済みなので、次回予告(第2話・近日公開)は出さない
+      const teaserCount = await page.locator('[data-story-ending-teaser]').count();
+      check(`③ ${label}: おわりの札に次回予告は出ない`, teaserCount === 0 && !/近日公開/.test(endText), endText.replace(/\s+/g, ' ').slice(0, 80));
       check(`③ ${label}: モンサクへ行くボタンは無い`, !/モンヒロサクセスへ/.test(endText));
       await shot('4-owari');
       await page.locator('[data-story-ending-close]').dispatchEvent('click').catch(() => {});
