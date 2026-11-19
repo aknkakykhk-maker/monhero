@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c4b0c45e4b55b300
+// generated-sha256: 4782a2be256c0620
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4872,6 +4872,8 @@ const BGM_TRACKS = [
   { id:'melo_hopes_and_dreams_short', name:'Hopes and Dreams short ver.', creator:'Toby Fox', src:'audio/bgm-hopes-and-dreams-short.mp3', gain:1, loop:true },
   { id:'melo_sparkling_pink_overture', name:'Sparkling Pink Overture', creator:'オリジナル', src:'audio/bgm-sparkling-pink-overture.mp3', gain:1, loop:true },
   { id:'melo_seasons_of_a_little_plaza', name:'僕たちのページは晴れ模様', creator:'きき', src:'audio/bgm-seasons-of-a-little-plaza.mp3', gain:1, loop:true },
+  { id:'melo_eiyuu_no_akashi', name:'英雄の証', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi.mp3', gain:1, loop:true },
+  { id:'melo_eiyuu_no_akashi_milktea', name:'英雄の証（ミラクル☆ミルクティ版）', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi-milktea.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6287,6 +6289,8 @@ const Audio_ = (() => {
     "audio/bgm-dullahan.mp3": "c66388ff6c14",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
+    "audio/bgm-eiyuu-no-akashi-milktea.mp3": "af00bdf4ef24",
+    "audio/bgm-eiyuu-no-akashi.mp3": "38f68104d031",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
     "audio/bgm-evans.mp3": "37c5c9e21113",
@@ -33000,6 +33004,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
+    'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -33083,6 +33089,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -33166,6 +33174,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
+    'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -33249,6 +33259,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -33332,6 +33344,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -33415,6 +33429,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
@@ -33498,6 +33514,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
@@ -33581,6 +33599,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
@@ -37853,7 +37873,7 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams' });
