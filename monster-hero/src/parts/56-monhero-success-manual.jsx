@@ -28,7 +28,7 @@ const MSX_MANUAL_CSS = `
 .msxm-row.cc .msxm-btn{min-height:40px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
 .msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
-.msxm.c .msxm-foot{display:none}
+.msc-wrap .msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
@@ -249,7 +249,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
 // 間合い d の一覧(d が null なら全部の技)。いちばん上が代表の技。
 //   onUse(t) … 押して使う(自分の手番で、いまの間合いの一覧のときだけ渡す)。usable(t) … 押せるか/useNote(t) … 押せないときの添え書き
 //   onRep(d, id) … 「☆ 代表にする」(渡したときだけ出す)/hintId … 助手のおすすめ
-function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = null, onUse = null, usable = null, useNote = null, onRep = null, hintId = null, onClose }) {
+function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = null, onUse = null, usable = null, useNote = null, onRep = null, hintId = null, onClose, host = '' }) {
   useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
   const repId = d == null ? null : ids[d];
@@ -257,8 +257,10 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
   const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((x) => MSA_DC_DIST[x]).join('・') : '');
   const note = d == null ? (dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技')
     : onUse ? '一番上が代表の技。押した技を使います' : `一番上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
-  return (
-    <div className="msa-sh" data-msa-sheet={d == null ? 'all' : d} onClick={onClose}><style>{MSA_DC_CSS}</style>
+  // 窓は body の直下へ出す(2026-11-19 段3・社長の実機: 助手マスモン対戦で、スクロールする操作欄の中に置いた窓の上に下の進み具合の帯が重なり、1行目と説明が隠れた。
+  //   iPhone では、スクロールする入れ物の中の固定表示が、ほかの重なりの下に回ることがある。モンサクの試合も同じ作りなので一緒に直す)
+  const sheetNode = (
+    <div className="msa-sh" data-msa-sheet={d == null ? 'all' : d} data-msa-sheet-host={host || undefined} onClick={onClose}><style>{MSA_DC_CSS}</style>
       <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>
         <div className="msa-sh-top"><b>{title}</b><button type="button" className="msa-sh-x" data-msa-sheet-close onClick={onClose}>閉じる</button></div>
         <p className="msa-sh-note">{note}</p>
@@ -284,6 +286,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
       </div>
     </div>
   );
+  return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' && document.body ? ReactDOM.createPortal(sheetNode, document.body) : sheetNode;
 }
 
 // 試合を作る(手の列があれば、その所まで進めた試合)。芯が無い・古いときは null
@@ -368,7 +371,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
         <MsaTechSheet title={`${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`} list={items} d={sd} dist={opt.dist} rep={ids} hitAt={hitAt} hintId={hintId}
           onUse={useHere ? (t) => { setSheet(null); go({ type: 'tech', key: t.id }); } : null}
           usable={(t) => t.ok} useNote={(t) => (!t.reach ? '(いまは届かない)' : `(あと${t.need})`)}
-          onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
+          onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)} host="manual"/>
       ) : null}
       {look === 'c' ? (() => {
         // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す

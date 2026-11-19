@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a1bd87dfc6ba35e
+// generated-sha256: f33d955a02dbc89e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80028,7 +80028,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
 .ambb-stagewrap{position:relative}
-.ambb-foe-tech{position:absolute;right:8px;top:104px;z-index:6;min-height:30px;padding:2px 10px;border-radius:15px;border:1px solid rgba(255,255,255,.35);background:rgba(15,10,40,.78);color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
 .ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
 .ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
 .ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
@@ -80061,6 +80061,30 @@ const AMBB_CSS = `
   .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none;overflow:visible}
   .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
   .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
+}
+/* 横の画面(2026-11-19 段3・r1114-023): モンサクの試合と同じ「自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)」 */
+@media (max-height:500px) and (orientation:landscape){
+  .ambw.ambb-full{overflow:hidden}
+  .ambw.ambb-full .ambw-in{height:100%;display:flex;flex-direction:column;max-width:none;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}
+  .ambw.ambb-full .ambw-top{min-height:28px}
+  .ambw.ambb-full [data-ambb-watch] .msxm.c .msxm-h{font-size:10px;flex-wrap:wrap}
+  .ambw.ambb-full [data-ambb-watch] .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
+  .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:grid;grid-template-columns:clamp(100px,14.5vw,128px) minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:minmax(0,1fr) auto auto;column-gap:6px;row-gap:3px}
+  .ambw.ambb-full [data-ambb-watch]>*{min-width:0}
+  .ambw.ambb-full [data-ambb-watch]>.msa-foe{grid-column:3;grid-row:1/4;overflow:auto}
+  .ambw.ambb-full [data-ambb-watch]>.ambb-stagewrap{grid-column:2;grid-row:1;margin-top:0!important;display:flex}
+  .ambw.ambb-full [data-ambb-watch]>.ambb-stagewrap .msa-stage.fill{flex:1;height:auto;min-height:0}
+  .ambw.ambb-full [data-ambb-watch]>.ambw-log{grid-column:2;grid-row:2;margin-top:0}
+  .ambw.ambb-full [data-ambb-watch]>.ambw-seek{grid-column:2;grid-row:3;margin-top:4px}
+  .ambw.ambb-full [data-ambb-watch]>.msa-cardsrow,.ambw.ambb-full [data-ambb-watch]>.ambb-bar-wrap{grid-column:1;grid-row:1;overflow:auto;margin-top:0}
+  .ambw.ambb-full [data-ambb-watch]>.ambw-ctl{grid-column:1;grid-row:2/4;flex-wrap:wrap;margin-top:0;gap:3px}
+  .ambw.ambb-full [data-ambb-watch]>.ambw-ctl button{flex:1 1 30%;min-height:28px;padding:2px;font-size:10.5px}
+  .ambw.ambb-full [data-ambb-watch] .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
+  .ambw.ambb-full [data-ambb-watch] .msa-dc-c{min-height:0;padding:2px 4px}
+  .ambw.ambb-full [data-ambb-watch] .msa-dc-c small.dmg,.ambw.ambb-full [data-ambb-watch] .msa-dc-c small.mv{display:none}
+  .ambw.ambb-full [data-ambb-watch] .msa-rowh small{display:none}
+  .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none}
+  .ambw.ambb-full .ambb-bar-wrap .msxm-row.cc,.ambw.ambb-full .ambb-bar-wrap .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
@@ -80439,6 +80463,13 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
     const k = side === 'A' ? repKeyOf(i) : null;
     return { k, items, ids: msaRepIds(items, side === 'A' ? repOf(k) : null), name: (t.members[i] || {}).name || '' };
   };
+  // 控えのモンスター(2体以上の対戦)。技の枠の見出しに小さな絵とライフで並べる(段3。古い欄 AmbwPanel の控えと同じ形)
+  const benchOf = (side, fr) => {
+    const t = side === 'A' ? battle.teamA : battle.teamB; const ms = (t && t.members) || []; if (ms.length < 2) return null;
+    return <span className="ambw-bench" data-ambb-bench={side}>{ms.map((m, j) => (j === fr.act[side] ? null : (
+      <span key={j} className={`ambw-bn ${fr.hp[side][j] <= 0 ? 'dead' : ''}`}><img src={(ALL_PLAYER_MONSTERS[m.species] || {}).imgUrl} alt=""/><i style={{ width: `${Math.max(0, Math.round(fr.hp[side][j] / ((battle.maxHp[side] || [])[j] || 1) * 100))}%` }}/></span>
+    )))}</span>;
+  };
   useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   // 手番の帯が出たら、帯が見える所まで(画面がスクロールできるときだけ)縦に送る
   const manualNow = !!(battle && battle.match && !battle.match.done() && pos >= battle.r.log.length - 1 && phase === 'watch');
@@ -80692,12 +80723,19 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
           </div>
         )}
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
+        {/* 相手の技の枠(2026-11-19 段3・r1114-023「助手マスモンの対戦も同じ部品」): モンサクの試合と同じ形。零近中遠に1技ずつ・いまの間合いを危なさで光らせる */}
+        {!review && !finish && typeof MsaDistCards === 'function' && (() => {
+          const rb = repIdsAt('B', shownF || f); if (!rb.items.length) return null;
+          const fr = shownF || f, tms = { A: battle.teamA, B: battle.teamB };
+          const hitB = (x, dd) => { const v = ambwHitPct(catalog, tms, 'B', { ...fr, d: dd }, x.id); return v != null ? v : x.hit; };
+          return <div className="msa msa-foe" data-msa-foe data-msa-danger={typeof msaFoeDangerOf === 'function' ? msaFoeDangerOf(rb.items, fr.d, hitB) : 0}><style>{MSA_CSS}</style><div className="msa-rowh">相手の技<small>押すと、その間合いの技が見られます</small>{benchOf('B', fr)}</div>
+            <MsaDistCards list={rb.items} rep={rb.ids} dist={fr.d} guts={fr.g.B} hitAt={hitB} lastMove={typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'B') : null} dataSide="B" onOpen={(d) => setTechList({ side: 'B', d })}/></div>;
+        })()}
         {review ? null : typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
             <MsaStage key={opening ? 'op' : 'go'} log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={venue}
               ended={finish} win={battle.r.winner} endSub={finish ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused && !opening}
-              introTitle={battle.teamA.members.length > 1 ? '先頭どうし' : (battle.pvp ? 'フレンド対戦' : 'マスモン対戦')} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill lite={lite}/>
-            <button type="button" className="ambb-foe-tech" data-ambb-foe-tech onClick={() => setTechList({ side: 'B', d: null })}>👀 相手の技</button>
+              introTitle={battle.teamA.members.length > 1 ? '先頭どうし' : (battle.pvp ? 'フレンド対戦' : 'マスモン対戦')} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill wide lite={lite}/>
             {nextOn && (() => {
               const sd = e.side, t = sd === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[pos] || f;
               return <MsaNext key={`nx-${pos}`} side={sd} name={who(sd, e.i)} hp={fr.hp} names={{ A: me.name, B: foeName }} face={ambbFace(t.assistantId, 'normal')} line={ambbTalk(t.assistantId, 'next', who(sd, e.i))}/>;
@@ -80712,9 +80750,16 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
           )}
         </div>
         )}
-        {!manualWait && !review && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine cards rep={repIdsAt('A', shownF || f).ids} onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
+        {!manualWait && !review && typeof MsaDistCards === 'function' && (() => {
+          // 自分の技の枠(段3): モンサクの試合と同じ形。使った技は、そのモンスターが次に技を出すまで印を残す
+          const ra = repIdsAt('A', shownF || f); if (!ra.items.length) return null;
+          const fr = shownF || f, tms = { A: battle.teamA, B: battle.teamB };
+          const hitA = (x, dd) => { const v = ambwHitPct(catalog, tms, 'A', { ...fr, d: dd }, x.id); return v != null ? v : x.hit; };
+          return <div className="msa msa-cardsrow" data-msa-cards data-ambw-panel><style>{MSA_CSS}</style><div className="msa-rowh">自分の技{benchOf('A', fr)}</div>
+            <MsaDistCards list={ra.items} rep={ra.ids} dist={fr.d} guts={fr.g.A} hitAt={hitA} lastMove={typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'A') : null} dataSide="A" onOpen={(d) => setTechList({ side: 'A', d })}/></div>;
+        })()}
         {!review && manualWait && typeof MsxManualBar === 'function' && (
-          <div className="ambb-bar-wrap" data-ambb-manual>{(() => { const ra = repIdsAt('A', f); return <MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false} rep={ra.ids} title={ra.name} onRep={ra.k ? (d, id) => setRep(ra.k, d, id) : null}/>; })()}</div>
+          <div className="ambb-bar-wrap" data-ambb-manual>{(() => { const ra = repIdsAt('A', f); return <MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false} rep={ra.ids} title={ra.name} onRep={ra.k ? (d, id) => setRep(ra.k, d, id) : null} look="c"/>; })()}</div>
         )}
         {!review && !manualWait && (
           <div className="ambw-card ambw-log">
@@ -80775,7 +80820,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         return (
           <div data-ambb-techlist={side}>
             <MsaTechSheet title={`${r.name} の${d == null ? `技(${r.items.length})` : `${AMBW_DIST[d]}の技`}`} list={r.items} d={d} dist={fr.d} rep={r.ids} hitAt={hitAt}
-              onRep={r.k && d != null ? (dd, id) => setRep(r.k, dd, id) : null} onClose={() => setTechList(null)}/>
+              onRep={r.k && d != null ? (dd, id) => setRep(r.k, dd, id) : null} onClose={() => setTechList(null)} host={side}/>
           </div>
         );
       })()}
@@ -96370,7 +96415,7 @@ const MSX_MANUAL_CSS = `
 .msxm-row.cc .msxm-btn{min-height:40px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
 .msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
-.msxm.c .msxm-foot{display:none}
+.msc-wrap .msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
@@ -96591,7 +96636,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
 // 間合い d の一覧(d が null なら全部の技)。いちばん上が代表の技。
 //   onUse(t) … 押して使う(自分の手番で、いまの間合いの一覧のときだけ渡す)。usable(t) … 押せるか/useNote(t) … 押せないときの添え書き
 //   onRep(d, id) … 「☆ 代表にする」(渡したときだけ出す)/hintId … 助手のおすすめ
-function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = null, onUse = null, usable = null, useNote = null, onRep = null, hintId = null, onClose }) {
+function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = null, onUse = null, usable = null, useNote = null, onRep = null, hintId = null, onClose, host = '' }) {
   useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
   const repId = d == null ? null : ids[d];
@@ -96599,8 +96644,10 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
   const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((x) => MSA_DC_DIST[x]).join('・') : '');
   const note = d == null ? (dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技')
     : onUse ? '一番上が代表の技。押した技を使います' : `一番上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
-  return (
-    <div className="msa-sh" data-msa-sheet={d == null ? 'all' : d} onClick={onClose}><style>{MSA_DC_CSS}</style>
+  // 窓は body の直下へ出す(2026-11-19 段3・社長の実機: 助手マスモン対戦で、スクロールする操作欄の中に置いた窓の上に下の進み具合の帯が重なり、1行目と説明が隠れた。
+  //   iPhone では、スクロールする入れ物の中の固定表示が、ほかの重なりの下に回ることがある。モンサクの試合も同じ作りなので一緒に直す)
+  const sheetNode = (
+    <div className="msa-sh" data-msa-sheet={d == null ? 'all' : d} data-msa-sheet-host={host || undefined} onClick={onClose}><style>{MSA_DC_CSS}</style>
       <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>
         <div className="msa-sh-top"><b>{title}</b><button type="button" className="msa-sh-x" data-msa-sheet-close onClick={onClose}>閉じる</button></div>
         <p className="msa-sh-note">{note}</p>
@@ -96626,6 +96673,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
       </div>
     </div>
   );
+  return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' && document.body ? ReactDOM.createPortal(sheetNode, document.body) : sheetNode;
 }
 
 // 試合を作る(手の列があれば、その所まで進めた試合)。芯が無い・古いときは null
@@ -96710,7 +96758,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
         <MsaTechSheet title={`${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`} list={items} d={sd} dist={opt.dist} rep={ids} hitAt={hitAt} hintId={hintId}
           onUse={useHere ? (t) => { setSheet(null); go({ type: 'tech', key: t.id }); } : null}
           usable={(t) => t.ok} useNote={(t) => (!t.reach ? '(いまは届かない)' : `(あと${t.need})`)}
-          onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
+          onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)} host="manual"/>
       ) : null}
       {look === 'c' ? (() => {
         // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す
@@ -98615,6 +98663,17 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
 //   input … 芯 createMatch に渡す入力(simulate と同じ形)。あれば自分で操作する
 //   watch … { r, teamA, teamB }(記録だけ。オートの結果を見せる)
 //   onEnd(won, { choices, auto, result }) … 決着を見せ終わったら1回だけ
+// 相手の技の枠の共通の決まり(2026-11-19 段2・段3。モンサクの試合と助手マスモン対戦の両方で使う)
+//   msaLastTechOf … その側が最後に使った技 id(次にその側が技を出すまで札に印を残す。交代したら消す)
+//   msaFoeDangerOf … いまの間合いの代表の技の危なさ(0=届く技なし / 1〜3)。命中×威力を、その子のいちばん強い技との割合で3段に分ける
+const msaLastTechOf = (log, pos, side) => { for (let k = pos; k >= 1; k--) { const r = log[k] || {}; if (r.ev === 'tech' && r.side === side) return r.move || null; if (r.ev === 'swap' && r.side === side) return null; } return null; };
+const msaFoeDangerOf = (items, d, hitAt) => {
+  if (!Array.isArray(items) || !items.length || typeof msaRepOf !== 'function') return 0;
+  const t = msaRepOf(items, d, null); if (!t) return 0;
+  const sc = (x) => (Number(hitAt ? hitAt(x, d) : x.hit) || 0) * (Number(x.power) || 0);
+  const r = sc(t) / Math.max(1, ...items.map(sc));
+  return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
+};
 function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const reduce = useMemo(() => msaReduce(), []);
   const manual = Boolean(input && engine && typeof engine.createMatch === 'function');
@@ -98727,15 +98786,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const mvB = (st.bMoves || [])[f.act.B], mbB = teams.B && teams.B.members ? teams.B.members[f.act.B] : null;
   const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(catalog, mbB, mvB) : null;
   const hitAtB = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
-  const lastTechOf = (side) => { for (let k = pos; k >= 1; k--) { const r = log[k] || {}; if (r.ev === 'tech' && r.side === side) return r.move || null; if (r.ev === 'swap' && r.side === side) return null; } return null; };
+  const lastTechOf = (side) => msaLastTechOf(log, pos, side);
   const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
-  const foeDanger = (() => {
-    if (!foeOn || typeof msaRepOf !== 'function') return 0;
-    const t = msaRepOf(itemsB, f.d, null); if (!t) return 0;
-    const sc = (x) => (Number(hitAtB(x, f.d)) || 0) * (Number(x.power) || 0);
-    const top = Math.max(1, ...itemsB.map(sc)); const r = sc(t) / top;
-    return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
-  })();
+  const foeDanger = foeOn ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0;
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>

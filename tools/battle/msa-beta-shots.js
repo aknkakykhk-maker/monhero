@@ -156,7 +156,7 @@ const seed = () => {
       }
     } else if (STILL_DIR) {
       // 構え・当たり・その先(ラウンドが進んだ所)
-      for (const [name, ms] of [['4-watch-intro', 1200], ['5-watch-fight', 3200], ['6-watch-mid', 6000]]) { await page.waitForTimeout(ms); await still(name); }
+      for (const [name, ms] of [['4-watch-intro', 1200], ['5-watch-fight', 3200], ['6-watch-mid', 6000], ['7-watch-later', 5000]]) { await page.waitForTimeout(ms); await still(name); }
       const fit = await page.evaluate(() => {
         const st = document.querySelector('[data-msa-stage]').getBoundingClientRect();
         const root = document.querySelector('[data-ambb-root]');
