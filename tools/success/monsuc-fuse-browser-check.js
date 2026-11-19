@@ -61,14 +61,16 @@ const layoutNg = (page, sel) => page.evaluate((sel) => {
         ], memory: [] };
         window.__saveBox = async (next) => { window.__box = next; return true; };
         const el = document.createElement('div'); el.id = 'monsuc-fuse-check'; document.body.appendChild(el);
-        const Host = () => { const [, tick] = React.useState(0); return React.createElement(MonsucFuseSheet, { box: window.__box, saveBox: async (n) => { const r = await window.__saveBox(n); tick(x => x + 1); return r; }, locked: ['m3'], onClose: () => {} }); };
+        const Host = () => { const [, tick] = React.useState(0); return React.createElement(MonsucFuseSheet, { box: window.__box, saveBox: async (n) => { const r = await window.__saveBox(n); tick(x => x + 1); return r; }, locked: ['m3'], lockWhy: { m3: '育成中の編成に入っています' }, onClose: () => {} }); };
         ReactDOM.createRoot(el).render(React.createElement(Host));
         return {};
       });
       if (prep.err) { check(`${T}仕込み`, false, prep.err); await page.close(); continue; }
       await page.locator('[data-monsuc-fuse]').waitFor({ timeout: 15000 }).catch(() => {});
       const picks = await page.$$eval('[data-monsuc-fuse-pick]', els => els.map(e => e.getAttribute('data-monsuc-fuse-pick')));
-      check(`${T}未育成の子・編成中の子は選べない`, picks.join(',') === 'm1,m2', picks.join(','));
+      check(`${T}未育成の子・編成中の子は選べない`, [...picks].sort().join(',') === 'm1,m2', picks.join(','));
+      const lockTxt = await page.$$eval('[data-monsuc-fuse-locked-mon]', els => els.map(e => e.getAttribute('data-monsuc-fuse-locked-mon') + ':' + e.textContent));
+      check(`${T}使えない子は理由と一緒に出る(B-6)`, lockTxt.length === 1 && lockTxt[0].startsWith('m3:') && lockTxt[0].includes('育成中の編成'), lockTxt.join(' / '));
       check(`${T}① 主の親の一覧がはみ出さない`, (await layoutNg(page, '[data-monsuc-fuse] > div')).length === 0, (await layoutNg(page, '[data-monsuc-fuse] > div')).join(' / '));
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `fuse-1-main-${v.id}.png`) });
       await page.click('[data-monsuc-fuse-pick="m1"]');
