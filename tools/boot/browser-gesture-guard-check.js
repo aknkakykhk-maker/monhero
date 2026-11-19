@@ -91,7 +91,11 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       ok('② ブラウザの戻るで、ゲームの HOME へ戻る(外へ出ない)',r.home&&/monster-hero\/index\.html$/.test(r.url),JSON.stringify(r));
       // ②-2 HOME の上に重ねて開く画面・窓も、戻るで閉じる(2026-11-19 r1119-013 ⑥ C-1・U-15。前はゲームの外へ出ていた)
       for(const [name,sel] of [['モンヒロサクセス β','.msx'],['更新履歴','[aria-modal="true"],.mh-title-modal']]){
-        // 前の窓に出たお話などを片づけてから開く
+        // HOME に出るお話(初めて HOME に来たときの告知・紹介)を片づけてから開く。お話が上にある間は、戻るはお話を閉じない(押せる戻るが無い)
+        for(let i=0;i<20;i++){
+          const did=await page.evaluate(()=>{const l=[...document.querySelectorAll('button')].filter(b=>/^(スキップ|確認|閉じる|OK|受け取る|(?:分|わ)かった|はい|あとで読む|とじる)$/.test((b.innerText||'').replace(/\s+/g,' ').trim())&&b.getBoundingClientRect().width>0);if(!l.length)return false;l[0].click();return true;});
+          if(!did)break;await page.waitForTimeout(500);
+        }
         await page.evaluate(n=>{const b=[...document.querySelectorAll('button')].find(x=>(x.getAttribute('aria-label')||'')===n);if(b)b.click();},name);
         await page.waitForTimeout(1800);
         const opened=await page.evaluate(s=>!!document.querySelector(s),sel);
