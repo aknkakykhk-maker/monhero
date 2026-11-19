@@ -246,6 +246,8 @@ const RELEASED_MARKERS=Object.freeze({
   eiyuu_no_akashi_milktea:'eiyuu-no-akashi-milktea-v3',
   gourmet_race_64:'gourmet-race-64-v3',
   gourmet_race_dx:'gourmet-race-dx-v3',
+  dr_wily_stage_1:'dr-wily-stage-1-v3',
+  dr_wily_stage_1_okkussenman:'dr-wily-stage-1-okkussenman-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -327,6 +329,8 @@ const RELEASED_TRACKS=Object.freeze({
   eiyuu_no_akashi_milktea:'eiyuu_no_akashi_milktea',
   gourmet_race_64:'gourmet_race_64',
   gourmet_race_dx:'gourmet_race_dx',
+  dr_wily_stage_1:'dr_wily_stage_1',
+  dr_wily_stage_1_okkussenman:'dr_wily_stage_1_okkussenman',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });
