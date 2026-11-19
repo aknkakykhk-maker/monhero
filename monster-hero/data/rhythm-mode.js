@@ -55489,7 +55489,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'戦闘版',
     bgmTrackId:'melo_eiyuu_no_akashi',
     // 2026-11-18 追加。「英雄の証」戦闘版(約2分3秒・BPM 161.5)。ジャケットは夕焼けの遺跡でモンスターに挑むハンターたちの絵
-    artwork:'images/song-art/eiyuu-no-akashi.jpg',
+    artwork:'images/song-art/eiyuu-no-akashi.jpg?v=9fad188e4ac8',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,eiyuuNoAkashiCharts[id]||emptyRhythmChart()
     ])))
@@ -55500,7 +55500,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'ミラクル☆ミルクティ版',
     bgmTrackId:'melo_eiyuu_no_akashi_milktea',
     // 2026-11-18 追加。「英雄の証」ミラクル☆ミルクティ版(約2分24秒・BPM 192.1)。ジャケットは花畑で微笑む2人の絵
-    artwork:'images/song-art/eiyuu-no-akashi-milktea.jpg',
+    artwork:'images/song-art/eiyuu-no-akashi-milktea.jpg?v=9afc0934b41a',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,eiyuuNoAkashiMilkteaCharts[id]||emptyRhythmChart()
     ])))
