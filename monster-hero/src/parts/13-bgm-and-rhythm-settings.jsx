@@ -122,6 +122,8 @@ const BGM_TRACKS = [
   { id:'melo_gourmet_race_dx', name:'グルメレース DX ver.', creator:'石川淳', src:'audio/bgm-gourmet-race-dx.mp3', gain:1, loop:true },
   { id:'melo_dr_wily_stage_1', name:'Dr.WILY STAGE 1', creator:'Takashi Tateishi', src:'audio/bgm-dr-wily-stage-1.mp3', gain:1, loop:true },
   { id:'melo_dr_wily_stage_1_okkussenman', name:'Dr.WILY STAGE 1（おっくせんまん版）', creator:'ゴム', src:'audio/bgm-dr-wily-stage-1-okkussenman.mp3', gain:1, loop:true },
+  { id:'melo_erfolg', name:'Erfolg', creator:'浜渦正志', src:'audio/bgm-erfolg.mp3', gain:1, loop:true },
+  { id:'melo_erfolg_piano', name:'Erfolg（ピアノ ver.）', creator:'浜渦正志', src:'audio/bgm-erfolg-piano.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },

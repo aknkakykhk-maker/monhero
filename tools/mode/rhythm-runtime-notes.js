@@ -248,6 +248,8 @@ const RELEASED_MARKERS=Object.freeze({
   gourmet_race_dx:'gourmet-race-dx-v3',
   dr_wily_stage_1:'dr-wily-stage-1-v3',
   dr_wily_stage_1_okkussenman:'dr-wily-stage-1-okkussenman-v3',
+  erfolg:'erfolg-v3',
+  erfolg_piano:'erfolg-piano-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -331,6 +333,8 @@ const RELEASED_TRACKS=Object.freeze({
   gourmet_race_dx:'gourmet_race_dx',
   dr_wily_stage_1:'dr_wily_stage_1',
   dr_wily_stage_1_okkussenman:'dr_wily_stage_1_okkussenman',
+  erfolg:'erfolg',
+  erfolg_piano:'erfolg_piano',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

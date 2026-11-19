@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb9a612afb3b8cc7
+// source-sha256: 18de45f890bde618
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6476,6 +6476,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_erfolg',
+  name: 'Erfolg',
+  creator: '浜渦正志',
+  src: 'audio/bgm-erfolg.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_erfolg_piano',
+  name: 'Erfolg（ピアノ ver.）',
+  creator: '浜渦正志',
+  src: 'audio/bgm-erfolg-piano.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8272,6 +8286,8 @@ const Audio_ = (() => {
     "audio/bgm-eiyuu-no-akashi.mp3": "38f68104d031",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
+    "audio/bgm-erfolg-piano.mp3": "44aff91727e2",
+    "audio/bgm-erfolg.mp3": "c5a0d9fddca4",
     "audio/bgm-evans.mp3": "37c5c9e21113",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
@@ -53950,12 +53966,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
-    'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
-    'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
-    'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
-    'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
+    'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
+    'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
+    'listen:erfolg': [['excited', '0:02からいちばん強い！ 始まった瞬間から全力なの、アガるぢゃん♪']],
+    'listen:erfolg_piano': [['excited', '0:19でいちばん強くなる所、気持ちがぐっと上がるぢゃん♪']],
+    'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
+    'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -54039,12 +54057,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
-    'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
-    'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
-    'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
-    'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
+    'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
+    'listen:erfolg': [['normal', '2:44からの静かな所、音がすっと引いてとてもきれいです♪']],
+    'listen:erfolg_piano': [['normal', '0:03の静かな始まり、音がそっと入ってきてとてもきれいです♪']],
+    'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
+    'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -54128,12 +54148,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
-    'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
-    'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
-    'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
-    'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
+    'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
+    'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
+    'listen:erfolg': [['excited', '0:24も0:34もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:erfolg_piano': [['excited', '1:01からもう一度いちばん強い！！ ももはここが大好き♡']],
+    'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -54217,12 +54239,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
-    'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
-    'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
-    'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
-    'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
+    'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
+    'listen:erfolg': [['normal', 'BPM213は速いな。0:02から全力で駆け抜けるやつだな']],
+    'listen:erfolg_piano': [['normal', 'BPM164か。ピアノの音だけでここまで駆けるのは、いい緊張感だな']],
+    'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
+    'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -54306,12 +54330,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
-    'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
-    'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
-    'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
-    'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
+    'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
+    'listen:erfolg': [['happy', '3:01から静かに締めるの、余韻があっていいよね笑']],
+    'listen:erfolg_piano': [['happy', '2:06から静かに終わるの、締めがきれいだね笑']],
+    'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
+    'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -54395,12 +54421,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
-    'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
-    'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
-    'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
-    'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
+    'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
+    'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
+    'listen:erfolg': [['happy', '0:02から1:13まで強い所が続いて、1:18で一度静かになる。構成が効いてるんだよね〜']],
+    'listen:erfolg_piano': [['happy', '0:19と1:01、二度サビが来る構成がいいんだよね〜。1:19で一度静かになるのも効いてる']],
+    'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
+    'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
@@ -54484,12 +54512,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
-    'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
-    'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
-    'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
-    'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
+    'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
+    'listen:erfolg': [['normal', 'BPM213で924ノーツ、Lv.40。強い音56%・軽い音0%の、力で押し切る配分です・・・！']],
+    'listen:erfolg_piano': [['normal', 'BPM164で441ノーツ、Lv.25。強い音39%・軽い音2%の混ざり具合です・・・！']],
+    'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
+    'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
@@ -54573,12 +54603,14 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
-    'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
-    'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
-    'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
-    'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
+    'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
+    'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
+    'listen:erfolg': [['normal', '1:23や2:08のふつうな所は落ち着くね。息を整えてから行けるかな']],
+    'listen:erfolg_piano': [['normal', '1:13のふつうな所と1:19の静かな所は落ち着くね。息を整えられるかな']],
+    'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
+    'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
@@ -61655,7 +61687,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   seasons_of_a_little_plaza: 500,
   eiyuu_no_akashi: 500,
   gourmet_race_64: 500,
-  dr_wily_stage_1: 500
+  dr_wily_stage_1: 500,
+  erfolg: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -61664,7 +61697,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   hopes_and_dreams_short: 'hopes_and_dreams',
   gourmet_race_dx: 'gourmet_race_64',
   eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
-  dr_wily_stage_1_okkussenman: 'dr_wily_stage_1'
+  dr_wily_stage_1_okkussenman: 'dr_wily_stage_1',
+  erfolg_piano: 'erfolg'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -189570,7 +189604,11 @@ function MsxManualBar({
 }
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
-const MSA_PAN_K = 0.35;
+const MSA_PAN_K = 0;
+const MSA_RECENTER = 0.5;
+const MSA_FIG_W = [0.20, 0.17, 0.13, 0.10];
+const MSA_GAP_W = [0.20, 0.35, 0.55, 0.75];
+const MSA_BG_ZOOM = 0.6;
 const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
@@ -189624,7 +189662,6 @@ function MsaBgToggle({
     "data-msa-bg": msaBgNorm(bg),
     "aria-label": `背景を${MSA_BG_LABEL[next].slice(3)}にする`,
     onClick: () => {
-      msaSe('tap');
       msaBgWrite(next);
       onChange(next);
     }
@@ -189687,7 +189724,6 @@ function MsaCtlToggle({
     "data-msa-ctl": now,
     "aria-label": next === 'auto' ? 'オートにする' : '手動にする',
     onClick: () => {
-      msaSe('tap');
       if (save) msaCtlWrite(next);
       onChange(next);
     }
@@ -189699,6 +189735,10 @@ const MSA_CSS = `
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
+.msa-stage.big .msa-bg{transform-origin:50% 75%;transition:transform .64s cubic-bezier(.45,.05,.35,1)}
+.msa-stage.fill.big .msa-f{transition:left .64s cubic-bezier(.45,.05,.35,1),width .64s cubic-bezier(.45,.05,.35,1),height .64s cubic-bezier(.45,.05,.35,1),margin-left .64s cubic-bezier(.45,.05,.35,1)}
+.msa-stage.fill.big .msa-f img.msa-img{transition:max-width .64s cubic-bezier(.45,.05,.35,1),max-height .64s cubic-bezier(.45,.05,.35,1)}
+.msa-spot.on.lb::after{content:attr(data-n);position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:900;font-style:normal;color:#fde047;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:nowrap}
 .msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
@@ -189722,6 +189762,9 @@ const MSA_CSS = `
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
 .msa-dist span.cur{background:#fde047;color:#422006}
+/* 技の行でも零近中遠を出す(2026-11-19 段1)。技名の札(左下=A・右下=B)と反対の側へ寄せる */
+.msa-dist.sA{justify-content:flex-end;padding-right:8px}
+.msa-dist.sB{justify-content:flex-start;padding-left:8px}
 .msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
 .msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
 /* 実況はステージの上に重ねる(2026-11-18 社長: 大会画面を極力1画面に。縦の行を返して操作に回す)。
@@ -189926,16 +189969,18 @@ const MSA_CSS = `
 /* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
-.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
+/* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
+.msc-wrap.msa .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
+.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
-.msa-stage.big .msa-floor{bottom:36%}
-.msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
-.msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+.msa-stage.big .msa-floor{bottom:25%}
+.msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
+.msa-stage.big .msa-aim{bottom:calc(25% + 28px)}
 /* 大きな場では、ダメージの数字を場の上端(体力の棒)にかからない高さへ下げる(r1115-157 ミハリの気づき) */
 .msa-stage.big .msa-dmg{top:24%}
-.msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
-.msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
+.msa-stage.big .msa-hx{bottom:calc(25% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
+.msa-stage.big .msa-tr{bottom:calc(25% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
@@ -189944,10 +189989,15 @@ const MSA_CSS = `
 /* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
 @media (max-height:500px) and (orientation:landscape){
   .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
-  .msa-main{display:flex;flex-direction:column;gap:6px;flex:1.1 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
+  /* 2026-11-19 社長の選択 A①: 場を画面の約 2/3 に広げ、操作は右の 1/3 に詰める(以前は 1.1:1 で場が半分) */
+  .msa-main{display:flex;flex-direction:column;gap:6px;flex:2 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
-  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+}
+/* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
+@media (max-height:500px) and (orientation:landscape) and (max-width:739px){
+  .msa-main{flex:1.5 1 0}
 }
 /* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面全てへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
 @media (orientation:portrait){
@@ -189959,7 +190009,7 @@ const MSA_CSS = `
 @media (max-height:700px) and (orientation:portrait){
   .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
   .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
-  .msa[data-msa-mode=manual] .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{height:200px;min-height:0}
   .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
@@ -192151,8 +192201,8 @@ function MsaStage({
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
   const [stageH, setStageH] = useState(300);
-  const bigFh = Math.round(Math.max(110, Math.min(300, stageH * 0.5, stageH * 0.66 - 72, stageW * 0.51)));
-  const bigFw = Math.round(bigFh * 0.82);
+  const figK = Math.min(1, Math.max(60, Math.min(stageH * 0.5, stageH * 0.75 - 72)) * 0.82 / Math.max(1, stageW * MSA_FIG_W[0]));
+  const fwOfD = d => Math.max(24, Math.round(stageW * MSA_FIG_W[Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1))] * figK));
   const stageRef = useRef(null);
   const camRef = useRef(null);
   useEffect(() => {
@@ -192235,12 +192285,15 @@ function MsaStage({
     tech,
     motionKind: e0.ev === 'tech' ? motionKindOf(atkSp, tech) : null
   };
+  const bigFw = fwOfD(f ? f.d : 1);
+  const bigFh = Math.round(bigFw / 0.82);
+  const bgZoom = 1 + (MSA_FIG_W[Math.max(0, Math.min(3, f && Number.isFinite(f.d) ? f.d : 1))] / MSA_FIG_W[3] - 1) * MSA_BG_ZOOM;
   const gapOf = d => {
     if (wide) {
-      const g0 = Math.max(MSA_GAP[0], Math.min(0.44, bigFw * 0.72 / Math.max(200, stageW)));
+      const W1 = Math.max(200, stageW);
       const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
-      const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
-      return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
+      const gMax = Math.max(0.05, 1 - (fwOfD(k) + 2 * MSA_SAFE) / W1);
+      return Math.min(gMax, MSA_GAP_W[k]);
     }
     const fwPx = fill ? 140 : 96;
     const W2 = Math.max(200, stageW);
@@ -192256,15 +192309,15 @@ function MsaStage({
       const r = log[k] || {};
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
-      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      const eM = Math.max(0.09, ((wide ? bigFw : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
+      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;else if (r.ev && r.ev !== 'tech' && r.ev !== 'move' && r.ev !== 'blow' && r.ev !== 'ko') c += (0.5 - c) * MSA_RECENTER;
+      const eM = Math.max(0.09, ((wide ? fwOfD(frames[k] ? frames[k].d : 1) : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
       const lo = Math.max(0.5 - MSA_C_LIM, eM + g1 / 2, (eM + g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
       const hi = Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2, (1 - eM - g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
       c = lo > hi ? 0.5 : Math.max(lo, Math.min(hi, c));
       out.push(c);
     }
     return out;
-  }, [log, frames, stageW, fill, wide, bigFw]);
+  }, [log, frames, stageW, fill, wide, figK]);
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2;
@@ -192294,15 +192347,25 @@ function MsaStage({
     const spanPx = Math.abs(sx('B') - sx('A')) * w + hwPx * 2;
     let sCap = spanPx > 0 ? w / spanPx : 1;
     if (wide && stageH > 0) {
-      const topF = 0.64 - bigFh / stageH;
+      const topF = 0.75 - bigFh / stageH;
       if (topF < 0.7) sCap = Math.min(sCap, 0.78 / Math.max(0.2, 0.78 - topF));
     }
-    sCap = Math.max(0.85, Math.min(1.6, sCap));
+    if (wide) {
+      let tCap = 1.6;
+      if (stageH > 0) {
+        const topF = 0.75 - bigFh / stageH;
+        if (topF < 0.7) tCap = Math.min(tCap, 0.78 / Math.max(0.2, 0.78 - topF));
+      }
+      sCap = Math.max(1, tCap);
+    } else sCap = Math.max(0.85, Math.min(1.6, sCap));
     const cap = v => Math.min(v, sCap);
-    const extAt = x => ({
+    const extAt = x => wide ? {
+      l: hwPx,
+      r: hwPx
+    } : {
       l: (x - Math.min(sx('A'), sx('B'))) * w + hwPx,
       r: (Math.max(sx('A'), sx('B')) - x) * w + hwPx
-    });
+    };
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined;
@@ -192445,8 +192508,12 @@ function MsaStage({
   }, React.createElement("div", {
     className: "msa-bg",
     "aria-hidden": "true",
+    "data-msa-bgzoom": wide ? bgZoom.toFixed(2) : undefined,
     style: {
-      backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined
+      backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined,
+      ...(wide ? {
+        transform: `scale(${bgZoom.toFixed(3)})`
+      } : null)
     }
   }), e.ev === 'tech' && !reduce && rkFx.bg && fx.cut > 0 && React.createElement(MsaRankBg, {
     key: `rb-${pos}`,
@@ -192463,7 +192530,8 @@ function MsaStage({
       left: `${a * 100}%`
     }
   }), React.createElement("i", {
-    className: `msa-spot ${d === f.d ? 'on' : ''}`,
+    className: `msa-spot ${d === f.d ? 'on lb' : ''}`,
+    "data-n": AMBW_DIST[d],
     style: {
       left: `${b * 100}%`
     }
@@ -192589,8 +192657,9 @@ function MsaStage({
     key: `sk-${pos}`,
     className: `msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`,
     "data-msa-sulk": e.side
-  }, React.createElement("b", null, "💢 意味不明!"), React.createElement("small", null, e.side === 'A' ? '' : '相手は', "言うことを聞かず、", React.createElement("wbr", null), "何もしなかった")), e.ev !== 'tech' && React.createElement("div", {
-    className: "msa-dist"
+  }, React.createElement("b", null, "💢 意味不明!"), React.createElement("small", null, e.side === 'A' ? '' : '相手は', "言うことを聞かず、", React.createElement("wbr", null), "何もしなかった")), React.createElement("div", {
+    className: `msa-dist ${e.ev === 'tech' && (e.side === 'A' || e.side === 'B') ? `s${e.side}` : ''}`,
+    "data-msa-dist": true
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
     key: d,
     className: d === f.d ? 'cur' : ''
@@ -192849,17 +192918,14 @@ function MonsucArena({
   };
   const pick = c => {
     if (busy || !manual) return;
-    msaSe('tap');
     if (mm.pick(c)) setPos(p => p + 1);
   };
   const goAuto = () => {
     if (!manual) return;
-    msaSe('tap');
     msaCtlRunWrite(s && s.id, 'auto');
     setCtl('auto');
   };
   const skip = () => {
-    msaSe('tap');
     if (manual && !done) {
       mm.toAuto();
       const n = mm.match ? mm.match.log.length : 0;
@@ -192961,7 +193027,6 @@ function MonsucArena({
     "data-msc-pause": true,
     "aria-label": paused ? 'つづける' : '一時停止',
     onClick: () => {
-      msaSe('tap');
       setPaused(v => !v);
     }
   }, paused ? '▶' : '⏸'), MSA_SPEEDS.map(x => React.createElement("button", {
@@ -192969,7 +193034,6 @@ function MonsucArena({
     type: "button",
     className: speed === x.id ? 'on' : '',
     onClick: () => {
-      msaSe('tap');
       setSpeed(x.id);
     }
   }, x.label)), React.createElement("button", {
@@ -192977,7 +193041,6 @@ function MonsucArena({
     "data-msc-hl": true,
     className: speed === 'hl' ? 'on' : '',
     onClick: () => {
-      msaSe('tap');
       setSpeed(v => v === 'hl' ? 'x1' : 'hl');
     }
   }, "★見せ場"), React.createElement("button", {
@@ -192995,7 +193058,6 @@ function MonsucArena({
     "data-msc-pause": true,
     "aria-label": paused ? 'つづける' : '一時停止',
     onClick: () => {
-      msaSe('tap');
       setPaused(v => !v);
     }
   }, paused ? '▶' : '⏸'), MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
@@ -193004,7 +193066,6 @@ function MonsucArena({
     className: speed === x.id ? 'on' : '',
     "aria-label": `見せる速さ ${x.label}`,
     onClick: () => {
-      msaSe('tap');
       setSpeed(x.id);
     }
   }, x.label)), React.createElement(MsaCtlToggle, {

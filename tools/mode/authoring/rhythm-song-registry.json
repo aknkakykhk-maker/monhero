@@ -1929,6 +1929,34 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "erfolg": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-erfolg.mp3",
+   "chartRevision": 40,
+   "audioSha256": "c5a0d9fddca45ca884afba95ab42576126c4b99bc47641df836dadbbf0cd91b3",
+   "durationMs": 201770,
+   "analyzedTiming": {
+    "bpm": 213.37,
+    "beatZeroMs": 2453,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "erfolg_piano": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-erfolg-piano.mp3",
+   "chartRevision": 40,
+   "audioSha256": "44aff91727e26d85cbeca0b429660b77eb05c669314dfb035b5dfb82a73da794",
+   "durationMs": 154802,
+   "analyzedTiming": {
+    "bpm": 164.02,
+    "beatZeroMs": 2927,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

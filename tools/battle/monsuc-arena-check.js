@@ -182,7 +182,8 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       // 技の札は間合いごとの4枚(2026-11-13 社長)。札に命中%・ガッツ、押すと一覧(撃つ前の命中%・ガッツ・届く距離)
       const pShown = await page.evaluate(async () => {
         const cards = [...document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]')];
-        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => /命中率\d+%/.test(c.textContent) && /消ガ\d+/.test(c.textContent)); // 札は案A「命中率○%・消ガ○」(r1115-074・185)
+        // 札は案A。いまの間合いの札は「命中率○%・消ガ○」(r1115-074・185)。ほかの間合いの札は撃てないので、届く間合い(「零でのみ届く」「届く間合い: …」)を出す
+        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => (c.classList.contains('now') ? /命中率\d+%/.test(c.textContent) && /消ガ\d+/.test(c.textContent) : /命中率\d+%|届く/.test(c.textContent)));
         const now = cards.find((c) => c.classList.contains('now') && !c.disabled);
         if (!now) return cardOk;
         now.click(); await new Promise((r) => setTimeout(r, 150));
