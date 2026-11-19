@@ -46,6 +46,9 @@ const makeRun = async (kind) => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   const sizes = SHOT_DIR ? [[390, 844, ''], [320, 568, 's320']] : [[390, 844, '']];
+  // SHOT_SIZES=base,land,s568 で大きさを選ぶ(見た目の点検 visual-shoot.js --monsuc-deep が使う。land = 横844×390・s568 = 小さい横568×320)
+  const pickSizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568']].filter(([, , t]) => pickSizes.includes(t || 'base')));
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; // 撮る場面を絞る(例 ONLY=S6)
   const SHOTS0 = [
