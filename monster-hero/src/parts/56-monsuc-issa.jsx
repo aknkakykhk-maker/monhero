@@ -87,7 +87,7 @@ function MsxIssaMeet({ run, v, ev, ctx, onChoose }) {
       <span className="msx-is-spark" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--i': i }}/>)}</span>
       <img className="v-issa msx-is-in" src={MSX_ISSA_ART} alt="イッサ博士"/>
       <div className="v-machine msx-is-mc">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
-      <div className="v-ev-h msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }}><small>大きな賭け</small>イッサ博士があらわれた!</div>
+      <MsxEvHead kind="issa" className="msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }} title="イッサ博士があらわれた!"/>
       <div className="v-ibub msx-is-bub" style={MSX_IS_WRAP}>{msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)}</div>
     </div>
     <div className="v-six msx-is-six">

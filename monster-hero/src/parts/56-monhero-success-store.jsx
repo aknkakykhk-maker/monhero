@@ -545,6 +545,18 @@ const msxRankCls = (r) => `rk r${String(r || 'G').replace(/\+/g, '')}`;
 // ---- 台詞(台本エンジン MONHERO_SUCCESS_SCRIPT_ENGINE から1本。並びは育成の id + 場面で決まり、ターンでずれる) ----
 // msxScriptLoad(助手) … 共通 + その助手の台本を読む(2回目からはすぐ)。読み終わるまで台詞は null(画面は代わりの一言を出す)
 const msxScriptLoad = (aid) => { const se = msxSuc && msxSuc.script; return se && typeof se.load === 'function' ? se.load(aid).catch(() => false) : Promise.resolve(false); };
+// ---- イベントの見出しの共通の型(r1119-009 段2・docs/progress/monsuc-event-story-design/README.md 4-1) ----
+//   1行目 = 種類の帯(色が種類で決まる)+ 連続物の番号 / 2行目 = 題。どの画面のイベントも、この部品で見出しを出す
+const MSX_EV_KIND = Object.freeze({ story: 'メインストーリー', days: '日々', team: '編成のモンスターのイベント', ikusei: '育成イベント', cup: '大会イベント', issa: '大きな賭け' });
+function MsxEvHead({ kind = 'ikusei', label, title, className = '', style }) {
+  const k = MSX_EV_KIND[kind] ? kind : 'ikusei';
+  const lb = label || MSX_EV_KIND[k];
+  return <div className={`v-ev-h k-${k}${className ? ` ${className}` : ''}`} style={style} data-msx-ev-kind={k}>{lb && lb !== title ? <small>{lb}</small> : null}{title}</div>;
+}
+// 連続物の「つづく」の1行(話の終わりに出す)
+function MsxEvNext({ text }) {
+  return text ? <div className="msx-ev-next" data-msx-ev-next>つづく ▶ {text}</div> : null;
+}
 const msxPickLine = (ctx, scene, opt = {}) => {
   const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
   const c = { ...ctx, bond: opt.bondLv != null ? opt.bondLv : ctx.bond };

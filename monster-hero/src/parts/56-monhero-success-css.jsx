@@ -353,6 +353,18 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+.msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
+.msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
+.msx .v-ev-h.k-ikusei{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.msx .v-ev-h.k-cup{background:linear-gradient(90deg,#b45309,#facc15)}
+.msx .v-ev-h.k-issa{background:linear-gradient(90deg,#6d28d9,#a78bfa)}
+.msx .msx-ev-tc{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none;background:radial-gradient(ellipse at center,#7c2d12cc,#0000 70%);animation:msxEvTc 1.6s ease-out both}
+.msx .msx-ev-tc small{font-size:15px;font-weight:900;color:#fed7aa;letter-spacing:.1em}
+.msx .msx-ev-tc b{font-size:40px;font-weight:900;color:#fff;text-shadow:0 3px 0 #c2410c,0 0 18px #fb923c}
+@keyframes msxEvTc{0%{opacity:0;transform:scale(1.15)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion: reduce){.msx .msx-ev-tc{display:none}}
+.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:center}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}

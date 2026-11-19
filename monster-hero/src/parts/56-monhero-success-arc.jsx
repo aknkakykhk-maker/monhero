@@ -25,6 +25,9 @@ const MSX_ARC_CSS = `
 .msx .r3 .arc-end{position:absolute;left:0;right:0;top:5%;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:1.5px #9a3412;text-shadow:0 3px 0 #9a3412,0 0 22px #fb923c}
 .msx .r3 .arc-end.bad{color:#bfdbfe;-webkit-text-stroke:1.5px #1e3a8a;text-shadow:0 3px 0 #1e3a8a,0 0 18px #60a5fa}
 .msx .r3 .arc-end small{display:block;font-size:12px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:4px}
+.msx .arc-out{display:none}
+.msx.land .v-body>.v-talk.arc-out{display:block;position:relative;left:auto;right:auto;bottom:auto;margin-top:16px;grid-column:2}
+.msx.land .v-scene .v-talk.arc-in{display:none}
 `;
 const MSX_ARC_END = Object.freeze({
   bad: { name: 'くやしさも、いっしょに', sub: 'ヒーローズファイナル出場', /* 見出しを「バッドエンディング」にしない(r1115-202 L7) */ bg: 'images/story-bg/monhero_plaza_evening.jpg' },
@@ -68,15 +71,17 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   return (
     <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
-      <MsxBand s={s} v={v} ev={ev}/>
+      {/* U-9: お話・エンディングの場面は数字の帯を出さない(参考 v4 128〜154秒) */}
       <div className={`v-scene ${dark ? 'dk' : ''}`} style={{ flex: '1 1 0', minHeight: 300 }} data-msx-arc-talk>
         <img className="bg" src={bg || msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
         {mon ? <><div className="gr" style={{ left: '30%', bottom: 'calc(34% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '34%', height: '24%' }} live/></> : null}
         <img src={msxBody(aid, lastFace)} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
         {top}
-        {head ? <div className="v-ev-h"><small>メインのお話</small>{head}</div> : null}
-        <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+        {head ? <MsxEvHead kind="story" title={head}/> : null}
+        <div className="v-talk arc-in">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
+      {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
+      <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
     </>)} foot={<div className="v-ft"><button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : doneText}</button></div>}/>
   );
 }
@@ -131,9 +136,11 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
           <div className="cap">💖 {title} 💖</div>
         </div>
         <div className="arc-flash"/>
-        <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+        <div className="v-talk arc-in">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="on" style={{ flex: 2 }}>…</button>}</div>}/>
+      {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
+      <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go" disabled data-msx-arc-wait>{pages > 1 ? '次へ ▶' : '引退へ ▶'}</button>}</div>}/>
   );
 }
 

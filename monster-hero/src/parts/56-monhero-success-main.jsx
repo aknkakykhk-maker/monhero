@@ -1298,14 +1298,23 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? (Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={s.team[cheerIdx].species} src={msxMonImg(s.team[cheerIdx].species)} masuColors={s.team[cheerIdx].colors} alt="" draggable={false} className="mon" style={{ left: '70%', bottom: '30%', height: '36%' }}/> : <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>)
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-3%', bottom: '17%', height: '88%', width: '56%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+      {isStory && !picked ? <div className="msx-ev-tc" aria-hidden="true" data-msx-ev-title><small>{msxAidName(s.aid)}のお話</small><b>{o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}</b></div> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
-      {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
+      {(() => { // 見出しの共通の型(段2): 種類の帯の色と番号・題
+        const an = msxAidName(s.aid);
+        if (isStory) return <MsxEvHead kind="story" label={`メインストーリー ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}`} title={`${an}のお話`}/>;
+        if (isUniq) { const arc = globalThis.MONHERO_SUCCESS_ARC && globalThis.MONHERO_SUCCESS_ARC.ARC && globalThis.MONHERO_SUCCESS_ARC.ARC[s.aid]; const n = arc && Array.isArray(arc.uniq) ? arc.uniq.findIndex((u) => u.id === view.id) + 1 : 0;
+          return <MsxEvHead kind="days" label={`${an}の日々${n > 0 ? ` その${n}` : ''}`} title={view.title ? `「${view.title}」` : 'お話'}/>; }
+        const k = view && view.kind === 'team' ? 'team' : view && view.kind === 'cup' ? 'cup' : 'ikusei';
+        return <MsxEvHead kind={k} title={head}/>;
+      })()}
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`gfx-${s.turn}-${picked.scenes.join('|')}`} items={msxGfxItemsOf(picked, s)}/> : null}
       {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? <MsxEvNext text={`第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`}/> : null}
       {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
