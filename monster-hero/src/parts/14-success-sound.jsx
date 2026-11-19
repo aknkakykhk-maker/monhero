@@ -2,6 +2,7 @@
 // モンヒロサクセスの音を鳴らす口(2026-11-12 開発部)
 // 割り当て表は data/success-sounds.js。ここは「場面の id を渡すと、表どおりに曲と効果音を鳴らす」だけ。
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
+// 効果音は「意味」で鳴らす(SuccessSound.sfx('matchGo') など。意味の表は data/success-sounds.js の SUCCESS_SFX)。fgSe の名前を画面に書かない(2026-11-19 r1119 ①音)
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
 //   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
@@ -24,6 +25,7 @@ const SuccessSound = (() => {
   const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
   const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = (id) => (typeof successSoundScene === 'function' ? successSoundScene(id) : null);
 
   // 画面に入る。入る前の曲と印を覚える。二重に入っても1回ぶんだけ覚える
   const enter = () => {
@@ -82,16 +84,27 @@ const SuccessSound = (() => {
     return key;
   };
 
-  // 場面の効果音を1回鳴らす。delayMs で待たせたあと、画面を離れていたら鳴らさない
-  const se = (sceneId, delayMs = 0) => {
-    const a = audio(); if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+  // 効果音を1回鳴らす(fgSe の名前)。delayMs で待たせたあと、画面を離れていたら鳴らさない
+  //   needActive … モンサクの画面に入っているときだけ鳴らす(場面の音)。sfx はモンサクの外(助手マスモン対戦の試合の部品)からも呼ぶので偽
+  const fireSe = (name, delayMs, needActive) => {
+    const a = audio(); if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
-    const my = epoch;
-    const fire = () => { if (!active || my !== epoch) return; try { a.fgSe[name](); } catch (e) {} };
+    const my = epoch; const wasActive = active;
+    const fire = () => { if ((wasActive || needActive) && (!active || my !== epoch)) return; try { a.fgSe[name](); } catch (e) {} };
     const wait = Number(delayMs);
     if (Number.isFinite(wait) && wait > 0) { setTimeout(fire, Math.min(wait, 10000)); } else { fire(); }
     return name;
+  };
+  // 場面の効果音を1回鳴らす(場面の表の mean を意味の表で引く)
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  // 意味で効果音を1回鳴らす(SUCCESS_SFX の id)。モンサクの画面・部品はこれを使い、fgSe の名前を書かない
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
   };
 
   // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
@@ -104,24 +117,31 @@ const SuccessSound = (() => {
     const a = audio();
     let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
-    if (!(rest > 0)) { scene(sceneId, opts); return () => {}; }
+    if (!(rest > 0)) { playScene(sceneId, opts, true); return () => {}; }
+    // ジングルが鳴っているあいだに入った場面は、ジングルのあとに曲だけ替える(効果音はジングルと重ねない・点検 Q-1-6)
     const my = epoch;
-    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) playScene(sceneId, opts, false); }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => { if (laterTimer === timer) { clearTimeout(timer); laterTimer = null; } };
   };
 
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
   // 場面が替わったら、ジングル後の予約はもう要らないので消す(古い画面のタイマーが移動先の曲を上書きしない)
+  //   表で afterJingle の場面(期の区切り)は、ジングルが鳴っている途中なら sceneAfterOnce と同じに待つ
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) { sceneAfterOnce(sceneId, opts); return; }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, isActive: () => active };
+  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, sfx, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
