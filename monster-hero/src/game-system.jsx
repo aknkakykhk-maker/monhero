@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3679363e7b901a33
+// generated-sha256: 86504a45c8229786
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23894,6 +23894,19 @@ const rhythmTitleFitEm=text=>{
 };
 const rhythmTitleFitSize=(text,maxPx,minPx,reservePx=0)=>
   `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
+// 曲名の描き方(2026-11-19 あっくん指摘「曲名が変な所で折れてる」)。
+// 題名と副題(版)を別のかたまり(inline-block)で描き、折れるのは境目だけにする。
+// かたまりのまま1行に入らない曲名は、呼ぶ側が字を縮める(rhythmTitleFitSize)か2行に折るが、
+// その折り目も境目にしか来ない(「英雄の証 ミラクル☆ミルクティ版」が「ミラクテ/ィ版」と単語の途中で割れていた)。
+// かたまり自体が置き場所より長いときだけ、はみ出さないよう かたまりの中で折る(最後の手段。JA_WRAP_STYLE と同じ考え方)
+// ★文字としての曲名が要る所(aria-label・並べ替え・長さの判定)は rhythmSongFullName の文字列のまま使う。ここは描く専用
+const RhythmSongName=({song})=>{
+  const title=song&&song.displayName?String(song.displayName):'';
+  const sub=song&&song.subtitle?String(song.subtitle):'';
+  const chunk={display:'inline-block',maxWidth:'100%',verticalAlign:'top'};
+  if(!sub)return <span style={chunk}>{title}</span>;
+  return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
+};
 const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
@@ -24355,7 +24368,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   style={{display:'flex',alignItems:'center',overflow:'hidden',height:'36px'}}>
                   <b className="line-clamp-2 block font-black text-white"
                     style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',
-                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}>{rhythmSongFullName(entry)}</b>
+                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}><RhythmSongName song={entry}/></b>
                 </span>
                 <span className={`flex items-center gap-1${spot('achievement')}`}>
                   {/* 楽曲Lv.(いま選んでいる難易度のLv.)。札の色は、その難易度のボタンと同じ色にする
@@ -24444,7 +24457,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
             <div className="flex items-start gap-1.5 [container-type:inline-size]">
               <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]"
-                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}>{rhythmSongFullName(song)}</b>
+                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}><RhythmSongName song={song}/></b>
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
                 aria-label={favoriteIds.has(song.songId)?'お気に入りから外す':'お気に入りに入れる'}
                 onClick={()=>toggleFavorite(song.songId)}
@@ -24632,7 +24645,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </div>;
       })()}
       <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
-      <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0">{rhythmSongFullName(song)}</b>
+      <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"><RhythmSongName song={song}/></b>
       {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
           (2026-09-14・ユーザー「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)。
           曲のデータ(RHYTHM_SONG_ENTRIES)に credit を書いた曲だけに出るので、ほかの曲は見た目が変わらない。
@@ -28164,7 +28177,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <section data-rhythm-result-song className="flex items-center gap-2.5 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5 [@container(min-width:680px)]:col-span-2">
   {hudArtSrc&&<img data-rhythm-result-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="h-16 w-16 shrink-0 rounded-xl border border-white/20 object-cover"/>}
   <div className="min-w-0 flex-1">
-    <b data-rhythm-result-song-name className="line-clamp-2 block text-base font-black leading-tight">{rhythmSongFullName(song)}</b>
+    <b data-rhythm-result-song-name className="line-clamp-2 block text-base font-black leading-tight"><RhythmSongName song={song}/></b>
     <div className="mt-0.5 flex items-baseline gap-1.5 text-[11px]"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b>{Number.isFinite(Number(chart.level))&&<span data-rhythm-result-level className="font-black tabular-nums text-slate-300">Lv.{chart.level}</span>}{/* その難易度での出来(2026-10-20 改善部 M6)。ランクは点数そのもので決まり、EASY は満点でも B まで(上限ランクの決まりは変えない)。
         ほぼ満点でも大きな「D」だけが見えないよう、その難易度の満点に対して何%取れたかを小さく添える */}{Number(difficulty.maxScore)>0&&<span data-rhythm-result-achievement className="whitespace-nowrap font-black tabular-nums text-amber-200">満点の{Math.min(100,Math.floor(view.score/Number(difficulty.maxScore)*100))}%</span>}</div>
     {/* ランクのゲージ。その難易度の満点で届く上の5ランクに目印を置き、いまのスコアまで塗る。
@@ -28352,7 +28365,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div data-rhythm-song-intro-text style={{flex:'0 0 auto',minWidth:0,maxWidth:isLandscape?'min(72vw,560px)':'88vw',textAlign:'center'}}>
     <small style={{display:'block',fontSize:'11px',fontWeight:900,letterSpacing:'.32em',color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>♪ LIVE START</small>
     {/* 曲名は2行まで。切り詰める箱の内側に余白を取り、文字の影が四角く切れないようにする */}
-    <b data-rhythm-song-intro-title style={{...(isLandscape?{display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:`${introTitleFont}px`}:{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',fontSize:`${introTitlePortraitFont}px`}),padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}>{introTitle}</b>
+    <b data-rhythm-song-intro-title style={{...(isLandscape?{display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:`${introTitleFont}px`}:{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',fontSize:`${introTitlePortraitFont}px`}),padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}><RhythmSongName song={song}/></b>
     {introCredit&&<p data-rhythm-song-intro-credit style={{display:'-webkit-box',WebkitLineClamp:isLandscape?1:2,WebkitBoxOrient:'vertical',overflow:'hidden',margin:isLandscape?'1px 0 0':'3px 0 0',fontSize:'12px',fontWeight:700,lineHeight:1.4,color:'#cbd5e1'}}>{introCredit}</p>}
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:isLandscape?'5px':'10px'}}><span data-rhythm-song-intro-difficulty style={{borderRadius:'999px',padding:'3px 12px',fontSize:'13px',fontWeight:900,letterSpacing:'.08em',color:'#fff',background:introColor,boxShadow:`0 0 12px ${introColor}`}}>{difficulty.id}</span>{Number.isFinite(introLevel)&&introLevel>0&&<b data-rhythm-song-intro-level style={{fontSize:'16px',fontWeight:900,color:'#fff',fontVariantNumeric:'tabular-nums'}}>Lv.{introLevel}</b>}
       {/* 横持ちは縦の場所が少ないので、案内を難易度と同じ行へ置く */}
@@ -38185,7 +38198,13 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
               : null}
           </div>
         )}
-        <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{cardName}</b>
+        {/* 曲名は題名と副題を別のかたまりで描き、折れるのは境目だけにする(RhythmSongName)。
+            幅に合わせて字を縮め(11px→8px)、それでも入らないときだけ境目で2行にする。
+            重ね表示の札の表示名は曲組の名前(cardName)なので、測る文字列も cardName にそろえ、
+            版名はジャケット下で見分ける決まりどおり曲名には副題を付けない */}
+        <div className="w-full [container-type:inline-size]">
+          <b data-rhythm-song-offer-name className="block w-full text-center font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere', fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(cardName, 11, 8) : undefined }}>{multiJacket ? cardName : (typeof RhythmSongName === 'function' ? <RhythmSongName song={song}/> : cardName)}</b>
+        </div>
         <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
           {meta.creator && <span className="block">{meta.creator}</span>}
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
@@ -45599,7 +45618,7 @@ function RhythmRankingScreen({
                 {eventDivisions.map(division=>(
                   <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
                   </button>
                 ))}
               </div>}
@@ -54730,7 +54749,7 @@ function RhythmHistoryScreen({
                 {divisions.map(division=>(
                   <button key={division.id} type="button" data-rhythm-history-division={division.id} onClick={()=>onSelectDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===activeDivision?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
                   </button>
                 ))}
               </div>
@@ -60700,7 +60719,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const countdownLayer = countdown && (
     <div data-rhythm-multi-countdown className="absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90">
       <small className="text-[11px] font-black tracking-widest text-slate-400">LIVE START</small>
-      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
+      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? <RhythmSongName song={songById(countdown.info.songId)}/> : ''}</p>
       <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
     </div>
   );

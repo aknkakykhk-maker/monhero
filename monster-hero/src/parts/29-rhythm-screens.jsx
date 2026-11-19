@@ -726,6 +726,19 @@ const rhythmTitleFitEm=text=>{
 };
 const rhythmTitleFitSize=(text,maxPx,minPx,reservePx=0)=>
   `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
+// 曲名の描き方(2026-11-19 あっくん指摘「曲名が変な所で折れてる」)。
+// 題名と副題(版)を別のかたまり(inline-block)で描き、折れるのは境目だけにする。
+// かたまりのまま1行に入らない曲名は、呼ぶ側が字を縮める(rhythmTitleFitSize)か2行に折るが、
+// その折り目も境目にしか来ない(「英雄の証 ミラクル☆ミルクティ版」が「ミラクテ/ィ版」と単語の途中で割れていた)。
+// かたまり自体が置き場所より長いときだけ、はみ出さないよう かたまりの中で折る(最後の手段。JA_WRAP_STYLE と同じ考え方)
+// ★文字としての曲名が要る所(aria-label・並べ替え・長さの判定)は rhythmSongFullName の文字列のまま使う。ここは描く専用
+const RhythmSongName=({song})=>{
+  const title=song&&song.displayName?String(song.displayName):'';
+  const sub=song&&song.subtitle?String(song.subtitle):'';
+  const chunk={display:'inline-block',maxWidth:'100%',verticalAlign:'top'};
+  if(!sub)return <span style={chunk}>{title}</span>;
+  return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
+};
 const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
@@ -1187,7 +1200,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   style={{display:'flex',alignItems:'center',overflow:'hidden',height:'36px'}}>
                   <b className="line-clamp-2 block font-black text-white"
                     style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',
-                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}>{rhythmSongFullName(entry)}</b>
+                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}><RhythmSongName song={entry}/></b>
                 </span>
                 <span className={`flex items-center gap-1${spot('achievement')}`}>
                   {/* 楽曲Lv.(いま選んでいる難易度のLv.)。札の色は、その難易度のボタンと同じ色にする
@@ -1276,7 +1289,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
             <div className="flex items-start gap-1.5 [container-type:inline-size]">
               <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]"
-                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}>{rhythmSongFullName(song)}</b>
+                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}><RhythmSongName song={song}/></b>
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
                 aria-label={favoriteIds.has(song.songId)?'お気に入りから外す':'お気に入りに入れる'}
                 onClick={()=>toggleFavorite(song.songId)}
@@ -1464,7 +1477,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         </div>;
       })()}
       <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
-      <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0">{rhythmSongFullName(song)}</b>
+      <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"><RhythmSongName song={song}/></b>
       {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
           (2026-09-14・ユーザー「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)。
           曲のデータ(RHYTHM_SONG_ENTRIES)に credit を書いた曲だけに出るので、ほかの曲は見た目が変わらない。

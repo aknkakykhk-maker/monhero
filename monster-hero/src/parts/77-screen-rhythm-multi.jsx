@@ -4433,7 +4433,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const countdownLayer = countdown && (
     <div data-rhythm-multi-countdown className="absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90">
       <small className="text-[11px] font-black tracking-widest text-slate-400">LIVE START</small>
-      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
+      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? <RhythmSongName song={songById(countdown.info.songId)}/> : ''}</p>
       <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
     </div>
   );

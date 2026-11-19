@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39e324b82090528e
+// source-sha256: 5ecb07f5653b89d5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38060,6 +38060,25 @@ const rhythmTitleFitEm = text => {
   return Math.max(1, em * 1.1);
 };
 const rhythmTitleFitSize = (text, maxPx, minPx, reservePx = 0) => `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
+const RhythmSongName = ({
+  song
+}) => {
+  const title = song && song.displayName ? String(song.displayName) : '';
+  const sub = song && song.subtitle ? String(song.subtitle) : '';
+  const chunk = {
+    display: 'inline-block',
+    maxWidth: '100%',
+    verticalAlign: 'top'
+  };
+  if (!sub) return React.createElement("span", {
+    style: chunk
+  }, title);
+  return React.createElement(React.Fragment, null, React.createElement("span", {
+    style: chunk
+  }, title), ' ', React.createElement("span", {
+    style: chunk
+  }, sub));
+};
 const RhythmSongArt = ({
   song,
   large = false,
@@ -38600,7 +38619,9 @@ const RhythmSongSelect = ({
         lineHeight: 1.2,
         fontSize: rhythmTitleFitSize(rhythmSongFullName(entry), 15, 12)
       }
-    }, rhythmSongFullName(entry))), React.createElement("span", {
+    }, React.createElement(RhythmSongName, {
+      song: entry
+    }))), React.createElement("span", {
       className: `flex items-center gap-1${spot('achievement')}`
     }, React.createElement("span", {
       "data-rhythm-song-row-level-tone": rowDifficultyId(entry) || '',
@@ -38731,7 +38752,9 @@ const RhythmSongSelect = ({
     style: {
       '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, 44)
     }
-  }, rhythmSongFullName(song)), React.createElement("button", {
+  }, React.createElement(RhythmSongName, {
+    song: song
+  })), React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
     "aria-pressed": favoriteIds.has(song.songId),
@@ -39074,7 +39097,9 @@ const RhythmSongSelect = ({
       className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
     }, React.createElement("b", {
       className: "mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"
-    }, rhythmSongFullName(song)), song.credit && song.credit.text && React.createElement("p", {
+    }, React.createElement(RhythmSongName, {
+      song: song
+    })), song.credit && song.credit.text && React.createElement("p", {
       "data-rhythm-song-credit": true,
       className: "mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300"
     }, helpWrap(song.credit.text)), song.credit && changelogSafeLink(song.credit.link) && React.createElement("a", {
@@ -46443,7 +46468,9 @@ const RhythmTapTest = ({
     }, React.createElement("b", {
       "data-rhythm-result-song-name": true,
       className: "line-clamp-2 block text-base font-black leading-tight"
-    }, rhythmSongFullName(song)), React.createElement("div", {
+    }, React.createElement(RhythmSongName, {
+      song: song
+    })), React.createElement("div", {
       className: "mt-0.5 flex items-baseline gap-1.5 text-[11px]"
     }, React.createElement("b", {
       "data-rhythm-difficulty-name": true,
@@ -47010,7 +47037,9 @@ const RhythmTapTest = ({
         color: '#fff',
         textShadow: '0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'
       }
-    }, introTitle), introCredit && React.createElement("p", {
+    }, React.createElement(RhythmSongName, {
+      song: song
+    })), introCredit && React.createElement("p", {
       "data-rhythm-song-intro-credit": true,
       style: {
         display: '-webkit-box',
@@ -61868,14 +61897,19 @@ function RhythmSongShopList({
       song: song,
       large: true,
       onZoom: src && onZoomIcon ? () => onZoomIcon(item) : null
-    }) : null), React.createElement("b", {
+    }) : null), React.createElement("div", {
+      className: "w-full [container-type:inline-size]"
+    }, React.createElement("b", {
       "data-rhythm-song-offer-name": true,
-      className: "w-full text-center text-[11px] font-black leading-tight text-white",
+      className: "block w-full text-center font-black leading-tight text-white",
       style: {
         wordBreak: 'keep-all',
-        overflowWrap: 'anywhere'
+        overflowWrap: 'anywhere',
+        fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(cardName, 11, 8) : undefined
       }
-    }, cardName), React.createElement("small", {
+    }, multiJacket ? cardName : typeof RhythmSongName === 'function' ? React.createElement(RhythmSongName, {
+      song: song
+    }) : cardName)), React.createElement("small", {
       "data-rhythm-song-offer-meta": true,
       className: "w-full text-center text-[9px] font-bold leading-tight text-slate-300",
       style: {
@@ -73879,7 +73913,9 @@ function RhythmRankingScreen({
     "data-rhythm-event-division": division.id,
     onClick: () => openDivision(division.id),
     className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === eventDivisionId ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), eventBoard.status === 'loading' && React.createElement("p", {
+  }, division.songId ? rhythmSongFullName(division.song) ? React.createElement(RhythmSongName, {
+    song: division.song
+  }) : division.songId : '総合'))), eventBoard.status === 'loading' && React.createElement("p", {
     "data-rhythm-event-board-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), eventBoard.status === 'error' && React.createElement("p", {
@@ -92416,7 +92452,9 @@ function RhythmHistoryScreen({
     "data-rhythm-history-division": division.id,
     onClick: () => onSelectDivision(division.id),
     className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === activeDivision ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), view.status === 'notReady' && React.createElement("p", {
+  }, division.songId ? rhythmSongFullName(division.song) ? React.createElement(RhythmSongName, {
+    song: division.song
+  }) : division.songId : '総合'))), view.status === 'notReady' && React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
   }, "この端末ではまだ順位を出せません。"), view.status === 'error' && React.createElement("p", {
     className: "rounded-2xl border border-rose-400/30 bg-rose-950/30 p-4 text-center text-[11px] font-black text-rose-200"
@@ -101806,7 +101844,9 @@ function RhythmMultiScreenBody({
     className: "text-[11px] font-black tracking-widest text-slate-400"
   }, "LIVE START"), React.createElement("p", {
     className: "px-4 text-center text-base font-black text-cyan-200"
-  }, songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''), React.createElement("b", {
+  }, songById(countdown.info.songId) ? React.createElement(RhythmSongName, {
+    song: songById(countdown.info.songId)
+  }) : ''), React.createElement("b", {
     className: "text-8xl font-black text-white"
   }, Math.max(1, countdown.left)));
   if (!view && !searching && modeSelect) {
