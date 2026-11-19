@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ce0b1fc28184859
+// source-sha256: c0e6ffc528039439
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172477,6 +172477,9 @@ const MSX_CSS = `
 .msx-sheet{overscroll-behavior:contain}
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
+/* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。横では窓を画面いっぱいに出す */
+.msx.land .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -172629,6 +172632,9 @@ const MSX_CSS = `
 .msx-st6.row6 b{font-size:14px;letter-spacing:0}
 .msx-st6.row6 i{font-size:8.5px}
 .msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+/* 詳細の窓の送り箱も伸び縮みさせる(上の .msx-dt>* が flex:none にしていたため、送り箱が縮まず窓ごと送る形になり、
+   低い画面で「貸し出す・お別れ・閉じる」が送った先にあった。2026-11-19 r1119-013 ⑥ U-12) */
+.msx-dt>.msx-md-scroll{flex:1 1 auto;min-height:0}
 .msx-dt-top{display:flex;align-items:flex-end;gap:8px}
 .msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
 .msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
@@ -279356,7 +279362,7 @@ const createAnimationStyle = () => {
     @media(max-width:380px){.mh-home-dock-card .mh-home-dock-name{font-size:8.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
     @media(max-width:350px){.mh-home-dock{gap:5px;padding:5px 6px 7px}.mh-home-dock-row{gap:5px}.mh-home-dock-card .mh-home-dock-name{font-size:7.5px}.mh-home-dock-card .mh-home-dock-txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}.mh-home-side-ic{width:43px;height:43px}}
     @media(orientation:landscape) and (max-height:600px){
-      .mh-home-event-strip{position:absolute;left:39%;right:64px;top:calc(66px + env(safe-area-inset-top));margin:0}
+      .mh-home-event-strip{position:absolute;left:39%;right:104px;top:calc(66px + env(safe-area-inset-top));margin:0}
       /* 横画面のドックは、横幅を活かして1段に並べる(2026-11-17・あっくん指示「横・タブレット対応フルセット」)。
          ドックを横向きにし、2つの段(.mh-home-dock-row)を等分、中のカードも等分するので、段の境目も含めて
          施設カードが等間隔・同寸になる。カードの形(正方形の絵+下に名前+下の言葉)は縦画面と変えない。
@@ -279369,7 +279375,10 @@ const createAnimationStyle = () => {
       .mh-home-dock-card .mh-home-dock-txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}
       .mh-home-side-stack{top:calc(64px + env(safe-area-inset-top));gap:5px}
       .mh-home-side-ic{width:34px;height:34px}
-      .mh-home-side-lb{display:none}
+      /* 横は字を印の左に並べる(2026-11-19 r1119-013 ⑥ U-23。前は高さを節約するため字を消していて、丸い印と数字だけでは何のボタンか分からなかった)。
+         高さは縦に積んだときと変えない */
+      .mh-home-side-btn{flex-direction:row-reverse;align-items:center;gap:5px}
+      .mh-home-side-lb{display:block;font-size:10px;line-height:1.2;white-space:nowrap}
     }
     /* 横画面で幅が狭い端末は、1段に並べたカードの内側が狭くなる。名前(最長8文字)が1行に収まるよう、
        全施設一律で段階的に小さくする(縦画面の .mh-home-dock-name の決め方と同じ考え方) */
