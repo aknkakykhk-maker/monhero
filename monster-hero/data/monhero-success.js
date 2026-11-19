@@ -219,7 +219,7 @@
   const ASSIST_MAX = 4;
   const ASSIST_MAX_V3 = 8;   // 第3版の表のとき1体8種類まで(社長 2026-11-14)
   const ASSIST_LV_MAX = 5;   // 持ち物の段の上限(第2版)。表が第1版のときも段4・5の持ち物は削らない(効き目は表の段数で頭打ち)
-  const assistPointsOf = (power) => clamp(Math.floor(num(power) / 50), 20, 400);
+  const assistPointsOf = (power) => Math.max(0, Math.floor(num(power) / 100)); // 切り捨て(総合力 ÷ 100)・最低・上限なし(社長 2026-11-19。それまでは ÷50・20〜400)
 
   // ---- イッサ博士(EVENTS.md 4-⑥・社長の確率どおり) ----
   const ISSA = Object.freeze({

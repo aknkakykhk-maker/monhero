@@ -215,7 +215,7 @@
   const VERSION = 3;
   const LV_MAX = Math.max(...LIST.map(a => a.max)); // 目盛りのいちばん多い数(保存の読み込みの上限)
   const MAX_KINDS = 8;          // 1体に8種類まで(社長 2026-11-14)
-  const POINTS_MIN = 20, POINTS_MAX = 400, POINTS_DIV = 50; // ポイント = 切り捨て(総合力 ÷ 50)・20〜400(芯の assistPointsOf)
+  const POINTS_DIV = 100; // ポイント = 切り捨て(総合力 ÷ 100)・最低・上限なし(芯の assistPointsOf・社長 2026-11-19。それまでは ÷50・20〜400)
   // 「おまかせ」: この順に5目盛りずつ配る。ひらめきの候補があれば先頭
   const AUTO_ORDER = Object.freeze(['sokoji', 'kizuna', 'hirameki', 'kaketsuke', 'shugyo', 'hitonatsu', 'atooshi', 'ninzu']);
   const AUTO_STEP = 5;
@@ -333,7 +333,7 @@
 
   // 取ったものを確かめる: 知らない id を捨て・目盛りは1〜max・8種類まで・値段の合計が pts を超えたら外す。出す形は { id, n }
   const normPicks = (list, pts) => {
-    const cap = Math.min(POINTS_MAX, Math.max(0, num(pts)));
+    const cap = Math.max(0, num(pts));
     const out = []; const seen = {}; let used = 0;
     for (const p of Array.isArray(list) ? list : []) {
       const id = p && typeof p === 'object' ? p.id : null;
@@ -350,7 +350,7 @@
     const cand = candidates(hints).map(a => a.id);
     const order = [...cand.filter(id => BY_ID[id].from === 'hint'), ...AUTO_ORDER.filter(id => cand.includes(id))];
     cand.forEach(id => { if (!order.includes(id)) order.push(id); });
-    const cap = Math.min(POINTS_MAX, Math.max(0, num(pts)));
+    const cap = Math.max(0, num(pts));
     const n = {}; let left = cap;
     for (const step of [AUTO_STEP, 1]) for (let changed = true; changed;) {
       changed = false;
@@ -391,9 +391,9 @@
     return best ? valueOf(id, best) : 0;
   };
 
-  const pointsOf = (power) => Math.min(POINTS_MAX, Math.max(POINTS_MIN, Math.floor(num(power) / POINTS_DIV)));
+  const pointsOf = (power) => Math.max(0, Math.floor(num(power) / POINTS_DIV));
 
-  const api = Object.freeze({ VERSION, PT, LIST, BY_ID, TYPE_NAME, SCENES, LV_MAX, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, AUTO_STEP,
+  const api = Object.freeze({ VERSION, PT, LIST, BY_ID, TYPE_NAME, SCENES, LV_MAX, MAX_KINDS, AUTO_ORDER, AUTO_STEP,
     CAP, capNote, describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MONHERO_SUCCESS_ASSIST = api;
