@@ -73,6 +73,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   seasons_of_a_little_plaza:{marker:'seasons-of-a-little-plaza-v3',zero:417.8,beat:353.971,levelRe:/const seasonsOfALittlePlazaHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['L','ground','R','ground'],hellDensity:1.2},
   eiyuu_no_akashi:{marker:'eiyuu-no-akashi-v3',zero:1476.3,beat:371.422,levelRe:/const eiyuuNoAkashiHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   eiyuu_no_akashi_milktea:{marker:'eiyuu-no-akashi-milktea-v3',zero:2391.9,beat:312.321,levelRe:/const eiyuuNoAkashiMilkteaHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  // グルメレース(2026-11-18・新曲は基本 HELL あり)。64版は冒頭無音1秒足し済み(zero はずらし後の拍の頭)
+  gourmet_race_64:{marker:'gourmet-race-64-v3',zero:2031.1,beat:321.254,levelRe:/const gourmetRace64HellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  gourmet_race_dx:{marker:'gourmet-race-dx-v3',zero:424,beat:374.289,levelRe:/const gourmetRaceDxHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_smash:{marker:'megalovania-smash-v3',zero:761,beat:375,levelRe:/const megalovaniaSmashHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   evans:{marker:'evans-v3',zero:2135,beat:324.3682,levelRe:/const evansHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},

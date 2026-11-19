@@ -2878,6 +2878,76 @@
    "fastSameSide": 14,
    "heldHandSwitch": 0
   },
+  "gourmet_race_64/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 1,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 34,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 65,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3018,6 +3088,11 @@
   {
    "at": "2026-11-18T16:17",
    "reason": "新曲「英雄の証」2バージョンの譜面を新規追加",
+   "changed": 10
+  },
+  {
+   "at": "2026-11-18T20:08",
+   "reason": "新曲「グルメレース」(64 ver./DX ver.)を追加。件数確認済み: 帯の中・高さ切り替え・帯の隣は全譜面0件。64版は速い曲のため fastSameSide が EXPERT 34件・MASTER 65件(80ms間隔の連打)",
    "changed": 10
   }
  ]
