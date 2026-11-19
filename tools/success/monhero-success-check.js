@@ -607,6 +607,12 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const late = { ...low, astory: { ep: 1, path: null, done: false } }; const dl = due(late, range(18, 20)); ok(dl && dl.d === 2 && dl.t === 18, '逃した2話が次の期に出ない(期をまたいでも消えない)');
   const tu = [1, 2, 3, 4].map((ep) => { const x = { ...low, astory: { ep: ep - 1, path: 'good', done: false } }; const d = due(x, range(1, 41)); return d && d.d === ep ? d.t : null; });
   ok(JSON.stringify(tu) === '[3,11,23,39]', `第1〜4話の出るターンが 3・11・23・39 でない: ${JSON.stringify(tu)}`);
+  // ミハリ #6869: 期末の大会のあとの出来事(次の期の1ターン目の番号で数える)があっても、そのターンの決まった出来事(目標えらび)を止めない
+  if (SUC.events) { const s18 = { ...SUC.newRun({ id: 'gp', species: 'Mocchi', aid: 'mua' }), turn: 18, acted: false }; const o0 = SUC.events.open(s18, 'start'); const ev0 = o0.state.ev;
+    const s18b = { ...s18, ev: { ...ev0, pend: null, rolled: {}, lastTurn: 18 } }; const o1 = SUC.events.open(s18b, 'start');
+    ok(o1.out.ev && o1.out.ev.id === 'ev.goal.pick', `大会のあとの出来事があった期の1ターン目に目標えらびが出ない: ${o1.out.ev && o1.out.ev.id}`); }
+  // けが・病気のあいだでも、ヒーローズファイナルの前の最後のターン(43)なら第4話を出す(結末が付かなくならない)
+  ok(SUC.storyDue({ ...low, turn: 43, cond: { kind: 'injury', left: 3 }, astory: { ep: 3, path: 'good', done: false } }) === 4 && SUC.storyDue({ ...low, turn: 40, cond: { kind: 'injury', left: 3 }, astory: { ep: 3, path: 'good', done: false } }) === null, 'けが中の第4話の扱いがずれている(40は出さない・43は出す)');
   const bit = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 100, astory: { ep: 3, path: 'bitter', done: false } };
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
 }

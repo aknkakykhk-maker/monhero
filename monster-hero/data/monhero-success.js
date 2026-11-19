@@ -1492,8 +1492,9 @@
     };
     // 助手の連続イベント(EVENTS ②)。そのターンに出る話(1〜4・'special')か null。画面はターンのはじめに見せる
     const storyDue = (s) => {
-      const a = s.astory || { ep: 0 }; if (s.over || s.cond || s.battle) return null;
-      if (s.ev && s.ev.lastTurn === s.turn && !(a.at === s.turn)) return null; // 大会のあとの出来事(期の目標の結果)が出たターンは次のターンへ回す(1ターンに見せるのは最大2つ・r1119-009)
+      const a = s.astory || { ep: 0 }; if (s.over || s.battle) return null;
+      // けが・病気・家出のあいだは出さない。ただし第4話は、ヒーローズファイナル(44ターン目〜)の前の最後のターンなら出す(結末が付かなくならないように・ミハリ #6869)
+      if (s.cond && !(a.ep === 3 && s.turn >= 43)) return null;
       const p = periodOf(s.turn); const max = ASTORY.lvMax(num(s.aidLv, 1));
       if (a.ep >= 4 && !a.done && num(s.aidLv, 1) >= ASTORY.specialLv && s.storyEnd === 'good' && p.key === 'final' && p.at <= 2) return 'special';
       const next = ASTORY.eps[a.ep]; if (!next || next.ep > max) return null;
