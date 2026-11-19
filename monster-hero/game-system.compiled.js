@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35c9ad9a54ee98fe
+// source-sha256: 4d07a93e92123e03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160841,7 +160841,7 @@ const monsucFuse = async ({
   if (!SUC || typeof saveBox !== 'function') return 'まだ使えません';
   if (monsucFuseBusy) return '合体しています';
   const lock = new Set(Array.isArray(locked) ? locked : []);
-  if (lock.has(mainId) || lock.has(matId)) return '編成・貸し出し・育成中のモンスターは合体に使えません';
+  if (lock.has(mainId) || lock.has(matId)) return '育成中の編成・貸し出し中・育成中のモンスターは合体に使えません';
   const mons = monsucBoxMons(box);
   const main = mons.find(m => m.id === mainId);
   const mat = mons.find(m => m.id === matId);
@@ -160913,6 +160913,7 @@ function MonsucFuseSheet({
   onSave,
   readBox,
   locked = [],
+  lockWhy = null,
   onDone,
   onClose,
   suc = null,
@@ -160937,6 +160938,23 @@ function MonsucFuseSheet({
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
+  const lockedEl = lockedRaised.length ? React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2",
+    "data-monsuc-fuse-locked": true
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "🔒 いまは合体に使えないモンスター"), lockedRaised.map(m => React.createElement("p", {
+    key: m.id,
+    className: "mt-0.5 text-[10.5px] font-bold text-slate-400",
+    "data-monsuc-fuse-locked-mon": m.id,
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseNick(m), "：", lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id] || '育成中の編成・貸し出し中のモンスターは使えません')), lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? React.createElement("p", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-500"
+  }, "育成が終わると使えるようになります") : null) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF;
   const main = mons.find(m => m.id === mainId) || null;
@@ -161122,12 +161140,12 @@ function MonsucFuseSheet({
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), lockedEl), usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
+  }, "育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
@@ -187100,6 +187118,7 @@ function MsxR3Box({
   const [asort, setAsort] = useState('new');
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
+  const [runOn, setRunOn] = useState(null);
   const [msg, setMsg] = useState('');
   const [edit, setEdit] = useState(null);
   const [top, setTop] = useState('base');
@@ -187137,8 +187156,13 @@ function MsxR3Box({
       if (alive) setViewState(msxMmNormView(v));
     }).catch(() => {});
     storeGet(MSX_KEYS.run, null).then(r => {
-      if (alive && r && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
-    }).catch(() => {});
+      if (!alive) return;
+      const on = !!r && typeof r === 'object';
+      setRunOn(on);
+      if (on && r.from && typeof r.from.box === 'string') setRunFrom(r.from.box);
+    }).catch(() => {
+      if (alive) setRunOn(true);
+    });
     return () => {
       alive = false;
     };
@@ -187156,7 +187180,7 @@ function MsxR3Box({
   const cur = box && sel ? box.mons.find(m => m.id === sel) : null;
   const lendOn = typeof monsucLendSet === 'function';
   const lendId = meta && typeof meta.lend === 'string' ? meta.lend : null;
-  const teamIds = meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
+  const teamIds = runOn !== false && meta && Array.isArray(meta.team) ? meta.team.filter(t => t && typeof t.box === 'string').map(t => t.box) : [];
   const byeLock = m => fav.includes(m.id) ? 'ハート' : lendId === m.id ? '貸し出し中' : runFrom === m.id ? '育成中' : null;
   const saveLend = async id => {
     const m = {
@@ -187237,9 +187261,16 @@ function MsxR3Box({
   let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
+    const lockWhy = {};
+    teamIds.forEach(id => {
+      lockWhy[id] = '育成中の編成に入っています';
+    });
+    if (lendId) lockWhy[lendId] = 'フレンドに貸し出し中です';
+    if (runFrom) lockWhy[runFrom] = 'いま育成中です';
     fuseEl = React.createElement(React.Fragment, null, React.createElement(MonsucFuseSheet, {
       box: box,
       locked: locked,
+      lockWhy: lockWhy,
       readBox: msxR3ReadBox,
       onName: async (id, nick, cols) => {
         const r = await msxR3EditMon(id, nick, cols);
