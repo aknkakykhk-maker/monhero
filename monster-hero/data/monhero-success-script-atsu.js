@@ -45,7 +45,6 @@
     {"id":"item.juice.atsu1","who":"atsu","e":"happy","t":"野菜ジュースで全快。ここから詰めよ笑"},
     {"id":"item.akuyosan.atsu1","who":"atsu","e":"normal","t":"苦いけど効くやつ。これでスッキリするだろ笑"},
     {"id":"item.license.atsu1","who":"atsu","e":"happy","t":"ライセンスか。{mon}、ちゃんと信じてついてきてるよ笑"},
-    {"id":"item.oily.atsu1","who":"atsu","e":"normal","t":"オイリーパックね。中身は大事に使お笑"},
     {"id":"ev.daily.nut.atsu1","who":"atsu","e":"normal","t":"落とし物か。どうする？ 届けるのが筋だけど笑"},
     {"id":"ev.daily.rain.atsu1","who":"atsu","e":"happy","t":"雨か。こういう日に走るのも悪くないけどな笑"},
     {"id":"ev.daily.night.atsu1","who":"atsu","e":"normal","t":"寝れないのか。まぁ〜たまにはいいけど、明日に響くぞ笑"},

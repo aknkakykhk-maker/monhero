@@ -24,7 +24,7 @@ const MONSUC_RANK_TIMEOUT_MS = 12000;
 const MONSUC_RANK_LIMIT_ALL = 100;
 const MONSUC_RANK_LIMIT_LINEAGE = 50;
 const MONSUC_RANK_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
-const MONSUC_RANK_STAT_LABEL = { life: '❤️ライフ', pow: '💪ちから', wise: '🧠かしこさ', hit: '🎯命中', eva: '💨回避', tough: '🛡️丈夫さ' };
+const MONSUC_RANK_STAT_LABEL = { life: '❤️ライフ', pow: '🏋️ちから', wise: '📖かしこさ', hit: '🎯命中', eva: '👣回避', tough: '🛡️丈夫さ' };
 const MONSUC_RANK_GRADE_COLOR = { M: '#f472b6', SSS: '#f472b6', SS: '#fb923c', S: '#fbbf24', A: '#f472b6', B: '#a78bfa', C: '#38bdf8', D: '#94a3b8', E: '#94a3b8', F: '#94a3b8', G: '#94a3b8' };
 const MONSUC_RANK_REASON_TEXT = Object.freeze({
   off: 'ランキングは準備中です',

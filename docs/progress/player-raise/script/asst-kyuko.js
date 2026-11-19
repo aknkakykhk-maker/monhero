@@ -296,7 +296,6 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'item.juice.kyuko1', who:'kyuko', e:'happy', t:'野菜ジュースで全快。ここから詰めよw' },
   { id:'item.akuyosan.kyuko1', who:'kyuko', e:'normal', t:'苦いけど効くやつ。これでスッキリするはず笑' },
   { id:'item.license.kyuko1', who:'kyuko', e:'happy', t:'ライセンスかぁ。{mon}、ちゃんと信じてついてきてるよぉ' },
-  { id:'item.oily.kyuko1', who:'kyuko', e:'normal', t:'オイリーパックね。中身は大事に使おw' },
 
   // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
   { id:'turn.awake.omen.kyuko1', who:'kyuko', e:'surprise', t:'{mon}、うっすら光ってる。見立てだと…なにか来るよぉ笑' },

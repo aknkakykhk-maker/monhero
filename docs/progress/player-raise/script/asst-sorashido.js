@@ -792,9 +792,6 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'item.license.sorashido1', who:'sorashido', e:'happy', t:'ライセンスですね。{mon}、ちゃんと信じてついてきてます笑' },
   { id:'item.license.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'ライセンスっすね。{mon}、ちゃんと信じてついてきてるっす笑' },
   { id:'item.license.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'ライセンスですね。{mon}、ちゃんと信じてついてきてるな笑' },
-  { id:'item.oily.sorashido1', who:'sorashido', e:'normal', t:'オイリーパックですね。中身は大事に使いましょう' },
-  { id:'item.oily.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'オイリーパックっすね。中身は大事に使うっす' },
-  { id:'item.oily.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'オイリーパックか。中身は大事に使いましょうね' },
 
   // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
   { id:'turn.awake.omen.sorashido1', who:'sorashido', e:'surprise', t:'{mon}の体、ほんのり光っていますね……何か起きそうです' },

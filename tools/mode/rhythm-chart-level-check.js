@@ -192,6 +192,12 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   REWORKED_V3.push('hopes_and_dreams','hopes_and_dreams_short','hopes_and_dreams_hell_debug','hopes_and_dreams_short_hell_debug');
   // 2026-11-15 に足した新曲 Sparkling Pink Overture(1曲・5難易度と HELL・v3 で測る)
   REWORKED_V3.push('sparkling_pink_overture','sparkling_pink_overture_hell_debug');
+  // 2026-11-18 に足した新曲 英雄の証(戦闘版とミラクル☆ミルクティ版・5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('eiyuu_no_akashi','eiyuu_no_akashi_hell_debug','eiyuu_no_akashi_milktea','eiyuu_no_akashi_milktea_hell_debug');
+  // 2026-11-19 に足した新曲 グルメレース(64 ver.・DX ver.。5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('gourmet_race_64','gourmet_race_dx','gourmet_race_64_hell_debug','gourmet_race_dx_hell_debug');
+  // 2026-11-19 に足した新曲 Dr.WILY STAGE 1(原曲とおっくせんまん版・5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('dr_wily_stage_1','dr_wily_stage_1_hell_debug','dr_wily_stage_1_okkussenman','dr_wily_stage_1_okkussenman_hell_debug');
   check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
     all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
   check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');

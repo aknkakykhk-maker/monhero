@@ -93,7 +93,7 @@ function RhythmHistoryScreen({
   return (
     <main data-mh-screen data-rhythm-history className="flex h-full flex-1 flex-col bg-slate-950 text-white">
       <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-        <button aria-label="戻る" data-rhythm-history-back onClick={()=>selected?onClearSelection():onBack()} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <button aria-label="戻る" data-rhythm-history-back onClick={()=>selected?onClearSelection():onBack()} className="flex min-h-[44px] items-center gap-0.5 px-2 text-slate-400"><ArrowLeft size={18}/><span className="whitespace-nowrap text-[11px] font-black">戻る</span></button>
         <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-amber-200">
           {selected?rhythmHistoryName(selected):'🕘 これまでの記録'}
         </h2>
@@ -160,7 +160,7 @@ function RhythmHistoryScreen({
                 {divisions.map(division=>(
                   <button key={division.id} type="button" data-rhythm-history-division={division.id} onClick={()=>onSelectDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===activeDivision?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
                   </button>
                 ))}
               </div>

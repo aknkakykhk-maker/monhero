@@ -15,6 +15,9 @@
 //   ・資料に無い技(オリジナル5種の90技)は、消費ガッツの軽い順に並べて、同じ数ずつ rank 1〜5 に分ける(同じガッツなら威力の小さい方が先)
 // ★learn の付け方(助手の修行): rank 1(初めからでない技)= 100 以上 / rank 2 = その技種の能力 150 以上 / rank 3 = 250 以上+ひとつ下の技を熟練 25 / rank 4 = 350 以上+熟練 40 /
 //   rank 5 = 450 以上+熟練 50。「ひとつ下の技」は、同じ技種で rank がちょうどひとつ下の技(無ければ、同じ技種でいちばん近い下の rank)。
+//   候補が複数あるときは、1つの技に集中しないよう、その種類の中で前提に使われた回数がいちばん少ない技を選ぶ
+//   (同数なら間合いが重なる技を優先し、それも同じなら表の並び順)。2026-11-18 社長指摘「条件2の技被りがおおすぎる」を受けた見直し。
+//   以前は候補の先頭を常に選んでいたため、エイキの rank 3 のちから技4つが全部「千花連刃」の熟練を要求するような偏りが出ていた。
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
@@ -54,6 +57,22 @@ for (const [sp, list0] of Object.entries(draft.species)) {
   // 資料に無い技(オリジナル5種)は、消費ガッツの軽い順に同じ数ずつ rank 1〜5 へ
   const noRes = base.filter((t) => !rank.has(t.id)).sort((a, b) => (a.guts - b.guts) || (a.power - b.power) || a.id.localeCompare(b.id));
   noRes.forEach((t, i) => rank.set(t.id, 1 + Math.min(4, Math.floor((i * 5) / Math.max(1, noRes.length)))));
+  // 前提技(need)の割り当て表を先に決める。割り当ては rank の低い技から順に行い、
+  // 「ひとつ下の段」の候補の中では、前提に使われた回数がいちばん少ない技を選ぶ(チェーンが数本に分かれて分散する)。
+  const needOf = new Map(); // 技 id → 前提にする技 id
+  const needUse = new Map(); // 技 id → 前提に使われた回数(この種類の中だけ数える)
+  const autoNeed = base.filter((t) => !t.start && !t.needFix && LEARN_NEED[rank.get(t.id)]);
+  autoNeed.sort((a, b) => rank.get(a.id) - rank.get(b.id)); // 安定ソートなので、同じ rank は表の並び順のまま
+  for (const t of autoNeed) {
+    const r = rank.get(t.id);
+    let cands = null;
+    for (let q = r - 1; q >= 1 && !cands; q--) { const c = base.filter((x) => x.kind === t.kind && rank.get(x.id) === q && x.id !== t.id); if (c.length) cands = c; }
+    if (!cands) continue;
+    const overlap = (x) => (x.dist.some((d) => t.dist.includes(d)) ? 0 : 1); // 間合いが重なる技を優先する
+    cands.sort((a, b) => ((needUse.get(a.id) || 0) - (needUse.get(b.id) || 0)) || (overlap(a) - overlap(b)) || (base.indexOf(a) - base.indexOf(b)));
+    needOf.set(t.id, cands[0].id);
+    needUse.set(cands[0].id, (needUse.get(cands[0].id) || 0) + 1);
+  }
   const out = base.map((t) => {
     const r = rank.get(t.id);
     const o = { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: t.hit, guts: t.guts, crit: t.crit, gd: t.gd };
@@ -65,12 +84,7 @@ for (const [sp, list0] of Object.entries(draft.species)) {
       const st = { [t.kind]: LEARN_ST[r] };
       o.learn = { by: t.kind, st };
       if (t.needFix) o.learn.need = Object.fromEntries(Object.entries(t.needFix).filter(([id, v]) => base.some((x) => x.id === id) && Number.isFinite(v))); // 決めた熟練の条件(fixRank の技)
-      else if (LEARN_NEED[r]) {
-        // ひとつ下の rank から順に下へ、同じ技種の技を探す
-        let need = null;
-        for (let q = r - 1; q >= 1 && !need; q--) need = base.find((x) => x.kind === t.kind && rank.get(x.id) === q && x.id !== t.id) || null;
-        if (need) o.learn.need = { [need.id]: LEARN_NEED[r] };
-      }
+      else if (LEARN_NEED[r] && needOf.has(t.id)) o.learn.need = { [needOf.get(t.id)]: LEARN_NEED[r] }; // 前提は上の割り当て表で決めた技(分散済み)
     }
     return o;
   });

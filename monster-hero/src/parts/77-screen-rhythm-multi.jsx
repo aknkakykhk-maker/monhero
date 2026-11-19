@@ -1795,7 +1795,7 @@ function RhythmMultiChatPanel({ view, phase = '', members = [], resolveIconUrl =
     <section data-rhythm-multi-chat className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 pb-1.5">
         <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">💬 チャット<small className="ml-1.5 text-[10px] font-bold text-slate-400">ルームの{count}件</small></h3>
-        {onClose && <button data-rhythm-multi-chat-close type="button" aria-label="チャットを閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black text-slate-200">✕</button>}
+        {onClose && <button data-rhythm-multi-chat-close type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black text-slate-200">閉じる</button>}
       </div>
       {talkTip && (
         <div data-rhythm-buddy-talk-tip className="mb-1.5 flex shrink-0 items-start gap-2 rounded-xl border border-lime-300/50 bg-lime-950/80 p-2 landscape:p-1.5">
@@ -2381,7 +2381,7 @@ function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeav
           : <button data-multi-away-return type="button" onClick={() => onReturn && onReturn()}
             className={`min-h-[40px] shrink-0 rounded-xl px-3 text-[12px] font-black ${hot ? 'bg-amber-300 text-slate-950' : 'bg-cyan-400 text-slate-950'}`}>{hot ? '対戦へ' : '戻る'}</button>}
         {onLeave && <button data-multi-away-leave type="button" aria-label="ルームを出る" onClick={leave}
-          className="min-h-[40px] min-w-[36px] shrink-0 rounded-xl bg-slate-700 text-[13px] font-black">✕</button>}
+          className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-700 px-2.5 text-[11px] font-black">部屋を出る</button>}
       </div>
     </div>
   );
@@ -2421,7 +2421,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
       <div data-rhythm-multi-record className="absolute inset-x-0 bottom-0 flex h-[82%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-3 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:h-full landscape:w-[55%] landscape:rounded-none landscape:rounded-l-2xl" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
         <div className="flex shrink-0 items-center gap-2">
           <h3 className="min-w-0 flex-1 text-sm font-black text-cyan-100">📜 みんなで対戦の記録</h3>
-          <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-800 text-lg font-black">✕</button>
+          <button type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {!rec ? <p className="mt-3 text-xs font-bold text-slate-400">読み込んでいます…</p> : <>
           <div className="mt-2 grid shrink-0 grid-cols-4 gap-1.5 text-center">
@@ -2494,7 +2494,7 @@ function RhythmMultiBuddyInfoSheet({ m, masu, songName, resolveIconUrl, onClose 
         <section data-rhythm-multi-buddy-info className="relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:max-h-[92%] landscape:max-w-xl landscape:rounded-3xl" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
           <header className="mb-2 flex shrink-0 items-center gap-2">
             <h3 className="min-w-0 flex-1 text-base font-black text-lime-200">🎵 マスモンのステータス</h3>
-            <button data-rhythm-multi-buddy-info-close type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
+            <button data-rhythm-multi-buddy-info-close type="button" onClick={onClose} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-full bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <RhythmBuddyDetail masu={masu} mon={state.mons[masu.id]} dayKey={dayKey} songName={songName} ownerName={m && m.name} onBack={null} />
@@ -3547,7 +3547,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
       {!playing && (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           <p data-rhythm-watch-message className="text-[14px] font-black leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(rhythmWatchPhaseText(v.phase))}</p>
-          <button type="button" onClick={close} className="min-h-[48px] w-full max-w-xs rounded-xl bg-slate-700 text-[14px] font-black">観戦をやめる</button>
+          {/* 観戦の出口は見出しの左上だけにそろえる(戻る系ボタン統一・2026-11-18 社長決定)。
+              待機中の真ん中にも同じボタンがあったのを廃止した */}
         </div>
       )}
       {playing && (
@@ -4411,7 +4412,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">💌</span>
           <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンドを招待する</b>
-          <button type="button" aria-label="閉じる" onClick={() => setInviteSheet(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+          <button type="button" onClick={() => setInviteSheet(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {inviteListBody}
       </div>
@@ -4432,7 +4433,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const countdownLayer = countdown && (
     <div data-rhythm-multi-countdown className="absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90">
       <small className="text-[11px] font-black tracking-widest text-slate-400">LIVE START</small>
-      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
+      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? <RhythmSongName song={songById(countdown.info.songId)}/> : ''}</p>
       <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
     </div>
   );
@@ -4542,7 +4543,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
                 <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100" style={JA_WRAP_STYLE}>{jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')}</p>
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
-                <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black">閉じる</button>
               </section>
             )}
             {ms.multi && buddyIntroSeen && !rankIntroSeen && (
@@ -4550,7 +4551,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <span aria-hidden="true" className="text-2xl leading-none">🏆</span>
                 <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">「ランキング」に「マスモンランキング」ができました。育てたマスモンのビートLvと最高スコアの順位が見られます</p>
                 <button type="button" onClick={() => closeRankIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">見てみる</button>
-                <button type="button" aria-label="閉じる" onClick={() => closeRankIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => closeRankIntro(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-[11px] font-black">閉じる</button>
               </section>
             )}
             {/* マスモンを呼べる回数。1日の無料ぶんの残りと、セッション券の枚数(部屋の「マスモンを呼ぶ」で使う) */}
@@ -4599,7 +4600,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🎮</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-fuchsia-100">フリーマッチ</b><small className="block text-[11px] font-bold text-slate-400">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></div>
-                <button type="button" aria-label="閉じる" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => { setFreeOpen(false); setFreeList(false); }} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
               </div>
               {rejoinButton}
               {/* フレンドがいます(2026-11-08)。部屋を開いているフレンドは「入る」、いるが部屋の無いフレンドは「作って誘う」 */}
@@ -4656,7 +4657,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、フレンドだけと遊べます</small></div>
-                <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
+                <button type="button" onClick={() => setPrivateOpen(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">部屋を作る</b>
@@ -4798,7 +4799,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
                 {view && rankingWideButton('w-full')}
                 {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
-                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
+                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>ルームを出る</button>
                 </div>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>

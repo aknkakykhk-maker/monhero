@@ -53,7 +53,8 @@ for (const a of AS.LIST) {
   if (a.v2) for (let lv = 1; lv <= 5; lv++) { const n = AS.fromSaved({ id: a.id, lv }); ok(Math.abs(a.v[n - 1] - Math.min(a.v[a.max - 1], a.v2[lv - 1])) < 1e-9, `${a.id} 段${lv} が同じ効き目の目盛りに読み替わらない: ${a.v[n - 1]} / ${a.v2[lv - 1]}`); const sv = AS.toSaved(a.id, n); ok(sv.lv === (a.id === 'sokoji' ? Math.min(lv, 2) : lv) && sv.n === n, `${a.id} 段${lv} の書き戻し(lv)がずれる`); }
 }
 ok(new Set(AS.LIST.map(a => a.name)).size === AS.LIST.length, 'アシスト効果の名前が重なる');
-ok(Math.min(...AS.LIST.map(a => a.cost[0])) <= AS.POINTS_MIN, 'ポイント最低の子が1つも取れない');
+ok(Math.min(...AS.LIST.map(a => a.cost[0])) <= AS.pointsOf(100), '総合力100でもらえるポイントで1つも取れない');
+ok(AS.pointsOf(99) === 0 && AS.pointsOf(0) === 0, 'ポイントに最低保証がある(社長 2026-11-19: 最低なし・総合力100未満は0)');
 const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'assist').map(s => s.good.name);
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 8, '1体に持てる数が8でない(社長 2026-11-14)');

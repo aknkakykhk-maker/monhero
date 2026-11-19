@@ -2808,6 +2808,216 @@
    "fastSameSide": 14,
    "heldHandSwitch": 0
   },
+  "eiyuu_no_akashi/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 38,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "eiyuu_no_akashi_milktea/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 14,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 1,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 34,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_64/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 65,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "gourmet_race_dx/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 97,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 50,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 75,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 4,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 72,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 22,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 26,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2944,6 +3154,26 @@
    "at": "2026-11-17T14:22",
    "reason": "新曲 seasons_of_a_little_plaza の難易度を challengeFactor 1.15 に再生成したため、自曲の行だけ件数を更新",
    "changed": 3
+  },
+  {
+   "at": "2026-11-18T16:17",
+   "reason": "新曲「英雄の証」2バージョンの譜面を新規追加",
+   "changed": 10
+  },
+  {
+   "at": "2026-11-18T20:08",
+   "reason": "新曲「グルメレース」(64 ver./DX ver.)を追加。件数確認済み: 帯の中・高さ切り替え・帯の隣は全譜面0件。64版は速い曲のため fastSameSide が EXPERT 34件・MASTER 65件(80ms間隔の連打)",
+   "changed": 10
+  },
+  {
+   "at": "2026-11-19T00:40",
+   "reason": "新曲 Dr.WILY STAGE 1（2版）を公開",
+   "changed": 10
+  },
+  {
+   "at": "2026-11-19T02:35",
+   "reason": "2026-11-19 あっくん指示でおっくせんまん版を超高難易度化(MASTER Lv.48/HELL Lv.67)。高密度化に伴う手の決まり件数増を了承",
+   "changed": 4
   }
  ]
 }

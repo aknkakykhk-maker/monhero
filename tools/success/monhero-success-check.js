@@ -5,7 +5,7 @@
 //   ・結果4種の倍率(大成功 ×1.5/成功 ×1/失敗 ×0/サボり ×0.3)・サボりは方針が普通より甘いときだけ・体力が減ると失敗が増える・サボりグセは失敗の下限 +5%
 //   ・休む(10/70/20% で 50/70/90% 回復)・遊ぶ(50% 回復・甘え度 +5・うつ病が治る)・通院(1回目70%・2回目は必ず)
 //   ・忠誠 = 甘え度 + 恐れ度(各50まで)・補正は60で +60% 頭打ち・うつ病のあいだは忠誠が動かない
-//   ・編成(上位3能力・得意率65%)・タッグの強さ(ランクで15〜35%)・親密度80でタッグ・アシストポイント = 総合力 ÷ 50
+//   ・編成(上位3能力・得意率65%)・タッグの強さ(ランクで15〜35%)・親密度80でタッグ・アシストポイント = 総合力 ÷ 100(最低・上限なし)
 //   ・イッサ博士の6択は社長の確率どおり
 //   ・芯は Math.random・Date・window・localStorage を使わず、いまは index.html から読まれない(誰にも見えない)
 'use strict';
@@ -163,7 +163,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // タッグは親密度80から
   const card = { kind: 'train', stat: 'pow', members: [0], aid: false };
   ok(SUC.cardMult({ ...s, bond: [79, 0, 0, 0, 0, 0] }, card).tag === 0 && SUC.cardMult({ ...s, bond: [80, 0, 0, 0, 0, 0] }, card).tag > 0, '親密度80でタッグにならない');
-  ok(SUC.assistPointsOf(8000) === 160 && SUC.assistPointsOf(100) === 20 && SUC.assistPointsOf(30000) === 400, 'アシストポイントが 総合力÷50(20〜400)でない');
+  ok(SUC.assistPointsOf(8000) === 80 && SUC.assistPointsOf(100) === 1 && SUC.assistPointsOf(99) === 0 && SUC.assistPointsOf(30000) === 300 && SUC.assistPointsOf(999999) === 9999, 'アシストポイントが 総合力÷100(最低・上限なし)でない');
 }
 
 // ---- イッサ博士 ----
@@ -454,6 +454,15 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const j = { ...s0, turn: 6, stats: { ...s0.stats, pow: 200 } };
   const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
   ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
+  // 金の大会(2026-11-18 社長: 資料で金の2杯を金の大会へ格上げ)。ジュニア3月=ミス・マーメイド杯 3,500G・5月=ノーブル杯 5,000G。星と大会の id はその期のまま・同じ月の銅は銀の半分のまま
+  const jm3 = SUC.cupsOf({ ...s0, turn: 8 }); const gold1 = jm3.find(c => c.name === 'ミス・マーメイド杯');
+  ok(gold1 && gold1.grade === 'gold' && gold1.prize === 3500 && gold1.star === 1 && gold1.id === 'junior:3:aim:1', `ミス・マーメイド杯が金の大会(3,500G・★はそのまま)になっていない: ${JSON.stringify(gold1)}`);
+  ok(jm3.filter(c => !c.ex)[1].prize === 1250, `金の大会の月の銅の賞金が変わっている: ${JSON.stringify(jm3.map(c => [c.name, c.prize]))}`);
+  const gold2 = SUC.cupsOf({ ...s0, turn: 10 }).find(c => c.name === 'ノーブル杯');
+  ok(gold2 && gold2.grade === 'gold' && gold2.prize === 5000 && gold2.star === 1, `ノーブル杯が金の大会(5,000G)になっていない: ${JSON.stringify(gold2)}`);
+  const pm3 = SUC.cupsOf({ ...s0, turn: 32 }).find(c => c.name === 'ミス・マーメイド杯'); const pm5 = SUC.cupsOf({ ...s0, turn: 34 }).find(c => c.name === 'ノーブル杯');
+  ok(pm3 && pm3.prize === 5250 && pm5 && pm5.prize === 7500, `プロ期の金の大会の賞金(ジュニア基準 × 期の倍率 1.5)がずれている: ${pm3 && pm3.prize}/${pm5 && pm5.prize}`);
+  ok(!SUC.cupsOf({ ...s0, turn: 20 }).some(c => c.grade === 'gold' && !c.ex), 'ミドル期のふだんの大会まで金の格が付いている');
   const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
   // ミドル1月は、月の並び2つ(銀・銅) + 第2版(間合いトーナメント4つ)。四大大会の1つ目(グレイテスト4)はミドル3月
   const cmRow = cm.filter(c => !c.ex);
@@ -784,7 +793,7 @@ if (SUC.ITEMS.awakeFruit && SUC.ITEMS.superAwakeFruit) {
   }));
   ok(n > 300 && half > 50, `賞金の突き合わせの数が少ない(${n}件・2つ目 ${half}件)`);
   const asa = SUC.cupsOf({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9 }).find((c) => c.name === 'あさがお杯');
-  if (asa) { const w = SUC.settle({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9, battle: { kind: 'cup', id: asa.id, sys: asa.sys, star: asa.star, round: 0 } }, [true]).out; ok(w.prize === 650 && w.beat === 10, `あさがお杯: 勝つと ${w.prize}G・ビートP ${w.beat}(650G・10 のはず)`); }
+  if (asa) { const w = SUC.settle({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9, battle: { kind: 'cup', id: asa.id, sys: asa.sys, star: asa.star, round: 0 } }, [true]).out; ok(w.prize === 1250 && w.beat === 30, `あさがお杯: 勝つと ${w.prize}G・ビートP ${w.beat}(1250G・30 のはず)`); }
 }
 function num0(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
 

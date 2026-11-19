@@ -1,0 +1,8 @@
+listen:gourmet_race_dx | mua excited 1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪
+listen:gourmet_race_dx | kiki normal 1:30で音がすっと引くところ、静かでとてもきれいです♪
+listen:gourmet_race_dx | momosuke excited 1:14でいちばん強くなるの、ももはここが大好き♡
+listen:gourmet_race_dx | dra happy 0:12から強めの音で駆け出すぞ。レースの始まりみたいだな
+listen:gourmet_race_dx | atsu happy 1:51で静かに終わるの、締めがきれいだね笑
+listen:gourmet_race_dx | kyuko happy 1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜
+listen:gourmet_race_dx | sorashido normal BPM160です。強い音67%に軽い音6%、力のこもった配分です
+listen:gourmet_race_dx | erubin normal 0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな
