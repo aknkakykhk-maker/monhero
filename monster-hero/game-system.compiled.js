@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d54f2d0c7d8290f4
+// source-sha256: 4c1be114a884efe5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15251,6 +15251,7 @@ const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
 const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const KYUKO_WINTER_STORY_ID = 'kyuko_winter_2026_11';
+const KIKI_TWINTAIL_STORY_ID = 'kiki_twintail_2026_11';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -117831,6 +117832,24 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.43,
       m: 0.736
     }
+  },
+  twintail: {
+    kiki: {
+      top: 0.112,
+      eye: 0.183,
+      chin: 0.244,
+      m: 0.383,
+      above: 0.95
+    }
+  },
+  'stand-twintail': {
+    kiki: {
+      top: 0.1966,
+      eye: 0.3225,
+      chin: 0.43,
+      m: 0.8,
+      above: 0.95
+    }
   }
 });
 const assistantLifeStandOutfitOf = src => {
@@ -121706,7 +121725,7 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG', 'winter/kyuko_normal.PNG', 'winter/face/kyuko_normal.PNG', 'twintail/kiki_normal.PNG', 'twintail/face/kiki_normal.PNG']));
 function assistantLifeSleepMeasured(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   if (!who || !who.imagePrefix || !who.imageDir) return null;
@@ -189172,6 +189191,17 @@ const MSX_MANUAL_CSS = `
 .msxm-row.gc .msxm-btn{text-align:center}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+/* 詰めた形(look c・2026-11-19 段2): 上の帯(ガッツ)は場の上の帯にあるので出さない。操作は1段に4つ(零では吹き飛ばしを足して5つ) */
+.msxm.c{padding:5px 6px;margin-top:0}
+.msxm.c .msxm-top{display:none}
+.msxm.c .msxm-sec{margin-top:0}
+.msxm.c .msxm-h{font-size:11px}
+.msxm-row.cc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:5px}
+.msxm-row.cc.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.msxm-row.cc .msxm-btn{min-height:40px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
+.msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
+.msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
@@ -189642,7 +189672,7 @@ function MsxManualBar({
   const sd = sheet === 'all' ? null : sheet;
   const useHere = !busy && (sd == null || sd === opt.dist);
   return React.createElement("div", {
-    className: `msxm${busy ? ' busy' : ''}`,
+    className: `msxm${busy ? ' busy' : ''}${look === 'c' ? ' c' : ''}`,
     "data-msxm": "act"
   }, React.createElement("style", null, MSX_MANUAL_CSS), React.createElement("div", {
     className: "msxm-top"
@@ -189662,7 +189692,7 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
+  }, React.createElement("span", null, look === 'c' ? '自分の技' : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
@@ -189677,7 +189707,7 @@ function MsxManualBar({
     busy: busy,
     onOpen: d => setSheet(d),
     dataSide: "manual",
-    look: look
+    look: look === 'c' ? '' : look
   })), sheetOn ? React.createElement(MsaTechSheet, {
     title: `${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`,
     list: items,
@@ -189697,7 +189727,56 @@ function MsxManualBar({
     useNote: t => !t.reach ? '(いまは届かない)' : `(あと${t.need})`,
     onRep: onRep && sd != null ? (d, id) => onRep(d, id) : null,
     onClose: () => setSheet(null)
-  }) : null, React.createElement("div", {
+  }) : null, look === 'c' ? (() => {
+    const back = opt.move.find(mv => mv.step > 0);
+    const fwd = opt.move.find(mv => mv.step < 0);
+    const near = !!(opt.blow && opt.blow.near);
+    const mvSub = mv => mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガ${mv.guts}` : ''}`;
+    return React.createElement("div", {
+      className: `msxm-row cc ${near ? 'n5' : ''}`,
+      "data-msxm-ops": true
+    }, back ? React.createElement("button", {
+      type: "button",
+      "data-msxm-move": back.step,
+      className: `msxm-btn ${isHint(back) ? 'hint' : ''}`,
+      disabled: !back.ok || busy,
+      onClick: () => go({
+        type: 'move',
+        step: back.step
+      })
+    }, "◀ 後退", React.createElement("small", null, mvSub(back))) : null, fwd ? React.createElement("button", {
+      type: "button",
+      "data-msxm-move": fwd.step,
+      className: `msxm-btn ${isHint(fwd) ? 'hint' : ''}`,
+      disabled: !fwd.ok || busy,
+      onClick: () => go({
+        type: 'move',
+        step: fwd.step
+      })
+    }, "前進 ▶", React.createElement("small", null, mvSub(fwd))) : null, React.createElement("button", {
+      type: "button",
+      className: `msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`,
+      disabled: busy,
+      onClick: () => go({
+        type: 'guard'
+      })
+    }, "🛡 ガード", React.createElement("small", null, "次の番まで")), React.createElement("button", {
+      type: "button",
+      className: `msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`,
+      disabled: !opt.charge.ok || busy,
+      onClick: () => go({
+        type: 'charge'
+      })
+    }, "💪 ためる", React.createElement("small", null, opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない')), near ? React.createElement("button", {
+      type: "button",
+      "data-msxm-blow": "",
+      className: `msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`,
+      disabled: !opt.blow.ok || busy,
+      onClick: () => go({
+        type: 'blow'
+      })
+    }, "💨 吹き飛ばし", React.createElement("small", null, opt.blow.wait ? '相手の手のあと' : `遠へ・ガ${opt.blow.guts}`)) : null);
+  })() : React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -189965,6 +190044,27 @@ const MSA_CSS = `
 .msa-tools .msa-ctl,.msa-tools .msa-bgt{white-space:nowrap}
 .msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
 .msa-cardsrow{flex:none}
+/* 段2(2026-11-19・docs/progress/monsuc-battle-redesign/layout2): 相手の技の枠/場/実況/自分の技の枠。どちらの枠も零近中遠に1技ずつ(同じ形) */
+.msa-rowh{display:flex;align-items:baseline;gap:6px;font-size:11px;font-weight:900;color:#cbd5e1;margin:0 2px 2px}
+.msa-rowh small{font-size:9.5px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa-foe{flex:none}
+.msa-foe .msa-dc-c{border-color:#155e75;background:#0f2530}
+/* 相手の、いまの間合いの枠を光らせる。危なさの段は光の強さだけで分ける(字は出さない) */
+.msa-foe .msa-dc-c.now{border-color:#f43f5e;background:#3b1424;color:#fff;box-shadow:0 0 0 1px #f43f5e88 inset,0 0 6px #f43f5e66}
+.msa-foe[data-msa-danger="2"] .msa-dc-c.now{box-shadow:0 0 0 2px #f43f5e inset,0 0 12px #f43f5eaa}
+.msa-foe[data-msa-danger="3"] .msa-dc-c.now{box-shadow:0 0 0 2px #fb7185 inset,0 0 18px #f43f5e;animation:msaDanger 1.1s ease-in-out infinite}
+@keyframes msaDanger{50%{box-shadow:0 0 0 2px #fda4af inset,0 0 26px #f43f5e}}
+@media (prefers-reduced-motion:reduce){.msa-foe .msa-dc-c.now{animation:none!important}}
+.msa-foe .msa-dc-c.now .msa-dc-h em{background:#f43f5e;color:#fff}
+.msa-foe[data-msa-danger="0"] .msa-dc-c.now{border-color:#64748b;background:#1b1733;box-shadow:none;animation:none}
+/* 使った技は、そのモンスターが次に技を出すまで札に白い点線の印を残す */
+.msa-dc-c.use{outline:2px dashed #ffffffcc;outline-offset:-3px}
+/* 実況は場の外・場のすぐ下の1行(技名の札・数字に重ならない) */
+.msc-wrap.msa>.msa-main>.msa-say,.msc-wrap.msa .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.msc-wrap.msa .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 技名の札は場の上(体力の帯の下)へ。零近中遠の字はいつも下のまん中 */
+.msa-stage.big .msa-plate{bottom:auto;top:62px}
+.msa-stage.big .msa-dist.sA,.msa-stage.big .msa-dist.sB{justify-content:center;padding:0}
 .msa-gtag{--msa-tx:-50%;position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
 .msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
@@ -190148,7 +190248,7 @@ const MSA_CSS = `
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
-.msc-wrap.msa .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
+.msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -190172,6 +190272,37 @@ const MSA_CSS = `
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
   .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+  /* 段2(2026-11-19): 自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)。枠は4つを縦に並べる */
+  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
+  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
+  .msc-wrap.msa .msa-main>.msa-topline{grid-column:1/3}
+  .msc-wrap.msa .msa-main>.msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
+  .msc-wrap.msa .msa-main>.msa-say{grid-column:1;grid-row:3}
+  .msc-wrap.msa .msa-main>.msa-foe{grid-column:2;grid-row:2/4;overflow:auto}
+  .msc-wrap.msa .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
+  .msc-wrap.msa .msa-dc-c{min-height:0;padding:2px 4px}
+  /* 横は枠の列を細くするため、札のダメージ・移る間合いの行を省く(ミハリ #6883: 場を画面の約2/3に) */
+  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{font-size:10.5px}
+  .msc-wrap.msa .msxm-row.cc,.msc-wrap.msa .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .msc-wrap.msa .msa-rowh small{display:none}
+  .msc-wrap.msa .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
+  .msc-wrap.msa .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
+  .msc-wrap.msa .msxm.c .msxm-h{flex-wrap:wrap}
+}
+/* 小さい横(高さ340px以下): 札はダメージの行を省き、技名の札を小さく上へ寄せる */
+@media (max-height:340px) and (orientation:landscape){
+  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
+  .msc-wrap.msa .msa-dc-c{padding:2px 4px}
+  .msa-stage.big .msa-plate{top:48px;padding:2px 12px 3px}
+  .msa-stage.big .msa-plate b{font-size:15px}
+  .msa-stage.big .msa-plate.big b{font-size:17px}
+  .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
+  .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
+  .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
+  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msc-wrap.msa .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){
@@ -192957,6 +193088,7 @@ function MonsucArena({
   const judgeIdx = useMemo(() => log.findIndex(x => x && x.ev === 'judge' && x.mode === 'three'), [log.length]);
   const [paused, setPaused] = useState(false);
   const [techSheet, setTechSheet] = useState(null);
+  const [foeSheet, setFoeSheet] = useState(null);
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
   const frames = useMemo(() => log.length ? ambwFramesOf(log) : [], [log.length, manual ? mm.tick : 0]);
@@ -193133,6 +193265,34 @@ function MonsucArena({
     return v != null ? v : t.hit;
   };
   const cardsOn = Boolean(itemsA && itemsA.length && typeof MsaDistCards === 'function' && !ended && !showBar);
+  const mvB = (st.bMoves || [])[f.act.B],
+    mbB = teams.B && teams.B.members ? teams.B.members[f.act.B] : null;
+  const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(catalog, mbB, mvB) : null;
+  const hitAtB = (t, d) => {
+    const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'B', {
+      ...f,
+      d
+    }, t.id) : null;
+    return v != null ? v : t.hit;
+  };
+  const lastTechOf = side => {
+    for (let k = pos; k >= 1; k--) {
+      const r = log[k] || {};
+      if (r.ev === 'tech' && r.side === side) return r.move || null;
+      if (r.ev === 'swap' && r.side === side) return null;
+    }
+    return null;
+  };
+  const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
+  const foeDanger = (() => {
+    if (!foeOn || typeof msaRepOf !== 'function') return 0;
+    const t = msaRepOf(itemsB, f.d, null);
+    if (!t) return 0;
+    const sc = x => (Number(hitAtB(x, f.d)) || 0) * (Number(x.power) || 0);
+    const top = Math.max(1, ...itemsB.map(sc));
+    const r = sc(t) / top;
+    return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
+  })();
   return React.createElement("div", {
     className: "msc-wrap msa",
     "data-msc-match": true,
@@ -193147,7 +193307,22 @@ function MonsucArena({
     className: "msc-buff"
   }, "✨ 特別な1話") : null, (info.opp || {}).breeder ? React.createElement("small", {
     className: "msa-breeder"
-  }, "相手 ", nm('B'), "・", msxBreederLabel(info.opp.breeder, info.opp.rivalKind)) : null), React.createElement("div", {
+  }, "相手 ", nm('B'), "・", msxBreederLabel(info.opp.breeder, info.opp.rivalKind)) : null), foeOn ? React.createElement("div", {
+    className: "msa-foe",
+    "data-msa-foe": true,
+    "data-msa-danger": foeDanger
+  }, React.createElement("div", {
+    className: "msa-rowh"
+  }, "相手の技", React.createElement("small", null, "押すと、その間合いの技が見られます")), React.createElement(MsaDistCards, {
+    list: itemsB,
+    rep: msaRepIds(itemsB, null),
+    dist: f.d,
+    guts: f.g.B,
+    lastMove: lastTechOf('B'),
+    dataSide: "B",
+    hitAt: hitAtB,
+    onOpen: d => setFoeSheet(d)
+  })) : null, React.createElement("div", {
     className: "msa-stagebox",
     "data-msa-stagebox": true
   }, React.createElement(MsaStage, {
@@ -193164,26 +193339,27 @@ function MonsucArena({
     wide: true,
     liveGuts: liveGuts,
     motionKindOf: monsucMotionKind
-  }), React.createElement("div", {
-    className: "msa-say over",
+  })), React.createElement("div", {
+    className: "msa-say",
     "data-msa-say": true
   }, call ? React.createElement("div", {
     key: `call-${call.at}`,
     className: `msa-call ${call.k}`,
     "data-msa-call": call.k
-  }, "🎙 ", call.t) : msaSay(e, nm, log)))), React.createElement("div", {
+  }, "🎙 ", call.t) : msaSay(e, nm, log))), React.createElement("div", {
     className: "msa-side",
     "data-msa-side": true
   }, cardsOn ? React.createElement("div", {
     className: "msa-cardsrow",
     "data-msa-cards": true
-  }, React.createElement(MsaDistCards, {
-    look: "a",
+  }, React.createElement("div", {
+    className: "msa-rowh"
+  }, "自分の技"), React.createElement(MsaDistCards, {
     list: itemsA,
     rep: msaRepIds(itemsA, null),
     dist: f.d,
     guts: f.g.A,
-    lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
+    lastMove: lastTechOf('A'),
     dataSide: "A",
     hitAt: hitAtA,
     onOpen: d => setTechSheet(d)
@@ -193194,7 +193370,7 @@ function MonsucArena({
     onPick: pick,
     onAuto: goAuto,
     busy: busy,
-    look: "a"
+    look: "c"
   }) : null), manual && !auto && busy && !ended && !showBar ? React.createElement("div", {
     className: "msa-wait"
   }, e.side === 'B' ? '相手の番…' : ' ') : null, (!manual || auto) && !ended ? React.createElement("div", {
@@ -193276,6 +193452,14 @@ function MonsucArena({
       B: nm('B')
     },
     onGo: () => setJudgeOk(true)
+  }) : null, foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
+    title: `${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`,
+    list: itemsB,
+    d: foeSheet,
+    dist: f.d,
+    rep: msaRepIds(itemsB, null),
+    hitAt: hitAtB,
+    onClose: () => setFoeSheet(null)
   }) : null, techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
     title: `${nm('A')} の${AMBW_DIST[techSheet]}の技`,
     list: itemsA,
@@ -240681,7 +240865,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -241202,6 +241386,12 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_WINTER_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || KYUKO_WINTER_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(KIKI_TWINTAIL_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || KIKI_TWINTAIL_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
@@ -244479,6 +244669,7 @@ function MonsterHeroGame() {
     monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     kyukoWinterStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_WINTER_STORY_ID),
+    kikiTwintailStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
