@@ -18,6 +18,16 @@ const MSX_MANUAL_CSS = `
 .msxm-row.gc .msxm-btn{text-align:center}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:5px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+/* 詰めた形(look c・2026-11-19 段2): 上の帯(ガッツ)は場の上の帯にあるので出さない。操作は1段に4つ(零では吹き飛ばしを足して5つ) */
+.msxm.c{padding:5px 6px;margin-top:0}
+.msxm.c .msxm-top{display:none}
+.msxm.c .msxm-sec{margin-top:0}
+.msxm.c .msxm-h{font-size:11px}
+.msxm-row.cc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:5px}
+.msxm-row.cc.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.msxm-row.cc .msxm-btn{min-height:40px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
+.msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msxm.c .msxm-foot{margin-top:4px}
 .msxm-nm{margin-bottom:1px}
 ${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
@@ -339,7 +349,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
   const sd = sheet === 'all' ? null : sheet;
   const useHere = !busy && (sd == null || sd === opt.dist);
   return (
-    <div className={`msxm${busy ? ' busy' : ''}`} data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
+    <div className={`msxm${busy ? ' busy' : ''}${look === 'c' ? ' c' : ''}`} data-msxm="act"><style>{MSX_MANUAL_CSS}</style>
       <div className="msxm-top">
         <span>{busy ? '相手の番…' : 'あなたの番'}</span>
         <b>間合い {MSX_MANUAL_DIST[opt.dist]}</b>
@@ -348,10 +358,10 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>⚔ 攻撃{reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}</span>
+          <span>{look === 'c' ? '自分の技' : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
-        <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual" look={look}/>
+        <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual" look={look === 'c' ? '' : look}/>
       </div>
       {sheetOn ? (
         <MsaTechSheet title={`${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`} list={items} d={sd} dist={opt.dist} rep={ids} hitAt={hitAt} hintId={hintId}
@@ -359,6 +369,21 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           usable={(t) => t.ok} useNote={(t) => (!t.reach ? '(いまは届かない)' : `(あと${t.need})`)}
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
       ) : null}
+      {look === 'c' ? (() => {
+        // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す
+        const back = opt.move.find((mv) => mv.step > 0); const fwd = opt.move.find((mv) => mv.step < 0);
+        const near = !!(opt.blow && opt.blow.near);
+        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガ${mv.guts}` : ''}`);
+        return (
+          <div className={`msxm-row cc ${near ? 'n5' : ''}`} data-msxm-ops>
+            {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : null}
+            {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : null}
+            <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで</small></button>
+            <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
+            {near ? <button type="button" data-msxm-blow="" className={`msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`} disabled={!opt.blow.ok || busy} onClick={() => go({ type: 'blow' })}>💨 吹き飛ばし<small>{opt.blow.wait ? '相手の手のあと' : `遠へ・ガ${opt.blow.guts}`}</small></button> : null}
+          </div>
+        );
+      })() : (
       <div className="msxm-sec">
         <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row gc">
@@ -385,6 +410,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           })()}
         </div>
       </div>
+      )}
       {opt.swap.length ? (
         <div className="msxm-sec">
           <div className="msxm-h">🔁 交代{opt.swapWait > 0 ? `(あと${opt.swapWait}手番)` : ''}</div>
