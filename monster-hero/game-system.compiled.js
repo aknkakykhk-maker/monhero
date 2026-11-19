@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c17956c75e50115
+// source-sha256: 83d4b13022205404
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -186139,7 +186139,7 @@ function MsxR3GameOver({
   }, "もう1回 初めから ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "閉じる",
+    back: "はじめの画面へ",
     onBack: onPause,
     body: body,
     foot: foot
@@ -186314,7 +186314,7 @@ function MsxR3Retire({
     }));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: s.pts > 0 ? '戻る' : '閉じる',
+      back: s.pts > 0 ? '戻る' : 'はじめの画面へ',
       onBack: s.pts > 0 ? () => setStep('e3') : onPause,
       right: right,
       body: body,
@@ -186594,7 +186594,7 @@ function MsxR3Retire({
     }, "決定 ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "はじめの画面へ",
       onBack: onPause,
       right: right,
       body: body,
@@ -186899,7 +186899,7 @@ function MsxR3Retire({
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "戻る",
       onBack: () => setStep('done'),
       right: right,
       body: React.createElement(MsxBest3, {
@@ -186978,7 +186978,7 @@ function MsxR3Retire({
     }, "この記録はランキングに載せられませんでした")) : null);
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "はじめの画面へ",
       onBack: () => {
         setRun(null);
         onPause();
@@ -272319,7 +272319,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? '項目一覧' : cat ? 'ヘルプへ' : '閉じる';
+      const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -272332,6 +272332,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-[17px] leading-none"
       }, "🆕");
       return React.createElement("div", {
+        "data-mh-help": true,
         className: "fixed inset-0 flex flex-col",
         style: {
           position: 'fixed',
@@ -272347,7 +272348,9 @@ function MonsterHeroGame() {
         }
       }, React.createElement("button", {
         onClick: goBack,
-        className: "shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"
+        "data-mh-help-back": true,
+        "data-mh-back": true,
+        className: "shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"
       }, React.createElement(ArrowLeft, {
         size: 16
       }), React.createElement("span", {
@@ -272527,18 +272530,11 @@ function MonsterHeroGame() {
           backgroundColor: cat.color
         }
       }, "次: ", nextTopic.title)))), React.createElement("footer", {
-        className: "shrink-0 p-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:gap-3 bg-slate-900 border-t border-white/10 text-center",
-        style: {
-          backgroundColor: '#0f172a',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
+        className: "shrink-0 px-4 py-1 bg-slate-900 border-t border-white/10 text-center"
       }, React.createElement("button", {
-        onClick: () => setShowHelp(false),
-        className: "mh-button mh-button-primary w-full min-h-[52px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 rounded-2xl font-black text-sm active:scale-95"
-      }, "分かった！冒険に戻る"), React.createElement("button", {
         "aria-label": "",
         onClick: requestDebugSettings,
-        className: "mt-5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 mx-auto [@media(orientation:landscape)_and_(max-height:520px)]:mx-0 [@media(orientation:landscape)_and_(max-height:520px)]:shrink-0 block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
+        className: "mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
       }, "💊")));
     })(), titleModal, showOfficialTitleConfirm && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
