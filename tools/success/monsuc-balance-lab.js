@@ -47,7 +47,7 @@ const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const q = (arr, p) => { if (!arr.length) return null; const b = arr.slice().sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(p * b.length))]; };
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : null);
 const GRADE_ORDER = ['M', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
-const newGroup = () => ({ n: 0, power: [], statSum: [], techs: [], wins: 0, matches: 0, league: [0, 0], summit: [0, 0], cup: [0, 0], shugyo: [], train: [], rest: [], grades: {}, debutLoss: 0, errors: 0, bad: 0 });
+const newGroup = () => ({ n: 0, power: [], statSum: [], techs: [], wins: 0, matches: 0, league: [0, 0], summit: [0, 0], cup: [0, 0], shugyo: [], train: [], rest: [], grades: {}, debutLoss: 0, earlyEnd: 0, errors: 0, bad: 0 });
 const addTo = (g, r) => {
   g.n++;
   if (r.error) { g.errors++; return; }
@@ -58,6 +58,7 @@ const addTo = (g, r) => {
   g.shugyo.push(r.acts.shugyo || 0); g.train.push(r.acts.train || 0); g.rest.push(r.acts.rest || 0);
   g.grades[r.grade] = (g.grades[r.grade] || 0) + 1;
   if (r.firstLoss && r.firstLoss.startsWith('debut')) g.debutLoss++;
+  if (r.earlyEnd) g.earlyEnd++;
 };
 const finishGroup = (g) => ({
   n: g.n, errors: g.errors, bad: g.bad,
@@ -65,7 +66,7 @@ const finishGroup = (g) => ({
   stat_p50: q(g.statSum, 0.5), techs_p50: q(g.techs, 0.5),
   win_rate: pct(g.wins, g.matches), league_win: pct(...g.league), summit_win: pct(...g.summit), cup_win: pct(...g.cup),
   shugyo_p50: q(g.shugyo, 0.5), train_p50: q(g.train, 0.5), rest_p50: q(g.rest, 0.5),
-  debut_loss: pct(g.debutLoss, g.n - g.errors),
+  debut_loss: pct(g.debutLoss, g.n - g.errors), early_end: pct(g.earlyEnd, g.n - g.errors),
   grades: GRADE_ORDER.filter((k) => g.grades[k]).map((k) => `${k}${Math.round((g.grades[k] / (g.n - g.errors)) * 100)}%`).join(' '),
 });
 
@@ -104,11 +105,11 @@ const findFlags = (sum) => {
   const wins = {}; let teams = 0;
   Object.values(byTeam).forEach((list) => { if (list.some((x) => x[2] < 10)) return; teams++; const top = list.reduce((a, b) => (b[1] > a[1] ? b : a)); wins[top[0]] = (wins[top[0]] || 0) + 1; });
   Object.entries(wins).forEach(([st, n]) => { if (teams >= 3 && n / teams >= 0.8) flags.push(`育て方 ${st} が、編成 ${teams} 通りのうち ${n} 通りで総合力1位`); });
-  if (all.debut_loss >= 10) flags.push(`デビュー戦で負けて早く終わる回が ${all.debut_loss}%`);
+  if (all.early_end >= 5) flags.push(`育成が最後のターンまで行かずに終わった回が ${all.early_end}%`);
   return flags;
 };
 
-const LABELS = { power_p50: '総合力 中央値', power_p10: '下10%', power_p90: '上10%', win_rate: '勝率%', league_win: 'リーグ%', summit_win: 'ファイナル%', cup_win: '大会%', techs_p50: '技の数', shugyo_p50: '修行', train_p50: 'トレ', debut_loss: 'デビュー負け%', grades: '評価の分布' };
+const LABELS = { power_p50: '総合力 中央値', power_p10: '下10%', power_p90: '上10%', win_rate: '勝率%', league_win: 'リーグ%', summit_win: 'ファイナル%', cup_win: '大会%', techs_p50: '技の数', shugyo_p50: '修行', train_p50: 'トレ', debut_loss: '最初の負けがデビュー戦%', early_end: '途中で終わった%', grades: '評価の分布' };
 const tableMd = (sum, meta, flags) => {
   const cols = ['n', ...Object.keys(LABELS)];
   const head = (title) => [`### ${title}`, '', `| 条件 | ${cols.map((c) => (c === 'n' ? '回数' : LABELS[c])).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`];

@@ -153,6 +153,8 @@ const makeLab = () => {
     const log = {}; Object.entries(s.log || {}).forEach(([k, v]) => { if (typeof v === 'number' && Number.isFinite(v)) log[k] = v; });
     return {
       i, ...cond, turns: guard, over: Boolean(s.over),
+      // 育成が途中で終わった(デビュー戦の負けなど)。ふつうの終わりはファイナルの進み方で 44〜47 ターンにばらつくので、40 ターンより前で見る
+      earlyEnd: Number(s.turn) < SUC.TOTAL_TURNS - 6, endTurn: Number(s.turn) || 0,
       power: e.power, grade: String((e.grade && e.grade.label) || e.grade).replace(/\d+$/, ''), rank: e.rank,
       statSum, techs: Array.isArray(s.techs) ? s.techs.length : 0, fame: Number(s.fame) || 0,
       ...out, log,
