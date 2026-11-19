@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // お話「モンヒロサクセス 第2話 ～ヒーローへの道～」(monsuc_beta_ep2・2026-11-15 ココロ4)を、実際のブラウザで HOME から流す。
-// β版の公開と同時に出るお話(公開の印 monheroSuccess)。印は検査の中(ブラウザに渡す本体JS)だけ真にする。台本 docs/progress/monsuc-beta-story/script.md
+// β版の公開と同時に出たお話(公開の印 monheroSuccess。もう公開済みなので、本体JSはそのまま使う)。台本 docs/progress/monsuc-beta-story/script.md
 //
 //   node tools/boot/monsuc-ep2-story-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、はじまり・最初の行・山場・おわりの札・モンサクを開いたところ・飛ばした人への告知の写真を残す(390×844)
 //
-//   ⓪ 印が偽のまま(本番の今)は、HOME で流れない
-//   ① 印を真にすると、HOME でひとりでに流れる(はじまりは iris。題字ロゴは出さない)
+//   ⓪ 公開の印 monheroSuccess が真(公開済み)
+//   ① 見ていない人には、HOME でひとりでに流れる(はじまりは iris。題字ロゴは出さない)
 //   ② 最後まで送れて、34行。あつは出ない
 //   ③ おわりの札に「🌱 モンヒロサクセスへ」。押すとモンサクが開く。見た印が付き、開き直しても二度は流れない
 //   ④ 飛ばした人: 見た印が付き、飛ばした印(mh_monsuc_story_skip_seen_v1)が付く。HOME でみゅあが1回だけ知らせ、閉じると二度と出ない
@@ -34,13 +34,12 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
   const seed = eventStorySeed({ except: [ID] });
   const seedOnce = { content: `(() => { if (sessionStorage.getItem('mh_check_seeded')) return; ${seed.content} })();` };
   const compiledRaw = fs.readFileSync(path.join(ROOT, 'monster-hero/game-system.compiled.js'), 'utf8');
-  const OFF = 'monheroSuccess: false,';
-  check('⓪ 公開の印を、検査の中だけ真にできる', compiledRaw.includes(OFF), `「${OFF}」が見つからない(公開済みなら、この検査の⓪は要らない)`);
-  const compiledOn = compiledRaw.split(OFF).join('monheroSuccess: true,');
+  const released = compiledRaw.includes('monheroSuccess: true,');
+  check('⓪ 公開の印 monheroSuccess が真(公開済み)', released, released ? '' : '「monheroSuccess: true,」が見つからない(書き方が変わったら、この検査を直す)');
   const server = await serve();
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const shot = async (page, name) => { if (!SHOT_DIR) return; fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${ID}-${name}.png`) }); };
-  const open = async (on) => {
+  const open = async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
     const page = await ctx.newPage();
     const errors = [];
@@ -54,7 +53,6 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
       put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
       put('mh_first_battle_done_v1', true);
     });
-    if (on) await page.route(/game-system\.compiled\.js/, (route) => route.fulfill({ status: 200, contentType: 'application/javascript; charset=utf-8', body: compiledOn }));
     await page.addInitScript(seedOnce);
     await page.addInitScript(([key, drop]) => {
       if (sessionStorage.getItem('mh_check_seeded')) return;
@@ -83,22 +81,13 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
     return want.count().then((n) => n > 0);
   };
   try {
-    // ⓪ 印が偽(本番の今)
-    {
-      const { ctx, page, errors, boot } = await open(false);
-      await boot();
-      const appeared = await waitFor(page, page.locator(`[data-event-story="${ID}"]`), 24);
-      check('⓪ 印が偽のあいだは HOME で流れない', !appeared);
-      check('⓪ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
-      await ctx.close();
-    }
     // ①〜③ 最後まで見る
     {
-      const { ctx, page, errors, boot } = await open(true);
+      const { ctx, page, errors, boot } = await open();
       await boot();
       const story = page.locator(`[data-event-story="${ID}"]`);
       const appeared = await waitFor(page, story);
-      check('① 印が真なら HOME でひとりでに流れる', appeared);
+      check('① 見ていない人には HOME でひとりでに流れる', appeared);
       if (appeared) {
         await page.waitForTimeout(1200);
         check('① はじまりは iris・題字ロゴは出さない', await page.locator('[data-story-opening-card="iris"]').count() > 0 && await page.locator('[data-story-opening-logo]').count() === 0);
@@ -148,7 +137,7 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
     }
     // ④ 飛ばす
     {
-      const { ctx, page, errors, boot } = await open(true);
+      const { ctx, page, errors, boot } = await open();
       await boot();
       const story = page.locator(`[data-event-story="${ID}"]`);
       const appeared = await waitFor(page, story);
