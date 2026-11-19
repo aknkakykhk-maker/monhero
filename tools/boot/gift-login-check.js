@@ -75,7 +75,9 @@ check('受取期限は付けない',!('expiresAt' in mineGift)&&!giftIsExpired(m
 check('配る相手のIDはギフトへ残さない',!('playerIds' in mineGift));
 check('報酬の形が通常のギフトとして成り立つ',!!normalizeGiftRewards(mineGift));
 check('ダイヤ2億が入っている',buildGiftClaim(mineGift,{gold:0},at('2026-09-21T00:00:00Z')).balances.gold===200000000);
-check('起動時にPLAYER IDを見て配る',source.includes('grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId)')&&source.includes("window.localStorage.getItem('mh_player_id')"));
+// 第1引数は、起動チェーンの直前の付与結果(gifts)を引き継ぐ形。2026-11-19の障害お詫び
+// (outageGrant)がチェーンに入って変数名が変わったため、変数名には寄せずに見る
+check('起動時にPLAYER IDを見て配る',/grantPlayerCompensationGifts\(\w+\.gifts, currentPlayerId\)/.test(source)&&source.includes("window.localStorage.getItem('mh_player_id')"));
 
 // はじめての人には7〜8月のお詫びを配らず、同じ合計をプレオープン記念へ足す(2026-10-09・社長の選択)
 const allIds=COMPENSATION_GIFTS.map(d=>d.id);

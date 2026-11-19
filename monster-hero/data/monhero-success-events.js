@@ -317,6 +317,11 @@
         return null;
       }
       if (s.battle || (slot === 'start' && (s.acted || s.cond)) || (slot === 'after' && !(s.last && ['train', 'shugyo'].includes(s.last.kind)))) return null;
+      // 1ターンに見せるイベントは最大2つ(r1119-009): 助手のお話を見たターンは、はじめの出来事を出さない(助手の日々は to のあと2ターンまで・季節は次の月へ回る)。
+      //   編成の子のイベントが出たターンは、トレーニングのあとのランダムの出来事を出さない(出なかった分は「空いたターン」として次の率に足される)
+      //   大会のあとの出来事(期の目標の結果など)は前のターンの終わりに見ているので、この数に入れない(ミハリ #6869: 入れると期の1ターン目の決まった出来事が遅れ、季節の行事が消える)
+      if (slot === 'start' && s.astory && s.astory.at === s.turn) return null;
+      if (slot === 'after' && s.tevAt === s.turn) return null;
       if (slot === 'start') { const f = fixedDue(s); if (f) return { e: f, cast: {} }; }
       // ランダムの分
       let p = RATE[slot] + Math.min(RATE.gapMax, ev.gap * RATE.gapAdd) + (ev.lastTurn && ev.lastTurn === s.turn - 1 ? RATE.recent : 0);
