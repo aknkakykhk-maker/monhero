@@ -93,6 +93,21 @@ const CHANGELOG = [
       '今後とも『モンスターヒーロー』をよろしくお願いいたします。',
     ],
   },
+  // 新曲「Dr.WILY STAGE 1」(2026-11-19 あっくん提供。原曲+おっくせんまん版の2バージョンの曲組。ビートP500で両バージョンが付く。Lv.・ノーツ数は作ったあとの値。
+  //   お知らせは曲組で1件にまとめる: 検査 song-art-notice-check はタイトルの曲名で曲を引くため、同名2版では版ごとに分けられない)
+  {
+    date: "2026-11-19 09:27", type:'update', group:'rhythm', status:'new',
+    title:'新曲「Dr.WILY STAGE 1」（原曲＋おっくせんまん版）を追加しました',
+    image:'images/song-art/dr-wily-stage-1.jpg?v=5b878b55cc76',
+    items:[
+      'モンヒロビートに「Dr.WILY STAGE 1」を追加しました。ロックマン2の原曲（2分46秒）と、歌ってみた版「思い出はおっくせんまん！」のアレンジ（おっくせんまん版・2分57秒）の、2バージョンの曲組です。どちらも BPM 180 です。',
+      '原曲のレベルは EASY Lv.11 ／ NORMAL Lv.14 ／ HARD Lv.22 ／ EXPERT Lv.32 ／ MASTER Lv.43 ／ HELL Lv.78、ノーツ数は 423 ／ 486 ／ 620 ／ 755 ／ 863 ／ 915 です。',
+      'おっくせんまん版のレベルは EASY Lv.10 ／ NORMAL Lv.14 ／ HARD Lv.21 ／ EXPERT Lv.34 ／ MASTER Lv.48 ／ HELL Lv.67、ノーツ数は 370 ／ 453 ／ 621 ／ 769 ／ 935 ／ 864 です。',
+      'ジャケットも譜面も版ごとに違います。交換所の札では2枚のジャケットを重ねて見せていて、タップで入れ替わります。曲えらびの版タブでも切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲とおっくせんまん版の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_dr_wily_stage_1_v1', type:'content' },
+  },
   {
     date: "2026-11-19 07:21", type:'update', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'アシストポイントの計算を「総合力 ÷ 100」に変えました',

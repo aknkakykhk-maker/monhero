@@ -1899,6 +1899,36 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "dr_wily_stage_1": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-dr-wily-stage-1.mp3",
+   "chartRevision": 40,
+   "audioSha256": "80f1ad0c564ca9803a33a6fb0832d07d022f8010412a419f8518060ebdbb14b5",
+   "durationMs": 165725,
+   "analyzedTiming": {
+    "bpm": 179.989,
+    "beatZeroMs": 2377.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "dr_wily_stage_1_okkussenman": {
+   "flowPlacement": true,
+   "chartIntensity": "extreme",
+   "masterDensity": 1.2,
+   "audio": "monster-hero/audio/bgm-dr-wily-stage-1-okkussenman.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1653c82ce75ef0621565d5af3d09456a8da1a20244d726ccd6d786398b14431b",
+   "durationMs": 177082,
+   "analyzedTiming": {
+    "bpm": 179.893,
+    "beatZeroMs": 2731.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d967aed07ebcf742
+// source-sha256: 35c9ad9a54ee98fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6462,6 +6462,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_dr_wily_stage_1',
+  name: 'Dr.WILY STAGE 1',
+  creator: 'Takashi Tateishi',
+  src: 'audio/bgm-dr-wily-stage-1.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dr_wily_stage_1_okkussenman',
+  name: 'Dr.WILY STAGE 1（おっくせんまん版）',
+  creator: 'ゴム',
+  src: 'audio/bgm-dr-wily-stage-1-okkussenman.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8245,6 +8259,8 @@ const Audio_ = (() => {
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
+    "audio/bgm-dr-wily-stage-1-okkussenman.mp3": "1653c82ce75e",
+    "audio/bgm-dr-wily-stage-1.mp3": "80f1ad0c564c",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "b51e196625c4",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
@@ -53938,6 +53954,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'BPM192だよ！ 0:31からのサビが速くて楽しいぢゃん♪']],
     'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
+    'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
+    'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
@@ -54025,6 +54043,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '1:31から2:09まで、いちばん強いのが長く続くのが見事です♪']],
     'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
+    'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
@@ -54112,6 +54132,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['excited', 'サビが2回来る！！ 0:31と1:31、どっちも強いよ♡']],
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
+    'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
+    'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
@@ -54199,6 +54221,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '2:19で静かに終わるぞ。速い曲なのに締めは静かなんだな']],
     'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
+    'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
@@ -54286,6 +54310,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', '0:56でいちばん強くなった直後、1:01で静かになる落差がすごいね笑']],
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
+    'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
+    'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
@@ -54373,6 +54399,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['happy', 'BPM192で2分26秒。サビが2か所あるから、山場の配分が分かりやすいんだよね〜']],
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
+    'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
+    'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
@@ -54460,6 +54488,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', 'BPM192です。強い音48%に軽い音3%、速さで押す配分です']],
     'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
+    'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
@@ -54547,6 +54577,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:eiyuu_no_akashi_milktea': [['normal', '0:02は静かに始まるね。そこから一気に速くなるから、構えておくといいかな']],
     'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
+    'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
+    'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
@@ -61622,7 +61654,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   sparkling_pink_overture: 500,
   seasons_of_a_little_plaza: 500,
   eiyuu_no_akashi: 500,
-  gourmet_race_64: 500
+  gourmet_race_64: 500,
+  dr_wily_stage_1: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -61630,7 +61663,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   midnight_studio_short: 'midnight_studio',
   hopes_and_dreams_short: 'hopes_and_dreams',
   gourmet_race_dx: 'gourmet_race_64',
-  eiyuu_no_akashi_milktea: 'eiyuu_no_akashi'
+  eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
+  dr_wily_stage_1_okkussenman: 'dr_wily_stage_1'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');

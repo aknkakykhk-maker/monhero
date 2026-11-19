@@ -2948,6 +2948,76 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
+  "dr_wily_stage_1/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 97,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 50,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 75,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 4,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 72,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 22,
+   "heldHandSwitch": 0
+  },
+  "dr_wily_stage_1_okkussenman/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 26,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3094,6 +3164,16 @@
    "at": "2026-11-18T20:08",
    "reason": "新曲「グルメレース」(64 ver./DX ver.)を追加。件数確認済み: 帯の中・高さ切り替え・帯の隣は全譜面0件。64版は速い曲のため fastSameSide が EXPERT 34件・MASTER 65件(80ms間隔の連打)",
    "changed": 10
+  },
+  {
+   "at": "2026-11-19T00:40",
+   "reason": "新曲 Dr.WILY STAGE 1（2版）を公開",
+   "changed": 10
+  },
+  {
+   "at": "2026-11-19T02:35",
+   "reason": "2026-11-19 あっくん指示でおっくせんまん版を超高難易度化(MASTER Lv.48/HELL Lv.67)。高密度化に伴う手の決まり件数増を了承",
+   "changed": 4
   }
  ]
 }
