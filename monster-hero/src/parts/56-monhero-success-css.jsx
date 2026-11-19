@@ -773,8 +773,10 @@ const MSX_CSS = `
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
 /* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
-   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。横では窓を画面いっぱいに出す */
-.msx.land .v-body>.msx-ov{position:fixed;inset:0}
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。窓を画面いっぱいに出す
+   縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
+   本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
+.msx .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}

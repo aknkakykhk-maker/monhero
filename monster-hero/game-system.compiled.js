@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0eba56e911f739a
+// source-sha256: 6a58264b49b60dfc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172497,8 +172497,10 @@ const MSX_CSS = `
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
 /* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
-   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。横では窓を画面いっぱいに出す */
-.msx.land .v-body>.msx-ov{position:fixed;inset:0}
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。窓を画面いっぱいに出す
+   縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
+   本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
+.msx .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -187681,12 +187683,7 @@ function MsxR3Box({
     }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体(合体・お別れしたモンスター。編成にだけ入れられる)")), box.memory.length ? React.createElement("div", {
       className: "mm-memo"
     }, "思い出: ", box.memory.slice(-5).map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
-    foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: onClose
-    }, "← 戻る"));
+    foot = null;
   } else if (page === 'assist') {
     title = 'メモリアルモンスター';
     const stock = assist ? assist.mons : [];
@@ -187765,15 +187762,7 @@ function MsxR3Box({
       className: "msx-btn sub",
       onClick: () => setAAsk(false)
     }, "やめておく"))) : null);
-    foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setPage('gate');
-        setApick([]);
-      }
-    }, "← 戻る"));
+    foot = null;
   } else if (page === 'list' || page === 'detail' && cur) {
     const listAll = msxMmSorted(box.mons, view.sort);
     const listF = bq.trim() && typeof msxMatchQ === 'function' ? listAll.filter(m => msxMatchQ(bq, msxMmName(m), msxMonName(m.species))) : listAll;
@@ -188037,27 +188026,13 @@ function MsxR3Box({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => {
-        setTab('list');
-        setPick([]);
-      }
-    }, "キャンセル"), React.createElement("button", {
-      type: "button",
       className: "go",
       disabled: !pick.length,
       onClick: () => setByeAsk({
         ids: pick.slice()
       }),
       "data-msx-mm-bye": true
-    }, "お別れする(", pick.length, "体)")) : React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setPage('gate');
-        setMsg('');
-      }
-    }, "← 戻る"));
+    }, "お別れする(", pick.length, "体)")) : null;
   } else if (page === 'edit' && cur && edit) {
     title = '名前と染色';
     body = React.createElement("div", {
@@ -188155,16 +188130,20 @@ function MsxR3Box({
     body = React.createElement("div", {
       className: "msx-note"
     }, "見つかりませんでした");
-    foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => setPage('list')
-    }, "← 戻る"));
+    foot = null;
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: "戻る",
-    onBack: page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => {
+    back: page === 'list' && tab === 'bye' ? 'やめる' : '戻る',
+    onBack: page === 'gate' ? onClose : page === 'list' && tab === 'bye' ? () => {
+      setTab('list');
+      setPick([]);
+    } : page === 'list' ? () => {
+      setPage('gate');
+      setMsg('');
+    } : page === 'assist' ? () => {
+      setPage('gate');
+      setApick([]);
+    } : page === 'edit' ? () => {
       setEdit(null);
       setPage('detail');
     } : () => setPage('list'),
