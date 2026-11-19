@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2cd6740adf89d27
+// source-sha256: d54f2d0c7d8290f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163461,13 +163461,13 @@ const MSX_DEX_CSS = `
 .mdx{display:flex;flex-direction:column;gap:8px;color:#f1f5f9}
 .mdx-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;flex:none}
 .mdx-bar i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
-.mdx-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid #334155;flex:none;margin:0 -2px}
+.mdx-tabs{display:flex;gap:2px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;border-bottom:2px solid #334155;flex:none;margin:0 -2px}
 .mdx-tabs::-webkit-scrollbar{display:none}
 .mdx-tabs button{flex:0 0 auto;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 8px 5px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;color:#94a3b8;font-weight:900}
 .mdx-tabs button .i{font-size:17px;line-height:1}.mdx-tabs button .n{font-size:12px;white-space:nowrap}.mdx-tabs button small{font-size:10px;color:#64748b}
 .mdx-tabs button.on{color:#fff;border-bottom-color:#fb923c;background:linear-gradient(180deg,#0000,#fb923c22)}
 .mdx-tabs button.on small{color:#fdba74}
-.mdx-aids{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;flex:none}
+.mdx-aids{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;padding:2px 2px 4px;flex:none}
 .mdx-aids::-webkit-scrollbar{display:none}
 .mdx-aids button{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;color:#e2e8f0}
 .mdx-aids .f{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#1e1a36;border:3px solid #334155;box-sizing:border-box}
