@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2abdda9fc12c792c
+// generated-sha256: 92adcd5f789fb7cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7112,6 +7112,7 @@ const Audio_ = (() => {
 // モンヒロサクセスの音を鳴らす口(2026-11-12 開発部)
 // 割り当て表は data/success-sounds.js。ここは「場面の id を渡すと、表どおりに曲と効果音を鳴らす」だけ。
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
+// 効果音は「意味」で鳴らす(SuccessSound.sfx('matchGo') など。意味の表は data/success-sounds.js の SUCCESS_SFX)。fgSe の名前を画面に書かない(2026-11-19 r1119 ①音)
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
 //   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
@@ -7134,6 +7135,7 @@ const SuccessSound = (() => {
   const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
   const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = (id) => (typeof successSoundScene === 'function' ? successSoundScene(id) : null);
 
   // 画面に入る。入る前の曲と印を覚える。二重に入っても1回ぶんだけ覚える
   const enter = () => {
@@ -7192,16 +7194,27 @@ const SuccessSound = (() => {
     return key;
   };
 
-  // 場面の効果音を1回鳴らす。delayMs で待たせたあと、画面を離れていたら鳴らさない
-  const se = (sceneId, delayMs = 0) => {
-    const a = audio(); if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+  // 効果音を1回鳴らす(fgSe の名前)。delayMs で待たせたあと、画面を離れていたら鳴らさない
+  //   needActive … モンサクの画面に入っているときだけ鳴らす(場面の音)。sfx はモンサクの外(助手マスモン対戦の試合の部品)からも呼ぶので偽
+  const fireSe = (name, delayMs, needActive) => {
+    const a = audio(); if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
-    const my = epoch;
-    const fire = () => { if (!active || my !== epoch) return; try { a.fgSe[name](); } catch (e) {} };
+    const my = epoch; const wasActive = active;
+    const fire = () => { if ((wasActive || needActive) && (!active || my !== epoch)) return; try { a.fgSe[name](); } catch (e) {} };
     const wait = Number(delayMs);
     if (Number.isFinite(wait) && wait > 0) { setTimeout(fire, Math.min(wait, 10000)); } else { fire(); }
     return name;
+  };
+  // 場面の効果音を1回鳴らす(場面の表の mean を意味の表で引く)
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  // 意味で効果音を1回鳴らす(SUCCESS_SFX の id)。モンサクの画面・部品はこれを使い、fgSe の名前を書かない
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
   };
 
   // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
@@ -7214,24 +7227,31 @@ const SuccessSound = (() => {
     const a = audio();
     let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
-    if (!(rest > 0)) { scene(sceneId, opts); return () => {}; }
+    if (!(rest > 0)) { playScene(sceneId, opts, true); return () => {}; }
+    // ジングルが鳴っているあいだに入った場面は、ジングルのあとに曲だけ替える(効果音はジングルと重ねない・点検 Q-1-6)
     const my = epoch;
-    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) playScene(sceneId, opts, false); }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => { if (laterTimer === timer) { clearTimeout(timer); laterTimer = null; } };
   };
 
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
   // 場面が替わったら、ジングル後の予約はもう要らないので消す(古い画面のタイマーが移動先の曲を上書きしない)
+  //   表で afterJingle の場面(期の区切り)は、ジングルが鳴っている途中なら sceneAfterOnce と同じに待つ
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) { sceneAfterOnce(sceneId, opts); return; }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, isActive: () => active };
+  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, sfx, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -92692,7 +92712,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         }
         const i = scrubIdx(e); const p = scrubPt(e);
         setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
-        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select'); }
       },
       onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
       onPointerCancel: () => { scrubRef.current = null; setTrail(null); },
@@ -94000,7 +94020,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 受付を開いた合図の効果音は鳴らさない(押したボタンの決定音だけ。社長「大会のボタンを押すと謎のSE」= join だった・点検 Q-1-1)
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   // 受付のひとこと: 「上の星が開いた」の台本(turn.cup.open)は毎月は合わないので使わない。出られる数に合わせて、月ごとに言い回しを替える(2026-11-14 点検 ①-14: 毎回同じ台詞)
   const openTexts = nOk ? [
@@ -94348,7 +94368,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  // 決まった日の大会の受付も、開いた合図の効果音は鳴らさない(点検 Q-1-1)
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
@@ -128133,7 +128153,8 @@ function MonsterHeroGame() {
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
   useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  // モンヒロサクセスの画面も裏の音を止める印が立つので、ボタンの音は fgSe で鳴らす(立てたままだとモンサクのボタンが全部無音だった・2026-11-19 点検 Q-1-3)
+  quickAnywhereSeQuietRef.current = (quickAnywhereScreenOpen && !cardScreenOpen) || successScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
   // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
   // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)

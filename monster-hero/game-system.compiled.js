@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7a6eef49fb795fc
+// source-sha256: 4d07a93e92123e03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10424,6 +10424,7 @@ const SuccessSound = (() => {
   const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
   const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
+  const sceneOf = id => typeof successSoundScene === 'function' ? successSoundScene(id) : null;
   const enter = () => {
     const a = audio();
     if (!a) return;
@@ -10515,14 +10516,15 @@ const SuccessSound = (() => {
     } catch (e) {}
     return key;
   };
-  const se = (sceneId, delayMs = 0) => {
+  const fireSe = (name, delayMs, needActive) => {
     const a = audio();
-    if (!a || !active || !tableOk()) return null;
-    const name = successSoundSe(sceneId);
+    if (!a) return null;
+    if (needActive && !active) return null;
     if (!name || !a.fgSe || typeof a.fgSe[name] !== 'function') return null;
     const my = epoch;
+    const wasActive = active;
     const fire = () => {
-      if (!active || my !== epoch) return;
+      if ((wasActive || needActive) && (!active || my !== epoch)) return;
       try {
         a.fgSe[name]();
       } catch (e) {}
@@ -10535,6 +10537,14 @@ const SuccessSound = (() => {
     }
     return name;
   };
+  const se = (sceneId, delayMs = 0) => {
+    if (!tableOk()) return null;
+    return fireSe(successSoundSe(sceneId), delayMs, true);
+  };
+  const sfx = (meaning, delayMs = 0) => {
+    if (typeof successSfxSe !== 'function') return null;
+    return fireSe(successSfxSe(meaning), delayMs, false);
+  };
   const ONCE_MS = 7200;
   const sceneAfterOnce = (sceneId, opts = null) => {
     if (!active) enter();
@@ -10546,13 +10556,13 @@ const SuccessSound = (() => {
     } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
     if (!(rest > 0)) {
-      scene(sceneId, opts);
+      playScene(sceneId, opts, true);
       return () => {};
     }
     const my = epoch;
     const timer = setTimeout(() => {
       if (laterTimer === timer) laterTimer = null;
-      if (active && my === epoch) scene(sceneId, opts);
+      if (active && my === epoch) playScene(sceneId, opts, false);
     }, Math.min(rest, ONCE_MS));
     laterTimer = timer;
     return () => {
@@ -10563,11 +10573,19 @@ const SuccessSound = (() => {
     };
   };
   const scene = (sceneId, opts = null) => {
+    const sc = sceneOf(sceneId);
+    if (sc && sc.afterJingle) {
+      sceneAfterOnce(sceneId, opts);
+      return;
+    }
+    playScene(sceneId, opts, true);
+  };
+  const playScene = (sceneId, opts, withSe) => {
     if (!active) enter();
     clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
-    se(sceneId, opts && opts.delayMs);
+    if (withSe) se(sceneId, opts && opts.delayMs);
   };
   return {
     enter,
@@ -10577,6 +10595,7 @@ const SuccessSound = (() => {
     bgm,
     keep,
     se,
+    sfx,
     isActive: () => active
   };
 })();
@@ -179634,7 +179653,7 @@ function MsxPlay({
         if (i !== st.last) {
           st.last = i;
           setSel(MSX_STATS[i]);
-          if (typeof msaSe === 'function') msaSe('tap');
+          if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select');
         }
       },
       onPointerUp: () => {
@@ -182825,9 +182844,6 @@ function MsxR3Cup({
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = {
@@ -183683,9 +183699,6 @@ function MsxR3PreDesk({
   const [win, setWin] = useState(false);
   const [prz, setPrz] = useState(null);
   useMsxR3Lines(s.aid);
-  useEffect(() => {
-    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
-  }, []);
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
@@ -241401,7 +241414,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
-  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
+  quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen || successScreenOpen;
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);

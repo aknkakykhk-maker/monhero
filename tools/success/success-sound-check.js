@@ -7,6 +7,11 @@
 //  4. 使う効果音・曲は、消音・音量0のときに Audio_ 側で鳴らさない作りのまま
 //  5. 動き: 入る前の曲と印を覚える / 同じ場面の曲は鳴らし直さない / 待たせた効果音は離れたら捨てる /
 //     離れると印と曲を戻す(サクセスが替えなかった曲は触らない) / 入る前に何も鳴っていなければ止める / useSuccessSound の後片付け
+//  6. 音を意味で引く表(SUCCESS_SFX・2026-11-19 r1119 ①音): 場面は効果音の名前を直接書かず意味(mean)で引く。意味の音は fgSe にある
+//  7. 場面ごとに鳴る音が表どおりか(呼び出しの記録): 大会の受付・試合は効果音なし / 勝ち負けはジングルだけ / 休む・遊ぶ・通院は場面の音なし /
+//     期の区切りはジングルを切らず、ジングルと効果音を重ねない / 意味で鳴らす口はモンサクの外でも鳴る
+//  8. 画面を見張る(点検 Q-6-1): モンサクの部品(56-monhero-success-*・56-monsuc-*)は Audio_・fgSe を直接呼ばない。sfx・se・scene に渡す名前は表にある。
+//     60-app の全ボタンのタップ音は、モンサクの画面では fgSe で鳴らす(点検 Q-1-3)
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -52,9 +57,28 @@ for (const s of data.SUCCESS_SOUND_SCENES) {
     if (!trackIds.has(k)) ng(`${s.id}: 曲 ${k} が BGM_TRACKS にない`);
     if (FORBIDDEN_BGM.test(k)) ng(`${s.id}: 曲 ${k} は使わない曲(アレンジ専用・ボス・モンヒロビート)`);
   }
-  if (s.se && !fgNames.has(s.se)) ng(`${s.id}: 効果音 ${s.se} が Audio_.fgSe にない`);
-  if (s.se && !new RegExp(`^    ${s.se}: async \\(\\) => \\{ if \\(!enabled\\) return;`, 'm').test(fgBlock)) ng(`${s.id}: 効果音 ${s.se} が消音で鳴らさない作りでなくなっている`);
+  if ('se' in s) ng(`${s.id}: 場面に効果音の名前(se)を直接書いている。意味(mean)で書く`);
+  if (s.mean && !data.successSfx(s.mean)) ng(`${s.id}: 意味 ${s.mean} が意味の表 SUCCESS_SFX にない`);
 }
+// 6: 意味の表
+const sfxIds = data.SUCCESS_SFX.map((x) => x.id);
+if (new Set(sfxIds).size !== sfxIds.length) ng('意味の表の id が重なっている');
+for (const need of ['decide', 'back', 'entry', 'matchReady', 'matchGo', 'win', 'lose', 'winSolo', 'loseSolo', 'periodEnd', 'heal', 'hit', 'ko', 'move', 'charge', 'swap']) if (!sfxIds.includes(need)) ng(`意味の表に ${need} がない`);
+for (const x of data.SUCCESS_SFX) {
+  if (!x.se) continue;
+  if (!fgNames.has(x.se)) ng(`意味 ${x.id}: 効果音 ${x.se} が Audio_.fgSe にない`);
+  if (!new RegExp(`^    ${x.se}: async \\(\\) => \\{ if \\(!enabled\\) return;`, 'm').test(fgBlock)) ng(`意味 ${x.id}: 効果音 ${x.se} が消音で鳴らさない作りでなくなっている`);
+}
+// 決めた音(社長の2件・点検 Q-1-1〜Q-1-9)。ここを替えるときは窓口と点検の表に確かめてから
+const want = { decide: 'tap', back: 'tap', entry: null, win: null, lose: null, matchReady: 'card' };
+for (const [k, v] of Object.entries(want)) if (data.successSfxSe(k) !== v) ng(`意味 ${k} の音が ${v} でない(${data.successSfxSe(k)})`);
+for (const k of ['ko', 'charge', 'move']) if (/^training/.test(data.successSfxSe(k) || '')) ng(`試合の ${k} がトレーニングの音の流用になっている(点検 Q-1-8)`);
+if (data.successSfxSe('ko') === data.successSfxSe('charge')) ng('KO と溜めが同じ音(点検 Q-1-8)');
+for (const x of data.SUCCESS_SFX) if (x.se === 'victory' && x.id !== 'winSolo') ng(`意味 ${x.id} が victory(曲を止める音)を使っている。モンサクでは winSolo だけ`);
+const joinUsers = data.SUCCESS_SFX.filter((x) => x.se === 'join').map((x) => x.id);
+if (joinUsers.join() !== 'gather') ng(`join(仲間が加わる音)を「仲間」以外の意味に使っている: ${joinUsers.join('・')}(点検 Q-1-9)`);
+for (const id of ['cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'rest', 'play', 'hospital']) if (data.successSoundSe(id) !== null) ng(`場面 ${id} に効果音が付いている(点検 Q-1-1・Q-1-4・Q-1-2・Q-1-7)`);
+if (!data.successSoundScene('kiShow').afterJingle) ng('期の区切りがジングルを待たない(点検 Q-1-6)');
 if (!/if \(!enabled \|\| bgmVolumePct <= 0 \|\| pageHidden\)/.test(audioSrc)) ng('playBGM が消音・音量0・裏のとき鳴らさない作りでなくなっている');
 if (data.successSoundBgm('main', 'nonsense') !== data.successSoundBgm('main', 'spring')) ng('知らない季節が春に寄っていない');
 if (data.successSoundBgm('trainOk') !== null || data.successSoundBgm('nothing') !== null) ng('曲を替えない場面・知らない場面が null でない');
@@ -83,8 +107,8 @@ const effects = [];
 const timers = [];
 const sandbox = {
   Audio_: fakeAudio,
-  BGM_TRACK_BY_ID: Object.fromEntries([...trackIds].concat(['hometheme']).map((i) => [i, { id: i }])),
-  successSoundBgm: data.successSoundBgm, successSoundSe: data.successSoundSe,
+  BGM_TRACK_BY_ID: Object.fromEntries([...trackIds].concat(['hometheme']).map((i) => [i, { id: i, loop: !/^monsuc_(win|lose)$/.test(i) }])),
+  successSoundBgm: data.successSoundBgm, successSoundSe: data.successSoundSe, successSoundScene: data.successSoundScene, successSfxSe: data.successSfxSe,
   setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
   useEffect: (fn) => { effects.push(fn); },
 };
@@ -121,5 +145,49 @@ sandbox.useSuccessSound('ascetic', { season: 'winter' });
 if (effects.length !== 2) ng('useSuccessSound の effect が2つでない');
 else { effects[0](); const cleanup = effects[1](); eq('フックで入る', last(), ['quiet:true', 'play:original_prep', 'se:trainingDecide']); if (typeof cleanup !== 'function') ng('useSuccessSound が後片付けを返さない'); else { cleanup(); if (S.isActive()) ng('後片付けのあとも入ったままになっている'); last(); } }
 
+// 7: 場面ごとの呼び出しの記録(大会の流れ)
+const flow = [];
+sandbox.SuccessSound.sfx('decide'); flow.push(['ボタンの決定音(入る前でも鳴る)', last(), ['se:tap']]);
+sandbox.SuccessSound.sfx('win'); flow.push(['大会の勝ちは意味で鳴らしても効果音なし', last(), []]);
+S.scene('main', { season: 'spring' }); last();
+S.scene('cupEntry'); flow.push(['大会の受付: 曲だけ・効果音なし(社長①)', last(), ['play:monsuc_cup']]);
+S.scene('cupMatch'); flow.push(['試合: 曲だけ(さいころの音を重ねない)', last(), ['play:ichika_battle']]);
+S.sfx('matchReady'); flow.push(['試合の入りの合図1つ', last(), ['se:card']]);
+S.scene('cupWin'); flow.push(['勝ち: ジングルだけ(victory を鳴らさない・社長②)', last(), ['play:monsuc_win']]);
+timers.length = 0;
+S.scene('kiShow'); flow.push(['ジングル中の期の区切り: すぐには何も鳴らさない', last(), []]);
+timers.splice(0).forEach((t) => t.fn()); flow.push(['ジングルのあと: 曲だけ替え、ファンファーレは重ねない', last(), ['play:monster_hero_theme']]);
+S.scene('cupLose'); last(); timers.length = 0;
+S.scene('main', { season: 'spring' }); flow.push(['負けのジングルのあとの画面替え(曲)', last(), ['play:original_home_2']]);
+S.scene('kiShow'); flow.push(['ジングルが無いときの期の区切り: 曲 + ファンファーレ', last(), ['play:monster_hero_theme', 'se:rankFanfare']]);
+for (const id of ['rest', 'play', 'hospital']) { S.scene(id); const got = last().filter((c) => c.startsWith('se:')); flow.push([`${id}: 場面の効果音なし(ゲージの音1つにする)`, got, []]); }
+S.leave(); last();
+for (const [name, got, w] of flow) eq(name, got, w);
+
+// 8: 画面を見張る
+const partsDir = path.join(root, 'monster-hero/src/parts');
+const monsucFiles = fs.readdirSync(partsDir).filter((f) => /^56-(monhero-success-|monsuc-).*\.jsx$/.test(f));
+// 試合の部品はバトルの会話(②)が差し替え中。差し替えが済んだらこの行を消す(残したままにしない)
+const PENDING = { '56-monhero-success-arena.jsx': 'バトルの会話(②)が msaSe を意味の表へ差し替え中' };
+const code = (src) => src.split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/ .*$/, '')).join('\n');
+const sceneIds = new Set(ids);
+const pending = [];
+for (const f of monsucFiles) {
+  const src = code(fs.readFileSync(path.join(partsDir, f), 'utf8'));
+  const bad = [];
+  if (/\bAudio_\b/.test(src)) bad.push('Audio_ を直接呼んでいる');
+  if (/\bfgSe\b/.test(src)) bad.push('fgSe を直接呼んでいる');
+  for (const m of src.matchAll(/\bmsaSe\(\s*'([A-Za-z]+)'/g)) if (!data.successSfx(m[1])) bad.push(`msaSe('${m[1]}') が意味の表にない(効果音の名前を直接書いている)`);
+  for (const m of src.matchAll(/SuccessSound\.sfx\(\s*'([A-Za-z]+)'/g)) if (!data.successSfx(m[1])) ng(`${f}: SuccessSound.sfx('${m[1]}') が意味の表にない`);
+  for (const m of src.matchAll(/SuccessSound\.(?:se|scene|keep|sceneAfterOnce)\(\s*'([A-Za-z0-9]+)'/g)) if (!sceneIds.has(m[1])) ng(`${f}: 場面 ${m[1]} が表にない`);
+  if (/SuccessSound\.se\(\s*'cupEntry'/.test(src)) bad.push('大会の受付で効果音を鳴らしている(点検 Q-1-1)');
+  if (!bad.length) continue;
+  if (PENDING[f]) pending.push(`${f}: ${bad.length} 件(${PENDING[f]})`);
+  else for (const b of bad) ng(`${f}: ${b}`);
+}
+const appSrc = read('monster-hero/src/parts/60-app.jsx');
+if (!/quickAnywhereSeQuietRef\.current = [^\n]*successScreenOpen/.test(appSrc)) ng('60-app: モンサクの画面でボタンのタップ音が fgSe で鳴らない(印で消える・点検 Q-1-3)');
+
 if (problems.length) { console.log(`NG: ${problems.length} 件`); problems.slice(0, 20).forEach((p) => console.log('  - ' + p)); process.exit(1); }
-console.log(`OK: 場面 ${ids.length} / 曲 ${new Set(usedBgm).size} 種 / 効果音 ${new Set(data.SUCCESS_SOUND_SCENES.map((s) => s.se).filter(Boolean)).size} 種 / 動き 12 項目`);
+console.log(`OK: 場面 ${ids.length} / 曲 ${new Set(usedBgm).size} 種 / 効果音 ${new Set(data.SUCCESS_SOUND_SCENES.map((s) => data.successSoundSe(s.id)).filter(Boolean)).size} 種 / 動き 12 項目 / 意味 ${sfxIds.length} 種 / 場面の記録 ${flow.length} 項目 / 画面 ${monsucFiles.length} ファイル`);
+if (pending.length) { console.log('待ち(バトルの会話の差し替え後に PENDING から消す):'); pending.forEach((p) => console.log('  - ' + p)); }
