@@ -129,7 +129,7 @@
     { id: 'select', name: 'なぞって選んだ(ボタンでない操作)', se: 'tap', same: '決定と同じ音' },
     { id: 'entry', name: '大会の受付を開いた', se: null, same: '決定の音だけ(画面が開いた合図は鳴らさない)' },
     // 大会・試合
-    { id: 'matchReady', name: '試合の入り(大会名の大写し)', se: 'card', same: 'カードバトルの札を出す音' },
+    { id: 'matchReady', name: '試合の入り(大会名の大写し)', se: 'card', same: 'カードバトルのカードを出す音' },
     { id: 'matchGo', name: '試合開始の合図', se: 'trainingDecide' },
     { id: 'go', name: '出発・段の切り替え(修行)', se: 'trainingDecide', same: '試合開始の合図と同じ音' },
     { id: 'win', name: '大会の勝ち', se: null, same: '効果音は鳴らさない。勝ちのジングル(場面 cupWin の曲)1つだけ' },
@@ -154,7 +154,7 @@
     // 結果
     { id: 'success', name: '成功', se: 'trainingGoal' },
     { id: 'great', name: '大成功', se: 'rankFanfare', same: 'モンヒロビートのランクアップと同じ' },
-    { id: 'grand', name: 'いちばん大きなお祝い', se: 'rankFanfareGrand' },
+    { id: 'grand', name: '一番大きなお祝い', se: 'rankFanfareGrand' },
     { id: 'fail', name: '失敗', se: 'trainingFail' },
     { id: 'bad', name: 'サボり・叱る', se: 'trainingBad' },
     { id: 'praise', name: '褒める・気持ちが通じた', se: 'trainingReward' },
