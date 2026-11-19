@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8993c71f55d72b38
+// source-sha256: 1dbbfab4c8d82576
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15553,10 +15553,15 @@ const OUTAGE_COMPENSATION_20261119 = Object.freeze({
   description: '11月19日のサーバー障害のお詫びです。ご迷惑をおかけしました。対象は11月19日13:00までにログインされた方です。',
   rewards: Object.freeze([{
     type: 'diamond',
-    amount: 5000000
+    amount: 50000000
   }]),
   windowStartMs: Date.parse('2026-11-19T00:00:00+09:00'),
   windowEndMs: Date.parse('2026-11-19T13:00:00+09:00')
+});
+const OUTAGE_COMPENSATION_20261119_EXTRA = Object.freeze({
+  id: 'gift_compensation_20261119_outage_extra',
+  title: 'お詫びのしるし',
+  description: '11月19日のサーバー障害のお詫びの増額ぶんです。すでに500万ダイヤをお受け取りいただいた方へ、差額をお届けします。'
 });
 const giftTimestampInOutageWindow = value => {
   const t = Date.parse(value || '');
@@ -15566,10 +15571,57 @@ const outageCompensationEligible = gifts => (Array.isArray(gifts) ? gifts : []).
 const grantOutageCompensationGift = (gifts, now = Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const def = OUTAGE_COMPENSATION_20261119;
-  if (list.some(item => item?.id === def.id)) return {
-    granted: false,
-    gifts: list
-  };
+  const newAmount = def.rewards.find(r => r.type === 'diamond')?.amount || 0;
+  const diamondAmountOf = gift => (Array.isArray(gift?.rewards) ? gift.rewards : []).filter(r => r?.type === 'diamond').reduce((sum, r) => sum + Math.floor(Number(r.amount) || 0), 0);
+  const existing = list.find(item => item?.id === def.id);
+  if (existing) {
+    const currentAmount = diamondAmountOf(existing);
+    if (currentAmount >= newAmount) return {
+      granted: false,
+      gifts: list
+    };
+    if (!existing.claimedAt) {
+      if (!existing.rewards?.some(r => r?.type === 'diamond')) return {
+        granted: false,
+        gifts: list
+      };
+      const upgraded = {
+        ...existing,
+        rewards: existing.rewards.map(r => r?.type === 'diamond' ? {
+          ...r,
+          amount: newAmount
+        } : r)
+      };
+      return {
+        granted: true,
+        gifts: list.map(item => item === existing ? upgraded : item)
+      };
+    }
+    const extraDef = OUTAGE_COMPENSATION_20261119_EXTRA;
+    if (list.some(item => item?.id === extraDef.id)) return {
+      granted: false,
+      gifts: list
+    };
+    const createdAt = new Date(now).toISOString();
+    const expiresAt = new Date(Number(now) + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const extra = {
+      id: extraDef.id,
+      source: 'compensation',
+      title: extraDef.title,
+      description: extraDef.description,
+      rewards: [{
+        type: 'diamond',
+        amount: newAmount - currentAmount
+      }],
+      createdAt,
+      expiresAt,
+      claimedAt: null
+    };
+    return {
+      granted: true,
+      gifts: [extra, ...list]
+    };
+  }
   if (!outageCompensationEligible(list)) return {
     granted: false,
     gifts: list
@@ -241911,7 +241963,7 @@ function MonsterHeroGame() {
       setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
+      if (loginGrant.granted || compensationGrant.granted || outageGrant.granted || playerCompensationGrant.granted || prunedGifts.length !== playerCompensationGrant.gifts.length) {
         await storeSet('mh_gifts', prunedGifts, false);
       }
       if (grandOpenGrant.granted) await storeSet(GRAND_OPEN_ALL_GIFT_KEY, true, false);
