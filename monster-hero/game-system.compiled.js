@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ecb07f5653b89d5
+// source-sha256: a157017cae62712b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189321,7 +189321,11 @@ function MsxManualBar({
 }
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
-const MSA_PAN_K = 0.35;
+const MSA_PAN_K = 0;
+const MSA_RECENTER = 0.5;
+const MSA_FIG_W = [0.20, 0.17, 0.13, 0.10];
+const MSA_GAP_W = [0.20, 0.35, 0.55, 0.75];
+const MSA_BG_ZOOM = 0.6;
 const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
@@ -189450,6 +189454,10 @@ const MSA_CSS = `
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
+.msa-stage.big .msa-bg{transform-origin:50% 75%;transition:transform .64s cubic-bezier(.45,.05,.35,1)}
+.msa-stage.fill.big .msa-f{transition:left .64s cubic-bezier(.45,.05,.35,1),width .64s cubic-bezier(.45,.05,.35,1),height .64s cubic-bezier(.45,.05,.35,1),margin-left .64s cubic-bezier(.45,.05,.35,1)}
+.msa-stage.fill.big .msa-f img.msa-img{transition:max-width .64s cubic-bezier(.45,.05,.35,1),max-height .64s cubic-bezier(.45,.05,.35,1)}
+.msa-spot.on.lb::after{content:attr(data-n);position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:900;font-style:normal;color:#fde047;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:nowrap}
 .msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
@@ -189473,6 +189481,9 @@ const MSA_CSS = `
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
 .msa-dist span.cur{background:#fde047;color:#422006}
+/* 技の行でも零近中遠を出す(2026-11-19 段1)。技名の札(左下=A・右下=B)と反対の側へ寄せる */
+.msa-dist.sA{justify-content:flex-end;padding-right:8px}
+.msa-dist.sB{justify-content:flex-start;padding-left:8px}
 .msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
 .msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
 /* 実況はステージの上に重ねる(2026-11-18 社長: 大会画面を極力1画面に。縦の行を返して操作に回す)。
@@ -189677,16 +189688,18 @@ const MSA_CSS = `
 /* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
-.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
+/* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
+.msc-wrap.msa .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
+.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
-.msa-stage.big .msa-floor{bottom:36%}
-.msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
-.msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+.msa-stage.big .msa-floor{bottom:25%}
+.msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
+.msa-stage.big .msa-aim{bottom:calc(25% + 28px)}
 /* 大きな場では、ダメージの数字を場の上端(体力の棒)にかからない高さへ下げる(r1115-157 ミハリの気づき) */
 .msa-stage.big .msa-dmg{top:24%}
-.msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
-.msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
+.msa-stage.big .msa-hx{bottom:calc(25% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
+.msa-stage.big .msa-tr{bottom:calc(25% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
@@ -189695,10 +189708,15 @@ const MSA_CSS = `
 /* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
 @media (max-height:500px) and (orientation:landscape){
   .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
-  .msa-main{display:flex;flex-direction:column;gap:6px;flex:1.1 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
+  /* 2026-11-19 社長の選択 A①: 場を画面の約 2/3 に広げ、操作は右の 1/3 に詰める(以前は 1.1:1 で場が半分) */
+  .msa-main{display:flex;flex-direction:column;gap:6px;flex:2 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
-  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
+}
+/* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
+@media (max-height:500px) and (orientation:landscape) and (max-width:739px){
+  .msa-main{flex:1.5 1 0}
 }
 /* 手動の縦画面は場面を上に留める(2026-11-17: r1115-202 M14 の留め方を、低い画面だけでなく縦画面全てへ広げた。場を画面の46%まで広げたので、操作欄を下へ送る間も場・体力の帯・実況が見えるように) */
 @media (orientation:portrait){
@@ -189710,7 +189728,7 @@ const MSA_CSS = `
 @media (max-height:700px) and (orientation:portrait){
   .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
   .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
-  .msa[data-msa-mode=manual] .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{height:200px;min-height:0}
   .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
@@ -191902,8 +191920,8 @@ function MsaStage({
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
   const [stageH, setStageH] = useState(300);
-  const bigFh = Math.round(Math.max(110, Math.min(300, stageH * 0.5, stageH * 0.66 - 72, stageW * 0.51)));
-  const bigFw = Math.round(bigFh * 0.82);
+  const figK = Math.min(1, Math.max(60, Math.min(stageH * 0.5, stageH * 0.75 - 72)) * 0.82 / Math.max(1, stageW * MSA_FIG_W[0]));
+  const fwOfD = d => Math.max(24, Math.round(stageW * MSA_FIG_W[Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1))] * figK));
   const stageRef = useRef(null);
   const camRef = useRef(null);
   useEffect(() => {
@@ -191986,12 +192004,15 @@ function MsaStage({
     tech,
     motionKind: e0.ev === 'tech' ? motionKindOf(atkSp, tech) : null
   };
+  const bigFw = fwOfD(f ? f.d : 1);
+  const bigFh = Math.round(bigFw / 0.82);
+  const bgZoom = 1 + (MSA_FIG_W[Math.max(0, Math.min(3, f && Number.isFinite(f.d) ? f.d : 1))] / MSA_FIG_W[3] - 1) * MSA_BG_ZOOM;
   const gapOf = d => {
     if (wide) {
-      const g0 = Math.max(MSA_GAP[0], Math.min(0.44, bigFw * 0.72 / Math.max(200, stageW)));
+      const W1 = Math.max(200, stageW);
       const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
-      const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
-      return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
+      const gMax = Math.max(0.05, 1 - (fwOfD(k) + 2 * MSA_SAFE) / W1);
+      return Math.min(gMax, MSA_GAP_W[k]);
     }
     const fwPx = fill ? 140 : 96;
     const W2 = Math.max(200, stageW);
@@ -192007,15 +192028,15 @@ function MsaStage({
       const r = log[k] || {};
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
-      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      const eM = Math.max(0.09, ((wide ? bigFw : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
+      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;else if (r.ev && r.ev !== 'tech' && r.ev !== 'move' && r.ev !== 'blow' && r.ev !== 'ko') c += (0.5 - c) * MSA_RECENTER;
+      const eM = Math.max(0.09, ((wide ? fwOfD(frames[k] ? frames[k].d : 1) : fill ? 140 : 96) / 2 + MSA_SAFE) / Math.max(200, stageW));
       const lo = Math.max(0.5 - MSA_C_LIM, eM + g1 / 2, (eM + g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
       const hi = Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2, (1 - eM - g1 / 2 - 0.5 * MSA_PAN_K) / (1 - MSA_PAN_K));
       c = lo > hi ? 0.5 : Math.max(lo, Math.min(hi, c));
       out.push(c);
     }
     return out;
-  }, [log, frames, stageW, fill, wide, bigFw]);
+  }, [log, frames, stageW, fill, wide, figK]);
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2;
@@ -192045,15 +192066,25 @@ function MsaStage({
     const spanPx = Math.abs(sx('B') - sx('A')) * w + hwPx * 2;
     let sCap = spanPx > 0 ? w / spanPx : 1;
     if (wide && stageH > 0) {
-      const topF = 0.64 - bigFh / stageH;
+      const topF = 0.75 - bigFh / stageH;
       if (topF < 0.7) sCap = Math.min(sCap, 0.78 / Math.max(0.2, 0.78 - topF));
     }
-    sCap = Math.max(0.85, Math.min(1.6, sCap));
+    if (wide) {
+      let tCap = 1.6;
+      if (stageH > 0) {
+        const topF = 0.75 - bigFh / stageH;
+        if (topF < 0.7) tCap = Math.min(tCap, 0.78 / Math.max(0.2, 0.78 - topF));
+      }
+      sCap = Math.max(1, tCap);
+    } else sCap = Math.max(0.85, Math.min(1.6, sCap));
     const cap = v => Math.min(v, sCap);
-    const extAt = x => ({
+    const extAt = x => wide ? {
+      l: hwPx,
+      r: hwPx
+    } : {
       l: (x - Math.min(sx('A'), sx('B'))) * w + hwPx,
       r: (Math.max(sx('A'), sx('B')) - x) * w + hwPx
-    });
+    };
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined;
@@ -192196,8 +192227,12 @@ function MsaStage({
   }, React.createElement("div", {
     className: "msa-bg",
     "aria-hidden": "true",
+    "data-msa-bgzoom": wide ? bgZoom.toFixed(2) : undefined,
     style: {
-      backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined
+      backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined,
+      ...(wide ? {
+        transform: `scale(${bgZoom.toFixed(3)})`
+      } : null)
     }
   }), e.ev === 'tech' && !reduce && rkFx.bg && fx.cut > 0 && React.createElement(MsaRankBg, {
     key: `rb-${pos}`,
@@ -192214,7 +192249,8 @@ function MsaStage({
       left: `${a * 100}%`
     }
   }), React.createElement("i", {
-    className: `msa-spot ${d === f.d ? 'on' : ''}`,
+    className: `msa-spot ${d === f.d ? 'on lb' : ''}`,
+    "data-n": AMBW_DIST[d],
     style: {
       left: `${b * 100}%`
     }
@@ -192340,8 +192376,9 @@ function MsaStage({
     key: `sk-${pos}`,
     className: `msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`,
     "data-msa-sulk": e.side
-  }, React.createElement("b", null, "💢 意味不明!"), React.createElement("small", null, e.side === 'A' ? '' : '相手は', "言うことを聞かず、", React.createElement("wbr", null), "何もしなかった")), e.ev !== 'tech' && React.createElement("div", {
-    className: "msa-dist"
+  }, React.createElement("b", null, "💢 意味不明!"), React.createElement("small", null, e.side === 'A' ? '' : '相手は', "言うことを聞かず、", React.createElement("wbr", null), "何もしなかった")), React.createElement("div", {
+    className: `msa-dist ${e.ev === 'tech' && (e.side === 'A' || e.side === 'B') ? `s${e.side}` : ''}`,
+    "data-msa-dist": true
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
     key: d,
     className: d === f.d ? 'cur' : ''
