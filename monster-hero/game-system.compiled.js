@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eef9ec3bdb996cc0
+// source-sha256: aeafb4e88e2a8563
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61930,9 +61930,7 @@ function RhythmSongShopList({
         [song.songId]: backEntry.entry.songId
       }));
       return React.createElement("div", {
-        className: "w-full"
-      }, React.createElement("div", {
-        className: "relative w-full cursor-pointer",
+        className: "w-full cursor-pointer",
         role: "button",
         tabIndex: 0,
         "data-rhythm-song-jacket-stack": song.songId,
@@ -61944,6 +61942,8 @@ function RhythmSongShopList({
             swapFront();
           }
         }
+      }, React.createElement("div", {
+        className: "relative w-full"
       }, React.createElement("div", {
         className: "absolute bottom-0 right-0 w-[86%] brightness-[0.7]",
         style: {
@@ -61969,13 +61969,13 @@ function RhythmSongShopList({
           onZoomIcon(frontItem);
         },
         "aria-label": `${frontItem.name}のジャケットを大きく見る`,
-        className: "absolute bottom-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-slate-950/70 text-[11px] leading-none shadow"
+        className: "absolute bottom-1 right-1 z-20 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950/70 text-base leading-none shadow"
       }, "🔍"))), React.createElement("div", {
-        className: "w-full [container-type:inline-size]"
+        className: "-ml-2 w-[calc(100%+1rem)] [container-type:inline-size]"
       }, React.createElement("span", {
-        className: "mt-0.5 block whitespace-nowrap text-center font-black text-slate-300",
+        className: "mt-0.5 block whitespace-nowrap text-center font-black leading-[1.1] text-slate-300",
         style: {
-          fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 9, 7) : 9
+          fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 12, 8) : 12
         }
       }, `⇄ ${frontLabel}`)));
     })() : React.createElement("div", {
