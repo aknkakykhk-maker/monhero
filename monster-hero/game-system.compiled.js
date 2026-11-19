@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5f68333ab80873dc
+// source-sha256: 39e324b82090528e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61574,7 +61574,6 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   sparkling_pink_overture: 500,
   seasons_of_a_little_plaza: 500,
   eiyuu_no_akashi: 500,
-  eiyuu_no_akashi_milktea: 500,
   gourmet_race_64: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
@@ -61582,7 +61581,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   rpg_short: 'rpg',
   midnight_studio_short: 'midnight_studio',
   hopes_and_dreams_short: 'hopes_and_dreams',
-  gourmet_race_dx: 'gourmet_race_64'
+  gourmet_race_dx: 'gourmet_race_64',
+  eiyuu_no_akashi_milktea: 'eiyuu_no_akashi'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -61606,7 +61606,7 @@ const rhythmSongPrice = songId => {
 const rhythmSongIsPaid = songId => rhythmSongPrice(songId) > 0;
 const normalizeRhythmOwnedSongs = value => {
   const list = Array.isArray(value) ? value : [];
-  return [...new Set(list.filter(id => typeof id === 'string' && id))];
+  return [...new Set(list.filter(id => typeof id === 'string' && id).map(id => rhythmSongOwnerId(id)))];
 };
 const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(rhythmSongOwnerId(songId));
 const rhythmPaidSongList = () => (typeof rhythmDemoSongs === 'function' && typeof RHYTHM_SONGS !== 'undefined' ? rhythmDemoSongs(RHYTHM_SONGS) : []).filter(song => song && rhythmSongIsPaid(song.songId) && rhythmSongOwnerId(song.songId) === song.songId);
@@ -61732,6 +61732,7 @@ function RhythmSongShopList({
   const owned = useRhythmOwnedSongs();
   const songs = rhythmPaidSongList();
   const [playingId, setPlayingId] = React.useState('');
+  const [frontBySong, setFrontBySong] = React.useState({});
   React.useEffect(() => () => {
     try {
       Audio_.stopPreview();
@@ -61757,9 +61758,10 @@ function RhythmSongShopList({
     }
   }, React.createElement("span", {
     className: "inline-block"
-  }, "買うと、その曲を全部の難易度で遊べます。"), ' ', anyBundle && React.createElement(React.Fragment, null, React.createElement("span", {
+  }, "買うと、その曲を全部の難易度で遊べます。"), ' ', anyBundle && [...new Set(songs.flatMap(song => rhythmSongBundleLabels(song.songId)))].map((label, i, arr) => React.createElement("span", {
+    key: label,
     className: "inline-block"
-  }, `${[...new Set(songs.flatMap(song => rhythmSongBundleLabels(song.songId)))].join('・')} も一緒に遊べます。`), ' '), React.createElement("span", {
+  }, i < arr.length - 1 ? `${label}、` : `${label} も一緒に遊べます。`)), ' ', React.createElement("span", {
     className: "inline-block"
   }, "みんなで対戦なら、"), React.createElement("span", {
     className: "inline-block"
@@ -61787,57 +61789,93 @@ function RhythmSongShopList({
     };
     const canBuy = !has && points >= price && !busy && !disabled;
     const listening = playingId === song.songId;
+    const bundleArts = rhythmSongBundleSongs(song.songId).map(entry => ({
+      entry,
+      artSrc: typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(entry) : ''
+    })).filter(x => x.artSrc);
+    const multiJacket = bundleArts.length >= 2 && new Set(bundleArts.map(x => x.artSrc.split('?')[0])).size >= 2;
+    const frontEntry = multiJacket ? bundleArts.find(x => x.entry.songId === (frontBySong[song.songId] || song.songId)) || bundleArts[0] : null;
+    const backEntry = multiJacket ? bundleArts.find(x => x.entry.songId !== frontEntry.entry.songId) : null;
+    const cardName = multiJacket ? song.displayName || item.name : item.name;
     return React.createElement("div", {
       key: song.songId,
       "data-rhythm-song-offer": song.songId,
       className: `relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`
-    }, (() => {
-      const bundleArts = rhythmSongBundleSongs(song.songId).map(entry => ({
-        entry,
-        artSrc: typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(entry) : ''
-      })).filter(x => x.artSrc);
-      if (bundleArts.length < 2 || new Set(bundleArts.map(x => x.artSrc.split('?')[0])).size < 2) {
-        return React.createElement("div", {
-          className: "w-full [container-type:inline-size]"
-        }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
-          song: song,
-          large: true,
-          onZoom: src && onZoomIcon ? () => onZoomIcon(item) : null
-        }) : null);
-      }
-      return React.createElement("div", {
-        className: "flex w-full flex-1 items-center gap-1"
-      }, bundleArts.map(({
-        entry,
-        artSrc
-      }) => {
-        const subItem = {
-          ...item,
-          id: `song_${entry.songId}`,
-          name: rhythmSongFullName(entry),
-          icon: artSrc
-        };
-        return React.createElement("div", {
-          key: entry.songId,
-          className: "min-w-0 flex-1"
-        }, React.createElement("div", {
-          className: "[container-type:inline-size]"
-        }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
-          song: entry,
-          large: true,
-          onZoom: onZoomIcon ? () => onZoomIcon(subItem) : null
-        }) : null), React.createElement("span", {
-          className: "mt-0.5 block text-center text-[9px] font-black text-slate-300"
-        }, rhythmSongVersionLabel(entry.songId) || '原曲'));
+    }, multiJacket ? (() => {
+      const frontItem = {
+        ...item,
+        id: `song_${frontEntry.entry.songId}`,
+        name: rhythmSongFullName(frontEntry.entry),
+        icon: frontEntry.artSrc
+      };
+      const frontLabel = typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(frontEntry.entry.songId) || '原曲' : '';
+      const swapFront = () => setFrontBySong(prev => ({
+        ...prev,
+        [song.songId]: backEntry.entry.songId
       }));
-    })(), React.createElement("b", {
+      return React.createElement("div", {
+        className: "w-full"
+      }, React.createElement("div", {
+        className: "relative w-full cursor-pointer",
+        role: "button",
+        tabIndex: 0,
+        "data-rhythm-song-jacket-stack": song.songId,
+        "aria-label": `${cardName}のジャケット入れ替え(いま手前は${frontLabel})`,
+        onClick: swapFront,
+        onKeyDown: e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            swapFront();
+          }
+        }
+      }, React.createElement("div", {
+        className: "absolute bottom-0 right-0 w-[86%] brightness-[0.7]",
+        style: {
+          transform: 'rotate(8deg)'
+        }
+      }, React.createElement("div", {
+        className: "[container-type:inline-size]"
+      }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
+        song: backEntry.entry,
+        large: true
+      }) : null)), React.createElement("div", {
+        className: "relative z-10 mb-[10%] w-[76%]"
+      }, React.createElement("div", {
+        className: "rounded-lg shadow-[0_6px_16px_rgba(0,0,0,0.55)] [container-type:inline-size]"
+      }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
+        song: frontEntry.entry,
+        large: true
+      }) : null), onZoomIcon && React.createElement("button", {
+        type: "button",
+        "data-rhythm-song-art-zoom": true,
+        onClick: e => {
+          e.stopPropagation();
+          onZoomIcon(frontItem);
+        },
+        "aria-label": `${frontItem.name}のジャケットを大きく見る`,
+        className: "absolute bottom-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-slate-950/70 text-[11px] leading-none shadow"
+      }, "🔍"))), React.createElement("div", {
+        className: "w-full [container-type:inline-size]"
+      }, React.createElement("span", {
+        className: "mt-0.5 block whitespace-nowrap text-center font-black text-slate-300",
+        style: {
+          fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 9, 7) : 9
+        }
+      }, `⇄ ${frontLabel}`)));
+    })() : React.createElement("div", {
+      className: "w-full [container-type:inline-size]"
+    }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
+      song: song,
+      large: true,
+      onZoom: src && onZoomIcon ? () => onZoomIcon(item) : null
+    }) : null), React.createElement("b", {
       "data-rhythm-song-offer-name": true,
       className: "w-full text-center text-[11px] font-black leading-tight text-white",
       style: {
         wordBreak: 'keep-all',
         overflowWrap: 'anywhere'
       }
-    }, item.name), React.createElement("small", {
+    }, cardName), React.createElement("small", {
       "data-rhythm-song-offer-meta": true,
       className: "w-full text-center text-[9px] font-bold leading-tight text-slate-300",
       style: {
@@ -61850,7 +61888,7 @@ function RhythmSongShopList({
       className: "block"
     }, [meta.length, meta.levels].filter(Boolean).join(' ／ ')), bundle && React.createElement("span", {
       className: "block text-lime-300"
-    }, `${rhythmSongBundleLabels(song.songId).join('・')} つき`)), React.createElement("div", {
+    }, multiJacket ? `${bundleArts.map(x => (typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(x.entry.songId) : '') || '原曲').join('・')} セット` : `${rhythmSongBundleLabels(song.songId).join('・')} つき`)), React.createElement("div", {
       "data-rhythm-song-offer-foot": true,
       className: "mt-auto flex w-full flex-col items-center gap-1"
     }, React.createElement("button", {
