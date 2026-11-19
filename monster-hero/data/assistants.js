@@ -411,7 +411,7 @@ const eventScriptForPlayer = (script, seenStoryIds) => {
     ? { ...l, who: [l.who, typeof l.outfit === 'string' ? l.outfit : '', l.secret ? 'secret' : ''].filter(Boolean).join('@') } : l);
 };
 // 台本の行で衣装を指定するときの、衣装の名前 → 絵のフォルダ(立ち絵 <接頭辞>_<表情>.PNG と face/)
-const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou', winter: 'images/assistant/winter' });
+const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou', winter: 'images/assistant/winter', twintail: 'images/assistant/twintail' });
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
 const assistantsUnlockedFrom = (seenStoryIds) =>
@@ -784,7 +784,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
-  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', 'kiki:twintail': 'stand-twintail', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
@@ -809,7 +809,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
 //   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
 const ASSISTANT_FULLBODY_ART = Object.freeze({
-  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
+  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', 'kiki:twintail': 'kiki_twintail', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
   mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
   erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
 });
@@ -817,7 +817,7 @@ const ASSISTANT_FULLBODY_ART = Object.freeze({
 //   例: atsu: ['happy', 'wink']。ここに無い表情は、表情なしの絵(<名前>.png)を出す。表情名は今の立ち絵と同じ8つ(angry・crying・excited・happy・normal・surprise・troubled・wink)
 const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
-  kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
+  kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, kiki_twintail: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
   kyuko: ASSISTANT_STAND_EXPRESSIONS, kyuko_winter: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情 / 2026-11-16 冬服の8表情
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
   atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
@@ -12648,7 +12648,30 @@ const KYUKO_WINTER_STORY = [
   { who:'kyuko',    e:'happy',    outfit:'winter', t:'買ってくれたら、プロフィールの「着替え」から着替えられるからね。{name}、よかったらおそろいにしてみてねぇ' },
 ];
 const KYUKO_WINTER_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん／あつニキ／えるニキ', erubin: 'きゅうこちゃん' };
+// ききのツインテールのお話「イメチェン ～ききのツインテール～」(2026-11-20 社長)。
+//   ききがツインテール(outfit:'twintail' = STORY_OUTFIT_DIRS の twintail)で登場して、同じ着せ替えがマーケットのダイヤショップに並んだことを知らせる。
+//   きっかけは曲「僕たちのページは晴れ模様」のジャケット絵で結んでもらった髪型。流し方は冬服のお話と同じ(更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+const KIKI_TWINTAIL_STORY = [
+  { bg:'monhero_plaza', who:'mua', e:'surprise', t:'あれ、ひめちん、髪がふたつに分かれてる〜！ イメチェンぢゃん！' },
+  { who:'momosuke', e:'excited',  t:'ほんとだ！ ききちゃん、ツインテールだ〜♡ うさ耳みたいなリボン、かわいい〜♡♡' },
+  { who:'kiki',     e:'happy',    outfit:'twintail', t:'えへへ、イメチェンしてみまちた♪ どうでつか？' },
+  { who:'kyuko',    e:'normal',   t:'あらぁ、かわいいじゃない。どうして急に？' },
+  { who:'kiki',     e:'normal',   outfit:'twintail', t:'あのね、「僕たちのページは晴れ模様」のジャケットの絵で、髪を結んでもらったのがあったでつ。あの髪型がずっと気に入ってて、やってみたかったのでつ♪' },
+  { who:'dra',      e:'normal',   t:'なるほど、曲の絵の髪型か。よく似合っているな' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'いいじゃん、きき。元気いっぱいって感じで、ききらしいよ笑' },
+  { who:'erubin',   e:'happy',    t:'うさ耳リボン、ききっぽさはそのままって感じでいいな' },
+  { who:'kiki',     e:'troubled', outfit:'twintail', t:'結ぶの、思ったよりむずかしくて……朝、ちょっとだけ手間取りまちた' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'わかる〜！ でも、そのぶん今日はとくべつかわいいやつぢゃん！' },
+  { who:'kiki',     e:'wink',     outfit:'twintail', t:'それでね、同じ着せ替えをマーケットに置いてもらいまちた。ダイヤショップで買えまつよ♪' },
+  { who:'momosuke', e:'excited',  t:'やった〜！ ももが買って、ききちゃんに着せてあげる〜♡' },
+  { who:'kiki',     e:'troubled', outfit:'twintail', t:'わ、私は着せ替え人形じゃないでつよ……でも、ありがとうでつ' },
+  { who:'sorashido', e:'happy',   t:'おそろいのリボン、いいですね笑 気分が変わると、曲作りもはかどりそうです' },
+  { who:'kiki',     e:'happy',    outfit:'twintail', t:'買ってくれたら、プロフィールの「着替え」から着替えられまつ。{name}、よかったらおそろいにしてくだたいね♪' },
+];
+const KIKI_TWINTAIL_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん／ももさん／きゅうこさん／ドラさん', momosuke: 'ききちゃん', dra: 'きき', atsu: 'きき', kyuko: 'ききさん', sorashido: 'ききさん', erubin: 'ききさん' };
 const EVENT_REPLAYS = [
+  // ききのツインテールのお話(2026-11-20 社長)。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は KIKI_TWINTAIL_STORY
+  { id: 'kiki_twintail_2026_11', date: '2026-11-20 12:00', title: 'イメチェン ～ききのツインテール～', script: KIKI_TWINTAIL_STORY, calls: KIKI_TWINTAIL_STORY_CALLS, unlockedKey: 'kikiTwintailStorySeen', group: 'update' },
   // きゅうこの冬服のお話(2026-11-16 社長)。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は KYUKO_WINTER_STORY
   { id: 'kyuko_winter_2026_11', date: '2026-11-16 12:00', title: '冬支度 ～きゅうこの模様替え～', script: KYUKO_WINTER_STORY, calls: KYUKO_WINTER_STORY_CALLS, unlockedKey: 'kyukoWinterStorySeen', group: 'update' },
   // ききが初めて作った曲「Sparkling Pink Overture」のお話(2026-11-15 社長 r1115-102)。更新のあとに初めて HOME に着いたときに1回流れ(ほかのお話と同じ入口)、あとは回想から読める。台本は SPARKLING_PINK_STORY(助手部ココロ2)
