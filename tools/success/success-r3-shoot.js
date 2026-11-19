@@ -87,6 +87,9 @@ const makeRun = async (kind) => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
+  // SHOT_SIZES=base,land,s568 のように名札を並べると、その大きさだけ撮る(s568 = 小さい横 568×320。見た目の点検 visual-shoot.js --monsuc-deep が使う)
+  const pickSizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568']].filter(([, , t]) => pickSizes.includes(t || 'base')));
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
