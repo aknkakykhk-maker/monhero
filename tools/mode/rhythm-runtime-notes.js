@@ -242,6 +242,8 @@ const RELEASED_MARKERS=Object.freeze({
   hopes_and_dreams_short:'hopes-and-dreams-short-v3',
   sparkling_pink_overture:'sparkling-pink-overture-v3',
   seasons_of_a_little_plaza:'seasons-of-a-little-plaza-v3',
+  eiyuu_no_akashi:'eiyuu-no-akashi-v3',
+  eiyuu_no_akashi_milktea:'eiyuu-no-akashi-milktea-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -319,6 +321,8 @@ const RELEASED_TRACKS=Object.freeze({
   hopes_and_dreams_short:'hopes_and_dreams_short',
   sparkling_pink_overture:'sparkling_pink_overture',
   seasons_of_a_little_plaza:'seasons_of_a_little_plaza',
+  eiyuu_no_akashi:'eiyuu_no_akashi',
+  eiyuu_no_akashi_milktea:'eiyuu_no_akashi_milktea',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

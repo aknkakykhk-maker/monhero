@@ -116,6 +116,8 @@ const BGM_TRACKS = [
   { id:'melo_hopes_and_dreams_short', name:'Hopes and Dreams short ver.', creator:'Toby Fox', src:'audio/bgm-hopes-and-dreams-short.mp3', gain:1, loop:true },
   { id:'melo_sparkling_pink_overture', name:'Sparkling Pink Overture', creator:'オリジナル', src:'audio/bgm-sparkling-pink-overture.mp3', gain:1, loop:true },
   { id:'melo_seasons_of_a_little_plaza', name:'僕たちのページは晴れ模様', creator:'きき', src:'audio/bgm-seasons-of-a-little-plaza.mp3', gain:1, loop:true },
+  { id:'melo_eiyuu_no_akashi', name:'英雄の証', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi.mp3', gain:1, loop:true },
+  { id:'melo_eiyuu_no_akashi_milktea', name:'英雄の証（ミラクル☆ミルクティ版）', creator:'オリジナル', src:'audio/bgm-eiyuu-no-akashi-milktea.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
