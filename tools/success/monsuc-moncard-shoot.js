@@ -27,7 +27,7 @@ const demo = () => {
   const h = React.createElement;
   const sec = (t, body) => h('section', { style: { margin: '0 0 12px' } }, h('div', { style: { fontWeight: 900, fontSize: 12, color: '#fde68a', margin: '0 0 4px' } }, t), body);
   return h('div', { id: 'mcd-demo', style: { position: 'fixed', inset: 0, overflow: 'auto', background: '#14112a', padding: 10, zIndex: 99999, color: '#fff', fontFamily: 'sans-serif' } },
-    sec('小 s … 一覧(5列・横は7列)。札の下は総合力', h(MonsucCardGrid, { size: 's' }, mons.map((m, i) => h(MonsucMonCard, { key: m.id, m, size: 's', num: (9000 + i * 731).toLocaleString(), on: i === 1, lock: i === 3 ? '育成中' : null, onClick: () => {}, attrs: { 'data-mcd': 's' } })))),
+    sec('小 s … 一覧(5列・横は7列)。札の下は総合力', h(MonsucCardGrid, { size: 's' }, mons.map((m, i) => h(MonsucMonCard, { key: m.id, m, size: 's', num: (9000 + i * 731).toLocaleString(), on: i === 1, lock: i === 3 ? '育成中' : null, slot: i === 0 ? 1 : i === 5 ? 5 : null, note: i === 4 ? '同じ種類' : null, onClick: () => {}, attrs: { 'data-mcd': 's' } })))),
     sec('中 m … 編成の6枠(3列・横は6列)。札の下は役の帯', h(MonsucCardGrid, { size: 'm' }, [
       h(MonsucMonCard, { key: 1, m: mons[0], size: 'm', tag: { text: 'マスモン', kind: 'box' }, onClick: () => {}, attrs: { 'data-mcd': 'm' } }),
       h(MonsucMonCard, { key: 2, m: mons[1], size: 'm', tag: { text: 'メモモン', kind: 'memo' }, onClick: () => {}, attrs: { 'data-mcd': 'm' } }),
@@ -58,21 +58,28 @@ const demo = () => {
       await page.evaluate((src) => { const el = Object.assign(document.createElement('div'), { id: 'mcd-root' }); document.body.appendChild(el); ReactDOM.createRoot(el).render(new Function(`return (${src})`)()()); }, demo.toString());
       await page.waitForSelector('#mcd-demo [data-mcd]'); await page.waitForTimeout(1500);
       const q = await page.evaluate(() => {
-        const out = { n: 0, hit: [], ratio: [], small: [] };
+        const out = { n: 0, hit: [], ratio: [], small: [], cut: [], s11: [] };
         document.querySelectorAll('#mcd-demo [data-mcd]').forEach((c) => {
           out.n += 1;
           const f = c.querySelector('.mcd-f').getBoundingClientRect(); out.ratio.push(+(f.height / f.width).toFixed(2));
-          const nm = c.querySelector('.mcd-nm'); if (!nm) return;
+          const nm = c.querySelector('.mcd-nm, .mcd-nms'); if (!nm) return;
           const r = nm.getBoundingClientRect();
-          c.querySelectorAll('.mcd-gd, .mcd-fav i, .mcd-ck, .mcd-lk').forEach((e) => { const o = e.getBoundingClientRect(); if (o.width && o.left < r.right && o.right > r.left && o.top < r.bottom && o.bottom > r.top) out.hit.push(`${c.dataset.mcd}:${nm.innerText}`); });
+          if (nm.scrollHeight > nm.clientHeight + 1 || nm.scrollWidth > nm.clientWidth + 1) out.cut.push(nm.innerText);
+          c.querySelectorAll('.mcd-note, .mcd-lk').forEach((e) => { if (e.scrollWidth > e.clientWidth + 1) out.cut.push(e.innerText); });
+          const marks = [...c.querySelectorAll('.mcd-gd, .mcd-fav i, .mcd-ck, .mcd-slot, .mcd-note')].map((e) => e.getBoundingClientRect()).filter((o) => o.width);
+          marks.forEach((a, i) => marks.slice(i + 1).forEach((b) => { if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) out.hit.push(`${c.dataset.mcd}:印どうし`); }));
+          c.querySelectorAll('.mcd-gd, .mcd-fav i, .mcd-ck, .mcd-lk, .mcd-slot, .mcd-note').forEach((e) => { const o = e.getBoundingClientRect(); if (o.width && o.left < r.right && o.right > r.left && o.top < r.bottom && o.bottom > r.top) out.hit.push(`${c.dataset.mcd}:${nm.innerText}`); });
           if (parseFloat(getComputedStyle(nm).fontSize) < 9) out.small.push(nm.innerText);
+          if (c.dataset.mcd === 's' && parseFloat(getComputedStyle(nm).fontSize) < 11) out.s11.push(nm.innerText);
         });
         return out;
       });
       check(`${label}: 札が並ぶ(小7・中6・大1)`, q.n === 14, String(q.n));
-      check(`${label}: 名前に評価・得意な能力・印・理由が重ならない`, q.hit.length === 0, q.hit.join(' '));
+      check(`${label}: 名前に評価・得意な能力・印・理由が重ならず、印どうしも重ならない`, q.hit.length === 0, q.hit.join(' '));
       check(`${label}: 札の縦横比が 3:4 でそろう`, q.ratio.every((x) => Math.abs(x - 1.333) < 0.04), q.ratio.join(','));
       check(`${label}: 名前の字が 9px より小さくならない`, q.small.length === 0, q.small.join(' '));
+      check(`${label}: 名前・帯の字が切れない(8文字の名前も全部読める)`, q.cut.length === 0, q.cut.join(' '));
+      check(`${label}: 小の名前は 11px 以上`, q.s11.length === 0, q.s11.join(' '));
       if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `moncard${tag ? `-${tag}` : ''}.png`), fullPage: false }); }
       await page.close();
     }

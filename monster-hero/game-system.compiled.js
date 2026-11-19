@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ad3dbe98f975fc4
+// source-sha256: ec54f5e75670f641
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -188290,6 +188290,8 @@ function MonsucMonCard({
   num = null,
   on = false,
   lock = null,
+  slot = null,
+  note = null,
   onClick = null,
   attrs = null,
   empty = '+'
@@ -188320,21 +188322,28 @@ function MonsucMonCard({
     key: k
   }, MSX_STAT_ICON[k]))) : null, grade ? React.createElement("i", {
     className: "mcd-gd"
-  }, grade) : null, m ? React.createElement("span", {
+  }, grade) : null, m && sz !== 's' ? React.createElement("span", {
     className: "mcd-strip"
   }, React.createElement("b", {
     className: "mcd-nm",
     style: {
-      fontSize: `max(9px, min(${sz === 's' ? 15 : 13}cqw, ${lv && sz !== 's' ? 60 : 88}cqw / ${Math.max(1, [...name].length)}))`
+      fontSize: `max(9px, min(13cqw, 86cqw / ${Math.max(1, [...name].length)}))`
     }
-  }, name), lv && sz !== 's' ? React.createElement("small", {
+  }, name)) : null, m && lv && sz !== 's' ? React.createElement("small", {
     className: "mcd-lv"
-  }, "Lv.", lv) : null) : null, lock ? React.createElement("span", {
+  }, "Lv.", lv) : null, slot != null && !lock ? React.createElement("i", {
+    className: "mcd-slot",
+    "aria-label": `編成の${slot}枠目`
+  }, slot) : null, note && !lock ? React.createElement("span", {
+    className: "mcd-note"
+  }, note) : null, lock ? React.createElement("span", {
     className: "mcd-lk"
   }, lock) : null, on ? React.createElement("i", {
     className: "mcd-ck",
     "aria-hidden": "true"
-  }, "✓") : null), tag && tag.text ? React.createElement("span", {
+  }, "✓") : null), m && sz === 's' ? React.createElement("span", {
+    className: "mcd-nms"
+  }, name) : null, tag && tag.text ? React.createElement("span", {
     className: `mcd-tag ${tag.kind || ''}`
   }, tag.text) : null, num != null && num !== '' ? React.createElement("span", {
     className: "mcd-num"
@@ -188374,13 +188383,17 @@ span.mcd{cursor:default}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
-.mcd .mcd-lv{flex:none;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
+.mcd.s .mcd-art{bottom:5%}
+.mcd .mcd-nms{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:900;font-size:11px;line-height:1.2;word-break:break-all;color:#fff;min-height:2.4em}
+.mcd .mcd-slot{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:clamp(20px,30cqw,34px);height:clamp(20px,30cqw,34px);font-style:normal;font-weight:900;font-size:clamp(11px,17cqw,19px);color:#fff;background:#2563eb;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px #0008}
+.mcd .mcd-note{position:absolute;left:4%;right:4%;top:24%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcd .mcd-lv{position:absolute;right:3%;bottom:23%;line-height:1.3;padding:0 .3em;background:#0f0d24d9;border-radius:6px;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
 .mcd .mcd-gd{position:absolute;right:3%;top:3%;font-style:normal;font-weight:900;font-size:clamp(9px,14cqw,15px);line-height:1.35;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:7px;padding:0 .35em}
 .mcd .mcd-fav{position:absolute;left:3%;top:3%;display:flex;flex-direction:column;gap:2px}
 .mcd .mcd-fav i{display:flex;align-items:center;justify-content:center;width:clamp(15px,22cqw,26px);height:clamp(15px,22cqw,26px);font-style:normal;font-size:clamp(9px,13cqw,15px);background:#0f0d24d9;border:1.5px solid #fde68a;border-radius:6px}
 .mcd .mcd-lk{position:absolute;left:6%;right:6%;top:40%;transform:translateY(-50%);font-weight:900;font-size:clamp(9px,12cqw,12px);background:#0f0d24e6;border-radius:6px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mcd.lk .mcd-art{opacity:.45}
-.mcd .mcd-ck{position:absolute;right:3%;bottom:24%;display:flex;align-items:center;justify-content:center;width:clamp(18px,24cqw,28px);height:clamp(18px,24cqw,28px);font-style:normal;font-weight:900;font-size:clamp(11px,15cqw,17px);color:#fff;background:#ec4899;border:2px solid #fff;border-radius:50%}
+.mcd .mcd-ck{position:absolute;left:3%;bottom:24%;display:flex;align-items:center;justify-content:center;width:clamp(18px,24cqw,28px);height:clamp(18px,24cqw,28px);font-style:normal;font-weight:900;font-size:clamp(11px,15cqw,17px);color:#fff;background:#ec4899;border:2px solid #fff;border-radius:50%}
 .mcd.on .mcd-f{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mcd .mcd-tag{display:block;font-weight:900;font-size:clamp(10px,11cqw,12px);line-height:1.6;border-radius:999px;color:#fff;background:#4f46e5}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
