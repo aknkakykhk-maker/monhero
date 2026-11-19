@@ -601,8 +601,8 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const lv1sp = { ...lv1, astory: { ep: 4, path: 'good', done: false }, storyEnd: 'good' };
   ok(due(lv1sp, range(42, 43)) === null, '仲良し度 Lv1 で特別な1話が出る(Lv5〜 だけ)');
   const low = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 10, astory: { ep: 1, path: null, done: false } };
-  // r1119-003: 親密度に関係なく決まったターン(3・11・23・39)に必ず出る。出せなかった話は期をまたいでも次のターンに出る
-  const d2 = due(low, range(6, 17)); ok(d2 && d2.d === 2 && d2.t === 11, '親密度が低いと2話が出ない・11ターン目に出ない(r1119-003)');
+  // r1119-009: 親密度に関係なく決まったターン(3・11・23・39)に必ず出る。出せなかった話は期をまたいでも次のターンに出る
+  const d2 = due(low, range(6, 17)); ok(d2 && d2.d === 2 && d2.t === 11, '親密度が低いと2話が出ない・11ターン目に出ない(r1119-009)');
   ok(due(low, range(6, 10)) === null, '2話が11ターンより前に出る');
   const late = { ...low, astory: { ep: 1, path: null, done: false } }; const dl = due(late, range(18, 20)); ok(dl && dl.d === 2 && dl.t === 18, '逃した2話が次の期に出ない(期をまたいでも消えない)');
   const tu = [1, 2, 3, 4].map((ep) => { const x = { ...low, astory: { ep: ep - 1, path: 'good', done: false } }; const d = due(x, range(1, 41)); return d && d.d === ep ? d.t : null; });

@@ -552,7 +552,7 @@
     erubin: { good: { hint: 'assist', name: '見守り' }, bitter: { loyal: 10 }, special: { noSulk: true } },
   });
   // 話の進み方(EVENTS ②: どの助手も同じ形)。lv = 助手ライフの仲良し度の段で見られる話の上限
-  //   2026-11-19 社長 r1119-003: 第1〜4話は決まったターン(3・11・23・39)に必ず出す。親密度の門と出る率はやめる(親密度は3話の分かれ道と超グッドエンディングにだけ効く)。
+  //   2026-11-19 社長 r1119-009: 第1〜4話は決まったターン(3・11・23・39)に必ず出す。親密度の門と出る率はやめる(親密度は3話の分かれ道と超グッドエンディングにだけ効く)。
   //   そのターンに出せない(大会の日・けが・家出)ときは、次に出せるターンへ回す(期をまたいでも消えない)。period は見出しの期の名前のためだけに残す
   const ASTORY = Object.freeze({
     eps: Object.freeze([{ ep: 1, period: 'debut', turn: 3 }, { ep: 2, period: 'junior', turn: 11 }, { ep: 3, period: 'middle', turn: 23 }, { ep: 4, period: 'pro', turn: 39 }]),
@@ -1129,7 +1129,7 @@
       const i = cand.find(j => s.story[j] < 3) !== undefined ? cand.find(j => s.story[j] < 3) : cand[0];
       const m = s.team[i]; const fk = m.top[0];
       const ep = s.story[i]; const st = STORY[ep];
-      s.log.events += 1; s.tevAt = s.turn; // 編成の子のイベントが出たターン(このターンはトレーニングのあとのランダムの出来事を出さない。r1119-003)
+      s.log.events += 1; s.tevAt = s.turn; // 編成の子のイベントが出たターン(このターンはトレーニングのあとのランダムの出来事を出さない。r1119-009)
       // 画面で「実際に動いた数」を出すため、前の値を覚えておく(出来事の外へ d として渡すだけ・保存の形は変えない)
       const b0 = { st: s.stats[fk], bond: s.bond[i], hp: s.hp, stress: s.stress };
       const dOf = () => ({ stat: fk, up: Math.round(s.stats[fk] - b0.st), bondFrom: b0.bond, bondTo: s.bond[i], bond: Math.round(s.bond[i] - b0.bond), hp: Math.round(s.hp - b0.hp), stress: Math.round(s.stress - b0.stress) });
@@ -1493,11 +1493,11 @@
     // 助手の連続イベント(EVENTS ②)。そのターンに出る話(1〜4・'special')か null。画面はターンのはじめに見せる
     const storyDue = (s) => {
       const a = s.astory || { ep: 0 }; if (s.over || s.cond || s.battle) return null;
-      if (s.ev && s.ev.lastTurn === s.turn && !(a.at === s.turn)) return null; // 大会のあとの出来事(期の目標の結果)が出たターンは次のターンへ回す(1ターンに見せるのは最大2つ・r1119-003)
+      if (s.ev && s.ev.lastTurn === s.turn && !(a.at === s.turn)) return null; // 大会のあとの出来事(期の目標の結果)が出たターンは次のターンへ回す(1ターンに見せるのは最大2つ・r1119-009)
       const p = periodOf(s.turn); const max = ASTORY.lvMax(num(s.aidLv, 1));
       if (a.ep >= 4 && !a.done && num(s.aidLv, 1) >= ASTORY.specialLv && s.storyEnd === 'good' && p.key === 'final' && p.at <= 2) return 'special';
       const next = ASTORY.eps[a.ep]; if (!next || next.ep > max) return null;
-      return s.turn >= next.turn ? next.ep : null; // 決まったターンから(過ぎていれば次に出せるターンで)必ず出す(r1119-003)
+      return s.turn >= next.turn ? next.ep : null; // 決まったターンから(過ぎていれば次に出せるターンで)必ず出す(r1119-009)
     };
     // 話を見て2択を選ぶ(choice = 'a' | 'b')。3話の選び方で4話がいい結末(a)/ほろ苦い結末(b)に分かれる
     //   1話: a = 素質のいちばん高い能力 中+ / b = 忠誠 小+   2話: a = 体力 大+・助手の親密度 +10 / b = 主の能力 中+・ストレス 中+
@@ -1515,7 +1515,7 @@
       else if (ep === 4) { const r = storyEnd(s, s.astory.path || 'bitter'); s = r.state; out.end = s.storyEnd; }
       else if (ep === 'special') { s = markSpecial(s).state; s.astory.done = true; }
       if (ep !== 'special') s.astory.ep = ep;
-      s.astory.at = s.turn; // お話を見たターン(このターンは、はじめの出来事を出さない・1ターンに見せるイベントは最大2つ。r1119-003)
+      s.astory.at = s.turn; // お話を見たターン(このターンは、はじめの出来事を出さない・1ターンに見せるイベントは最大2つ。r1119-009)
       if ((ep === 4 && num(s.aidLv, 1) < ASTORY.specialLv) || ep === 'special' || (ep === 4 && s.storyEnd !== 'good')) s.astory.done = true;
       s.log.astory = (s.log.astory || 0) + 1;
       // 画面に出す動いた数(能力は画面が前後の差で出す)。出来事の out.delta と同じ形
