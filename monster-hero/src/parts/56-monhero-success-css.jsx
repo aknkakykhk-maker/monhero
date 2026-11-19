@@ -110,6 +110,7 @@ const MSX_CSS = `
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
+.msx .v-body.st{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 /* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */

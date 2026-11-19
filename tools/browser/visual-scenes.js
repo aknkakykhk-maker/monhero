@@ -151,6 +151,74 @@ const heroSelect = async (s) => {
   return /勇者モン/.test(await s.screenName());
 };
 
+// ---- モンサク(HOME の入口から開く場面。2026-11-19 社長「API 通し点検を早く」で足した) ----
+// β版のお話(11ページと最後の選択肢)を閉じて、モンサクのホームを出す
+const monsucHome = async (s, { keepStory = false } = {}) => {
+  if (!(await homeBtn('モンヒロサクセス β')(s))) return false;
+  if (keepStory) return s.page.evaluate(() => !!document.querySelector('[data-msx-view="home"]'));
+  await s.page.evaluate(async () => {
+    for (let i = 0; i < 30; i++) {
+      const o = document.querySelector('.msx-beta-ov');
+      if (!o) break;
+      const b = o.querySelector('button');
+      (b || o.querySelector('.msx-beta-card') || o).click();
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }).catch(() => {});
+  await s.wait(800);
+  return s.page.evaluate(() => !!document.querySelector('[data-msx-view="home"]') && !document.querySelector('.msx-beta-ov'));
+};
+// モンサクのホームの札(文字で探す)を押す
+const monsucTile = (re, after = []) => async (s) => {
+  if (!(await monsucHome(s))) return false;
+  const ok = await s.page.evaluate((src) => {
+    const b = [...document.querySelectorAll('.msx button')].find((x) => x.getClientRects().length && new RegExp(src).test((x.innerText || '').replace(/\s+/g, ' ')));
+    if (b) b.click();
+    return !!b;
+  }, re.source);
+  await s.wait(1500);
+  return ok && via(after)(s);
+};
+// ランキングの偽の行(本番のサーバーへは送らない。にせの Supabase の表に置くだけ)。名前は架空
+const RANK_SPECIES = ['Mocchi', 'Golem', 'Tiger', 'Pixie', 'Suezo', 'Undine', 'Kyubi', 'Snegurochka'];
+const fakeRankRows = (beta) => RANK_SPECIES.flatMap((sp, i) => [0, 1].map((k) => {
+  const n = i * 2 + k;
+  const base = 880 - n * 37 - (beta === 1 ? 40 : 0);
+  const st = { life: base + 40, pow: base - 20, wise: base - 120, hit: base + 10, eva: base - 60, tough: base + 25 };
+  return { run_id: `vis-${beta}-${n}`, user_name: `ブリーダー${String.fromCharCode(0x30a2 + n * 2)}`, child_name: ['もちまる', 'ごろた', 'とらきち', 'ぴくる', 'すえぞう', 'みなも', 'こんこ', 'ゆきな'][i] + (k ? '2' : ''),
+    species: sp, lineage: sp, dye: null, stats: st, tech_count: 6 + (n % 4), lv: 40 - n, power: 5200 - n * 180, grade: n < 3 ? 'S' : n < 8 ? 'A' : 'B', place: n + 1, loyal: 80, pop: 60 - n, techs: [] };
+}));
+const seedRanking = (s) => {
+  for (const b of [1, 2]) {
+    const rows = fakeRankRows(b);
+    const sfx = b === 2 ? '_beta2' : '';
+    s.supabase.tables.set(`monsuc_rank_all${sfx}`, rows);
+    s.supabase.tables.set(`monsuc_rank_lineage${sfx}`, rows);
+  }
+};
+const monsucRank = (beta, after = []) => async (s) => {
+  seedRanking(s);
+  if (!(await monsucTile(/ランキング/)(s))) return false;
+  if (beta === 1 && !(await tapAny(s, /^β1$/))) return false;
+  await s.wait(1500);
+  return via(after)(s);
+};
+// ヘルプの「モンヒロサクセス」のページ(モンヒロバトル → ヘルプ → モンヒロサクセス)
+const monsucHelp = (sub) => async (s) => {
+  if (!(await homeBtn('モンヒロバトル')(s))) return false;
+  await s.page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.getClientRects().length && /^📖\s*ヘルプ$/.test(x.textContent.trim())); if (b) b.click(); });
+  await s.wait(2000);
+  const ok = await s.page.evaluate(() => {
+    const bs = [...document.querySelectorAll('button')].filter((x) => x.getClientRects().length && /モンヒロサクセス/.test(x.textContent) && !/モンスターを育てる/.test(x.textContent));
+    const b = bs[bs.length - 1];
+    if (b) { b.scrollIntoView({ block: 'center' }); b.click(); }
+    return !!b;
+  });
+  await s.wait(1200);
+  if (!ok) return false;
+  return sub ? tapAny(s, sub) : true;
+};
+
 const SCENES = [
   // ---- HOME まわり ----
   { id: 'home', area: 'HOME', name: 'HOME', go: async () => true },
@@ -212,8 +280,21 @@ const SCENES = [
   // ---- ヘルプ ----
   { id: 'help', area: 'ヘルプ', name: 'ヘルプ(モンヒロバトルから)', go: then(homeBtn('モンヒロバトル'), [/ヘルプ$/]) },
   // ---- モンサク(既定では撮らない) ----
-  { id: 'monsuc-home', area: 'モンサク', group: 'monsuc', name: 'モンサクのホーム', go: homeBtn('モンヒロサクセス β') },
-  { id: 'monsuc-box', area: 'モンサク', group: 'monsuc', name: 'マスモンボックス(モンサク)', go: via([/^M\/B管理$/, /^マスモンボックス\(モンサク\)/]) },
+  { id: 'monsuc-story', area: 'モンサク', group: 'monsuc', name: 'モンサクの入口(β版のお話の1ページ目)', go: (s) => monsucHome(s, { keepStory: true }) },
+  { id: 'monsuc-home', area: 'モンサク', group: 'monsuc', name: 'モンサクのホーム(入口)', go: (s) => monsucHome(s) },
+  { id: 'monsuc-new', area: 'モンサク', group: 'monsuc', name: '新しく育成を始める(最初の画面)', go: monsucTile(/新しく育成を始める/) },
+  { id: 'monsuc-basemon', area: 'モンサク', group: 'monsuc', name: 'ベースモン(モンサクのホーム)', go: monsucTile(/ベースモン/) },
+  { id: 'monsuc-box-empty', area: 'モンサク', group: 'monsuc', name: 'マスモンボックス(空のとき)', go: monsucTile(/マスモンボックス/) },
+  { id: 'monsuc-dex', area: 'モンサク', group: 'monsuc', name: 'イベント図鑑(ホームから)', go: monsucTile(/イベント図鑑/) },
+  { id: 'monsuc-rank-b2', area: 'モンサク', group: 'monsuc', name: 'ランキング β2(偽の16行)', go: monsucRank(2) },
+  { id: 'monsuc-rank-b1', area: 'モンサク', group: 'monsuc', name: 'ランキング β1(偽の16行)', go: monsucRank(1) },
+  { id: 'monsuc-rank-lin', area: 'モンサク', group: 'monsuc', name: 'ランキングの血統を選ぶ', go: monsucRank(2, [/選ぶ/]) },
+  { id: 'monsuc-rank-detail', area: 'モンサク', group: 'monsuc', name: 'ランキングの1行を押した詳細', go: monsucRank(2, [/もちまる/]) },
+  { id: 'monsuc-help', area: 'モンサク', group: 'monsuc', name: 'ヘルプ「モンヒロサクセス」', go: monsucHelp(null) },
+  { id: 'monsuc-help-start', area: 'モンサク', group: 'monsuc', name: 'ヘルプ「はじめに(遊びの流れ)」', go: monsucHelp(/はじめに/) },
+  { id: 'monsuc-help-beta', area: 'モンサク', group: 'monsuc', name: 'ヘルプ「β版について」', go: monsucHelp(/β版について/) },
+  { id: 'monsuc-assistant-help', area: 'モンサク', group: 'monsuc', name: '助手の説明(HOME の助手を押した窓)', go: via([/の説明を開く$/]) },
+  { id: 'monsuc-box', area: 'モンサク', group: 'monsuc', name: 'マスモンボックス(M/B管理から)', go: via([/^M\/B管理$/, /^マスモンボックス\(モンサク\)/]) },
 ];
 
 // 4つの大きさ(依頼文: 縦 390×844・横 844×390・小さい横 568×320・PC 1280×800)
@@ -224,12 +305,12 @@ const SIZES = [
   { tag: 'pc', w: 1280, h: 800, name: 'PC' },
 ];
 
-// モンサクの奥の画面は既存の道具で撮る(どれも画面の部品を直接置いて開く。合言葉は使わない)。
-// その道具が持つ大きさの名札だけ渡せる(568×320・PC はまだ無い。足すときはモンサクの部と相談)
+// モンサクの奥の画面は既存の道具で撮る(どれも画面の部品を直接置いて開く。偽のデータでページの中だけ。合言葉は使わない)。
+// 大きさは縦 390×844(base)・横 844×390(land)・小さい横 568×320(s568)。s568 は名指ししたときだけ撮る(2026-11-19 足した)
 const MONSUC_DEEP = [
-  { tool: 'tools/success/success-shoot.js', env: { SHOT_SIZES: 'base,land,s320' }, note: '回2 約105場面' },
-  { tool: 'tools/success/success-r3-shoot.js', env: {}, note: '回3(大会・修行・引退・保存枠・合体) 約85場面・縦390 と 320' },
-  { tool: 'tools/success/success-arc-shoot.js', env: {}, note: 'みゅあ編 16場面' },
+  { tool: 'tools/success/success-shoot.js', env: { SHOT_SIZES: 'base,land,s568' }, note: '回2(入口・育成の開始1/6〜6/6・毎ターン・図鑑) 約105場面' },
+  { tool: 'tools/success/success-r3-shoot.js', env: { SHOT_SIZES: 'base,land,s568' }, note: '回3(大会・修行・引退・保存枠・合体) 約85場面' },
+  { tool: 'tools/success/success-arc-shoot.js', env: { SHOT_SIZES: 'base,land,s568' }, note: 'みゅあ編 16場面' },
 ];
 
 module.exports = { SCENES, SIZES, MONSUC_DEEP, tapAny };
