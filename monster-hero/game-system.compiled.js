@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a157017cae62712b
+// source-sha256: 612398cfa8187957
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -189379,7 +189379,6 @@ function MsaBgToggle({
     "data-msa-bg": msaBgNorm(bg),
     "aria-label": `背景を${MSA_BG_LABEL[next].slice(3)}にする`,
     onClick: () => {
-      msaSe('tap');
       msaBgWrite(next);
       onChange(next);
     }
@@ -189442,7 +189441,6 @@ function MsaCtlToggle({
     "data-msa-ctl": now,
     "aria-label": next === 'auto' ? 'オートにする' : '手動にする',
     onClick: () => {
-      msaSe('tap');
       if (save) msaCtlWrite(next);
       onChange(next);
     }
@@ -192637,17 +192635,14 @@ function MonsucArena({
   };
   const pick = c => {
     if (busy || !manual) return;
-    msaSe('tap');
     if (mm.pick(c)) setPos(p => p + 1);
   };
   const goAuto = () => {
     if (!manual) return;
-    msaSe('tap');
     msaCtlRunWrite(s && s.id, 'auto');
     setCtl('auto');
   };
   const skip = () => {
-    msaSe('tap');
     if (manual && !done) {
       mm.toAuto();
       const n = mm.match ? mm.match.log.length : 0;
@@ -192749,7 +192744,6 @@ function MonsucArena({
     "data-msc-pause": true,
     "aria-label": paused ? 'つづける' : '一時停止',
     onClick: () => {
-      msaSe('tap');
       setPaused(v => !v);
     }
   }, paused ? '▶' : '⏸'), MSA_SPEEDS.map(x => React.createElement("button", {
@@ -192757,7 +192751,6 @@ function MonsucArena({
     type: "button",
     className: speed === x.id ? 'on' : '',
     onClick: () => {
-      msaSe('tap');
       setSpeed(x.id);
     }
   }, x.label)), React.createElement("button", {
@@ -192765,7 +192758,6 @@ function MonsucArena({
     "data-msc-hl": true,
     className: speed === 'hl' ? 'on' : '',
     onClick: () => {
-      msaSe('tap');
       setSpeed(v => v === 'hl' ? 'x1' : 'hl');
     }
   }, "★見せ場"), React.createElement("button", {
@@ -192783,7 +192775,6 @@ function MonsucArena({
     "data-msc-pause": true,
     "aria-label": paused ? 'つづける' : '一時停止',
     onClick: () => {
-      msaSe('tap');
       setPaused(v => !v);
     }
   }, paused ? '▶' : '⏸'), MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
@@ -192792,7 +192783,6 @@ function MonsucArena({
     className: speed === x.id ? 'on' : '',
     "aria-label": `見せる速さ ${x.label}`,
     onClick: () => {
-      msaSe('tap');
       setSpeed(x.id);
     }
   }, x.label)), React.createElement(MsaCtlToggle, {
