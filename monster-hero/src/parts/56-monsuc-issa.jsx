@@ -87,7 +87,7 @@ function MsxIssaMeet({ run, v, ev, ctx, onChoose }) {
       <span className="msx-is-spark" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--i': i }}/>)}</span>
       <img className="v-issa msx-is-in" src={MSX_ISSA_ART} alt="イッサ博士"/>
       <div className="v-machine msx-is-mc">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
-      <div className="v-ev-h msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }}><small>大きな賭け</small>イッサ博士があらわれた!</div>
+      <MsxEvHead kind="issa" className="msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }} title="イッサ博士があらわれた!"/>
       <div className="v-ibub msx-is-bub" style={MSX_IS_WRAP}>{msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)}</div>
     </div>
     <div className="v-six msx-is-six">
@@ -139,7 +139,7 @@ function MsxIssaResult({ run, res, v, ev, ctx, onNext }) {
       {done && k ? <div className={`v-stamp msx-pop ${win ? 'msx-is-win' : 'ng'}`} style={{ top: '3%', fontSize: win ? 46 : 40 }}>{win ? '大成功!' : '失敗…'}<small>{win ? '装置がぴかーっと光った' : '装置から煙が…'}</small></div> : null}
       {st === 0 ? <div className="v-ibub" style={{ top: 'auto', bottom: 8, left: 8, right: '44%', ...MSX_IS_WRAP }}>{msxIsJw('「スイッチ、オン! …どうなるかな〜?」')}</div> : null}
       {done && said ? <div className="v-ibub msx-is-bub2" style={{ top: 'auto', bottom: 8, left: 8, right: '44%', ...MSX_IS_WRAP }}>{msxIsJw(`「${said.t}」`)}</div> : null}
-      {st < 2 && !calm ? <div className="msx-is-ctl"><button type="button" onClick={() => setSt(2)} data-msx-issa-skip>短縮 ⏭</button></div> : null}
+      {st < 2 && !calm ? <div className="msx-is-ctl"><button type="button" onClick={() => setSt(2)} data-msx-issa-skip>飛ばす ⏭</button></div> : null}
     </div>
     {done ? (<>
       {hasUps ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}

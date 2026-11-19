@@ -380,7 +380,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   // タイトル(2026-11-16 UI改修): 入口を押したら、まずロゴと背景のあるタイトルを見せ、その同じ画面で育成データを読み込む。
   //   準備中も「閉じる」で閉じられ、失敗したらその場で「もう一度読み込む」ができる
   if (view === 'loading' || view === 'fail') content = (<>
-    <MsxHd back="閉じる" onBack={onClose}/>
+    <MsxHd back="HOMEへ戻る" onBack={onClose}/>
     <div className="v-body v-hm">
       <div className="v-scene hm">
         <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
@@ -479,7 +479,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   return (
     <>
       {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
-      <MsxHd back="閉じる" onBack={onClose}/>
+      <MsxHd back="HOMEへ戻る" onBack={onClose}/>
       <div className="v-body v-hm">
         <div className="v-scene hm">
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
@@ -635,7 +635,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   };
 
   const phase = run.phase;
-  let body = null; let foot = null;
+  let body = null; let foot = null; let subPanel = false;
   // はじめたばかりの育成は、1ターン目のはじめの出来事を立ててからメインへ(描いている途中で保存を書き換えないよう、あとで1回だけ)
   // 期のはじめの控え run.ki(期の区切りの演出で、期のあいだに増えた賞金と総合力を出す)もここで1回だけ取る
   // 育成の始まり: シナリオの始まりの場面(56-monsuc-intro.jsx)→ 1ターン目。部品が無いときはすぐ1ターン目へ
@@ -701,12 +701,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>次へ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>飛ばす ⏭</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>次へ ▶</button></div>;
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>飛ばす ⏭</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -766,7 +766,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ 飛ばす</button><span className="v-wait">選んでね</span></div>;
+      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>飛ばす ⏭</button><span className="v-wait">選んでね</span></div>;
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -776,7 +776,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   else if (phase === 'turn' && typeof MsxKiShow === 'function' && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn) {
     const doneKi = () => { setKiAt(s.turn); setRun({ ...run, ki: { p: v.period.index, fame: Number.isFinite(s.fameTotal) ? s.fameTotal : 0, power: ev.power } }); };
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxKiShow key={`ki-${s.turn}`} run={run} v={v} ev={ev} ki={run.ki} onDone={doneKi}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ 飛ばす</button></div>;
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={doneKi} data-msx-ki-skip>飛ばす ⏭</button></div>;
   }
   else if (phase === 'turn') {
     const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -792,7 +792,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
   }
   // ---- 大会(中身は回3) ----
   // 大会の1戦(phase 'battle'。当日の準備 preOn のときを除く)と終わり(phase 'over')は、上の MsxR3 が受け持つ(回3)。ここへは来ない
@@ -975,15 +975,20 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>
       </>)}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 記録</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" onClick={() => setSheet('log')}>📖 記録</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')} onOpenTech={(id) => { setDetailTech(id); setDetail(true); }}/>;
-    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))}>← 戻る</button></div>;
+    // 持ち物・能力を開いている間は、左上が「← 戻る」(パネルを閉じる)。下の帯は出さず、中身を下まで使う(2026-11-19 r1119-013 ⑥ M-2・M-3・M-7)。
+    //   前は左上の「← 中断」が押せるままで、パネルを閉じるつもりで押すと確認なしに育成から出た。下にも「← 戻る」があり出口が2つだった
+    if (sub === 'bag' || sub === 'stats') { foot = null; subPanel = true; }
   }
 
   return (
     <>
-      <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+      {/* 詳しく・記録・メニューの窓を開いている間も、左上は「← 戻る」(その窓を閉じる)。中断は確認なしに抜けるので、窓の上からは押させない(M-2) */}
+      {(detail || sheet) && !subPanel ? <MsxHd back="戻る" onBack={() => (detail ? setDetail(false) : setSheet(null))} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+        : subPanel ? <MsxHd back="戻る" onBack={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))} sub={sub === 'bag' ? '持ち物' : '能力'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+        : <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>}
       <div className="v-body">{body}</div>
       {foot}
       {askLeave ? <div className="msx-ov msx-fade" data-msx-leave-ask><div className="msx-sheet">
@@ -1069,7 +1074,7 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
     <div className="v-scene home dk" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       {ifxOn ? <MsxItemUseFx key={ifx.id} run={run} fx={ifx} onDone={() => setIfx(null)}/> : null}
       <div className="v-bagw">
-        <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i className="sym close" aria-hidden="true"/></button></div>
+        <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small></div>{/* 閉じるは左上の「← 戻る」1つ(M-7) */}
         {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
@@ -1293,14 +1298,23 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
       {cheerIdx != null && s.team[cheerIdx] ? (Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={s.team[cheerIdx].species} src={msxMonImg(s.team[cheerIdx].species)} masuColors={s.team[cheerIdx].colors} alt="" draggable={false} className="mon" style={{ left: '70%', bottom: '30%', height: '36%' }}/> : <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>)
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-3%', bottom: '17%', height: '88%', width: '56%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
+      {isStory && !picked ? <div className="msx-ev-tc" aria-hidden="true" data-msx-ev-title><small>{msxAidName(s.aid)}のお話</small><b>{o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}</b></div> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
-      {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
+      {(() => { // 見出しの共通の型(段2): 種類の帯の色と番号・題
+        const an = msxAidName(s.aid);
+        if (isStory) return <MsxEvHead kind="story" label={`メインストーリー ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}`} title={`${an}のお話`}/>;
+        if (isUniq) { const arc = globalThis.MONHERO_SUCCESS_ARC && globalThis.MONHERO_SUCCESS_ARC.ARC && globalThis.MONHERO_SUCCESS_ARC.ARC[s.aid]; const n = arc && Array.isArray(arc.uniq) ? arc.uniq.findIndex((u) => u.id === view.id) + 1 : 0;
+          return <MsxEvHead kind="days" label={`${an}の日々${n > 0 ? ` その${n}` : ''}`} title={view.title ? `「${view.title}」` : 'お話'}/>; }
+        const k = view && view.kind === 'team' ? 'team' : view && view.kind === 'cup' ? 'cup' : 'ikusei';
+        return <MsxEvHead kind={k} title={head}/>;
+      })()}
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`gfx-${s.turn}-${picked.scenes.join('|')}`} items={msxGfxItemsOf(picked, s)}/> : null}
       {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? <MsxEvNext text={`第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`}/> : null}
       {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}

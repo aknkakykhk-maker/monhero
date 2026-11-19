@@ -453,7 +453,7 @@ function MonsucRankDetail({ row, pinned, onBack }) {
   }
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
-      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 一覧へ</button>
+      <button type="button" onClick={onBack} data-mh-back className="min-h-[44px] rounded-full bg-slate-700/80 px-4 text-[12px] font-bold active:scale-95">← 戻る</button>
       <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
     </div>
     <div className="px-3 pt-2">
@@ -484,9 +484,8 @@ function MonsucRankDetail({ row, pinned, onBack }) {
         {row.loyal != null && <div className="text-[12px] text-slate-200 mt-1">忠誠度: <span className="font-black text-white">{Math.round(monsucRankNum(row.loyal))}</span> ・ 人気: <span className="font-black text-white">{Math.round(monsucRankNum(row.pop))}</span></div>}
       </div>
     </div>
-    <div className="px-3 pb-3 pt-1">
-      <button type="button" onClick={onBack} className="w-full rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 一覧へ</button>
-    </div>
+    {/* 戻るは左上の1つ(2026-11-19 r1119-013 ⑥ M-7。下にも同じ戻るがあった) */}
+    <div className="pb-3"/>
   </div>;
 }
 // 血統の札(主血統のうち、遊べるモンスターがいるもの)
@@ -595,7 +594,7 @@ function MonsucRankScreen({ onBack }) {
   if (detail) return <MonsucRankDetail row={detail.row} pinned={detail.pinned} onBack={() => setDetail(null)} />;
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
-      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
+      <button type="button" onClick={onBack} data-mh-back className="min-h-[44px] rounded-full bg-slate-700/80 px-4 text-[12px] font-bold active:scale-95">← 戻る</button>
       <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
     </div>
     <div className="px-3 pt-2">
@@ -627,8 +626,8 @@ function MonsucRankScreen({ onBack }) {
     {mine && <div className="px-3 pb-1">
       <MonsucRankRow row={mine} pinned onOpen={() => openDetail(mine, true)} />
     </div>}
-    <div className="grid grid-cols-2 gap-2 px-3 pb-3 pt-1">
-      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 戻る</button>
+    {/* 戻るは左上の1つ(M-7。下にも同じ戻るがあった) */}
+    <div className="px-3 pb-3 pt-1">
       <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く'}</div>
     </div>
     {lineagePickerOpen && <MonsucRankLineageSheet lineages={lineages} tab={tab} lineage={lineage} q={lineagePickerQ} setQ={setLineagePickerQ} onPick={pickLineage} onClose={closeLineagePicker} />}

@@ -113,11 +113,14 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
   // 育て終えたのに使えない子は、理由を添えて一覧の下に出す(B-6: 黙って消えると「固定されたまま」に見える)
   const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
   const lockedEl = lockedRaised.length ? (
-    <div className="mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2" data-monsuc-fuse-locked>
-      <p className="text-[11px] font-black text-slate-300">🔒 いまは合体に使えないモンスター</p>
+    // 一覧の送り箱の外(下)に、いつも見える1行で出す。押すと理由が開く(2026-11-19 r1119-013 ⑥ U-12。升目の下にあると、横・小さい横では送らないと見えなかった)
+    <details className="mt-2 shrink-0 rounded-xl border border-white/10 bg-slate-800/60 px-2 py-1" data-monsuc-fuse-locked>
+      <summary className="flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-slate-300"><span>🔒 いまは合体に使えないモンスター {lockedRaised.length}体</span><span className="text-[10px] text-slate-400">わけを見る ▼</span></summary>
+      <div style={{ maxHeight: '28vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
       {lockedRaised.map(m => <p key={m.id} className="mt-0.5 text-[10.5px] font-bold text-slate-400" data-monsuc-fuse-locked-mon={m.id} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(m)}：{(lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id]) || '育成中の編成・貸し出し中のモンスターは使えません'}</p>)}
       {lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? <p className="mt-0.5 text-[10px] font-bold text-slate-500">育成が終わると使えるようになります</p> : null}
-    </div>) : null;
+      </div>
+    </details>) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
@@ -172,8 +175,8 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
           <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
-            {lockedEl}
           </div>
+          {lockedEl}
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
           {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)</p>}
@@ -204,10 +207,13 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
             {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
           </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
-          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
-          <button type="button" onClick={() => { setMat(null); setSure(0); setErr(''); }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
-        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
+        {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
+        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 grid-cols-2 gap-2" data-monsuc-fuse-foot>
+          <button type="button" data-mh-back onClick={() => { setMat(null); setSure(0); setErr(''); }} className="min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
+          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
+        </div>
+        : !done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
     </div>);
 }
@@ -271,7 +277,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st}>
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
       <div className="mf-head"><small>合体</small>{((t) => (typeof jaWrap === 'function' ? jaWrap(t) : t))(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…')}</div>
-      {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>短縮 ⏭</button></div> : null}
+      {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>飛ばす ⏭</button></div> : null}
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>
         {st === 1 || st === 2 ? <span className="mf-stone" aria-hidden="true"><img src={stone} alt=""/><i/></span> : null}
