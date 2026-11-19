@@ -262,9 +262,10 @@
       const seen = (id) => ev.seen.includes(id);
       for (const id of ['ev.self.anniv', 'ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
       const uq = uniqDue(s); if (uq) return uq;
-      if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if ((mo === m || mo === m + 1) && !seen(id)) return BYX[id]; return null; }
+      if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if (mo >= m && mo <= m + 2 && !seen(id)) return BYX[id]; return null; }
+      // 季節の行事は、その月と次の月に出す。お話やほかの決まった出来事に押し出されたときだけ、もう1か月待つ(ミハリ #6869 の残り: oct3 が消えた)
       const y = yearOf(s); if (!y) return null;
-      for (const m of seasonsOf(s, p.key)) { const id = `ev.season.${SEASON_KEY[m]}${y}`; if ((mo === m || mo === m + 1) && !seen(id) && BYX[id]) return BYX[id]; }
+      for (const m of seasonsOf(s, p.key)) { const id = `ev.season.${SEASON_KEY[m]}${y}`; if (mo >= m && mo <= m + 2 && !seen(id) && BYX[id]) return BYX[id]; }
       return null;
     };
 

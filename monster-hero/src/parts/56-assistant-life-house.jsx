@@ -770,8 +770,9 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
     </div>) : null;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
-      <button type="button" aria-label={returnToMap ? '地図へ戻る' : '家へ戻る'} data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
-        style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>{returnToMap ? '← 地図へ' : '← 家へ'}</button>
+      {/* 家具・模様替えを開いている間は出さない(2026-11-19 r1119-013 ⑥ A-2)。シートの上に残って、押すと部屋ごと閉じていた。閉じるのはシート自身の「閉じる」 */}
+      {!furnOpen && !layoutOpen && <button type="button" aria-label={returnToMap ? '地図へ戻る' : '家へ戻る'} data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
+        style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>{returnToMap ? '← 地図へ' : '← 家へ'}</button>}
       {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
       <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
       {/* 縦の部屋の高さは幅に合わせる(画面いっぱいだと上が大きく空いた・2026-11-08 社長「画面変」)。すぐ下に中身が見え始める */}
@@ -1185,6 +1186,16 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   }, [openNow]);
   React.useEffect(() => { if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(); } catch {} } if (typeof ASSISTANT_LIFE_REL_STORE !== 'undefined') void ASSISTANT_LIFE_REL_STORE.load().then(() => { try { ASSISTANT_LIFE_STORE.emit(); } catch {} }); }, []); // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   React.useEffect(() => { if (roomId) setNote(''); }, [roomId]); // 別の部屋を開いたら前の一言を消す(ミハリ L13)
+  // 一言(にぎわいの説明・贈った結果など)は、次にどこかを押す・タブを替える・8秒たつ、のどれかで消す(2026-11-19 r1119-013 ⑥ A-1)。
+  //   前はどの操作でも消えず、町へ移ってもシートの「部屋へ」「閉じる」の上に残って押せなくしていた。押した物はそのまま効く(止めない)
+  React.useEffect(() => { setNote(''); }, [tab]);
+  React.useEffect(() => {
+    if (!note || typeof document === 'undefined') return undefined;
+    const off = (ev) => { const el = ev && ev.target; if (el && el.closest && el.closest('[data-assistant-life-tier-help]')) return; setNote(''); };
+    const timer = setTimeout(() => setNote(''), 8000);
+    const arm = setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+    return () => { clearTimeout(timer); clearTimeout(arm); document.removeEventListener('pointerdown', off, true); };
+  }, [note]);
   React.useEffect(() => { if (st.focus) { setRoomId(st.focus); ASSISTANT_LIFE_STORE.set({ focus: null }); } }, [st.focus]);
   // 地図のその場所の窓を開く(assistantLifeOpenMapAt。「いま行くと得」のモンヒロバトルの行など・2026-11-12 社長「タップ押しても何も起きない」)
   React.useEffect(() => { const f = st.mapFocus; if (!f || !f.place) return; setRoomId(null); setScene(null); setMapFocusPlace(f.place); setMapFocusAssistantId(f.id || null); setMapFocusKey(k => k + 1); setTab('where'); ASSISTANT_LIFE_STORE.set({ mapFocus: null }); }, [st.mapFocus]);

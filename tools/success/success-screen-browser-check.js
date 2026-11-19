@@ -266,8 +266,8 @@ const sameState = (a, b) => {
         check(`${tag}: ${TURNS_BEFORE} ターン進む`, m.turn === 1 + TURNS_BEFORE, `turn=${m.turn}・押した ${p1.length} 回`);
         // 2026-11-14 叱る/褒めるは大成功・失敗・サボり・修行のあとだけ出る(ふつうの成功では出ない)。出たときは上の advance が押す
         check(`${tag}: トレーニングを通った`, p1.includes('train'), p1.join(',').slice(0, 80));
-        // 中断
-        const paused = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx .v-ft button')].find((x) => /中断/.test(x.innerText)); if (b) b.click(); return !!b; });
+        // 中断(2026-11-19 r1119-013 ⑥: 中断は左上の1つになった。下の帯には置かない)
+        const paused = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx .v-hd .bk')].find((x) => /中断/.test(x.innerText)); if (b) b.click(); return !!b; });
         check(`${tag}: 「← 中断」が押せる`, paused);
         await page.waitForTimeout(600);
         m = await see('paused');

@@ -92,7 +92,7 @@ function MsxSteps({ n }) {
 function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, right }) {
   return (
     <div className="v-hd">
-      <button type="button" className="bk" onClick={onBack}>← {back}</button>
+      <button type="button" className="bk" data-mh-back onClick={onBack}>← {back}</button>
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}

@@ -34,12 +34,12 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
-        <div className="v-ev-h"><small>メインのお話</small>{msxAidName(s.aid)}編のはじまり</div>
+        <MsxEvHead kind="story" label="メインストーリー 序章" title={`${msxAidName(s.aid)}編のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
     <div className="v-ft">
-      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>⏩ 飛ばす</button> : null}
+      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>飛ばす ⏭</button> : null}
       <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成を始める ▶' : '次へ ▶'}</button>
     </div>
   </>);

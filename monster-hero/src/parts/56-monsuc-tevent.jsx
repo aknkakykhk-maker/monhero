@@ -73,7 +73,7 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
       <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
       {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
       <div className="v-talk tev-talk" style={JA_LABEL_STYLE}>{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{jaWrap(line.t)}」</div> : <div>{jaWrap(line.t)}</div>) : <div>{jaWrap(`${name}と、すこし特別な時間をすごした。`)}</div>}</div>
-      <div className="v-ev-h"><small>編成のモンスターのイベント</small>{title}</div>
+      <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={e.story ? `${name}との出来事` : title}/>
       <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%`, transition: 'width .9s ease-out' }}/></i><em data-msx-tev-bond>{bondShow}{e.d && e.d.bond ? <small> ({e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond})</small> : null}</em></div>
       {/* 入り方 */}
       {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
@@ -82,6 +82,7 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
     </div>
     {ups ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
     <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
+    {e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? <MsxEvNext text={bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}といっしょにトレーニングしたとき` : `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`}/> : null}
   </>);
 }
 
