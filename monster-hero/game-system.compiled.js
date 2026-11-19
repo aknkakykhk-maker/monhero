@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 589af6f3c958131a
+// source-sha256: 2b8c225aad321d16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171834,6 +171834,7 @@ const MSX_CSS = `
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
+.msx .v-body.st{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 /* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
@@ -176622,7 +176623,7 @@ function MsxStart({
     onBack: back,
     right: `${step + 1} / 6`
   }), React.createElement("div", {
-    className: "v-body"
+    className: "v-body st"
   }, React.createElement(MsxSteps, {
     n: step
   }), body), go && React.createElement("div", {
