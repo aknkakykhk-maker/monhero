@@ -113,11 +113,14 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
   // 育て終えたのに使えない子は、理由を添えて一覧の下に出す(B-6: 黙って消えると「固定されたまま」に見える)
   const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
   const lockedEl = lockedRaised.length ? (
-    <div className="mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2" data-monsuc-fuse-locked>
-      <p className="text-[11px] font-black text-slate-300">🔒 いまは合体に使えないモンスター</p>
+    // 一覧の送り箱の外(下)に、いつも見える1行で出す。押すと理由が開く(2026-11-19 r1119-013 ⑥ U-12。升目の下にあると、横・小さい横では送らないと見えなかった)
+    <details className="mt-2 shrink-0 rounded-xl border border-white/10 bg-slate-800/60 px-2 py-1" data-monsuc-fuse-locked>
+      <summary className="flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-slate-300"><span>🔒 いまは合体に使えないモンスター {lockedRaised.length}体</span><span className="text-[10px] text-slate-400">わけを見る ▼</span></summary>
+      <div style={{ maxHeight: '28vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
       {lockedRaised.map(m => <p key={m.id} className="mt-0.5 text-[10.5px] font-bold text-slate-400" data-monsuc-fuse-locked-mon={m.id} style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(m)}：{(lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id]) || '育成中の編成・貸し出し中のモンスターは使えません'}</p>)}
       {lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? <p className="mt-0.5 text-[10px] font-bold text-slate-500">育成が終わると使えるようになります</p> : null}
-    </div>) : null;
+      </div>
+    </details>) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
@@ -172,8 +175,8 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
           <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
-            {lockedEl}
           </div>
+          {lockedEl}
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
           {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)</p>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48a4f7c80ad8564f
+// source-sha256: 7035a90d1573941e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161094,12 +161094,20 @@ function MonsucFuseSheet({
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
   const lockedRaised = mons.filter(m => m.raised === true && lock.has(m.id));
-  const lockedEl = lockedRaised.length ? React.createElement("div", {
-    className: "mt-2 rounded-xl border border-white/10 bg-slate-800/60 p-2",
+  const lockedEl = lockedRaised.length ? React.createElement("details", {
+    className: "mt-2 shrink-0 rounded-xl border border-white/10 bg-slate-800/60 px-2 py-1",
     "data-monsuc-fuse-locked": true
-  }, React.createElement("p", {
-    className: "text-[11px] font-black text-slate-300"
-  }, "🔒 いまは合体に使えないモンスター"), lockedRaised.map(m => React.createElement("p", {
+  }, React.createElement("summary", {
+    className: "flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-slate-300"
+  }, React.createElement("span", null, "🔒 いまは合体に使えないモンスター ", lockedRaised.length, "体"), React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, "わけを見る ▼")), React.createElement("div", {
+    style: {
+      maxHeight: '28vh',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain'
+    }
+  }, lockedRaised.map(m => React.createElement("p", {
     key: m.id,
     className: "mt-0.5 text-[10.5px] font-bold text-slate-400",
     "data-monsuc-fuse-locked-mon": m.id,
@@ -161109,7 +161117,7 @@ function MonsucFuseSheet({
     }
   }, monsucFuseNick(m), "：", lockWhy && typeof lockWhy[m.id] === 'string' && lockWhy[m.id] || '育成中の編成・貸し出し中のモンスターは使えません')), lockedRaised.some(m => lockWhy && lockWhy[m.id] && lockWhy[m.id].includes('編成')) ? React.createElement("p", {
     className: "mt-0.5 text-[10px] font-bold text-slate-500"
-  }, "育成が終わると使えるようになります") : null) : null;
+  }, "育成が終わると使えるようになります") : null)) : null;
   const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF;
   const main = mons.find(m => m.id === mainId) || null;
@@ -161295,7 +161303,7 @@ function MonsucFuseSheet({
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), lockedEl), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), lockedEl, usable.length >= 2 && !usableF.length ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
