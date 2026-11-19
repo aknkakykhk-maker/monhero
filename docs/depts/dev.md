@@ -64,8 +64,6 @@ node tools/ctx.js brief               いまの状態
 - `tools/ranking/*`
 - `tools/changelog/*`
 - `tools/run/*`
-- `tools/analysis/*`
-- `supabase/functions/analysis-gateway/*`
 
 ## 入口の関数
 
