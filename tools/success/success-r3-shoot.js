@@ -86,7 +86,7 @@ const makeRun = async (kind) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
+  const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 'sland']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
@@ -117,7 +117,8 @@ const makeRun = async (kind) => {
     ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
     ['X11', 'box', ['@openbox', '@mmlist', '@boxmon=bx3']], ['X12', 'box', ['@openbox', '@mmlist', '@boxmon=bx5']], // 資料に無い技(オリジナルの子)の影絵の絵
     ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
-    ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
+    ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-tab-rm', '#assist-mon=as1', '#assist-mon=as3', '#assist-remove']], // メモモン: 押すとマスモンと同じ詳細(アシストのタブから)・外すはタブで選ぶ(r1119-006)
+    ['A4', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#detail-btab=info']], ['A5', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as2']],
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
     // 編成(r1115-096・115 で6枠+全画面の選ぶ画面に作り直し): T1 = 枠を押して選ぶ画面のメモリアルのタブ(見出し assist-head)/ T2 = メモリアルの as1・as3 を1・2枠目に入れて決定 → 編成の札に2体が入ったか
     ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#slot=0', '#tp-tab=memo', '^assist-head']],
@@ -158,7 +159,7 @@ const makeRun = async (kind) => {
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
               ...['Snegurochka', 'Golem', 'Mocchi', 'Eiki', 'Mocchi', 'KenshiMocchi'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
             // アシスト用に残した子(合体の親・お別れした子)。育成には使えず、編成にだけ入る(2026-11-14 社長)
-            localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify({ v: 1, cap: 100, mons: ['Pixie', 'Tiger', 'Ghost', 'Plant'].map((sp, i) => ({ id: `as${i + 1}`, species: sp, nick: i === 0 ? 'ぴくる' : '', colors: [], gen: 1, st, techs: [], mast: [], loy: 60, pop: 40, lv: 5, rank: ['A', 'B', 'S', 'C'][i], grade: ['A1', 'B2', 'S1', 'C3'][i], score: 9000, raised: true, assists: [], titles: [], keep: { from: i % 2 ? 'farewell' : 'fuse', at: 1 } })) }));
+            localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify({ v: 1, cap: 100, mons: ['Pixie', 'Tiger', 'Ghost', 'Plant'].map((sp, i) => ({ id: `as${i + 1}`, species: sp, nick: ['ぴくる', 'キリモチ', 'きき', ''][i], colors: [], gen: 1, st, techs: [], mast: [], loy: 60, pop: 40, lv: 5, rank: ['A', 'B', 'S', 'C'][i], grade: ['A1', 'B2', 'S1', 'C3'][i], score: 9000, raised: true, fav: i === 0 ? ['wise', 'eva'] : [], assists: i === 0 ? [{ id: 'sokoji', lv: 4, n: 18 }] : [], titles: [], keep: { from: i % 2 ? 'farewell' : 'fuse', at: 1 } })) }));
             localStorage.removeItem('mh_monsuc_run_v1');
           } else { const run = await make(kind); localStorage.setItem('mh_monsuc_run_v1', JSON.stringify(run)); }
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
@@ -192,6 +193,10 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
           keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
+        if (name === 'A1') { const q = await page.evaluate(() => { const cs = [...document.querySelectorAll('[data-msx-assist-mon]')]; return { n: cs.length, mark: document.querySelectorAll('[data-msx-assist-mon] .mmg-as').length, hit: cs.filter((c) => { const nm = c.querySelector('.mmg-nm2, .mmg-lb'); if (!nm) return true; const r = nm.getBoundingClientRect(); return [...c.querySelectorAll('i')].some((e) => { const o = e.getBoundingClientRect(); return o.width > 0 && o.left < r.right && o.right > r.left && o.top < r.bottom && o.bottom > r.top; }); }).length }; });
+          check(`${label}: メモモンの升の名前に札が重ならない(マスモンボックスと同じ見せ方)`, q.n === 4 && q.mark === 0 && q.hit === 0, JSON.stringify(q)); }
+        if (name === 'A2') { const q = await page.evaluate(() => ({ det: !!document.querySelector('[data-msx-detail-btab="assist"].on'), why: !!document.querySelector('[data-msx-assist-why]'), txt: (document.body.innerText || '').includes('メモモン') }));
+          check(`${label}: メモモンを押すとマスモンと同じ詳細がアシストのタブで開き、使えない理由が出る`, q.det && q.why && q.txt, JSON.stringify(q)); }
         if (name === 'MA1' || name === 'MA2') { const q = await page.evaluate(() => { const tools = [...document.querySelectorAll('.msa-tools')]; const bottom = tools.length ? Math.round(Math.max(...tools.map((e) => e.getBoundingClientRect().bottom))) : -1;
             const cards = [...document.querySelectorAll('[data-msa-dc-look="a"] [data-msa-dc-card]')]; const withT = cards.filter((c) => c.getAttribute('data-msa-dc-rep'));
             const full = withT.every((c) => c.querySelector('.msa-dc-ic') && c.querySelector('[data-msa-dc-l1]') && c.querySelector('[data-msa-dc-l2]'));
