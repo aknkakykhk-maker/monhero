@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 37739e22d248a21e
+// generated-sha256: d55ed7b479eb2f27
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38224,13 +38224,15 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
           // 後ろは手前より少し大きく、右下にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
           // 札のタップで手前と後ろが入れ替わり、入れ替わった後も後ろになった方が斜めになる。
           // 拡大は手前のジャケットの虫めがねだけから(タップと競合させない)。絵が同じ版しかない曲は今までどおり1枚
+          // タップの範囲は、ジャケットの重なりと下の「⇄ 版名」の行まで含める(2026-11-19 あっくん実機報告
+          // 「小さすぎて押しづらすぎる」)。目印の行も押せる所に入れて、狙う場所を広くする
           const frontItem = { ...item, id: `song_${frontEntry.entry.songId}`, name: rhythmSongFullName(frontEntry.entry), icon: frontEntry.artSrc };
           const frontLabel = typeof rhythmSongVersionLabel === 'function' ? (rhythmSongVersionLabel(frontEntry.entry.songId) || '原曲') : '';
           const swapFront = () => setFrontBySong((prev) => ({ ...prev, [song.songId]: backEntry.entry.songId }));
-          return <div className="w-full">
-            <div className="relative w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
-              aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
-              onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
+          return <div className="w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
+            aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
+            onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
+            <div className="relative w-full">
               <div className="absolute bottom-0 right-0 w-[86%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
                 <div className="[container-type:inline-size]">
                   {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={backEntry.entry} large /> : null}
@@ -38243,13 +38245,17 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
                 {onZoomIcon && <button type="button" data-rhythm-song-art-zoom
                   onClick={(e) => { e.stopPropagation(); onZoomIcon(frontItem); }}
                   aria-label={`${frontItem.name}のジャケットを大きく見る`}
-                  className="absolute bottom-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-slate-950/70 text-[11px] leading-none shadow">🔍</button>}
+                  className="absolute bottom-1 right-1 z-20 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950/70 text-base leading-none shadow">🔍</button>}
               </div>
             </div>
-            {/* 手前の版名。長い版名(ミラクル☆ミルクティ版)は、札の幅に合わせて字を縮めて1行に収める */}
-            <div className="w-full [container-type:inline-size]">
-              <span className="mt-0.5 block whitespace-nowrap text-center font-black text-slate-300"
-                style={{ fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 9, 7) : 9 }}>{`⇄ ${frontLabel}`}</span>
+            {/* 手前の版名。長い版名(ミラクル☆ミルクティ版)は、札の幅に合わせて字を縮めて1行に収める。
+                字は以前(最大9px)より大きくし、幅が足りない長い版名だけ自動で縮む(2026-11-19 押しづらさの直し)。
+                置き場所は札の余白(p-2)の分まで広げて測る。長い版名が札の縁で切れないようにするためで、
+                札の padding を変えたらここの広げ幅も合わせること。行の高さは字を大きくしても札が伸びないよう
+                詰めてある(伸びると同じ段の他の札の中に大きな空きができて、売り場の検査で落ちる) */}
+            <div className="-ml-2 w-[calc(100%+1rem)] [container-type:inline-size]">
+              <span className="mt-0.5 block whitespace-nowrap text-center font-black leading-[1.1] text-slate-300"
+                style={{ fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 12, 8) : 12 }}>{`⇄ ${frontLabel}`}</span>
             </div>
           </div>;
         })() : (
