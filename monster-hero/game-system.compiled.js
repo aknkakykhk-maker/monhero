@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73877d8eed4fa2f1
+// source-sha256: 7bf64015f009bf89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163922,7 +163922,7 @@ function MsxTrainEvent({
       animationDelay: `${0.9 + i * 0.15}s`
     }
   }, t))), e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? React.createElement(MsxEvNext, {
-    text: `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`
+    text: bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}といっしょにトレーニングしたとき` : `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`
   }) : null);
 }
 const MSX_TEV_CSS = `

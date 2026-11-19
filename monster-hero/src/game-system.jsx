@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1fdc1a15a5cc6a9
+// generated-sha256: b7ef4cbf89db9de5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85173,7 +85173,7 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
     </div>
     {ups ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
     <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
-    {e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? <MsxEvNext text={`その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`}/> : null}
+    {e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? <MsxEvNext text={bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}といっしょにトレーニングしたとき` : `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`}/> : null}
   </>);
 }
 
