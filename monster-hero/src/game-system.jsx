@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab5b45175e769939
+// generated-sha256: 3679363e7b901a33
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38147,7 +38147,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
         className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
         {multiJacket ? (() => {
           // ジャケットが版ごとに違う曲は、2枚をずらして重ねて大きく見せる(2026-11-19 あっくん指示)。
-          // 手前が大きく、後ろは右上にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
+          // 後ろは手前より少し大きく、右下にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
           // 札のタップで手前と後ろが入れ替わり、入れ替わった後も後ろになった方が斜めになる。
           // 拡大は手前のジャケットの虫めがねだけから(タップと競合させない)。絵が同じ版しかない曲は今までどおり1枚
           const frontItem = { ...item, id: `song_${frontEntry.entry.songId}`, name: rhythmSongFullName(frontEntry.entry), icon: frontEntry.artSrc };
@@ -38157,12 +38157,12 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
             <div className="relative w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
               aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
               onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
-              <div className="absolute right-0 top-0 w-[76%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
+              <div className="absolute bottom-0 right-0 w-[86%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
                 <div className="[container-type:inline-size]">
                   {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={backEntry.entry} large /> : null}
                 </div>
               </div>
-              <div className="relative z-10 mt-[10%] w-[76%]">
+              <div className="relative z-10 mb-[10%] w-[76%]">
                 <div className="rounded-lg shadow-[0_6px_16px_rgba(0,0,0,0.55)] [container-type:inline-size]">
                   {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={frontEntry.entry} large /> : null}
                 </div>
