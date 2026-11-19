@@ -150,6 +150,8 @@ const Audio_ = (() => {
     "audio/bgm-dullahan.mp3": "c66388ff6c14",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
+    "audio/bgm-eiyuu-no-akashi-milktea.mp3": "af00bdf4ef24",
+    "audio/bgm-eiyuu-no-akashi.mp3": "38f68104d031",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
     "audio/bgm-evans.mp3": "37c5c9e21113",

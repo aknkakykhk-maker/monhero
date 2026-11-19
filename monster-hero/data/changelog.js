@@ -51,7 +51,7 @@ const CHANGELOG = [
   {
     date: "2026-11-19 01:16", type:'update', group:'rhythm', status:'new',
     title:'「英雄の証 ミラクル☆ミルクティ版」を追加しました',
-    image:'images/song-art/eiyuu-no-akashi-milktea.jpg',
+    image:'images/song-art/eiyuu-no-akashi-milktea.jpg?v=9afc0934b41a',
     items:[
       'モンヒロビートに「英雄の証」の別アレンジ「ミラクル☆ミルクティ版」（2分26秒）を追加しました。BPM 192 の、明るくて速い曲です。',
       'レベルは EASY Lv.9 ／ NORMAL Lv.10 ／ HARD Lv.19 ／ EXPERT Lv.30 ／ MASTER Lv.34 ／ HELL Lv.52 です。',
@@ -65,7 +65,7 @@ const CHANGELOG = [
   {
     date: "2026-11-19 00:58", type:'update', group:'rhythm', status:'new',
     title:'新曲「英雄の証」を追加しました',
-    image:'images/song-art/eiyuu-no-akashi.jpg',
+    image:'images/song-art/eiyuu-no-akashi.jpg?v=9fad188e4ac8',
     items:[
       'モンヒロビートに「英雄の証」（2分3秒）を追加しました。BPM 162 の、戦闘の勢いそのままの曲です。',
       'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.17 ／ MASTER Lv.20 ／ HELL Lv.30 です。',
