@@ -1393,7 +1393,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
       <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
         <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
-        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongHasBundle==='function'&&rhythmSongHasBundle(buyAsk.songId)?'short ver. もいっしょに遊べます。':''}`)}</p>
+        {/* ジャケットが版ごとに違う曲は、買う前に全部の版の絵を並べて見せる(2026-11-18 社長指示)。絵が同じ版しかない曲・版が1つだけの曲では出さない */}
+        {(()=>{const bundleArts=(typeof rhythmSongBundleSongs==='function'?rhythmSongBundleSongs(buyAsk.songId):[])
+          .map((entry)=>({entry,artSrc:typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(entry):''})).filter((x)=>x.artSrc);
+          if(bundleArts.length<2||new Set(bundleArts.map((x)=>x.artSrc.split('?')[0])).size<2)return null;
+          return <div className="mt-2 flex justify-center gap-2">{bundleArts.map(({entry,artSrc})=>(
+            <figure key={entry.songId} className="w-20 shrink-0">
+              <img src={artSrc} alt="" className="aspect-square w-full rounded-lg border border-white/20 object-cover"/>
+              <figcaption className="mt-0.5 text-center text-[10px] font-black text-slate-300">{typeof rhythmSongVersionLabel==='function'?(rhythmSongVersionLabel(entry.songId)||'原曲'):''}</figcaption>
+            </figure>))}</div>;})()}
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongBundleLabels==='function'&&rhythmSongBundleLabels(buyAsk.songId).length?`${rhythmSongBundleLabels(buyAsk.songId).join('・')} もいっしょに遊べます。`:''}`)}</p>
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
