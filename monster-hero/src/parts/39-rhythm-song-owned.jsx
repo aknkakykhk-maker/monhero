@@ -13,12 +13,27 @@
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, eiyuu_no_akashi_milktea: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams' });
+// 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams', gourmet_race_dx: 'gourmet_race_64', eiyuu_no_akashi_milktea: 'eiyuu_no_akashi' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
+// 購入で一緒に開く版の songId(持ち主自身は除く)。バンドルの表が正本
+const rhythmSongBundleIds = (songId) => {
+  const owner = rhythmSongOwnerId(songId);
+  return Object.keys(RHYTHM_SONG_BUNDLE_OWNER).filter((id) => RHYTHM_SONG_BUNDLE_OWNER[id] === owner && id !== owner);
+};
+// 購入で一緒に開く版の名前(版の切り替えボタンの名前)。購入の案内文に使う
+const rhythmSongBundleLabels = (songId) => rhythmSongBundleIds(songId)
+  .map((id) => (typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(id) : '')).filter(Boolean);
+// 購入で一緒に開く版も含めた曲データ(持ち主→版の順)。ジャケットが版ごとに違う曲で、買うときに全部の絵を見せるために使う
+const rhythmSongBundleSongs = (songId) => {
+  if (typeof RHYTHM_SONGS === 'undefined') return [];
+  const owner = rhythmSongOwnerId(songId);
+  return [owner, ...rhythmSongBundleIds(owner)].map((id) => RHYTHM_SONGS.find((song) => song && song.songId === id)).filter(Boolean);
+};
 
 const rhythmSongPrice = (songId) => {
   const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
@@ -26,9 +41,12 @@ const rhythmSongPrice = (songId) => {
 };
 const rhythmSongIsPaid = (songId) => rhythmSongPrice(songId) > 0;
 // 持っている曲の保存値を、曲の id の配列に直す(無い・壊れている → 空。重複と文字でない値は捨てる)
+// バンドルの版の id は、読み込むときに持ち主の id へ寄せる。版が後からバンドル化された曲
+// (2026-11-19 英雄の証のミラクル☆ミルクティ版)を版だけ買っていた人も、持ち主ごと持っている
+// ことにするための読み替えで、保存の形そのものは変えない(読み替えは冪等。次に買ったときに保存値も寄る)
 const normalizeRhythmOwnedSongs = (value) => {
   const list = Array.isArray(value) ? value : [];
-  return [...new Set(list.filter((id) => typeof id === 'string' && id))];
+  return [...new Set(list.filter((id) => typeof id === 'string' && id).map((id) => rhythmSongOwnerId(id)))];
 };
 // 買わないと遊べない曲か(有料の印があり、まだ持っていない)
 const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(rhythmSongOwnerId(songId));
@@ -124,6 +142,8 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
   const owned = useRhythmOwnedSongs();
   const songs = rhythmPaidSongList();
   const [playingId, setPlayingId] = React.useState('');
+  // ジャケットを重ねて見せる札で、どちらの版が手前か(札の曲 id → 手前の版の曲 id)。未指定なら持ち主の版が手前
+  const [frontBySong, setFrontBySong] = React.useState({});
   // 売り場を離れる(タブを替える・交換所を出る)と、試し聴きを止めて元の BGM へ戻す
   React.useEffect(() => () => { try { Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
   if (!songs.length) return null;
@@ -139,7 +159,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
     {/* 文は、言葉のまとまりごとに折れるようにする(語の途中・「short ver.」の途中で折れない) */}
     <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
       <span className="inline-block">買うと、その曲を全部の難易度で遊べます。</span>{' '}
-      {anyBundle && <><span className="inline-block">short ver. も一緒に遊べます。</span>{' '}</>}
+      {anyBundle && [...new Set(songs.flatMap((song) => rhythmSongBundleLabels(song.songId)))].map((label, i, arr) => <span key={label} className="inline-block">{i < arr.length - 1 ? `${label}、` : `${label} も一緒に遊べます。`}</span>)}{' '}
       <span className="inline-block">みんなで対戦なら、</span><span className="inline-block">持っていなくてもその回だけ遊べます</span>
     </p>
     {songs.map((song) => {
@@ -148,22 +168,74 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
       const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
       const meta = rhythmSongShopMeta(song);
       const bundle = rhythmSongHasBundle(song.songId);
-      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? `新曲(全難易度・${rhythmSongBundleLabels(song.songId).join('・')} もセット)` : '新曲(全難易度で遊べます)' };
       const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
       const canBuy = !has && points >= price && !busy && !disabled;
       const listening = playingId === song.songId;
+      // 版ごとのジャケット(持ち主→版の順)。絵が版ごとに違う札だけ、重ね表示の対象にする
+      const bundleArts = rhythmSongBundleSongs(song.songId)
+        .map((entry) => ({ entry, artSrc: typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(entry) : '' }))
+        .filter((x) => x.artSrc);
+      const multiJacket = bundleArts.length >= 2 && new Set(bundleArts.map((x) => x.artSrc.split('?')[0])).size >= 2;
+      const frontEntry = multiJacket ? (bundleArts.find((x) => x.entry.songId === (frontBySong[song.songId] || song.songId)) || bundleArts[0]) : null;
+      const backEntry = multiJacket ? bundleArts.find((x) => x.entry.songId !== frontEntry.entry.songId) : null;
+      // 重ね表示の札は曲組の名前を出し、どちらの版が手前かはジャケット下の版名で見分ける
+      const cardName = multiJacket ? (song.displayName || item.name) : item.name;
       return <div key={song.songId} data-rhythm-song-offer={song.songId}
         className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
+        {multiJacket ? (() => {
+          // ジャケットが版ごとに違う曲は、2枚をずらして重ねて大きく見せる(2026-11-19 あっくん指示)。
+          // 後ろは手前より少し大きく、右下にはみ出して見える。後ろは斜めに傾けて重ねる(あっくん追加指示)。
+          // 札のタップで手前と後ろが入れ替わり、入れ替わった後も後ろになった方が斜めになる。
+          // 拡大は手前のジャケットの虫めがねだけから(タップと競合させない)。絵が同じ版しかない曲は今までどおり1枚
+          const frontItem = { ...item, id: `song_${frontEntry.entry.songId}`, name: rhythmSongFullName(frontEntry.entry), icon: frontEntry.artSrc };
+          const frontLabel = typeof rhythmSongVersionLabel === 'function' ? (rhythmSongVersionLabel(frontEntry.entry.songId) || '原曲') : '';
+          const swapFront = () => setFrontBySong((prev) => ({ ...prev, [song.songId]: backEntry.entry.songId }));
+          return <div className="w-full">
+            <div className="relative w-full cursor-pointer" role="button" tabIndex={0} data-rhythm-song-jacket-stack={song.songId}
+              aria-label={`${cardName}のジャケット入れ替え(いま手前は${frontLabel})`}
+              onClick={swapFront} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); swapFront(); } }}>
+              <div className="absolute bottom-0 right-0 w-[86%] brightness-[0.7]" style={{ transform: 'rotate(8deg)' }}>
+                <div className="[container-type:inline-size]">
+                  {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={backEntry.entry} large /> : null}
+                </div>
+              </div>
+              <div className="relative z-10 mb-[10%] w-[76%]">
+                <div className="rounded-lg shadow-[0_6px_16px_rgba(0,0,0,0.55)] [container-type:inline-size]">
+                  {typeof RhythmSongArt === 'function' ? <RhythmSongArt song={frontEntry.entry} large /> : null}
+                </div>
+                {onZoomIcon && <button type="button" data-rhythm-song-art-zoom
+                  onClick={(e) => { e.stopPropagation(); onZoomIcon(frontItem); }}
+                  aria-label={`${frontItem.name}のジャケットを大きく見る`}
+                  className="absolute bottom-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-slate-950/70 text-[11px] leading-none shadow">🔍</button>}
+              </div>
+            </div>
+            {/* 手前の版名。長い版名(ミラクル☆ミルクティ版)は、札の幅に合わせて字を縮めて1行に収める */}
+            <div className="w-full [container-type:inline-size]">
+              <span className="mt-0.5 block whitespace-nowrap text-center font-black text-slate-300"
+                style={{ fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(`⇄ ${frontLabel}`, 9, 7) : 9 }}>{`⇄ ${frontLabel}`}</span>
+            </div>
+          </div>;
+        })() : (
+          <div className="w-full [container-type:inline-size]">
+            {typeof RhythmSongArt === 'function'
+              ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
+              : null}
+          </div>
+        )}
+        {/* 曲名は題名と副題を別のかたまりで描き、折れるのは境目だけにする(RhythmSongName)。
+            幅に合わせて字を縮め(11px→8px)、それでも入らないときだけ境目で2行にする。
+            重ね表示の札の表示名は曲組の名前(cardName)なので、測る文字列も cardName にそろえ、
+            版名はジャケット下で見分ける決まりどおり曲名には副題を付けない */}
         <div className="w-full [container-type:inline-size]">
-          {typeof RhythmSongArt === 'function'
-            ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
-            : null}
+          <b data-rhythm-song-offer-name className="block w-full text-center font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere', fontSize: typeof rhythmTitleFitSize === 'function' ? rhythmTitleFitSize(cardName, 11, 8) : undefined }}>{multiJacket ? cardName : (typeof RhythmSongName === 'function' ? <RhythmSongName song={song}/> : cardName)}</b>
         </div>
-        <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{item.name}</b>
         <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
           {meta.creator && <span className="block">{meta.creator}</span>}
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
-          {bundle && <span className="block text-lime-300">short ver. つき</span>}
+          {bundle && <span className="block text-lime-300">{multiJacket
+            ? `${bundleArts.map((x) => (typeof rhythmSongVersionLabel === 'function' ? rhythmSongVersionLabel(x.entry.songId) : '') || '原曲').join('・')} セット`
+            : `${rhythmSongBundleLabels(song.songId).join('・')} つき`}</span>}
         </small>
         {/* 試し聴きと値段(所持済み)は、札の下にひとまとめにそろえる。作者の行が折れる・「short ver. つき」の有無で札ごとにずれない(r1115-162) */}
         <div data-rhythm-song-offer-foot className="mt-auto flex w-full flex-col items-center gap-1">

@@ -244,6 +244,8 @@ const RELEASED_MARKERS=Object.freeze({
   seasons_of_a_little_plaza:'seasons-of-a-little-plaza-v3',
   eiyuu_no_akashi:'eiyuu-no-akashi-v3',
   eiyuu_no_akashi_milktea:'eiyuu-no-akashi-milktea-v3',
+  gourmet_race_64:'gourmet-race-64-v3',
+  gourmet_race_dx:'gourmet-race-dx-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -323,6 +325,8 @@ const RELEASED_TRACKS=Object.freeze({
   seasons_of_a_little_plaza:'seasons_of_a_little_plaza',
   eiyuu_no_akashi:'eiyuu_no_akashi',
   eiyuu_no_akashi_milktea:'eiyuu_no_akashi_milktea',
+  gourmet_race_64:'gourmet_race_64',
+  gourmet_race_dx:'gourmet_race_dx',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

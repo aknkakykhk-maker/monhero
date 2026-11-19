@@ -160,7 +160,7 @@ function RhythmHistoryScreen({
                 {divisions.map(division=>(
                   <button key={division.id} type="button" data-rhythm-history-division={division.id} onClick={()=>onSelectDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===activeDivision?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
                   </button>
                 ))}
               </div>

@@ -939,6 +939,79 @@ const grantCompensationGifts = (gifts, now=Date.now(), waivedIds=[]) => {
   return { granted:true, gifts:[...added, ...list] };
 };
 
+// ===== 2026-11-19 サーバー障害のお詫び(対象期間にログインした人だけ) =====
+//
+// 全員へ配る COMPENSATION_GIFTS と違い、今回は「2026-11-19 00:00〜13:00(+09:00)に
+// 一度でもログインした人」が対象。セーブデータは端末の中にしかないので、
+// 対象かどうかは端末に残る時刻入りの記録で判定する:
+//   ・ギフトの createdAt(ログインボーナスのギフトは、その期間に初めて開いた時刻に作られる)
+//   ・ギフトの claimedAt(その時刻にゲーム内で受け取り操作をした=遊んでいた証拠)
+// のどちらかが窓の中にあれば対象とする。最終ログインの時刻だけでは判定しない
+// (13:00以降に開き直した人でも、窓の中の記録があれば受け取れる)。
+// 【判定できない範囲】同じログインボーナス期間の2回目以降の起動は時刻の記録が
+//   残らないため、その回しか窓の証拠がない人は対象と確定できない。推測では配らない。
+// 【二重防止】通常のお詫びと同じく id で判定する。ギフト一覧に id があれば
+//   (受取済みでも)本体は二度は入れない。この項目は消さない(消すと再配布されてしまう)。
+// 【増額(2026-11-19・500万→5000万)】当初500万で配り始めたが、同日中に5000万へ増額した。
+//   既に届いている人には窓の判定をやり直さず(届いた時点で対象は確定)、次の扱いで揃える:
+//   ・未受取 … そのギフトの金額だけを5000万へ書き換える(作成・期限の時刻は維持)
+//   ・受取済み … 差額4500万を別ギフト(OUTAGE_COMPENSATION_20261119_EXTRA)で1回だけ足す
+const OUTAGE_COMPENSATION_20261119 = Object.freeze({
+  id: 'gift_compensation_20261119_outage',
+  title: 'お詫びのしるし',
+  description: '11月19日のサーバー障害のお詫びです。ご迷惑をおかけしました。対象は11月19日13:00までにログインされた方です。',
+  rewards: Object.freeze([{ type:'diamond', amount:50000000 }]),
+  // 対象の窓(+09:00 で判定)。終わりは「13:00ちょうどまで」なので 13:00:00 を含む
+  windowStartMs: Date.parse('2026-11-19T00:00:00+09:00'),
+  windowEndMs: Date.parse('2026-11-19T13:00:00+09:00'),
+});
+// 受取済みの人へ増額の差額を届けるための別ギフト。id が一覧にあれば二重には入れない
+const OUTAGE_COMPENSATION_20261119_EXTRA = Object.freeze({
+  id: 'gift_compensation_20261119_outage_extra',
+  title: 'お詫びのしるし',
+  description: '11月19日のサーバー障害のお詫びの増額ぶんです。すでに500万ダイヤをお受け取りいただいた方へ、差額をお届けします。',
+});
+const giftTimestampInOutageWindow = (value) => {
+  const t = Date.parse(value || '');
+  return Number.isFinite(t) && t >= OUTAGE_COMPENSATION_20261119.windowStartMs && t <= OUTAGE_COMPENSATION_20261119.windowEndMs;
+};
+// 窓の中にログイン(遊んでいた)証拠があるか。ギフトの作成・受取の時刻だけを見る
+const outageCompensationEligible = (gifts) => (Array.isArray(gifts) ? gifts : []).some(gift =>
+  giftTimestampInOutageWindow(gift?.createdAt) || giftTimestampInOutageWindow(gift?.claimedAt));
+const grantOutageCompensationGift = (gifts, now=Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const def = OUTAGE_COMPENSATION_20261119;
+  const newAmount = def.rewards.find(r => r.type === 'diamond')?.amount || 0;
+  const diamondAmountOf = (gift) => (Array.isArray(gift?.rewards) ? gift.rewards : [])
+    .filter(r => r?.type === 'diamond')
+    .reduce((sum, r) => sum + (Math.floor(Number(r.amount) || 0)), 0);
+  const existing = list.find(item => item?.id === def.id);
+  if (existing) {
+    // 既に届いている人。届いた時点で対象は確定しているので、窓の判定はやり直さない。
+    // 増額(500万→5000万)に追いつかせるだけ
+    const currentAmount = diamondAmountOf(existing);
+    if (currentAmount >= newAmount) return { granted:false, gifts:list };
+    if (!existing.claimedAt) {
+      // 未受取: 金額だけを増額後の額へ書き換える(作成・期限の時刻はそのまま)
+      if (!existing.rewards?.some(r => r?.type === 'diamond')) return { granted:false, gifts:list };
+      const upgraded = { ...existing, rewards: existing.rewards.map(r => r?.type === 'diamond' ? { ...r, amount:newAmount } : r) };
+      return { granted:true, gifts: list.map(item => item === existing ? upgraded : item) };
+    }
+    // 受取済み: 差額を別ギフトで1回だけ足す(差額ギフトが既にあれば何もしない)
+    const extraDef = OUTAGE_COMPENSATION_20261119_EXTRA;
+    if (list.some(item => item?.id === extraDef.id)) return { granted:false, gifts:list };
+    const createdAt = new Date(now).toISOString();
+    const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
+    const extra = { id:extraDef.id, source:'compensation', title:extraDef.title, description:extraDef.description, rewards:[{ type:'diamond', amount:newAmount - currentAmount }], createdAt, expiresAt, claimedAt:null };
+    return { granted:true, gifts:[extra, ...list] };
+  }
+  if (!outageCompensationEligible(list)) return { granted:false, gifts:list };
+  const createdAt = new Date(now).toISOString();
+  const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
+  const gift = { id:def.id, source:'compensation', title:def.title, description:def.description, rewards:def.rewards.map(r=>({...r})), createdAt, expiresAt, claimedAt:null };
+  return { granted:true, gifts:[gift, ...list] };
+};
+
 // ===== その人だけに届くお詫び(2026-09-21) =====
 //
 // 不具合の影響が特定の人にだけ出たときのための配布。全員へ配る COMPENSATION_GIFTS とは
