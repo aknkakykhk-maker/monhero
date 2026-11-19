@@ -46,7 +46,7 @@ const songs=RHYTHM_DEMO_SONG_IDS
     // artwork は 'images/song-art/xxx.jpg?v=…' の形。キャッシュキーは比べない
     // (build.js が中身のハッシュで付け替えるので、ここで縛ると毎回ずれる)。
     const artwork=String(song.artwork||'').split('?')[0];
-    return {id,name:String(song.displayName||''),artwork};
+    return {id,name:String(song.displayName||''),subtitle:String(song.subtitle||''),artwork};
   })
   .filter(song=>song&&song.name)
   .sort((a,b)=>b.name.length-a.name.length);
@@ -70,8 +70,17 @@ for(const entry of changelog){
   checked++;
   const image=String(entry.image||'').split('?')[0];
   if(!image){missing.push(`${date} ${title}`);continue;}
-  if(song.artwork&&image!==song.artwork){
-    wrongPath.push(`${date} ${song.name}: image=${image} / その曲の絵=${song.artwork}`);
+  // 版ごとに曲名(displayName)が同じ曲組では、タイトルが「曲名 副題」の形で版を名指しして
+  // いればその版に特定して厳密に比べる。そうでなければ曲組のお知らせなので、同じ曲名の
+  // 版の絵のどれかならよい(「Dr.WILY STAGE 1」（原曲＋おっくせんまん版）のように、副題の
+  // 言葉が説明として出るだけの曲組お知らせもあるため、副題の単独一致では特定しない)
+  // (2026-11-19「英雄の証 ミラクル☆ミルクティ版」のお知らせが、曲名だけの照合で戦闘版の絵と
+  // 比べられてNGになっていた。お知らせの絵そのものはミルクティ版で正しかった)
+  const sameName=songs.filter(item=>item.name===song.name);
+  const bySubtitle=sameName.find(item=>item.subtitle&&title.includes(`${item.name} ${item.subtitle}`));
+  const allowed=bySubtitle?[bySubtitle.artwork]:sameName.map(item=>item.artwork);
+  if(song.artwork&&!allowed.includes(image)){
+    wrongPath.push(`${date} ${song.name}: image=${image} / その曲の絵=${allowed.join(' または ')}`);
     continue;
   }
   if(!fs.existsSync(path.join(ROOT,'monster-hero',image)))notFound.push(`${date} ${image}`);

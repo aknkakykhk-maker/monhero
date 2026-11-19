@@ -356,6 +356,16 @@
   "eiyuu_no_akashi_milktea/hard": "61ff0d0a8f7e9cbc",
   "eiyuu_no_akashi_milktea/expert": "ea17016caa3ade61",
   "eiyuu_no_akashi_milktea/master": "7f3793d9493533e2",
+  "dr_wily_stage_1/easy": "6d2d390a2ed8f0c9",
+  "dr_wily_stage_1/normal": "2208e14f5fef8cc7",
+  "dr_wily_stage_1/hard": "0d36e7fc4854d1b0",
+  "dr_wily_stage_1/expert": "c7ac0baac23d4083",
+  "dr_wily_stage_1/master": "2f776411dc0f2e04",
+  "dr_wily_stage_1_okkussenman/easy": "7cce599bc18b1fa3",
+  "dr_wily_stage_1_okkussenman/normal": "ba3a5576bf0606dd",
+  "dr_wily_stage_1_okkussenman/hard": "1f9277bb2708a608",
+  "dr_wily_stage_1_okkussenman/expert": "c1987b93e214767e",
+  "dr_wily_stage_1_okkussenman/master": "88a2555e2ba59d41",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -437,6 +447,8 @@
   "seasons_of_a_little_plaza/hell": "9f3b62407a73e3bc",
   "eiyuu_no_akashi/hell": "a73c1a84d3eb4839",
   "eiyuu_no_akashi_milktea/hell": "ddf4040c131fa5b6",
+  "dr_wily_stage_1/hell": "5cddbefed26a3f8b",
+  "dr_wily_stage_1_okkussenman/hell": "3ac9515e935debaa",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -899,6 +911,42 @@
     "seasons_of_a_little_plaza/hell",
     "eiyuu_no_akashi/hell",
     "eiyuu_no_akashi_milktea/hell"
+   ]
+  },
+  {
+   "at": "2026-11-19 10:02",
+   "reason": "新曲 Dr.WILY STAGE 1（原曲+おっくせんまん版）を公開",
+   "changed": [
+    "seasons_of_a_little_plaza/easy",
+    "seasons_of_a_little_plaza/normal",
+    "seasons_of_a_little_plaza/hard",
+    "seasons_of_a_little_plaza/expert",
+    "seasons_of_a_little_plaza/master",
+    "dr_wily_stage_1/easy",
+    "dr_wily_stage_1/normal",
+    "dr_wily_stage_1/hard",
+    "dr_wily_stage_1/expert",
+    "dr_wily_stage_1/master",
+    "dr_wily_stage_1_okkussenman/easy",
+    "dr_wily_stage_1_okkussenman/normal",
+    "dr_wily_stage_1_okkussenman/hard",
+    "dr_wily_stage_1_okkussenman/expert",
+    "dr_wily_stage_1_okkussenman/master",
+    "seasons_of_a_little_plaza/hell",
+    "dr_wily_stage_1/hell",
+    "dr_wily_stage_1_okkussenman/hell"
+   ]
+  },
+  {
+   "at": "2026-11-19 11:35",
+   "reason": "2026-11-19 あっくん指示でおっくせんまん版の譜面を超高難易度へ作り直し(MASTER Lv.48/HELL Lv.67)",
+   "changed": [
+    "dr_wily_stage_1_okkussenman/easy",
+    "dr_wily_stage_1_okkussenman/normal",
+    "dr_wily_stage_1_okkussenman/hard",
+    "dr_wily_stage_1_okkussenman/expert",
+    "dr_wily_stage_1_okkussenman/master",
+    "dr_wily_stage_1_okkussenman/hell"
    ]
   }
  ]

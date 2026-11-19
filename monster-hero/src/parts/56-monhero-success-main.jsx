@@ -835,7 +835,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         }
         const i = scrubIdx(e); const p = scrubPt(e);
         setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
-        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof SuccessSound !== 'undefined') SuccessSound.sfx('select'); }
       },
       onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
       onPointerCancel: () => { scrubRef.current = null; setTrail(null); },

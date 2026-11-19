@@ -1,0 +1,8 @@
+listen:dr_wily_stage_1_okkussenman | mua excited 1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪
+listen:dr_wily_stage_1_okkussenman | kiki normal 0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ
+listen:dr_wily_stage_1_okkussenman | momosuke excited 2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡
+listen:dr_wily_stage_1_okkussenman | dra normal 強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな
+listen:dr_wily_stage_1_okkussenman | atsu happy 2:52で静かに終わるの、歌いきった感じでいいよね笑
+listen:dr_wily_stage_1_okkussenman | kyuko happy ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜
+listen:dr_wily_stage_1_okkussenman | sorashido normal BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！
+listen:dr_wily_stage_1_okkussenman | erubin normal 1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね
