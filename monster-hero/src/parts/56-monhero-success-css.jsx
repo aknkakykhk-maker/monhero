@@ -431,7 +431,7 @@ const MSX_CSS = `
 .msx .v-p1bar>.msx-pt{margin-top:6px}
 .msx .v-p1lg{font-style:normal}
 .msx.land .v-body.p1>*{min-width:0}
-/* 横: 左に選んだ子(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
+/* 横: 左に選んだモンスター(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
 .msx.land .v-body.p1{grid-template-columns:36% minmax(0,1fr);grid-template-rows:min-content 1fr}
 .msx.land .v-body.p1>.v-p1main{grid-row:2}
 .msx.land .v-body.p1>.v-p1sel{grid-column:1;grid-row:1/-1;margin-top:5px;min-height:0;flex-direction:column;gap:5px}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d66a0eaf4aee454b
+// source-sha256: 592d1255e570cbd4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172248,7 +172248,7 @@ const MSX_CSS = `
 .msx .v-p1bar>.msx-pt{margin-top:6px}
 .msx .v-p1lg{font-style:normal}
 .msx.land .v-body.p1>*{min-width:0}
-/* 横: 左に選んだ子(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
+/* 横: 左に選んだモンスター(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
 .msx.land .v-body.p1{grid-template-columns:36% minmax(0,1fr);grid-template-rows:min-content 1fr}
 .msx.land .v-body.p1>.v-p1main{grid-row:2}
 .msx.land .v-body.p1>.v-p1sel{grid-column:1;grid-row:1/-1;margin-top:5px;min-height:0;flex-direction:column;gap:5px}
@@ -175795,7 +175795,7 @@ const MSX_PERIOD_WHEN = Object.freeze({
 const msxPeakWords = peak => {
   const ps = String(peak || '').split('〜');
   const w = ps.map(p => MSX_PERIOD_WHEN[p]).filter(Boolean);
-  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', 'いちばん', '伸びる'];
+  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '一番', '伸びる'];
 };
 function MsxStart({
   data,
@@ -176223,7 +176223,7 @@ function MsxStart({
       })));
     })), React.createElement("div", {
       className: "v-p1note"
-    }, "右の字は", React.createElement("b", null, "伸びやすさ"), "(A がいちばん伸びる → E)"))), detail && React.createElement(MsxMonDetail, {
+    }, "右の字は", React.createElement("b", null, "伸びやすさ"), "(A が一番伸びる → E)"))), detail && React.createElement(MsxMonDetail, {
       pick: {
         sel: tpSel,
         locked: () => false,

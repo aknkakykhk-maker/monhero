@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 69bff43cbf0b04e6
+// generated-sha256: fda85b77716b88fb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89526,7 +89526,7 @@ const MSX_CSS = `
 .msx .v-p1bar>.msx-pt{margin-top:6px}
 .msx .v-p1lg{font-style:normal}
 .msx.land .v-body.p1>*{min-width:0}
-/* 横: 左に選んだ子(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
+/* 横: 左に選んだモンスター(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
 .msx.land .v-body.p1{grid-template-columns:36% minmax(0,1fr);grid-template-rows:min-content 1fr}
 .msx.land .v-body.p1>.v-p1main{grid-row:2}
 .msx.land .v-body.p1>.v-p1sel{grid-column:1;grid-row:1/-1;margin-top:5px;min-height:0;flex-direction:column;gap:5px}
@@ -91600,7 +91600,7 @@ const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュ�
 const msxPeakWords = (peak) => {
   const ps = String(peak || '').split('〜');
   const w = ps.map((p) => MSX_PERIOD_WHEN[p]).filter(Boolean);
-  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', 'いちばん', '伸びる']; // 言葉の途中で折れないよう、かたまりごとに折らない札にする
+  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '一番', '伸びる']; // 言葉の途中で折れないよう、かたまりごとに折らない札にする
 };
 function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenShop }) {
   const { box, meta, unlocked } = data;
@@ -91756,7 +91756,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
           <div className="v-p1grow" data-msx-start-type><span className="k">成長の型</span><b className="yel">{growName}</b>{peakText ? <span className="v">{msxPeakWords(peakText).map((w, i) => <span key={i} className="w">{w}</span>)}</span> : null}</div>
           <div className="v-p1st" data-msx-start-stats>{MSX_STATS.map((k, i) => { const v = Number(startSt[k]) || 0; const top = Math.max(300, ...MSX_STATS.map((q) => Number(startSt[q]) || 0)); return (
             <div key={k} className="r"><span className="n">{MSX_STAT_NAME[k]}</span><b>{v}</b><i className={`g g${msxAptCls(apt[i])}`} title="伸びやすさ">{apt[i]}</i><span className="bar"><span style={{ width: `${Math.max(4, Math.min(100, (v / top) * 100))}%`, background: MSX_STAT_COLOR && MSX_STAT_COLOR[k] ? MSX_STAT_COLOR[k] : '#94a3b8' }}/></span></div>); })}</div>
-          <div className="v-p1note">右の字は<b>伸びやすさ</b>(A がいちばん伸びる → E)</div>
+          <div className="v-p1note">右の字は<b>伸びやすさ</b>(A が一番伸びる → E)</div>
         </div>
       </div>
       {detail && <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
