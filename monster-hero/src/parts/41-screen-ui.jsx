@@ -215,8 +215,117 @@ const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, na
   </div>
 );
 const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
-  <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
+  <button type="button" disabled={disabled} onClick={onClick} data-mh-back className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
 );
+
+// ==================== 窓の3段の型(ModalSheet)・2026-11-19 r1119-013 ⑥窓と戻るの土台 ====================
+// 点検(UI/UX C-1・A-0・B-1・B-2・U-12)で、窓が画面ごとに違う作りのため次が起きていた:
+//   ・中身ごと送る作り(ModalFrame・.mh-title-dialog)なので、横・小さい横で「閉じる/決める」が画面の外(U-12・B-2)
+//   ・本文の箱の中に fixed で出した窓は、その箱の重なり順に閉じこめられ、上の帯や下のタブが窓の上に出て押せる(A-0)
+//   ・閉じるがメニューの1行の形(.mh-dialog-choice)で、項目の1つに見える(B-1)
+// 参考(LINE MF の「大会参加確認」「アイテム詳細」docs/reference/line-mf/taikai-entry-2026-11-13/)の窓の形にそろえる:
+//   見出しの帯(真ん中に題)/ 中身(ここだけ送る)/ 足(下の中央に丸いボタン。「とじる」1つ、または「キャンセル/はい」)
+//   ・足はいつも見える(中身が長くても窓の外へ出ない)。窓は画面の高さを超えない
+//   ・body(回転中のモンヒロビートは回した器)へ出すので、どの箱の中から開いても裏の物の上に出る
+//   ・低い画面(横・小さい横)は、窓を画面の高さいっぱいまで使う。いちばん低い所(〜340px)は全画面のシート
+//   ・幕(窓の外)を押すと閉じる。保存中など閉じてはいけない間は onClose を渡さない
+//   title    … 見出しの帯の題(省略すると帯を出さない)
+//   onClose  … 閉じる。footer を渡さないと、足に「閉じる」(closeLabel)を1つ出す
+//   footer   … 足に並べるボタン(ModalSheetButton)。取り消しのボタンには back を付ける(ブラウザの戻るがそれを押す)
+//   size     … '' / 'wide'(横に広い中身)/ 'narrow'(確かめるだけの小さい窓)
+//   rim      … 枠の色(CSS の色)。その画面の識別色を使うとき
+//   dataProps… 窓の根に付ける data-* (検査の目印)
+// ★閉じる手段は1つにする(M-7「✕ と ← 戻る の2つ」)。見出しの右上の ✕ は出さない
+const MODAL_SHEET_CSS = `
+.mh-msheet{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(2,6,23,.84);overscroll-behavior:contain}
+.mh-msheet-box{display:flex;flex-direction:column;width:100%;max-width:400px;max-height:100%;min-height:0;border:2px solid var(--mh-msheet-rim,#8b7cf6aa);border-radius:22px;background:#0f172a;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden}
+.mh-msheet-box.wide{max-width:600px}
+.mh-msheet-box.narrow{max-width:320px}
+.mh-msheet-hd{flex:none;display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid rgba(255,255,255,.12)}
+.mh-msheet-hd h3{margin:0;font-size:14px;font-weight:900;line-height:1.35;text-align:center;letter-spacing:.02em}
+.mh-msheet-bd{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:12px 14px}
+.mh-msheet-ft{flex:none;display:flex;justify-content:center;gap:10px;padding:10px 14px 12px;border-top:1px solid rgba(255,255,255,.1);background:#0b1222}
+.mh-msheet-btn{flex:0 1 168px;min-width:0;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:#334155;color:#f1f5f9;font-size:13px;font-weight:900;line-height:1.2;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.mh-msheet-btn.go{border-color:#fde68a;background:linear-gradient(180deg,#fcd34d,#f59e0b);color:#3b1d02}
+.mh-msheet-btn.danger{border-color:#fca5a5;background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff}
+.mh-msheet-btn:active{transform:translateY(1px) scale(.98);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.mh-msheet-btn:disabled{opacity:.4}
+@media (max-height:460px){.mh-msheet{padding-top:max(6px,env(safe-area-inset-top));padding-bottom:max(6px,env(safe-area-inset-bottom))}.mh-msheet-box{max-width:min(640px,100%)}.mh-msheet-box.narrow{max-width:360px}.mh-msheet-hd{min-height:36px;padding:5px 16px}.mh-msheet-bd{padding:8px 14px}.mh-msheet-ft{padding:6px 14px 8px}}
+@media (max-height:340px){.mh-msheet{padding:0}.mh-msheet-box,.mh-msheet-box.wide,.mh-msheet-box.narrow{max-width:none;height:100%;border-width:0;border-radius:0;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}.mh-msheet-ft{padding-bottom:max(6px,env(safe-area-inset-bottom))}}
+`;
+const ensureModalSheetCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-modal-sheet-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-modal-sheet-css';
+    el.textContent = MODAL_SHEET_CSS;
+    document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても中身は読める */ }
+};
+// 足のボタン。kind: ''(閉じる・キャンセル)/ 'go'(決める)/ 'danger'(消すなど)。back … ブラウザの戻るで押す取り消しのボタン
+const ModalSheetButton = ({ kind = '', back = false, className = '', children, ...rest }) => (
+  <button type="button" className={`mh-msheet-btn ${kind} ${className}`} {...(back ? { 'data-mh-back': '' } : {})} {...rest}>{children}</button>
+);
+const ModalSheet = ({ title = null, label = '', onClose = null, footer = null, closeLabel = '閉じる', size = '', rim = null, zIndex = MODAL_Z.dialog, dataProps = null, bodyClassName = '', bodyStyle = null, children }) => {
+  ensureModalSheetCss();
+  const node = (
+    <div className="mh-msheet" role="dialog" aria-modal="true" aria-label={label || (typeof title === 'string' ? title : '')}
+      style={{ zIndex }} onClick={onClose || undefined} {...(dataProps || {})}>
+      <div className={`mh-msheet-box ${size}`} onClick={(event) => event.stopPropagation()} style={rim ? { '--mh-msheet-rim': rim } : undefined}>
+        {title != null && <div className="mh-msheet-hd"><h3>{title}</h3></div>}
+        <div className={`mh-msheet-bd ${bodyClassName}`} style={bodyStyle || undefined}>{children}</div>
+        {(footer || onClose) && <div className="mh-msheet-ft">{footer || <ModalSheetButton back onClick={onClose}>{closeLabel}</ModalSheetButton>}</div>}
+      </div>
+    </div>
+  );
+  const target = rotationAwarePortalTarget();
+  return target && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, target) : node;
+};
+
+// ==================== ブラウザの「戻る」が押すボタンを選ぶ(C-1・U-15) ====================
+// ブラウザ(スマホ)の戻るは、画面でいちばん上に見えている「戻る・閉じる」を押したのと同じ動きにする(本体は 60-app.jsx)。
+// 前は「画面の頭(header.mh-screen-head)の戻る」だけを探していたので、HOME の上に重ねて開く画面(モンサク・助手ライフ)と、
+// 自前の戻るを持つ画面(モンヒロビート)では効かず、ゲームの外へ出たり何も起きなかったりした。
+// 選び方:
+//   ① 押せる物だけ: 画面の中にあり、その真ん中を指したとき本当にそのボタンに当たる(上に窓や幕が重なっていない)
+//   ② 窓(aria-modal)の中の物を先に
+//   ③ 印の強い順: data-mh-back(この決まりの印)> 画面の頭の戻る > 言葉が「← / ✕ / 閉じる / キャンセル / 戻る」で始まる物
+//   ④ 同じなら、文書の後ろの物(あとから開いた物)
+//   ⑤ ①で何も残らなければ、前と同じく画面の頭の戻る(演出の札が一時的に重なっているときなど)
+// data-mh-back="off" を付けたボタンは選ばない(戻るの形だが、ブラウザの戻るで押されると困る物)
+const MH_BACK_WORDS = /^\s*(?:[←✕×✖]|閉じる|とじる|キャンセル|戻る|やめる)/;
+const mhBackRankOf = (el) => {
+  const mark = el.getAttribute('data-mh-back');
+  if (mark === 'off') return 0;
+  if (mark != null) return 3;
+  if (el.matches('header.mh-screen-head > button[aria-label]')) return 2;
+  const words = (el.getAttribute('aria-label') || el.textContent || '').slice(0, 24);
+  return MH_BACK_WORDS.test(words) ? 1 : 0;
+};
+const mhBackHittable = (el) => {
+  if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+  const r = el.getBoundingClientRect();
+  const vw = window.innerWidth || 0, vh = window.innerHeight || 0;
+  if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw) return false;
+  const x = Math.min(vw - 1, Math.max(0, r.left + r.width / 2)), y = Math.min(vh - 1, Math.max(0, r.top + r.height / 2));
+  const hit = document.elementFromPoint(x, y);
+  return !!hit && (hit === el || el.contains(hit));
+};
+const mhBrowserBackTarget = () => {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null;
+  let best = null, bestRank = 0, bestModal = false;
+  for (const el of document.querySelectorAll('button,[role="button"]')) {
+    const rank = mhBackRankOf(el);
+    if (!rank) continue;
+    const inModal = !!el.closest('[aria-modal="true"]');
+    if (best && (bestModal && !inModal || (bestModal === inModal && rank < bestRank))) continue;
+    if (!mhBackHittable(el)) continue;
+    best = el; bestRank = rank; bestModal = inModal;
+  }
+  if (best) return best;
+  // 押せる物が無いとき(演出の札などが一時的に重なっている)は、前と同じく画面の頭の戻るを押す
+  return Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]')).find(el => !el.disabled && mhBackRankOf(el)) || null;
+};
 // 言葉の切れ目で折る(2026-10-20 改善部の見直し M3「継/承」「攻/撃」「ガッツ上/限」「スライ/ド」)。
 // 日本語は既定だとどの文字の間でも折れるので、幅ぴったりのときに言葉の途中で行が変わる。
 // Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。

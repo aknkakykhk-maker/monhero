@@ -308,7 +308,8 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
           </div>
         </div>
       ) : (
-        <div className={`flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`} data-assistant-life-layout-tools>
+        <div className="flex flex-wrap items-center gap-1.5 pb-0.5" data-assistant-life-layout-tools>
+          {/* 縦も折り返す(2026-11-19 r1119-013 ⑥ U-19)。横に送る並びだと「後ろへ」「しまう」が右で切れ、送れる印も無かった */}
           {tool('small', '小', () => patch(sel, { s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100) }), !selIt || selIt.s <= ASSISTANT_LIFE_LAYOUT_S[0], '小さくする')}
           {tool('big', '大', () => patch(sel, { s: Math.min(ASSISTANT_LIFE_LAYOUT_S[1], Math.round((selIt.s + 0.15) * 100) / 100) }), !selIt || selIt.s >= ASSISTANT_LIFE_LAYOUT_S[1], '大きくする')}
           {tool('flip', '↔', () => patch(sel, { f: !selIt.f }), !selIt, '左右を返す')}
@@ -328,7 +329,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
       <div className="flex items-center gap-1.5">
         <button type="button" data-assistant-life-layout-omakase disabled={got.length === 0} onClick={omakase} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-2 text-[12.5px] font-black text-white shadow active:scale-95 disabled:opacity-40">🎀 {who.name}におまかせ</button>
         <button type="button" data-assistant-life-layout-undo onClick={() => { if (first.current) commit(first.current); setSel(null); }} className="min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95">元に戻す</button>
-        <button type="button" data-assistant-life-layout-done onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95">✓ できた</button>
+        <button type="button" data-assistant-life-layout-done data-mh-back onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95">✓ できた</button>
       </div>
     </div>);
   return (

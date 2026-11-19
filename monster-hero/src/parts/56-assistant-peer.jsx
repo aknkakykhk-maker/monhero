@@ -940,9 +940,12 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
   const talks = mine.filter(t => seen.has(t.id) || spSeen(t));
   const all = mine.length;
   const firstLine = (t) => assistantPeerLineText(t.lines[0], t);
-  return (
-    <div data-assistant-peer-album={key} className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2" style={{ zIndex: 9100 }} onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
+  // 窓は body(回転中は回した器)へ出す(2026-11-19 r1119-013 ⑥ A-0)。助手ライフの本文の箱(.mhl-body・z-index:2)の中に描くと、
+  //   9100 がその箱の中でしか効かず、上の帯と下のタブがアルバムの上に出て押せた(押すと町や家へ移った)。
+  //   閉じるは送り箱の下に貼り付け、送っても見える所に置く。送り箱は端で裏へ送らない(overscroll-contain)
+  const albumNode = (
+    <div data-assistant-peer-album={key} role="dialog" aria-modal="true" aria-label={`${a.name}と${b.name}の思い出アルバム`} className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/80 p-2" style={{ zIndex: MODAL_Z.dialog, paddingTop: 'max(8px, env(safe-area-inset-top))', paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="w-full max-w-md max-h-full overflow-y-auto overscroll-contain mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3" onClick={ev => ev.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2">
           <p className="min-w-0 flex-1 text-[13px] font-black text-amber-200">{a.name}と{b.name}の思い出アルバム</p>
         </div>
@@ -1005,7 +1008,9 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
                 : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t)}</span>
             </button>))}
         </div>
-        <button type="button" data-assistant-peer-album-close onClick={onClose} className="mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
+        <div className="sticky -bottom-3 -mx-3 -mb-3 mt-3 bg-slate-950 px-3 pb-3 pt-2" style={{ boxShadow: '0 -10px 12px -4px #020617' }}>
+          <button type="button" data-assistant-peer-album-close data-mh-back onClick={onClose} className="min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
+        </div>
       </div>
       {buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => { const x = assistantLifeGiftOf(buyKind); return x ? (
         <AssistantLifeBuyConfirm item={x} to={`${a.name}と${b.name}`} onClose={() => setBuyKind(null)}
@@ -1013,6 +1018,8 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
           check={() => assistantLifeGiftReason(buyKind, ASSISTANT_PEER_STORE.state, 1)}
           give={async () => { const t = await onUseItem(buyKind, pair); if (!t) setUseMsg(`${x.name}は、いまは贈れません。買った${x.name}は持ち物に残っています`); }}/>) : null; })()}
     </div>);
+  const albumHost = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : (typeof document !== 'undefined' ? document.body : null);
+  return albumHost && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(albumNode, albumHost) : albumNode;
 }
 
 // ---------- プロフィールの関係図(Lv3 から線が出る) ----------

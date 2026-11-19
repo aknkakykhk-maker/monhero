@@ -755,6 +755,11 @@ const MSX_CSS = `
 .msx-ov.msx-ov-deep{z-index:41;background:#0b0920f7}
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
+/* 窓の最後の「閉じる」は、窓の中を送っても下に貼り付ける(2026-11-19 r1119-013 ⑥ U-12・M-5。横・小さい横で閉じるが送った先にあり、
+   イベント図鑑では一覧の最後の行が閉じるに重なっていた)。小さい横は幕の余白を詰めて、中身に高さを回す */
+.msx-sheet{overscroll-behavior:contain}
+.msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
+@media (max-height:460px){.msx-ov{padding:6px 10px}}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -1192,5 +1197,10 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
+/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
+   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
+.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
+.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
+.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
 `;
 
