@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ddda56d5c022c3c
+// source-sha256: de6bc93bc6f9fb10
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63445,8 +63445,129 @@ const ModalCloseButton = ({
   type: "button",
   disabled: disabled,
   onClick: onClick,
+  "data-mh-back": true,
   className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
 }, label);
+const MODAL_SHEET_CSS = `
+.mh-msheet{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(2,6,23,.84);overscroll-behavior:contain}
+.mh-msheet-box{display:flex;flex-direction:column;width:100%;max-width:400px;max-height:100%;min-height:0;border:2px solid var(--mh-msheet-rim,#8b7cf6aa);border-radius:22px;background:#0f172a;color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden}
+.mh-msheet-box.wide{max-width:600px}
+.mh-msheet-box.narrow{max-width:320px}
+.mh-msheet-hd{flex:none;display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid rgba(255,255,255,.12)}
+.mh-msheet-hd h3{margin:0;font-size:14px;font-weight:900;line-height:1.35;text-align:center;letter-spacing:.02em}
+.mh-msheet-bd{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:12px 14px}
+.mh-msheet-ft{flex:none;display:flex;justify-content:center;gap:10px;padding:10px 14px 12px;border-top:1px solid rgba(255,255,255,.1);background:#0b1222}
+.mh-msheet-btn{flex:0 1 168px;min-width:0;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:#334155;color:#f1f5f9;font-size:13px;font-weight:900;line-height:1.2;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.mh-msheet-btn.go{border-color:#fde68a;background:linear-gradient(180deg,#fcd34d,#f59e0b);color:#3b1d02}
+.mh-msheet-btn.danger{border-color:#fca5a5;background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff}
+.mh-msheet-btn:active{transform:translateY(1px) scale(.98);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.mh-msheet-btn:disabled{opacity:.4}
+@media (max-height:460px){.mh-msheet{padding-top:max(6px,env(safe-area-inset-top));padding-bottom:max(6px,env(safe-area-inset-bottom))}.mh-msheet-box{max-width:min(640px,100%)}.mh-msheet-box.narrow{max-width:360px}.mh-msheet-hd{min-height:36px;padding:5px 16px}.mh-msheet-bd{padding:8px 14px}.mh-msheet-ft{padding:6px 14px 8px}}
+@media (max-height:340px){.mh-msheet{padding:0}.mh-msheet-box,.mh-msheet-box.wide,.mh-msheet-box.narrow{max-width:none;height:100%;border-width:0;border-radius:0;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}.mh-msheet-ft{padding-bottom:max(6px,env(safe-area-inset-bottom))}}
+`;
+const ensureModalSheetCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-modal-sheet-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-modal-sheet-css';
+    el.textContent = MODAL_SHEET_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
+const ModalSheetButton = ({
+  kind = '',
+  back = false,
+  className = '',
+  children,
+  ...rest
+}) => React.createElement("button", _extends({
+  type: "button",
+  className: `mh-msheet-btn ${kind} ${className}`
+}, back ? {
+  'data-mh-back': ''
+} : {}, rest), children);
+const ModalSheet = ({
+  title = null,
+  label = '',
+  onClose = null,
+  footer = null,
+  closeLabel = '閉じる',
+  size = '',
+  rim = null,
+  zIndex = MODAL_Z.dialog,
+  dataProps = null,
+  bodyClassName = '',
+  bodyStyle = null,
+  children
+}) => {
+  ensureModalSheetCss();
+  const node = React.createElement("div", _extends({
+    className: "mh-msheet",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": label || (typeof title === 'string' ? title : ''),
+    style: {
+      zIndex
+    },
+    onClick: onClose || undefined
+  }, dataProps || {}), React.createElement("div", {
+    className: `mh-msheet-box ${size}`,
+    onClick: event => event.stopPropagation(),
+    style: rim ? {
+      '--mh-msheet-rim': rim
+    } : undefined
+  }, title != null && React.createElement("div", {
+    className: "mh-msheet-hd"
+  }, React.createElement("h3", null, title)), React.createElement("div", {
+    className: `mh-msheet-bd ${bodyClassName}`,
+    style: bodyStyle || undefined
+  }, children), (footer || onClose) && React.createElement("div", {
+    className: "mh-msheet-ft"
+  }, footer || React.createElement(ModalSheetButton, {
+    back: true,
+    onClick: onClose
+  }, closeLabel))));
+  const target = rotationAwarePortalTarget();
+  return target && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, target) : node;
+};
+const MH_BACK_WORDS = /^\s*(?:[←✕×✖]|閉じる|とじる|キャンセル|戻る|やめる)/;
+const mhBackRankOf = el => {
+  const mark = el.getAttribute('data-mh-back');
+  if (mark === 'off') return 0;
+  if (mark != null) return 3;
+  if (el.matches('header.mh-screen-head > button[aria-label]')) return 2;
+  const words = (el.getAttribute('aria-label') || el.textContent || '').slice(0, 24);
+  return MH_BACK_WORDS.test(words) ? 1 : 0;
+};
+const mhBackHittable = el => {
+  if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+  const r = el.getBoundingClientRect();
+  const vw = window.innerWidth || 0,
+    vh = window.innerHeight || 0;
+  if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw) return false;
+  const x = Math.min(vw - 1, Math.max(0, r.left + r.width / 2)),
+    y = Math.min(vh - 1, Math.max(0, r.top + r.height / 2));
+  const hit = document.elementFromPoint(x, y);
+  return !!hit && (hit === el || el.contains(hit));
+};
+const mhBrowserBackTarget = () => {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null;
+  let best = null,
+    bestRank = 0,
+    bestModal = false;
+  for (const el of document.querySelectorAll('button,[role="button"]')) {
+    const rank = mhBackRankOf(el);
+    if (!rank) continue;
+    const inModal = !!el.closest('[aria-modal="true"]');
+    if (best && (bestModal && !inModal || bestModal === inModal && rank < bestRank)) continue;
+    if (!mhBackHittable(el)) continue;
+    best = el;
+    bestRank = rank;
+    bestModal = inModal;
+  }
+  if (best) return best;
+  return Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]')).find(el => !el.disabled && mhBackRankOf(el)) || null;
+};
 let _jaSegmenter;
 const JA_WRAP_LINE = 10;
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
@@ -68814,6 +68935,7 @@ function ArtPickerModal({
   })), React.createElement("button", {
     type: "button",
     className: "shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
+    "data-mh-back": true,
     onClick: onClose
   }, "決定")));
 }
@@ -68892,6 +69014,7 @@ function ScreenThemeModal({
   }, choice.label))))), React.createElement("button", {
     type: "button",
     className: "mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
+    "data-mh-back": true,
     onClick: onClose
   }, "決定")));
 }
@@ -110607,15 +110730,20 @@ function AssistantPeerAlbum({
   const talks = mine.filter(t => seen.has(t.id) || spSeen(t));
   const all = mine.length;
   const firstLine = t => assistantPeerLineText(t.lines[0], t);
-  return React.createElement("div", {
+  const albumNode = React.createElement("div", {
     "data-assistant-peer-album": key,
-    className: "fixed inset-0 flex items-end sm:items-center justify-center bg-black/70 p-2",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${a.name}と${b.name}の思い出アルバム`,
+    className: "fixed inset-0 flex items-end sm:items-center justify-center bg-black/80 p-2",
     style: {
-      zIndex: 9100
+      zIndex: MODAL_Z.dialog,
+      paddingTop: 'max(8px, env(safe-area-inset-top))',
+      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
     },
     onClick: onClose
   }, React.createElement("div", {
-    className: "w-full max-w-md max-h-[85vh] [[data-mh-view-rotation=true]_&]:max-h-[85vw] overflow-y-auto mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3",
+    className: "w-full max-w-md max-h-full overflow-y-auto overscroll-contain mh-scroll rounded-2xl border-2 border-amber-300/60 bg-slate-950 p-3",
     onClick: ev => ev.stopPropagation()
   }, React.createElement("div", {
     className: "mb-2 flex items-center gap-2"
@@ -110722,12 +110850,18 @@ function AssistantPeerAlbum({
     "aria-hidden": "true"
   }, t.special ? '✦' : t.kind === 'event' ? '🎪' : t.kind === 'trio' ? '👥' : t.kind === 'quarrel' || t.kind === 'makeup' ? '🤝' : t.choice ? '💬' : '▶'), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[10px] font-bold text-slate-200"
-  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t))))), React.createElement("button", {
+  }, t.special ? (t.lv || 5) >= 10 ? '特別なお話・その2' : '特別なお話' : t.kind === 'event' ? `ミニイベント「${t.title}」` : t.kind === 'makeup' ? '仲直り' : t.kind === 'quarrel' ? `言い合い: ${firstLine(t)}` : firstLine(t))))), React.createElement("div", {
+    className: "sticky -bottom-3 -mx-3 -mb-3 mt-3 bg-slate-950 px-3 pb-3 pt-2",
+    style: {
+      boxShadow: '0 -10px 12px -4px #020617'
+    }
+  }, React.createElement("button", {
     type: "button",
     "data-assistant-peer-album-close": true,
+    "data-mh-back": true,
     onClick: onClose,
-    className: "mt-3 min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
-  }, "閉じる")), buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => {
+    className: "min-h-[48px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる"))), buyKind && typeof AssistantLifeBuyConfirm === 'function' && (() => {
     const x = assistantLifeGiftOf(buyKind);
     return x ? React.createElement(AssistantLifeBuyConfirm, {
       item: x,
@@ -110741,6 +110875,8 @@ function AssistantPeerAlbum({
       }
     }) : null;
   })());
+  const albumHost = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : typeof document !== 'undefined' ? document.body : null;
+  return albumHost && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(albumNode, albumHost) : albumNode;
 }
 function AssistantPeerMap({
   metIds,
@@ -117133,7 +117269,7 @@ function AssistantLifeRoomSheet({
       zIndex: 25
     },
     "data-assistant-life-room-sheet": id
-  }, React.createElement("button", {
+  }, !furnOpen && !layoutOpen && React.createElement("button", {
     type: "button",
     "aria-label": returnToMap ? '地図へ戻る' : '家へ戻る',
     "data-assistant-life-roomview-close": true,
@@ -118262,6 +118398,24 @@ function AssistantLifeHouse({
   React.useEffect(() => {
     if (roomId) setNote('');
   }, [roomId]);
+  React.useEffect(() => {
+    setNote('');
+  }, [tab]);
+  React.useEffect(() => {
+    if (!note || typeof document === 'undefined') return undefined;
+    const off = ev => {
+      const el = ev && ev.target;
+      if (el && el.closest && el.closest('[data-assistant-life-tier-help]')) return;
+      setNote('');
+    };
+    const timer = setTimeout(() => setNote(''), 8000);
+    const arm = setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(arm);
+      document.removeEventListener('pointerdown', off, true);
+    };
+  }, [note]);
   React.useEffect(() => {
     if (st.focus) {
       setRoomId(st.focus);
@@ -140327,7 +140481,7 @@ function AssistantLifeRoomEditor({
     l: 1,
     g: 1
   }), selIt.h === 0 && selIt.l === 1 && selIt.g === 1), tool('colorclose', '← 道具へ戻る', () => setColorOpen(false)))) : React.createElement("div", {
-    className: `flex items-center gap-1.5 ${land ? 'flex-wrap' : 'overflow-x-auto'} pb-0.5`,
+    className: "flex flex-wrap items-center gap-1.5 pb-0.5",
     "data-assistant-life-layout-tools": true
   }, tool('small', '小', () => patch(sel, {
     s: Math.max(ASSISTANT_LIFE_LAYOUT_S[0], Math.round((selIt.s - 0.15) * 100) / 100)
@@ -140372,6 +140526,7 @@ function AssistantLifeRoomEditor({
   }, "元に戻す"), React.createElement("button", {
     type: "button",
     "data-assistant-life-layout-done": true,
+    "data-mh-back": true,
     onClick: onClose,
     className: "min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95"
   }, "✓ できた")));
@@ -161197,25 +161352,29 @@ function MonsucFuseSheet({
   }, "思い出の記録(名前・ランク・代)もそのまま残ります")), err && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-rose-200",
     "data-monsuc-fuse-err": true
-  }, err), React.createElement("button", {
+  }, err)) : React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400",
+    "data-monsuc-fuse-err": true
+  }, plan && plan.why || 'この2体では合体できません'), !done && SUC && main && mat && plan && plan.ok ? React.createElement("div", {
+    className: "mt-2 grid shrink-0 grid-cols-2 gap-2",
+    "data-monsuc-fuse-foot": true
+  }, React.createElement("button", {
     type: "button",
-    onClick: go,
-    disabled: !ready || busy,
-    "data-monsuc-fuse-go": sure,
-    "data-monsuc-fuse-ready": ready ? 1 : 0,
-    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
-  }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'), React.createElement("button", {
-    type: "button",
+    "data-mh-back": true,
     onClick: () => {
       setMat(null);
       setSure(0);
       setErr('');
     },
-    className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "選び直す")) : React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold text-slate-400",
-    "data-monsuc-fuse-err": true
-  }, plan && plan.why || 'この2体では合体できません'), !done && React.createElement("button", {
+    className: "min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "選び直す"), React.createElement("button", {
+    type: "button",
+    onClick: go,
+    disabled: !ready || busy,
+    "data-monsuc-fuse-go": sure,
+    "data-monsuc-fuse-ready": ready ? 1 : 0,
+    className: `disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+  }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する')) : !done && React.createElement("button", {
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
@@ -161319,7 +161478,7 @@ function MonsucFuseShow({
     type: "button",
     onClick: () => setSt(3),
     "data-monsuc-fuse-skip": true
-  }, "短縮 ⏭")) : null, React.createElement("div", {
+  }, "飛ばす ⏭")) : null, React.createElement("div", {
     className: "mf-stage"
   }, React.createElement("img", {
     className: "mf-mon a",
@@ -161908,7 +162067,7 @@ function MsxAwakeShow({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-awake-skip": true
-  }, "短縮 ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
+  }, "飛ばす ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: fire.ups
@@ -162117,7 +162276,7 @@ function MsxBirth({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-birth-skip": true
-  }, "短縮 ⏭")) : null), React.createElement("div", {
+  }, "飛ばす ⏭")) : null), React.createElement("div", {
     className: "v-log"
   }, st >= 3 ? React.createElement(React.Fragment, null, "円盤石から、", React.createElement("b", null, name), "が生まれた! ここから育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
     className: "v-ft"
@@ -162560,7 +162719,7 @@ function MsxIssaResult({
     type: "button",
     onClick: () => setSt(2),
     "data-msx-issa-skip": true
-  }, "短縮 ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
+  }, "飛ばす ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: ups
@@ -165921,7 +166080,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "⏩ 飛ばす") : null, React.createElement("button", {
+  }, "飛ばす ⏭") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -172214,6 +172373,11 @@ const MSX_CSS = `
 .msx-ov.msx-ov-deep{z-index:41;background:#0b0920f7}
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
+/* 窓の最後の「閉じる」は、窓の中を送っても下に貼り付ける(2026-11-19 r1119-013 ⑥ U-12・M-5。横・小さい横で閉じるが送った先にあり、
+   イベント図鑑では一覧の最後の行が閉じるに重なっていた)。小さい横は幕の余白を詰めて、中身に高さを回す */
+.msx-sheet{overscroll-behavior:contain}
+.msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
+@media (max-height:460px){.msx-ov{padding:6px 10px}}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -172651,6 +172815,11 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
+/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
+   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
+.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
+.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
+.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -178179,7 +178348,7 @@ function MonheroSuccessScreen({
   });
   let content = null;
   if (view === 'loading' || view === 'fail') content = React.createElement(React.Fragment, null, React.createElement(MsxHd, {
-    back: "閉じる",
+    back: "HOMEへ戻る",
     onBack: onClose
   }), React.createElement("div", {
     className: "v-body v-hm"
@@ -178448,7 +178617,7 @@ function MsxHome({
     nick: run ? run.nick : '',
     onClose: () => setDex(false)
   }) : null, React.createElement(MsxHd, {
-    back: "閉じる",
+    back: "HOMEへ戻る",
     onBack: onClose
   }), React.createElement("div", {
     className: "v-body v-hm"
@@ -178824,6 +178993,7 @@ function MsxPlay({
   const phase = run.phase;
   let body = null;
   let foot = null;
+  let subPanel = false;
   useEffect(() => {
     if (run.phase === 'begin') {
       const r0 = {
@@ -179091,7 +179261,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "⏩ 飛ばす"), React.createElement("button", {
+    }, "飛ばす ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -179118,7 +179288,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       })
-    }, "⏩ 飛ばす"), React.createElement("button", {
+    }, "飛ばす ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toReact(run),
@@ -179365,7 +179535,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => choose(null)
-    }, "⏩ 飛ばす"), React.createElement("span", {
+    }, "飛ばす ⏭"), React.createElement("span", {
       className: "v-wait"
     }, "選んでね"));
   } else if (phase === 'issa') {
@@ -179410,13 +179580,10 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: onPause
-    }, "← 中断"), React.createElement("button", {
-      type: "button",
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "⏩ 飛ばす"));
+    }, "飛ばす ⏭"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -179495,9 +179662,6 @@ function MsxPlay({
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
-      type: "button",
-      onClick: onPause
-    }, "← 中断"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toMain({
@@ -180169,9 +180333,6 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: onPause
-    }, "← 中断"), React.createElement("button", {
-      type: "button",
       onClick: () => setSheet('log')
     }, "📖 記録"), React.createElement("button", {
       type: "button",
@@ -180195,14 +180356,22 @@ function MsxPlay({
         setDetail(true);
       }
     });
-    if (sub === 'bag' || sub === 'stats') foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main')
-    }, "← 戻る"));
+    if (sub === 'bag' || sub === 'stats') {
+      foot = null;
+      subPanel = true;
+    }
   }
-  return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+  return React.createElement(React.Fragment, null, (detail || sheet) && !subPanel ? React.createElement(MsxHd, {
+    back: "戻る",
+    onBack: () => detail ? setDetail(false) : setSheet(null),
+    sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }) : subPanel ? React.createElement(MsxHd, {
+    back: "戻る",
+    onBack: () => sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'),
+    sub: sub === 'bag' ? '持ち物' : '能力',
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }) : React.createElement(MsxHd, {
     back: "中断",
     onBack: onPause,
     sub: `${msxAidName(s.aid)}編`,
@@ -180511,13 +180680,7 @@ function MsxBag({
     className: "v-bagw"
   }, React.createElement("div", {
     className: "t"
-  }, "🎒 持ち物", React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない"), React.createElement("button", {
-    type: "button",
-    onClick: onClose
-  }, React.createElement("i", {
-    className: "sym close",
-    "aria-hidden": "true"
-  }))), t ? React.createElement("div", {
+  }, "🎒 持ち物", React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), t ? React.createElement("div", {
     className: "v-bsel"
   }, React.createElement("span", {
     className: "e",
@@ -183318,7 +183481,7 @@ function MsxR3Bracket({
     className: "sk",
     onClick: () => setStage(3),
     "data-msx-r3-bsk": true
-  }, "SKIP ▸▸") : null));
+  }, "飛ばす ⏭") : null));
   const foot = debug ? React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -184486,7 +184649,7 @@ function MsxR3Battle({
         className: "go",
         onClick: () => setIntroSeen(introKey),
         "data-msx-r3-cupintro-go": true
-      }, "SKIP ▸▸"))
+      }, "飛ばす ⏭"))
     });
   }
   const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
@@ -193876,8 +194039,9 @@ function MonsucRankDetail({
   }, React.createElement("button", {
     type: "button",
     onClick: onBack,
-    className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
-  }, "← 一覧へ"), React.createElement("div", {
+    "data-mh-back": true,
+    className: "min-h-[44px] rounded-full bg-slate-700/80 px-4 text-[12px] font-bold active:scale-95"
+  }, "← 戻る"), React.createElement("div", {
     className: "text-[13px] font-black text-pink-300"
   }, "🌱 モンヒロサクセス")), React.createElement("div", {
     className: "px-3 pt-2"
@@ -193930,12 +194094,8 @@ function MonsucRankDetail({
   }, Math.round(monsucRankNum(row.loyal))), " ・ 人気: ", React.createElement("span", {
     className: "font-black text-white"
   }, Math.round(monsucRankNum(row.pop)))))), React.createElement("div", {
-    className: "px-3 pb-3 pt-1"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: onBack,
-    className: "w-full rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
-  }, "← 一覧へ")));
+    className: "pb-3"
+  }));
 }
 const monsucRankLineageTabs = () => {
   const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP : {};
@@ -194136,7 +194296,8 @@ function MonsucRankScreen({
   }, React.createElement("button", {
     type: "button",
     onClick: onBack,
-    className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
+    "data-mh-back": true,
+    className: "min-h-[44px] rounded-full bg-slate-700/80 px-4 text-[12px] font-bold active:scale-95"
   }, "← 戻る"), React.createElement("div", {
     className: "text-[13px] font-black text-pink-300"
   }, "🌱 モンヒロサクセス")), React.createElement("div", {
@@ -194219,12 +194380,8 @@ function MonsucRankScreen({
     pinned: true,
     onOpen: () => openDetail(mine, true)
   })), React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 px-3 pb-3 pt-1"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: onBack,
-    className: "rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
-  }, "← 戻る"), React.createElement("div", {
+    className: "px-3 pb-3 pt-1"
+  }, React.createElement("div", {
     className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
   }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く')), lineagePickerOpen && React.createElement(MonsucRankLineageSheet, {
     lineages: lineages,
@@ -240429,18 +240586,25 @@ function MonsterHeroGame() {
         armed = false;
       }
     };
+    const findBack = () => {
+      try {
+        return mhBrowserBackTarget();
+      } catch (error) {
+        return null;
+      }
+    };
+    const needsGuard = () => gameStateForBackRef.current !== 'HOME' || !!findBack();
     const onPop = () => {
       armed = false;
-      if (gameStateForBackRef.current === 'HOME') return;
+      const back = findBack();
+      if (gameStateForBackRef.current === 'HOME' && !back) return;
       arm();
       try {
-        const heads = Array.from(document.querySelectorAll('header.mh-screen-head > button[aria-label]'));
-        const back = heads.find(b => !b.disabled);
         if (back) back.click();
       } catch (error) {}
     };
     const timer = setInterval(() => {
-      if (!armed && gameStateForBackRef.current !== 'HOME') arm();
+      if (!armed && needsGuard()) arm();
     }, 500);
     window.addEventListener('popstate', onPop);
     return () => {
@@ -258151,11 +258315,15 @@ function MonsterHeroGame() {
   const titleModal = showChangelog ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(closeChangelog)), React.createElement("div", {
-    className: "mh-title-dialog"
+    className: "mh-title-dialog mh-title-dialog--changelog",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "更新履歴"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "✦ 更新履歴")), React.createElement("div", {
-    className: "mh-changelog-tabs"
+    className: "mh-changelog-tabs",
+    role: "tablist"
   }, [{
     key: 'update',
     label: '更新情報'
@@ -258164,6 +258332,9 @@ function MonsterHeroGame() {
     label: '不具合情報'
   }].map(t => React.createElement("button", {
     key: t.key,
+    type: "button",
+    role: "tab",
+    "aria-selected": changelogTab === t.key,
     onClick: () => selectChangelogTab(t.key),
     className: changelogTab === t.key ? 'active' : ''
   }, t.label, changelogUnread[t.key] && React.createElement("em", {
@@ -258385,12 +258556,13 @@ function MonsterHeroGame() {
     })];
   })()), React.createElement("button", {
     type: "button",
-    className: "mh-dialog-choice",
+    className: "mh-dialog-close",
+    "data-mh-back": true,
     onClick: closeChangelog
   }, "閉じる"))) : showTitleSettings ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowTitleSettings(false))), React.createElement("div", {
-    className: "mh-title-dialog"
+    className: "mh-title-dialog mh-title-dialog--menu"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "設定")), React.createElement("button", {
@@ -258442,7 +258614,8 @@ function MonsterHeroGame() {
   }, "🛡️ データ引き継ぎ ", React.createElement(ChevronRight, {
     size: 18
   })), React.createElement("button", {
-    className: "mh-dialog-choice",
+    className: "mh-dialog-close",
+    "data-mh-back": true,
     onClick: () => setShowTitleSettings(false)
   }, "閉じる"))) : showTitleArt ? React.createElement(ArtPickerModal, {
     pickerId: "title",
@@ -258509,7 +258682,8 @@ function MonsterHeroGame() {
     onRepair: repairAudioOutput,
     repairing: audioRepairing
   }), React.createElement(ReloadLogPanel, null)), React.createElement("button", {
-    className: "mh-dialog-choice mt-3",
+    className: "mh-dialog-close",
+    "data-mh-back": true,
     onClick: () => setShowAudioSettings(false)
   }, "閉じる"))) : showBgmArrangement ? React.createElement("div", _extends({
     className: "mh-title-modal"
@@ -258616,7 +258790,8 @@ function MonsterHeroGame() {
       ...DEFAULT_BGM_ARRANGEMENT
     })
   }, "デフォルトに戻す"), React.createElement("button", {
-    className: "mh-dialog-choice",
+    className: "mh-dialog-close",
+    "data-mh-back": true,
     onClick: closeBgmArrangement
   }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
@@ -258749,10 +258924,8 @@ function MonsterHeroGame() {
       textAlign: 'center'
     }
   }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg), React.createElement("button", {
-    className: "mh-dialog-choice justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
+    className: "mh-dialog-close",
+    "data-mh-back": true,
     onClick: () => setShowBackup(false)
   }, "閉じる"))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
@@ -278909,7 +279082,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 8px;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

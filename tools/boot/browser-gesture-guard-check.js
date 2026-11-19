@@ -8,6 +8,7 @@
 // iPhone は履歴があると、ホーム画面のアプリでも左端からのスワイプで戻れてしまい、前の画面の写しが横から出てくる。
 //   ① iPhone のホーム画面のアプリ(navigator.standalone)では履歴を足さない
 //   ② Safari・Chrome で遊ぶとき・Android のホーム画面では、今までどおり履歴を足し、戻るで画面の戻るボタンが押される
+//   ②-2 HOME の上に重ねて開く画面(モンサク)・窓(更新履歴)も、戻るで閉じてゲームの外へ出ない(41-screen-ui.jsx の mhBrowserBackTarget)
 //   ③ 長押しの吹き出し・文字の選択を止める。入力欄は選べるまま
 //   ④ 箱の中の要素にも touch-action(拡大なし)が付く。touch-action:none の所はそのまま・スクロールは止めない
 //   ⑤ 指の長押しのメニュー(contextmenu)を止める。パソコンの右クリックと入力欄はそのまま
@@ -36,7 +37,8 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
 const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s','1'); const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   put('mh_breeder_name','テスト'); put('mh_breeder_icon','🐣'); put('mh_intro_done',true); put('mh_onboarded',true); put('mh_tutorial_seen_v1',true);
   put('mh_battle_tutorial_seen_v1',true); put('mh_battle_tutorial_guide_shown_v1',true); put('mh_assistant_selected_v1','mua'); put('mh_assistant_unlock_seen_v1',true);
-  put('mh_update_notice_seen_v1',true); put('mh_rhythm_tutorial_seen_v1',true); put('mh_inherited_unique_level_compensation_v1',true); put('mh_masu_level_cap_compensation_notice_seen_v1',true); };
+  put('mh_update_notice_seen_v1',true); put('mh_rhythm_tutorial_seen_v1',true); put('mh_inherited_unique_level_compensation_v1',true); put('mh_masu_level_cap_compensation_notice_seen_v1',true);
+  const seen={};['scn','prep','team','bring','turn','train','result','rest','shugyo','cup','rank','meal','match','rematch','event','awake','retire','open','firstend','start'].forEach(k=>seen[k]=1); put('mh_monsuc_beta_v1',{v:1,seen}); };
 (async()=>{
   let chromium;
   try{({chromium}=require('playwright'));}
@@ -87,6 +89,17 @@ const seed=()=>{ if (sessionStorage.getItem('s')) return; sessionStorage.setItem
       await page.waitForTimeout(900);
       const r=await page.evaluate(()=>({home:!!document.querySelector('.mh-home-assistant'),url:location.pathname}));
       ok('② ブラウザの戻るで、ゲームの HOME へ戻る(外へ出ない)',r.home&&/monster-hero\/index\.html$/.test(r.url),JSON.stringify(r));
+      // ②-2 HOME の上に重ねて開く画面・窓も、戻るで閉じる(2026-11-19 r1119-013 ⑥ C-1・U-15。前はゲームの外へ出ていた)
+      for(const [name,sel] of [['モンヒロサクセス β','.msx'],['更新履歴','[aria-modal="true"],.mh-title-modal']]){
+        // 前の窓に出たお話などを片づけてから開く
+        await page.evaluate(n=>{const b=[...document.querySelectorAll('button')].find(x=>(x.getAttribute('aria-label')||'')===n);if(b)b.click();},name);
+        await page.waitForTimeout(1800);
+        const opened=await page.evaluate(s=>!!document.querySelector(s),sel);
+        await page.goBack().catch(()=>{});
+        await page.waitForTimeout(1200);
+        const after=await page.evaluate(s=>({open:!!document.querySelector(s),url:location.pathname}),sel);
+        ok(`②-2 HOME の上の「${name}」はブラウザの戻るで閉じ、ゲームの外へ出ない`,opened&&!after.open&&/monster-hero\/index\.html$/.test(after.url),JSON.stringify({opened,...after}));
+      }
       // ③ 長押しの吹き出し・文字の選択
       const st=await page.evaluate(()=>{
         const pick=el=>{const c=getComputedStyle(el);return {us:c.userSelect||c.webkitUserSelect,co:c.webkitTouchCallout||'(なし)',ta:c.touchAction};};
