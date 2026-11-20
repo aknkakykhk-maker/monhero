@@ -604,22 +604,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
-/* 大会参加確認の窓を画面に収める(2026-11-20 r1119-013 ⑥ API 点検 #4)。横・小さい横で見出しが上で、「キャンセル/はい」が下で切れて押せなかった。
-   本文の格子に閉じこめず画面いっぱいに出し、窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける。
-   低い画面は、左に見出しと看板、右に獲得物・問い・ボタンの2列にする(参考の窓と同じ並びの順のまま、高さを半分にする) */
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
 .msx .v-body>.v-cupwin{position:fixed;inset:0}
 .v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
 .v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
 .v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
-@media (max-height:460px){
-.v-cupwin{padding:6px 12px}
-.v-cupwin .in{max-width:640px;display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);column-gap:12px;align-content:start;padding:8px 12px 12px}
-.v-cupwin .in>*{grid-column:2}
-.v-cupwin .in>.h{grid-column:1/-1;margin-bottom:6px}
-.v-cupwin .in>.sign,.v-cupwin .in>.rvl{grid-column:1}
-.v-cupwin .in>.sign{grid-row:2/span 4;align-self:start}
-.v-cupwin .in>.sub{margin-top:0}
-}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}

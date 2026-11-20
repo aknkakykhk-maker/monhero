@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: efa38578565d8f2b
+// generated-sha256: bda810bff0781092
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89632,22 +89632,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
-/* 大会参加確認の窓を画面に収める(2026-11-20 r1119-013 ⑥ API 点検 #4)。横・小さい横で見出しが上で、「キャンセル/はい」が下で切れて押せなかった。
-   本文の格子に閉じこめず画面いっぱいに出し、窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける。
-   低い画面は、左に見出しと看板、右に獲得物・問い・ボタンの2列にする(参考の窓と同じ並びの順のまま、高さを半分にする) */
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
 .msx .v-body>.v-cupwin{position:fixed;inset:0}
 .v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
 .v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
 .v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
-@media (max-height:460px){
-.v-cupwin{padding:6px 12px}
-.v-cupwin .in{max-width:640px;display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);column-gap:12px;align-content:start;padding:8px 12px 12px}
-.v-cupwin .in>*{grid-column:2}
-.v-cupwin .in>.h{grid-column:1/-1;margin-bottom:6px}
-.v-cupwin .in>.sign,.v-cupwin .in>.rvl{grid-column:1}
-.v-cupwin .in>.sign{grid-row:2/span 4;align-self:start}
-.v-cupwin .in>.sub{margin-top:0}
-}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
@@ -91158,7 +91148,8 @@ function MsxSteps({ n }) {
 function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, right }) {
   return (
     <div className="v-hd">
-      <button type="button" className="bk" data-mh-back onClick={onBack}>← {back}</button>
+      {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
+      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
@@ -92987,7 +92978,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <span>体力 <b>−{pv ? Math.round(pv.hp || 0) : 0}</b></span>
       </div> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」(下にも同じ矢印の戻るがあった) */}<button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
   }
   // ---- 休む・遊ぶ・通院を選ぶ(Issue #6807 UI-2: 入口の1タップで即確定せず、選ぶ前に見込みを出し、共通位置の実行ボタンで確定。トレーニングと同じ形) ----
   else if (sub === 'care') {
@@ -93026,7 +93017,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </> : <span>{selCare.nm}の見込みは出せません</span>}
       </div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button><button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」 */}<button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
   }
   // ---- メイン ----
   else {
@@ -93100,6 +93091,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     <>
       {/* 詳しく・記録・メニューの窓を開いている間も、左上は「← 戻る」(その窓を閉じる)。中断は確認なしに抜けるので、窓の上からは押させない(M-2) */}
       {(detail || sheet) && !subPanel ? <MsxHd back="戻る" onBack={() => (detail ? setDetail(false) : setSheet(null))} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+        : (sub === 'train' || sub === 'care') && phase === 'main' && !run.out ? <MsxHd back="戻る" onBack={() => { setSub('main'); setSel(null); }} sub={sub === 'train' ? 'トレーニング' : '休む・遊ぶ'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : subPanel ? <MsxHd back="戻る" onBack={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))} sub={sub === 'bag' ? '持ち物' : '能力'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>}
       <div className="v-body">{body}</div>
@@ -93469,6 +93461,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
+/* 押せない決めるボタンは透けさせず、字を読めるようにする(2026-11-20 r1119-013 ⑥ API 点検。「お別れする(0体)」の字が地とほぼ同じ色だった) */
+.msx .v-ft button.go:disabled{opacity:1;color:#cbd5e1}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
@@ -95195,7 +95189,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const foot = (<>
     {!want.length ? <div className="q-note msx-kp" data-msx-r3-qnote>技を選ばなくても修行できます(能力だけ上がります)</div> : null}
     {hpShort ? <div className="q-hpng msx-kp" data-msx-r3-qhp>💔 {isSuper ? '超修行' : '修行'}は体力を {hpOf(isSuper)} 使う。体力があと <b>{hpShort}</b> 足りない(休む・遊ぶで回復)</div> : null}
-    <div className="v-ft"><button type="button" onClick={onBack}>← 戻る</button><button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
+    <div className="v-ft">{/* 戻るは左上の1つ(2026-11-20 r1119-013 ⑥ API 点検) */}<button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }
 
@@ -96039,6 +96033,8 @@ const MSX_MM_CSS = `
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
+/* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
+.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----

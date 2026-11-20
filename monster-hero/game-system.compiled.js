@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52ec110cedcd3800
+// source-sha256: 11f252b2aaa362bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172328,22 +172328,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
-/* 大会参加確認の窓を画面に収める(2026-11-20 r1119-013 ⑥ API 点検 #4)。横・小さい横で見出しが上で、「キャンセル/はい」が下で切れて押せなかった。
-   本文の格子に閉じこめず画面いっぱいに出し、窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける。
-   低い画面は、左に見出しと看板、右に獲得物・問い・ボタンの2列にする(参考の窓と同じ並びの順のまま、高さを半分にする) */
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
 .msx .v-body>.v-cupwin{position:fixed;inset:0}
 .v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
 .v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
 .v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
-@media (max-height:460px){
-.v-cupwin{padding:6px 12px}
-.v-cupwin .in{max-width:640px;display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);column-gap:12px;align-content:start;padding:8px 12px 12px}
-.v-cupwin .in>*{grid-column:2}
-.v-cupwin .in>.h{grid-column:1/-1;margin-bottom:6px}
-.v-cupwin .in>.sign,.v-cupwin .in>.rvl{grid-column:1}
-.v-cupwin .in>.sign{grid-row:2/span 4;align-self:start}
-.v-cupwin .in>.sub{margin-top:0}
-}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
@@ -174751,7 +174741,7 @@ function MsxHd({
     className: "bk",
     "data-mh-back": true,
     onClick: onBack
-  }, "← ", back), sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
+  }, back === '中断' ? '⏸ 中断' : `← ${back}`), sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
     className: "ti",
     "data-msx-hd-sc": true
   }, sub) : React.createElement("span", {
@@ -180164,12 +180154,6 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => {
-        setSub('main');
-        setSel(null);
-      }
-    }, "← 戻る"), React.createElement("button", {
-      type: "button",
       className: "go",
       disabled: !card,
       onClick: () => doAct({
@@ -180276,9 +180260,6 @@ function MsxPlay({
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
-      type: "button",
-      onClick: () => setSub('main')
-    }, "← 戻る"), React.createElement("button", {
       type: "button",
       className: "go",
       disabled: !selCare.ok || selCare.kind === 'clinic' && !cp,
@@ -180547,6 +180528,14 @@ function MsxPlay({
     back: "戻る",
     onBack: () => detail ? setDetail(false) : setSheet(null),
     sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }) : (sub === 'train' || sub === 'care') && phase === 'main' && !run.out ? React.createElement(MsxHd, {
+    back: "戻る",
+    onBack: () => {
+      setSub('main');
+      setSel(null);
+    },
+    sub: sub === 'train' ? 'トレーニング' : '休む・遊ぶ',
     right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
   }) : subPanel ? React.createElement(MsxHd, {
     back: "戻る",
@@ -181856,6 +181845,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
+/* 押せない決めるボタンは透けさせず、字を読めるようにする(2026-11-20 r1119-013 ⑥ API 点検。「お別れする(0体)」の字が地とほぼ同じ色だった) */
+.msx .v-ft button.go:disabled{opacity:1;color:#cbd5e1}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
@@ -185958,9 +185949,6 @@ function MsxR3Shugyo({
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
-    onClick: onBack
-  }, "← 戻る"), React.createElement("button", {
-    type: "button",
     className: `go${hpShort ? ' off' : ''}`,
     disabled: tickets <= 0 || hpShort > 0,
     onClick: go,
@@ -188318,6 +188306,8 @@ const MSX_MM_CSS = `
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
+/* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
+.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
 `;
 const MSX_BOX_HOST = {
   open: null,

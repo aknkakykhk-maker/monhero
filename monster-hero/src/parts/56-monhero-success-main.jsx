@@ -874,7 +874,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <span>体力 <b>−{pv ? Math.round(pv.hp || 0) : 0}</b></span>
       </div> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」(下にも同じ矢印の戻るがあった) */}<button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
   }
   // ---- 休む・遊ぶ・通院を選ぶ(Issue #6807 UI-2: 入口の1タップで即確定せず、選ぶ前に見込みを出し、共通位置の実行ボタンで確定。トレーニングと同じ形) ----
   else if (sub === 'care') {
@@ -913,7 +913,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </> : <span>{selCare.nm}の見込みは出せません</span>}
       </div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button><button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」 */}<button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
   }
   // ---- メイン ----
   else {
@@ -987,6 +987,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     <>
       {/* 詳しく・記録・メニューの窓を開いている間も、左上は「← 戻る」(その窓を閉じる)。中断は確認なしに抜けるので、窓の上からは押させない(M-2) */}
       {(detail || sheet) && !subPanel ? <MsxHd back="戻る" onBack={() => (detail ? setDetail(false) : setSheet(null))} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+        : (sub === 'train' || sub === 'care') && phase === 'main' && !run.out ? <MsxHd back="戻る" onBack={() => { setSub('main'); setSel(null); }} sub={sub === 'train' ? 'トレーニング' : '休む・遊ぶ'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : subPanel ? <MsxHd back="戻る" onBack={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))} sub={sub === 'bag' ? '持ち物' : '能力'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>}
       <div className="v-body">{body}</div>

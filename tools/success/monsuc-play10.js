@@ -225,7 +225,7 @@ if (require.main === module) (async () => {
         const sig = info.view + '|' + info.text.slice(0, 160);
         const turn = ((info.text.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0;
         if (info.text.length < 20) note('真っ白', `文字がほぼ無い view=${info.view}`);
-        const key = sanitize(info.text.replace(/^← 中断 みゅあ編 \d+ \/ 46ターン /, ''));
+        const key = sanitize(info.text.replace(/^(?:← |⏸ )中断 みゅあ編 \d+ \/ 46ターン /, ''));
         if (!log.screens[key]) {
           log.screens[key] = info.text.slice(0, 900);
           if (info.over.length) { note('はみ出し', `T${turn} ${info.over.slice(0, 3).join('/')}`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-over-t${turn}-${log.findings.length}.png`) }); }
