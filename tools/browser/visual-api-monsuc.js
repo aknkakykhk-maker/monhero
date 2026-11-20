@@ -152,6 +152,11 @@ const pngBlock = async (file, { ref = false } = {}) => {
     const buf = await sharp(path.join(ROOT, file)).resize({ height: 844, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
     return { type: 'image', media_type: 'image/jpeg', data: buf.toString('base64') };
   }
+  // sharp が無い環境(クラウドの会話など)は ImageMagick の convert で同じように縮める。入り口の1枚の上限(5MB)を超える参考の絵が断られていた(2026-11-20)
+  if (ref) {
+    const r = require('child_process').spawnSync('convert', [path.join(ROOT, file), '-resize', 'x844>', '-quality', '80', 'jpeg:-'], { maxBuffer: 64 * 1024 * 1024 });
+    if (r.status === 0 && r.stdout && r.stdout.length) return { type: 'image', media_type: 'image/jpeg', data: r.stdout.toString('base64') };
+  }
   const ext = path.extname(file).toLowerCase();
   return { type: 'image', media_type: ext === '.png' ? 'image/png' : 'image/jpeg', data: fs.readFileSync(ref ? path.join(ROOT, file) : file).toString('base64') };
 };
