@@ -37,13 +37,16 @@ try { sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp')); } catc
 
 const PROMPT_FILE = path.join(__dirname, 'prompts', 'monsuc-ui-check.md');
 const MAX_SCENES_PER_REQ = 6; // 1つの頼みに 6場面 × 3つの大きさ = 18枚 + 参考 1枚(入り口の上限は20枚)
+const MAX_IMGS_PER_REQ = 18; // 大きさを絞ったとき(--sizes tate,pc)は、18枚に収まるだけ場面を詰める
 // 入り口の上限: その場で返す(--message)は 16000、バッチは 32000(analysis-gateway/core.js)。超えると g001 から断られる(2026-11-20)
 const TOKEN_CAP = has('--message') ? 16000 : 32000;
 const MAX_TOKENS = Math.min(Number(opt('--max-tokens', has('--message') ? '16000' : '24000')) || TOKEN_CAP, TOKEN_CAP); // 12000 だと考えに使って 35本中12本が途中で切れた(2026-11-19)
 const EFFORT = opt('--effort', 'high');
 const MAX_USD = Number(opt('--max-usd', '15'));
-const SIZE_OF = { '': 'tate', land: 'yoko', s568: 'yoko-s' };
-const SIZE_NAME = { tate: '縦390×844', yoko: '横844×390', 'yoko-s': '小さい横568×320' };
+const SIZE_OF = { '': 'tate', land: 'yoko', s568: 'yoko-s', pc: 'pc' };
+const SIZE_NAME = { tate: '縦390×844', yoko: '横844×390', 'yoko-s': '小さい横568×320', pc: 'PC1280×800' };
+// --sizes tate,pc … 送る大きさを絞る(r1119-026 でモンサクは横を見ない。既定は撮ってある物を全部)
+const SIZES = opt('--sizes', 'tate,pc,yoko,yoko-s').split(',').filter((x) => x in SIZE_NAME);
 
 // 奥の撮影の道具の場面の名前(名札 → 日本語)。道具の表の注に合わせる。合わない物は名札のまま送る
 const LABELS = {
@@ -98,6 +101,8 @@ const AREAS = [
 const areaOf = (key) => AREAS.find((a) => a.re.test(key)) || { key: 'etc', name: 'その他', ref: null };
 
 // ---- 止め絵を集める ----
+const FLOW_NAME = { SQE: '育成イベント1つ(起きてから戻るまで)', SQT: 'トレーニングの1ターン(選ぶ→結果→次の月)', SQV: '編成の子のイベント(トレーニングのあと)', SQC: '大会の1試合(入りから結果まで・オート)', S6: 'みゅあ編のお話 特別な結末(最後まで)', G4: 'みゅあ編のお話 良い結末', N2: 'みゅあ編のお話 悪い結末' };
+const seqs = new Map(); // 続きの止め絵: 名前 → { key, label, frames }
 const collect = () => {
   const scenes = new Map(); // key → { key, label, shots: { tate, yoko, 'yoko-s' }, machine: [] }
   const put = (key, label, size, file, machine = []) => {
@@ -109,7 +114,7 @@ const collect = () => {
   if (home && fs.existsSync(path.join(home, 'results.json'))) {
     const res = JSON.parse(fs.readFileSync(path.join(home, 'results.json'), 'utf8'));
     for (const sc of res.scenes.filter((x) => /^monsuc-/.test(x.id))) {
-      for (const tag of ['tate', 'yoko', 'yoko-s']) {
+      for (const tag of SIZES) {
         const f = path.join(home, 'shots', tag, `${sc.id}.png`);
         if (!fs.existsSync(f)) continue;
         const rel = path.join('shots', tag, `${sc.id}.png`);
@@ -124,9 +129,12 @@ const collect = () => {
       if (!fs.existsSync(dir)) continue;
       const log = fs.existsSync(`${dir}.log`) ? fs.readFileSync(`${dir}.log`, 'utf8').split('\n').filter((l) => l.startsWith('NG')) : [];
       for (const f of fs.readdirSync(dir).sort()) {
-        const m = new RegExp(`^${tool}-(.+?)(?:-(land|s568|s320|ip|land667|big|landbig|s320big))?\\.png$`).exec(f);
+        const m = new RegExp(`^${tool}-(.+?)(?:-(land|s568|s320|ip|land667|big|landbig|s320big|pc))?\\.png$`).exec(f);
         if (!m || !((m[2] || '') in SIZE_OF)) continue;
         const code = m[1], size = SIZE_OF[m[2] || ''];
+        if (!SIZES.includes(size)) continue;
+        // 続きの止め絵(SHOT_SEQ で撮った <名前>~NN)は、縦だけを1つの流れとして束ねる(見せ場と流れの点検 r1119-033)
+        if (code.includes('~')) { if (size === 'tate') { const [c0] = code.split('~'); const q = seqs.get(c0) || seqs.set(c0, { key: `flow:${tool}:${c0}`, label: `${FLOW_NAME[c0] || labelOf(tool, c0)}〔${tool}-${c0}〕`, frames: [] }).get(c0); q.frames.push(path.join(dir, f)); } continue; }
         const tagRe = new RegExp(`^NG: ${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\(${m[2] || 'zz'}\\))?[:：(]`);
         const mach = log.filter((l) => tagRe.test(l) && (m[2] ? l.includes(`(${m[2]})`) : !/\((land|s568|s320)\)/.test(l))).map((l) => l.replace(/^NG:\s*/, '').slice(0, 160));
         put(`${tool}:${code}`, `${labelOf(tool, code)}〔${tool}-${code}〕`, size, path.join(dir, f), mach.slice(0, 3));
@@ -134,7 +142,7 @@ const collect = () => {
     }
   }
   // 同じ画面の時間違い(歩き回りの途中・演出の途中)は1枚で足りるので送らない(費用を抑える)
-  const SKIP = /^msx:RW[2-5]$|^r3:QF[1-4]$/;
+  const SKIP = /^msx:RW[2-5]$|^r3:QF[1-4]$|^(msx|r3):SQ/;
   return [...scenes.values()].filter((sc) => !SKIP.test(sc.key));
 };
 
@@ -148,12 +156,19 @@ const pngBlock = async (file, { ref = false } = {}) => {
   return { type: 'image', media_type: ext === '.png' ? 'image/png' : 'image/jpeg', data: fs.readFileSync(ref ? path.join(ROOT, file) : file).toString('base64') };
 };
 
+const only = opt('--only').split(',').filter(Boolean);
 const buildRequests = async (scenes) => {
   const system = fs.readFileSync(PROMPT_FILE, 'utf8');
   const groups = [];
   for (const a of [...AREAS, { key: 'etc' }]) {
     const list = scenes.filter((sc) => areaOf(sc.key).key === a.key);
-    for (let i = 0; i < list.length; i += MAX_SCENES_PER_REQ) groups.push({ area: areaOf(list[0].key), scenes: list.slice(i, i + MAX_SCENES_PER_REQ) });
+    let cur = [], n = 0;
+    for (const sc of list) {
+      const k = SIZES.filter((z) => sc.shots[z]).length;
+      if (cur.length && (cur.length >= (SIZES.length >= 3 ? MAX_SCENES_PER_REQ : 99) || n + k > MAX_IMGS_PER_REQ)) { groups.push({ area: areaOf(cur[0].key), scenes: cur }); cur = []; n = 0; }
+      cur.push(sc); n += k;
+    }
+    if (cur.length) groups.push({ area: areaOf(cur[0].key), scenes: cur });
   }
   const reqs = [];
   for (const [n, g] of groups.entries()) {
@@ -163,7 +178,7 @@ const buildRequests = async (scenes) => {
       content.push(await pngBlock(g.area.ref, { ref: true }));
     }
     for (const sc of g.scenes) {
-      for (const size of ['tate', 'yoko', 'yoko-s']) {
+      for (const size of SIZES) {
         if (!sc.shots[size]) continue;
         const mach = sc.machine.filter((x) => x.startsWith(`${size}:`)).map((x) => x.slice(size.length + 2));
         content.push({ type: 'text', text: `【${sc.label}@${size}】${SIZE_NAME[size]}${mach.length ? ` / 機械の見つけ物(machine): ${mach.join(' ・ ')}` : ''}` });
@@ -172,6 +187,17 @@ const buildRequests = async (scenes) => {
     }
     content.push({ type: 'text', text: '上の止め絵を点検し、決めた形の JSON の配列だけを返してください。' });
     reqs.push({ custom_id: `g${String(n + 1).padStart(3, '0')}`, area: g.area.name, scenes: g.scenes.map((s) => s.label),
+      request: { system, cache_system: true, messages: [{ role: 'user', content }], max_tokens: MAX_TOKENS, effort: EFFORT } });
+  }
+  // 続きの止め絵: 1つの流れを1本の頼みに(19枚を超える物は間引く)。観点11(見せ場と流れ)を見てもらう
+  for (const q of seqs.values()) {
+    if (only.length && !only.some((o) => q.key.includes(o) || q.label.includes(o))) continue;
+    const fr = q.frames.sort();
+    const pick = fr.length <= 19 ? fr : Array.from({ length: 19 }, (_, i) => fr[Math.round(i * (fr.length - 1) / 18)]);
+    const content = [{ type: 'text', text: `続きの止め絵: ${q.label}。縦390×844 で、1枚目から押すたびに撮った ${pick.length}枚を順に並べます(試合は約3秒ごと)。観点11(見せ場と流れ)を中心に、1〜12 の全部で見てください。場面の名前は「${q.label}」、sizes は ["tate"] にしてください。` }];
+    for (const [i, f] of pick.entries()) { content.push({ type: 'text', text: `【${q.label} ${i + 1}枚目@tate】` }); content.push(await pngBlock(f)); }
+    content.push({ type: 'text', text: '上の止め絵を点検し、決めた形の JSON の配列だけを返してください。' });
+    reqs.push({ custom_id: `f${String(reqs.length + 1).padStart(3, '0')}`, area: '流れ(続きの止め絵)', scenes: [q.label],
       request: { system, cache_system: true, messages: [{ role: 'user', content }], max_tokens: MAX_TOKENS, effort: EFFORT } });
   }
   return reqs;
@@ -229,7 +255,6 @@ const writeFindings = (results, usd) => {
     writeFindings(results, Math.round(usd * 10000) / 10000);
     return;
   }
-  const only = opt('--only').split(',').filter(Boolean);
   let scenes = collect();
   if (only.length) scenes = scenes.filter((s) => only.some((o) => s.key.includes(o) || s.label.includes(o)));
   let reqs = await buildRequests(scenes);

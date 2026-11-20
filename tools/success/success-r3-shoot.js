@@ -89,7 +89,7 @@ const makeRun = async (kind) => {
   const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
   // SHOT_SIZES=base,land,s568 のように名札を並べると、その大きさだけ撮る(s568 = 小さい横 568×320。見た目の点検 visual-shoot.js --monsuc-deep が使う)
   const pickSizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568']].filter(([, , t]) => pickSizes.includes(t || 'base')));
+  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568'], [1280, 800, 'pc']].filter(([, , t]) => pickSizes.includes(t || 'base')));
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
@@ -97,6 +97,8 @@ const makeRun = async (kind) => {
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
     ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['MA1', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '@@h', '*[data-msxm-move="1"]', 'w600', '@@h', 'w5400', '@@h']], ['MA2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="-1"]', 'w6000']], // 手動の試合: 札の案A・場の高さが番で変わらない・零で吹き飛ばし(r1115-050②・074・185・193)
     ['G2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="1"]', 'w6000']], // 手動の試合の2ラウンド目の自分の番: 上の帯と操作欄のガッツが同じ(r1115-187)
+    // 続きの止め絵(SHOT_SEQ で名指ししたときだけ撮る。見せ場と流れの点検 r1119-033): 大会の1試合を受付から結果まで
+    ...((process.env.SHOT_SEQ || '').split(',').includes('SQC') ? [['SQC', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w1500', '*[data-msa-ctl="manual"]', ...Array(12).fill('w3000'), 'w1500', /^結果へ/, '%next', '@next']]] : []),
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], // R1: 賞金ランク UP!(段が上がったときだけ)。C3b: ごはんは その場では出ない(2026-11-17 社長: ファームで あげる)。権利が育成に残るかを見る
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
@@ -177,6 +179,11 @@ const makeRun = async (kind) => {
         await page.evaluate(() => { window.__bgmLog = []; if (!window.__bgmHooked && typeof SuccessSound !== 'undefined') { window.__bgmHooked = true; const o = SuccessSound.scene; SuccessSound.scene = function (id) { window.__bgmLog.push(id); return o.apply(this, arguments); }; } });
         await page.evaluate(() => { window.__stageH = []; });
         const keysSeen = [];
+        // SHOT_SEQ=MA1,C3 … その場面は操作のたびに1枚撮る(続きの止め絵。見せ場と流れの点検 r1119-033)
+        const seq = SHOT_DIR && (process.env.SHOT_SEQ || '').split(',').includes(name);
+        let seqN = 0;
+        const seqShot = async () => { if (seq) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `r3-${name}~${String(seqN++).padStart(2, '0')}${tag ? `-${tag}` : ''}.png`) }); } };
+        await seqShot();
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -194,6 +201,7 @@ const makeRun = async (kind) => {
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
+          await seqShot();
           keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
         if (name === 'A1') { const q = await page.evaluate(() => { const cs = [...document.querySelectorAll('[data-msx-assist-mon]')]; return { n: cs.length, mark: document.querySelectorAll('[data-msx-assist-mon] .mmg-as').length, hit: cs.filter((c) => { const nm = c.querySelector('.mmg-nm2, .mmg-lb'); if (!nm) return true; const r = nm.getBoundingClientRect(); return [...c.querySelectorAll('i')].some((e) => { const o = e.getBoundingClientRect(); return o.width > 0 && o.left < r.right && o.right > r.left && o.top < r.bottom && o.bottom > r.top; }); }).length }; });

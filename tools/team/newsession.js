@@ -19,6 +19,25 @@ const { linesFor } = require('./requests');
 
 const HQ = 'session_014GTmSNS2ae9tRr57k3zFjC';
 
+// 会話の題(Claude アプリの一覧に出る)。2026-11-20 社長「API はセッション名わかりやすくして」:
+//   台帳の番号(r1119-024②)や丸数字が題を埋め、API を使う会話かどうかが28字で切れて見えなかった。
+//   API を使う仕事は頭に [API] を付け、番号と丸数字と中身のない括弧は題から外す(依頼文には残る)
+const sessionTitle = (dept, who, job) => {
+  const raw = String(job || '').replace(/\s+/g, ' ');
+  const api = /API|Claude API|分析の入り口/i.test(raw);
+  const clean = raw
+    .replace(/r\d{4}-\d{3}[①-⑳]?/g, '')                 // 台帳の番号
+    .replace(/^[①-⑳]/, '').replace(/[(（][^)）]*[)）]/g, (g) => g.replace(/[①-⑳]/g, '')) // 頭と括弧の中の丸数字
+    .replace(/(?<=[(（・、,\s])\d{3}(?=[・、,)）\s]|$)/g, '')  // 番号の続き(「・018・030」)
+    .replace(/[(（][^)）]*[)）]/g, (g) => g.replace(/(?:Claude\s*)?API(?:\s*分析|\s*点検)?\s*[・、+]?/gi, '')) // 括弧の中の API の語(頭の [API] と重なる)
+    .replace(/[(（]\s*[・、,+\s]*[)）]/g, '')               // 中身のない括弧
+    .replace(/[(（]\s*[・、,+\s]+/g, (m) => m[0]).replace(/[・、,+\s]+([)）])/g, '$1')
+    .replace(/[・、,+]{2,}/g, '・')
+    .replace(/[(（]\s*[)）]/g, '')
+    .replace(/\s{2,}/g, ' ').trim();
+  return `${api ? '[API] ' : ''}${dept} ${who}: ${cut(clean, 36)}`;
+};
+
 function build(d, job, { name, kind, failed, to } = {}) {
   const r = pick(job, { kind, failed });
   const memo = latest(d);
@@ -60,7 +79,7 @@ function build(d, job, { name, kind, failed, to } = {}) {
   P.push('');
   P.push(`■報告: send_message は使わない(社長に毎回許可の確認が出る・r1119-015)。会話の最後の発言に書いて止まる(窓口が見回って読む・宛先 ${to || HQ})。短く「何を直したか・PR番号・済ませた頼みの id(追跡表)・更新履歴の要否(要るなら文案)・本番で見る所」`);
   return {
-    title: `${d['部'].replace(/\(.*$/, '')} ${who}: ${cut(job.replace(/\s+/g, ' '), 28)}`,
+    title: sessionTitle(d['部'].replace(/\(.*$/, ''), who, job),
     model: r.kind.model,
     kind: r.kind,
     why: r.why,
@@ -92,4 +111,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { build };
+module.exports = { sessionTitle, build };

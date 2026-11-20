@@ -1,0 +1,1247 @@
+{
+ "summary": [
+  "Grievous Lady EASY/NORMALの音ずれと、16分の同じ所連打(47〜67ms)が最優先",
+  "同時の重なり3件と押せない所(戦場MASTER・LAMIA MASTER等)は位置だけ直す",
+  "風がそよぐ場所HELLはMASTERと全数値が同じで写しの疑い。表示Lvの差も多い"
+ ],
+ "songs": [
+  {
+   "song": "Grievous Lady",
+   "songId": "grievous_lady",
+   "items": [
+    {
+     "difficulty": "EASY",
+     "where": "0:38.5(小節32)〜",
+     "what": "ノーツの約4割が打点から60ms超で、この曲の他の難易度より大きく、16分ひとつ早く置かれている疑いがある",
+     "evidence": "60ms超 0.442・中央35ms(HARD〜MASTERは0.171〜0.184・13ms)/0:38.5(小節32)から4秒に12個",
+     "suggest": "耳で確かめ、早い所は位置だけ直す(時刻を打点へ寄せる)",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "1:50.0(小節95)〜",
+     "what": "EASYと同じく打点から外れたノーツが多く、NORMALの中で仮想ミス%がいちばん高い",
+     "evidence": "60ms超 0.392・中央26ms/1:50.0(小節95)から4秒に13個/仮想ミス1.12%(他のNORMALは概ね0.35〜0.5、FREEDOM DiVE↓でも0.87)",
+     "suggest": "耳で確かめ、外れた所は位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "0:56〜",
+     "what": "HARDの中で仮想ミス%が飛び抜けているのに、表示Lvが見込みより5低い",
+     "evidence": "仮想ミス2.22%(他のHARDは概ね0.4〜0.9)/表示22・見込み27.1/0:22.7(小節18)から4秒に9個ずれ/0:56〜ミス見込み1.5/47個",
+     "suggest": "ずれを耳で確かめた後、表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "0:56〜",
+     "what": "EXPERTなのに仮想ミス%が他曲のほとんどのMASTERより高い",
+     "evidence": "仮想ミス5.16%/0:56〜ミス見込み5.1/64個/0:25.4(小節21)から4秒に10個ずれ",
+     "suggest": "耳で確かめ、0:56〜の区間をその難易度だけ手で直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "0:56〜",
+     "what": "全MASTERで仮想ミス%が最も高く、ずれの集まりもある",
+     "evidence": "仮想ミス7.85%/0:56〜ミス見込み8.2/72個/2:09.6(小節112)から4秒に13個ずれ",
+     "suggest": "耳で確かめてから表示Lvまたは該当区間をその難易度だけ手で直す",
+     "priority": "中",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Sparkling Pink Overture",
+   "songId": "sparkling_pink_overture",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "同じ所を47msで続けて押す所が上の難易度より多い",
+     "evidence": "同じ所70ms未満18回・最短47ms(EXPERT 9回・MASTER 4回)",
+     "suggest": "連打の片方を隣の位置へ、位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "",
+     "what": "同じ所47msの連打が残っている",
+     "evidence": "同じ所70ms未満9回・最短47ms/仮想ミス1.72%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "同じ所47msの連打がHELLで14回ある",
+     "evidence": "同じ所70ms未満14回・最短47ms",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "EASYに交差と届きにくい所があり、最短間隔も短い",
+     "evidence": "交差1/100・届きにくい11/100・最短94ms",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "NORMALに交差と届きにくい所が多い",
+     "evidence": "交差1/100・届きにくい16/100",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより大きく高い",
+     "evidence": "表示39・見込み33.2(表示が高い)/仮想ミス2.43%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "メガロバニア",
+   "songId": "megalovania_sans",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "HARDに同じ所62msの連打がある",
+     "evidence": "同じ所70ms未満6回・最短62ms",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "",
+     "what": "同じ所62msの連打が多い",
+     "evidence": "同じ所70ms未満10回・最短62ms",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "0:56〜",
+     "what": "同じ所62msの連打が多く、表示Lvも見込みより高い",
+     "evidence": "同じ所70ms未満17回/表示43・見込み38.1/仮想ミス3.3%",
+     "suggest": "位置だけ直し、その後で表示Lvを見直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "0:48〜",
+     "what": "全HELLで同じ所連打が最多で、仮想ミス%もHELLの最上位",
+     "evidence": "同じ所70ms未満54回・最短62ms/仮想ミス5.02%/0:48〜ミス見込み5.3/66個",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "FREEDOM DiVE↓",
+   "songId": "freedom_dive",
+   "items": [
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "EASYに同じ所67msの連打がある",
+     "evidence": "同じ所70ms未満2回・最短67ms/表示16",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "1:36〜",
+     "what": "NORMALに同じ所67msの連打がある",
+     "evidence": "同じ所70ms未満3回・最短67ms/仮想ミス0.87%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "1:04〜",
+     "what": "同じ所67msの連打が多い",
+     "evidence": "同じ所70ms未満11回/仮想ミス2.64%/1:04〜ミス見込み2.8/54個",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:04〜",
+     "what": "同じ所67msの連打があり、仮想ミス%がMASTERの上位",
+     "evidence": "同じ所70ms未満8回/仮想ミス4.18%/1:04〜ミス見込み4.4/62個",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "HELL",
+     "where": "1:04〜",
+     "what": "同じ所67msの連打がHELLで36回ある",
+     "evidence": "同じ所70ms未満36回・最短67ms/仮想ミス4.31%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "SIX ÉTERNEL(six_eternel_beat)",
+   "songId": "six_eternel_beat",
+   "items": [
+    {
+     "difficulty": "EXPERT",
+     "where": "2:16〜",
+     "what": "同じ所54msの連打がMASTERより多い",
+     "evidence": "同じ所70ms未満25回・最短54ms(MASTER 17回)/仮想ミス1.73%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "HARDに同じ所55msの連打がある",
+     "evidence": "同じ所70ms未満1回・最短55ms",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:12〜",
+     "what": "同じ所54msの連打があり、表示Lvも見込みより高い",
+     "evidence": "同じ所70ms未満17回/表示39・見込み34.8/仮想ミス2.35%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "HELL",
+     "where": "0:48〜",
+     "what": "同じ所54msの連打がHELLで48回ある",
+     "evidence": "同じ所70ms未満48回・最短54ms",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "風がそよぐ場所",
+   "songId": "kaze_ga_soyogu",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "HELLがMASTERとすべての数字で同じで、HELLらしい交差も無く、MASTERの写しになっている疑いがある",
+     "evidence": "HELL・MASTERともにノーツ193・毎秒2.04・最密16・交差0・届きにくい2・跳び4/仮想ミスHELL 0.46%(全HELLで最低)",
+     "suggest": "実際の譜面を確かめ、写しならHELLだけ手で直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより大きく高い",
+     "evidence": "表示18・見込み11.8(表示が高い)",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "",
+     "what": "下の難易度も含めて表示Lvが見込みより高めにそろっている",
+     "evidence": "EASY 4/0.8・NORMAL 5/1.8・HARD 7/3.8・EXPERT 11/7.2",
+     "suggest": "表示Lvだけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Sheriruth",
+   "songId": "sheriruth",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:36〜",
+     "what": "押せない所が全譜面で最多",
+     "evidence": "押せない11/跳び56/仮想ミス2.06%",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:36〜",
+     "what": "押せない所がある",
+     "evidence": "押せない4/跳び57",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "2:08.2(小節99)〜",
+     "what": "下の難易度なのに打点からずれたノーツが集まる所がある",
+     "evidence": "60ms超 0.051/2:08.2(小節99)から4秒に11個",
+     "suggest": "耳で確かめ、位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "2:08.5(小節99)〜",
+     "what": "NORMALと同じ所にずれの集まりがある",
+     "evidence": "60ms超 0.023/2:08.5(小節99)から4秒に6個",
+     "suggest": "耳で確かめる",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:27.9(小節68)〜",
+     "what": "打点から60ms超の割合が上の段ほど大きい",
+     "evidence": "60ms超 MASTER 0.118・HELL 0.12(HARD 0.031)/1:27.9(小節68)から4秒に8個",
+     "suggest": "耳で確かめる",
+     "priority": "中",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "天翔る翼",
+   "songId": "amakakeru_tsubasa",
+   "items": [
+    {
+     "difficulty": "EXPERT",
+     "where": "0:16〜",
+     "what": "押せない所があり、仮想ミス%がHARDから急に跳ね上がる",
+     "evidence": "押せない1(MASTERは0)/仮想ミス3.08%(HARD 0.8%)/0:16〜ミス見込み2.3/50個",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "0:16〜",
+     "what": "見込みLvより表示が大きく高い一方、仮想ミス%はMASTERの上位で数字が食い違う",
+     "evidence": "表示48・見込み35.9(表示が高い)/仮想ミス4.45%",
+     "suggest": "耳と実際のプレイで確かめてから表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "0:16〜",
+     "what": "全HELLで仮想ミス%が最も高いのに、表示はより低い",
+     "evidence": "仮想ミス5.16%・表示67(メガロバニア77で5.02%・FREEDOM DiVE↓73で4.31%)",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "届きにくい所がEXPERT・MASTERより多い",
+     "evidence": "届きにくい HARD 22・EXPERT 11・MASTER 12(/100)",
+     "suggest": "位置だけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Hopes and Dreams",
+   "songId": "hopes_and_dreams",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "0:02.1",
+     "what": "HOLDとSLIDEが同じ所から同時に始まり重なっている",
+     "evidence": "同時で重なる1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "グルメレース(gourmet_race_dx)",
+   "songId": "gourmet_race_dx",
+   "items": [
+    {
+     "difficulty": "EXPERT",
+     "where": "1:51.7",
+     "what": "HOLDとSLIDEが同じ所から同時に始まり重なっている",
+     "evidence": "同時で重なる1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Rebellion short",
+   "songId": "rebellion_short",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "0:32.9",
+     "what": "HOLDとSLIDEが同じ所から同時に始まり重なっている",
+     "evidence": "同時で重なる1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "2:00〜",
+     "what": "EXPERTからの難しさの跳びが大きい",
+     "evidence": "表示26→42・ノーツ534→780",
+     "suggest": "表示Lvはそのままで、EXPERTの表示Lvとの間を説明できるか確かめる",
+     "priority": "中",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "戦場の疾風",
+   "songId": "senjou_no_shippuu",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "2:32〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1(HELLは0)",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "2:32〜",
+     "what": "表示25のEXPERTとしては仮想ミス%が高い",
+     "evidence": "仮想ミス1.24%(HARD 0.45%)/2:32〜ミス見込み1.0/34個",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "中",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "LAMIA",
+   "songId": "lamia",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "0:24〜",
+     "what": "押せない所があり、表示Lvが見込みより大きく高い",
+     "evidence": "押せない1/表示51・見込み42.8(表示が高い)",
+     "suggest": "位置だけ直し、表示Lvだけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "EASYなのに最短間隔が短く、届きにくい所がある",
+     "evidence": "最短75ms・届きにくい2/100",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "NORMALに交差と届きにくい所が多い",
+     "evidence": "交差1・届きにくい12(/100)",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "最後のノーツ後の空きが長い(全難易度で同じ)",
+     "evidence": "空き4135ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "サウダージ",
+   "songId": "saudade",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "3:04〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "3:04〜",
+     "what": "表示Lvのわりに仮想ミス%が高い",
+     "evidence": "表示37・仮想ミス2.02%(表示30〜40台前半のHELLは概ね0.5〜1.3%)",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "最後のノーツ後の空きがとても長い(全難易度で同じ)",
+     "evidence": "空き8809ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "departure! short",
+   "songId": "departure_short",
+   "items": [
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "最密4秒がEASYより少ない段の逆転",
+     "evidence": "EASY→NORMAL: ノーツ数×1.14・最密4秒×0.9(EASY 10・NORMAL 9)",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "高",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示23・見込み19.4",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "打点との差の中央がEASYだけ大きい",
+     "evidence": "中央23ms(NORMAL〜HELLは17ms)",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "綺季一閃 short",
+   "songId": "kiki_issen_short",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "2:08〜",
+     "what": "最密4秒がEXPERTより少ない段の逆転",
+     "evidence": "EXPERT→MASTER: ノーツ数×1.06・最密4秒×0.87(30→26)/仮想ミスEXPERT 0.70%・MASTER 0.73%",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "SAD SONG short",
+   "songId": "sad_song_short",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "最密4秒がEXPERTより少ない段の逆転",
+     "evidence": "EXPERT→MASTER: ノーツ数×1.11・最密4秒×0.96(26→25)",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Altar of the World Tree, Beneath the White Night short",
+   "songId": "altar_world_tree_short",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "最密4秒がEXPERTより少ない段の逆転",
+     "evidence": "EXPERT→MASTER: ノーツ数×1.16・最密4秒×0.96(25→24)",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Altar of the World Tree, Beneath the White Night",
+   "songId": "altar_world_tree",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "5:44〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1/届きにくい151/100(全HELLで最多)",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Monster",
+   "songId": "monster",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "3:36〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Monster short",
+   "songId": "monster_short",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:20〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "ROSE",
+   "songId": "rose",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "2:24〜",
+     "what": "押せない所があり、表示Lvのわりに仮想ミス%が高い",
+     "evidence": "押せない1/表示51・仮想ミス3.29%(表示51のMonster Heroは1.55%)",
+     "suggest": "位置だけ直し、表示Lvだけ直す",
+     "priority": "高",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "呪われた騎士の時計仕掛け",
+   "songId": "dullahan_clockwork",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:36〜",
+     "what": "押せない所がある",
+     "evidence": "押せない1",
+     "suggest": "位置だけ直す",
+     "priority": "高",
+     "known": true
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示25・見込み21.5",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "魔窟の旋律",
+   "songId": "makutsu_no_senritsu",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "1:44〜",
+     "what": "見込みLvがEXPERTを下回り、最密4秒も同じで段の差がほぼ無い",
+     "evidence": "見込み EXPERT 24.0・MASTER 23.9/最密4秒25→25・ノーツ×1.13",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "中",
+     "known": true
+    },
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "HELLのノーツ数・毎秒がMASTERより少ない",
+     "evidence": "ノーツ477・毎秒3.28(MASTER 536・3.69)",
+     "suggest": "実際の譜面で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)",
+   "songId": "dr_wily_stage_1_okkussenman",
+   "items": [
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "EASYなのに最短間隔が84msで跳びもある",
+     "evidence": "最短84ms・跳び1",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "NORMALに交差・届きにくい・跳びがある",
+     "evidence": "交差1・届きにくい1(/100)・跳び2・最短83ms",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "届きにくい所がEXPERT・MASTERの倍以上ある",
+     "evidence": "届きにくい HARD 36・EXPERT 16・MASTER 16(/100)",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:12〜",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示48・見込み43.1",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "打点との差の中央が全難易度で大きめ",
+     "evidence": "中央22〜25ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Dr.WILY STAGE 1(dr_wily_stage_1)",
+   "songId": "dr_wily_stage_1",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "0:32〜",
+     "what": "届きにくい所がEXPERT・MASTERより多い",
+     "evidence": "届きにくい HARD 39・EXPERT 24・MASTER 24(/100)",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "下の難易度の表示Lvが見込みより低い",
+     "evidence": "EASY 11/14.4・NORMAL 14/17.9・HARD 22/26.4",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "交差がHELLの中で最も多い",
+     "evidence": "交差114/100",
+     "suggest": "位置だけ直す",
+     "priority": "低",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "最後のノーツ後の空きが長い(全難易度で同じ)",
+     "evidence": "空き7338ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Erfolg(erfolg)",
+   "songId": "erfolg",
+   "items": [
+    {
+     "difficulty": "EXPERT",
+     "where": "0:32〜",
+     "what": "HARDから仮想ミス%が大きく跳ね、EXPERTの上位",
+     "evidence": "仮想ミス2.31%(HARD 0.49%)/表示33・見込み29.9",
+     "suggest": "その難易度だけ手で直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:04〜",
+     "what": "仮想ミス%がMASTERの上位",
+     "evidence": "仮想ミス3.52%/1:04〜ミス見込み4.2/57個",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "届きにくい所がEXPERTより多い",
+     "evidence": "届きにくい HARD 12・EXPERT 6(/100)",
+     "suggest": "位置だけ直す",
+     "priority": "低",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "最後のノーツ後の空きが全譜面で最も長い",
+     "evidence": "空き9506ms(全難易度)",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    },
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "打点との差の中央がHARD以上だけ大きい",
+     "evidence": "中央 EASY・NORMAL 9ms/HARD〜HELL 15ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Journey",
+   "songId": "journey",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "1:36〜",
+     "what": "表示Lvが見込みより低く、仮想ミス%も高い",
+     "evidence": "表示36・見込み39.8/仮想ミス2.96%/最密4秒37/1:36〜ミス見込み3.9/54個",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "HELL",
+     "where": "1:36〜",
+     "what": "表示Lvのわりに仮想ミス%が高い",
+     "evidence": "表示51・仮想ミス3.27%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "帯の中のノーツが全譜面で最も多い",
+     "evidence": "帯の中 MASTER 25・EXPERT 15",
+     "suggest": "上限を超えていれば位置だけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "サウダージ short",
+   "songId": "saudade_short",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:04〜",
+     "what": "表示Lvのわりに仮想ミス%が高い",
+     "evidence": "表示37・仮想ミス1.95%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Wrath of the Thorn King",
+   "songId": "wrath_of_the_thorn_king",
+   "items": [
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "見込みLvがEASYより低く、表示Lvとの差も大きい",
+     "evidence": "見込み EASY 4.5・NORMAL 3.2/表示7",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "ヒューマノイド",
+   "songId": "humanoid",
+   "items": [
+    {
+     "difficulty": "EXPERT",
+     "where": "0:56〜",
+     "what": "表示Lvが見込みより大きく低く、交差が多い",
+     "evidence": "表示31・見込み36.3/交差34/100",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": true
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "NORMALに交差がある",
+     "evidence": "交差1/100・最短94ms",
+     "suggest": "位置だけ直す",
+     "priority": "中",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "英雄の証(eiyuu_no_akashi)",
+   "songId": "eiyuu_no_akashi",
+   "items": [
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "表示Lvが見込みより大きく高い",
+     "evidence": "EASY 6/1.9・NORMAL 7/4.4・MASTER 20/16.6",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "ROSE short",
+   "songId": "rose_short",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:28〜",
+     "what": "表示Lvのわりに仮想ミス%が高い",
+     "evidence": "表示49・仮想ミス2.96%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "MEGALOVANIA",
+   "songId": "megalovania_smash",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "1:52〜",
+     "what": "表示Lvのわりに仮想ミス%が高い",
+     "evidence": "表示42・仮想ミス2.18%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "MASTER",
+     "where": "1:52〜",
+     "what": "表示27のMASTERとしては仮想ミス%が高い",
+     "evidence": "仮想ミス1.41%/1:52〜ミス見込み1.5/46個",
+     "suggest": "表示Lvだけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Midnight Studio",
+   "songId": "midnight_studio",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "表示Lvが見込みより低い",
+     "evidence": "表示12・見込み15.6/届きにくい8/100",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "NORMAL",
+     "where": "",
+     "what": "NORMALだけ譜面が早く終わる",
+     "evidence": "空き NORMAL 2668ms・HARD 2263ms・他1452ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Monster Hero",
+   "songId": "monster_hero",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "表示Lvが見込みより低い",
+     "evidence": "表示15・見込み18.6",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "EASY・NORMALだけ譜面が早く終わる",
+     "evidence": "空き EASY 3034ms・NORMAL 2860ms・HARD以上1214ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "departure!",
+   "songId": "departure",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示22・見込み17.8/仮想ミス0.47%",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Toward the Stars, Paradise or Truth short",
+   "songId": "toward_the_stars_short",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "1:12〜",
+     "what": "表示Lvが見込みより高く、EXPERTからの跳びが大きい",
+     "evidence": "表示37・見込み33.4/EXPERT 21→MASTER 37",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": true
+    },
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "最密4秒がMASTERより少ない",
+     "evidence": "最密4秒 HELL 26・MASTER 33",
+     "suggest": "実際の譜面で確かめる",
+     "priority": "低",
+     "known": false
+    },
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "最後のノーツ後の空きが長い",
+     "evidence": "空き EASY〜HARD 4326ms・EXPERT/MASTER 4117ms",
+     "suggest": "耳で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Rebellion",
+   "songId": "rebellion",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "3:52〜",
+     "what": "EXPERTからの跳びが大きく、表示Lvも見込みより高い",
+     "evidence": "表示24→45・ノーツ812→1297/見込み40.8",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": true
+    },
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "跳びが全HELLで最も多い",
+     "evidence": "跳び162",
+     "suggest": "位置だけ直す",
+     "priority": "低",
+     "known": true
+    }
+   ]
+  },
+  {
+   "song": "Midnight Studio short",
+   "songId": "midnight_studio_short",
+   "items": [
+    {
+     "difficulty": "HARD",
+     "where": "",
+     "what": "表示Lvが見込みより低い",
+     "evidence": "表示10・見込み12.7(EXPERTは21)",
+     "suggest": "表示Lvだけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Nothing Without You",
+   "songId": "nothing_without_you",
+   "items": [
+    {
+     "difficulty": "EASY",
+     "where": "",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示7・見込み4.6",
+     "suggest": "表示Lvだけ直す",
+     "priority": "低",
+     "known": false
+    },
+    {
+     "difficulty": "EXPERT",
+     "where": "",
+     "what": "帯の中のノーツが多い",
+     "evidence": "帯の中 EXPERT 10・MASTER 8",
+     "suggest": "上限を超えていれば位置だけ直す",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Crazy Party Night(crazy_party_night)",
+   "songId": "crazy_party_night",
+   "items": [
+    {
+     "difficulty": "MASTER",
+     "where": "",
+     "what": "表示Lvが見込みより高い",
+     "evidence": "表示29・見込み25.6",
+     "suggest": "表示Lvだけ直す",
+     "priority": "中",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Stay With Me short",
+   "songId": "stay_with_me_short",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "HELLの最密4秒・毎秒がMASTERとEXPERTより少ない",
+     "evidence": "最密4秒 HELL 19・MASTER 28・EXPERT 23/毎秒 HELL 2.72・MASTER 3.26",
+     "suggest": "実際の譜面で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  },
+  {
+   "song": "Evans",
+   "songId": "evans",
+   "items": [
+    {
+     "difficulty": "HELL",
+     "where": "",
+     "what": "HELLのノーツ数・最密4秒・仮想ミス%がMASTERより少ない",
+     "evidence": "ノーツ462・最密30・仮想ミス1.66%(MASTER 561・37・2.22%)",
+     "suggest": "実際の譜面で確かめる",
+     "priority": "低",
+     "known": false
+    }
+   ]
+  }
+ ],
+ "top10": [
+  {
+   "song": "Grievous Lady",
+   "difficulty": "EASY",
+   "why": "ノーツの44%が打点から60ms超で、他の難易度より16分ひとつ早くずれている疑い",
+   "known": false
+  },
+  {
+   "song": "Sparkling Pink Overture",
+   "difficulty": "HARD",
+   "why": "同じ所47msの連打が18回あり、EXPERT・MASTERより多い",
+   "known": false
+  },
+  {
+   "song": "風がそよぐ場所",
+   "difficulty": "HELL",
+   "why": "全数値がMASTERと同じで、HELLがMASTERの写しになっている疑い",
+   "known": false
+  },
+  {
+   "song": "FREEDOM DiVE↓",
+   "difficulty": "EASY",
+   "why": "EASYに同じ所67msの連打がある",
+   "known": true
+  },
+  {
+   "song": "メガロバニア",
+   "difficulty": "HELL",
+   "why": "同じ所62msの連打が54回と最多で、仮想ミス5.02%",
+   "known": false
+  },
+  {
+   "song": "SIX ÉTERNEL(six_eternel_beat)",
+   "difficulty": "EXPERT",
+   "why": "同じ所54msの連打が25回でMASTERより多い",
+   "known": false
+  }
+ ]
+}
