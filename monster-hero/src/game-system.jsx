@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 551b55b26affb1bf
+// generated-sha256: 60d5ca9ae5b914c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80062,6 +80062,14 @@ const AMBB_CSS = `
   .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
   .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
 }
+/* 縦の画面(2026-11-20 ミハリ #6901): 場の高さをモンサクの大会の試合と同じ(画面の高さの半分・420px まで)にそろえる。入りきらない分は画面ごと縦に送る */
+@media (orientation:portrait) and (min-height:741px){
+  .ambw.ambb-full{overflow-y:auto}
+  .ambw.ambb-full .ambw-in{height:auto;min-height:100%}
+  .ambw.ambb-full [data-ambb-watch]{flex:none}
+  .ambw.ambb-full .ambb-stagewrap{flex:none}
+  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(300px,50vh,420px);min-height:0}
+}
 /* 横の画面(2026-11-19 段3・r1114-023): モンサクの試合と同じ「自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)」 */
 @media (max-height:500px) and (orientation:landscape){
   .ambw.ambb-full{overflow:hidden}
@@ -80809,7 +80817,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         <div className="ambw-top">
           <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? '戻る' : 'じゅんびへ'}</button>
           <span>⚔ マスモンで対戦<span className="ambb-beta">β</span></span>
-          <b>{phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : ''}</b>
+          <b>{phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 1}` : ''}</b>
         </div>
         {body}
       </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 979e95ab339d3db0
+// source-sha256: a0b23429dc6425e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152422,6 +152422,14 @@ const AMBB_CSS = `
   .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
   .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
 }
+/* 縦の画面(2026-11-20 ミハリ #6901): 場の高さをモンサクの大会の試合と同じ(画面の高さの半分・420px まで)にそろえる。入りきらない分は画面ごと縦に送る */
+@media (orientation:portrait) and (min-height:741px){
+  .ambw.ambb-full{overflow-y:auto}
+  .ambw.ambb-full .ambw-in{height:auto;min-height:100%}
+  .ambw.ambb-full [data-ambb-watch]{flex:none}
+  .ambw.ambb-full .ambb-stagewrap{flex:none}
+  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(300px,50vh,420px);min-height:0}
+}
 /* 横の画面(2026-11-19 段3・r1114-023): モンサクの試合と同じ「自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)」 */
 @media (max-height:500px) and (orientation:landscape){
   .ambw.ambb-full{overflow:hidden}
@@ -154098,7 +154106,7 @@ function AssistantMasmonBattleBeta({
     onClick: phase === 'rank' && !battle ? () => setPhase('prep') : back
   }, "← ", phase === 'prep' ? '戻る' : 'じゅんびへ'), React.createElement("span", null, "⚔ マスモンで対戦", React.createElement("span", {
     className: "ambb-beta"
-  }, "β")), React.createElement("b", null, phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '')), body), techList && battle && phase !== 'prep' && (() => {
+  }, "β")), React.createElement("b", null, phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 1}` : '')), body), techList && battle && phase !== 'prep' && (() => {
     const side = techList.side,
       d = techList.d,
       fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
