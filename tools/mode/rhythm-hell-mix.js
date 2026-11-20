@@ -80,6 +80,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   dr_wily_stage_1_okkussenman:{marker:'dr-wily-stage-1-okkussenman-v3',zero:2731.7,beat:333.532,levelRe:/const drWilyStage1OkkussenmanHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.3},
   erfolg:{marker:'erfolg-v3',zero:2453,beat:281.202,levelRe:/const erfolgHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   erfolg_piano:{marker:'erfolg-piano-v3',zero:2927,beat:365.813,levelRe:/const erfolgPianoHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  // 天翔る翼(2026-11-20)。hellDensity:1.2 は同日あっくん「MASTER に対して HELL が低すぎる」を受けて量を増やした分(付けないと Lv.52 で MASTER 48 と +4 しか開かず、ノーツ数も MASTER 未満だった)
+  amakakeru_tsubasa:{marker:'amakakeru-tsubasa-v3',zero:2021,beat:288.802,levelRe:/const amakakeruTsubasaHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.2},
   megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_smash:{marker:'megalovania-smash-v3',zero:761,beat:375,levelRe:/const megalovaniaSmashHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   evans:{marker:'evans-v3',zero:2135,beat:324.3682,levelRe:/const evansHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},

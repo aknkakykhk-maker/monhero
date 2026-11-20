@@ -239,6 +239,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div className="q-td side msx-kp" data-msx-r3-qtd={ft.id}>
           <div className="q-td-nm"><b>{ft.name}</b><em>{fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり'}</em></div>
           <div className="q-td-rows">{tdRows(ft)}</div>
+          {/* U-18: 覚える率が上がる条件(条件1〜4・満たすと「済」)。参考 te-67・68。数え方は選んだ枠と同じ techBoostConds(この技を選んだときの組み合わせ) */}
+          {!fGot && fOk && typeof SUC.techBoostConds === 'function' ? (() => { const bc = SUC.techBoostConds(s0, ft, fSel ? want : [...want.slice(0, superWhy ? 0 : 1), ft.id]).slice(0, 4); const BC = { n: (c) => `覚えた技 ${c.need}つ以上`, pop: (c) => `人気 ${c.need}以上`, sum: (c) => `選んだ技の段の合計 ${c.need}以上` }; return bc.length ? (
+            <ul className="q-td-conds" data-msx-r3-qtd-conds>{bc.map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span>{(BC[c.type] || (() => ''))(c)}</span><em>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul>) : null; })() : null}
           {fGot ? null : fOk ? (
           <div className="q-td-act">
             {want[0] === ft.id ? <button type="button" className="off" onClick={() => toggle(ft.id)}>1つ目から外す</button>
@@ -259,6 +262,6 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const foot = (<>
     {!want.length ? <div className="q-note msx-kp" data-msx-r3-qnote>技を選ばなくても修行できます(能力だけ上がります)</div> : null}
     {hpShort ? <div className="q-hpng msx-kp" data-msx-r3-qhp>💔 {isSuper ? '超修行' : '修行'}は体力を {hpOf(isSuper)} 使う。体力があと <b>{hpShort}</b> 足りない(休む・遊ぶで回復)</div> : null}
-    <div className="v-ft"><button type="button" onClick={onBack}>← 戻る</button><button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
+    <div className="v-ft">{/* 戻るは左上の1つ(2026-11-20 r1119-013 ⑥ API 点検) */}<button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }

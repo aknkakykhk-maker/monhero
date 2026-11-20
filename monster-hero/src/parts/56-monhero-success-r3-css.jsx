@@ -22,6 +22,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
+/* 押せない決めるボタンは透けさせず、字を読めるようにする(2026-11-20 r1119-013 ⑥ API 点検。「お別れする(0体)」の字が地とほぼ同じ色だった) */
+.msx .v-ft button.go:disabled{opacity:1;color:#cbd5e1}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
@@ -57,6 +59,12 @@ const MSX_R3_CSS = `
 .msx .r3 .q-td .q-td-nm b{display:block;font-size:13.5px;font-weight:900;color:#fff;line-height:1.25}
 .msx .r3 .q-td .q-td-nm em{font-style:normal;font-size:10.5px;font-weight:800;color:#fde047}
 .msx .r3 .q-td .q-td-rows{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+.msx .r3 .q-td-conds{list-style:none;margin:5px 0 0;padding:4px 0 0;border-top:1px dashed #4a4380;font-size:11px;line-height:1.35;color:#e2e8f0}
+.msx .r3 .q-td-conds li{display:flex;gap:5px;align-items:center;padding:1px 0}
+.msx .r3 .q-td-conds li i{font-style:normal;color:#94a3b8;flex:0 0 auto;font-size:10.5px}
+.msx .r3 .q-td-conds li span{flex:1 1 auto;min-width:0}
+.msx .r3 .q-td-conds li em{flex:0 0 auto;font-style:normal;font-size:10.5px;font-weight:900;border-radius:5px;padding:0 5px;background:#475569;color:#cbd5e1}
+.msx .r3 .q-td-conds li.ok em{background:#16a34a;color:#fff}
 .msx .r3 .q-td .q-td-rows .kv{display:inline-flex;gap:4px;font-size:10px;color:#e2e8f0;font-weight:700}
 .msx .r3 .q-td.side .q-td-rows{flex-direction:column;flex-wrap:nowrap;gap:3px;align-items:stretch}
 .msx .r3 .q-td.side .q-td-rows .kv{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;border-bottom:1px dashed #ffffff1f;padding-bottom:2px}

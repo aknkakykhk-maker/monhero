@@ -87,11 +87,11 @@ const makeRun = async (kind) => {
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
     ['S1', null, ['new', 'next']], ['S1U', null, ['unlockall', 'new', 'next']], ['S1UG', null, ['unlockall', 'new', 'next', 'pickmon:Golem']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
-    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], ['S2T', null, ['seedteam', 'new', 'next', 'next', 'teamauto']], ['S2TP', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0']], ['S2EA', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects']], ['S2EB', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efrow:0']], ['S2EC', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efmon']], // 効果のある編成(④段2) // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
+    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], ['S2T', null, ['seedteam', 'new', 'next', 'next', 'teamauto']], ['S2TP', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0']], ['S2EA', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects']], ['S2EB', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efrow:0']], ['S2EC', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efmon']], ['S2TD', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail']], ['S2TD2', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail', 'asdcard']], // アシスト詳細(r1119-011) // 効果のある編成(④段2) // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carryall', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['IN', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip']], ['IN2', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip', 'introNext', 'introNext']], // 育成の始まりの場面(2026-11-14)
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
@@ -158,6 +158,9 @@ const makeRun = async (kind) => {
             }
             if (st === 'teamauto') { const d = document.querySelector('[data-msx-team-auto]'); if (d && !d.disabled) d.click(); return !!d; }
             if (st.startsWith('efrow:')) { const d = document.querySelectorAll('[data-msx-effect]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
+            if (st === 'tpdetail') { const d = document.querySelector('[data-msx-tp-detail]'); if (d) d.click(); return !!d; }
+            if (st === 'asdcard') { const d = document.querySelector('[data-msx-assist-detail] [data-msx-assist-card][role=button]'); if (d) d.click(); return !!d; }
+            if (st === 'cmtap') { const d = document.querySelector('[data-msx-cm]'); if (d) d.click(); return !!d; }
             if (st === 'efmon') { const d = document.querySelector('[data-msx-ef-view="mon"]'); if (d) d.click(); return !!d; }
             if (st === 'unlockall') { // ベースモンを全種解放にして開き直す(社長の実機と同じく30体ほどから選ぶ一覧を撮る。r1119 ⑦)
               localStorage.setItem('mh_unlocked_monsters', JSON.stringify(msxSuc.SUC.speciesList.filter((id) => ALL_PLAYER_MONSTERS[id])));
@@ -183,13 +186,13 @@ const makeRun = async (kind) => {
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st === 'tabfuse') { const d = document.querySelector('[data-msx-tab-fuse]'); if (d) d.click(); return !!d; } // 横では「で生まれたモンスター」を隠すので印で押す
-            if (st === 'pickfirst') { const d = document.querySelector('.v-grid6 button'); if (d) d.click(); return !!d; }
+            if (st === 'pickfirst') { const d = document.querySelector('[data-msx-pick-mon]'); if (d) d.click(); return !!d; }
             if (st === 'detail') { const d = document.querySelector('[data-msx-detail-open]'); if (d) d.click(); return !!d; } // 選ぶ画面の「くわしく」(2026-11-14)
             if (st.startsWith('slot:')) { const d = document.querySelector(`[data-msx-slot="${st.slice(5)}"]`); if (d) d.click(); return !!d; } // 編成の枠を押す(2026-11-14)
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
             if (st === 'effects') { const d = document.querySelector('[data-msx-team-effects-open]'); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
-            if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
+            if (st.startsWith('pickmon:')) { const d = document.querySelector(`[data-msx-pick-mon="${st.slice(8)}"]`); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
             // 被った升を押す → 右の欄の「⇄ 覚える技を選ぶ」で窓を開く(r1115-152①。升の ⇄ は押せない印になった)
             if (st.startsWith('cell:')) { const c = document.querySelector(`[data-msx-cell="${st.slice(5)}"]`); if (c) c.click(); return !!c; }
             if (st === 'altopen') { const d = document.querySelector('[data-msx-alt-open]'); if (d) d.click(); return !!d; }
@@ -438,6 +441,38 @@ const makeRun = async (kind) => {
         { const px = await measureBtnPixels(page); check(`${name}${tag ? `(${tag})` : ''}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
+        // 押した札と違う札に当たらない(2026-11-19 r1119-013 ⑥ M-6 のミハリの指摘)。見えているボタンの上の端・下の端(内側 2px)と真ん中を押して、
+        //   別のボタンに当たる所を数える。押せる範囲を広げた見えない縁(::after)が隣の札に重なると、札の中を押しても隣が押される
+        {
+          const miss = await page.evaluate(() => {
+            const out = [];
+            const vis = (r) => r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+            // 入ってくる動きの途中の札は、位置が動いている最中なので数えない(撮る時刻しだいで重なって見える)
+            const moving = (e) => !!e && typeof e.getAnimations === 'function' && e.getAnimations().some((x) => x.playState === 'running');
+            for (const el of document.querySelectorAll('.msx button')) {
+              if (el.disabled || moving(el)) continue;
+              // 送り箱で切れて見えない所は数えない(送り箱の外の「閉じる」や下の帯の下に隠れているだけで、押せる所ではない)
+              const r0 = el.getBoundingClientRect(); const r = { left: r0.left, right: r0.right, top: r0.top, bottom: r0.bottom };
+              for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+                const c = getComputedStyle(a); if (c.overflowY === 'visible' && c.overflowX === 'visible') continue;
+                const q = a.getBoundingClientRect(); r.top = Math.max(r.top, q.top); r.bottom = Math.min(r.bottom, q.bottom); r.left = Math.max(r.left, q.left); r.right = Math.min(r.right, q.right);
+              }
+              r.width = r.right - r.left; r.height = r.bottom - r.top; if (!vis(r)) continue;
+              // 真ん中が押せるボタンだけを見る(窓の裏に隠れたボタンは数えない)
+              const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              if (!mid || !(mid === el || el.contains(mid))) continue;
+              for (const y of [r.top + 2, r.bottom - 2]) {
+                if (y < 0 || y >= innerHeight) continue;
+                const hit = document.elementFromPoint(r.left + r.width / 2, y);
+                const hb = hit && hit.closest('button');
+                if (hb && hb !== el && !el.contains(hb) && !hb.contains(el) && !moving(hb)) out.push(`${(el.innerText || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}→${(hb.innerText || hb.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}`);
+              }
+            }
+            return out;
+          });
+          if (process.env.TAP_DUMP) console.log('TAP', name, tag, miss.length, miss.slice(0, 6).join(' / '));
+          else check(`${L}: 札の端を押しても隣の札に当たらない`, miss.length === 0, miss.slice(0, 4).join(' / '));
+        }
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }
       await page.close();
