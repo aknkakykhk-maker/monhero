@@ -1472,6 +1472,8 @@
       out.storyEnd = ['good', 'bitter'].includes(raw.storyEnd) ? raw.storyEnd : null;
       if (Number.isInteger(raw.tevAt) && raw.tevAt >= 0 && raw.tevAt <= 60) out.tevAt = raw.tevAt; // 編成の子のイベントが出たターン(無ければ持たない)
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
+      // 甘え度・恐れ度が何で動いたかの記録(r1119-019)。無い・壊れている → 持たない。形 { t, w, a, f } の物だけ・最後の8件
+      if (Array.isArray(raw.lw)) { const lw = raw.lw.filter(x => x && typeof x === 'object' && Number.isFinite(Number(x.t)) && typeof x.w === 'string').slice(-8).map(x => ({ t: Math.round(n(x.t, 0, 0, 99)), w: x.w.slice(0, 16), a: Math.round(n(x.a, 0, 0, 50)), f: Math.round(n(x.f, 0, 0, 50)) })); if (lw.length) out.lw = lw; }
       out.rivalMetId = typeof raw.rivalMetId === 'string' && raw.rivalMetId ? raw.rivalMetId.slice(0, 96) : null; // 会ったライバルの個体の印(r1116-002・無い古いセーブは名前で引く)
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
