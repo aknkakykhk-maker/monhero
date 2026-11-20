@@ -114,7 +114,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         </div>))}</div> : null}
       {(o.partsRaw || o.mulInfo) ? (() => { const rawP = o.partsRaw || {}; const fitP = o.parts || {}; const bdRows = MSX_STAT_KEYS_R3.map((k) => { const rp = rawP[k] || { base: 0, team: [] }; const raw = rp.base + (rp.team || []).reduce((a, x) => a + x.v, 0); const g = gains[k] || 0; if (!(raw > 0) && !g) return null; return { k, rp, g }; }).filter(Boolean); const maxG = Math.max(1, ...bdRows.map((x) => x.g)); return (
       <div className="q-bd" data-msx-r3-qbd>
-        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>修行の内訳（行き先の分・編成の分・倍率）<span className="q-tgl-t">{bdOpen ? '閉じる ▴' : '開く ▾'}</span></button>
+        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>{/* 見出しは中身の言葉で。帯ぜんたいを押せる高さにした(育-192) */}上がった量のくわしい内訳<span className="q-tgl-t">{bdOpen ? '閉じる ▴' : '開く ▾'}</span></button>
         {bdOpen ? <>{bdRows.map(({ k, rp, g }) => { const before = Math.round(Number((res.before || {})[k]) || 0); const after = Math.round(Number((s.stats || {})[k]) || 0); const segs = fitP[k] || []; return (
         <div className="q-bd-row" key={k}>
           <span className="q-bd-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
@@ -169,6 +169,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     <span className="kv"><b>命中率</b><span className="gd">{grade('hit', t.hit)}</span></span>
     <span className="kv"><b>ガッツダウン</b><span className="gd">{grade('gd', t.gd)}</span></span>
     <span className="kv"><b>クリティカル率</b><span className="gd">{grade('crit', t.crit)}</span></span>
+    <span className="kv msx-gd-note" data-msx-grade-note>{/* 評価の字の段(育-183・185) */}評価は G〜SS の9段(SS がいちばん高い)</span>
     {typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <span className="kv"><b>使ったあと</b><span className="vv">{msxTechMoveTxt(t)}</span></span> : null}
     {(s0.techs || []).includes(t.id) && typeof msxMasteryOf === 'function' ? (() => { const m = msxMasteryOf(s0.mastery, t.id); const b = typeof msxMasteryBoost === 'function' ? msxMasteryBoost(SUC, t.id, m) : null; return (<><span className="kv"><b>熟練</b><span className="vv">{m}/100</span></span><span className="kv"><b>熟練の効き目</b><span className="vv">{b ? `威力+${b.pow}%・命中+${b.hit}%` : 'まだ無し'}</span></span></>); })() : null}
   </>);
