@@ -88,7 +88,7 @@ const openHome = async (page) => {
     const first = topicNew[0];
     await page.evaluate(() => document.querySelector('[data-help-new]')?.closest('button')?.click());
     await page.waitForTimeout(500);
-    await page.getByRole('button', { name: '項目一覧へ', exact: true }).dispatchEvent('click'); // 上の戻る「項目一覧へ戻る」(r1119-025)と区別する
+    await page.locator('[data-mh-help-back]').dispatchEvent('click'); // 下の「項目一覧へ」は外した(r1119-033 窓-04)。上の戻るで一覧へ
     await page.waitForTimeout(500);
     const after = await page.evaluate(() => [...document.querySelectorAll('[data-help-new]')].map(b => b.closest('button')?.innerText.split('\n')[0] || ''));
     check('② 開いた項目の🆕は消える', !after.includes(first) && after.length === topicNew.length - 1, `${first} → 残り ${after.join(' / ') || 'なし'}`);
