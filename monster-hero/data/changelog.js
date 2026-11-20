@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-21 00:48", type:'update', title:'HOMEの助手の吹き出しから、おしゃべりと詳しい説明を選べるようになりました', status:'new', group:'assistant',
+    items:[
+      'HOMEの助手の吹き出しを押すと、『おしゃべりする』と『詳しく見る』を選べるようになりました。',
+    ],
+  },
+  {
     date: "2026-11-20 23:17", type:'update', title:'モンヒロサクセスの窓と戻るのボタンを見直しました', status:'new', group:'success',
     items:[
       'PCで窓が横に広がりすぎないようにしました。',
