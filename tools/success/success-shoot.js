@@ -55,6 +55,7 @@ const makeRun = async (kind) => {
   // 能力の上限アップ(r1115-103): 999 を超えた能力の子(4桁の数がはみ出さないか・ゲージの紫の帯)
   if (kind === 'over') s = { ...s, cap: { life: 1500, pow: 999, wise: 1800, hit: 3200, eva: 1200, tough: 999 }, stats: { ...s.stats, hit: 3123, wise: 1789, life: 1234, eva: 1001 } };
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'buff') s = { ...s, hirameki: true, ev: { ...s.ev, buff: [{ k: 'yaruki', left: 2 }, { k: 'neboke', left: 1 }] } }; // ひとときの状態の札(r1119-029): 良い=緑・悪い=赤・💡コツをつかんだ
   if (kind === 'ama14') s = { ...s, ama: 14, fear: 10 }; // 甘え度が少し多い所からほめる: 差が5になって育成方針が「甘い」に変わる(r1115-059)
   if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
@@ -74,7 +75,8 @@ const makeRun = async (kind) => {
   // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
   const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
   // s568 = 小さい横 568×320(見た目の点検 visual-shoot.js --monsuc-deep が名指しするときだけ撮る。r1119-014 PR3 の続き)
-  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
+  // pc = PC 1280×800(名指ししたときだけ。モンサクは縦と PC を見る r1119-026)
+  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568'], [1280, 800, 'pc']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -101,13 +103,13 @@ const makeRun = async (kind) => {
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
-    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
   // 名指ししたときだけ撮る場面(全サイズで回すと success-layout-check が 600秒を超えるため。2026-11-14)
   //   M3A = 持ち物に育成中の物を全部並べた所 / S4L = 持ちこみで升目を押した所。名前の折れは S4・M3 で全サイズ見張っている
-  const OPT_IN = ['M3A', 'S4L', 'S4E'];
+  const OPT_IN = ['M3A', 'S4L', 'S4E', 'BF2'];
   const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL.filter(([n]) => !OPT_IN.includes(n));
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -178,6 +180,7 @@ const makeRun = async (kind) => {
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
+            if (st.startsWith('buffchip:')) { const d = document.querySelector(`[data-msx-buff-chip="${st.slice(9)}"]`); if (d) d.click(); await new Promise((r) => setTimeout(r, 300)); return !!d; }
             if (st === 'dexopen') { const d = document.querySelector('[data-msx-dex-home]'); if (d) d.click(); return !!d; }
             if (st.startsWith('dextab:')) { const d = document.querySelector(`[data-msx-dex-tab="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('dexch:')) { const d = document.querySelectorAll('[data-msx-dex-ch]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }

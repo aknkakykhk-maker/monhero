@@ -882,6 +882,13 @@ const helpDataRows = (id) => {
       return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost))
         .map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
     }
+    // モンヒロサクセスのひとときの状態(r1119-029)。名前・続くターン・効き目は芯の出来事の表(MONHERO_SUCCESS_EVENTS.BUFFS)から作る。
+    // 効き目の数を変えたときにヘルプだけ古くならないよう、書き写さない。芯が読み込まれる前は1行だけ案内を返す
+    case 'monsakuBuffs': {
+      const B = globalThis.MONHERO_SUCCESS_EVENTS && globalThis.MONHERO_SUCCESS_EVENTS.BUFFS;
+      if (!B || typeof B !== 'object') return [['ひとときの状態', '育成中の出来事で付きます']];
+      return Object.values(B).filter(b => b && b.name).map(b => [`${b.icon} ${b.name}(${b.left > 0 ? `${b.left}ターン` : '次の修行まで'})`, `${b.good === false ? '悪い: ' : '良い: '}${b.text}`]);
+    }
     case 'masuCosts':
       return [
         ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
@@ -1103,6 +1110,7 @@ const HELP_DATA_TITLES = {
   masuCosts: '神殿でかかるダイヤ',
   monsakuRanks: '評価のランク(総合力)',
   monsakuAssists: 'アシスト能力の一覧',
+  monsakuBuffs: 'ひとときの状態の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
