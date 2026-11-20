@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7f6a195d4726f31
+// source-sha256: ce2b434b728dca4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155330,7 +155330,8 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 const MONSUC_MATCH_RULE = Object.freeze({
   statMax: 99999,
-  judgeTie: 'B'
+  judgeTie: 'B',
+  antiStall: true
 });
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);
@@ -191671,7 +191672,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
-.msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.p{color:#fde68a;font-weight:900}.msa-dc-c small.p span.hd{display:inline;position:static;margin-left:2px;font-size:.85em}.msa-dc-c small.p span.hd.up{color:#4ade80}.msa-dc-c small.p span.hd.down{color:#f87171}
 .msa-dc-c small.mv{color:#7dd3fc;font-size:9.5px;letter-spacing:-.02em;white-space:normal;line-height:1.15}
 /* 2026-11-20 API の点検: 札の字が 9〜10px で読めない → 1段上げる。届く技が無い「いま」の札に黄色のふちを付けない(黄色のふちは助手のおすすめと読める) */
 .msa-dc-c small{font-size:10.5px}
@@ -191778,6 +191779,7 @@ function MsaTechGrades({
   }));
 }
 const msaKindIcon = t => t && t.kind === 'pow' ? '🏋️' : '📖';
+const MSA_DC_HIT_MEMO = {};
 function MsaDistCards({
   list,
   rep,
@@ -191795,6 +191797,10 @@ function MsaDistCards({
     msaFitTechNames();
   });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  const memoOf = d => {
+    const m = MSA_DC_HIT_MEMO[`${dataSide}:${d}`];
+    return m && Date.now() - m.at < 60000 ? m : null;
+  };
   return React.createElement("div", {
     className: `msa-dc ${look === 'a' ? 'a' : ''}`,
     "data-msa-dc": dataSide || '',
@@ -191869,9 +191875,24 @@ function MsaDistCards({
       icon: msaKindIcon(t)
     }) : React.createElement("span", {
       className: "msa-dc-none"
-    }, "届く技なし"), t ? React.createElement("small", {
-      className: "p"
-    }, Number.isFinite(hp) ? `命中${Math.round(hp)}%` : '命中 —') : null, t && dataSide !== 'B' ? React.createElement("small", {
+    }, "届く技なし"), t ? (() => {
+      const v = Number.isFinite(hp) ? Math.round(hp) : null;
+      const m = memoOf(d);
+      const dir = v == null ? '' : m && m.id === t.id ? v > m.v ? 'up' : v < m.v ? 'down' : m.dir : '';
+      MSA_DC_HIT_MEMO[`${dataSide}:${d}`] = {
+        id: t.id,
+        v,
+        dir,
+        at: Date.now()
+      };
+      return React.createElement("small", {
+        className: "p",
+        "data-msa-dc-hit": dir || undefined,
+        title: dir ? 'ガッツが多いほど命中が上がります' : undefined
+      }, v != null ? `命中${v}%` : '命中 —', dir ? React.createElement("span", {
+        className: `hd ${dir}`
+      }, dir === "up" ? "▲" : "▼") : null);
+    })() : null, t && dataSide !== 'B' ? React.createElement("small", {
       className: "gu"
     }, "ガッツ−", t.guts) : null, t && t.base ? (() => {
       const g = msaTechGrade('power', t.base.power);
@@ -192082,7 +192103,15 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, look === 'c' ? '自分の技' : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`), items.length ? React.createElement("button", {
+  }, React.createElement("span", null, look === 'c' ? React.createElement(React.Fragment, null, "自分の技", React.createElement("small", {
+    className: "msxm-hn",
+    style: {
+      marginLeft: 6,
+      fontSize: 11,
+      fontWeight: 400,
+      color: '#cbd5e1'
+    }
+  }, "命中はガッツで上下(▲▼)")) : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
@@ -195805,7 +195834,7 @@ function MonsucArena({
     "data-msa-cards": true
   }, React.createElement("div", {
     className: "msa-rowh"
-  }, "自分の技"), React.createElement(MsaDistCards, {
+  }, "自分の技", React.createElement("small", null, "命中はガッツで上下(▲▼)")), React.createElement(MsaDistCards, {
     list: itemsA,
     rep: msaRepIds(itemsA, null),
     dist: f.d,
