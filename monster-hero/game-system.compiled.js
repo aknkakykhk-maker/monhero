@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29b6b596e212064a
+// source-sha256: ce0b48164fa61819
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21967,9 +21967,11 @@ const AssistantBubble = ({
   maxLines = 0,
   collapseKey = null,
   collapseHidden = false,
-  oneLine = false
+  oneLine = false,
+  menu = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
@@ -22055,7 +22057,9 @@ const AssistantBubble = ({
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
-  const Wrapper = hasDetail ? 'button' : 'div';
+  const menuItems = Array.isArray(menu) ? menu.filter(m => m && typeof m.onClick === 'function') : [];
+  const useMenu = menuItems.length > 0;
+  const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
   if (collapseKey && collapsed) {
@@ -22094,7 +22098,12 @@ const AssistantBubble = ({
     size: size,
     accent: color,
     expression: face
-  })), React.createElement(Wrapper, _extends({}, hasDetail ? {
+  })), React.createElement(Wrapper, _extends({}, useMenu ? {
+    onClick: () => setMenuOpen(!menuOpen),
+    'aria-label': `${who.name}のメニューを開く`,
+    'aria-expanded': menuOpen,
+    'data-bubble-menu-toggle': ''
+  } : hasDetail ? {
     onClick: () => setOpen(true),
     'aria-label': `${who.name}の説明を開く`
   } : {}, {
@@ -22197,9 +22206,11 @@ const AssistantBubble = ({
         whiteSpace: 'nowrap'
       } : {})
     }
-  }, hasDetail && React.createElement(React.Fragment, null, React.createElement("span", {
+  }, useMenu && !hasDetail && React.createElement("span", {
     "data-bubble-more-text": true
-  }, "タップで詳しく"), React.createElement(ChevronRight, {
+  }, "タップでメニュー"), hasDetail && React.createElement(React.Fragment, null, React.createElement("span", {
+    "data-bubble-more-text": true
+  }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
   }))))), collapseKey && React.createElement("button", {
     type: "button",
@@ -22207,7 +22218,45 @@ const AssistantBubble = ({
     "aria-label": "ひとことをたたむ",
     "data-bubble-collapse": true,
     className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
-  }, "▴")), open && React.createElement("div", {
+  }, "▴"), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "fixed inset-0",
+    style: {
+      zIndex: 60
+    },
+    onClick: () => setMenuOpen(false),
+    "data-bubble-menu-backdrop": true,
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    role: "menu",
+    "data-bubble-menu": true,
+    className: "absolute left-[56px] top-full mt-1 flex flex-col gap-1 rounded-2xl border-2 p-1.5 shadow-xl",
+    style: {
+      zIndex: 61,
+      borderColor: color,
+      backgroundColor: 'rgba(15,23,42,0.97)',
+      minWidth: '168px'
+    }
+  }, menuItems.map(m => React.createElement("button", _extends({
+    key: m.key || m.label,
+    type: "button",
+    role: "menuitem",
+    "data-bubble-menu-item": m.key || ''
+  }, m.attr || {}, {
+    onClick: () => {
+      setMenuOpen(false);
+      m.onClick();
+    },
+    className: "min-h-[44px] rounded-xl px-3 text-left text-[12px] font-black text-white bg-white/10 active:scale-[.98]"
+  }), m.label)), hasDetail && React.createElement("button", {
+    type: "button",
+    role: "menuitem",
+    "data-bubble-menu-item": "detail",
+    onClick: () => {
+      setMenuOpen(false);
+      setOpen(true);
+    },
+    className: "min-h-[44px] rounded-xl px-3 text-left text-[12px] font-black text-white bg-white/10 active:scale-[.98]"
+  }, "📖 詳しく見る")))), open && React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
       position: 'fixed',
@@ -83819,16 +83868,15 @@ function HomeScreen({
     scene: "home",
     condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
     compact: true,
-    footerSpace: typeof onOpenAssistantChat === 'function' ? 70 : 0
-  }), typeof onOpenAssistantChat === 'function' && React.createElement("button", {
-    type: "button",
-    "data-home-assistant-chat": true,
-    onClick: onOpenAssistantChat,
-    className: "absolute bottom-[6px] z-10 rounded-full border border-pink-300/70 bg-pink-500/85 px-1.5 py-px text-[9px] font-black leading-tight text-white shadow active:scale-95",
-    style: {
-      left: '64px'
-    }
-  }, "💬 おしゃべり")));
+    menu: typeof onOpenAssistantChat === 'function' ? [{
+      key: 'chat',
+      label: '💬 おしゃべりする',
+      onClick: onOpenAssistantChat,
+      attr: {
+        'data-home-assistant-chat': ''
+      }
+    }] : null
+  })));
 }
 function KikiIntroOverlay({
   kikiIntroStep,
