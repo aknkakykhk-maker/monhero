@@ -32,16 +32,19 @@
   const S = 0.5, M = 1, L = 2;
 
   // ---- ひとときの状態(EVENTS §3)。同時に2つまで。ようす(サボりグセ・うつ病)は芯の s.yosu で別 ----
+  //   効き目の数(EFFECT)から説明の文を作る(r1119-029: 説明と本当の効き目をそろえる。数を変えたら文も一緒に変わる)
+  //   text … 札・結果に出す短い説明 / long … 札を押したとき・ヘルプに出す説明 / left … 続くターン(0 = 次の修行まで)
+  const EFFECT = Object.freeze({ great: 0.10, sab: 0.10, stress: 0.5, tech: 0.15, iki: 0.20, scold: -2, fav: -0.10, inj: 2, baseBoost: 2, guts: 5, issaUp: 0.05, issaDown: -0.05 });
+  const pc = (x) => `${Math.round(Math.abs(x) * 100)}%`;
   const BUFFS = Object.freeze({
-    yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
-    gokigen: { icon: '🎵', name: 'ご機嫌', left: 3, good: true, text: 'ストレスの増え −50%' },
-    neboke: { icon: '💤', name: '寝ぼけ', left: 2, good: false, text: 'サボり +10%' },
-    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱っても恐れ度が上がりにくい' },
-    hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
-    iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },
+    yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: `トレーニングの大成功 +${pc(EFFECT.great)}・イッサ博士の実験の成功 +${pc(EFFECT.issaUp)}`, long: `トレーニングで大成功が出る確率が ${pc(EFFECT.great)} 上がります。イッサ博士の実験が成功する確率も ${pc(EFFECT.issaUp)} 上がります。` },
+    gokigen: { icon: '🎵', name: 'ご機嫌', left: 3, good: true, text: `トレーニングのストレスの増え −${pc(1 - EFFECT.stress)}`, long: `トレーニングでたまるストレスが、いつもの ${pc(EFFECT.stress)} になります。` },
+    neboke: { icon: '💤', name: '寝ぼけ', left: 2, good: false, text: `サボり +${pc(EFFECT.sab)}`, long: `トレーニングでサボる確率が ${pc(EFFECT.sab)} 上がります。` },
+    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: `叱ったときの恐れ度 −${Math.abs(EFFECT.scold)}・イッサ博士の実験の成功 −${pc(EFFECT.issaDown)}`, long: `叱っても、恐れ度の上がりが ${Math.abs(EFFECT.scold)} 少なくなります。イッサ博士の実験が成功する確率も ${pc(EFFECT.issaDown)} 下がります。` },
+    hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: `次の修行で技を覚える確率 +${pc(EFFECT.tech)}`, long: `次に修行をしたとき、技を覚える確率が ${pc(EFFECT.tech)} 上がります。修行をすると消えます(ターンでは消えません)。` }, // left 0 = 次の修行まで
+    iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: `息の合った編成のモンスターがトレーニングに来やすい(+${pc(EFFECT.iki)})`, long: `息の合った編成のモンスターが、トレーニングに来る確率が ${pc(EFFECT.iki)} 上がります。` },
   });
   const BUFF_MAX = 2;
-  const EFFECT = Object.freeze({ great: 0.10, sab: 0.10, stress: 0.5, tech: 0.15, iki: 0.20, scold: -2, fav: -0.10, inj: 2, baseBoost: 2, guts: 5, issaUp: 0.05, issaDown: -0.05 });
 
   // ---- 起きる確率(EVENTS §2。数字は試算 tools/success/success-sim.js で合わせた) ----
   // 拾い物とおすそわけ(r1113-037)。kin = 主血統ごとにくれる物(無い血統は、その子の1番の得意の実)/ find = 拾ってくる物の山(決まった乱数で1つ)
@@ -475,7 +478,7 @@
       if (ev.bad >= 3 && ev.seen.includes('ev.self.slump')) ev.bad = 0;
       return s;
     };
-    const buffs = (s) => (s && s.ev && Array.isArray(s.ev.buff) ? s.ev.buff.filter(b => BUFFS[b.k]).map(b => ({ k: b.k, icon: BUFFS[b.k].icon, name: BUFFS[b.k].name, text: BUFFS[b.k].text, left: b.k === 'hirameki' ? null : b.left, with: b.with })) : []);
+    const buffs = (s) => (s && s.ev && Array.isArray(s.ev.buff) ? s.ev.buff.filter(b => BUFFS[b.k]).map(b => ({ k: b.k, icon: BUFFS[b.k].icon, name: BUFFS[b.k].name, text: BUFFS[b.k].text, long: BUFFS[b.k].long, good: BUFFS[b.k].good !== false, left: b.k === 'hirameki' ? null : b.left, with: b.with })) : []);
 
     return Object.freeze({ VERSION, LIST: EVENTS, BY_ID: BYX, UNIQ, BUFFS, EFFECT, RATE, OMIKUJI, GOAL_LINE, GOAL_REWARD, norm, due: peekDue, open, pick, mod, tick, buffs, STAT_TARGETS, lookOf });
   };

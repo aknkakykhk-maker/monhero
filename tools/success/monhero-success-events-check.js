@@ -126,6 +126,14 @@ s.ev.pend = { id: 'ev.season.dec3', slot: 'start', turn: s.turn };
 s = EV.pick(s, null).state;
 ok(s.ev.buff.length === 2 && s.ev.buff[0].k === 'gokigen' && s.ev.buff[1].k === 'yaruki', '状態が2つを超えた・古いほうが消えない');
 ok(EV.buffs(s).every(b => b.icon && b.name), '画面の印(buffs)に絵文字と名前が無い');
+// 説明の文が本当の効き目と同じ(r1119-029: 一喝の ±5%・ひらめき中の +15% などが書かれていなかった)。画面の札・ヘルプはこの文を使う
+{
+  const pc = (x) => `${Math.round(Math.abs(x) * 100)}%`; const B = EV.BUFFS; const F = EV.EFFECT;
+  const need = { yaruki: [pc(F.great), pc(F.issaUp), 'イッサ博士'], gokigen: [pc(1 - F.stress)], neboke: [pc(F.sab)], futekusare: [String(Math.abs(F.scold)), pc(F.issaDown), 'イッサ博士'], hirameki: [pc(F.tech)], iki: [pc(F.iki)] };
+  for (const [k, words] of Object.entries(need)) for (const w of words) ok(B[k] && B[k].text.includes(w), `${k} の説明に「${w}」が無い(効き目と説明がずれた)`);
+  ok(Object.values(B).every(b => typeof b.long === 'string' && b.long.length > 0 && typeof b.good === 'boolean'), 'ひとときの状態に long(くわしい説明)か good(良い/悪い)が無い');
+  ok(Object.values(B).every(b => !/子/.test(b.text + b.long)), 'ひとときの状態の説明でモンスターを「子」と呼んでいる');
+}
 
 // 拾い物とおすそわけ(2026-11-13 社長 r1113-037): 同じ主血統の子がトレーニングに来たあとだけ ev.team.kin・もらった物は持ち物に入る
 {

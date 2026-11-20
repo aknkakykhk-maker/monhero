@@ -365,7 +365,8 @@ const MSX_CSS = `
 .msx .msx-ev-tc b{font-size:40px;font-weight:900;color:#fff;text-shadow:0 3px 0 #c2410c,0 0 18px #fb923c}
 @keyframes msxEvTc{0%{opacity:0;transform:scale(1.15)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion: reduce){.msx .msx-ev-tc{display:none}}
-.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:center}
+.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:left;display:flex;gap:8px;align-items:baseline;line-height:1.5}
+.msx .msx-ev-next>b{flex:none;white-space:nowrap}.msx .msx-ev-next>span{flex:1;min-width:0}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
@@ -786,7 +787,7 @@ const MSX_CSS = `
 .msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
 .msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
 .msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
-.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.06em;margin:0 -4px;display:flex;align-items:flex-start;justify-content:center}
+.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.08em;margin:0 -3px;display:flex;align-items:flex-start;justify-content:center;min-height:1.2em;overflow:visible}
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
