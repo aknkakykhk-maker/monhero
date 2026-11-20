@@ -1,0 +1,1852 @@
+{
+ "at": "2026-11-20T10:28:16.145Z",
+ "usd_est": 3.27,
+ "requests": [
+  {
+   "custom_id": "l001",
+   "area": "初めての人(HOME・家・町・きずな・フレンド)",
+   "scenes": [
+    "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+    "初めての人 家(開いてすぐ)〔01-house-open〕",
+    "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+    "初めての人 町〔03-town〕",
+    "初めての人 きずな〔04-kizuna〕",
+    "初めての人 フレンド〔05-friend-tab〕"
+   ],
+   "machine": [
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「「助手ライフ」を開く」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "下の空きが 331px(画面の 39%・基準 20% 以下)"
+    },
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2 / 数字「1日」×2"
+    },
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「「助手ライフ」を開く」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "pc",
+     "text": "下の空きが 309px(画面の 39%・基準 20% 以下)"
+    },
+    {
+     "scene": "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2 / 数字「1日」×2"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "10px 未満の字が 90字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "字の大きさが 14段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・14・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "10px 未満の字が 88字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "字の大きさが 14段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・14・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×3 / おやつ屋さん×2"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "tate",
+     "text": "10px 未満の字が 89字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "pc",
+     "text": "10px 未満の字が 113字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "pc",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×4 / おやつ屋さん×3 / モンヒロビート×2"
+    },
+    {
+     "scene": "初めての人 町〔03-town〕",
+     "size": "tate",
+     "text": "途中の空きが 160px(618px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "初めての人 町〔03-town〕",
+     "size": "tate",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "初めての人 町〔03-town〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 町〔03-town〕",
+     "size": "pc",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "初めての人 町〔03-town〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "tate",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "tate",
+     "text": "字の大きさが 11段(9・9.5・10・11・11.5・12・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 💗 仲良し度 Lv1 → Lv2×3 / 数字「×10,000」×3 / 数字「×10」×3 / 数字「58」×2 / 🐾 新しいマスモン(💗 Lv3で迎える)×2"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "pc",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(9・9.5・10・11・11.5・12・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 きずな〔04-kizuna〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 💗 仲良し度 Lv1 → Lv2×3 / 数字「×10,000」×3 / 数字「×10」×3 / 「顔なじみ」の話し方・飾り枠・ダイヤ ×10,000・虹のプシュケー ×10×2 / 数字「60」×2 / 🐾 新しいマスモン(💗 Lv3で迎える)×2"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「分かった」が 77×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「分かった」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "tate",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:42×2 / 数字「18:42」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "pc",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "初めての人 フレンド〔05-friend-tab〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:47×2 / 数字「18:47」×2 / 数字「1個」×2"
+    }
+   ],
+   "usd_est": 0.2453
+  },
+  {
+   "custom_id": "l002",
+   "area": "家・見守る・声かけ・贈る",
+   "scenes": [
+    "HOME(助手ライフを開く前)〔00-home〕",
+    "家(開いてすぐ)〔01-house-open〕",
+    "家(下へ半分)〔02-house-scroll-mid〕",
+    "家(いちばん下)〔03-house-scroll-end〕",
+    "にぎわいの説明〔05-tier-help〕",
+    "今日あったこと〔06-diary〕"
+   ],
+   "machine": [
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "途中の空きが 280px(308px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "10px 未満の字が 129字(いちばん小さい 8px。例「ブリーダー Lv.」「1」)"
+    },
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(8・8.5・9・9.5・10・11・12px・基準 6段まで)"
+    },
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: モンヒロビート×2"
+    },
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "pc",
+     "text": "10px 未満の字が 58字(いちばん小さい 8px。例「ブリーダー Lv.」「1」)"
+    },
+    {
+     "scene": "HOME(助手ライフを開く前)〔00-home〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: モンヒロビート×2"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "10px 未満の字が 93字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "10px 未満の字が 117字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(開いてすぐ)〔01-house-open〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×4 / おやつ屋さん×3 / モンヒロバトル×2"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🃏 MFバトルカード ❗」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "tate",
+     "text": "10px 未満の字が 93字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「1個」×3 / 🃏 MFバトル×2 / 数字「7日」×2"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🃏 MFバトルカード ❗」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "pc",
+     "text": "10px 未満の字が 109字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "pc",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(下へ半分)〔02-house-scroll-mid〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×3 / 数字「1個」×3 / 数字「7日」×2"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "tate",
+     "text": "10px 未満の字が 72字(いちばん小さい 9px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "tate",
+     "text": "字の大きさが 11段(9・9.5・10・10.5・11・11.5・12・12.5・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「1個」×3 / 数字「7日」×2"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "pc",
+     "text": "10px 未満の字が 72字(いちばん小さい 9px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(9・9.5・10・10.5・11・11.5・12・12.5・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(いちばん下)〔03-house-scroll-end〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「1個」×3 / 数字「7日」×2"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "tate",
+     "text": "10px 未満の字が 93字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3 / 数字「4時」×2"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "pc",
+     "text": "10px 未満の字が 117字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "pc",
+     "text": "字の大きさが 12段(8.5・9・9.5・10・10.5・11・11.5・12・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "にぎわいの説明〔05-tier-help〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×4 / おやつ屋さん×3 / 数字「4時」×2 / モンヒロバトル×2"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "tate",
+     "text": "10px 未満の字が 93字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "pc",
+     "text": "10px 未満の字が 117字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "pc",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "今日あったこと〔06-diary〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×4 / おやつ屋さん×3 / モンヒロバトル×2"
+    }
+   ],
+   "usd_est": 0.2446
+  },
+  {
+   "custom_id": "l003",
+   "area": "家・見守る・声かけ・贈る",
+   "scenes": [
+    "見守る(掛け合いの場面)〔07-watch〕",
+    "声をかける(選ぶ)〔08-call〕",
+    "贈る(選ぶ)〔09-give〕",
+    "贈る → 道具の一覧〔10-give-items〕"
+   ],
+   "machine": [
+    {
+     "scene": "見守る(掛け合いの場面)〔07-watch〕",
+     "size": "tate",
+     "text": "途中の空きが 197px(63px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "見守る(掛け合いの場面)〔07-watch〕",
+     "size": "tate",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「1/3・タップで次へ」「CAFE」)"
+    },
+    {
+     "scene": "見守る(掛け合いの場面)〔07-watch〕",
+     "size": "pc",
+     "text": "途中の空きが 184px(63px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "見守る(掛け合いの場面)〔07-watch〕",
+     "size": "pc",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「1/3・タップで次へ」「CAFE」)"
+    },
+    {
+     "scene": "贈る(選ぶ)〔09-give〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2 / 🤝💗 上がる×2"
+    },
+    {
+     "scene": "贈る(選ぶ)〔09-give〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2 / 🤝💗 上がる×2"
+    },
+    {
+     "scene": "贈る → 道具の一覧〔10-give-items〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🤝 友情Lv +×4 / 💗 仲良し度 +×4 / 数字「2人」×3 / 🤝💗 上がる×2 / 数字「30」×2 / 数字「25」×2"
+    },
+    {
+     "scene": "贈る → 道具の一覧〔10-give-items〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 🤝 友情Lv +×5 / 💗 仲良し度 +×5 / 数字「2人」×3 / で買って贈る×3 / 🤝💗 上がる×2 / 数字「15」×2"
+    }
+   ],
+   "usd_est": 0.2304
+  },
+  {
+   "custom_id": "l004",
+   "area": "部屋・家具・予定表・対戦",
+   "scenes": [
+    "部屋(家にひとり・あつ)〔11-room-alone〕",
+    "部屋(下へ・できること)〔12-room-alone-scroll〕",
+    "部屋 → おしゃべり〔13-room-chat〕",
+    "部屋 → 1人に贈る〔14-room-solo-gift〕",
+    "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+    "部屋 → 家具〔15-room-furn〕"
+   ],
+   "machine": [
+    {
+     "scene": "部屋(家にひとり・あつ)〔11-room-alone〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(家にひとり・あつ)〔11-room-alone〕",
+     "size": "pc",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → おしゃべり〔13-room-chat〕",
+     "size": "tate",
+     "text": "途中の空きが 186px(549px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋 → おしゃべり〔13-room-chat〕",
+     "size": "pc",
+     "text": "下の空きが 224px(画面の 28%・基準 20% 以下)"
+    },
+    {
+     "scene": "部屋 → おしゃべり〔13-room-chat〕",
+     "size": "pc",
+     "text": "途中の空きが 186px(300px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋 → 1人に贈る〔14-room-solo-gift〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🤝 おそろいのミサンガ 持ち 1」が 70×66px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋 → 1人に贈る〔14-room-solo-gift〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×4 / 数字「300P」×3 / 数字「250P」×3 / 数字「あと3回」×2 / 数字「1人」×2 / 数字「400P」×2"
+    },
+    {
+     "scene": "部屋 → 1人に贈る〔14-room-solo-gift〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🍰 半分こケーキ 🛒300P」が 82×66px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋 → 1人に贈る〔14-room-solo-gift〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×4 / 数字「300P」×3 / 数字「250P」×3 / 数字「あと3回」×2 / 数字「1人」×2 / 数字「400P」×2"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "tate",
+     "text": "10px 未満の字が 4字(いちばん小さい 9.5px。例「Lv」「18」)"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(9.5・10・10.5・11・12・12.5・13・15・16px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「18」×2"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「えるびん」が 416×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "pc",
+     "text": "10px 未満の字が 4字(いちばん小さい 9.5px。例「Lv」「27」)"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9.5・10・10.5・11・12・12.5・13・15・16px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「27」×2 / 数字「91」×2 / 数字「59」×2"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "tate",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「FURNITURE 」「ATSU」)"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(9・10.5・11・11.5・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: +80(好みで変わる)×8 / 数字「80」×8 / で買って贈る×8 / 数字「700」×2"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "pc",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「FURNITURE 」「ATSU」)"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(9・10.5・11・11.5・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → 家具〔15-room-furn〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: +80(好みで変わる)×8 / 数字「80」×8 / で買って贈る×8 / 数字「700」×2"
+    }
+   ],
+   "usd_est": 0.2427
+  },
+  {
+   "custom_id": "l005",
+   "area": "部屋・家具・予定表・対戦",
+   "scenes": [
+    "部屋 → 予定表〔16-room-plan〕",
+    "部屋(出かけている・ドラ)〔21-room-away〕",
+    "部屋(みゅあ)〔22-room-pair〕"
+   ],
+   "machine": [
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📍 決める」が 65×44px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📍 決める」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12.5・13・15px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「20」×4 / が自分で決める×4 / 数字「10」×2 / 数字「12」×2 / 数字「14」×2 / 数字「16」×2"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「あつを 全部おまかせに」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12.5・13・15px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → 予定表〔16-room-plan〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「20」×4 / が自分で決める×3 / 数字「10」×2 / 数字「12」×2 / 数字「14」×2 / 数字「16」×2"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "tate",
+     "text": "途中の空きが 323px(281px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「16時」×2"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "pc",
+     "text": "途中の空きが 232px(267px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "pc",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(出かけている・ドラ)〔21-room-away〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「16時」×2"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "tate",
+     "text": "途中の空きが 323px(281px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「16時」×2"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "pc",
+     "text": "途中の空きが 232px(267px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "pc",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(みゅあ)〔22-room-pair〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「16時」×2"
+    }
+   ],
+   "usd_est": 0.2263
+  },
+  {
+   "custom_id": "l006",
+   "area": "助手のマスモン・育成ノート",
+   "scenes": [
+    "部屋 → 助手のマスモン〔17-room-masmon〕",
+    "家 → 育成ノート〔17b-house-note〕",
+    "育成ノート(下へ)〔17c-house-note-scroll〕",
+    "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+    "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+    "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕"
+   ],
+   "machine": [
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "tate",
+     "text": "下の空きが 271px(画面の 32%・基準 20% 以下)"
+    },
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "tate",
+     "text": "10px 未満の字が 34字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(9・9.5・10.5・11・12・15・19・39px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "pc",
+     "text": "下の空きが 244px(画面の 30%・基準 20% 以下)"
+    },
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "pc",
+     "text": "10px 未満の字が 34字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "部屋 → 助手のマスモン〔17-room-masmon〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9・9.5・10.5・11・11.5・12・15・19・39px・基準 6段まで)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」が 113×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12・13・16px・基準 6段まで)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: のマスモン・育成Lv.×4 / ・ ストレス×4 / ・ 今日の伸び×4 / 数字「45」×4 / 📌 計画して育てる×3 / 💤 眠らせる×3"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」が 113×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12・13・16px・基準 6段まで)"
+    },
+    {
+     "scene": "家 → 育成ノート〔17b-house-note〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: のマスモン・育成Lv.×3 / ・ ストレス×3 / ・ 今日の伸び×3 / 数字「45」×3 / 📌 計画して育てる×3 / 💤 眠らせる×3"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」が 113×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12・13・16px・基準 6段まで)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: のマスモン・育成Lv.×6 / ・ ストレス×6 / ・ 今日の伸び×6 / 数字「45」×6 / 📌 計画して育てる×6 / 💤 眠らせる×6"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」が 113×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📌 計画して育てる」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(10・10.5・11・11.5・12・13・16px・基準 6段まで)"
+    },
+    {
+     "scene": "育成ノート(下へ)〔17c-house-note-scroll〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 📌 計画して育てる×6 / 💤 眠らせる×6 / (入れ替える相手なし)×6 / のマスモン・育成Lv.×6 / 数字「45」×6 / ・ ストレス×5"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「好き よく使う」が 115×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "tate",
+     "text": "10px 未満の字が 23字(いちばん小さい 8.8px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(9・10・10.5・11・12・13・18・19px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「3体」×2"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「好き よく使う」が 145×40px(基準 120×44 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "pc",
+     "text": "10px 未満の字が 20字(いちばん小さい 8.8px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9・10・10.5・11・11.5・12・13・18・19px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「3体」×2"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "tate",
+     "text": "下の空きが 271px(画面の 32%・基準 20% 以下)"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "tate",
+     "text": "10px 未満の字が 34字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(9・9.5・10.5・11・12・15・19・39px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "pc",
+     "text": "下の空きが 244px(画面の 30%・基準 20% 以下)"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "pc",
+     "text": "10px 未満の字が 34字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9・9.5・10.5・11・11.5・12・15・19・39px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「💗 好み」が 88×44px(基準 120×44 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「💗 好み」の字が 11px(基準 13px 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "tate",
+     "text": "下の空きが 169px(画面の 20%・基準 20% 以下)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "tate",
+     "text": "10px 未満の字が 20字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(9・10・10.5・11・11.5・12・19px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📚 図書室」が 93×44px(基準 120×44 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📚 図書室」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "pc",
+     "text": "10px 未満の字が 20字(いちばん小さい 9px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(9・10・10.5・11・11.5・12・19px・基準 6段まで)"
+    }
+   ],
+   "usd_est": 0.2457
+  },
+  {
+   "custom_id": "l007",
+   "area": "助手のマスモン・育成ノート",
+   "scenes": [
+    "助手のマスモン(タブ team)〔18-masmon-tab-team〕"
+   ],
+   "machine": [
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "tate",
+     "text": "10px 未満の字が 50字(いちばん小さい 8.5px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(8.5・9・9.5・10・10.5・11・12・16・19・34px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「3体」×2"
+    },
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "pc",
+     "text": "10px 未満の字が 50字(いちばん小さい 8.5px。例「MASMON ·」「ATSU」)"
+    },
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(8.5・9・9.5・10・10.5・11・11.5・12・16・19・34px・基準 6段まで)"
+    },
+    {
+     "scene": "助手のマスモン(タブ team)〔18-masmon-tab-team〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「3体」×2"
+    }
+   ],
+   "usd_est": 0.2143
+  },
+  {
+   "custom_id": "l008",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "町 → 場所の窓(battle)〔30-town-battle〕",
+    "町 → 場所の窓(cafe)〔30-town-cafe〕",
+    "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+    "町 → 場所の窓(clinic)〔30-town-clinic〕",
+    "町 → 場所の窓(library)〔30-town-library〕",
+    "町 → 場所の窓(market)〔30-town-market〕"
+   ],
+   "machine": [
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「BATTLE」)"
+    },
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(9・10・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: モンヒロバトルで×2"
+    },
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「BATTLE」)"
+    },
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9・10・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → 場所の窓(battle)〔30-town-battle〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: モンヒロバトルで×2"
+    },
+    {
+     "scene": "町 → 場所の窓(cafe)〔30-town-cafe〕",
+     "size": "tate",
+     "text": "10px 未満の字が 10字(いちばん小さい 9px。例「WHERE ·」「CAFE」)"
+    },
+    {
+     "scene": "町 → 場所の窓(cafe)〔30-town-cafe〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🏡 部屋へ ›×2"
+    },
+    {
+     "scene": "町 → 場所の窓(cafe)〔30-town-cafe〕",
+     "size": "pc",
+     "text": "10px 未満の字が 10字(いちばん小さい 9px。例「WHERE ·」「CAFE」)"
+    },
+    {
+     "scene": "町 → 場所の窓(cafe)〔30-town-cafe〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 🏡 部屋へ ›×2"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "tate",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「WHERE ·」「CARDROOM」)"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(9・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 対戦する×3 / 🏡 部屋へ ›×3 / 対戦すると、×2 / 1.375倍×2 / 数字「1.375倍」×2"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "pc",
+     "text": "10px 未満の字が 14字(いちばん小さい 9px。例「WHERE ·」「CARDROOM」)"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "pc",
+     "text": "字の大きさが 8段(9・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 🃏 対戦する×3 / 🏡 部屋へ ›×3 / 対戦すると、×2 / 1.375倍×2 / 数字「1.375倍」×2"
+    },
+    {
+     "scene": "町 → 場所の窓(clinic)〔30-town-clinic〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「CLINIC」)"
+    },
+    {
+     "scene": "町 → 場所の窓(clinic)〔30-town-clinic〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「CLINIC」)"
+    },
+    {
+     "scene": "町 → 場所の窓(library)〔30-town-library〕",
+     "size": "tate",
+     "text": "10px 未満の字が 13字(いちばん小さい 9px。例「WHERE ·」「LIBRARY」)"
+    },
+    {
+     "scene": "町 → 場所の窓(library)〔30-town-library〕",
+     "size": "pc",
+     "text": "10px 未満の字が 13字(いちばん小さい 9px。例「WHERE ·」「LIBRARY」)"
+    },
+    {
+     "scene": "町 → 場所の窓(market)〔30-town-market〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「MARKET」)"
+    },
+    {
+     "scene": "町 → 場所の窓(market)〔30-town-market〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「MARKET」)"
+    }
+   ],
+   "usd_est": 0.2425
+  },
+  {
+   "custom_id": "l009",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "町 → 場所の窓(plaza)〔30-town-plaza〕",
+    "町 → 場所の窓(ranch)〔30-town-ranch〕",
+    "町 → 場所の窓(studio)〔30-town-studio〕",
+    "町 → 場所の窓(temple)〔30-town-temple〕",
+    "町〔30-town〕",
+    "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕"
+   ],
+   "machine": [
+    {
+     "scene": "町 → 場所の窓(plaza)〔30-town-plaza〕",
+     "size": "tate",
+     "text": "10px 未満の字が 11字(いちばん小さい 9px。例「WHERE ·」「PLAZA」)"
+    },
+    {
+     "scene": "町 → 場所の窓(plaza)〔30-town-plaza〕",
+     "size": "pc",
+     "text": "10px 未満の字が 11字(いちばん小さい 9px。例「WHERE ·」「PLAZA」)"
+    },
+    {
+     "scene": "町 → 場所の窓(ranch)〔30-town-ranch〕",
+     "size": "tate",
+     "text": "10px 未満の字が 11字(いちばん小さい 9px。例「WHERE ·」「RANCH」)"
+    },
+    {
+     "scene": "町 → 場所の窓(ranch)〔30-town-ranch〕",
+     "size": "pc",
+     "text": "10px 未満の字が 11字(いちばん小さい 9px。例「WHERE ·」「RANCH」)"
+    },
+    {
+     "scene": "町 → 場所の窓(studio)〔30-town-studio〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「STUDIO」)"
+    },
+    {
+     "scene": "町 → 場所の窓(studio)〔30-town-studio〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「STUDIO」)"
+    },
+    {
+     "scene": "町 → 場所の窓(temple)〔30-town-temple〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「TEMPLE」)"
+    },
+    {
+     "scene": "町 → 場所の窓(temple)〔30-town-temple〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「TEMPLE」)"
+    },
+    {
+     "scene": "町〔30-town〕",
+     "size": "tate",
+     "text": "途中の空きが 160px(561px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "町〔30-town〕",
+     "size": "tate",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "町〔30-town〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    },
+    {
+     "scene": "町〔30-town〕",
+     "size": "pc",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "町〔30-town〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "tate",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「BATTLE」)"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(9・10・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: モンヒロバトルで×2"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "pc",
+     "text": "10px 未満の字が 12字(いちばん小さい 9px。例「WHERE ·」「BATTLE」)"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(9・10・10.5・11・11.5・12・12.5・13・18px・基準 6段まで)"
+    },
+    {
+     "scene": "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: モンヒロバトルで×2"
+    }
+   ],
+   "usd_est": 0.2421
+  },
+  {
+   "custom_id": "l010",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "修行を見る〔34-watch-train〕"
+   ],
+   "machine": [
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「★ 見せ場だけ」が 99×36px(基準 120×44 以上)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「★ 見せ場だけ」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "tate",
+     "text": "下の空きが 372px(画面の 44%・基準 20% 以下)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "tate",
+     "text": "字の大きさが 7段(10・10.5・11・12・12.5・15・17px・基準 6段まで)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「★ 見せ場だけ」が 99×36px(基準 120×44 以上)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「★ 見せ場だけ」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "pc",
+     "text": "下の空きが 361px(画面の 45%・基準 20% 以下)"
+    },
+    {
+     "scene": "修行を見る〔34-watch-train〕",
+     "size": "pc",
+     "text": "字の大きさが 7段(10・10.5・11・12・12.5・15・17px・基準 6段まで)"
+    }
+   ],
+   "usd_est": 0.2145
+  },
+  {
+   "custom_id": "l011",
+   "area": "きずな・アルバム・紹介",
+   "scenes": [
+    "きずな〔40-kizuna〕",
+    "きずな(関係図)〔41-kizuna-mid〕",
+    "きずな(ペアの一覧)〔42-kizuna-end〕",
+    "思い出アルバム〔43-album〕",
+    "紹介(一覧)〔50-profile-list〕",
+    "紹介(みゅあ)〔51-profile-detail〕"
+   ],
+   "machine": [
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "tate",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "tate",
+     "text": "字の大きさが 11段(9・9.5・10・11・11.5・12・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 💗 仲良し度 Lv1 → Lv2×3 / 数字「×10,000」×3 / 数字「×10」×3 / 「顔なじみ」の話し方・飾り枠・ダイヤ ×10,000・虹のプシュケー ×10×2 / 🐾 新しいマスモン(💗 Lv3で迎える)×2"
+    },
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "pc",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(9・9.5・10・11・11.5・12・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな〔40-kizuna〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 💗 仲良し度 Lv1 → Lv2×3 / 数字「×10,000」×3 / 数字「×10」×3 / 「顔なじみ」の話し方・飾り枠・ダイヤ ×10,000・虹のプシュケー ×10×2 / 🐾 新しいマスモン(💗 Lv3で迎える)×2"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」が 108×32px(基準 120×44 以上)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "tate",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "tate",
+     "text": "字の大きさが 11段(9・9.5・10・10.5・11・11.5・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🤝 きずな」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🤝 きずな」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "pc",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(9・9.5・10・10.5・11・11.5・12.5・13・14・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな(関係図)〔41-kizuna-mid〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×2"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "tate",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: になると →×6 / 数字「120」×2 / 息の合ったおしゃべりが加わる×2"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "pc",
+     "text": "10px 未満の字が 27字(いちばん小さい 9px。例「ASSISTANT 」「KIZUNA」)"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "きずな(ペアの一覧)〔42-kizuna-end〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: になると →×6 / 数字「120」×2 / 息の合ったおしゃべりが加わる×2"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「✦ 特別なお話」が 346×27px(基準 120×44 以上)"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "tate",
+     "text": "10px 未満の字が 58字(いちばん小さい 9px。例「友だちの1枚」「名コンビの1枚」)"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×3 / で貼られます×2"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「✦ 特別なお話」が 420×27px(基準 120×44 以上)"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "pc",
+     "text": "10px 未満の字が 58字(いちばん小さい 9px。例「友だちの1枚」「名コンビの1枚」)"
+    },
+    {
+     "scene": "思い出アルバム〔43-album〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「2人」×3 / で貼られます×2"
+    },
+    {
+     "scene": "紹介(一覧)〔50-profile-list〕",
+     "size": "tate",
+     "text": "10px 未満の字が 28字(いちばん小さい 9px。例「ASSISTANT 」「PROFILE」)"
+    },
+    {
+     "scene": "紹介(一覧)〔50-profile-list〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・13・15・16・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "紹介(一覧)〔50-profile-list〕",
+     "size": "pc",
+     "text": "10px 未満の字が 28字(いちばん小さい 9px。例「ASSISTANT 」「PROFILE」)"
+    },
+    {
+     "scene": "紹介(一覧)〔50-profile-list〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・13・15・16・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「ひとこと 👆 タップで表情 1/8 困ったこと」の字が 12px(基準 13px 以上)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "tate",
+     "text": "10px 未満の字が 10字(いちばん小さい 9.5px。例「👆 タップで表情」「1」)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "tate",
+     "text": "字の大きさが 11段(9.5・10・10.5・11・11.5・12・12.5・13・13.5・17・28px・基準 6段まで)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「人となり」が 311×36px(基準 120×44 以上)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「人となり」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "pc",
+     "text": "10px 未満の字が 10字(いちばん小さい 9.5px。例「👆 タップで表情」「1」)"
+    },
+    {
+     "scene": "紹介(みゅあ)〔51-profile-detail〕",
+     "size": "pc",
+     "text": "字の大きさが 11段(9.5・10・10.5・11・11.5・12・12.5・13・13.5・17・28px・基準 6段まで)"
+    }
+   ],
+   "usd_est": 0.2452
+  },
+  {
+   "custom_id": "l012",
+   "area": "きずな・アルバム・紹介",
+   "scenes": [
+    "紹介(みゅあ・下へ)〔52-profile-detail-scroll〕"
+   ],
+   "machine": [
+    {
+     "scene": "紹介(みゅあ・下へ)〔52-profile-detail-scroll〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(10・10.5・11・11.5・12・12.5・13・13.5・14・17px・基準 6段まで)"
+    },
+    {
+     "scene": "紹介(みゅあ・下へ)〔52-profile-detail-scroll〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(10・10.5・11・11.5・12・12.5・13・13.5・14・17px・基準 6段まで)"
+    }
+   ],
+   "usd_est": 0.2139
+  },
+  {
+   "custom_id": "l013",
+   "area": "フレンド",
+   "scenes": [
+    "フレンド〔60-friend-tab〕",
+    "フレンド(下へ)〔61-friend-tab-scroll〕",
+    "フレンドの家〔62-friend-house〕",
+    "フレンドの家(タブ)〔64-friend-vtabs〕"
+   ],
+   "machine": [
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」が 108×32px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "tate",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:41×2 / 数字「18:41」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "pc",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンド〔60-friend-tab〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:47×2 / 数字「18:47」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」が 108×32px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "tate",
+     "text": "10px 未満の字が 26字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "pc",
+     "text": "10px 未満の字が 26字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンド(下へ)〔61-friend-tab-scroll〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」が 108×32px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "tate",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:41×2 / 数字「18:41」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "pc",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンドの家〔62-friend-house〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:47×2 / 数字「18:47」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」が 108×32px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「🎉 にぎやか ×1.5 ⓘ」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "tate",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "tate",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:41×2 / 数字「18:41」×2 / 数字「1個」×2"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」が 86×48px(基準 120×44 以上)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「🏘 フレンド」の字が 10px(基準 13px 以上)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "pc",
+     "text": "10px 未満の字が 42字(いちばん小さい 9px。例「ASSISTANT 」「VISIT」)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "pc",
+     "text": "字の大きさが 10段(9・9.5・10・10.5・11・11.5・12・13・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "フレンドの家(タブ)〔64-friend-vtabs〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: ［プレイヤー］×3 / 今日 18:47×2 / 数字「18:47」×2 / 数字「1個」×2"
+    }
+   ],
+   "usd_est": 0.2344
+  },
+  {
+   "custom_id": "l014",
+   "area": "夜(23時)",
+   "scenes": [
+    "家(夜23時)〔night-house〕",
+    "部屋(夜・起きている)〔night-room-awake〕",
+    "部屋(夜・寝ている)〔night-room-sleep〕",
+    "町(夜)〔night-town〕"
+   ],
+   "machine": [
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "tate",
+     "text": "10px 未満の字が 93字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "tate",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 🃏 MFバトル×3"
+    },
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "pc",
+     "text": "10px 未満の字が 117字(いちばん小さい 8.5px。例「ASSISTANT 」「HOUSE」)"
+    },
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "pc",
+     "text": "字の大きさが 13段(8.5・9・9.5・10・10.5・11・11.5・12・12.5・13・15・17・22px・基準 6段まで)"
+    },
+    {
+     "scene": "家(夜23時)〔night-house〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: MFバトルカード×4 / おやつ屋さん×3 / モンヒロバトル×2"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「行く ›」が 53×44px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "tate",
+     "text": "いちばん大事に見えるボタン「行く ›」の字が 12.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "tate",
+     "text": "途中の空きが 196px(52px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(10.5・11・11.5・12・12.5・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「0時」×2 / モンヒロバトルで×2"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📚 図書室」が 93×44px(基準 120×44 以上)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "pc",
+     "text": "いちばん大事に見えるボタン「📚 図書室」の字が 11.5px(基準 13px 以上)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "pc",
+     "text": "途中の空きが 182px(52px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(10.5・11・11.5・12・12.5・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(夜・起きている)〔night-room-awake〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「0時」×2 / モンヒロバトルで×2"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "tate",
+     "text": "途中の空きが 323px(281px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "tate",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "tate",
+     "text": "同じ数字・文が何度も出る: 数字「0時」×2"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "pc",
+     "text": "途中の空きが 232px(267px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "pc",
+     "text": "字の大きさが 8段(10.5・11・11.5・12・13・14・16・17px・基準 6段まで)"
+    },
+    {
+     "scene": "部屋(夜・寝ている)〔night-room-sleep〕",
+     "size": "pc",
+     "text": "同じ数字・文が何度も出る: 数字「0時」×2"
+    },
+    {
+     "scene": "町(夜)〔night-town〕",
+     "size": "tate",
+     "text": "途中の空きが 160px(561px の下・基準 画面の 18% 以下)"
+    },
+    {
+     "scene": "町(夜)〔night-town〕",
+     "size": "tate",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "町(夜)〔night-town〕",
+     "size": "tate",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    },
+    {
+     "scene": "町(夜)〔night-town〕",
+     "size": "pc",
+     "text": "10px 未満の字が 17字(いちばん小さい 8px。例「モンスター・編成」「みんなの家」)"
+    },
+    {
+     "scene": "町(夜)〔night-town〕",
+     "size": "pc",
+     "text": "字の大きさが 9段(8・9・10・10.5・11・12・15・17・20px・基準 6段まで)"
+    }
+   ],
+   "usd_est": 0.2324
+  }
+ ]
+}
