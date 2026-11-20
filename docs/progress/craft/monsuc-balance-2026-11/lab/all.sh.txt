@@ -1,0 +1,6 @@
+set -e
+cd "$(dirname "$0")"
+node drive.js main base 0 100000 4 out
+for v in hp10 hp10a noIssa noHira no40 polFlat turnNoAma polFlatTurn; do node drive.js cf $v 0 8000 4 out; done
+node drive.js assist base 0 400 4 out "base,memo1-B,memo1-A,memo1-S,memo3-S,real-B,real-A,real-S,bare-B,bare-A,bare-S,battle-S,probe-sokoji,probe-kizuna,probe-hirameki,probe-ochitsuki,probe-itawari,probe-ninzu,probe-trainlv,probe-gyakkyo,probe-hagemi,probe-haru,probe-natsu,probe-aki,probe-fuyu,probe-ninkigreat,probe-challenge,probe-tsuika,probe-kaifuku,probe-atooshi,probe-miharu,probe-kibarashi,probe-kunpow,probe-kunwise,probe-kunhit,probe-kuneva,probe-kuntough,probe-kunlife,probe-kaketsuke,probe-shutsugen,probe-shuugou,probe-shitashi,probe-tagpow,probe-hitonatsu,probe-nakayoshi,probe-shitsuke,probe-shoki,probe-genkai,probe-ticket0,probe-tairyoku,probe-kuishinbo,probe-trchance,probe-shchance,probe-gussuri,probe-asobi,probe-tsukisoi,probe-genki,probe-shugyo,probe-shugyotoku,probe-waza,probe-chokyo,probe-wazakazu,probe-shugyohp,probe-aptq,probe-shokin,probe-ikioi,probe-ninki,probe-kokoroe,probe-ticket,probe-rivaldamashii,probe-event,probe-peak,probe-yobimizu,probe-mejirushi,probe-joshu,probe-aidcome,probe-aidtrain,probe-aidluck,probe-aidtrust,probe-aidkeisho,probe-gatsu,probe-miseba,probe-mitate,probe-kensho,probe-mimamori"
+echo 全部終わり
