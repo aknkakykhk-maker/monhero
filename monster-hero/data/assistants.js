@@ -22840,7 +22840,7 @@ const ASSISTANT_LIFE_WORDS = Object.freeze({
     bond:   Object.freeze({ show: '仲良し度',   icon: '💗', avoid: Object.freeze(['親密度', 'きずな']) }),
     peer:   Object.freeze({ show: '友情Lv',     icon: '🤝', avoid: Object.freeze(['友だち度']) }),
     mood:   Object.freeze({ show: '調子',       icon: '🌡', avoid: Object.freeze(['気分']) }),
-    masmon: Object.freeze({ show: 'マスモン',   icon: '🐾', avoid: Object.freeze(['助手の子', '育てた子']) }),
+    masmon: Object.freeze({ show: 'マスモン',   icon: '🐾', avoid: Object.freeze(['助手の子']) }),
     friend: Object.freeze({ show: 'おなじみ度', icon: '🏠', avoid: Object.freeze([]) }),
   }),
   nav: Object.freeze({
