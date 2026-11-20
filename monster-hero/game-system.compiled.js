@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 363c39ecad5f6ff5
+// source-sha256: 7951abef1e20fcee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -181628,7 +181628,15 @@ function MsxPlay({
       return React.createElement("div", {
         className: `v-chip${rs === '優勝' ? ' hot' : ''}`,
         style: {
-          position: 'static'
+          position: 'static',
+          fontSize: 16,
+          padding: '6px 16px',
+          ...(rs === '優勝' ? {
+            background: 'linear-gradient(90deg,#b45309,#f59e0b)',
+            color: '#fff',
+            border: '2px solid #fde047',
+            boxShadow: '0 0 14px #fde04788'
+          } : {})
         },
         "data-msx-turn-cup": rs === '優勝' ? 'win' : 'lose'
       }, rs === '優勝' ? `🏆 ${nm} 優勝!` : `${nm} は 負け…`);
@@ -184689,7 +184697,7 @@ function MsxR3Frame({
     back: back,
     onBack: onBack,
     sub: `${msxAidName(s.aid)}編`,
-    right: right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`
+    right: right != null ? right : `💰 所持 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`
   }), React.createElement("div", {
     className: "v-body r3"
   }, body), foot);
@@ -185593,6 +185601,7 @@ const MSX_R3_RANK_CSS = `
 .msx-rk .rk-tag{position:absolute;top:2px;bottom:2px;left:0;display:flex;align-items:center;justify-content:center;padding:0 9px 0 6px;border-radius:5px 0 0 5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%);font-size:9.5px;font-weight:900;letter-spacing:.04em;color:#fff;background:#4caf50}
 .msx-rk .rk-tag.up{background:#ef4444;color:#fff7d6}
 .msx-rk .rk-nm.dk,.msx-rk .rk-amt.dk{color:#1e1b4b;text-shadow:0 0 2px #fff,0 0 2px #fff}
+.msx-rk .rk-tot em.gn{font-style:normal;font-size:clamp(16px,5.6cqw,22px);font-weight:900;color:#4ade80;white-space:nowrap;animation:msx-rk-tag .5s cubic-bezier(.3,1.6,.6,1) 1.2s both}
 .msx-rk .rk-tot small{flex-basis:100%;text-align:center;font-size:11px;font-weight:800;color:#fde68a}
 .msx-rk .rk-row.me .rk-bar{animation:msx-rk-glow 1.2s ease-in-out .6s 2 alternate}
 .msx-rk .rk-tag{animation:msx-rk-tag .5s cubic-bezier(.3,1.6,.6,1) .9s both}
@@ -185600,14 +185609,14 @@ const MSX_R3_RANK_CSS = `
 @keyframes msx-rk-tag{from{opacity:0;transform:scale(2.2)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.msx-rk .rk-row.me .rk-bar,.msx-rk .rk-tag{animation:none}}
 `;
-const msxR3Bright = hex => {
+const msxR3Bright = (hex, lim = 170) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
   if (!m) return false;
   const n = parseInt(m[1], 16);
   const r = n >> 16,
     g = n >> 8 & 255,
     b = n & 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b > 170;
+  return 0.299 * r + 0.587 * g + 0.114 * b > lim;
 };
 function MsxR3CountUp({
   from,
@@ -185663,7 +185672,10 @@ function MsxR3RankPyramid({
   }, React.createElement("small", null, "累計の賞金"), Number.isFinite(g) && g > 0 ? React.createElement(React.Fragment, null, React.createElement("i", null, msxFmt(Math.max(0, t - g)), "G →"), React.createElement("b", null, React.createElement(MsxR3CountUp, {
     from: Math.max(0, t - g),
     to: Math.max(0, t)
-  }), "G"), React.createElement("i", null, "(+", msxFmt(g), "G)")) : React.createElement("b", null, msxFmt(Math.max(0, t)), "G")) : null, React.createElement("div", {
+  }), "G"), React.createElement("em", {
+    className: "gn",
+    "data-msx-r3-rank-gain": true
+  }, "+", msxFmt(g), "G")) : React.createElement("b", null, msxFmt(Math.max(0, t)), "G")) : null, React.createElement("div", {
     className: "rk-hd"
   }, "賞金ランク"), R.map((x, i) => i).reverse().map(i => {
     const x = R[i];
@@ -185699,7 +185711,7 @@ function MsxR3RankPyramid({
         left: `${CX}%`
       }
     }, x.name), React.createElement("span", {
-      className: `rk-amt${msxR3Bright(col[1]) ? ' dk' : ''}`
+      className: `rk-amt${msxR3Bright(col[1], 150) ? ' dk' : ''}`
     }, cond(x)), me ? React.createElement("span", {
       className: `rk-tag${up ? ' up' : ''}`,
       style: {
@@ -186468,10 +186480,12 @@ function MsxR3Battle({
       }, msxR3RankName(d.rankFrom || 0), " → ", React.createElement("em", null, msxR3RankName(d.rankTo))), React.createElement("b", {
         style: {
           animationDelay: '.9s'
-        }
-      }, "🎫 修行チケット +", SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement("style", null, `.msx .msx-r3-upcards{position:absolute;z-index:4;left:0;right:0;top:calc(5% + 46px);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
+        },
+        "data-msx-r3-upticket": true
+      }, "🎫 修行チケット +", SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0), React.createElement("small", null, "修行に出るときに使う")))), React.createElement("style", null, `.msx .msx-r3-upcards{position:absolute;z-index:4;left:0;right:0;top:calc(5% + 46px);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
 .msx .msx-r3-upcards b{background:#0f172aee;border:1.5px solid #fde04799;border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:#fff;animation:msx-r3-card .45s cubic-bezier(.3,1.5,.6,1) both}
 .msx .msx-r3-upcards em{font-style:normal;color:#fde047}
+.msx .msx-r3-upcards b small{display:block;text-align:center;font-size:12px;font-weight:700;color:#cbd5e1}
 @keyframes msx-r3-card{from{opacity:0;transform:translateY(-10px) scale(.7)}to{opacity:1;transform:none}}
 .msx .v-scene .mon.msx-r3-hop{animation:msx-r3-hop 1.1s ease-in-out infinite}
 @keyframes msx-r3-hop{0%,100%{transform:translateX(-50%) translateY(0)}45%{transform:translateX(-50%) translateY(-12px)}}

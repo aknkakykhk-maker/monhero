@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7d5942d63d9c52cf
+// generated-sha256: 971408bfbe960ae5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -94047,7 +94047,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {/* 残りのターンは上の帯の1か所だけ(2026-11-20 r1119-033 育-19・育-26・育-95: 帯・暦の下・大会の札に同じ数が3回出ていた) */}
         {v.period.key === 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 ヒーローズファイナル</div> : v.period.left <= 1 ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 このあと期末の大会</div> : null}
         {/* バ-28: 大会のあとの月替わりで、何の大会でどうだったかが分からない → 前の月の大会の結果を札で出す */}
-        {(() => { const e = (Array.isArray(run.log) ? run.log : []).filter((x) => x && Number(x.turn) === s.turn - 1 && /: (優勝|負け)$/.test(String(x.t || ''))).pop(); if (!e) return null; const [nm, rs] = String(e.t).split(': '); return <div className={`v-chip${rs === '優勝' ? ' hot' : ''}`} style={{ position: 'static' }} data-msx-turn-cup={rs === '優勝' ? 'win' : 'lose'}>{rs === '優勝' ? `🏆 ${nm} 優勝!` : `${nm} は 負け…`}</div>; })()}
+        {(() => { const e = (Array.isArray(run.log) ? run.log : []).filter((x) => x && Number(x.turn) === s.turn - 1 && /: (優勝|負け)$/.test(String(x.t || ''))).pop(); if (!e) return null; const [nm, rs] = String(e.t).split(': '); return <div className={`v-chip${rs === '優勝' ? ' hot' : ''}`} style={{ position: 'static', fontSize: 16, padding: '6px 16px', ...(rs === '優勝' ? { background: 'linear-gradient(90deg,#b45309,#f59e0b)', color: '#fff', border: '2px solid #fde047', boxShadow: '0 0 14px #fde04788' } : {}) }} data-msx-turn-cup={rs === '優勝' ? 'win' : 'lose'}>{rs === '優勝' ? `🏆 ${nm} 優勝!` : `${nm} は 負け…`}</div>; })()}
         {seasonChanged ? <div className="v-chip" style={{ position: 'static' }}>{MSX_SEASON[cal.season]}になった</div> : null}
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
@@ -95298,7 +95298,7 @@ function MsxR3Frame({ back = '戻る', onBack, run, right, body, foot, rankName 
   return (
     <>
       <style>{MSX_R3_CSS}</style>
-      <MsxHd back={back} onBack={onBack} sub={`${msxAidName(s.aid)}編`} right={right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`}/>
+      <MsxHd back={back} onBack={onBack} sub={`${msxAidName(s.aid)}編`} right={right != null ? right : `💰 所持 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`}/>
       <div className="v-body r3">{body}</div>
       {foot}
     </>
@@ -95663,6 +95663,7 @@ const MSX_R3_RANK_CSS = `
 .msx-rk .rk-tag{position:absolute;top:2px;bottom:2px;left:0;display:flex;align-items:center;justify-content:center;padding:0 9px 0 6px;border-radius:5px 0 0 5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%);font-size:9.5px;font-weight:900;letter-spacing:.04em;color:#fff;background:#4caf50}
 .msx-rk .rk-tag.up{background:#ef4444;color:#fff7d6}
 .msx-rk .rk-nm.dk,.msx-rk .rk-amt.dk{color:#1e1b4b;text-shadow:0 0 2px #fff,0 0 2px #fff}
+.msx-rk .rk-tot em.gn{font-style:normal;font-size:clamp(16px,5.6cqw,22px);font-weight:900;color:#4ade80;white-space:nowrap;animation:msx-rk-tag .5s cubic-bezier(.3,1.6,.6,1) 1.2s both}
 .msx-rk .rk-tot small{flex-basis:100%;text-align:center;font-size:11px;font-weight:800;color:#fde68a}
 .msx-rk .rk-row.me .rk-bar{animation:msx-rk-glow 1.2s ease-in-out .6s 2 alternate}
 .msx-rk .rk-tag{animation:msx-rk-tag .5s cubic-bezier(.3,1.6,.6,1) .9s both}
@@ -95671,7 +95672,7 @@ const MSX_R3_RANK_CSS = `
 @media (prefers-reduced-motion:reduce){.msx-rk .rk-row.me .rk-bar,.msx-rk .rk-tag{animation:none}}
 `;
 // 段の色が明るいときは字を濃くする(バ-62: 期待の星の黄・ルーキーの水色の上の白い字が読めない)
-const msxR3Bright = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return false; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return 0.299 * r + 0.587 * g + 0.114 * b > 170; };
+const msxR3Bright = (hex, lim = 170) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return false; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return 0.299 * r + 0.587 * g + 0.114 * b > lim; };
 // 賞金の数字を数え上げる(バ-05)。動きを減らす設定では、すぐ最後の値
 function MsxR3CountUp({ from, to, ms = 900 }) {
   const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -95694,7 +95695,7 @@ function MsxR3RankPyramid({ step, up, total, gain }) {
   return (<div className="msx-rk" data-msx-r3-rank data-msx-r3-rank-step={step}>
     <style>{MSX_R3_RANK_CSS}</style>
     {/* バ-04・30: 賞金は「前 → いま」の1か所。右上の所持の賞金と分けて、ランクを決める「累計」と書く。バ-05: 数え上げる */}
-    {Number.isFinite(t) ? <div className="rk-tot" data-msx-r3-rank-total><small>累計の賞金</small>{Number.isFinite(g) && g > 0 ? <><i>{msxFmt(Math.max(0, t - g))}G →</i><b><MsxR3CountUp from={Math.max(0, t - g)} to={Math.max(0, t)}/>G</b><i>(+{msxFmt(g)}G)</i></> : <b>{msxFmt(Math.max(0, t))}G</b>}</div> : null}
+    {Number.isFinite(t) ? <div className="rk-tot" data-msx-r3-rank-total><small>累計の賞金</small>{Number.isFinite(g) && g > 0 ? <><i>{msxFmt(Math.max(0, t - g))}G →</i><b><MsxR3CountUp from={Math.max(0, t - g)} to={Math.max(0, t)}/>G</b><em className="gn" data-msx-r3-rank-gain>+{msxFmt(g)}G</em></> : <b>{msxFmt(Math.max(0, t))}G</b>}</div> : null}
     <div className="rk-hd">賞金ランク</div>
     {R.map((x, i) => i).reverse().map((i) => {
       const x = R[i]; const me = i + 1 === step; const k = N - i; // 上から k 段目(1 が頂)
@@ -95705,7 +95706,7 @@ function MsxR3RankPyramid({ step, up, total, gain }) {
         <span className="rk-bar" style={{ left: `${CX + hwT}%`, background: `linear-gradient(90deg, ${col[1]}, ${col[1]}dd)` }}/>
         <span className="rk-tri" style={{ left: `${triL}%`, width: `${triW}%`, background: `linear-gradient(180deg, #ffffff66, ${col[0]} 45%, ${col[0]})`, clipPath: `polygon(${cut}% 0, ${100 - cut}% 0, 100% 100%, 0 100%)` }}/>
         <span className={`rk-nm${msxR3Bright(col[0]) ? ' dk' : ''}`} style={{ left: `${CX}%` }}>{x.name}</span>
-        <span className={`rk-amt${msxR3Bright(col[1]) ? ' dk' : ''}`}>{cond(x)}</span>
+        <span className={`rk-amt${msxR3Bright(col[1], 150) ? ' dk' : ''}`}>{cond(x)}</span>
         {me ? <span className={`rk-tag${up ? ' up' : ''}`} style={{ left: `${Math.max(0, triL - 15)}%` }} data-msx-r3-rank-tag={up ? 'up' : 'keep'}>{up ? 'UP!' : 'KEEP'}</span> : null}
       </div>);
     })}
@@ -95979,10 +95980,11 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
           {/* バ-29: ランクが上がる瞬間はモンスターを真ん中に大きく(喜んで跳ねる)。ランク名ともらえる物は無地の札に載せて順に出す */}
           <div className="gr" style={{ bottom: 'calc(6% - 5px)' }}/><MsxMonArt run={run} noPeak className="mon msx-r3-hop" style={{ bottom: '6%', height: '54%' }}/>
           <div className="v-stamp msx-pop" style={{ top: '5%', fontSize: 34 }}>ランク UP!</div>
-          <div className="msx-r3-upcards" data-msx-r3-upcards><b style={{ animationDelay: '.5s' }}>{msxR3RankName(d.rankFrom || 0)} → <em>{msxR3RankName(d.rankTo)}</em></b><b style={{ animationDelay: '.9s' }}>🎫 修行チケット +{SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)}</b></div></div>
+          <div className="msx-r3-upcards" data-msx-r3-upcards><b style={{ animationDelay: '.5s' }}>{msxR3RankName(d.rankFrom || 0)} → <em>{msxR3RankName(d.rankTo)}</em></b><b style={{ animationDelay: '.9s' }} data-msx-r3-upticket>🎫 修行チケット +{SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)}<small>修行に出るときに使う</small></b></div></div>
         <style>{`.msx .msx-r3-upcards{position:absolute;z-index:4;left:0;right:0;top:calc(5% + 46px);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
 .msx .msx-r3-upcards b{background:#0f172aee;border:1.5px solid #fde04799;border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:#fff;animation:msx-r3-card .45s cubic-bezier(.3,1.5,.6,1) both}
 .msx .msx-r3-upcards em{font-style:normal;color:#fde047}
+.msx .msx-r3-upcards b small{display:block;text-align:center;font-size:12px;font-weight:700;color:#cbd5e1}
 @keyframes msx-r3-card{from{opacity:0;transform:translateY(-10px) scale(.7)}to{opacity:1;transform:none}}
 .msx .v-scene .mon.msx-r3-hop{animation:msx-r3-hop 1.1s ease-in-out infinite}
 @keyframes msx-r3-hop{0%,100%{transform:translateX(-50%) translateY(0)}45%{transform:translateX(-50%) translateY(-12px)}}
