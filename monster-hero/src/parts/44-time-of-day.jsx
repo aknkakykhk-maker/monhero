@@ -6,16 +6,19 @@
 //   ・絵の背景(HOME・タイトル)は絵に色を重ねる。塗りだけの画面(メニュー・マーケット・神殿・モードえらび)は塗りをほんの少し寄せる
 //   ・お話・モンヒロビートの演奏中・リザルト・バトル中・カードの場は変えない。ボタン・文字・カード・ノーツには乗らない
 //   ・色の層は背景の要素の中にあるので、「🔄 横」で回しても絵と一緒に回る
-// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 5:00 から
+// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 6:00 から
 // 保存: キー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off', format:'24h'|'12h' }(無い・壊れているときは従来どおり入・24時間)
 
 const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
 // 区切り(日本時間の時)。[始まりの時, 名前, 印, 表示名]。助手ライフの家も同じ表を使う
+// 2026-11-20 社長(r1119-043 ⑥・r1119-044): 朝6時から。深夜(0〜6時)は見た目は夜のまま(id 'night')で、呼び名だけ「深夜」。夕は「夕方」
+//   助手ライフの2時間の移動(0・2・4…時)と区切りがそろう(docs/spec/ASSISTANT_LIFE.md §3-2)
 const TIME_OF_DAY_SLOTS = Object.freeze([
-  Object.freeze({ id: 'morning', from: 5,  icon: '🌅', label: '朝' }),
+  Object.freeze({ id: 'night',   from: 0,  icon: '🌙', label: '深夜' }),
+  Object.freeze({ id: 'morning', from: 6,  icon: '🌅', label: '朝' }),
   Object.freeze({ id: 'day',     from: 10, icon: '☀️', label: '昼' }),
-  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕' }),
-  Object.freeze({ id: 'night',   from: 19, icon: '🌙', label: '夜' }),
+  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕方' }),
+  Object.freeze({ id: 'night',   from: 18, icon: '🌙', label: '夜' }),
 ]);
 const TIME_OF_DAY_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 // 日本時間の時・分
@@ -23,7 +26,7 @@ const timeOfDayJstParts = (now = Date.now()) => {
   const d = new Date((Number.isFinite(Number(now)) ? Number(now) : Date.now()) + TIME_OF_DAY_JST_OFFSET_MS);
   return { h: d.getUTCHours(), m: d.getUTCMinutes() };
 };
-// いまの時間帯(朝 5:00〜 / 昼 10:00〜 / 夕 16:00〜 / 夜 19:00〜4:59)
+// いまの時間帯(深夜 0:00〜 / 朝 6:00〜 / 昼 10:00〜 / 夕方 16:00〜 / 夜 18:00〜)
 const timeOfDayAt = (now = Date.now()) => {
   const { h } = timeOfDayJstParts(now);
   let slot = TIME_OF_DAY_SLOTS[TIME_OF_DAY_SLOTS.length - 1];
@@ -64,7 +67,7 @@ const timeOfDaySetSettings = (patch) => {
 // 20秒ごとに見直す(分が変わったら時刻を、時間帯が変わったら雰囲気を書き換える)。見るたびに今の時刻で決める
 const timeOfDayTick = () => {
   const slot = timeOfDayAt(), minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
-  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  if (slot === TIME_OF_DAY_STORE.slot && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot; TIME_OF_DAY_STORE.minute = minute;
   timeOfDayEmit();
 };

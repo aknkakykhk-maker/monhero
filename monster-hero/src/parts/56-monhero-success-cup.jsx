@@ -173,7 +173,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 
 // モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
 //   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B', antiStall: true }); // antiStall: 間合いの取り合いで技が出ないまま打ち切りにしない(バ-08)
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -205,6 +205,9 @@ const MSC_CSS = `
 .msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+/* 2026-11-20 再点検 バ-02・58: PC(1280×800)で「結果だけ見る・試合へ」が画面の下で切れていた → ボタンの段は下に留め、低い画面では能力の行を詰める */
+.msc-wrap .msc-foot{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg,#0000,#140f2a 30%);padding-bottom:max(4px,env(safe-area-inset-bottom))}
+@media (max-height:860px) and (min-width:700px){.msc-st{height:25px}}
 .msc-foot>*{flex:1}
 /* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
 .msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
@@ -223,6 +226,9 @@ const MSC_CSS = `
 .msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
 .msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
 .msc-face img{width:120%;height:120%;object-fit:contain}
+/* 2026-11-20 再点検 バ-56・66: 絵が右端に約28pxで押し込まれ、誰か分からない → 名前の左に大きく置く */
+.msc-row .msc-face{order:-1;width:38px;height:38px;max-height:calc(100% - 2px);margin-left:0}
+.msc-row .msc-no{order:-2}
 .msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
@@ -238,7 +244,8 @@ const MSC_CSS = `
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
-.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
+.msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
@@ -289,6 +296,7 @@ const MSC_CSS = `
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
+.msc-fcnote{margin:-2px 2px 0;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:center}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
 .msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
 .msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
@@ -440,7 +448,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
-    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}の{Z}1回戦は{Z} これからだよ」</>,
+    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう。{Z}{info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ。{Z}まずは{Z} 1回戦を{Z} 見ていこう」</>,
     upsets.length ? <>「<em>大穴!{Z} {nm(E[upsets[0]])}</em> が{Z} 勝ち上がったぞ!{Z} {info.meName}も{Z} 1回戦を{Z} 勝ち上がり!」</> : <>「1回戦が{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 順当に{Z} 勝ち上がり!」</>,
     foeNo >= 4 ? <>「<em>大穴!{Z} {nm(foe)}</em>{Z} 決勝まで{Z} きたぞ!{Z} {info.meName}は{Z} 準決勝も{Z} 勝って{Z} 決勝へ!」</> : <>「準決勝も{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 決勝へ!{Z} 反対の山からは{Z} <em>{nm(foe)}</em>」</>,
   ];
@@ -452,7 +460,8 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
   return (
     <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
-      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      {/* 2026-11-20 再点検 バ-06・16・19・41: 大会名が戻るの横と表の見出しで二重だった → 表の見出しだけにする */}
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
@@ -474,12 +483,14 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      {/* 2026-11-20 再点検 バ-07・20: 1回戦の途中で決勝の顔合わせを先に言っていた・「見せるだけの演出です」の裏話で冷めた → 決勝の顔合わせは表が決勝まで進んでから出し、裏話の文はやめる */}
+      <div className="msc-note">{st >= 3 ? <><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。</> : null}<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>スキップ ⏭</button> : null}</div>
       <div className="msc-foot">
         {/* 「(優勝ずみ)」を後ろに付けると、半分の幅では単語の途中で折れて読めなかった(2026-11-17 社長)。押せないときの副題と同じ形で、優勝ずみも副題にする */}
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">優勝ずみ</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">一度優勝したので使えます</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
+        {/* 2026-11-20 再点検 バ-55: 進むボタンは「試合へ」にそろえる(表は「決勝へ」・試合の前は「準備完了」とばらばらだった) */}
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
@@ -550,6 +561,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
+      {/* 2026-11-20 再点検 バ-57: 「零」が何か初めての人に分からない → 間合いの言葉を1行で添える */}
+      <div className="msc-fcnote" data-msc-dist-note>間合いは 零(くっつく)・近・中・遠 の順に離れます</div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="msc-sheet grow" key={tab}>
         {tab === 'st' && <>
@@ -580,7 +593,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
+        <button className="msc-btn" data-msc-ready onClick={onReady}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
