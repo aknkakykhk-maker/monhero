@@ -133,7 +133,7 @@ const makeRun = async (kind) => {
     ['X1', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit', '@editsave']],
     // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ マスモンボックス(2026-11-14 参考 v4 の順)
     ['E3', 'retire', ['cont']], ['E3b', 'retire', ['cont', '@bal']], ['E3u', 'retire', ['cont', '@plus=pow', '@plus=hit', '@ptminus=pow']], ['E3v', 'retire', ['cont', '@bal', '@ptminus=pow']], // 引退の能力ポイント: 押した能力だけ戻る・まとめて振ったあとも個別に戻せる(r1115-172) ['E0', 'retire', ['cont', '@bal', '@e3']], ['E1', 'retire', ['cont', '@bal', '@e3', '@e0']],
-    ['E2', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto']], ['E9', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto', '@decide', '@decide']],
+    ['E2', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto']], ['E9', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto', '@decide', '@decide', 'w1200']] /* w1200: ベスト3のせり上がり(650ms 待ち+0.8秒)が終わってから撮る。途中を撮ると1位が空に見えた(API 点検 r3-E9) */,
   ];
   try {
     for (const [w, h, tag] of sizes) {

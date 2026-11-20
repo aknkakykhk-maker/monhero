@@ -870,8 +870,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
             <div key={i} className={`v-cm${tag ? ' tag' : ''}`}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
-              <div className="tx"><div className="r1"><b>{msxMemberName(m)}</b><small>{tag ? `🤝 タッグ +${m.tag}%` : `編成の効き +${Math.round(eff)}%`}</small></div><div className="afl">親密度<i><b style={{ width: `${s.bond[i]}%` }}/></i>{s.bond[i]}</div></div></div>); })}
-          {card && card.aid ? <div className={`v-cm${s.aidBond >= tagAt ? ' tag' : ''}`}><MsxPf aid={s.aid} bond={s.aidBond} tagAt={999}/><div className="tx"><div className="r1"><b>{msxAidName(s.aid)}</b><small>{s.aidBond >= tagAt ? '🤝 タッグ' : '助手も来ている'}</small></div><div className="afl">親密度<i><b style={{ width: `${s.aidBond}%` }}/></i>{s.aidBond}</div></div></div> : null}
+              <div className="tx"><div className="r1"><b>{msxMemberName(m)}</b></div><div className="afl"><small>{tag ? `🤝 タッグ +${m.tag}%` : `効き +${Math.round(eff)}%`}</small>親密度<i><b style={{ width: `${s.bond[i]}%` }}/></i>{s.bond[i]}</div></div></div>); })}
+          {card && card.aid ? <div className={`v-cm${s.aidBond >= tagAt ? ' tag' : ''}`}><MsxPf aid={s.aid} bond={s.aidBond} tagAt={999}/><div className="tx"><div className="r1"><b>{msxAidName(s.aid)}</b></div><div className="afl"><small>{s.aidBond >= tagAt ? '🤝 タッグ' : '助手'}</small>親密度<i><b style={{ width: `${s.aidBond}%` }}/></i>{s.aidBond}</div></div></div> : null}
         </div>
         {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span>効果 ×{card.mult}</span><span className="fl">失敗 <b>{Math.round(card.fail * 100)}%</b></span></div>

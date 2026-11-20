@@ -303,10 +303,10 @@ const MSX_CSS = `
 .msx .v-cm .tx .r1 small{display:inline;flex:none}
 .msx .v-cm.tag{border-color:#fde047;background:linear-gradient(90deg,#3b2f0bf2,#0f0d24e6);box-shadow:0 0 10px #fde04788}
 .msx .v-cm .tx{flex:1;min-width:0;line-height:1.1}
-.msx .v-cm .tx b{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cm .tx b{display:block;font-size:10.5px;white-space:normal;overflow-wrap:anywhere;line-height:1.15} /* 名前は省略しない(API 点検 msx-T3・タッグ相手が「ウンディ…」で読めなかった) */
 .msx .v-cm .tx small{display:block;font-size:10px;color:#86efac;font-weight:900;white-space:nowrap}
 .msx .v-cm.tag .tx small{color:#fde047}
-.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
+.msx .v-cm .afl small{display:inline!important;margin-right:2px}.msx .v-cm .afl{display:flex;align-items:center;gap:3px;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
 .msx .v-cm .afl i{flex:1;height:5px;border-radius:3px;background:#334155;overflow:hidden;position:relative}
 .msx .v-cm .afl i b{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#f472b6)}
 .msx .v-cm.tag .afl i b{background:linear-gradient(90deg,#fde047,#fb923c)}
@@ -578,6 +578,11 @@ const MSX_CSS = `
 .msx .v-a3 .gauge{flex:1 1 auto;height:12px;border-radius:6px;background:#3a3054;position:relative;overflow:hidden;cursor:pointer}.msx .v-a3 .gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f59e0b,#fde68a)}
 .msx .v-a3 .gauge s{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,10,30,.55)}
 .msx .v-a3 .c{flex:0 0 46px;text-align:right;font-size:10.5px;font-weight:800;color:#fde68a}
+.msx .v-a3 .ctl .chip.sym{flex:0 0 44px;width:44px;height:44px;padding:0;border-radius:12px;border:1.5px solid #6d5fa6;background:#2f2550;color:#fff} /* −/＋ を能力ポイントの画面と同じ 44px の押せる四角に(API 点検 r3-E2: 20px 前後で「⊂⊃」に見えた) */
+.msx .v-a3 .ctl .chip.sym.plus{background:linear-gradient(180deg,#fde047,#f59e0b);border-color:#fde68a;color:#422006}
+.msx .v-a3 .ctl .chip.sym::before{width:16px;height:16px;background-size:16px 3px}.msx .v-a3 .ctl .chip.sym.plus::before{background-size:16px 3px,3px 16px}
+.msx .v-a3 .ctl .chip.sym::after{inset:0}
+.msx .v-a3 .ctl .chip.sym:disabled{opacity:.3}
 .msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
 .msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
 .msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1172,6 +1177,7 @@ const MSX_CSS = `
 .msx .v-b3{display:flex;gap:14px;margin-top:4px;font-size:10.5px;font-weight:900;white-space:nowrap;color:#e2e8f0;line-height:1.25}
 .msx .v-b3 span{display:inline-flex;align-items:baseline;gap:3px}
 .msx .v-b3 b{font-size:12.5px;color:#fff}
+.msx .v-b3 small{font-size:11px;color:#cbd5e1;font-weight:700} /* 忠誠の「/100」: 指定が無いとブラウザ既定の80%で 8px になっていた(API 点検 ④ 2026-11-20) */
 .msx .v-b3 .v-dl{font-style:normal;font-size:10.5px;font-weight:900;animation:msxDl 2.6s ease-out both}
 .msx .v-b3 .v-dl.up{color:#86efac}.msx .v-b3 .v-dl.dn{color:#fca5a5}
 @keyframes msxDl{0%{opacity:0;transform:translateY(4px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
