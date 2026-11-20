@@ -96,6 +96,31 @@ const msxGfxItemsOf = (p, s) => {
   add('pop', '⭐', '人気', p.pop0, Math.round(Number(s.pop) || 0), 100);
   return o;
 };
+// トレーニングに来た編成の子の札。押すとアシスト詳細(r1119-011「アシモンを押すとアシスト能力」)。詳細は .msx の上に重ねる(場面の中に閉じ込めない)
+function MsxCmTap({ m, className, attrs, children }) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  const root = open && ref.current ? ref.current.closest('.msx') : null;
+  return (<>
+    <button type="button" ref={ref} className={`${className} msx-cm-tap`} onClick={() => setOpen(true)} aria-label={`${msxMemberName(m)}のアシスト効果を見る`} {...(attrs || {})}>{children}</button>
+    {open && root && typeof MsxAssistDetail === 'function' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal
+      ? ReactDOM.createPortal(<MsxAssistDetail mem={m} kind={m.kind === 'base' ? 'base' : 'team'} name={msxMemberName(m)} sub={m.kind === 'base' ? 'ベースモン' : `Lv.${m.lv || 1}・${msxMonName(m.species)}`} onClose={() => setOpen(false)}/>, root) : null}
+  </>);
+}
+
+// 甘え度・恐れ度が何で動いたか(芯の s.lw・r1119-019)。短い字は上の帯の右、長い字は能力のページの一覧
+const MSX_LW_WHY = Object.freeze({
+  turnHp: ['体力に余裕', '体力を半分以上残してターンを終えた'], turnLow: ['体力が少ない', '体力が半分より少ないままターンを終えた'],
+  praise: ['ほめた', 'ほめた'], scold: ['しかった', 'しかった'], idle: ['ほうっておいた', 'しばらく、ほめも しかりもしなかった'],
+  play: ['遊んだ', 'いっしょに遊んだ'], meal: ['ごはん', 'ごはんを食べた'], mealSkip: ['ごはん抜き', 'ごはんを抜いた'],
+  story: ['お話', 'お話の出来事'], item: ['アイテム', 'アイテムを使った'], win: ['勝った', '試合に勝った'], away: ['家出', '家出から戻った'], event: ['出来事', '出来事があった'],
+});
+const msxLwWhy = (w, long) => { const r = MSX_LW_WHY[w]; return r ? r[long ? 1 : 0] : '出来事'; };
+const msxLwAmt = (x) => [x.a ? `🍬甘え+${x.a}` : '', x.f ? `⚡恐れ+${x.f}` : ''].filter(Boolean).join(' ');
+const msxLwList = (s) => (s && Array.isArray(s.lw) ? s.lw.filter((x) => x && typeof x === 'object' && (Number(x.a) > 0 || Number(x.f) > 0)) : []);
+// いちばん新しいターン(前のターンの終わりと今のターン)に動いた分
+const msxLwNow = (s) => { const l = msxLwList(s); const t = Number(s && s.turn) || 0; return l.filter((x) => Number(x.t) >= t - 1); };
+
 // 上の帯の忠誠・人気が変わったときの「+4」は、帯がどの画面で描き直されても続くよう、育成ごとに前の値を覚えておく(2026-11-14 社長「忠誠度と人気を上部に」)
 const msxBandMem = { id: null, loy: 0, pop: 0, dl: 0, dp: 0, tl: 0, tp: 0 };
 const MSX_BAND_DELTA_MS = 2600;
@@ -139,7 +164,8 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
           <div className="tr"><i style={{ width: `${s.stress}%`, ...(grow(stFrom, s.stress) || {}) }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
           {stAdd ? <em className="pl">+{stAdd}</em> : stGain ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
-      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span></div>
+      <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span>
+        {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}>{msxLwAmt(x)}<small>{msxLwWhy(x.w)}{l.length > 1 ? ` ほか${l.length - 1}` : ''}</small></span>; })()}</div>
     </div>
   );
 }
@@ -431,6 +457,15 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>キャンセル</button></div></div>}
+      </div>
+      {/* スマホを横にしたときの案内(2026-11-20 r1119-026 社長: モンサクは縦向きで遊ぶ)。出し入れは CSS だけで決める(.msx-portrait-only)。
+          画面の進み具合はそのまま(案内を上に重ねるだけ)なので、試合中や育成中に回しても、縦に戻せば続きから遊べる。保存には触らない */}
+      <div className="msx-portrait-only" data-msx-portrait-only role="alert" aria-live="polite">
+        <div className="in">
+          <div className="ph" aria-hidden="true"><span>📱</span></div>
+          <b>スマホを縦向きにしてね</b>
+          <p>モンヒロサクセスは縦向きで遊べます。<br/>縦に戻すと、そのまま続きから遊べます。</p>
+        </div>
       </div>
     </div>
   );
@@ -855,8 +890,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw" data-msx-train-chip style={{ display: 'block', width: 'max-content', maxWidth: 'calc(50vw - 24px)', whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'left' }}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}<small style={{ display: 'block', fontSize: 10, fontWeight: 800, opacity: .85 }}>{MSX_STAT_NAME[stat]}のトレーニング{trainLv ? ` Lv${trainLv}` : ''}</small></span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
-            <div key={i} className={`v-cm${tag ? ' tag' : ''}`}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
-              <div className="tx"><div className="r1"><b>{msxMemberName(m)}</b></div><div className="afl"><small>{tag ? `🤝 タッグ +${m.tag}%` : `効き +${Math.round(eff)}%`}</small>親密度<i><b style={{ width: `${s.bond[i]}%` }}/></i>{s.bond[i]}</div></div></div>); })}
+            <MsxCmTap key={i} m={m} className={`v-cm${tag ? ' tag' : ''}`} attrs={{ 'data-msx-cm': i }}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
+              <div className="tx"><div className="r1"><b>{msxMemberName(m)}</b></div><div className="afl"><small>{tag ? `🤝 タッグ +${m.tag}%` : `効き +${Math.round(eff)}%`}</small>親密度<i><b style={{ width: `${s.bond[i]}%` }}/></i>{s.bond[i]}</div></div></MsxCmTap>); })}
           {card && card.aid ? <div className={`v-cm${s.aidBond >= tagAt ? ' tag' : ''}`}><MsxPf aid={s.aid} bond={s.aidBond} tagAt={999}/><div className="tx"><div className="r1"><b>{msxAidName(s.aid)}</b></div><div className="afl"><small>{s.aidBond >= tagAt ? '🤝 タッグ' : '助手'}</small>親密度<i><b style={{ width: `${s.aidBond}%` }}/></i>{s.aidBond}</div></div></div> : null}
         </div>
         {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
@@ -1238,7 +1273,9 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
       <div className="v-card"><div className="h2">🌱 成長の型 {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
         <div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : pk.state === 'soon' ? `あと${pk.in}ターンでピーク(伸びどき)が始まる` : peakSpan ? `伸びどき: ${peakSpan}` : ''}</div></div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
-        <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}</div></div>
+        <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}</div>
+        {msxLwList(s).length ? <div className="v-lwl" data-msx-ability-lw><div className="sub" style={{ marginTop: 4 }}>最近 甘え度・恐れ度が上がったわけ</div>
+          {msxLwList(s).slice().reverse().map((x, i) => <div key={i} className="r"><i>{x.t}ターン</i><span>{msxLwWhy(x.w, true)}</span><b>{msxLwAmt(x)}</b></div>)}</div> : null}</div>
       {s.omen || s.awake ? <div className="v-card" data-msx-yosu><div className="h2">🔎 様子</div>
         {s.omen ? <div className="sub">様子: <b style={{ color: '#fde047' }}>なにか起きそう</b>(体がうっすら{s.omen.k === 2 ? '虹色に' : ''}光っている)</div> : null}
         {s.awake ? <div className="sub">{s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)'}</div> : null}</div> : null}

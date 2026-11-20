@@ -64,7 +64,10 @@ const demo = () => {
           const f = c.querySelector('.mcd-f').getBoundingClientRect(); out.ratio.push(+(f.height / f.width).toFixed(2));
           const nm = c.querySelector('.mcd-nm, .mcd-nms'); if (!nm) return;
           const r = nm.getBoundingClientRect();
-          if (nm.scrollHeight > nm.clientHeight + 1 || nm.scrollWidth > nm.clientWidth + 1) out.cut.push(nm.innerText);
+          // 小の名前は横に詰めて収める(MonsucFitName)。詰めたあとの見えている幅で測る(scrollWidth は詰める前の幅のまま)
+          const nt = nm.querySelector('.mcd-nmt');
+          const wide = nt ? nt.getBoundingClientRect().width > nm.getBoundingClientRect().width + 1 : nm.scrollWidth > nm.clientWidth + 1;
+          if (nm.scrollHeight > nm.clientHeight + 1 || wide) out.cut.push(nm.innerText);
           c.querySelectorAll('.mcd-note, .mcd-lk').forEach((e) => { if (e.scrollWidth > e.clientWidth + 1) out.cut.push(e.innerText); });
           const marks = [...c.querySelectorAll('.mcd-gd, .mcd-fav i, .mcd-ck, .mcd-slot, .mcd-note')].map((e) => e.getBoundingClientRect()).filter((o) => o.width);
           marks.forEach((a, i) => marks.slice(i + 1).forEach((b) => { if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) out.hit.push(`${c.dataset.mcd}:印どうし`); }));

@@ -250,6 +250,7 @@ const RELEASED_MARKERS=Object.freeze({
   dr_wily_stage_1_okkussenman:'dr-wily-stage-1-okkussenman-v3',
   erfolg:'erfolg-v3',
   erfolg_piano:'erfolg-piano-v3',
+  amakakeru_tsubasa:'amakakeru-tsubasa-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -335,6 +336,7 @@ const RELEASED_TRACKS=Object.freeze({
   dr_wily_stage_1_okkussenman:'dr_wily_stage_1_okkussenman',
   erfolg:'erfolg',
   erfolg_piano:'erfolg_piano',
+  amakakeru_tsubasa:'amakakeru_tsubasa',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

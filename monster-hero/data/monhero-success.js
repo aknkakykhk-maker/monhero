@@ -1105,13 +1105,21 @@
     const POL_BANDS = Object.freeze([5, 11, 16]); // 差の大きさがこれ以上で 1段・2段・3段
     const polOfBond = (ama, fear) => { const d = num(ama) - num(fear); const m = Math.abs(d); const k = m >= POL_BANDS[2] ? 3 : m >= POL_BANDS[1] ? 2 : m >= POL_BANDS[0] ? 1 : 0; return d > 0 ? -k : k; };
     const syncPol = (s) => { s.pol = polOfBond(s.ama, s.fear); return s; };
-    const addLoyal = (s, ama, fear) => {
+    // 甘え度・恐れ度が「何で動いたか」の短い記録(r1119-019・2026-11-20 社長「何で上がったか分からない」)。数値の決まりは変えない。
+    //   s.lw = [{ t: ターン, w: 理由の名前, a: 甘え度の増え, f: 恐れ度の増え }](新しい項目・最後の LW_MAX 件だけ。無い古い育成は空のまま読む)
+    const LW_MAX = 8;
+    const noteLoyal = (s, why, a0, f0) => {
+      const a = num(s.ama) - num(a0); const f = num(s.fear) - num(f0); if (!a && !f) return;
+      const l = Array.isArray(s.lw) ? s.lw.filter(x => x && typeof x === 'object').slice(-(LW_MAX - 1)) : [];
+      l.push({ t: num(s.turn), w: String(why || 'other').slice(0, 16), a, f }); s.lw = l;
+    };
+    const addLoyal = (s, ama, fear, why) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
-      const i = clamp(s.pol, -3, 3) + 3;
+      const i = clamp(s.pol, -3, 3) + 3; const a0 = s.ama; const f0 = s.fear;
       // 甘え度・恐れ度は下げない(社長 2026-11-14): 負の値は0として数える
       s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : 0)), 0, LOYAL.half);
       s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : 0)), 0, LOYAL.half);
-      syncPol(s);
+      syncPol(s); noteLoyal(s, why, a0, f0);
     };
     const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
     const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
@@ -1163,7 +1171,7 @@
         return { kind: 'injury', left: len };
       }
       if (s.stress >= COND.illStress && rng() < COND.illRate * soft) return { kind: 'ill', left: COND.illLen };
-      if (loyalOf(s) < COND.awayLoyal && s.stress >= COND.awayStress && rng() < COND.awayRate * (1 - Math.min(0.8, stayNum(s, 'genki') / 100))) { addLoyal(s, COND.awayAma, COND.awayFear); return { kind: 'away', left: COND.awayLen }; }
+      if (loyalOf(s) < COND.awayLoyal && s.stress >= COND.awayStress && rng() < COND.awayRate * (1 - Math.min(0.8, stayNum(s, 'genki') / 100))) { addLoyal(s, COND.awayAma, COND.awayFear, 'away'); return { kind: 'away', left: COND.awayLen }; }
       return null;
     };
 
@@ -1294,7 +1302,7 @@
         const asb = 1 + stayNum(s, 'asobi') / 100; // 🪁遊び上手
         recover(s, PLAY.rec * asb); addStress(s, PLAY.stress * (s.aid === 'mua' ? 1.3 : 1));
         if (s.yosu.utsu) { delete s.yosu.utsu; out.cured = ['utsu']; } // 遊ぶでうつ病が治る(先に治してから甘え度を足す)
-        addLoyal(s, PLAY.ama * asb, 0);
+        addLoyal(s, PLAY.ama * asb, 0, 'play');
         // 🎲トレーニングチャンス(ひらめき)・🔮修行チャンス(修行の気合い)。別の乱数で並びを変えない
         const tc = stayNum(s, 'trchance'); if (tc && rngOf(s.id, s.turn, 'trchance')() < tc / 100) { s.hirameki = true; out.hirameki = true; }
         const sc = stayNum(s, 'shchance'); if (sc && rngOf(s.id, s.turn, 'shchance')() < sc / 100) { s.shBoost = true; out.shBoost = true; }
@@ -1334,9 +1342,9 @@
       const b0 = { ama: s.ama, fear: s.fear, loy: loyalOf(s), pol: s.pol };
       s.reacted = true;
       const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
-      if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); s.idle = 0; }
-      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); s.idle = 0; }
-      else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
+      if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1]), 'praise'); s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold')), 'scold'); s.idle = 0; }
+      else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1], 'idle'); s.idle = 0; } }
       // 変わった物(画面の結果の札): 甘え度・恐れ度・忠誠度・方針
       const d = { ama: num(s.ama) - num(b0.ama), fear: num(s.fear) - num(b0.fear), loy: loyalOf(s) - b0.loy, pol: num(s.pol) - num(b0.pol) };
       return { state: s, out: { ok: true, loyal: loyalOf(s), pol: s.pol, scene, how: how || null, d, polFrom: b0.pol } };
@@ -1359,7 +1367,7 @@
       return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
     };
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
-    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); syncPol(s); }; // 下げない(社長 2026-11-14)
+    const addLoyalRaw = (s, ama, fear, why = 'event') => { if (s.yosu.utsu) return; const a0 = s.ama; const f0 = s.fear; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); syncPol(s); noteLoyal(s, why, a0, f0); }; // 下げない(社長 2026-11-14)
 
     // 大会のあとに並ぶごはん(2026-11-14 社長「ご褒美はランダムで3個選ばれる」)。9種から3つ(同じ物は出さない)。
     //   くじは育成ごとの決まった乱数(育成の id + 勝った回数)で引くので、開き直し・中断のあとでも引き直しにならない。
@@ -1382,7 +1390,7 @@
       const boost = s.freeMeal === true ? MEAL_WATCH_MULT : 1; s.freeMeal = false;
       const kui = (1 + stayNum(s, 'kuishinbo') / 100) * boost; // 🍙食いしん坊: ごはんの効き目が増える(見守りの ×1.5 と掛け合わせ)
       if (m.hp) recover(s, m.hp * kui);
-      if (m.ama || m.fear) addLoyal(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
+      if (m.ama || m.fear) addLoyal(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui), 'meal');
       if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
       if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
       if (m.pts) gainPts(s, Math.round(m.pts * kui));
@@ -1393,7 +1401,7 @@
     // ごはんをあげずに進む(恐れ度 +1)。並んだごはんが無いときは何もしない
     const mealSkip = (s0) => {
       if (!s0.mealReady || s0.over) return { state: s0, out: { ok: false } };
-      const s = clone(s0); s.mealReady = false; s.mealOpts = null; addLoyal(s, 0, MEAL_SKIP_FEAR);
+      const s = clone(s0); s.mealReady = false; s.mealOpts = null; addLoyal(s, 0, MEAL_SKIP_FEAR, 'mealSkip');
       return { state: s, out: { ok: true, skip: true } };
     };
 
@@ -1464,6 +1472,8 @@
       out.storyEnd = ['good', 'bitter'].includes(raw.storyEnd) ? raw.storyEnd : null;
       if (Number.isInteger(raw.tevAt) && raw.tevAt >= 0 && raw.tevAt <= 60) out.tevAt = raw.tevAt; // 編成の子のイベントが出たターン(無ければ持たない)
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
+      // 甘え度・恐れ度が何で動いたかの記録(r1119-019)。無い・壊れている → 持たない。形 { t, w, a, f } の物だけ・最後の8件
+      if (Array.isArray(raw.lw)) { const lw = raw.lw.filter(x => x && typeof x === 'object' && Number.isFinite(Number(x.t)) && typeof x.w === 'string').slice(-8).map(x => ({ t: Math.round(n(x.t, 0, 0, 99)), w: x.w.slice(0, 16), a: Math.round(n(x.a, 0, 0, 50)), f: Math.round(n(x.f, 0, 0, 50)) })); if (lw.length) out.lw = lw; }
       out.rivalMetId = typeof raw.rivalMetId === 'string' && raw.rivalMetId ? raw.rivalMetId.slice(0, 96) : null; // 会ったライバルの個体の印(r1116-002・無い古いセーブは名前で引く)
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
@@ -1507,7 +1517,7 @@
       const ep = storyDue(s0); if (ep === null) return { state: s0, out: { ok: false } };
       let s = clone(s0); const c = choice === 'b' ? 'b' : 'a'; const out = { ok: true, ep, choice: c };
       const best = KEYS.slice().sort((x, y) => aptMult(s.species, y) - aptMult(s.species, x))[0];
-      if (ep === 1) { if (c === 'a') addStat(s, best, unitOf(s, best)); else addLoyal(s, 3, 0); }
+      if (ep === 1) { if (c === 'a') addStat(s, best, unitOf(s, best)); else addLoyal(s, 3, 0, 'story'); }
       else if (ep === 2) { if (c === 'a') { recover(s, 0.3); addBond(s, 'aid', 10); } else { const top = top3Of(s.stats, s.species)[0]; addStat(s, top, unitOf(s, top)); addStress(s, 20); } }
       else if (ep === 3) { // 2026-11-15 社長 r1115-056: 3話にも1話と同じくらいの能力アップ(a = 素質のいちばん高い能力・b = いまいちばん高い能力)
         s.astory.path = c === 'a' ? 'good' : 'bitter'; addBond(s, 'aid', 10);
@@ -1529,14 +1539,14 @@
     // シナリオの大会に勝ったときの上乗せ(TOURNAMENT §4b)
     const scenarioReward = (s, b, out) => {
       const aid = b.sys.slice(2); out.scenario = aid;
-      if (aid === 'mua') { addStress(s, -30); addLoyal(s, 3, 0); }
+      if (aid === 'mua') { addStress(s, -30); addLoyal(s, 3, 0, 'story'); }
       else if (aid === 'kiki') { const top = top3Of(s.stats, s.species)[0]; addStat(s, top, 12); }
       else if (aid === 'momosuke') s.pop = clamp(s.pop + popGain(s, 10 * 1.5), 0, 100);
       else if (aid === 'dra') s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 10, 0, 100); });
       else if (aid === 'atsu') gainWinPts(s, 15);
       else if (aid === 'kyuko') KEYS.forEach(k => addStat(s, k, 3));
       else if (aid === 'sorashido') gainWinPts(s, 10);
-      else if (aid === 'erubin') { addLoyal(s, 5, 0); s.freeMeal = true; }
+      else if (aid === 'erubin') { addLoyal(s, 5, 0, 'story'); s.freeMeal = true; }
       if (b.star >= 3) { const t = `${SC_NAME[aid]}の優勝`; if (!s.titles.includes(t)) s.titles.push(t); }
     };
     // 助手のお話の4話の結末(1回の育成に1度)。kind = 'good'(いい結末)| 'bitter'(ほろ苦い結末)
@@ -1583,8 +1593,8 @@
       if (it.hpFull) s.hp = s.hpMax;
       if (it.hp) recover(s, it.hp);
       if (it.cure) { s.yosu = {}; }
-      if (it.loyal) addLoyalRaw(s, Math.ceil(it.loyal / 2), Math.floor(it.loyal / 2));
-      if (it.ama || it.fear) addLoyalRaw(s, num(it.ama), num(it.fear));
+      if (it.loyal) addLoyalRaw(s, Math.ceil(it.loyal / 2), Math.floor(it.loyal / 2), 'item');
+      if (it.ama || it.fear) addLoyalRaw(s, num(it.ama), num(it.fear), 'item');
       if (it.stress) addStress(s, it.stress);
       if (it.issaSure) s.issaSure = true;
       if (Number.isInteger(it.elixir)) s.elixir = { d: it.elixir, turn: s.turn };
@@ -1606,7 +1616,7 @@
       if (s.over || s.battle) return { state: s, out: { ok: false } };
       if (!s.acted) return { state: s, out: { ok: false, why: 'not-acted' } };
       if (EV) EV.tick(s); // 出来事のひとときの状態を1ターン減らす(s.last を消す前)
-      if (num(s.hp) >= Math.max(1, num(s.hpMax)) * LOYAL.turnHpLine) addLoyal(s, LOYAL.turnAma, 0); else addLoyal(s, 0, LOYAL.turnFear);
+      if (num(s.hp) >= Math.max(1, num(s.hpMax)) * LOYAL.turnHpLine) addLoyal(s, LOYAL.turnAma, 0, 'turnHp'); else addLoyal(s, 0, LOYAL.turnFear, 'turnLow');
       if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
       else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, name: s.last.cup.name || null, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
       else s.battle = forcedBattle(s);
@@ -2081,7 +2091,7 @@
       const out = { ok: true, kind: b.kind, won };
       addXp(s, XP.match);
       if (b.rival && b.rival.name) { s.rivalMet = String(b.rival.name).slice(0, 24); s.rivalMetId = typeof b.rival.id === 'string' && b.rival.id ? b.rival.id.slice(0, 96) : null; } // ヒーローズファイナルで助手が選ぶ「この育成のライバル」(個体の印も残す・r1116-002)
-      if (won) { s.log.wins += 1; addLoyal(s, LOYAL.win[0], LOYAL.win[1]); const bk = battleKey(b); if (!s.wonNow.includes(bk)) s.wonNow.push(bk); } else s.log.losses += 1;
+      if (won) { s.log.wins += 1; addLoyal(s, LOYAL.win[0], LOYAL.win[1], 'win'); const bk = battleKey(b); if (!s.wonNow.includes(bk)) s.wonNow.push(bk); } else s.log.losses += 1;
       // 賞金(保存は fame)とチケット。負けたら準優勝の扱い(★★ 以上)
       const pk = periodOf(s.turn).key;
       const star = b.kind === 'cup' ? b.star : b.kind === 'summit' ? 4 : FORCED[b.kind].star;
