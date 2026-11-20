@@ -260,10 +260,10 @@ const seed = () => {
       const cards = (sel) => [...document.querySelectorAll(`${sel} [data-msa-dc-card]`)];
       const bar = cards('[data-msa-dc="manual"]'), top = cards('[data-ambw-cards="A"]');
       const now = bar.filter((x) => x.classList.contains('now'));
-      return { bar: !!document.querySelector('[data-ambb-manual]'), barCards: bar.length, topCards: top.length, now: now.length === 1 && /いま/.test(now[0].textContent),
+      return { bar: !!document.querySelector('[data-ambb-manual]'), barCards: bar.length, topCards: top.length, now: now.length === 1, // 2026-11-20 再点検 バ-22: いまの間合いは「いま」の字をやめ、枠の色(now)だけ
         techBtns: document.querySelectorAll('[data-msxm-tech]').length, pos: Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos) };
     });
-    check('段3: 手動では自分の手番で帯が出る・技の札は間合いごとの4枚(帯。相手の欄は外し「相手の技」の札で一覧)・いまの間合いの札に「いま」', man.bar && man.barCards === 4 && man.topCards === 0 && man.now && man.techBtns === 0, JSON.stringify(man));
+    check('段3: 手動では自分の手番で帯が出る・技の札は間合いごとの4枚(帯。相手の欄は外し「相手の技」の札で一覧)・いまの間合いの札だけ枠の色が変わる', man.bar && man.barCards === 4 && man.topCards === 0 && man.now && man.techBtns === 0, JSON.stringify(man));
     // いまの間合いの札を押すと一覧。代表でない技に「☆ 代表にする」→ 札の代表が変わり、保存の rep に入る
     const nowCard = '[data-msa-dc="manual"] [data-msa-dc-card].now';
     const hasNow = await page.evaluate((sel) => { const c = document.querySelector(sel); return !!(c && !c.disabled); }, nowCard);

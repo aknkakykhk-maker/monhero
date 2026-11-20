@@ -421,7 +421,7 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null })'));
 // 1行の形(oneLine・2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほど)。名前とセリフを1行・高さ36px以内・折らない(index.html の text-wrap: balance に負けない)
 check('吹き出しの1行の形(oneLine)は高さ36px以内で、セリフを折らない', has("max-h-[36px]") && has("style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}") && has("data-bubble-one-line"));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
@@ -458,7 +458,8 @@ check('場面キーだけでも、直接指定でも呼べる',
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
-check('詳細が無いときはボタンにしない', has("const Wrapper = hasDetail ? 'button' : 'div';"));
+// 押せるのは詳細かメニュー(HOME のおしゃべり・r1119-050)があるときだけ
+check('詳細もメニューも無いときはボタンにしない', has("const Wrapper = hasDetail || useMenu ? 'button' : 'div';"));
 check('チュートリアル用に最初から開いた状態にもできる', has('defaultOpen=false') && has('useState(defaultOpen)'));
 check('画面のテーマ色に合わせられる', has('const color = accent || who.accent || ASSISTANT_FALLBACK.accent;'));
 check('ヘルプ画面で実際に使っている', has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
@@ -472,32 +473,28 @@ check('セリフをJSXへ直接書いていない', (() => {
   return texts.every(t => !source.includes(t));
 })());
 check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//.test(source));
-// HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
-// かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
+// HOME の作り直し(2026-11-17)で、吹き出しは上の帯の下に流れで置く形(position:relative)になった。
+// 重ならないことは CSS の数値でなく、ブラウザで実際の位置を測って確かめる(下の「ブラウザで測っている」)
 // 2026-10-23 からセリフは2行まで(maxLines={2})だったが、幅320で「…」で切れた(2026-10-24 窓口)。いまは全文を出し、伸びたぶん「M/B管理」の札を下げる(home-layout-check)
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
-  has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
+  has('.mh-home-assistant{position:relative;z-index:5;width:70%;margin:3px 0 0 3%;pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:68%}}')
     // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下の行(左の空き)へ重ねる。
     // 吹き出しの下へ1段足すと高くなり、横持ちの「M/B管理」・小さい画面のジャックの吹き出しにかぶった(2026-10-16。raid-jack-home-say-tap-check)
-    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')
-    && has('data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10'));
-// 上のプロフィールカードに重ならないことを、CSSの数値から計算して確かめる。
-// safe-area は帯にも吹き出しにも同じだけ効くので、比べるのは固定の px だけでよい
-check('HOMEの吹き出しはプロフィールカードの下に来る', (() => {
-  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : null; };
-  const headerPad = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
-  const avatar = num(/\.mh-home-avatar\{flex:0 0 (\d+)px/);
-  const playerPad = num(/\.mh-home-player\{[^}]*padding:(\d+)px/);
-  const assistantTop = num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
-  if ([headerPad, avatar, playerPad, assistantTop].some(v => v == null)) return false;
-  // プロフィールカードの下端 = 帯の上余白 + (アイコン + 上下の内側余白 + 枠線)
-  const cardBottom = headerPad + avatar + playerPad * 2 + 2;
-  return assistantTop >= cardBottom + 6;
-})(), (() => {
-  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : 0; };
-  const cardBottom = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env/) + num(/\.mh-home-avatar\{flex:0 0 (\d+)px/) + num(/\.mh-home-player\{[^}]*padding:(\d+)px/) * 2 + 2;
-  return `カード下端 ${cardBottom}px / 吹き出し ${num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env/)}px`;
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact menu=')
+    // 「💬 おしゃべり」は吹き出しに重ねず、吹き出しを押して出るメニューの中へ(r1119-050 窓-36)
+    && has("menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}"));
+// 上のプロフィールカード・下のドック・右端のボタン・画面の端に重ならないことは、ブラウザで実際の位置を測って確かめる
+// (前は CSS の top の数値から計算していたが、流れで置く形になって数値が無くなった)。
+// 測る道具 homeDockProblems(tools/assistant/life-browser-shared.js)が吹き出しを測る物に入れていて、
+// HOME の配置の検査(tools/assistant/assistant-life-home-layout-check.js)が縦 390×844 と横で回していることを見張る
+check('HOMEの吹き出しの置き場所は、ブラウザで縦と横の実際の位置を測っている', (() => {
+  const rd = (f) => { try { return fs.readFileSync(path.join(__dirname, f), 'utf8'); } catch { return ''; } };
+  const shared = rd('assistant/life-browser-shared.js'), layout = rd('assistant/assistant-life-home-layout-check.js');
+  const measured = /document\.querySelector\('\.mh-home-assistant'\)[^\n]*parts\.push\(\{ c: '吹き出し'/.test(shared)
+    && /parts\.push\(\{ c: '上の帯'/.test(shared) && /ng\.push\(`\$\{p\.c\}が画面の外`\)/.test(shared) && /\$\{p\.c\}×ドック/.test(shared);
+  const sizes = /w: 390, h: 844/.test(layout) && /w: 844, h: 390/.test(layout) && /homeFacesProblems\(page\)/.test(layout);
+  return measured && sizes;
 })());
 // はじめての案内で、光らせた場所が画面の下のほうにあるときは説明を上へ寄せる。
 // バトルやミッションを説明しているときに、説明の吹き出しがその上に重なっていた

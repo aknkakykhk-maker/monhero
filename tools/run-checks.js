@@ -124,6 +124,8 @@ function alwaysChecks() {
   catch { return []; }
 }
 const FORCE_CHECKS = [
+  // フルコンボ等の音が設定ごとに1回だけ鳴る(2026-11-20 社長「フルコンボのとき鳴っていた SE が無くなっている」)
+  { re: /^monster-hero\/src\/parts\/30-rhythm-play\.jsx$|^tools\/mode\/rhythm-fullcombo-se-check\.js$/, checks: ['mode/rhythm-fullcombo-se-check.js'], why: 'フルコンボ等の音が設定ごとに1回だけ鳴る' },
   // 選び方そのもの(2026-11-11)。選び方を直したら、名指しで読む検査が漏れていないか・どの領域にも入らない検査が無いかを確かめる
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
   // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る
@@ -140,6 +142,8 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/src\/parts\/(14-audio|60-app)\.jsx$|^tools\/audio\/audio-return-heal-check\.js$/, checks: ['audio/audio-return-heal-check.js'], why: 'ほかのアプリへ切り替えて戻ったとき、止まった音の出口を作り直して鳴らし直すか(r1115-205)' },
   { re: /^monster-hero\/src\/parts\/(30-rhythm-play|77-screen-rhythm-multi)\.jsx$|^tools\/mode\/rhythm-multi-spectate-start-check\.js$/, checks: ['mode/rhythm-multi-spectate-start-check.js'], why: 'マルチの観戦で、始まる前から見ても・見ている人が古い版でも、ノーツ・進みの棒・判定の数・観戦の曲が止まらないか(r1115-204)' },
   { re: /^monster-hero\/src\/parts\/(10-core|30-rhythm-play|60-app|77-screen-rhythm-multi)\.jsx$|^tools\/ui\/rhythm-multi-play-guard-check\.js$/, checks: ['ui/rhythm-multi-play-guard-check.js'], why: 'マルチの演奏中に、押していないのに画面が外へ替わろうとしたら止まるか(r1115-006)' },
+  { re: /^monster-hero\/src\/parts\/(30-rhythm-play|43-player-rank-ui)\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-result-landscape-check\.js$/, checks: ['ui/rhythm-result-landscape-check.js'], why: '横のリザルトの最初の画面に、曲名・点数・判定の数が出るか(点検 V3)' },
+  { re: /^monster-hero\/src\/parts\/58-screen-rhythm\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-event-ranking-landscape-check\.js$/, checks: ['ui/rhythm-event-ranking-landscape-check.js'], why: '横の全国ランキング(イベント)の最初の画面に順位が見えるか(点検 V4)' },
   { re: /^monster-hero\/src\/parts\/(29-rhythm-screens|77-screen-rhythm-multi|80-screen-rhythm-buddy)\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-multi-select-fit-check\.js$/, checks: ['ui/rhythm-multi-select-fit-check.js'], why: 'マルチの曲えらびの吹き出し・決定の帯が切れず重ならないか' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },

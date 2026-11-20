@@ -77,7 +77,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   const next = () => (page + 1 < pages ? setPage(page + 1) : onDone());
   const s = run.s;
   return (
-    <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
+    <MsxR3Frame run={run} back="" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
       {/* U-9: お話・エンディングの場面は数字の帯を出さない(参考 v4 128〜154秒) */}
       <div className={`v-scene ${dark ? 'dk' : ''}`} style={{ flex: '1 1 0', minHeight: 300 }} data-msx-arc-talk>
@@ -131,7 +131,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
   const who = (l) => (l.who === 'narr' ? null : msxAidName(l.who));
   const next = () => (page + 1 < pages ? setPage(page + 1) : onDone());
   return (
-    <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
+    <MsxR3Frame run={run} back="" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 420 }} data-msx-arc-special>
         <img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>

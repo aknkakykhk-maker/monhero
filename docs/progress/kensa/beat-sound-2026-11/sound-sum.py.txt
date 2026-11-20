@@ -1,0 +1,19 @@
+import json,sys,collections
+# 呼んだ音ごとに、呼んだ時刻から0.4秒以内に実際に出た音(buffer/osc/media)を足す。印 q=裏の音を止める
+def load(f):
+    d=json.load(open(f));L=d['log'];hi=[e for e in L if not e['id'].startswith('(低)')];lo=[e for e in L if e['id'].startswith('(低)')]
+    for e in hi: e['heard']=sum((e.get('low') or {}).values())
+    j=0;used=set()
+    for e in lo:
+        cand=[h for h in hi if 0<=e['t']-h['t']<=400 and not h['id'].startswith(('set','stop','startRhythm','previewBGM','stopPreview','note.holdStop'))]
+        if cand: cand[-1]['heard']+=1
+        else: e['orphan']=1
+    return d,hi,lo
+if __name__=='__main__':
+    d,hi,lo=load(sys.argv[1]);print('hold',d['hold'],'orphan low',sum(1 for e in lo if e.get('orphan')))
+    by=collections.OrderedDict()
+    for e in hi:
+        k=e['scene'];by.setdefault(k,collections.Counter())
+        st=('Q' if e.get('q') and e['id'].startswith('se.') else '')+('鳴' if e['heard'] else '無')
+        by[k][f"{e['id']}[{st}]"]+=1
+    for k,c in by.items(): print('##',k,'|',', '.join(f"{a}×{n}" for a,n in c.most_common(16)))
