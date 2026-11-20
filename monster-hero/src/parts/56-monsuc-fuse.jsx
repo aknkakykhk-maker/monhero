@@ -233,8 +233,8 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
             <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseSpName(plan.child.species)}が生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
-            <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseSpName(plan.child.species)}の初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
-            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span><small className="text-[11px] text-slate-400">{plan.base[k]} → </small><b className="text-amber-200">{plan.child.st[k]}</b> <b className="ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100">+{plan.add[k]}</b></span></p>)}
+            <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
+            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span><b className="text-amber-200">{plan.child.st[k]}</b> <b className="ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100">+{plan.add[k]}</b></span></p>)}
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
@@ -312,7 +312,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
   return (
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st}>
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
-      <div className="mf-head"><small>合体</small>{((t) => (typeof jaWrap === 'function' ? jaWrap(t) : t))(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…')}</div>
+      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…'}</span></div>
       {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>飛ばす ⏭</button></div> : null}
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51986692fe19f6e0
+// source-sha256: d3c2ef4c4eda676a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161655,12 +161655,10 @@ function MonsucFuseSheet({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, monsucFuseSpName(plan.child.species), "の初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), keys.map(k => React.createElement("p", {
+  }, "初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), keys.map(k => React.createElement("p", {
     key: k,
     className: "flex justify-between text-[12px] font-black"
-  }, React.createElement("span", null, names[k]), React.createElement("span", null, React.createElement("small", {
-    className: "text-[11px] text-slate-400"
-  }, plan.base[k], " → "), React.createElement("b", {
+  }, React.createElement("span", null, names[k]), React.createElement("span", null, React.createElement("b", {
     className: "text-amber-200"
   }, plan.child.st[k]), " ", React.createElement("b", {
     className: "ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100"
@@ -161805,7 +161803,12 @@ function MonsucFuseShow({
     alt: ""
   }), React.createElement("div", {
     className: "mf-head"
-  }, React.createElement("small", null, "合体"), (t => typeof jaWrap === 'function' ? jaWrap(t) : t)(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…')), st < 3 ? React.createElement("div", {
+  }, React.createElement("small", null, "合体"), React.createElement("span", {
+    style: {
+      display: 'block',
+      whiteSpace: 'nowrap'
+    }
+  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…')), st < 3 ? React.createElement("div", {
     className: "mf-ctl"
   }, React.createElement("button", {
     type: "button",
