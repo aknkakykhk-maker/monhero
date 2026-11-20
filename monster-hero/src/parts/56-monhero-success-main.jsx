@@ -426,6 +426,15 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>キャンセル</button></div></div>}
       </div>
+      {/* スマホを横にしたときの案内(2026-11-20 r1119-026 社長: モンサクは縦向きで遊ぶ)。出し入れは CSS だけで決める(.msx-portrait-only)。
+          画面の進み具合はそのまま(案内を上に重ねるだけ)なので、試合中や育成中に回しても、縦に戻せば続きから遊べる。保存には触らない */}
+      <div className="msx-portrait-only" data-msx-portrait-only role="alert" aria-live="polite">
+        <div className="in">
+          <div className="ph" aria-hidden="true"><span>📱</span></div>
+          <b>スマホを縦向きにしてね</b>
+          <p>モンヒロサクセスは縦向きで遊べます。<br/>縦に戻すと、そのまま続きから遊べます。</p>
+        </div>
+      </div>
     </div>
   );
   return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
