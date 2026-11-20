@@ -239,6 +239,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div className="q-td side msx-kp" data-msx-r3-qtd={ft.id}>
           <div className="q-td-nm"><b>{ft.name}</b><em>{fGot ? '覚えた' : fSel ? '選んだ' : fOk ? `覚えられる ${Math.round(rateOf[ft.id] * 100)}%` : '条件あり'}</em></div>
           <div className="q-td-rows">{tdRows(ft)}</div>
+          {/* U-18: 覚える率が上がる条件(条件1〜4・満たすと「済」)。参考 te-67・68。数え方は選んだ枠と同じ techBoostConds(この技を選んだときの組み合わせ) */}
+          {!fGot && fOk && typeof SUC.techBoostConds === 'function' ? (() => { const bc = SUC.techBoostConds(s0, ft, fSel ? want : [...want.slice(0, superWhy ? 0 : 1), ft.id]).slice(0, 4); const BC = { n: (c) => `覚えた技 ${c.need}つ以上`, pop: (c) => `人気 ${c.need}以上`, sum: (c) => `選んだ技の段の合計 ${c.need}以上` }; return bc.length ? (
+            <ul className="q-td-conds" data-msx-r3-qtd-conds>{bc.map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span>{(BC[c.type] || (() => ''))(c)}</span><em>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul>) : null; })() : null}
           {fGot ? null : fOk ? (
           <div className="q-td-act">
             {want[0] === ft.id ? <button type="button" className="off" onClick={() => toggle(ft.id)}>1つ目から外す</button>
