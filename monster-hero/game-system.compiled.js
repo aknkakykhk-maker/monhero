@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52dd90d63662821f
+// source-sha256: 63725f39427bfda6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161810,7 +161810,7 @@ function MonsucFuseShow({
       display: 'block',
       whiteSpace: 'nowrap'
     }
-  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…')), st < 3 ? React.createElement("div", {
+  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…')), st < 3 ? React.createElement("div", {
     className: "mf-ctl"
   }, React.createElement("button", {
     type: "button",
