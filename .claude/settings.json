@@ -60,7 +60,22 @@
       "mcp__Supabase__search_docs",
       "mcp__Supabase__generate_typescript_types",
       "mcp__Supabase__execute_sql",
-      "mcp__Supabase__apply_migration"
+      "mcp__Supabase__apply_migration",
+      "mcp__claude-code-remote__send_message",
+      "mcp__claude-code-remote__send_later",
+      "mcp__claude-code-remote__create_session",
+      "mcp__claude-code-remote__archive_session",
+      "mcp__claude-code-remote__list_sessions",
+      "mcp__claude-code-remote__get_session",
+      "mcp__claude-code-remote__list_events",
+      "mcp__claude-code-remote__get_event",
+      "mcp__claude-code-remote__list_triggers",
+      "mcp__claude-code-remote__get_trigger",
+      "mcp__github__create_pull_request",
+      "mcp__github__merge_pull_request",
+      "mcp__github__pull_request_read",
+      "mcp__github__list_pull_requests",
+      "mcp__github__update_pull_request"
     ]
   }
 }
