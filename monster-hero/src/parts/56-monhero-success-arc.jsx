@@ -5,11 +5,19 @@
 // ・台詞は台本エンジン(scn.<助手>.summit.* / end.* / party.* / fx.super)。台本が無い助手は短い既定の文で進む(止まらない)
 // ・保存は芯の s.ending だけ(芯の restore が直す)。run.arcPick / run.arcAfter は画面の中だけの印(保存しない・中断したらもう一度出る)
 const MSX_ARC_CSS = `
+/* 特別演出の待ち(2026-11-20 点検 arc-S5): 押せない間はボタンの形をやめ、理由の字と細い棒だけを出す。棒が満ちたら「次へ」のボタンに替わる */
+.msx .v-ft .arc-wait{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:48px;color:#e2e8f0;font-size:14px;font-weight:900}
+.msx .v-ft .arc-wait>i{display:block;width:60%;height:4px;border-radius:2px;background:linear-gradient(90deg,#f97316 0 0) no-repeat #33415599;background-size:0 100%;animation:arcWaitFill 5.5s linear forwards}
+.msx .v-ft .arc-wait>span{flex:none;background:none;border-radius:0;padding:0;font-size:14px;color:#e2e8f0}
+@keyframes arcWaitFill{to{background-size:100% 100%}}
+@media (prefers-reduced-motion: reduce){.msx .v-ft .arc-wait>i{animation:none;background-size:50% 100%}}
 .msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
 .msx .r3 .arc-foe img{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto}
-.msx .r3 .arc-foe b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 相手の名前は「…」で切らず2行まで出す。組み合わせの理由は見出しと分けて1行に収める(2026-11-20 点検 arc-P2) */
+.msx .r3 .arc-foe b{display:block;font-size:13px;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere}
 .msx .r3 .arc-foe small{display:block;font-size:10px;color:#fbcfe8;font-weight:800}
-.msx .r3 .arc-foe .why{margin-top:3px;font-size:10.5px;color:#fde047;font-weight:900}
+.msx .r3 .arc-foe .why{margin-top:3px;font-size:10.5px;color:#fde047;font-weight:900;white-space:nowrap;line-height:1.3}
+.msx .r3 .arc-foe .why small{display:block;font-size:10px;color:#e2e8f0;font-weight:800}
 .msx .r3 .arc-party{position:absolute;left:0;right:0;top:20%;text-align:center}
 .msx .r3 .arc-party b{display:inline-block;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;padding:6px 18px;font-size:20px;font-weight:900;color:#fff;box-shadow:0 0 20px #fb923c99}
 .msx .r3 .arc-party small{display:block;margin-top:6px;font-size:12px;font-weight:900;color:#fde047;text-shadow:0 1px 0 #000}
@@ -94,7 +102,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)}</small>
-      <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why"><small>対戦するのは</small>{MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
@@ -140,7 +148,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
       </div>
       {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
       <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go" disabled data-msx-arc-wait>{pages > 1 ? '次へ ▶' : '引退へ ▶'}</button>}</div>}/>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <div className="arc-wait" role="status" data-msx-arc-wait><span>📸 記念写真を撮っているよ… 少し待ってね</span><i aria-hidden="true"/></div>}</div>}/>
   );
 }
 
