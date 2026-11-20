@@ -45,10 +45,10 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
         <div className="msx-ki-sum" key="s0">
           {/* 賞金も、この章で増えた分だけを出す(「1,000G +1,000G」の二重・育-121) */}
           <div className="h">{dFame != null ? 'この章の獲得賞金' : '獲得賞金'}</div>
-          <div className="v-num r"><b>{dFame != null ? <span className={dFame < 0 ? 'dn' : 'up'}>{sign(dFame)}<small>G</small></span> : <>{msxFmt(fame)}<small>G</small></>}</b></div>
+          <div className={`ki-n${dFame != null ? (dFame < 0 ? ' dn' : ' up') : ''}`}>{dFame != null ? sign(dFame) : msxFmt(fame)}<small>G</small></div>
           {/* 総合力は上の帯にもあるので、ここはこの章で伸びた分を主役にする(2026-11-20 r1119-033 育-118) */}
           <div className="h">{dPow != null ? 'この章で伸びた総合力' : '総合力'}</div>
-          <div className="v-num r"><b>{dPow != null ? <span className={dPow < 0 ? 'dn' : 'up'}>{sign(dPow)}</span> : msxFmt(ev.power)}</b></div>
+          <div className={`ki-n${dPow != null ? (dPow < 0 ? ' dn' : ' up') : ''}`}>{dPow != null ? sign(dPow) : msxFmt(ev.power)}</div>
         </div>
       </>) : (<>
         {/* 残りのターンは上の帯の1か所だけ。ここは次の段の名前を1行で出す(2026-11-20 r1119-033 育-119) */}
@@ -95,7 +95,7 @@ const MSX_KI_CSS = `
 @container (max-height:330px){.msx .msx-ki .msx-ki-next small{font-size:24px}.msx .msx-ki .msx-ki-next div{font-size:17px}.msx .msx-ki .msx-ki-next div b{font-size:44px}}
 .msx .msx-ki .msx-ki-next div span.tn{margin-left:10px}
 .msx .msx-ki .msx-ki-next div b.nm{font-size:min(32px,8.4cqw);white-space:nowrap}
-.msx .msx-ki-sum .v-num .up{color:#86efac}.msx .msx-ki-sum .v-num .dn{color:#fca5a5}
+.msx .msx-ki-sum .ki-n{position:static!important;display:block;text-align:center;font-size:26px;font-weight:900;line-height:1.2;margin:1px 0 3px;color:#fff;font-variant-numeric:tabular-nums}.msx .msx-ki-sum .ki-n.up{color:#86efac}.msx .msx-ki-sum .ki-n.dn{color:#fca5a5}
 .msx .msx-ki-lad{position:absolute;left:0;right:0;top:36%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:1px}
 .msx .msx-ki-lad .up{font-style:normal;font-size:10px;line-height:10px;color:#e2e8f0aa}
 .msx .msx-ki-lad .rg{position:relative;width:62%;min-height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#e2e8f0;background:#334155e6;border:1.5px solid #64748b;border-radius:8px;text-align:center;animation:msxKiUp .35s ease-out both;animation-delay:calc(.15s + var(--j) * .08s)}

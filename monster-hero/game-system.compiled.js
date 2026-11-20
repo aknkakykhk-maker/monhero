@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb18fad0bdb36382
+// source-sha256: 3fcff5f073b79187
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166870,16 +166870,12 @@ function MsxKiShow({
   }, React.createElement("div", {
     className: "h"
   }, dFame != null ? 'この章の獲得賞金' : '獲得賞金'), React.createElement("div", {
-    className: "v-num r"
-  }, React.createElement("b", null, dFame != null ? React.createElement("span", {
-    className: dFame < 0 ? 'dn' : 'up'
-  }, sign(dFame), React.createElement("small", null, "G")) : React.createElement(React.Fragment, null, msxFmt(fame), React.createElement("small", null, "G")))), React.createElement("div", {
+    className: `ki-n${dFame != null ? dFame < 0 ? ' dn' : ' up' : ''}`
+  }, dFame != null ? sign(dFame) : msxFmt(fame), React.createElement("small", null, "G")), React.createElement("div", {
     className: "h"
   }, dPow != null ? 'この章で伸びた総合力' : '総合力'), React.createElement("div", {
-    className: "v-num r"
-  }, React.createElement("b", null, dPow != null ? React.createElement("span", {
-    className: dPow < 0 ? 'dn' : 'up'
-  }, sign(dPow)) : msxFmt(ev.power))))) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: `ki-n${dPow != null ? dPow < 0 ? ' dn' : ' up' : ''}`
+  }, dPow != null ? sign(dPow) : msxFmt(ev.power)))) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "msx-ki-next",
     key: "t1",
     "data-msx-ki-left": left
@@ -166930,7 +166926,7 @@ const MSX_KI_CSS = `
 @container (max-height:330px){.msx .msx-ki .msx-ki-next small{font-size:24px}.msx .msx-ki .msx-ki-next div{font-size:17px}.msx .msx-ki .msx-ki-next div b{font-size:44px}}
 .msx .msx-ki .msx-ki-next div span.tn{margin-left:10px}
 .msx .msx-ki .msx-ki-next div b.nm{font-size:min(32px,8.4cqw);white-space:nowrap}
-.msx .msx-ki-sum .v-num .up{color:#86efac}.msx .msx-ki-sum .v-num .dn{color:#fca5a5}
+.msx .msx-ki-sum .ki-n{position:static!important;display:block;text-align:center;font-size:26px;font-weight:900;line-height:1.2;margin:1px 0 3px;color:#fff;font-variant-numeric:tabular-nums}.msx .msx-ki-sum .ki-n.up{color:#86efac}.msx .msx-ki-sum .ki-n.dn{color:#fca5a5}
 .msx .msx-ki-lad{position:absolute;left:0;right:0;top:36%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:1px}
 .msx .msx-ki-lad .up{font-style:normal;font-size:10px;line-height:10px;color:#e2e8f0aa}
 .msx .msx-ki-lad .rg{position:relative;width:62%;min-height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#e2e8f0;background:#334155e6;border:1.5px solid #64748b;border-radius:8px;text-align:center;animation:msxKiUp .35s ease-out both;animation-delay:calc(.15s + var(--j) * .08s)}
@@ -172882,7 +172878,7 @@ const MSX_CSS = `
 .msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:11px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.5}
-.msx .v-a3 .ex b{color:#fff}
+.msx .v-a3 .ex b{color:#fff;word-break:keep-all;overflow-wrap:anywhere} /* 「忠/誠度」「春/夏秋冬」と言葉の途中で折れていた */
 .msx .v-a3 .ex .exd{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700;margin-top:1px}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button:not(.chip){flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
 .msx .v-a3 .ctl button:disabled{opacity:.35}
@@ -176971,7 +176967,7 @@ function MsxStart({
     }))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "カードの下は、そのモンスターと いっしょにトレーニングしたときに 伸びが上がる能力と割合。カードを押すと入れ替え"), React.createElement("button", {
+    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "カードの下は、そのモンスターといっしょにトレーニングしたときに伸びが上がる能力と割合(%)。カードを押すと入れ替え"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -181900,7 +181896,7 @@ function MsxBag({
     }
   }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
     className: "lim"
-  }, t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'))) : null, React.createElement("div", {
+  }, t.carry ? '始める前から効いている' : '育成中、いつでも使える'))) : null, React.createElement("div", {
     className: "v-bgrid"
   }, bagList.map(x => React.createElement("button", {
     type: "button",
@@ -187522,7 +187518,6 @@ function MsxR3Retire({
       }
       setPtListNow(list);
     };
-    const used = s.pts - ws.pts;
     const ownT = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
     const mTechs = (Array.isArray(s.techs) ? s.techs : []).map(id => ownT.find(t => t && t.id === id)).filter(Boolean);
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
@@ -187536,9 +187531,7 @@ function MsxR3Retire({
       }
     }, " / ", s.pts))), React.createElement("div", {
       className: "r"
-    }, "使った ", React.createElement("span", {
-      className: "yel"
-    }, used), React.createElement("br", null), "総合力 ", msxFmt(ev0.power), " → ", React.createElement("span", {
+    }, "総合力 ", msxFmt(ev0.power), " → ", React.createElement("span", {
       className: "yel"
     }, msxFmt(ev.power)), " ", React.createElement("i", {
       className: msxRankCls(ev.rank)
@@ -188090,9 +188083,7 @@ function MsxR3Retire({
     }
   }, " / ", points))), React.createElement("div", {
     className: "r"
-  }, "総合力 ", msxFmt(ev.power), " から ", points, "ポイント", React.createElement("br", null), React.createElement("span", {
-    className: "yel"
-  }, "使った ", cost), "(あまりは なくなる)", React.createElement("div", {
+  }, "総合力 ", msxFmt(ev.power), " から ", points, "ポイント", React.createElement("br", null), "あまりは なくなる", React.createElement("div", {
     className: "bar p"
   }, React.createElement("i", {
     style: {
@@ -188249,7 +188240,7 @@ function MsxR3Retire({
     run: run,
     back: "戻る",
     onBack: () => setStep('e1'),
-    right: `1体${maxKinds}種類まで`,
+    right: "",
     body: body,
     foot: foot
   });
