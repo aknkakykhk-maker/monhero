@@ -110,6 +110,7 @@ const MSX_CSS = `
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
+.msx .v-body.st{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 /* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
@@ -772,6 +773,11 @@ const MSX_CSS = `
 .msx-sheet{overscroll-behavior:contain}
 .msx-sheet>.msx-btn:last-child{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;box-shadow:0 -12px 12px -2px #16122e,0 12px 0 0 #16122e}
 @media (max-height:460px){.msx-ov{padding:6px 10px}}
+/* 横持ちでは本文(.v-body)が2列の格子になり、本文の直下に置いた窓の幕が右の列(中身の長さぶん)に閉じこめられて、
+   詳細の窓の「貸し出す・お別れ・閉じる」が画面の外へ出ていた(2026-11-19 r1119-013 ⑥ U-12)。窓を画面いっぱいに出す
+   縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
+   本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
+.msx .v-body>.msx-ov{position:fixed;inset:0}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -924,6 +930,9 @@ const MSX_CSS = `
 .msx-st6.row6 b{font-size:14px;letter-spacing:0}
 .msx-st6.row6 i{font-size:8.5px}
 .msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+/* 詳細の窓の送り箱も伸び縮みさせる(上の .msx-dt>* が flex:none にしていたため、送り箱が縮まず窓ごと送る形になり、
+   低い画面で「貸し出す・お別れ・閉じる」が送った先にあった。2026-11-19 r1119-013 ⑥ U-12) */
+.msx-dt>.msx-md-scroll{flex:1 1 auto;min-height:0}
 .msx-dt-top{display:flex;align-items:flex-end;gap:8px}
 .msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
 .msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}

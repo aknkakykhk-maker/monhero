@@ -705,7 +705,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           戻るがあったのを廃止し、言葉も段によらず「戻る」に固定する(同じ back() なのに言葉だけ
           変わっていた)。step=0 の戻り先はシナリオ選択(無ければサクセスの入口)で、意味は一貫して「戻る」 */}
       <MsxHd back="戻る" onBack={back} right={`${step + 1} / 6`}/>
-      <div className="v-body">
+      {/* 中身が画面より長い段(持ちこみ・確認・低い画面)は本体ごと縦に流す。指定が無いと中身が下の帯の後ろへはみ出し、
+          最後まで読めず触れなかった(r1119 社長の実機「スライドできない・裏と表になってる」) */}
+      <div className="v-body st">
         <MsxSteps n={step}/>
         {body}
       </div>

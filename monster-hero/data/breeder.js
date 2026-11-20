@@ -1283,6 +1283,17 @@ const kyukoWinterCostume = Object.freeze({
   imageDir: 'images/assistant/winter',
   price: Object.freeze({ diamond: 100000 }),
 });
+// ききのツインテール(2026-11-20 社長)。売り場はダイヤショップ 100,000(ほかの衣装と同じ。買い物の出し分けは無い)。
+//   絵は images/assistant/twintail/(立ち絵は stand-twintail、全身画は fullbody/kiki_twintail)。お話「イメチェン」でも着る(STORY_OUTFIT_DIRS の twintail)
+const KIKI_TWINTAIL_COSTUME_ART = "images/assistant/twintail/face/kiki_happy.PNG?v=725e2956e3ac";
+const kikiTwintailCostume = Object.freeze({
+  id: 'kiki_twintail_v1', assistantId: 'kiki',
+  name: 'ツインテール', desc: 'ききの新しい髪型の着せ替え。曲「僕たちのページは晴れ模様」のジャケット絵で結んでもらった、大きなうさ耳リボンのツインテールです。',
+  released: true,
+  icon: KIKI_TWINTAIL_COSTUME_ART,
+  imageDir: 'images/assistant/twintail',
+  price: Object.freeze({ diamond: 100000 }),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1291,6 +1302,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   erubinSekiyuouCostume,
   sorashidoHoseiCostume,
   kyukoWinterCostume,
+  kikiTwintailCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
