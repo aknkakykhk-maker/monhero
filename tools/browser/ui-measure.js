@@ -263,6 +263,20 @@ function measureInPage(TH, PRIMARY_SRC) {
     }
   }
 
+  // 部品の目印(data-* の名前)。同じ意味の画面どうしで、部品の有る無しを比べる(自分の子の詳細とフレンドの詳細 など)
+  {
+    const names = new Set();
+    for (const el of all) {
+      if (!el.attributes || !el.attributes.length) continue;
+      let shown = null;
+      for (const a of el.attributes) {
+        if (!a.name.startsWith('data-') || /^data-(v-|reactid|testid)/.test(a.name)) continue;
+        if (shown === null) { const r = el.getBoundingClientRect(); shown = onScreen(r) && vis(el); }
+        if (shown) names.add(a.name);
+      }
+    }
+    out.parts = [...names].sort();
+  }
   // 10. 上が切れている: 画面の頭から撮っても、文字の部品や窓の上が画面の外へ出ている
   out.topCut = [];
   for (const { el, r } of textLeaves) if (r.top < -3 && r.bottom > 6) out.topCut.push({ t: textOf(el).slice(0, 14), y: Math.round(r.top) });
@@ -350,22 +364,46 @@ const record = async (page, file, extra = {}) => {
   const m = await run(page);
   if (!m || m.error) return [];
   const findings = judge(m);
-  try { fs.appendFileSync(path.join(path.dirname(file), '_measure.jsonl'), JSON.stringify({ file: path.basename(file), ...extra, findings, m: { view: m.view, frame: m.frame, primary: m.primary, bottomGap: m.bottomGap, colGaps: m.colGaps, empty: m.empty, fontMin: m.fontMin, ...(process.env.UI_MEASURE_DEBUG ? { dups: m.dups, seenNums: m.seenNums, buttons: m.buttons, texts: m.texts } : {}) } }) + '\n'); } catch (e) { /* 測れなくても撮影は止めない */ }
+  try { fs.appendFileSync(path.join(path.dirname(file), '_measure.jsonl'), JSON.stringify({ file: path.basename(file), ...extra, findings, m: { view: m.view, frame: m.frame, primary: m.primary, bottomGap: m.bottomGap, colGaps: m.colGaps, empty: m.empty, fontMin: m.fontMin, parts: m.parts, ...(process.env.UI_MEASURE_DEBUG ? { dups: m.dups, seenNums: m.seenNums, buttons: m.buttons, texts: m.texts } : {}) } }) + '\n'); } catch (e) { /* 測れなくても撮影は止めない */ }
   return findings;
 };
 
-// 置き場の _measure.jsonl を読む(止め絵のファイル名 → 指摘)。同じ名前が2回あれば後の方
+// 同じ意味の画面どうしで、部品の有る無しを比べる(社長「自分のモンスターの詳細にあるアシスト効果の札が、フレンドの詳細に無い」r1119-039 M10)。
+//   a(手本の画面)にある部品が b に無ければ、b の指摘にする。部品は data-* の目印で決める。画面は止め絵のファイル名(大きさの名札を除く)で引く
+const PAIRS = [
+  { name: 'モンスターの詳細(自分の子 ↔ フレンド)', a: /^msx-S2TD(-|\.)/, b: /^msx-S2F[DX](-|\.)/, parts: { 'アシスト効果の札': 'data-msx-assist-card' } },
+  { name: 'モンスターの詳細(マスモンボックス ↔ フレンド)', a: /^r3-X[3-6](-|\.)/, b: /^msx-S2F[DX](-|\.)/, parts: { 'アシスト効果の札': 'data-msx-assist-card' } },
+];
+const sizeTag = (f) => (/-(pc|land|s568|s320|ip|big)\.png$/.exec(f) || [])[1] || '';
+const pairFindings = (map) => {
+  const out = new Map();
+  for (const p of PAIRS) {
+    const as = [...map.entries()].filter(([f, r]) => p.a.test(f) && r.m && Array.isArray(r.m.parts));
+    for (const [fb, rb] of map) {
+      if (!p.b.test(fb) || !rb.m || !Array.isArray(rb.m.parts)) continue;
+      const ra = (as.find(([fa]) => sizeTag(fa) === sizeTag(fb)) || as[0] || [])[1];
+      if (!ra) continue;
+      for (const [label, attr] of Object.entries(p.parts)) {
+        if (ra.m.parts.includes(attr) && !rb.m.parts.includes(attr)) (out.get(fb) || out.set(fb, []).get(fb)).push({ kind: '同じ意味の画面に部品が無い', pri: '高', detail: `${p.name}: 手本の画面にある「${label}」(${attr})がこの画面に無い` });
+      }
+    }
+  }
+  return out;
+};
+
+// 置き場の _measure.jsonl を読む(止め絵のファイル名 → 指摘)。同じ名前が2回あれば後の方。同じ意味の画面の比べ(PAIRS)も足す
 const load = (dir) => {
   const map = new Map();
   const f = path.join(dir, '_measure.jsonl');
   if (!fs.existsSync(f)) return map;
   for (const line of fs.readFileSync(f, 'utf8').split('\n')) { if (!line.trim()) continue; try { const j = JSON.parse(line); map.set(j.file, j); } catch (e) {} }
+  for (const [file, add] of pairFindings(map)) { const r = map.get(file); r.findings = [...(r.findings || []).filter((x) => x.kind !== '同じ意味の画面に部品が無い'), ...add]; }
   return map;
 };
 // API へ添える1行(機械の見つけ物)
 const lines = (rec) => (rec && rec.findings || []).filter((x) => x.pri !== '低').map((x) => `[測る・${x.pri}] ${x.kind}: ${x.detail}`.slice(0, 220));
 
-module.exports = { TH, PRIMARY_RE, measureInPage, judge, run, record, load, lines };
+module.exports = { TH, PRIMARY_RE, PAIRS, measureInPage, judge, run, record, load, lines, pairFindings };
 
 if (require.main === module) {
   const argv = process.argv.slice(2);
