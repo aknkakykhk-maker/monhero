@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e47e52a49c9328f
+// source-sha256: db7926fecaeabbea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172578,6 +172578,7 @@ const MSX_CSS = `
 .msx .sym.info::before{width:20px;height:20px;border:2.5px solid currentColor;border-radius:50%;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) 50% 3px/2.5px 2.5px no-repeat,linear-gradient(currentColor,currentColor) 50% 7.5px/2.5px 6px no-repeat}
 /* 注意: 全ボタンの ::after は「押せる範囲を広げる」用(838行)。記号の線は ::before だけで描く */
 .msx .msx-md-alt{margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+.msx .msx-md-alt.top{margin:4px 0 6px;min-height:36px}
 /* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
 .msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
 .msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
@@ -175300,7 +175301,12 @@ function MsxMonDetail({
     className: "tn"
   }, msxTechNm(tech.name), has(tech) ? null : React.createElement("small", {
     className: "msx-md-not"
-  }, "まだ覚えていない")), React.createElement("div", {
+  }, "まだ覚えていない")), pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? React.createElement("button", {
+    type: "button",
+    className: "msx-md-alt top",
+    "data-msx-alt-open": true,
+    onClick: () => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)
+  }, "⇄ 覚える技を選ぶ") : null, React.createElement("div", {
     className: "msx-md-kv"
   }, React.createElement("b", null, "技種"), React.createElement("span", null, tech.kind === 'wise' ? 'かしこさ' : 'ちから')), React.createElement("div", {
     className: "msx-md-kv"
@@ -175352,12 +175358,7 @@ function MsxMonDetail({
     return how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, "修行で覚える", React.createElement("small", {
       className: "msx-md-how"
     }, how.slice('修行で覚える'.length))) : how;
-  })())), pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? React.createElement("button", {
-    type: "button",
-    className: "msx-md-alt",
-    "data-msx-alt-open": true,
-    onClick: () => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)
-  }, "⇄ 覚える技を選ぶ") : null) : null))), pick && pickCell ? (() => {
+  })()))) : null))), pick && pickCell ? (() => {
     const [pr, pd] = pickCell.split('-').map(Number);
     const alts = tgAt(pr, pd);
     const lock = !!pick.locked(pickCell);
