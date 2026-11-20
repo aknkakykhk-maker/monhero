@@ -336,6 +336,8 @@ const MSA_CSS = `
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
 .msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
+/* 縦は部品どうしのすき間を 8→5px に詰め、手動でも下の道具の段まで1画面に入れる(2026-11-20 API の点検 r3-MA1: 札の字を上げた分) */
+@media (orientation:portrait){.msc-wrap.msa{gap:5px}}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -1840,6 +1842,17 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
 //   input … 芯 createMatch に渡す入力(simulate と同じ形)。あれば自分で操作する
 //   watch … { r, teamA, teamB }(記録だけ。オートの結果を見せる)
 //   onEnd(won, { choices, auto, result }) … 決着を見せ終わったら1回だけ
+// 相手の技の枠の共通の決まり(2026-11-19 段2・段3。モンサクの試合と助手マスモン対戦の両方で使う)
+//   msaLastTechOf … その側が最後に使った技 id(次にその側が技を出すまで札に印を残す。交代したら消す)
+//   msaFoeDangerOf … いまの間合いの代表の技の危なさ(0=届く技なし / 1〜3)。命中×威力を、その子のいちばん強い技との割合で3段に分ける
+const msaLastTechOf = (log, pos, side) => { for (let k = pos; k >= 1; k--) { const r = log[k] || {}; if (r.ev === 'tech' && r.side === side) return r.move || null; if (r.ev === 'swap' && r.side === side) return null; } return null; };
+const msaFoeDangerOf = (items, d, hitAt) => {
+  if (!Array.isArray(items) || !items.length || typeof msaRepOf !== 'function') return 0;
+  const t = msaRepOf(items, d, null); if (!t) return 0;
+  const sc = (x) => (Number(hitAt ? hitAt(x, d) : x.hit) || 0) * (Number(x.power) || 0);
+  const r = sc(t) / Math.max(1, ...items.map(sc));
+  return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
+};
 function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const reduce = useMemo(() => msaReduce(), []);
   const manual = Boolean(input && engine && typeof engine.createMatch === 'function');
@@ -1952,15 +1965,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const mvB = (st.bMoves || [])[f.act.B], mbB = teams.B && teams.B.members ? teams.B.members[f.act.B] : null;
   const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(catalog, mbB, mvB) : null;
   const hitAtB = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
-  const lastTechOf = (side) => { for (let k = pos; k >= 1; k--) { const r = log[k] || {}; if (r.ev === 'tech' && r.side === side) return r.move || null; if (r.ev === 'swap' && r.side === side) return null; } return null; };
+  const lastTechOf = (side) => msaLastTechOf(log, pos, side);
   const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
-  const foeDanger = (() => {
-    if (!foeOn || typeof msaRepOf !== 'function') return 0;
-    const t = msaRepOf(itemsB, f.d, null); if (!t) return 0;
-    const sc = (x) => (Number(hitAtB(x, f.d)) || 0) * (Number(x.power) || 0);
-    const top = Math.max(1, ...itemsB.map(sc)); const r = sc(t) / top;
-    return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
-  })();
+  const foeDanger = foeOn ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0;
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
