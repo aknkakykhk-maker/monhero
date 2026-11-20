@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7647cba2ff1ffb64
+// source-sha256: 3d2f6c0df26f1a1f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164527,7 +164527,8 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
+/* 戻るはほかのモンサクの画面と同じ丸い形にそろえる(金色の四角だった。r1119-049 窓-33) */
+.msx .scn-hd .bk{flex:none;display:inline-flex;align-items:center;min-height:36px;background:#2b3348;color:#fff;border:0;border-radius:99px;font-weight:900;font-size:11px;padding:4px 10px;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -164571,6 +164572,7 @@ function MsxScenarioSelect({
   }, React.createElement("button", {
     type: "button",
     className: "bk",
+    "data-mh-back": true,
     onClick: onBack
   }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), many ? React.createElement("small", null, "ストーリー ", idx + 1, "/", n) : null), React.createElement("div", {
     className: "scn-sc"
@@ -180470,7 +180472,8 @@ function MsxHome({
     onClose: () => setDex(false)
   }) : null, React.createElement(MsxHd, {
     back: "HOMEへ戻る",
-    onBack: onClose
+    onBack: onClose,
+    sub: "モンサクルーム"
   }), React.createElement("div", {
     className: "v-body v-hm"
   }, React.createElement("div", {
@@ -186372,7 +186375,7 @@ function MsxR3Battle({
         style: {
           textAlign: 'center'
         }
-      }, "🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ") : null);
+      }, "🍽 ごほうびのごはんは、ファームで待っているよ") : null);
       return React.createElement(MsxR3Frame, {
         run: run,
         back: "中断",
@@ -188714,7 +188717,7 @@ function MsxR3Retire({
           onPause();
         },
         "data-msx-r3-home": true
-      }, "ホームへ ▶"))
+      }, "モンサクルームへ ▶"))
     });
   }
   const body = React.createElement(React.Fragment, null, React.createElement("div", {

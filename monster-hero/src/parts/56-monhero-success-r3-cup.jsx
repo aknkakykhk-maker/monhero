@@ -678,7 +678,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="v-prz">{rows.length ? rows.map(([e, n, t, c, nw], i) => <div key={i} className={c}><span className="e">{e}</span><b>{n}</b><span className="t">{t}</span>{nw ? <i>{nw}</i> : null}</div>) : <div><span className="e">🏆</span><b>{st3.won ? msxR3WinWord(st3.kind, st3.round).replace('!', '') : '準優勝'}</b><span className="t">よくがんばった!</span></div>}</div>
         {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`cupgfx-${s.turn}`} items={msxR3GainItems(d, s)}/> : null}
         {!st3.won ? <MsxSay aid={s.aid} ex="normal" text="「くやしいけど、準優勝のごほうびはもらえたよ。つぎは いちばん上をめざそ!」"/> : (() => { const l = msxR3Line('turn.cup.win', run, { cup: st3.name, rival: st3.rivalName || '' }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! ごほうびのごはんは、ファームに帰ってから あげよう!」' : '「やったね! ごほうびのごはんは、ファームに帰ってから あげよう!」'); return <MsxSay aid={s.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
-        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ</div> : null}
+        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファームで待っているよ</div> : null}
       </>);
       return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-next>次へ ▶</button></div>}/>;
     }
