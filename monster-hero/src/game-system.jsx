@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e723fe3dc1679cc
+// generated-sha256: 4db08c79fe925939
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -96439,7 +96439,7 @@ const MSX_ARC_CSS = `
 /* 特別演出の待ち(2026-11-20 点検 arc-S5): 押せない間は紺地に灰の字だと止まったように見えるので、オレンジが左から満ちて、満ちたら押せると分かるようにする */
 .msx .v-ft button.go.arc-wait:disabled{position:relative;overflow:hidden;opacity:1}
 .msx .v-ft button.go.arc-wait>i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#f97316,#fb923c);opacity:.75;animation:arcWaitFill 5.5s linear forwards}
-.msx .v-ft button.go.arc-wait>span{position:relative;color:#fff}
+.msx .v-ft button.go.arc-wait>span{position:relative;color:#fff;font-size:14px}
 @keyframes arcWaitFill{to{width:100%}}
 @media (prefers-reduced-motion: reduce){.msx .v-ft button.go.arc-wait>i{animation:none;width:50%}}
 .msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
@@ -96533,7 +96533,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)}</small>
-      <div className="why"><small>組み合わせ</small>{MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why"><small>対戦するのは</small>{MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
@@ -96579,7 +96579,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
       </div>
       {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
       <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go arc-wait" disabled data-msx-arc-wait><i aria-hidden="true"/><span>{pages > 1 ? '次へ ▶' : '引退へ ▶'}</span></button>}</div>}/>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go arc-wait" disabled data-msx-arc-wait><i aria-hidden="true"/><span>📸 記念写真を撮っているよ…</span></button>}</div>}/>
   );
 }
 
