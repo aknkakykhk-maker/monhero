@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 279e155568e252e9
+// source-sha256: 3bdb9d2bd92aeb1f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173212,6 +173212,10 @@ const MSX_CSS = `
 .msx .msx-ef-mrow .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .msx .msx-ef-mrow .chips span{font-size:11px;font-weight:800;background:#0f172a;border:1px solid #475569;border-radius:8px;padding:2px 7px}.msx .msx-ef-mrow .chips span b{color:#fde68a}
 .msx .msx-ef-mrow .chips span.dim{opacity:.5}.msx .msx-ef-mrow .chips .none{color:#94a3b8}
+/* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
+.msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
+.msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
+.msx .msx-tp-bar .msx-pt-s select{max-width:66px}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -177407,7 +177411,7 @@ function MsxTeamPick({
       m: msxTpCardM(x.rec, m, x.species),
       size: "s",
       on: on,
-      slot: at >= 0 ? at + 1 : null,
+      slot: on ? idx + 1 : at >= 0 ? at + 1 : null,
       note: mk && mk.c !== 'in' ? mk.n : null,
       num: x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : '',
       attrs: {
@@ -188924,7 +188928,7 @@ function MsxAssistCard({
   const short = note && full.endsWith(note) ? full.slice(0, full.length - note.length) : full;
   const scene = msxAsScene(AT, a.scene);
   const more = !!(note || scene);
-  const dots = Math.min(5, a.max);
+  const dots = Math.min(10, a.max);
   const lit = Math.round(n / Math.max(1, a.max) * dots);
   return React.createElement("div", {
     className: `msx-md-ac${a.type === 'battle' || a.scene === 'cup' ? ' gold' : ''}${open ? ' open' : ''}`,
@@ -188955,14 +188959,15 @@ function MsxAssistCard({
     className: i < lit ? 'on' : ''
   })), React.createElement("i", null, n), "/", a.max)), React.createElement("div", {
     className: "tx"
-  }, short, more ? React.createElement("span", {
-    className: "mr"
-  }, open ? ' ▲' : ' ▼詳しく') : null), open && note ? React.createElement("div", {
+  }, short), open && note ? React.createElement("div", {
     className: "sc",
     "data-msx-assist-cap": true
   }, "上限: ", note.replace(/^[(（]|[)）]$/g, '')) : null, open && scene ? React.createElement("div", {
     className: "sc"
-  }, "効く場面: ", scene) : null));
+  }, "効く場面: ", scene) : null, more ? React.createElement("span", {
+    className: "mr",
+    "aria-hidden": "true"
+  }, open ? '閉じる ▲' : '上限・効く場面 ▼') : null));
 }
 function MsxAssistDetail({
   rec = null,
@@ -189015,7 +189020,9 @@ function MsxAssistDetail({
   }, sub), React.createElement("div", {
     className: "kv",
     "data-msx-asd-support": true
-  }, React.createElement("span", null, React.createElement("i", null, "初めの親密度"), React.createElement("b", null, mem.bond0)), React.createElement("span", null, React.createElement("i", null, "友情タッグ"), React.createElement("b", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("span", null, React.createElement("i", null, "得意率"), React.createElement("b", null, Math.round((Number(mem.fav) || 0) * 100), "%")), React.createElement("span", null, React.createElement("i", null, "総合力"), React.createElement("b", null, kind === 'base' ? '—' : msxFmt(pow || 0)))), top.length ? React.createElement("div", {
+  }, React.createElement("span", null, React.createElement("i", null, "初めの親密度"), React.createElement("b", null, mem.bond0)), React.createElement("span", null, React.createElement("i", null, "友情タッグ"), React.createElement("b", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("span", null, React.createElement("i", null, "得意率"), React.createElement("b", null, Math.round((Number(mem.fav) || 0) * 100), "%")), React.createElement("span", null, React.createElement("i", null, "総合力"), React.createElement("b", null, kind === 'base' ? '—' : msxFmt(pow || 0)))), React.createElement("small", {
+    className: "asd-kvn"
+  }, "初めの親密度=育成を始めたときの親密度。友情タッグ=親密度80からの伸び。得意率=得意な能力のトレーニングに来やすさ"), top.length ? React.createElement("div", {
     className: "asd-up",
     "data-msx-asd-up": true
   }, React.createElement("i", null, "伸びが上がる"), top.map(k => React.createElement("span", {
@@ -189041,7 +189048,7 @@ function MsxAssistDetail({
   }, tab === 'assist' ? got.length ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "msx-asd-cnt",
     "data-msx-assist-count": true
-  }, "アシスト効果 ", got.length, " / ", AT ? AT.MAX_KINDS : 8, "種類", kind === 'memo' ? '(メモモンは育成に使えず、アシスト効果と伸びが上がる能力だけ効く)' : ''), got.map(({
+  }, "持っているアシスト効果 ", got.length, "つ(最大", AT ? AT.MAX_KINDS : 8, "種類)", kind === 'memo' ? '(メモモンは育成に使えず、アシスト効果と伸びが上がる能力だけ効く)' : ''), got.map(({
     a,
     n
   }) => React.createElement(MsxAssistCard, {
@@ -189077,15 +189084,15 @@ const MSX_ASD_CSS = `
 .msx .msx-asd-top .sub{font-size:11px;color:#cbd5e1;font-weight:800}
 .msx .msx-asd-top .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .msx .msx-asd-top .kv span{display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #4a4380;border-radius:9px;padding:3px 2px}
-.msx .msx-asd-top .kv i{font-style:normal;font-size:10px;color:#cbd5e1;font-weight:800;white-space:nowrap}
+.msx .msx-asd-top .kv i{font-style:normal;font-size:11px;color:#cbd5e1;font-weight:800;white-space:nowrap}
 .msx .msx-asd-top .kv b{font-size:15px;color:#fde68a;font-weight:900;line-height:1.2}
-.msx .msx-asd-top .asd-up{display:flex;flex-wrap:wrap;gap:3px 6px;font-size:11px;font-weight:800;align-items:center}
+.msx .msx-asd-top .asd-up{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:12px;font-weight:800;align-items:center}
 .msx .msx-asd-top .asd-up i{font-style:normal;color:#f9a8d4;width:100%}.msx .msx-asd-top .asd-up b{color:#86efac}
 .msx .msx-asd-tabs{display:flex;gap:6px;margin:8px 0 4px}
 .msx .msx-asd-tabs button{position:relative;flex:1 1 0;height:36px;margin:4px 0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:10px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:900}
 .msx .msx-asd-tabs button::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
 .msx .msx-asd-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;border-color:transparent}
-.msx .msx-asd-tabs button.more{flex:0 0 auto;padding:0 10px;color:#f9a8d4}
+.msx .msx-asd-tabs button.more{color:#f9a8d4}
 .msx .msx-asd-body{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .msx-asd-cnt{font-size:11px;font-weight:800;color:#cbd5e1;margin:2px 0}
 .msx .msx-asd-st{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px}
@@ -189093,11 +189100,14 @@ const MSX_ASD_CSS = `
 .msx .msx-asd-st i{font-style:normal;font-size:11px;font-weight:800;color:#cbd5e1}.msx .msx-asd-st b{font-size:17px;font-weight:900}
 .msx-md-ac[role=button]{cursor:pointer}
 .msx-md-ac .pips{display:inline-flex;align-items:center;gap:2px}
+.msx-md-ac .hd{flex-direction:column;align-items:flex-start;gap:3px} /* 名前を1行に使い、目盛りは下の行へ(長い名前が途中で折れない) */
+.msx .msx-asd .msx-dt-close{flex:none;display:flex;align-items:center;justify-content:center}
 .msx-md-ac .pips small{font-size:10px;color:#cbd5e1;margin-right:2px}
-.msx-md-ac .pips s{display:inline-block;width:7px;height:7px;border-radius:50%;background:#334155;border:1px solid #64748b;text-decoration:none}
+.msx-md-ac .pips s{display:inline-block;width:6px;height:6px;border-radius:50%;background:#334155;border:1px solid #64748b;text-decoration:none}
 .msx-md-ac .pips s.on{background:#22d3ee;border-color:#a5f3fc}
 .msx-md-ac .pips i{margin-left:3px}
-.msx-md-ac .tx .mr{color:#f9a8d4;font-size:10.5px;white-space:nowrap}
+.msx-md-ac .mr{display:block;margin-top:6px;padding:7px 0;text-align:center;border-radius:8px;background:#0f172a;border:1px solid #4a4380;color:#f9a8d4;font-size:11.5px;font-weight:900}
+.msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#94a3b8;line-height:1.4}
 `;
 let msxAsdCssDone = false;
 const msxAsdEnsureCss = () => {
