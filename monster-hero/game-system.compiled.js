@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc1883db8eea70f6
+// source-sha256: 88cf5cca6e0b7fe3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164688,10 +164688,22 @@ const msxTevPops = (s, o) => {
   msxTevChanges(s, o).filter(t => !/親密度/.test(t)).forEach(t => {
     const tx = t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '');
     const sub = d && /^体力/.test(tx) ? fromTo(s.hp, d.hp, s.hpMax) : d && /^ストレス/.test(tx) ? fromTo(s.stress, d.stress, 100) : '';
+    const g = d && /^体力/.test(tx) && d.hp ? {
+      lb: '体力',
+      to: s.hp,
+      from: s.hp - d.hp,
+      max: s.hpMax
+    } : d && /^ストレス/.test(tx) && d.stress ? {
+      lb: 'ストレス',
+      to: s.stress,
+      from: s.stress - d.stress,
+      max: 100
+    } : null;
     out.push({
       k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up',
       t: tx,
-      sub
+      sub,
+      g
     });
   });
   return out;
@@ -164703,8 +164715,34 @@ const msxTevNextText = (run, o) => {
   const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
   if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、${name}がいる\nトレーニングをまた選んだとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
 };
+function MsxTevGauge({
+  g,
+  t,
+  delay = 0,
+  kind = '',
+  children = null
+}) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setOn(true), delay * 1000 + 250);
+    return () => clearTimeout(id);
+  }, []);
+  const v = on ? g.to : g.from;
+  const max = Math.max(1, g.max);
+  return React.createElement("div", {
+    className: `tev-gauge${kind ? ` ${kind}` : ''}`,
+    style: {
+      animationDelay: `${delay}s`
+    },
+    "data-msx-tev-gauge": kind || g.lb
+  }, React.createElement("span", null, t), React.createElement("i", null, React.createElement("b", {
+    style: {
+      width: `${Math.max(0, Math.min(100, v / max * 100))}%`
+    }
+  })), React.createElement("em", null, React.createElement("small", null, Math.round(g.from), " → "), Math.round(v), React.createElement("small", null, "/", Math.round(max))), on ? children : null);
+}
 function MsxTevMini({
   s,
   v
@@ -164797,7 +164835,7 @@ function MsxTrainEvent({
     }
   }) : null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
-    className: `v-scene msx-tev s-${style} tb${b}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`,
+    className: `v-scene msx-tev s-${style} tb${b}${bk ? ' bondb' : ''}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`,
     style: {
       flex: '1 1 0'
     },
@@ -164831,7 +164869,11 @@ function MsxTrainEvent({
     className: "gr"
   }), React.createElement("div", {
     className: "tev-art"
-  }, palImg)) : null, b === 5 && !bk && !calm ? React.createElement("div", {
+  }, palImg)) : null, pair && b !== 6 ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "tev-nm me"
+  }, run.nick || ''), m ? React.createElement("span", {
+    className: `tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`
+  }, name) : null) : null, b === 5 && !bk && !calm ? React.createElement("div", {
     className: "tev-dust",
     "aria-hidden": "true"
   }, [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
@@ -164844,23 +164886,42 @@ function MsxTrainEvent({
     kind: "team",
     label: e.story ? `編成のモンスターのイベント その${e.story}` : undefined,
     title: title
-  }) : null, (b === 5 && bk || b === 6) && bondUp ? React.createElement("div", {
-    className: `tev-bond${bk ? ' big' : ''}${bondOn && bondNow >= 100 ? ' max' : ''}`,
+  }) : null, b === 5 && bk && bondUp ? React.createElement("div", {
+    className: "tev-pops",
     "data-msx-tev-bond-row": true
-  }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
-    style: {
-      width: `${Math.max(0, Math.min(100, bondShow))}%`
-    }
-  })), React.createElement("em", {
-    "data-msx-tev-bond": true
-  }, bondShow, React.createElement("small", null, "/100"), bondNow !== bondFrom ? React.createElement("small", {
-    className: "dl"
-  }, " (", bondNow > bondFrom ? '+' : '', bondNow - bondFrom, ")") : null), bondOn && bondNow >= 100 ? React.createElement("strong", {
+  }, React.createElement(MsxTevGauge, {
+    g: {
+      lb: '親密度',
+      from: bondFrom,
+      to: bondNow,
+      max: 100
+    },
+    t: `💗 ${name}との親密度 ${bondNow - bondFrom > 0 ? '+' : ''}${bondNow - bondFrom}`,
+    kind: `bd${bondNow >= 100 ? ' max' : ''}`,
+    delay: 0.2
+  }, bondNow >= 100 ? React.createElement(React.Fragment, null, React.createElement("strong", {
     className: "mx"
-  }, "MAX!") : null) : null, b === 5 && !bk ? React.createElement("div", {
+  }, "MAX!"), React.createElement("small", {
+    className: "cap"
+  }, "これ以上は上がりません")) : null)) : null, b === 5 && bk && !calm ? React.createElement("div", {
+    className: "tev-hearts",
+    "aria-hidden": "true"
+  }, [0, 1, 2, 3, 4].map(k => React.createElement("i", {
+    key: k,
+    style: {
+      left: `${36 + k * 7}%`,
+      animationDelay: `${0.5 + k * 0.12}s`
+    }
+  }, "♥"))) : null, b === 5 && !bk ? React.createElement("div", {
     className: "tev-pops",
     "data-msx-tev-pops": true
-  }, pops.map((p, k) => React.createElement("b", {
+  }, pops.map((p, k) => p.g ? React.createElement(MsxTevGauge, {
+    key: k,
+    g: p.g,
+    t: p.t,
+    kind: /ストレス/.test(p.g.lb) ? 'st' : 'hp',
+    delay: 0.3 + k * 0.7
+  }) : React.createElement("b", {
     key: k,
     className: `tev-pop ${p.k}`,
     style: {
@@ -164901,10 +164962,10 @@ function MsxTrainEvent({
     style: {
       display: 'block'
     }
-  }, bondFrom, " → ", bondNow)) : null, pops.map((p, k) => React.createElement("div", {
+  }, bondFrom, " → ", bondNow, bondNow >= 100 ? '(これ以上は上がりません)' : '')) : null, pops.map((p, k) => React.createElement("div", {
     key: k,
     className: `r ${p.k}`
-  }, p.t, p.sub ? React.createElement("small", null, " ", p.sub) : null)), nx ? React.createElement("div", {
+  }, p.t, p.sub ? React.createElement("small", null, " ", p.sub) : p.k === 'st' && ups ? React.createElement("small", null, " (", s.stats[e.d.stat] - e.d.up, " → ", s.stats[e.d.stat], ")") : null)), nx ? React.createElement("div", {
     className: "nx"
   }, React.createElement("b", null, "つづく"), React.createElement("span", {
     style: JA_WRAP_STYLE
@@ -164984,22 +165045,45 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond.big em small.dl{font-size:17px}
 .msx .msx-tev .tev-sum .r small{font-size:12px;color:#cbd5e1}
 .msx .msx-tev .tev-sum .nx{display:flex;gap:8px;align-items:baseline}
-.msx .msx-tev .tev-pop.st{font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
+.msx .msx-tev .tev-pop.st{animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both,tevToRow .7s 1.5s ease-in forwards;font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
 .msx .msx-tev .tev-pop.gd{-webkit-text-stroke-color:#0f766e;text-shadow:0 0 14px #5eead4}
 .msx .msx-tev .tev-who.pal.on.tsh{opacity:.45}
 .msx .msx-tev .tev-bond.big{top:58px;left:12%;right:12%;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:16px;font-size:13px;background:#1f0f2ee6;border:2px solid #f472b6}
 .msx .msx-tev .tev-bond.big i{flex:1 1 100%;height:12px}
 .msx .msx-tev .tev-bond.big em{font-size:18px}
+.msx .msx-tev .tev-bond.big .cap{flex:1 1 100%;text-align:center;font-size:11px;color:#e9d5ff;font-weight:800}
 .msx .msx-tev .tev-bond.big .mx{font-size:22px}
 .msx .msx-tev .tev-sum .r.bd{color:#fbcfe8;font-size:19px}
 .msx .msx-tev .tev-pop.dn{-webkit-text-stroke-color:#1e3a8a;text-shadow:none}
+@keyframes tevToRow{to{opacity:0;scale:.35;translate:0 260px}}
 @keyframes tevPop{0%{opacity:0;scale:.2;translate:0 30px}60%{opacity:1;scale:1.15}100%{opacity:1;scale:1;translate:0}}
 .msx .msx-tev .tev-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
 .msx .msx-tev .tev-dust i{position:absolute;left:70%;width:9px;height:9px;border-radius:50%;background:#fef9c3;box-shadow:0 0 10px #fde047,0 0 4px #fff;animation:tevDust .75s ease-in both}
 @keyframes tevDust{0%{left:70%;opacity:0}20%{opacity:1}100%{left:30%;opacity:0;scale:.4}}
+.msx .msx-tev .tev-pops:has(.tev-gauge){top:56px}
+.msx .msx-tev .tev-gauge{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:78%;padding:10px 14px;border-radius:16px;background:#0f0d24eb;border:2px solid #5eead4;color:#fff;font-weight:900;animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-gauge>span{flex:1 1 100%;text-align:center;font-size:19px;color:#f1f5f9}
+.msx .msx-tev .tev-gauge i{flex:1;height:12px;border-radius:8px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-gauge i b{display:block;height:100%;background:linear-gradient(90deg,#2dd4bf,#5eead4);transition:width .9s ease-out}
+.msx .msx-tev .tev-gauge.st i b{background:linear-gradient(90deg,#a78bfa,#c084fc)}
+.msx .msx-tev .tev-gauge.bd{border-color:#f472b6}
+.msx .msx-tev .tev-gauge.bd i b{background:linear-gradient(90deg,#f472b6,#fb7185)}
+.msx .msx-tev .tev-gauge.bd.max{box-shadow:0 0 0 2px #fde047,0 0 18px #f472b6}
+.msx .msx-tev .tev-gauge em{font-style:normal;font-size:18px;white-space:nowrap}
+.msx .msx-tev .tev-gauge em small{font-size:12px;color:#cbd5e1}
+.msx .msx-tev .tev-gauge .mx{flex:1 1 100%;text-align:center;color:#fde047;font-size:22px;font-style:italic;animation:tevBang .45s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-gauge .cap{flex:1 1 100%;text-align:center;font-size:11px;color:#e9d5ff;font-weight:800}
+.msx .msx-tev .tev-hearts{position:absolute;inset:0;z-index:3;pointer-events:none}
+.msx .msx-tev .tev-hearts i{position:absolute;bottom:52%;font-style:normal;font-size:22px;color:#f472b6;text-shadow:0 0 8px #fff;animation:tevHeart 1.4s ease-out both}
+@keyframes tevHeart{0%{opacity:0;translate:0 20px;scale:.5}30%{opacity:1;scale:1.1}100%{opacity:0;translate:0 -70px;scale:1}}
+.msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
+.msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
+.msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
+.msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
 .msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
-.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
+.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;top:58px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
 .msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
 .msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
 .msx .msx-tev .tev-sum .r.st{color:#fef08a;font-size:22px}
@@ -180805,9 +180889,9 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      className: "off",
-      disabled: true
-    }, "飛ばす ⏭"), React.createElement("button", {
+      onClick: () => tGo(0),
+      "data-msx-tev-replay": true
+    }, "もう一度見る"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => afterAct({
