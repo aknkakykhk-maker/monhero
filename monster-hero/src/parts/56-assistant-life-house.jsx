@@ -28,13 +28,13 @@ const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || AS
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
-//   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
+//   区切りは社長の決定: 朝 6:00〜/昼 10:00〜/夕方 16:00〜/夜 18:00〜5:59(日本時間・2026-11-20 r1119-044 で朝5時・夜19時から変えた)。助手の居場所が入れかわる6つの区切りとは別
 //   <html data-mh-tod="morning|day|evening|night"> の印があればそれに従い、無ければ同じ区切りでここで決める
 const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({ morning: 'morning', day: 'noon', evening: 'evening', night: 'night' });
 const assistantLifeTimeLook = (now = Date.now()) => {
   try { const tod = typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-mh-tod'); if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod]; } catch {}
   const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
-  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+  return h >= 6 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 18 ? 'evening' : 'night';
 };
 // 窓の外・場面の背景(お話の背景の絵。広場と森は時間帯の絵がある)
 const ASSISTANT_LIFE_VIEW = Object.freeze({
@@ -226,7 +226,7 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 // 画面に出す時間帯の言葉(朝・昼・夕・夜)。見出しの札・HOME と同じ区切りにそろえる(居場所の入れかわりの6つの区切りとは別。2026-11-07 ミハリ L8・ハナビ)
 const assistantLifeTodLabel = (now = Date.now()) => {
   try { if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now); } catch (_) {}
-  return { morning: '朝', noon: '昼', evening: '夕', night: '夜' }[assistantLifeTimeLook(now)];
+  return typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(new Date(Number(now) + 9 * 3600000).getUTCHours()) : '';
 };
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);

@@ -384,6 +384,8 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   // 時間帯の数・区切りは ASSISTANT_LIFE_SLOTS から取る(6でも12でも動く)。場面は区切りの開始時刻で決める
   const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
   const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  // 画面の呼び名はゲーム全体の表から(2時間の区切りの始まりの時刻で引く。15時は「昼」・r1119-044)
+  const slotName = slot && Number.isFinite(slot.from) && typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(slot.from) : (slotDef ? slotDef.label : '');
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
@@ -410,7 +412,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotName}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={JA_WRAP_STYLE}>
@@ -421,7 +423,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
         {!done && (plan
-          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotDef.label })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
+          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotName })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
           : <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>)}
       </div>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1" data-assistant-life-daily-stamps={n}>

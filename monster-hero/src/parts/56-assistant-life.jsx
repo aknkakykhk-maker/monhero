@@ -179,6 +179,18 @@ const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => (typeof jstDayKey4 === 'function') ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
 
+// 画面に出す時間の呼び名(2026-11-20 社長 r1119-043 ⑥・r1119-044)。表はゲーム全体の TIME_OF_DAY_SLOTS(44-time-of-day.jsx)1つ:
+//   深夜 0〜6時・朝 6〜10時・昼 10〜16時・夕方 16〜18時・夜 18〜24時。上の ASSISTANT_LIFE_SLOTS の名前(午後など)は傾向を引くための内側の名前で、画面には出さない
+const ASSISTANT_LIFE_TIME_NAMES_FALLBACK = Object.freeze([[0, '深夜'], [6, '朝'], [10, '昼'], [16, '夕方'], [18, '夜']]);
+const assistantLifeTimeNameOf = (hour) => {
+  const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
+  const list = (typeof TIME_OF_DAY_SLOTS !== 'undefined' && Array.isArray(TIME_OF_DAY_SLOTS) && TIME_OF_DAY_SLOTS.length)
+    ? TIME_OF_DAY_SLOTS.map(s => [s.from, s.label]) : ASSISTANT_LIFE_TIME_NAMES_FALLBACK;
+  let name = list[0][1];
+  for (const [from, label] of list) if (Number.isFinite(h) && h >= from) name = label;
+  return name;
+};
+
 // ---------- 時間 ----------
 // abs … 通しの番号(日本時間の暦の日 × 6 + 時間の並び)。1つ進むと次の時間
 // 12区切り(2026-11-11 社長: 移動を1日6回→12回。2時間ずつ均等)。傾向を引く名前(id・label・i)は、区切りの真ん中の時刻が入る6つ(上の ASSISTANT_LIFE_SLOTS)のまま。
@@ -190,7 +202,7 @@ const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.find
 const assistantLifeSlotBuild = (day, j, hourForV1) => {
   const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
   const six = ASSISTANT_LIFE_SLOTS[i];
-  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: assistantLifeTimeNameOf(j * 2), from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
 };
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 419b61aac0a0ba1a
+// generated-sha256: 350aaae7f2520b92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41018,16 +41018,19 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
 //   ・絵の背景(HOME・タイトル)は絵に色を重ねる。塗りだけの画面(メニュー・マーケット・神殿・モードえらび)は塗りをほんの少し寄せる
 //   ・お話・モンヒロビートの演奏中・リザルト・バトル中・カードの場は変えない。ボタン・文字・カード・ノーツには乗らない
 //   ・色の層は背景の要素の中にあるので、「🔄 横」で回しても絵と一緒に回る
-// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 5:00 から
+// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 6:00 から
 // 保存: キー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off', format:'24h'|'12h' }(無い・壊れているときは従来どおり入・24時間)
 
 const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
 // 区切り(日本時間の時)。[始まりの時, 名前, 印, 表示名]。助手ライフの家も同じ表を使う
+// 2026-11-20 社長(r1119-043 ⑥・r1119-044): 朝6時から。深夜(0〜6時)は見た目は夜のまま(id 'night')で、呼び名だけ「深夜」。夕は「夕方」
+//   助手ライフの2時間の移動(0・2・4…時)と区切りがそろう(docs/spec/ASSISTANT_LIFE.md §3-2)
 const TIME_OF_DAY_SLOTS = Object.freeze([
-  Object.freeze({ id: 'morning', from: 5,  icon: '🌅', label: '朝' }),
+  Object.freeze({ id: 'night',   from: 0,  icon: '🌙', label: '深夜' }),
+  Object.freeze({ id: 'morning', from: 6,  icon: '🌅', label: '朝' }),
   Object.freeze({ id: 'day',     from: 10, icon: '☀️', label: '昼' }),
-  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕' }),
-  Object.freeze({ id: 'night',   from: 19, icon: '🌙', label: '夜' }),
+  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕方' }),
+  Object.freeze({ id: 'night',   from: 18, icon: '🌙', label: '夜' }),
 ]);
 const TIME_OF_DAY_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 // 日本時間の時・分
@@ -41035,7 +41038,7 @@ const timeOfDayJstParts = (now = Date.now()) => {
   const d = new Date((Number.isFinite(Number(now)) ? Number(now) : Date.now()) + TIME_OF_DAY_JST_OFFSET_MS);
   return { h: d.getUTCHours(), m: d.getUTCMinutes() };
 };
-// いまの時間帯(朝 5:00〜 / 昼 10:00〜 / 夕 16:00〜 / 夜 19:00〜4:59)
+// いまの時間帯(深夜 0:00〜 / 朝 6:00〜 / 昼 10:00〜 / 夕方 16:00〜 / 夜 18:00〜)
 const timeOfDayAt = (now = Date.now()) => {
   const { h } = timeOfDayJstParts(now);
   let slot = TIME_OF_DAY_SLOTS[TIME_OF_DAY_SLOTS.length - 1];
@@ -41076,7 +41079,7 @@ const timeOfDaySetSettings = (patch) => {
 // 20秒ごとに見直す(分が変わったら時刻を、時間帯が変わったら雰囲気を書き換える)。見るたびに今の時刻で決める
 const timeOfDayTick = () => {
   const slot = timeOfDayAt(), minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
-  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  if (slot === TIME_OF_DAY_STORE.slot && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot; TIME_OF_DAY_STORE.minute = minute;
   timeOfDayEmit();
 };
@@ -67324,6 +67327,18 @@ const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => (typeof jstDayKey4 === 'function') ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
 
+// 画面に出す時間の呼び名(2026-11-20 社長 r1119-043 ⑥・r1119-044)。表はゲーム全体の TIME_OF_DAY_SLOTS(44-time-of-day.jsx)1つ:
+//   深夜 0〜6時・朝 6〜10時・昼 10〜16時・夕方 16〜18時・夜 18〜24時。上の ASSISTANT_LIFE_SLOTS の名前(午後など)は傾向を引くための内側の名前で、画面には出さない
+const ASSISTANT_LIFE_TIME_NAMES_FALLBACK = Object.freeze([[0, '深夜'], [6, '朝'], [10, '昼'], [16, '夕方'], [18, '夜']]);
+const assistantLifeTimeNameOf = (hour) => {
+  const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
+  const list = (typeof TIME_OF_DAY_SLOTS !== 'undefined' && Array.isArray(TIME_OF_DAY_SLOTS) && TIME_OF_DAY_SLOTS.length)
+    ? TIME_OF_DAY_SLOTS.map(s => [s.from, s.label]) : ASSISTANT_LIFE_TIME_NAMES_FALLBACK;
+  let name = list[0][1];
+  for (const [from, label] of list) if (Number.isFinite(h) && h >= from) name = label;
+  return name;
+};
+
 // ---------- 時間 ----------
 // abs … 通しの番号(日本時間の暦の日 × 6 + 時間の並び)。1つ進むと次の時間
 // 12区切り(2026-11-11 社長: 移動を1日6回→12回。2時間ずつ均等)。傾向を引く名前(id・label・i)は、区切りの真ん中の時刻が入る6つ(上の ASSISTANT_LIFE_SLOTS)のまま。
@@ -67335,7 +67350,7 @@ const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.find
 const assistantLifeSlotBuild = (day, j, hourForV1) => {
   const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
   const six = ASSISTANT_LIFE_SLOTS[i];
-  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: assistantLifeTimeNameOf(j * 2), from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
 };
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
@@ -68454,13 +68469,13 @@ const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || AS
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
-//   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
+//   区切りは社長の決定: 朝 6:00〜/昼 10:00〜/夕方 16:00〜/夜 18:00〜5:59(日本時間・2026-11-20 r1119-044 で朝5時・夜19時から変えた)。助手の居場所が入れかわる6つの区切りとは別
 //   <html data-mh-tod="morning|day|evening|night"> の印があればそれに従い、無ければ同じ区切りでここで決める
 const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({ morning: 'morning', day: 'noon', evening: 'evening', night: 'night' });
 const assistantLifeTimeLook = (now = Date.now()) => {
   try { const tod = typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-mh-tod'); if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod]; } catch {}
   const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
-  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+  return h >= 6 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 18 ? 'evening' : 'night';
 };
 // 窓の外・場面の背景(お話の背景の絵。広場と森は時間帯の絵がある)
 const ASSISTANT_LIFE_VIEW = Object.freeze({
@@ -68652,7 +68667,7 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 // 画面に出す時間帯の言葉(朝・昼・夕・夜)。見出しの札・HOME と同じ区切りにそろえる(居場所の入れかわりの6つの区切りとは別。2026-11-07 ミハリ L8・ハナビ)
 const assistantLifeTodLabel = (now = Date.now()) => {
   try { if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now); } catch (_) {}
-  return { morning: '朝', noon: '昼', evening: '夕', night: '夜' }[assistantLifeTimeLook(now)];
+  return typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(new Date(Number(now) + 9 * 3600000).getUTCHours()) : '';
 };
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
@@ -71596,6 +71611,8 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   // 時間帯の数・区切りは ASSISTANT_LIFE_SLOTS から取る(6でも12でも動く)。場面は区切りの開始時刻で決める
   const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
   const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  // 画面の呼び名はゲーム全体の表から(2時間の区切りの始まりの時刻で引く。15時は「昼」・r1119-044)
+  const slotName = slot && Number.isFinite(slot.from) && typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(slot.from) : (slotDef ? slotDef.label : '');
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
@@ -71622,7 +71639,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotName}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={JA_WRAP_STYLE}>
@@ -71633,7 +71650,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
         {!done && (plan
-          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotDef.label })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
+          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotName })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
           : <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>)}
       </div>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1" data-assistant-life-daily-stamps={n}>
