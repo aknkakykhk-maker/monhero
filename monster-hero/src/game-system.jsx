@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed7347e61ec16056
+// generated-sha256: 6c0d9c76323a0141
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89670,7 +89670,8 @@ const MSX_CSS = `
 .msx .msx-ev-tc b{font-size:40px;font-weight:900;color:#fff;text-shadow:0 3px 0 #c2410c,0 0 18px #fb923c}
 @keyframes msxEvTc{0%{opacity:0;transform:scale(1.15)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion: reduce){.msx .msx-ev-tc{display:none}}
-.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:center}
+.msx .msx-ev-next{margin:6px 10px 0;padding:6px 12px;border-radius:12px;background:#fff7ed;border:2px solid #fdba74;color:#9a3412;font-size:13px;font-weight:900;text-align:left;display:flex;gap:8px;align-items:baseline;line-height:1.5}
+.msx .msx-ev-next>b{flex:none;white-space:nowrap}.msx .msx-ev-next>span{flex:1;min-width:0}
 .msx .v-dots{position:absolute;right:8px;top:10px;background:#0f0d24d9;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#475569;margin-left:3px}.msx .v-dots i.on{background:#fde047}
 .msx .v-talk{position:absolute;left:8px;right:8px;bottom:8px;background:#fffdf5;color:#1e1b4b;border-radius:14px;border:2px solid #fb923c;padding:14px 12px 8px;font-size:12.5px;font-weight:800;line-height:1.55}
@@ -91286,7 +91287,8 @@ function MsxEvHead({ kind = 'ikusei', label, title, className = '', style }) {
 }
 // 連続物の「つづく」の1行(話の終わりに出す)
 function MsxEvNext({ text }) {
-  return text ? <div className="msx-ev-next" data-msx-ev-next>つづく ▶ {text}</div> : null;
+  // 2行になる文は左そろえ・言葉の途中で折らない(2026-11-20 社長「トレーニン/グ」「中央そろえはおかしい」)
+  return text ? <div className="msx-ev-next" data-msx-ev-next><b>つづく ▶</b><span style={JA_WRAP_STYLE}>{jaWrap(text)}</span></div> : null;
 }
 const msxPickLine = (ctx, scene, opt = {}) => {
   const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
