@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e01592ce41ca4451
+// generated-sha256: b1625b18ff2e6f54
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84252,8 +84252,8 @@ function MonsucCarryShop({ onClose }) {
 
 // ---- part: 56-monsuc-best3.jsx ----
 // ===== モンヒロサクセスの「自分だけのベスト3」(2026-11-13 社長 r1113-057②) =====
-// 育成が終わった(引退した)あとに、種に関係なく総合力の上位3つを出す。今回が入ったら、下からせり上がって入り込み、
-// 押し出された行は1段下がる。1位なら「自己ベスト更新!」、2・3位なら「ベスト3入り!」。入らなければ「ベスト3まで あと ◯」。
+// 育成が終わった(引退した)あとに、種に関係なく総合力の上位3つを出す。今回が入ったら、その順位の場所で光って現れ、
+// 押し出された行は1段下がる(2026-11-20 点検 #8: 4位の外からせり上げると、待ちの間は1位が空の枠に見え、今回の子が枠の下に隠れていた)。1位なら「自己ベスト更新!」、2・3位なら「ベスト3入り!」。入らなければ「ベスト3まで あと ◯」。
 // 記録は芯ではなく保存枠の部品(56-monhero-success-r3-store.jsx の msxR3Retire)が mh_monsuc_meta_v1 の best3 に足す。ここは見せるだけ。
 // 「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、動かさずに並べ終わりの形を出す。
 
@@ -84270,14 +84270,14 @@ function MsxBest3({ b, run }) {
   const calm = msxB3Calm();
   const MSX_B3_ROW = msxB3Row();
   const [go, setGo] = React.useState(calm);
-  React.useEffect(() => { if (calm) return undefined; const id = setTimeout(() => setGo(true), 650); return () => clearTimeout(id); }, []);
+  React.useEffect(() => { if (calm) return undefined; const id = setTimeout(() => setGo(true), 250); return () => clearTimeout(id); }, []);
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(go && b.place >= 0 && !calm ? [['awKira', 250]] : [], [go]);
   const next = Array.isArray(b.next) ? b.next : []; const prev = Array.isArray(b.prev) ? b.prev : [];
   const inIt = b.place >= 0;
-  // 動き出す前の位置: 今回の行は「4位の場所」から、押し出された行は1つ上の場所から
+  // 動き出す前の位置: 今回の行はその場所(小さく・透明から光って現れる)、押し出された行は1つ上の場所から
   const startOf = (i, e) => {
     if (!inIt) return 0;
-    if (e.id === next[b.place].id) return (3 - b.place) * MSX_B3_ROW;
+    if (e.id === next[b.place].id) return 0;
     const was = prev.findIndex((x) => x.id === e.id);
     return was >= 0 ? (was - i) * MSX_B3_ROW : 0;
   };
@@ -84294,11 +84294,11 @@ function MsxBest3({ b, run }) {
     </div> : null}
     <div className="v-h">🏆 自分だけのベスト3<small>これまでに育てたモンスターの、総合力の上位3つ</small></div>
     <div className={`msx-b3${go ? ' go' : ''}${calm ? ' calm' : ''}`} data-msx-best3={inIt ? b.place + 1 : 0} style={{ height: MSX_B3_ROW * 3 + 16 }}>
-      {[0, 1, 2].map((i) => <div key={`slot-${i}`} className="slot" style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8 }}><b className={`pl p${i + 1}`}>{i + 1}</b>{next[i] ? null : <span className="none">まだない</span>}</div>)}
+      {[0, 1, 2].filter((i) => !next[i]).map((i) => <div key={`slot-${i}`} className="slot" style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8 }}><b className={`pl p${i + 1}`}>{i + 1}</b><span className="none">まだない</span></div>)}
       {next.map((e, i) => {
         const me = inIt && i === b.place;
         return (<div key={e.id} className={`row${me ? ' me' : ''}`} data-msx-best3-row={i + 1}
-          style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8, transform: go ? 'translateY(0)' : `translateY(${startOf(i, e)}px)` }}>
+          style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8, transform: go ? 'none' : me ? 'scale(.7)' : `translateY(${startOf(i, e)}px)`, opacity: go || !me ? 1 : 0 }}>
           <b className={`pl p${i + 1}`}>{i + 1}</b>
           {thumb(e.species) ? <MsxMonFace species={e.species} colors={e.colors}/> : null}
           <span className="nm">{name(e)}{me ? <small>今回</small> : null}</span>
@@ -84317,7 +84317,7 @@ const MSX_B3_CSS = `
 .msx-b3{position:relative;margin:4px 0 6px;overflow:hidden;flex:none} /* 縦の並びの中で縮ませない(3行が必ず入る) */
 .msx-b3 .slot{position:absolute;left:0;right:0;border-radius:12px;border:1.5px dashed #47556988;display:flex;align-items:center;gap:8px;padding:0 10px}
 .msx-b3 .slot .none{flex:1;text-align:center;color:#94a3b8;font-size:12px;font-weight:800}
-.msx-b3 .row{position:absolute;left:0;right:0;border-radius:12px;background:#0f172a;border:1.5px solid #475569;display:flex;align-items:center;gap:8px;padding:0 10px;transition:transform .8s cubic-bezier(.2,1.2,.4,1)}
+.msx-b3 .row{position:absolute;left:0;right:0;border-radius:12px;background:#0f172a;border:1.5px solid #475569;display:flex;align-items:center;gap:8px;padding:0 10px;transition:transform .6s cubic-bezier(.2,1.2,.4,1),opacity .3s}
 .msx-b3.calm .row{transition:none}
 .msx-b3 .row.me{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788;z-index:2}
 .msx-b3 .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;background:#334155;color:#fff;flex:0 0 auto}
@@ -86589,7 +86589,7 @@ const MSX_KI_CSS = `
 .msx .msx-ki-aura{position:absolute;left:50%;bottom:20%;width:86%;height:66%;transform:translateX(-50%);z-index:1;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,rgba(253,224,71,.55),rgba(251,146,60,.25) 45%,transparent 70%);animation:msxKiAura 1.2s ease-in-out infinite alternate;pointer-events:none}
 .msx .msx-ki-aura.k2{background:radial-gradient(ellipse at 50% 60%,rgba(244,114,182,.55),rgba(96,165,250,.3) 45%,transparent 70%)}
 .msx .msx-ki-ttl{position:absolute;left:0;right:0;top:5%;z-index:4;text-align:center;animation:msxKiDrop .45s cubic-bezier(.2,1.3,.4,1) both}
-.msx .msx-ki-ttl b{display:inline-block;font-size:40px;font-weight:900;letter-spacing:.06em;line-height:1.1;color:#fde047;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12,0 0 18px #fb923c88;padding:2px 14px;border-radius:10px;background:linear-gradient(180deg,#fff7c288,#f59e0b33);border:2px solid #fde68a}
+.msx .msx-ki-ttl b{display:inline-block;max-width:calc(100% - 16px);white-space:nowrap;font-size:min(40px,calc((100cqw - 48px) / 6.8));font-weight:900;letter-spacing:.06em;line-height:1.1;color:#fde047;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12,0 0 18px #fb923c88;padding:2px 14px;border-radius:10px;background:linear-gradient(180deg,#fff7c288,#f59e0b33);border:2px solid #fde68a}
 .msx .msx-ki-ttl span{display:block;margin:6px auto 0;width:78%;font-size:15px;font-weight:900;color:#fff;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:3px 0}
 .msx .msx-ki-sum{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;background:#0f0d24e6;border:1.5px solid #64748b;border-radius:12px;padding:6px 14px 8px;animation:msxKiUp .45s ease-out .35s both}
 .msx .msx-ki-sum .h{font-size:11px;font-weight:900;color:#e2e8f0;text-align:center;display:flex;align-items:center;gap:8px}
@@ -86616,8 +86616,10 @@ const MSX_KI_CSS = `
 .msx .msx-ki-lad .rg.next .mk{left:-18px;color:#fde047;text-shadow:0 0 6px #000}
 .msx .msx-ki-lad .rg.gold{min-height:36px;background:linear-gradient(180deg,#fde68a,#d97706);color:#3b1d05;border-color:#fef3c7;box-shadow:0 0 14px #fbbf2499}
 .msx .msx-ki-lad .rg.gold.next{box-shadow:0 0 18px #fde047,0 0 4px #fff}
-.msx .msx-ki-tap{position:absolute;right:10px;bottom:4px;z-index:5;font-size:11px;font-weight:900;color:#e2e8f0aa;letter-spacing:.1em}
-.msx .msx-ki.st0 .msx-ki-tap{bottom:auto;top:6px}
+.msx .msx-ki-tap{position:absolute;right:10px;bottom:4px;z-index:5;font-size:11px;font-weight:900;color:#e2e8f0;letter-spacing:.1em;padding:1px 8px;border-radius:8px;background:#0f0d24b3}
+/* 章の区切り(段0): 見出しは1行のまま幅に合わせて縮める。TAP は見出しに重ねず、賞金の箱の下に置く(2026-11-20 点検 Q0「第二章 終/了」) */
+.msx .msx-ki.st0 .msx-ki-sum{bottom:26px}
+@container (max-height:330px){.msx .msx-ki-ttl{top:3%}.msx .msx-ki-ttl b{font-size:min(28px,calc((100cqw - 48px) / 6.8))}.msx .msx-ki-ttl span{margin-top:3px;font-size:13px}.msx .msx-ki-sum{padding:3px 12px 4px}.msx .msx-ki-sum .r{margin:0}.msx .msx-ki-sum .r>b{font-size:20px}.msx .msx-ki-sum .r>b>em{font-size:12px}}
 @keyframes msxKiDrop{from{opacity:0;transform:translateY(-18px) scale(.85)}to{opacity:1;transform:none}}
 @keyframes msxKiUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes msxKiAura{from{opacity:.6;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.04)}}
@@ -96492,11 +96494,19 @@ span.mcd{cursor:default}
 // ・台詞は台本エンジン(scn.<助手>.summit.* / end.* / party.* / fx.super)。台本が無い助手は短い既定の文で進む(止まらない)
 // ・保存は芯の s.ending だけ(芯の restore が直す)。run.arcPick / run.arcAfter は画面の中だけの印(保存しない・中断したらもう一度出る)
 const MSX_ARC_CSS = `
+/* 特別演出の待ち(2026-11-20 点検 arc-S5): 押せない間はボタンの形をやめ、理由の字と細い棒だけを出す。棒が満ちたら「次へ」のボタンに替わる */
+.msx .v-ft .arc-wait{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:48px;color:#e2e8f0;font-size:14px;font-weight:900}
+.msx .v-ft .arc-wait>i{display:block;width:60%;height:4px;border-radius:2px;background:linear-gradient(90deg,#f97316 0 0) no-repeat #33415599;background-size:0 100%;animation:arcWaitFill 5.5s linear forwards}
+.msx .v-ft .arc-wait>span{flex:none;background:none;border-radius:0;padding:0;font-size:14px;color:#e2e8f0}
+@keyframes arcWaitFill{to{background-size:100% 100%}}
+@media (prefers-reduced-motion: reduce){.msx .v-ft .arc-wait>i{animation:none;background-size:50% 100%}}
 .msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
 .msx .r3 .arc-foe img{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto}
-.msx .r3 .arc-foe b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 相手の名前は「…」で切らず2行まで出す。組み合わせの理由は見出しと分けて1行に収める(2026-11-20 点検 arc-P2) */
+.msx .r3 .arc-foe b{display:block;font-size:13px;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere}
 .msx .r3 .arc-foe small{display:block;font-size:10px;color:#fbcfe8;font-weight:800}
-.msx .r3 .arc-foe .why{margin-top:3px;font-size:10.5px;color:#fde047;font-weight:900}
+.msx .r3 .arc-foe .why{margin-top:3px;font-size:10.5px;color:#fde047;font-weight:900;white-space:nowrap;line-height:1.3}
+.msx .r3 .arc-foe .why small{display:block;font-size:10px;color:#e2e8f0;font-weight:800}
 .msx .r3 .arc-party{position:absolute;left:0;right:0;top:20%;text-align:center}
 .msx .r3 .arc-party b{display:inline-block;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:99px;padding:6px 18px;font-size:20px;font-weight:900;color:#fff;box-shadow:0 0 20px #fb923c99}
 .msx .r3 .arc-party small{display:block;margin-top:6px;font-size:12px;font-weight:900;color:#fde047;text-shadow:0 1px 0 #000}
@@ -96581,7 +96591,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <MsxMonFace species={opp.species} colors={opp.colors} style={{ height: 64, width: 64, margin: '0 auto' }}/><b>{foe}</b><small>{opp.breeder ? `育て手 ${msxBreederLabel(opp.breeder, opp.rivalKind)}` : msxMonName(opp.species)}</small>
-      <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why"><small>対戦するのは</small>{MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
@@ -96627,7 +96637,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
       </div>
       {/* U-2: 横では絵が左の列に入るので、文の箱を右の列にも出す(縦では出さない) */}
       <div className="v-talk arc-out">{shown.map((l, i) => <div key={`o-${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="go" disabled data-msx-arc-wait>{pages > 1 ? '次へ ▶' : '引退へ ▶'}</button>}</div>}/>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <div className="arc-wait" role="status" data-msx-arc-wait><span>📸 記念写真を撮っているよ… 少し待ってね</span><i aria-hidden="true"/></div>}</div>}/>
   );
 }
 
@@ -146338,7 +146348,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="shrink-0 mb-1 flex items-center gap-2">
                     <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
-                      <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true">{activeGroup.emoji} </span>{jaWrap(activeGroup.label)}</b>
+                      <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>
@@ -147621,7 +147631,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   :<p className="relative inline-block text-[34px] font-black leading-tight" style={{background:'linear-gradient(180deg,#fef3c7,#fbbf24 55%,#b45309)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 14px rgba(251,191,36,.55))'}}>{event.openingLogo.text}</p>}
                   {event.openingLogo.badge&&<span data-story-opening-badge className="ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100">{event.openingLogo.badge}</span>}
                 </div>
-                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
+                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:'storyEndCard 1s ease-out .9s both'}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
                 {prevParts&&<p data-story-opening-prev className="mt-6 text-[11px] font-bold text-slate-400" style={{animation:'storyEndCard 1s ease-out 1.5s both'}}>{storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`,Math.min(storyBoxW,384)-48,11)}</p>}
@@ -147663,10 +147673,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
               style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
               <div className="w-full max-w-sm px-6 text-center">
-                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
-                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'終わり'}</p>
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{paddingLeft:'.4em',animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'終わり'}</p>
                 {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
                   <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
                   <p className="text-[14px] font-black text-white">{storyCenter(`${nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}${nextParts.ep} ${nextParts.sub}`,Math.min(storyBoxW,384)-80,14)}</p>
