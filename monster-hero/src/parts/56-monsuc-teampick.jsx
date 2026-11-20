@@ -80,9 +80,9 @@ function msxTpSupport(mem, SUC) {
     <div className="cap">サポート情報<span>基本値</span></div>
     <div className="msx-md-kv"><b>親密度(はじめ)</b><span>{mem.bond0}</span></div>
     <div className="msx-md-kv"><b>友情タッグの強さ</b><span>+{Math.round(Number(mem.tag) || 0)}%</span></div>
-    <div className="msx-md-kv"><b>得意率</b><span>{Math.round((Number(mem.fav) || 0) * 100)}%</span></div>
+    <div className="msx-md-kv"><b>得意率</b><span>+{Math.round((Number(mem.fav) || 0) * 100)}%{Array.isArray(mem.top) && mem.top[0] ? `(${MSX_STAT_ICON[mem.top[0]] || ''}${MSX_STAT_NAME[mem.top[0]] || ''})` : ''}</span></div>
     {(Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map((k) => (
-      <div key={k} className="msx-md-kv"><b>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</b><span>{ch[k] != null ? `集合率 ${Math.round(ch[k] * 100)}%・` : ''}伸び +{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></div>
+      <div key={k} className="msx-md-kv"><b>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</b><span>{ch[k] != null ? `来やすさ ${Math.round(ch[k] * 100)}%・` : ''}伸び +{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></div>
     ))}
     <div className="msx-note">基本値です。実際の効果は発動条件などで変わります</div>
   </>);

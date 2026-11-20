@@ -3405,7 +3405,35 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     voice('sine',196.00,chord,.7,.7);
     return true;
   };
-  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  // 場面の合図の短い音(2026-11-20 音の点検 F2・F3・F6)。'count' … 演奏前の 3・2・1(1つ数えるごとに1回)/ 'join' … マルチの部屋に
+  // 人やマスモンが加わった / 'mvp' … マルチのみんなの結果で MVP を発表する。守りは playFullCombo と同じ(ノーツの効果音OFF・音量0・全体ミュートでは鳴らさない)。
+  // モンヒロビートの画面は効果音(Audio_.se)の音量を0にしているので、ノーツの音と同じ出口から鳴らす
+  const RHYTHM_CUE_NOTES={count:[[880,0,.09]],join:[[659.25,0,.14],[987.77,.09,.22]],mvp:[[783.99,0,.12],[1046.5,.08,.12],[1318.51,.16,.12],[1567.98,.24,.42]]};
+  const playCue=(kind)=>{
+    const notes=RHYTHM_CUE_NOTES[kind];
+    if(!notes)return false;
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,level=rhythmNoteSeLevel(kind==='count'?.04:.045,settings.volume/100);
+    notes.forEach(([freq,offset,sustain])=>{
+      const start=now+offset,oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type='triangle';
+      oscillator.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(level,start+.008);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);
+      gain.connect(output(audio));
+      oscillator.start(start);
+      oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    });
+    return true;
+  };
+  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
