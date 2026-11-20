@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36502b39f0d3fdf7
+// source-sha256: 35da79aeef2bab0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173931,6 +173931,14 @@ const MSX_CSS = `
 .msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
 .msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+/* 受付の札の下の段: 左に優勝の賞品の印・右に賞金(r1119-052) */
+.msx .v-cup2 .tx .gr{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;min-width:0}
+.msx .v-cup2 .tx .gr .g{flex:none}
+.msx .v-cup2 .pzc{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.msx .v-cup2 .pzc .pc{display:inline-flex;align-items:center;gap:1px;height:20px;padding:0 5px;border-radius:10px;background:#1e293b;border:1px solid #475569;font-size:13px;line-height:1}
+.msx .v-cup2 .pzc .pc.rare{border-color:#f59e0b;background:#3b2a0a}
+.msx .v-cup2 .pzc .pc small{font-size:10px;font-weight:900;color:#e2e8f0;white-space:nowrap}
+.msx .v-cup2.ng .pzc{opacity:.45}
 .msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
 .msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
 .msx .v-cup2 .ok{display:block;color:#86efac;font-size:10.5px;font-weight:900;line-height:1.3}
@@ -185329,6 +185337,44 @@ const MsxR3PrizeBox = ({
     name: x.name
   }))))) : null);
 };
+const msxR3PrizeChips = (SUC, c) => {
+  let all = [];
+  try {
+    all = msxR3Prizes(SUC, c);
+  } catch (e) {
+    all = [];
+  }
+  return all.filter(x => !['g', 'tk', 'rv', 'rvpts'].includes(x.id)).map(x => {
+    const m = /([+＋×][0-9,]+)$/.exec(String(x.name || '').replace(/｜/g, ''));
+    return {
+      ...x,
+      n: m ? m[1] : ''
+    };
+  });
+};
+const MsxR3PrizeChips = ({
+  SUC,
+  c
+}) => {
+  const ch = msxR3PrizeChips(SUC, c);
+  if (!ch.length) return React.createElement("span", {
+    className: "pzc"
+  });
+  const show = ch.slice(0, 4);
+  const more = ch.length - show.length;
+  return React.createElement("span", {
+    className: "pzc",
+    "data-msx-r3-cup-prizes": c.id,
+    "aria-label": `賞品 ${ch.map(x => String(x.name || '').replace(/｜/g, '')).join('・')}`
+  }, show.map(x => React.createElement("span", {
+    key: x.id,
+    className: `pc${x.rare ? ' rare' : ''}`
+  }, React.createElement("span", {
+    className: "i"
+  }, typeof msxItemIco === 'function' ? msxItemIco(x, '15px') : x.e), x.n ? React.createElement("small", null, x.n) : null)), more > 0 ? React.createElement("span", {
+    className: "pc more"
+  }, React.createElement("small", null, "+", more)) : null);
+};
 const MSX_R3_FC_CLASS = Object.freeze({
   easy: 'fc-e',
   good: 'fc-g',
@@ -185534,9 +185580,14 @@ function MsxR3Cup({
       size: 20
     }), React.createElement(MsxRivalThumb, {
       rival: c.rival
-    }), React.createElement("b", null, "ライバル ", c.rival.name), c.rival.breeder ? React.createElement("small", null, msxBreederLabel(c.rival.breeder, c.rival.kind)) : null) : null, React.createElement("span", {
+    }), React.createElement("b", null, "ライバル ", c.rival.name), c.rival.breeder ? React.createElement("small", null, msxBreederLabel(c.rival.breeder, c.rival.kind)) : null) : null, React.createElement("div", {
+      className: "gr"
+    }, React.createElement(MsxR3PrizeChips, {
+      SUC: SUC,
+      c: c
+    }), React.createElement("span", {
       className: "g"
-    }, Number(c.prizeMax) > Number(c.prize) ? React.createElement(React.Fragment, null, React.createElement("small", null, "最大"), msxFmt(c.prizeMax)) : msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement("span", {
+    }, Number(c.prizeMax) > Number(c.prize) ? React.createElement(React.Fragment, null, React.createElement("small", null, "最大"), msxFmt(c.prizeMax)) : msxFmt(c.prize), React.createElement("small", null, "G")))), c.rival ? React.createElement("span", {
       className: "rvb"
     }, "能力ポイント1.5倍") : null);
   }) : React.createElement("div", {
