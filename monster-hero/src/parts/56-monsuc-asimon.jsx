@@ -67,11 +67,11 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0
             <div className="kv" data-msx-asd-support>
               {[['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'],
                 ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'],
-                ['fav', '得意率', `${Math.round((Number(mem.fav) || 0) * 100)}%`, '得意な能力のトレーニングに来やすい。'],
+                ['fav', '得意率', `+${Math.round((Number(mem.fav) || 0) * 100)}%${top[0] ? `(${MSX_STAT_ICON[top[0]] || ''}${MSX_STAT_NAME[top[0]] || ''})` : ''}`, '来たとき、一番得意な能力のトレーニングに行く確率。'], // r1119-054: 1位の得意だけ・強さの段で15〜35%
                 kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => (
                 <button type="button" key={k} className={kvTip === k ? 'on' : ''} aria-expanded={kvTip === k} onClick={() => setKvTip(kvTip === k ? null : k)} data-msx-asd-kv={k}><i>{t}</i><b>{v}</b></button>))}
             </div>
-            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 得意な能力のトレーニングに来やすい。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
+            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
               : <small className="asd-kvn">数字を押すと説明</small>}
             {top.length ? <div className="asd-up" data-msx-asd-up><i>伸びが上がる</i>{top.map((k) => <span key={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]} <b>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</b></span>)}</div> : null}
           </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31b6121b6d609e0e
+// source-sha256: c8d56634a83f0c52
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -178487,10 +178487,10 @@ function msxTpSupport(mem, SUC) {
     className: "msx-md-kv"
   }, React.createElement("b", null, "友情タッグの強さ"), React.createElement("span", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("div", {
     className: "msx-md-kv"
-  }, React.createElement("b", null, "得意率"), React.createElement("span", null, Math.round((Number(mem.fav) || 0) * 100), "%")), (Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map(k => React.createElement("div", {
+  }, React.createElement("b", null, "得意率"), React.createElement("span", null, "+", Math.round((Number(mem.fav) || 0) * 100), "%", Array.isArray(mem.top) && mem.top[0] ? `(${MSX_STAT_ICON[mem.top[0]] || ''}${MSX_STAT_NAME[mem.top[0]] || ''})` : '')), (Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map(k => React.createElement("div", {
     key: k,
     className: "msx-md-kv"
-  }, React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", null, ch[k] != null ? `集合率 ${Math.round(ch[k] * 100)}%・` : '', "伸び +", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), React.createElement("div", {
+  }, React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", null, ch[k] != null ? `来やすさ ${Math.round(ch[k] * 100)}%・` : '', "伸び +", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), React.createElement("div", {
     className: "msx-note"
   }, "基本値です。実際の効果は発動条件などで変わります"));
 }
@@ -188674,7 +188674,7 @@ function MsxR3Retire({
       className: "nw"
     }, "タッグ +", mem.tag, "%"), "・", React.createElement("span", {
       className: "nw"
-    }, "得意率 ", Math.round((mem.fav || 0) * 100), "%")) : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 初めの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
+    }, "得意率 +", Math.round((mem.fav || 0) * 100), "%")) : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 初めの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
       const band = msxR3Band(grade.rank);
       const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {
@@ -190708,7 +190708,7 @@ function MsxAssistDetail({
   }, sub && String(sub).includes(role) ? sub : [role, sub].filter(Boolean).join('・')), React.createElement("div", {
     className: "kv",
     "data-msx-asd-support": true
-  }, [['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'], ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'], ['fav', '得意率', `${Math.round((Number(mem.fav) || 0) * 100)}%`, '得意な能力のトレーニングに来やすい。'], kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => React.createElement("button", {
+  }, [['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'], ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'], ['fav', '得意率', `+${Math.round((Number(mem.fav) || 0) * 100)}%${top[0] ? `(${MSX_STAT_ICON[top[0]] || ''}${MSX_STAT_NAME[top[0]] || ''})` : ''}`, '来たとき、一番得意な能力のトレーニングに行く確率。'], kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => React.createElement("button", {
     type: "button",
     key: k,
     className: kvTip === k ? 'on' : '',
@@ -190721,7 +190721,7 @@ function MsxAssistDetail({
   }, {
     bond: '初めの親密度 … 育成を始めたときの親密度。',
     tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。',
-    fav: '得意率 … 得意な能力のトレーニングに来やすい。',
+    fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。',
     pow: '総合力 … 6つの能力から出す強さ。'
   }[kvTip]) : React.createElement("small", {
     className: "asd-kvn"

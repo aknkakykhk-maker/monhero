@@ -168,7 +168,10 @@
   const TAG_POWER = Object.freeze({ base: 15, G: 20, F: 20, E: 22, D: 22, C: 24, B: 25, A: 27, S: 30, SS: 32, SSS: 32, M: 35, aid: 25 }); // タッグの強さ(%)
   const BOND_START = Object.freeze({ base: 0, G: 10, F: 10, E: 15, D: 15, C: 20, B: 25, A: 30, S: 35, SS: 40, SSS: 40, M: 50 });
   const POS_COEF = [1.0, 0.9, 0.8];
-  const GATHER = Object.freeze({ fav: 0.65, favCap: 0.9, top: [30, 20, 15], else: 20, none: 15, aidRate: 0.6, groupAdd: 0.10, groupMin: 3 });
+  // 得意率 = 来たときに1位の得意の能力のトレーニングへ行く確率(2026-11-20 社長 r1119-054・前は一律65%で上位3つへ分けていた)。
+  //   強さの段(友情タッグの強さ・はじめの親密度と同じ段)で決める。残りはほかの5つへ均等。来ない率(GATHER.none)は別に数える
+  const FAV_BY_RANK = Object.freeze({ base: 0.15, G: 0.15, F: 0.16, E: 0.17, D: 0.19, C: 0.21, B: 0.24, A: 0.27, S: 0.30, SS: 0.32, SSS: 0.34, M: 0.35 });
+  const GATHER = Object.freeze({ fav: 0.15, favCap: 0.45, top: [30, 20, 15], else: 20, none: 15, aidRate: 0.6, groupAdd: 0.10, groupMin: 3 });
   const BOND = Object.freeze({ max: 100, tag: 80, train: 8, aidPerLv: 4, aidStartMax: 40, eventRate: 0.5 }); // 助手のはじめの親密度 = 仲良し度Lv × 4(+人なつっこさ)・最大 40(社長 2026-11-14「最初から80もある。最大40に」)
   const STORY = Object.freeze([{ need: 0, p: 1, bond: 10 }, { need: 40, p: 0.7, bond: 10 }, { need: 60, p: 0.5, bond: 15 }]);
   const LOTTERY = Object.freeze([{ key: 'self', p: 0.4 }, { key: 'rest', p: 0.25 }, { key: 'talk', p: 0.15 }, { key: 'tip', p: 0.1 }, { key: 'pal', p: 0.1 }]);
@@ -747,7 +750,7 @@
       const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
       const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[srank])); });
-      const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
+      const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, num(FAV_BY_RANK[srank], GATHER.fav) + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0)); // 📯得意率アップ(1目盛り +0.5点・45%まで)
       const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi'); const so = lvOf('shutsugen');
       return {
         ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
@@ -838,10 +841,12 @@
     // ---- そのターンの集まり(決まった乱数: 育成の id + ターン) ----
     const cardKey = (kind, stat) => `${kind}:${stat}`;
     // 編成の1体が、得意の1〜3位のトレーニングへ来る確率(0〜1・gatherOf と同じ数え方)。選ぶ画面の表に使う(2026-11-14)
+    const noneOf = (m) => Math.max(0, GATHER.none - num(m && m.none)) / 100; // 来ない率(はじめ15%)
     const gatherChanceOf = (m) => {
       const out = {}; if (!m || !Array.isArray(m.top)) return out;
-      const fav = num(m.fav, GATHER.fav); const unit = fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]);
-      m.top.slice(0, 3).forEach((k, j) => { out[k] = r2(GATHER.top[j] * unit); });
+      // 1位の得意へ来る確率(来ない率を除いた分 × 得意率)。2・3位はほかの能力と同じなので出さない(r1119-054)
+      const fav = num(m.fav, GATHER.fav); const come = 1 - noneOf(m);
+      if (m.top[0]) out[m.top[0]] = r2(come * fav);
       return out;
     };
     const gatherOf = (s) => {
@@ -849,10 +854,9 @@
       const cards = {}; for (const k of KEYS) cards[cardKey('train', k)] = { kind: 'train', stat: k, members: [], aid: false };
       s.team.forEach((m, i) => {
         const x = rng(); const kind = 'train'; rng(); const y = rng(); // 2つ目の乱数は前の形(軽い/重い)の名残。並びを変えないため引くだけ
-        const favUnit = m.fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]); const restUnit = (1 - m.fav) / (GATHER.else + Math.max(0, GATHER.none - num(m.none))); // 🚪トレーニング出現率アップ
-        let a = 0; let stat = null;
-        for (let j = 0; j < 3 && !stat; j++) { a += GATHER.top[j] * favUnit; if (x < a) stat = m.top[j]; }
-        if (!stat) { a += GATHER.else * restUnit; if (x < a) { const others = KEYS.filter(k => !m.top.includes(k)); stat = others[Math.floor(y * others.length)]; } }
+        // 来ない(🚪トレーニング出現率アップで下がる)→ 来たら得意率で1位の得意、それ以外はほかの5つへ均等(r1119-054)。乱数を引く数と順は前と同じ
+        let stat = null; const noneP = noneOf(m);
+        if (x >= noneP) { const z = (x - noneP) / Math.max(1e-9, 1 - noneP); if (z < m.fav) stat = m.top[0]; else { const others = KEYS.filter(k => k !== m.top[0]); stat = others[Math.floor(y * others.length)]; } }
         if (!stat && evMod(s, 'iki', i) && rngOf(s.id, s.turn, 'iki', i)() < evMod(s, 'iki', i)) stat = m.top[0]; // 🤝息ぴったり(並びを変えない別の乱数)
         if (stat) cards[cardKey(kind, stat)].members.push(i);
       });
@@ -2268,7 +2272,7 @@
 
     return Object.freeze({
       events: EV,
-      VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
+      VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, FAV_BY_RANK, BOND, STORY, LOTTERY,
       polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, shugyoMulOf, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, carePreview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
