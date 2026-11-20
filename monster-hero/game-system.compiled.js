@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ccfc90befb6494c7
+// source-sha256: 6b85f965f7a1a807
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162694,7 +162694,8 @@ function MsxBirth({
     style: {
       flex: '1 1 0'
     },
-    "data-msx-birth": st
+    "data-msx-birth": st,
+    onClick: () => setSt(n => Math.min(3, n + 1))
   }, React.createElement("img", {
     className: "bg",
     src: msxSceneBg(s.turn).bg,
@@ -162739,24 +162740,18 @@ function MsxBirth({
     noPeak: true
   })) : null, React.createElement("div", {
     className: "msx-birth-head"
-  }, React.createElement("small", null, fused ? '合体円盤石' : 'ベースモンの円盤石'), st >= 3 ? `${name}が生まれた!` : '円盤石が光りはじめた…'), st < 3 && !calm ? React.createElement("div", {
-    className: "msx-aw-ctl"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(n => Math.min(3, n + 1)),
-    "data-msx-birth-ff": true
-  }, "早送り ⏩"), React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(3),
-    "data-msx-birth-skip": true
-  }, "飛ばす ⏭")) : null), React.createElement("div", {
+  }, React.createElement("small", null, fused ? '合体円盤石' : 'ベースモンの円盤石'), st >= 3 ? `${name}が生まれた!` : null)), React.createElement("div", {
     className: "v-log"
-  }, st >= 3 ? React.createElement(React.Fragment, null, "円盤石から、", React.createElement("b", null, name), "が生まれた! ここから育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
+  }, st >= 3 ? React.createElement(React.Fragment, null, "ここから", React.createElement("b", null, name), "の育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
     className: "v-ft"
-  }, React.createElement("button", {
+  }, st < 3 ? React.createElement("button", {
     type: "button",
     className: "go",
-    disabled: st < 3,
+    onClick: () => setSt(3),
+    "data-msx-birth-skip": true
+  }, "飛ばす ⏭") : React.createElement("button", {
+    type: "button",
+    className: "go",
     onClick: onDone,
     "data-msx-birth-next": true
   }, "育成を始める ▶")));
