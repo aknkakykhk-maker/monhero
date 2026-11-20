@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 460a757edd047b9c
+// generated-sha256: 593c48f9abd7fa68
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84021,6 +84021,7 @@ const MONSUC_FUSE_SLOT_CSS = `
 [data-monsuc-fuse] .mfz-lb{font-size:13px;font-weight:900;color:#f5d0fe}
 [data-monsuc-fuse] .mfz-d{font-size:11px;font-weight:800;color:#cbd5e1;text-align:center;line-height:1.3}
 [data-monsuc-fuse] .mfz-x{align-self:center;font-size:22px;font-weight:900;color:#f0abfc;margin-top:18px}
+[data-monsuc-fuse] .mfz-sm .mfz-slot{width:min(24vw,92px)}[data-monsuc-fuse] .mfz-sm .mfz-x{margin-top:12px}
 @media (max-height:520px){[data-monsuc-fuse] .mfz-slot{width:88px}[data-monsuc-fuse] .mfz-d{display:none}}
 `;
 function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy = null, onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
@@ -84137,16 +84138,15 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           </>)}
           {lockedEl}
         </div>) : plan && plan.ok ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
-          {slots}
+          <div className="mfz-sm">{slots}</div>
           <p className="mt-1.5 text-[12px] font-black text-slate-200">生まれるモンスターの見通し</p>
           <div className="mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
             {/* 生まれる子は④の型の札(中)で大きく(窓-02: 約24pxのアイコンだけで、生まれる喜びが無かった) */}
             {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
-            <p className="text-[13px] font-black">{monsucFuseSpName(plan.child.species)} <small className="text-[11px] text-amber-200">{plan.child.gen}代目 ・ 未育成</small>
-              <small className="block text-[10px] font-bold text-slate-300">型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}(生まれたモンスターの種類の型)</small></p>
+            <p className="text-[14px] font-black text-amber-100">{plan.child.gen}代目<small className="block text-[12px] font-bold text-slate-200">まだ育てていないマスモンとして生まれます</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
-            <p className="mb-1 text-[11px] font-bold text-slate-300">{monsucFuseSpName(plan.child.species)}の初めの能力に、2体の強さに応じた上乗せが付きます(2体ともに強いほど大きく、片方だけ強くてもあまり上がりません)</p>
+            <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseSpName(plan.child.species)}の初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
             {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span>{plan.base[k]} → <b className="text-amber-200">{plan.child.st[k]}</b> <small className="text-fuchsia-200">(+{plan.add[k]})</small></span></p>)}
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
@@ -84158,9 +84158,9 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
-        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 grid-cols-2 gap-2" data-monsuc-fuse-foot>
-          <button type="button" data-mh-back onClick={() => { setMat(null); setSure(0); setErr(''); }} className="min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
-          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
+        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 gap-2" style={{ gridTemplateColumns: '1fr 2fr' }} data-monsuc-fuse-foot>{/* 選び直すのは上の2枠を押す。いちばん押す「合体する」を大きく(API 点検) */}
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="min-h-[48px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
+          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[56px] w-full text-center rounded-xl text-[16px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
         </div>
         : !done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
@@ -84179,7 +84179,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 98d37e086136179a
+// source-sha256: cd8ff1c5e0015cc2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161297,6 +161297,7 @@ const MONSUC_FUSE_SLOT_CSS = `
 [data-monsuc-fuse] .mfz-lb{font-size:13px;font-weight:900;color:#f5d0fe}
 [data-monsuc-fuse] .mfz-d{font-size:11px;font-weight:800;color:#cbd5e1;text-align:center;line-height:1.3}
 [data-monsuc-fuse] .mfz-x{align-self:center;font-size:22px;font-weight:900;color:#f0abfc;margin-top:18px}
+[data-monsuc-fuse] .mfz-sm .mfz-slot{width:min(24vw,92px)}[data-monsuc-fuse] .mfz-sm .mfz-x{margin-top:12px}
 @media (max-height:520px){[data-monsuc-fuse] .mfz-slot{width:88px}[data-monsuc-fuse] .mfz-d{display:none}}
 `;
 function MonsucFuseSheet({
@@ -161617,7 +161618,9 @@ function MonsucFuseSheet({
       minHeight: 0,
       flex: '1 1 auto'
     }
-  }, slots, React.createElement("p", {
+  }, React.createElement("div", {
+    className: "mfz-sm"
+  }, slots), React.createElement("p", {
     className: "mt-1.5 text-[12px] font-black text-slate-200"
   }, "生まれるモンスターの見通し"), React.createElement("div", {
     className: "mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
@@ -161634,17 +161637,21 @@ function MonsucFuseSheet({
       colors: Array.isArray(plan.child.colors) ? plan.child.colors : []
     }
   })) : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
-    className: "text-[13px] font-black"
-  }, monsucFuseSpName(plan.child.species), " ", React.createElement("small", {
-    className: "text-[11px] text-amber-200"
-  }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
-    className: "block text-[10px] font-bold text-slate-300"
-  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', "(生まれたモンスターの種類の型)"))), React.createElement("div", {
+    className: "text-[14px] font-black text-amber-100"
+  }, plan.child.gen, "代目", React.createElement("small", {
+    className: "block text-[12px] font-bold text-slate-200"
+  }, "まだ育てていないマスモンとして生まれます"), React.createElement("small", {
+    className: "mt-1 block text-[12px] font-bold text-slate-200"
+  }, "成長の型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''))), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
     "data-monsuc-fuse-plan": true
   }, React.createElement("p", {
-    className: "mb-1 text-[11px] font-bold text-slate-300"
-  }, monsucFuseSpName(plan.child.species), "の初めの能力に、2体の強さに応じた上乗せが付きます(2体ともに強いほど大きく、片方だけ強くてもあまり上がりません)"), keys.map(k => React.createElement("p", {
+    className: "mb-1 text-[11px] font-bold text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseSpName(plan.child.species), "の初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), keys.map(k => React.createElement("p", {
     key: k,
     className: "flex justify-between text-[12px] font-black"
   }, React.createElement("span", null, names[k]), React.createElement("span", null, plan.base[k], " → ", React.createElement("b", {
@@ -161681,24 +161688,23 @@ function MonsucFuseSheet({
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-err": true
   }, plan && plan.why || 'この2体では合体できません'), !done && SUC && main && mat && plan && plan.ok ? React.createElement("div", {
-    className: "mt-2 grid shrink-0 grid-cols-2 gap-2",
+    className: "mt-2 grid shrink-0 gap-2",
+    style: {
+      gridTemplateColumns: '1fr 2fr'
+    },
     "data-monsuc-fuse-foot": true
   }, React.createElement("button", {
     type: "button",
-    "data-mh-back": true,
-    onClick: () => {
-      setMat(null);
-      setSure(0);
-      setErr('');
-    },
-    className: "min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "選び直す"), React.createElement("button", {
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "min-h-[48px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     onClick: go,
     disabled: !ready || busy,
     "data-monsuc-fuse-go": sure,
     "data-monsuc-fuse-ready": ready ? 1 : 0,
-    className: `disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+    className: `disabled:opacity-50 min-h-[56px] w-full text-center rounded-xl text-[16px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
   }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する')) : !done && React.createElement("button", {
     type: "button",
     onClick: onClose,
@@ -161732,7 +161738,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
