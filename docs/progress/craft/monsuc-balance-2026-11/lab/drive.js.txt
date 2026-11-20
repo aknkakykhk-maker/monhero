@@ -1,0 +1,28 @@
+// 回す: node drive.js <mode> <variant> <from> <to> <workers> <outdir> [teams,comma]
+'use strict';
+const fs = require('fs'); const path = require('path');
+const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
+if (!isMainThread) {
+  const { makeLab } = require('./lab.js');
+  const { variant, from, to, w, W, file, teams } = workerData;
+  const L = makeLab(variant);
+  const fd = fs.openSync(file, 'w'); let n = 0;
+  const jobs = [];
+  if (teams) { for (const t of teams) for (let i = from; i < to; i++) jobs.push([i, t]); } else for (let i = from; i < to; i++) jobs.push([i, null]);
+  for (let j = w; j < jobs.length; j += W) {
+    const [i, t] = jobs[j];
+    let row; try { row = L.runOne(i, t ? { team: t } : {}); } catch (e) { row = { i, team: t, error: String(e && e.stack).slice(0, 300) }; }
+    row.variant = variant; fs.writeSync(fd, JSON.stringify(row) + '\n');
+    if (++n % 500 === 0) parentPort.postMessage(n);
+  }
+  fs.closeSync(fd); parentPort.postMessage('end'); return;
+}
+const [mode, variant, from, to, W, out, teamsArg] = process.argv.slice(2);
+fs.mkdirSync(out, { recursive: true });
+const teams = teamsArg ? teamsArg.split(',') : null;
+const t0 = Date.now(); const prog = {};
+Promise.all(Array.from({ length: +W }, (_, w) => new Promise((res, rej) => {
+  const wk = new Worker(__filename, { workerData: { variant, from: +from, to: +to, w, W: +W, file: path.join(out, `${mode}-${variant}-${w}.jsonl`), teams } });
+  wk.on('message', (m) => { if (m === 'end') res(); else { prog[w] = m; } });
+  wk.on('error', rej);
+}))).then(() => console.log(`${mode} ${variant} 終わり ${Math.round((Date.now() - t0) / 1000)}秒`));

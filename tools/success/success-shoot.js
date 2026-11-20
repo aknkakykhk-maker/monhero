@@ -96,20 +96,22 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
-    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
+    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
+    // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
+    ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
     ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
   // 名指ししたときだけ撮る場面(全サイズで回すと success-layout-check が 600秒を超えるため。2026-11-14)
   //   M3A = 持ち物に育成中の物を全部並べた所 / S4L = 持ちこみで升目を押した所。名前の折れは S4・M3 で全サイズ見張っている
-  const OPT_IN = ['M3A', 'S4L', 'S4E', 'BF2'];
+  const OPT_IN = ['M3A', 'S4L', 'S4E', 'BF2', 'SQE', 'SQT', 'SQV'];
   const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL.filter(([n]) => !OPT_IN.includes(n));
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -134,6 +136,11 @@ const makeRun = async (kind) => {
           window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4, debug: false }));
         }, { kind, mk: makeRun.toString() });
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
+        // SHOT_SEQ=E2,K5 … その場面は操作のたびに1枚撮る(続きの止め絵。見せ場と流れの点検 r1119-033)
+        const seq = SHOT_DIR && (process.env.SHOT_SEQ || '').split(',').includes(name);
+        let seqN = 0;
+        const seqShot = async () => { if (seq) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}~${String(seqN++).padStart(2, '0')}${tag ? `-${tag}` : ''}.png`) }); } };
+        await seqShot();
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             const btn = (re) => [...document.querySelectorAll('.msx button')].find((b) => re.test(b.innerText || '') && !b.disabled);
@@ -323,7 +330,8 @@ const makeRun = async (kind) => {
             return false;
           }, st);
           if (!done) check(`${name}${tag ? `(${tag})` : ''}: 「${st}」のボタンが押せる`, false, JSON.stringify(await page.evaluate(() => window.__scrubInfo || null)));
-          await page.waitForTimeout(350);
+          await page.waitForTimeout(seq ? 900 : 350);
+          await seqShot();
         }
         await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
         if (process.env.SHOT_TINY) { // SHOT_TINY=10: この大きさ(px)より小さい字を、字と className で書き出す(添え字の 8px 探し・④ 2026-11-20)
