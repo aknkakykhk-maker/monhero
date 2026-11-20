@@ -278,16 +278,12 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             const hasA = Array.isArray(assists) && !!AT; const hasI = infoRows.length > 0;
             if (!hasA && !hasI) return null;
             const BT = [['tech', '技'], hasA ? ['assist', 'アシスト'] : null, hasI ? ['info', '育成情報'] : null].filter(Boolean);
-            const sceneName = (sc) => { const f = AT && AT.SCENES ? AT.SCENES.find((x) => x.key === sc) : null; return f ? f.name : ''; };
             const got = hasA ? assists.filter((a) => a && AT.BY_ID[a.id]).map((a) => ({ a: AT.BY_ID[a.id], n: AT.fromSaved(a) })).filter((x) => x.n > 0) : [];
             return (<div className="msx-md-btabs" data-msx-detail-btabs>
               <div className="msx-md-tabs" style={{ gridTemplateColumns: `repeat(${BT.length},1fr)` }}>{BT.map(([k, n]) => <button type="button" key={k} className={btab === k ? 'on' : ''} data-msx-detail-btab={k} onClick={() => setBtab(k)}>{n}</button>)}</div>
               {btab === 'assist' ? (<div className="msx-md-box msx-md-as" data-msx-detail-assist>
                 <div className="cap">取ったアシスト効果<span data-msx-assist-count>{got.length} / {AT.MAX_KINDS}種類</span></div>
-                {got.length ? got.map(({ a, n }) => (<div key={a.id} className={`msx-md-ac${a.type === 'battle' || a.scene === 'cup' ? ' gold' : ''}`} data-msx-assist-card={a.id} data-msx-assist-type={a.type || ''}>
-                  <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
-                  <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b><span className="pips" aria-label={`目盛り ${n}/${a.max}`}><i>{n}</i>/{a.max}</span></div>
-                    <div className="tx">{AT.describe(a.id, n)}</div>{sceneName(a.scene) ? <div className="sc">効く場面: {sceneName(a.scene)}</div> : null}</div></div>))
+                {got.length ? got.map(({ a, n }) => (typeof MsxAssistCard === 'function' ? <MsxAssistCard key={a.id} a={a} n={n}/> : null))
                   : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>アシスト効果はまだありません</div>}</div>) : null}
               {btab === 'info' ? (<div className="msx-md-box" data-msx-detail-info>{infoRows.map(([k, v], i) => <div key={`i${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>)}</div>) : null}
             </div>);
