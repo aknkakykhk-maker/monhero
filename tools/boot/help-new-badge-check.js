@@ -74,7 +74,7 @@ const openHome = async (page) => {
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.locator('[data-mh-help]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(500);
     const catNew = await page.evaluate(() => [...document.querySelectorAll('[data-help-new]')].map(b => b.closest('button')?.innerText.split('\n')[0] || ''));
     check('① カテゴリに🆕が付く', catNew.length > 0, catNew.join(' / '));
@@ -88,7 +88,7 @@ const openHome = async (page) => {
     const first = topicNew[0];
     await page.evaluate(() => document.querySelector('[data-help-new]')?.closest('button')?.click());
     await page.waitForTimeout(500);
-    await page.getByRole('button', { name: '項目一覧へ' }).dispatchEvent('click');
+    await page.getByRole('button', { name: '項目一覧へ', exact: true }).dispatchEvent('click'); // 上の戻る「項目一覧へ戻る」(r1119-025)と区別する
     await page.waitForTimeout(500);
     const after = await page.evaluate(() => [...document.querySelectorAll('[data-help-new]')].map(b => b.closest('button')?.innerText.split('\n')[0] || ''));
     check('② 開いた項目の🆕は消える', !after.includes(first) && after.length === topicNew.length - 1, `${first} → 残り ${after.join(' / ') || 'なし'}`);
