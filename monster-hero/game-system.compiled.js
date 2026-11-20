@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 77a0af370bae40b4
+// source-sha256: c5bcf6b2f3d21292
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163465,7 +163465,7 @@ function MsxDex({
       onClick: () => chosen ? setChosen(null) : setOpen(null),
       "data-msx-dex-back": true
     }, chosen ? '← 選ぶ前に戻る' : '← 一覧へ戻る') : null
-  }, React.createElement("div", {
+  }, open ? null : React.createElement("div", {
     className: "mdx-bar"
   }, React.createElement("i", {
     style: {
@@ -163497,7 +163497,10 @@ function MsxDex({
       key: i
     }, i ? React.createElement("br", null) : null, w))), React.createElement("small", null, n, "/", L.length));
   })), tab === 'story' && !open ? React.createElement("div", {
-    className: "mdx-aids"
+    className: "mdx-aids",
+    style: {
+      gridTemplateColumns: `repeat(${Math.max(1, aids.length)},minmax(0,1fr))`
+    }
   }, aids.map(a => {
     const L = list.story.filter(x => x.aid === a);
     const op = aidOpen(a);
@@ -163515,7 +163518,7 @@ function MsxDex({
     }, typeof msxFace === 'function' ? React.createElement("img", {
       src: msxFace(a, 'normal'),
       alt: ""
-    }) : null, op ? null : React.createElement("em", null, "🔒")), React.createElement("b", null, typeof msxAidName === 'function' ? msxAidName(a) : a), React.createElement("small", null, op ? `${L.filter(x => seen.ev[x.id]).length}/${L.length}` : '準備中'));
+    }) : null, op ? null : React.createElement("em", null, "🔒")), React.createElement("b", null, typeof msxAidName === 'function' ? msxAidName(a) : a), React.createElement("small", null, op ? `${L.filter(x => seen.ev[x.id]).length}/${L.length}` : '近日'));
   })) : null, open ? React.createElement("div", {
     className: "mdx-read msx-dex-read",
     "data-msx-dex-read": open.id
@@ -163592,7 +163595,7 @@ function MsxDex({
       alt: ""
     }) : TAB_ICON[tab] || '📄' : st === 'lock' ? '🔒' : '？'), React.createElement("span", {
       className: "tx"
-    }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ›' : st === 'lock' ? '準備中' : 'まだ'));
+    }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ›' : st === 'lock' ? '近日追加' : '未発見'));
   }) : React.createElement("div", {
     className: "mdx-none"
   }, "まだありません")));
@@ -163608,12 +163611,21 @@ const MSX_DEX_CSS = `
 .msx-dex .mdx-tabs,.mdx .mdx-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;touch-action:auto}
 .mdx .mdx-tabs button{min-width:0;padding:5px 2px 4px}
 .mdx .mdx-tabs button .n{font-size:12px;line-height:1.15;white-space:nowrap;text-align:center;min-height:2.3em;display:flex;align-items:center}
-.mdx .mdx-tabs{row-gap:6px}
+.mdx .mdx-tabs{row-gap:5px;column-gap:4px;border-bottom:0;margin:0}
+/* 選んでいない札にも枠を付け、押して切り替える物と分かるようにする。数は明るく */
+.mdx .mdx-tabs button{border:1.5px solid #334155;border-radius:10px;margin:0;background:#1e1a36;padding:3px 2px}
+.mdx .mdx-tabs button.on{border-color:#fb923c;background:linear-gradient(180deg,#fb923c33,#1e1a36)}
+.mdx .mdx-tabs button .i{font-size:15px}.mdx .mdx-tabs button small{font-size:11px;color:#cbd5e1}
+/* キャラは顔を小さくして1行に全員(一覧に高さを回す) */
+.mdx .mdx-aids{gap:2px}
+.mdx .mdx-aids .f{width:min(38px,100%);height:auto;aspect-ratio:1}
+.mdx .mdx-aids b{font-size:11px;overflow:hidden;text-overflow:clip}.mdx .mdx-aids small{font-size:10.5px;color:#cbd5e1;white-space:nowrap}
+.mdx-row .tx small{color:#cbd5e1}
 .mdx-tabs button{flex:0 0 auto;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 8px 5px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;color:#94a3b8;font-weight:900}
 .mdx-tabs button .i{font-size:17px;line-height:1}.mdx-tabs button .n{font-size:12px;white-space:nowrap}.mdx-tabs button small{font-size:10px;color:#64748b}
 .mdx-tabs button.on{color:#fff;border-bottom-color:#fb923c;background:linear-gradient(180deg,#0000,#fb923c22)}
 .mdx-tabs button.on small{color:#fdba74}
-.mdx-aids{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 4px;padding:2px 2px 4px;flex:none}
+.mdx-aids{display:grid;gap:6px 2px;padding:2px 2px 4px;flex:none}
 .mdx-aids::-webkit-scrollbar{display:none}
 .mdx-aids button{min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;color:#e2e8f0}
 .mdx-aids .f{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#1e1a36;border:3px solid #334155;box-sizing:border-box}
