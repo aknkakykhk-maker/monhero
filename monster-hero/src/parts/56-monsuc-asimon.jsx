@@ -42,13 +42,13 @@ function MsxAssistCard({ a, n }) {
 }
 
 // rec … 保存枠の子(ボックス・メモモン)。フレンドは null / mem … 芯の memberOf の結果 / kind … 'box' | 'memo' | 'friend' | 'base'
-function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = null, onClose }) {
+function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0, droppedNames = [], onMore = null, onClose }) {
   msxAsdEnsureCss();
   const AT = msxAsAT();
   const assists = mem && Array.isArray(mem.assists) && mem.assists.length ? mem.assists : rec && Array.isArray(rec.assists) ? rec.assists : [];
   const got = AT ? assists.filter((x) => x && AT.BY_ID[x.id]).map((x) => ({ a: AT.BY_ID[x.id], n: AT.fromSaved(x) })).filter((x) => x.n > 0) : [];
   // ベースモンはアシスト効果を持たないので、札の切り替えを出さず能力だけ見せる(「持ちません」の1文だけの札だった。r1119-033 窓-48)
-  const [tab, setTab] = useState(got.length && kind !== 'base' ? 'assist' : 'stat');
+  const [tab, setTab] = useState((got.length && kind !== 'base') || dropped > 0 ? 'assist' : 'stat'); // 確かめで外れたフレンドは理由の文をアシストの札に出す
   const [kvTip, setKvTip] = useState(null); // 4つの数字の札を押すと、その言葉の説明を1行で出す(長い説明の段落をやめた・育-08)
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : { species: mem.species };
@@ -56,7 +56,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
   const role = kind === 'friend' ? 'フレンド' : kind === 'memo' ? 'メモモン' : kind === 'base' ? 'ベースモン' : kind === 'team' ? '編成' : 'マスモン';
   const top = Array.isArray(mem.top) ? mem.top.slice(0, 3) : [];
   return (
-    <div className="msx-ov msx-fade msx-asd-ov" data-msx-assist-detail onClick={onClose}>
+    <div className="msx-ov msx-fade msx-asd-ov" data-msx-assist-detail role="dialog" aria-modal="true" onClick={onClose}>
       <div className="msx-sheet msx-asd" onClick={(e) => e.stopPropagation()}>
         <h3>アシスト詳細</h3>
         <div className="msx-asd-top">
@@ -82,7 +82,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
           {tab === 'assist' ? (got.length ? <>
             <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類)</div>
             {got.map(({ a, n }) => <MsxAssistCard key={a.id} a={a} n={n}/>)}</>
-            : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : 'アシスト効果はまだありません'}</div>)
+            : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : dropped > 0 ? `このモンスターのアシスト効果(${droppedNames.length ? droppedNames.join('・') : `${dropped}つ`})は、能力から取れる強さを超えているため、編成に入れても効きません。伸びが上がる能力だけ効きます` : 'アシスト効果はまだありません'}</div>)
             : <div className="msx-asd-st" data-msx-asd-stats>{MSX_STATS.map((k) => <span key={k}><i>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</i><b>{Math.round((mem.stats && mem.stats[k]) || 0)}</b></span>)}</div>}
         </div>
         <button type="button" className="msx-dt-close" data-msx-asd-close onClick={onClose}>閉じる</button>
