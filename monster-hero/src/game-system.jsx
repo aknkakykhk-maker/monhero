@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b524d1618cc4c786
+// generated-sha256: a78d203cd9291b69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85506,7 +85506,7 @@ const MSX_BETA_CSS = `
 const MSX_STORIES = Object.freeze([
   Object.freeze({
     id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: 'ヒーローズファイナル',
-    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
+    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる。', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
     about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
     rows: Object.freeze([
       ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'],
@@ -85590,7 +85590,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
         <div className="scn-tx">
           <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
-          <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
+          <div className="scn-ld"><div style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{typeof jaWrap === 'function' ? jaWrap(t) : t}</React.Fragment>)}</div></div>{/* 言葉の途中で折らない(API 点検: 「日ま/で」と折れた) */}
           <div className="scn-dt">
             {many ? <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div> : null}
             {many ? null : <span className="scn-note">ほかのストーリーは 準備中です</span>}
@@ -89860,6 +89860,7 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
 .msx .v-sum .v-sumsub{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx .v-s6det{margin-top:2px}.msx .v-s6det>summary{display:flex;align-items:center;min-height:44px;cursor:pointer;color:#7dd3fc;font-size:12px;font-weight:900}.msx .v-s6det .v-s6row{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;padding:2px 0;border-top:1px solid #3b3566}.msx .v-s6det .v-s6row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
@@ -89943,8 +89944,8 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:4px 10px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
+.msx .v-sum .k{min-width:46px;font-size:12px;color:#fbcfe8;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:6px 12px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
@@ -92386,7 +92387,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}</span>{/* 題はストーリーの行の1つだけ(再点検 msx-S6: 題が2つ並んでいた) */}<span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       {/* 何に何を足すのかを言葉で(「初めの上乗せ」だけでは伝わらなかった) */}
-      <div className="v-sum"><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small></> : '編成のモンスターからの足し分はありません'}</span></div>
+      <div className="v-sum v-s6add" data-msx-s6-add><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small>
+        {/* どの子から何が来たかの内訳(API 点検: 式だけでは分からない)。押すと開く */}
+        <details className="v-s6det"><summary>内訳を見る</summary>{members.map((m, i) => (m.startAdd && m.startAdd.v > 0 ? <span key={i} className="v-s6row"><b>{m.name || msxMonName(m.species)}</b>{`${MSX_STAT_NAME[m.startAdd.stat]} +${m.startAdd.v * startMul}`}</span> : null))}</details></> : '編成のモンスターからの足し分はありません'}</span></div>
       {capUp.length ? <div className="v-sum" data-msx-start-cap><span className="k">能力の上限</span><span>{capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・')}</span></div> : null}
       <button type="button" className="v-big" onClick={start}>🌱 育成を始める</button>
       </div>

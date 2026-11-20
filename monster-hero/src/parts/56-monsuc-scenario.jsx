@@ -9,7 +9,7 @@
 const MSX_STORIES = Object.freeze([
   Object.freeze({
     id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: 'ヒーローズファイナル',
-    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
+    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる。', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
     about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
     rows: Object.freeze([
       ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'],
@@ -93,7 +93,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
         <div className="scn-tx">
           <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
-          <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
+          <div className="scn-ld"><div style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{typeof jaWrap === 'function' ? jaWrap(t) : t}</React.Fragment>)}</div></div>{/* 言葉の途中で折らない(API 点検: 「日ま/で」と折れた) */}
           <div className="scn-dt">
             {many ? <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div> : null}
             {many ? null : <span className="scn-note">ほかのストーリーは 準備中です</span>}
