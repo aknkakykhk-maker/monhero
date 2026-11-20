@@ -673,6 +673,10 @@
       "role": "モンヒロサクセス: モンスター表示の共通の型(r1119-017)。札 MonsucMonCard(大きさ s/m/l・縦長 3:4・得意な能力・評価・名前と Lv の帯・下の帯)と升目 MonsucCardGrid。決まりは docs/spec/MONSUC_UI.md の 8"
     },
     {
+      "file": "56-monsuc-asimon.jsx",
+      "role": "モンヒロサクセス: アシモン専用の見せ方(r1119-011)。アシスト詳細 MsxAssistDetail(大の札・はじめの親密度・友情タッグ・得意率・総合力・アシスト効果/能力のタブ)と、アシスト効果の札 MsxAssistCard(目盛りに名前・上限は押して開く。ボックスの詳細も共通)。保存は増やさない"
+    },
+    {
       "file": "56-monhero-success-arc.jsx",
       "role": "モンヒロサクセス: 助手1人分のストーリーの画面(頂への道の相手えらび MsxArcPick・試合のあとの掛け合い MsxArcAfter・エンディングとお祝いと特別演出 MsxArcEnding)。表は data/monhero-success-arc.js・計算は芯。保存は芯の s.ending だけ。公開の印 monheroSuccess の後ろ"
     },

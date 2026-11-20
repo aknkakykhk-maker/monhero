@@ -1403,5 +1403,26 @@ const MSX_CSS = `
 .msx .msx-ef-mrow .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .msx .msx-ef-mrow .chips span{font-size:11px;font-weight:800;background:#0f172a;border:1px solid #475569;border-radius:8px;padding:2px 7px}.msx .msx-ef-mrow .chips span b{color:#fde68a}
 .msx .msx-ef-mrow .chips span.dim{opacity:.5}.msx .msx-ef-mrow .chips .none{color:#94a3b8}
+/* Muse id51(④段3): 技詳細の項目名の列を中身の幅に合わせる。8.1em 固定だと、いちばん長い「クリティカル率」の行だけ値が右へずれていた。
+   技詳細の欄(.msx-md-td)を2列の grid にし、各行は subgrid で同じ列に載せる(subgrid の無い端末は今までの 8.1em のまま) */
+@supports (grid-template-columns:subgrid){
+.msx-md-td{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:8px}
+.msx-md-td>*{grid-column:1/-1}
+.msx-md-td>.msx-md-kv{display:grid;grid-template-columns:subgrid;gap:normal;align-items:baseline}
+.msx-md-td>.msx-md-kv>b{min-width:0}
+}
+/* r1119-019: 甘え度・恐れ度が何で動いたか(上の帯の右の短い字・能力のページの一覧) */
+.msx .v-b3:has(.v-lw){flex-wrap:wrap;row-gap:1px}
+.msx .v-b3 .v-lw{margin-left:auto;color:#fde68a;font-size:10.5px} /* 入らないときは次の行の右へ(字は切らない) */
+.msx .v-b3 .v-lw small{font-size:10.5px;color:#cbd5e1;font-weight:800;white-space:nowrap}
+.msx .v-lwl .r{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
+.msx .v-lwl .r i{flex:none;font-style:normal;color:#94a3b8;width:4.6em}.msx .v-lwl .r span{flex:1;min-width:0}.msx .v-lwl .r b{flex:none;color:#fde68a}
+.msx .v-come:has(.msx-cm-tap){gap:4px}
+.msx .msx-cm-tap::after{display:none}
+.msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:44px} /* 編成のモンスターの札(押すとアシスト詳細) */
+/* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
+.msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
+.msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
+.msx .msx-tp-bar .msx-pt-s select{max-width:66px}
 `;
 

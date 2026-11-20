@@ -90,7 +90,14 @@ function msxTpSupport(mem, SUC) {
 // 詳細(長押し・「効果・詳細」ボタン)。部品は MsxMonDetail をそのまま使う(中は触らない)
 //   保存済みアシストを渡してアシストのタブから開き、サポート情報(基本値)を技・アシストの手前に出す。開閉で選択・編成は変えない
 function MsxTpDetail({ it, SUC, onClose }) {
+  const [more, setMore] = useState(false); // 「技・素質」で今までの詳細(MsxMonDetail)を重ねて開く
   if (!it || typeof MsxMonDetail !== 'function') return null;
+  // r1119-011: 先にアシモン専用の見せ方(アシスト詳細)。技・素質はそこから
+  if (!more && it.mem && typeof MsxAssistDetail === 'function') {
+    const m0 = it.rec;
+    return <MsxAssistDetail rec={m0} mem={it.mem} kind={it.kind} name={m0 ? (m0.nick || msxMonName(m0.species)) : msxMonName(it.species)}
+      sub={m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン'} onMore={() => setMore(true)} onClose={onClose}/>;
+  }
   const m = it.rec;
   const assists = it.mem && Array.isArray(it.mem.assists) && it.mem.assists.length ? it.mem.assists : (m && Array.isArray(m.assists) && m.assists.length ? m.assists : null);
   const support = it.mem ? msxTpSupport(it.mem, SUC) : null;
@@ -172,7 +179,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
-            <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={at >= 0 ? at + 1 : null} note={mk && mk.c !== 'in' ? mk.n : null}
+            <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={mk && mk.c !== 'in' ? mk.n : null}
               num={x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : ''}
               attrs={{ 'data-msx-tp-item': x.key, ...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {}) }}
               onClick={() => setCand(on ? null : x.slot)}/>); })}</MonsucCardGrid>
