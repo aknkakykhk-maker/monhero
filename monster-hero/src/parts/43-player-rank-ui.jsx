@@ -291,6 +291,11 @@ const ensurePlayerRankXpBarCss = () => {
 const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
 // 2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」: 棒が画面に入るまでは前の量で止めておき、
 // 見えたところで動き出す(onStart)。見えているかを調べられない端末では、すぐ動かす
+// 数え上げの音(2026-11-20 音の点検 F4): ボタンの音を0.03秒おきに連打していた → 専用の xpTick を、前の音から PLAYER_RANK_XP_TICK_GAP_MS 以上空けて鳴らす
+const PLAYER_RANK_XP_TICK_GAP_MS = 90;
+const playerRankXpTickDue = (run, now) => { if (!run || !Number.isFinite(now)) return false; if (Number.isFinite(run.lastTickAt) && now - run.lastTickAt < PLAYER_RANK_XP_TICK_GAP_MS) return false; run.lastTickAt = now; return true; };
+// 伸び終わりに trainingReward を鳴らすか(ランクが上がって演出を出す側 onFull があるときは、演出のごほうびの音に任せる)
+const playerRankXpFinalSe = (rankUp, hasFullFx) => !(rankUp && hasFullFx);
 function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -368,7 +373,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
       later(() => {
         // 数字を弾ませながら数え上げる(数が変わるたびに小さい音)
         const t0 = performance.now(); let last = -1;
-        const step = (now) => { if (!run.running) return; const kk = Math.min(1, (now - t0) / 320), val = Math.round(before + p.xp * kk); if (val !== last) { last = val; setView((v) => ({ ...v, shown: val })); bumpAdd('bump'); if (val % 3 === 0) se('tap'); } if (kk < 1) requestAnimationFrame(step); };
+        const step = (now) => { if (!run.running) return; const kk = Math.min(1, (now - t0) / 320), val = Math.round(before + p.xp * kk); if (val !== last) { last = val; setView((v) => ({ ...v, shown: val })); bumpAdd('bump'); if (playerRankXpTickDue(run, now)) se('xpTick'); } if (kk < 1) requestAnimationFrame(step); };
         requestAnimationFrame(step);
         boom();
         if (crossesHere) {
@@ -391,7 +396,8 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
       if (crossesHere) crossed = true;
       t += crossesHere ? 1150 : 480;
     });
-    later(() => { bumpAdd('final'); sparks(10); se('trainingReward'); }, t + 150);
+    // 伸び終わりのごほうびの音は、ランクが上がって画面いっぱいの演出が出るときは鳴らさない(演出の割れる音・ファンファーレ・ごほうびの音と重なるため。2026-11-20 音の点検 F5)
+    later(() => { bumpAdd('final'); sparks(10); if (playerRankXpFinalSe(rankUp, !!onFull)) se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
   }, [seen]);
