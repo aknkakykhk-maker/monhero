@@ -403,6 +403,91 @@ const MSX_CSS = `
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
 .msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
+.msx .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px 6px;padding:2px 2px 6px}
+.msx .v-grid6.pk1 .v-g6n{font-size:10.5px;transform:none;overflow:hidden;text-overflow:clip;letter-spacing:-.04em}
+.msx .v-body.p1 .v-gridw{margin-top:2px;border-radius:12px;background:#0f0d2466;padding:0 4px}
+.msx .v-p1sel{flex:none;display:flex;gap:8px;padding:7px;margin-top:6px}
+.msx .v-p1art{position:relative;flex:0 0 31%;min-height:128px;border-radius:11px;overflow:hidden;background:#0f0d24;border:1px solid #4a4380}
+.msx .v-p1art .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 80%}
+.msx .v-p1art .mon{position:absolute;left:4%;right:4%;top:6%;bottom:3%;width:92%;height:91%;object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 6px 4px #0009)}
+.msx .v-p1info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.msx .v-p1hd{display:flex;align-items:center;gap:6px}
+.msx .v-p1hd .nm{flex:1;min-width:0;font-size:17px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-p1grow{font-size:11px;line-height:1.35;color:#cbd5e1}
+.msx .v-p1grow .k{display:inline-block;margin-right:5px;padding:0 6px;border-radius:6px;background:#2e2856;color:#f9a8d4;font-weight:900;font-size:10.5px}
+.msx .v-p1grow b{margin-right:5px;font-size:12.5px}
+.msx .v-p1grow .v{font-weight:700}
+.msx .v-p1st{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 8px}
+.msx .v-p1st .r{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:4px;min-width:0}
+.msx .v-p1st .n{font-size:10.5px;color:#cbd5e1;font-weight:800;white-space:nowrap}
+.msx .v-p1st b{font-size:14px;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.msx .v-p1st .g{font-style:normal;font-weight:900;font-size:12px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;background:#334155;color:#cbd5e1}
+.msx .v-p1st .g.ghi{background:#facc15;color:#1f1300}.msx .v-p1st .g.gmd{background:#22c55e;color:#04210f}.msx .v-p1st .g.gmid{background:#475569;color:#f1f5f9}.msx .v-p1st .g.glo{background:#1e293b;color:#94a3b8}
+.msx .v-p1st .bar{grid-column:1/-1;height:4px;border-radius:3px;background:#0f172a;overflow:hidden}
+.msx .v-p1st .bar span{display:block;height:100%;border-radius:3px}
+.msx .v-p1note{font-size:10px;color:#94a3b8;line-height:1.3}.msx .v-p1note b{color:#fde047}
+.msx .v-p1main{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.msx .v-p1main>*{flex:none}
+.msx .v-p1main>.v-gridw{flex:1 1 0;min-height:0}
+.msx .v-p1bar>.msx-pt{margin-top:6px}
+.msx .v-p1lg{font-style:normal}
+.msx.land .v-body.p1>*{min-width:0}
+/* 横: 左に選んだモンスター(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
+.msx.land .v-body.p1{grid-template-columns:36% minmax(0,1fr);grid-template-rows:min-content 1fr}
+.msx.land .v-body.p1>.v-p1main{grid-row:2}
+.msx.land .v-body.p1>.v-p1sel{grid-column:1;grid-row:1/-1;margin-top:5px;min-height:0;flex-direction:column;gap:5px}
+.msx.land .v-body.p1 .v-p1art{flex:1 1 0;min-height:60px}
+.msx.land .v-body.p1 .v-p1info{flex:none}
+.msx.land .v-body.p1 .v-h small{display:none}
+.msx.land .v-p1bar{display:flex;gap:6px;align-items:center;margin-top:5px}
+.msx.land .v-p1bar>.v-tabs{flex:0 1 auto;margin-top:0}
+.msx.land .v-p1bar>.v-tabs button{padding:4px 10px}
+.msx.land .v-p1bar>.msx-pt{flex:1 1 0;margin-top:0;flex-wrap:nowrap}
+.msx.land .v-p1bar .msx-pt-c{display:none}
+.msx.land .v-p1lg{display:none}
+.msx .v-p1grow .v .w{white-space:nowrap}
+.msx .v-body.p1.few .v-p1main{flex:none}
+.msx .v-body.p1.few .v-p1main>.v-gridw{flex:none;overflow:visible}
+.msx .v-body.p1.few>.v-p1sel{flex:1 1 0;min-height:0}
+.msx .v-body.p1.few>.v-p1sel{flex-direction:column}
+.msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
+.msx .v-body.p1.few .v-p1info{flex:none}
+.msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+/* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
+   絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
+.msx .v-lmain{display:contents}
+.msx.land .v-body.one{display:flex}
+.msx.land .v-body.lg3{grid-template-rows:min-content min-content minmax(0,1fr)}
+.msx.land .v-body.lg3>.v-lmain{display:flex;flex-direction:column;grid-row:3;min-height:0;overflow-y:auto;gap:0}
+.msx.land .v-body.lg3>.v-lmain>*{flex:none}
+.msx.land .v-body.lg3>.v-lmain>.v-card{max-height:none!important;overflow:visible!important}
+.msx.land .v-body.lg3>.v-scene{min-height:0}
+.msx.land .v-body.lg3>.v-lmain>.v-big{position:sticky;bottom:0;z-index:2;flex:none}
+.msx .v-faces .v-soon1{flex:3;align-self:center;min-height:52px;display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:14px;border:1px dashed #64748b;background:#1e1a36;cursor:pointer}
+.msx .v-faces .v-soon1 .fs{display:flex;flex:none}
+.msx .v-faces .lk.soon.v-soon1 .fs img{filter:grayscale(1) brightness(.75);width:34px;height:34px;margin-left:-8px;border-width:1.5px}.msx .v-faces .v-soon1 .fs img:first-child{margin-left:0}
+.msx .v-faces .lk.soon.v-soon1 b{position:static;flex:1;text-align:left;font-size:11px;font-weight:900;color:#cbd5e1;line-height:1.3;background:none;padding:0}
+.msx .v-faces>button{flex:0 0 56px}
+.msx .v-nobring{font-size:12px;line-height:1.5;color:#e2e8f0}.msx .v-nobring b{color:#fde047}
+.msx .v-shopgo,.msx .v-allgo{display:flex;align-items:center;justify-content:center;text-align:center}
+.msx .v-shopgo{margin-top:6px;min-height:44px;border-radius:12px;border:1.5px solid #f472b6;background:#3b1736;color:#fbcfe8;font:inherit;font-size:13px;font-weight:900}
+.msx .v-allgo{margin-top:6px;min-height:44px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;font:inherit;font-size:12px;font-weight:800}
+.msx.land .v-body.one .v-bag{grid-template-columns:repeat(2,minmax(0,170px))}
+.msx.land .v-body.one .v-bag div{aspect-ratio:auto;height:64px}
+.msx.land .v-body.one .v-igrid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.msx.land .v-body.one .v-faces>button{flex:0 0 52px}
+.msx.land .v-body.one .v-faces .v-soon1{flex:0 1 280px}
+.msx.land .v-body.one .v-sc .pic{width:150px;min-height:150px}
+/* 小さい横(高さ340以下): 右の列は見出しから一覧までまとめて縦に流す(r1115-195 低い画面は1画面にこだわらない) */
+@media (max-height:340px){
+  .msx.land .v-body.p1>.v-p1main{overflow-y:auto}
+  .msx.land .v-body.p1 .v-p1main>.v-gridw{flex:none;overflow:visible}
+  .msx.land .v-body.p1 .v-p1bar{flex-wrap:wrap}
+  .msx.land .v-body.p1 .v-p1bar>.v-tabs{flex:1 1 100%}
+  .msx.land .v-body.p1 .v-p1note{display:none}
+  .msx.land .v-body.p1 .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
+  .msx.land .v-body.p1 .v-p1st b{font-size:12.5px}
+}
 .msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-apt div{background:#0f172a;border-radius:8px;padding:3px 0;white-space:nowrap;line-height:1.3}.msx .v-apt b{display:block;font-size:13px;color:#fde047}.msx .v-apt div.lo b{color:#94a3b8}
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}

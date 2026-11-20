@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11f252b2aaa362bd
+// source-sha256: e8a6ebb7299fc24c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161802,6 +161802,118 @@ function MonsucShopList({
     });
   }));
 }
+function MonsucCarryShop({
+  onClose
+}) {
+  const [points, setPoints] = React.useState(0);
+  const [sheet, setSheet] = React.useState(null);
+  const [sheetQuantity, setSheetQuantity] = React.useState(1);
+  const [sheetPending, setSheetPending] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const boughtRef = React.useRef(false);
+  const busyRef = React.useRef(false);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const p = await loadRhythmEventPoints();
+        if (alive) setPoints(Math.max(0, Math.floor(Number(p) || 0)));
+      } catch (e) {}
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const openSheet = next => {
+    setError('');
+    setSheetQuantity(1);
+    setSheet(next);
+  };
+  const closeSheet = () => {
+    if (!sheetPending) setSheet(null);
+  };
+  const onExchange = async (offer, count) => {
+    if (busyRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    busyRef.current = true;
+    try {
+      const r = await monsucShopBuy(offer.id, count);
+      if (r && r.ok) {
+        boughtRef.current = true;
+        setPoints(r.eventPoints);
+      } else setError(monsucShopReasonText(r && r.reason));
+      return r;
+    } catch (e) {
+      setError(monsucShopReasonText('save'));
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      busyRef.current = false;
+    }
+  };
+  const confirmSheet = async count => {
+    if (!sheet || sheetPending) return;
+    setSheetPending(true);
+    try {
+      const result = await sheet.confirm(count);
+      if (result === true || result && result.ok) setSheet(null);
+    } finally {
+      setSheetPending(false);
+    }
+  };
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[60] flex flex-col text-white",
+    style: {
+      background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)',
+      paddingTop: 'var(--mh-sa-top)',
+      paddingBottom: 'var(--mh-sa-bottom)'
+    },
+    "data-msx-carry-shop": true
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 px-3 pt-3"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => onClose(boughtRef.current),
+    className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
+  }, "← 戻る"), React.createElement("div", {
+    className: "text-[13px] font-black text-pink-300"
+  }, "🌱 モンヒロサクセス"), React.createElement("div", {
+    className: "ml-auto text-[12px] font-black text-violet-200"
+  }, "🎟️ ", points.toLocaleString(), " ビートP")), React.createElement("div", {
+    className: "px-3 pt-2"
+  }, React.createElement("div", {
+    className: "text-[18px] font-black"
+  }, "🛒 ビートP交換所"), React.createElement("div", {
+    className: "text-[11px] text-slate-300 leading-snug"
+  }, "持ちこみの品をビートPと交換できます。交換した物は、戻った先の「持ちこみ」でそのまま選べます")), React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto px-3 py-2"
+  }, React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, React.createElement(MonsucShopList, {
+    points: points,
+    busy: sheetPending,
+    disabled: sheetPending,
+    openSheet: openSheet,
+    onExchange: onExchange
+  }))), sheet && typeof MarketPurchaseSheet === 'function' ? React.createElement(MarketPurchaseSheet, {
+    item: sheet.item,
+    balance: points,
+    stackable: !!sheet.stackable,
+    countUnit: sheet.countUnit || '個',
+    grantAmount: sheet.grantAmount || 0,
+    grantUnit: sheet.grantUnit || '',
+    quantity: sheetQuantity,
+    onQuantity: setSheetQuantity,
+    pending: sheetPending,
+    error: error,
+    onConfirm: confirmSheet,
+    onCancel: closeSheet
+  }) : null);
+}
 const msxB3Row = () => typeof window !== 'undefined' && window.innerHeight < 520 ? 46 : 64;
 const msxB3Calm = () => {
   if (typeof msxFxCalm === 'function' && msxFxCalm()) return true;
@@ -172127,6 +172239,91 @@ const MSX_CSS = `
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
 .msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
+.msx .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px 6px;padding:2px 2px 6px}
+.msx .v-grid6.pk1 .v-g6n{font-size:10.5px;transform:none;overflow:hidden;text-overflow:clip;letter-spacing:-.04em}
+.msx .v-body.p1 .v-gridw{margin-top:2px;border-radius:12px;background:#0f0d2466;padding:0 4px}
+.msx .v-p1sel{flex:none;display:flex;gap:8px;padding:7px;margin-top:6px}
+.msx .v-p1art{position:relative;flex:0 0 31%;min-height:128px;border-radius:11px;overflow:hidden;background:#0f0d24;border:1px solid #4a4380}
+.msx .v-p1art .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 80%}
+.msx .v-p1art .mon{position:absolute;left:4%;right:4%;top:6%;bottom:3%;width:92%;height:91%;object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 6px 4px #0009)}
+.msx .v-p1info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.msx .v-p1hd{display:flex;align-items:center;gap:6px}
+.msx .v-p1hd .nm{flex:1;min-width:0;font-size:17px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-p1grow{font-size:11px;line-height:1.35;color:#cbd5e1}
+.msx .v-p1grow .k{display:inline-block;margin-right:5px;padding:0 6px;border-radius:6px;background:#2e2856;color:#f9a8d4;font-weight:900;font-size:10.5px}
+.msx .v-p1grow b{margin-right:5px;font-size:12.5px}
+.msx .v-p1grow .v{font-weight:700}
+.msx .v-p1st{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 8px}
+.msx .v-p1st .r{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:4px;min-width:0}
+.msx .v-p1st .n{font-size:10.5px;color:#cbd5e1;font-weight:800;white-space:nowrap}
+.msx .v-p1st b{font-size:14px;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.msx .v-p1st .g{font-style:normal;font-weight:900;font-size:12px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;background:#334155;color:#cbd5e1}
+.msx .v-p1st .g.ghi{background:#facc15;color:#1f1300}.msx .v-p1st .g.gmd{background:#22c55e;color:#04210f}.msx .v-p1st .g.gmid{background:#475569;color:#f1f5f9}.msx .v-p1st .g.glo{background:#1e293b;color:#94a3b8}
+.msx .v-p1st .bar{grid-column:1/-1;height:4px;border-radius:3px;background:#0f172a;overflow:hidden}
+.msx .v-p1st .bar span{display:block;height:100%;border-radius:3px}
+.msx .v-p1note{font-size:10px;color:#94a3b8;line-height:1.3}.msx .v-p1note b{color:#fde047}
+.msx .v-p1main{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.msx .v-p1main>*{flex:none}
+.msx .v-p1main>.v-gridw{flex:1 1 0;min-height:0}
+.msx .v-p1bar>.msx-pt{margin-top:6px}
+.msx .v-p1lg{font-style:normal}
+.msx.land .v-body.p1>*{min-width:0}
+/* 横: 左に選んだモンスター(立ち絵の上・名前と能力の下)、右に一覧。分類と検索は1行 */
+.msx.land .v-body.p1{grid-template-columns:36% minmax(0,1fr);grid-template-rows:min-content 1fr}
+.msx.land .v-body.p1>.v-p1main{grid-row:2}
+.msx.land .v-body.p1>.v-p1sel{grid-column:1;grid-row:1/-1;margin-top:5px;min-height:0;flex-direction:column;gap:5px}
+.msx.land .v-body.p1 .v-p1art{flex:1 1 0;min-height:60px}
+.msx.land .v-body.p1 .v-p1info{flex:none}
+.msx.land .v-body.p1 .v-h small{display:none}
+.msx.land .v-p1bar{display:flex;gap:6px;align-items:center;margin-top:5px}
+.msx.land .v-p1bar>.v-tabs{flex:0 1 auto;margin-top:0}
+.msx.land .v-p1bar>.v-tabs button{padding:4px 10px}
+.msx.land .v-p1bar>.msx-pt{flex:1 1 0;margin-top:0;flex-wrap:nowrap}
+.msx.land .v-p1bar .msx-pt-c{display:none}
+.msx.land .v-p1lg{display:none}
+.msx .v-p1grow .v .w{white-space:nowrap}
+.msx .v-body.p1.few .v-p1main{flex:none}
+.msx .v-body.p1.few .v-p1main>.v-gridw{flex:none;overflow:visible}
+.msx .v-body.p1.few>.v-p1sel{flex:1 1 0;min-height:0}
+.msx .v-body.p1.few>.v-p1sel{flex-direction:column}
+.msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
+.msx .v-body.p1.few .v-p1info{flex:none}
+.msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+/* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
+   絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
+.msx .v-lmain{display:contents}
+.msx.land .v-body.one{display:flex}
+.msx.land .v-body.lg3{grid-template-rows:min-content min-content minmax(0,1fr)}
+.msx.land .v-body.lg3>.v-lmain{display:flex;flex-direction:column;grid-row:3;min-height:0;overflow-y:auto;gap:0}
+.msx.land .v-body.lg3>.v-lmain>*{flex:none}
+.msx.land .v-body.lg3>.v-lmain>.v-card{max-height:none!important;overflow:visible!important}
+.msx.land .v-body.lg3>.v-scene{min-height:0}
+.msx.land .v-body.lg3>.v-lmain>.v-big{position:sticky;bottom:0;z-index:2;flex:none}
+.msx .v-faces .v-soon1{flex:3;align-self:center;min-height:52px;display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:14px;border:1px dashed #64748b;background:#1e1a36;cursor:pointer}
+.msx .v-faces .v-soon1 .fs{display:flex;flex:none}
+.msx .v-faces .lk.soon.v-soon1 .fs img{filter:grayscale(1) brightness(.75);width:34px;height:34px;margin-left:-8px;border-width:1.5px}.msx .v-faces .v-soon1 .fs img:first-child{margin-left:0}
+.msx .v-faces .lk.soon.v-soon1 b{position:static;flex:1;text-align:left;font-size:11px;font-weight:900;color:#cbd5e1;line-height:1.3;background:none;padding:0}
+.msx .v-faces>button{flex:0 0 56px}
+.msx .v-nobring{font-size:12px;line-height:1.5;color:#e2e8f0}.msx .v-nobring b{color:#fde047}
+.msx .v-shopgo,.msx .v-allgo{display:flex;align-items:center;justify-content:center;text-align:center}
+.msx .v-shopgo{margin-top:6px;min-height:44px;border-radius:12px;border:1.5px solid #f472b6;background:#3b1736;color:#fbcfe8;font:inherit;font-size:13px;font-weight:900}
+.msx .v-allgo{margin-top:6px;min-height:44px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:#cbd5e1;font:inherit;font-size:12px;font-weight:800}
+.msx.land .v-body.one .v-bag{grid-template-columns:repeat(2,minmax(0,170px))}
+.msx.land .v-body.one .v-bag div{aspect-ratio:auto;height:64px}
+.msx.land .v-body.one .v-igrid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.msx.land .v-body.one .v-faces>button{flex:0 0 52px}
+.msx.land .v-body.one .v-faces .v-soon1{flex:0 1 280px}
+.msx.land .v-body.one .v-sc .pic{width:150px;min-height:150px}
+/* 小さい横(高さ340以下): 右の列は見出しから一覧までまとめて縦に流す(r1115-195 低い画面は1画面にこだわらない) */
+@media (max-height:340px){
+  .msx.land .v-body.p1>.v-p1main{overflow-y:auto}
+  .msx.land .v-body.p1 .v-p1main>.v-gridw{flex:none;overflow:visible}
+  .msx.land .v-body.p1 .v-p1bar{flex-wrap:wrap}
+  .msx.land .v-body.p1 .v-p1bar>.v-tabs{flex:1 1 100%}
+  .msx.land .v-body.p1 .v-p1note{display:none}
+  .msx.land .v-body.p1 .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
+  .msx.land .v-body.p1 .v-p1st b{font-size:12.5px}
+}
 .msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-apt div{background:#0f172a;border-radius:8px;padding:3px 0;white-space:nowrap;line-height:1.3}.msx .v-apt b{display:block;font-size:13px;color:#fde047}.msx .v-apt div.lo b{color:#94a3b8}
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
@@ -175629,13 +175826,27 @@ function MsxGatherTable({
     onClick: onClose
   }, "閉じる")));
 }
+const msxAptCls = g => g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo';
+const MSX_PERIOD_WHEN = Object.freeze({
+  'デビュー期': 'はじめ',
+  'ジュニア期': '前半',
+  'ミドル期': '中ごろ',
+  'プロ期': '後半',
+  '最後の期': '終わりごろ'
+});
+const msxPeakWords = peak => {
+  const ps = String(peak || '').split('〜');
+  const w = ps.map(p => MSX_PERIOD_WHEN[p]).filter(Boolean);
+  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '一番', '伸びる'];
+};
 function MsxStart({
   data,
   SUC,
   onCancel,
   onStart,
   bondLvOf,
-  callNameOf
+  callNameOf,
+  onOpenShop
 }) {
   const {
     box,
@@ -175651,6 +175862,7 @@ function MsxStart({
   const [pickQ, setPickQ] = useState('');
   const [pickSort, setPickSort] = useState('std');
   const [pickRev, setPickRev] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [look, setLook] = useState(null);
   useEffect(() => {
     if (!look || typeof document === 'undefined') return;
@@ -175889,6 +176101,7 @@ function MsxStart({
       setStep(0);
     }
   });
+  let p1few = false;
   let body = null;
   let go = null;
   let full = null;
@@ -175913,10 +176126,15 @@ function MsxStart({
     const listF = pickQ.trim() && typeof msxMatchQ === 'function' ? listAll.filter(x => msxMatchQ(pickQ, x.nm, msxMonName(x.sp))) : listAll;
     const listS = pickSort === 'name' ? listF.slice().sort((a, b) => String(a.nm).localeCompare(String(b.nm), 'ja')) : pickSort === 'species' ? listF.slice().sort((a, b) => String(msxMonName(a.sp)).localeCompare(String(msxMonName(b.sp)), 'ja')) : listF;
     const list = pickRev ? listS.slice().reverse() : listS;
-    const picked = meta.picked && meta.picked[species];
+    const few = listAll.length <= 12 && !pickQ;
+    p1few = few;
     body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "v-p1main"
+    }, React.createElement("div", {
       className: "v-h"
     }, "だれを育てる?", React.createElement("small", null, "ベースモンか、合体で生まれた未育成のモンスターから1体")), React.createElement("div", {
+      className: "v-p1bar"
+    }, React.createElement("div", {
       className: "v-tabs"
     }, React.createElement("button", {
       type: "button",
@@ -175930,6 +176148,7 @@ function MsxStart({
     }, "🌱 ベースモン ", unlocked.length), React.createElement("button", {
       type: "button",
       className: tab === 'fuse' ? 'on' : '',
+      "data-msx-tab-fuse": true,
       onClick: () => {
         setTab('fuse');
         if (!pick.box && unraised.length) {
@@ -175939,7 +176158,9 @@ function MsxStart({
           });
         }
       }
-    }, "🧬 合体で生まれたモンスター ", unraised.length)), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+    }, "🧬 合体", React.createElement("i", {
+      className: "v-p1lg"
+    }, "で生まれたモンスター"), " ", unraised.length)), typeof MsxPickTools === 'function' && !few ? React.createElement(MsxPickTools, {
       q: pickQ,
       onQ: setPickQ,
       sorts: [['std', '標準'], ['name', '名前'], ['species', '種族']],
@@ -175949,10 +176170,11 @@ function MsxStart({
       onRev: setPickRev,
       count: list.length,
       total: listAll.length
-    }) : null, React.createElement("div", {
-      className: "v-gridw"
+    }) : null), React.createElement("div", {
+      className: "v-gridw",
+      "data-msx-pick-list": true
     }, React.createElement("div", {
-      className: "v-grid6"
+      className: "v-grid6 pk1"
     }, list.length ? list.map(x => React.createElement("button", {
       type: "button",
       key: x.key,
@@ -175970,52 +176192,80 @@ function MsxStart({
       style: {
         gridColumn: '1 / -1'
       }
-    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), scene({
-      mb: '10%',
-      h: '88%'
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')))), React.createElement("div", {
+      className: "v-card sel v-p1sel",
+      "data-msx-start-sel": true
     }, React.createElement("div", {
-      className: "v-chips"
-    }, React.createElement("span", {
-      className: "v-chip ylw"
-    }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), picked ? React.createElement("span", {
-      className: "v-chip"
-    }, "選んだ回数 ", picked, "回") : null), true), React.createElement("div", {
-      className: "v-card sel"
+      className: "v-p1art"
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg(1).bg,
+      alt: ""
+    }), colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
+      className: "mon"
+    }, React.createElement(DyedMonsterImage, {
+      baseId: species,
+      src: msxMonImg(species),
+      masuColors: colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
+      className: "mon",
+      src: msxMonImg(species),
+      alt: ""
+    })), React.createElement("div", {
+      className: "v-p1info"
     }, React.createElement("div", {
-      className: "msx-dt-hd"
-    }, React.createElement("div", {
-      className: "h1"
+      className: "v-p1hd"
+    }, React.createElement("b", {
+      className: "nm"
     }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), React.createElement("button", {
       type: "button",
       className: "msx-dt-more",
       "data-msx-detail-open": true,
       onClick: () => setDetail(true)
     }, "🔍 詳しく")), React.createElement("div", {
-      className: "v-kv",
+      className: "v-p1grow",
       "data-msx-start-type": true
-    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, React.createElement("span", {
+    }, React.createElement("span", {
+      className: "k"
+    }, "成長の型"), React.createElement("b", {
       className: "yel"
     }, growName), peakText ? React.createElement("span", {
-      className: "msx-dt-sm"
-    }, " ピーク ", peakText) : null)), React.createElement("div", {
-      className: "sub",
-      style: {
-        marginTop: 6,
-        color: '#f9a8d4',
-        fontWeight: 900
-      }
-    }, "初めの能力", React.createElement("span", {
-      className: "msx-dt-sm"
-    }, "(小さい字は素質)")), React.createElement("div", {
-      className: "msx-st6 row6",
+      className: "v"
+    }, msxPeakWords(peakText).map((w, i) => React.createElement("span", {
+      key: i,
+      className: "w"
+    }, w))) : null), React.createElement("div", {
+      className: "v-p1st",
       "data-msx-start-stats": true
-    }, MSX_STATS.map((k, i) => React.createElement("div", {
-      key: k
-    }, React.createElement("span", {
-      className: "n"
-    }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
-      className: apt[i] > 'B' ? 'lo' : ''
-    }, "素質 ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+    }, MSX_STATS.map((k, i) => {
+      const v = Number(startSt[k]) || 0;
+      const top = Math.max(300, ...MSX_STATS.map(q => Number(startSt[q]) || 0));
+      return React.createElement("div", {
+        key: k,
+        className: "r"
+      }, React.createElement("span", {
+        className: "n"
+      }, MSX_STAT_NAME[k]), React.createElement("b", null, v), React.createElement("i", {
+        className: `g g${msxAptCls(apt[i])}`,
+        title: "伸びやすさ"
+      }, apt[i]), React.createElement("span", {
+        className: "bar"
+      }, React.createElement("span", {
+        style: {
+          width: `${Math.max(4, Math.min(100, v / top * 100))}%`,
+          background: MSX_STAT_COLOR && MSX_STAT_COLOR[k] ? MSX_STAT_COLOR[k] : '#94a3b8'
+        }
+      })));
+    })), React.createElement("div", {
+      className: "v-p1note"
+    }, "右の字は", React.createElement("b", null, "伸びやすさ"), "(A が一番伸びる → E)"))), detail && React.createElement(MsxMonDetail, {
       pick: {
         sel: tpSel,
         locked: () => false,
@@ -176234,18 +176484,23 @@ function MsxStart({
     }, React.createElement("img", {
       src: msxFace(x.aid),
       alt: msxAidName(x.aid)
-    }))), [...MSX_SCENARIOS.filter(x => !msxAidOpen(x.aid)).map(x => x.aid), ...MSX_SOON_AIDS].map(a => React.createElement("span", {
-      key: a,
-      className: "lk soon",
-      role: "button",
-      tabIndex: 0,
-      "aria-label": `${msxAidName(a)}(準備中)`,
-      "data-msx-soon": a,
-      onClick: () => setLockTalk(n => n + 1)
-    }, React.createElement("img", {
-      src: msxFace(a),
-      alt: ""
-    }), React.createElement("b", null, "準備中")))), React.createElement("div", {
+    }))), (() => {
+      const soon = [...MSX_SCENARIOS.filter(x => !msxAidOpen(x.aid)).map(x => x.aid), ...MSX_SOON_AIDS];
+      return soon.length ? React.createElement("span", {
+        className: "lk soon v-soon1",
+        role: "button",
+        tabIndex: 0,
+        "aria-label": "ほかの助手は準備中",
+        "data-msx-soon": soon[0],
+        onClick: () => setLockTalk(n => n + 1)
+      }, React.createElement("span", {
+        className: "fs"
+      }, soon.slice(0, 3).map(a => React.createElement("img", {
+        key: a,
+        src: msxFace(a),
+        alt: ""
+      }))), React.createElement("b", null, "ほかの助手 ", soon.length, "人は準備中")) : null;
+    })()), React.createElement("div", {
       className: "v-card sel",
       style: {
         flex: '1 1 0',
@@ -176326,6 +176581,7 @@ function MsxStart({
     const has = id => meta.items && meta.items[id] || 0;
     const toggle = id => setItems(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]);
     const coreItems = id => !!(SUC.ITEMS && SUC.ITEMS[id]);
+    const ownN = MSX_ITEMS.filter(t => has(t.id) > 0 || items.includes(t.id)).length;
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
     }, "持ちこみ(2つまで)", React.createElement("small", null, "手に入れた物を、育成に持っていける。持っていかなくてもよい")), React.createElement("div", {
@@ -176343,9 +176599,17 @@ function MsxStart({
       style: {
         color: '#94a3b8'
       }
-    }, "空き")))), React.createElement("div", {
+    }, "空き")))), !ownN ? React.createElement("div", {
+      className: "v-card v-nobring",
+      "data-msx-carry-none": true
+    }, "まだ持ちこめる物がありません。", React.createElement("b", null, "ビートP交換所"), "で手に入れると、ここで選べます(持っていかなくても始められます)") : null, onOpenShop ? React.createElement("button", {
+      type: "button",
+      className: "v-shopgo",
+      onClick: onOpenShop,
+      "data-msx-carry-shop-open": true
+    }, "🛒 ビートP交換所で手に入れる") : null, React.createElement("div", {
       className: "v-igrid"
-    }, MSX_ITEMS.map(t => React.createElement("button", {
+    }, MSX_ITEMS.filter(t => showAll || has(t.id) > 0 || items.includes(t.id)).map(t => React.createElement("button", {
       type: "button",
       key: t.id,
       className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}${!has(t.id) && !items.includes(t.id) ? ' none' : ''}${look === t.id ? ' look' : ''}`,
@@ -176361,7 +176625,13 @@ function MsxStart({
       }
     }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", {
       style: JA_LABEL_STYLE
-    }, msxItemNameNode(t.name.replace('ガロエ印の', ''))), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
+    }, msxItemNameNode(t.name.replace('ガロエ印の', ''))), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), MSX_ITEMS.length > ownN ? React.createElement("button", {
+      type: "button",
+      className: "v-allgo",
+      onClick: () => setShowAll(v => !v),
+      "aria-pressed": showAll,
+      "data-msx-carry-all": true
+    }, showAll ? '▲ 持っていない物を隠す' : `▼ 持っていない物も見る(${MSX_ITEMS.length - ownN}個)`) : null, React.createElement("div", {
       className: "v-ileg"
     }, React.createElement("span", null, React.createElement("b", {
       className: "sw1"
@@ -176465,7 +176735,9 @@ function MsxStart({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
-    }, "成長の型: ", growName))), React.createElement("label", {
+    }, "成長の型: ", growName))), React.createElement("div", {
+      className: "v-lmain"
+    }, React.createElement("label", {
       className: "v-inp",
       style: {
         display: 'flex'
@@ -176510,7 +176782,7 @@ function MsxStart({
       names: typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map(x => x[0]) : null
     }) : React.createElement("div", {
       className: "msx-note"
-    }, "染色はこの端末では使えません")));
+    }, "染色はこの端末では使えません"))));
     go = 'これで決める ▶';
   } else {
     const startAdd = {};
@@ -176583,7 +176855,9 @@ function MsxStart({
         objectFit: 'contain',
         objectPosition: 'right bottom'
       }
-    })), React.createElement("button", {
+    })), React.createElement("div", {
+      className: "v-lmain"
+    }, React.createElement("button", {
       type: "button",
       className: "v-sum",
       onClick: () => setStep(1)
@@ -176636,7 +176910,7 @@ function MsxStart({
       type: "button",
       className: "v-big",
       onClick: start
-    }, "🌱 育成を始める"));
+    }, "🌱 育成を始める")));
   }
   if (full) return full;
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
@@ -176644,7 +176918,7 @@ function MsxStart({
     onBack: back,
     right: `${step + 1} / 6`
   }), React.createElement("div", {
-    className: "v-body st"
+    className: `v-body st${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`
   }, React.createElement(MsxSteps, {
     n: step
   }), body), go && React.createElement("div", {
@@ -178270,6 +178544,7 @@ function MonheroSuccessScreen({
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null);
+  const [carryShop, setCarryShop] = useState(false);
   const lendRef = useRef({});
   const [playSub, setPlaySub] = useState('main');
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
@@ -178341,6 +178616,16 @@ function MonheroSuccessScreen({
       meta
     }));
     msxSaveMeta(meta);
+  };
+  const refreshMeta = async () => {
+    try {
+      const raw = await storeGet(MSX_KEYS.meta, null);
+      const m = msxNormMeta(raw);
+      setData(d => d ? {
+        ...d,
+        meta: m
+      } : d);
+    } catch (e) {}
   };
   const toHome = () => {
     (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
@@ -178579,7 +178864,8 @@ function MonheroSuccessScreen({
     onCancel: () => setView('home'),
     onStart: startRun,
     bondLvOf: bondLvOf,
-    callNameOf: callNameOf
+    callNameOf: callNameOf,
+    onOpenShop: () => setCarryShop(true)
   });else if (view === 'basemon' && typeof MsxBaseMons === 'function') content = React.createElement(MsxBaseMons, {
     data: data,
     onClose: () => setView('home')
@@ -178631,6 +178917,11 @@ function MonheroSuccessScreen({
     "aria-label": "モンヒロサクセス"
   }, React.createElement("style", null, MSX_CSS), typeof MSX_BETA_CSS === 'string' ? React.createElement("style", null, MSX_BETA_CSS) : null, view === 'rank' && typeof MonsucRankScreen === 'function' ? React.createElement(MonsucRankScreen, {
     onBack: () => setView('home')
+  }) : null, carryShop && typeof MonsucCarryShop === 'function' ? React.createElement(MonsucCarryShop, {
+    onClose: bought => {
+      setCarryShop(false);
+      if (bought) refreshMeta();
+    }
   }) : null, React.createElement("div", {
     className: `msx v3 ${layout}`,
     "data-msx-view": view
@@ -188353,6 +188644,138 @@ function MonheroSuccessBoxHost({
     bondLvOf: bondLvOf
   });
 }
+const MONSUC_CARD_FRAME = Object.freeze({
+  S: '#fde047',
+  A: '#f87171',
+  B: '#f472b6',
+  C: '#4ade80',
+  D: '#67e8f9',
+  E: '#60a5fa',
+  F: '#a78bfa',
+  G: '#9ca3af',
+  M: '#c084fc'
+});
+const monsucCardFrame = g => MONSUC_CARD_FRAME[String(g || '').trim().charAt(0).toUpperCase()] || '#6b6597';
+function MonsucMonCard({
+  m,
+  size = 's',
+  tag = null,
+  num = null,
+  on = false,
+  lock = null,
+  slot = null,
+  note = null,
+  onClick = null,
+  attrs = null,
+  empty = '+'
+}) {
+  const sz = size === 'l' || size === 'm' ? size : 's';
+  const grade = m ? m.grade || m.rank || '' : '';
+  const fav = m && Array.isArray(m.fav) ? m.fav.filter(k => typeof MSX_STAT_ICON === 'object' && MSX_STAT_ICON[k]).slice(0, sz === 's' ? 1 : 2) : [];
+  const name = m ? m.nick || (typeof msxMonName === 'function' ? msxMonName(m.species) : m.species) : '';
+  const lv = m && Number.isFinite(Number(m.lv)) && Number(m.lv) > 0 ? Math.round(Number(m.lv)) : null;
+  const inner = React.createElement(React.Fragment, null, React.createElement("span", {
+    className: `mcd-f${m ? '' : ' empty'}`,
+    style: m ? {
+      '--mcd-c': monsucCardFrame(grade)
+    } : undefined
+  }, m ? React.createElement("span", {
+    className: "mcd-art"
+  }, typeof MsxMmArt === 'function' ? React.createElement(MsxMmArt, {
+    m: m,
+    size: "100%",
+    thumb: sz === 's'
+  }) : null) : React.createElement("span", {
+    className: "mcd-plus",
+    "aria-hidden": "true"
+  }, empty), fav.length ? React.createElement("span", {
+    className: "mcd-fav",
+    "aria-label": `得意な能力 ${fav.map(k => MSX_STAT_NAME[k] || k).join('・')}`
+  }, fav.map(k => React.createElement("i", {
+    key: k
+  }, MSX_STAT_ICON[k]))) : null, grade ? React.createElement("i", {
+    className: "mcd-gd"
+  }, grade) : null, m && sz !== 's' ? React.createElement("span", {
+    className: "mcd-strip"
+  }, React.createElement("b", {
+    className: "mcd-nm",
+    style: {
+      fontSize: `max(9px, min(13cqw, 86cqw / ${Math.max(1, [...name].length)}))`
+    }
+  }, name)) : null, m && lv && sz !== 's' ? React.createElement("small", {
+    className: "mcd-lv"
+  }, "Lv.", lv) : null, slot != null && !lock ? React.createElement("i", {
+    className: "mcd-slot",
+    "aria-label": `編成の${slot}枠目`
+  }, slot) : null, note && !lock ? React.createElement("span", {
+    className: "mcd-note"
+  }, note) : null, lock ? React.createElement("span", {
+    className: "mcd-lk"
+  }, lock) : null, on ? React.createElement("i", {
+    className: "mcd-ck",
+    "aria-hidden": "true"
+  }, "✓") : null), m && sz === 's' ? React.createElement("span", {
+    className: "mcd-nms"
+  }, name) : null, tag && tag.text ? React.createElement("span", {
+    className: `mcd-tag ${tag.kind || ''}`
+  }, tag.text) : null, num != null && num !== '' ? React.createElement("span", {
+    className: "mcd-num"
+  }, num) : null);
+  const cls = `mcd ${sz}${on ? ' on' : ''}${lock ? ' lk' : ''}`;
+  return onClick ? React.createElement("button", _extends({
+    type: "button",
+    className: cls,
+    disabled: !!lock,
+    onClick: onClick
+  }, attrs || {}), React.createElement("style", null, MONSUC_CARD_CSS), inner) : React.createElement("span", _extends({
+    className: cls
+  }, attrs || {}), React.createElement("style", null, MONSUC_CARD_CSS), inner);
+}
+function MonsucCardGrid({
+  size = 's',
+  children
+}) {
+  return React.createElement("div", {
+    className: `mcd-grid ${size === 'm' ? 'm' : 's'}`
+  }, React.createElement("style", null, MONSUC_CARD_CSS), children);
+}
+const MONSUC_CARD_CSS = `
+.mcd{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:3px;min-width:0;width:100%;margin:0;padding:0;background:none;border:0;color:#fff;font:inherit;text-align:center;cursor:pointer;container-type:inline-size}
+span.mcd{cursor:default}
+.mcd:disabled{cursor:default}
+.mcd .mcd-f{position:relative;display:block;width:100%;border-radius:8px;overflow:hidden;border:2px solid var(--mcd-c,#6b6597);background:radial-gradient(120% 90% at 50% 30%,#3f3a78 0,#1e1a36 70%);box-shadow:0 2px 0 #0007}
+.mcd.s .mcd-f{border-radius:6px}
+.mcd.l .mcd-f{border-width:3px;border-radius:12px}
+/* 縦長 3:4 はスペーサーで決める(aspect-ratio は対応の弱い端末で高さが付かない) */
+.mcd .mcd-f::before{content:'';display:block;padding-top:133.333%}
+.mcd .mcd-f.empty{border:0;background:#4a3f2a;box-shadow:inset 0 0 0 2px #0003}
+.mcd .mcd-plus{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28cqw;font-weight:900;color:#fff}
+/* 絵は下の帯の上に収める(全身・下合わせ)。帯と重ねないので名前が絵で読めなくならない */
+.mcd .mcd-art{position:absolute;left:4%;right:4%;top:6%;bottom:22%}
+.mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
+.mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
+.mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
+.mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
+.mcd.s .mcd-art{bottom:5%}
+.mcd .mcd-nms{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:900;font-size:11px;line-height:1.2;word-break:break-all;color:#fff;min-height:2.4em}
+.mcd .mcd-slot{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:clamp(20px,30cqw,34px);height:clamp(20px,30cqw,34px);font-style:normal;font-weight:900;font-size:clamp(11px,17cqw,19px);color:#fff;background:#2563eb;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px #0008}
+.mcd .mcd-note{position:absolute;left:4%;right:4%;top:24%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcd .mcd-lv{position:absolute;right:3%;bottom:23%;line-height:1.3;padding:0 .3em;background:#0f0d24d9;border-radius:6px;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
+.mcd .mcd-gd{position:absolute;right:3%;top:3%;font-style:normal;font-weight:900;font-size:clamp(9px,14cqw,15px);line-height:1.35;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:7px;padding:0 .35em}
+.mcd .mcd-fav{position:absolute;left:3%;top:3%;display:flex;flex-direction:column;gap:2px}
+.mcd .mcd-fav i{display:flex;align-items:center;justify-content:center;width:clamp(15px,22cqw,26px);height:clamp(15px,22cqw,26px);font-style:normal;font-size:clamp(9px,13cqw,15px);background:#0f0d24d9;border:1.5px solid #fde68a;border-radius:6px}
+.mcd .mcd-lk{position:absolute;left:6%;right:6%;top:40%;transform:translateY(-50%);font-weight:900;font-size:clamp(9px,12cqw,12px);background:#0f0d24e6;border-radius:6px;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcd.lk .mcd-art{opacity:.45}
+.mcd .mcd-ck{position:absolute;left:3%;bottom:24%;display:flex;align-items:center;justify-content:center;width:clamp(18px,24cqw,28px);height:clamp(18px,24cqw,28px);font-style:normal;font-weight:900;font-size:clamp(11px,15cqw,17px);color:#fff;background:#ec4899;border:2px solid #fff;border-radius:50%}
+.mcd.on .mcd-f{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
+.mcd .mcd-tag{display:block;font-weight:900;font-size:clamp(10px,11cqw,12px);line-height:1.6;border-radius:999px;color:#fff;background:#4f46e5}
+.mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
+.mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
+.mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
+.mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
+.mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
+@media (orientation:landscape){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
+`;
 const MSX_ARC_CSS = `
 .msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
 .msx .r3 .arc-foe img{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto}

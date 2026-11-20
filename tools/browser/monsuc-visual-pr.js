@@ -4,7 +4,7 @@
 //
 //   node tools/browser/monsuc-visual-pr.js --scenes msx:S2P              1画面だけ(名札は visual-api-monsuc.js の LABELS・--list で一覧)
 //   node tools/browser/monsuc-visual-pr.js --changed [--base origin/main] PR の差分のファイルから場面を選ぶ(下の FILE_SCENES)
-//   --dry-run   撮って見積りだけ(送らない) / --batch  半額のバッチで送る(既定はその場で返す message) / --sizes base,land,s568
+//   --dry-run   撮って見積りだけ(送らない) / --batch  半額のバッチで送る(既定はその場で返す message) / --sizes base(既定は縦だけ。横は base,land,s568)
 //   合言葉は環境のネットワークの秘密で付く(ANALYSIS_GATEWAY_TOKEN=proxy を道具が自分で付ける)。値はどこにも書かない
 // 結果: tools/out/visual/monsuc-pr-<日時>/api/api-findings.md(git に入らない)。使った額は画面に出る
 'use strict';
@@ -32,11 +32,32 @@ const FILE_SCENES = [
   [/success-css|success-r3-css/, ['msx:H1', 'msx:M1', 'msx:S2', 'r3:C1', 'r3:X4', 'r3:E0']],
   [/data\/help\.js/, ['home:monsuc-help', 'home:monsuc-help-start', 'home:monsuc-help-beta']],
   [/data\/monhero-success/, ['msx:M1', 'msx:T1', 'r3:C1']],
+  // 助手との対戦(おまかせ観戦と手動の2通りを撮る。縦 390×844 だけ)
+  [/assistant-masmon-battle|msa-beta-shots/, ['asst:auto', 'asst:manual']],
 ];
 const TOOLS = {
   msx: { file: 'tools/success/success-shoot.js', only: 'SHOT_ONLY' },
   r3: { file: 'tools/success/success-r3-shoot.js', only: 'ONLY' },
   arc: { file: 'tools/success/success-arc-shoot.js', only: 'ONLY' },
+};
+// 助手との対戦の道具は名札で選べず、1回で1通り(おまかせ/手動)を撮るので別に回す。止め絵を asst-<通り>.<名前>.png へ並べ直す
+const runAsst = async (modes) => {
+  const dir = path.join(DEEP, 'asst');
+  fs.mkdirSync(dir, { recursive: true });
+  const seen = new Set();
+  for (const mode of [...new Set(modes)].filter((m) => m === 'auto' || m === 'manual')) {
+    const raw = path.join(DEEP, `asst-raw-${mode}`);
+    await run([path.join('tools', 'battle', 'msa-beta-shots.js')], { STILL_DIR: raw, WIDTH: '390', HEIGHT: '844', MANUAL: mode === 'manual' ? '1' : '' }, path.join(DEEP, `asst-${mode}.log`));
+    if (!fs.existsSync(raw)) continue;
+    for (const f of fs.readdirSync(raw).sort()) {
+      // 準備・くらべる・設定は2通りで同じ画面なので、先に撮った方だけ送る(費用を抑える)
+      if (!/\.png$/.test(f) || seen.has(f) && /^[123]b?-/.test(f)) continue;
+      seen.add(f);
+      fs.copyFileSync(path.join(raw, f), path.join(dir, `asst-${mode}.${f}`));
+    }
+  }
+  const logs = fs.readdirSync(DEEP).filter((f) => /^asst-(auto|manual)\.log$/.test(f)).map((f) => fs.readFileSync(path.join(DEEP, f), 'utf8'));
+  fs.writeFileSync(path.join(DEEP, 'asst.log'), logs.join('\n'));
 };
 
 if (has('--list')) { FILE_SCENES.forEach(([re, sc]) => console.log(`${re.source}\n    ${sc.join(' ')}`)); process.exit(0); }
@@ -54,7 +75,7 @@ if (!scenes.length) { console.log('撮る場面がない(--scenes か --changed�
 const stamp = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace(/[-:T]/g, '');
 const OUT = opt('--out', path.join(ROOT, 'tools', 'out', 'visual', `monsuc-pr-${stamp}`));
 const DEEP = path.join(OUT, 'deep');
-const sizes = opt('--sizes', 'base,land,s568');
+const sizes = opt('--sizes', 'base'); // モンサクの横向きはいまは対応しない(社長の決めごと 2026-11-20)。横も撮るときは --sizes base,land,s568
 const byTool = {};
 for (const s of scenes) { const [t, c] = s.split(':'); (byTool[t] = byTool[t] || []).push(c); }
 console.log(`撮る: ${scenes.join(' ')}(大きさ ${sizes})→ ${path.relative(ROOT, OUT)}`);
@@ -73,6 +94,8 @@ const run = (args, env = {}, log) => new Promise((resolve) => {
     if (t === 'home') {
       const tags = sizes.split(',').map((z) => ({ base: 'tate', land: 'yoko', s568: 'yoko-s' }[z])).filter(Boolean).join(',');
       jobs.push(run([path.join('tools', 'browser', 'visual-shoot.js'), '--only', codes.join(','), '--sizes', tags, '--out', path.join(OUT, 'home')], {}, path.join(OUT, 'home.log')));
+    } else if (t === 'asst') {
+      jobs.push(runAsst(codes));
     } else if (TOOLS[t]) {
       jobs.push(run([TOOLS[t].file], { SHOT_SIZES: sizes, SHOT_DIR: path.join(DEEP, t), [TOOLS[t].only]: codes.join(',') }, path.join(DEEP, `${t}.log`)));
     } else console.log(`知らない道具の名札: ${t}`);
