@@ -50,6 +50,12 @@ const MSX_R3_CSS = `
 .msx .v-body.r3:has(> .q-say) .v-b2{margin-top:3px;gap:3px}
 .msx .v-body.r3:has(> .q-say) .v-b3{margin-top:1px;font-size:10px}
 .msx .r3 .msx-md-tg.q .tc .tg-nm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 1px 1px;background:rgba(18,12,6,.82);color:#fff;font-size:8.5px;font-weight:800;line-height:1.2;text-align:center;border-radius:0 0 6px 6px;pointer-events:none}
+/* 修行の技の升目は全幅にして升を大きく、技の詳しい欄は升目の下へ(2026-11-20 r1119-033 育-63・育-65: 升が約45px・技名 8px で「ローリン/モッチ」と折れていた) */
+.msx .r3 .q-twrap{flex-direction:column;align-items:stretch}
+.msx .r3 .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;gap:5px}
+.msx .r3 .msx-md-tg.q .tc{width:100%;max-width:76px;justify-self:center}
+.msx .r3 .msx-md-tg.q .tc .tg-nm{font-size:10px;line-height:1.2;white-space:nowrap;letter-spacing:-.06em;padding:1px 0 2px} /* 1行で全部出す(「超ローリンモッ/チ」と折れていた) */
+.msx .r3 .q-td.side{flex:none;width:auto}
 .msx .r3 .msx-md-tg.q .tc .tg-ms{bottom:24px}
 .msx .r3 .msx-md-tg.q .tc .g{bottom:24px}
 .msx .r3 .q-td{padding:5px 8px;border-radius:10px;background:rgba(15,23,42,.96);border:1px solid #ffffff2b}

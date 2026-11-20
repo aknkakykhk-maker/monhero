@@ -364,7 +364,7 @@
   "gourmet_race_dx/easy": "08207a0b44275834",
   "gourmet_race_dx/normal": "63f9676fbbe155bd",
   "gourmet_race_dx/hard": "4435e59338a68518",
-  "gourmet_race_dx/expert": "53b3b2a91838d7cf",
+  "gourmet_race_dx/expert": "ca4c3608bc012850",
   "gourmet_race_dx/master": "58a1a834e0c9b328",
   "dr_wily_stage_1/easy": "6d2d390a2ed8f0c9",
   "dr_wily_stage_1/normal": "2208e14f5fef8cc7",
@@ -452,7 +452,7 @@
   "tsuki_ga_michiru_mae_ni/hell": "7c53909ece20ab67",
   "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578",
   "rebellion/hell": "b9725052c60b586d",
-  "rebellion_short/hell": "afe6b5390d7d8392",
+  "rebellion_short/hell": "8c5517dd009d70b7",
   "altar_world_tree/hell": "7a17297ddcf051e7",
   "altar_world_tree_short/hell": "02d22507dcb0689c",
   "evans/hell": "c6f47f64d053a04d",
@@ -466,7 +466,7 @@
   "rpg_short/hell": "a10dac9f8283b77d",
   "midnight_studio/hell": "ec71cfc1df7e6c32",
   "midnight_studio_short/hell": "012172a56e1462cf",
-  "hopes_and_dreams/hell": "d7cd72e96a947098",
+  "hopes_and_dreams/hell": "65c5b97f587bb25b",
   "hopes_and_dreams_short/hell": "b1707946774bf475",
   "sparkling_pink_overture/hell": "6d0111a19d406016",
   "seasons_of_a_little_plaza/hell": "9f3b62407a73e3bc",
@@ -1027,6 +1027,15 @@
    "reason": "天翔る翼の HELL を作り直し(2026-11-20 あっくん「MASTER に対して HELL が低すぎる」。hellDensity 1.2 で再生成し Lv.52→67・417→522ノーツ。他の譜面は不変)",
    "changed": [
     "amakakeru_tsubasa/hell"
+   ]
+  },
+  {
+   "at": "2026-11-20 20:21",
+   "reason": "社長の判断(r1119-041): HOLD と SLIDE の同時の重なり3件を位置だけ直す(Hopes and Dreams HELL 0:02.1・グルメレース(DX) EXPERT 1:51.7・Rebellion short HELL 0:32.9)",
+   "changed": [
+    "gourmet_race_dx/expert",
+    "rebellion_short/hell",
+    "hopes_and_dreams/hell"
    ]
   }
  ]

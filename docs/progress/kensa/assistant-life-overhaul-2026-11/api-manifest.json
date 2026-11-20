@@ -1,0 +1,164 @@
+{
+ "at": "2026-11-20T10:00:46.836Z",
+ "usd_est": 3.21,
+ "requests": [
+  {
+   "custom_id": "l001",
+   "area": "初めての人(HOME・家・町・きずな・フレンド)",
+   "scenes": [
+    "初めての人 HOME(助手ライフを開く前)〔00-home〕",
+    "初めての人 家(開いてすぐ)〔01-house-open〕",
+    "初めての人 家(初めての案内を閉じたあと)〔02-house-after-guide〕",
+    "初めての人 町〔03-town〕",
+    "初めての人 きずな〔04-kizuna〕",
+    "初めての人 フレンド〔05-friend-tab〕"
+   ],
+   "usd_est": 0.2381
+  },
+  {
+   "custom_id": "l002",
+   "area": "家・見守る・声かけ・贈る",
+   "scenes": [
+    "HOME(助手ライフを開く前)〔00-home〕",
+    "家(開いてすぐ)〔01-house-open〕",
+    "家(下へ半分)〔02-house-scroll-mid〕",
+    "家(いちばん下)〔03-house-scroll-end〕",
+    "にぎわいの説明〔05-tier-help〕",
+    "今日あったこと〔06-diary〕"
+   ],
+   "usd_est": 0.2378
+  },
+  {
+   "custom_id": "l003",
+   "area": "家・見守る・声かけ・贈る",
+   "scenes": [
+    "見守る(掛け合いの場面)〔07-watch〕",
+    "声をかける(選ぶ)〔08-call〕",
+    "贈る(選ぶ)〔09-give〕",
+    "贈る → 道具の一覧〔10-give-items〕"
+   ],
+   "usd_est": 0.2275
+  },
+  {
+   "custom_id": "l004",
+   "area": "部屋・家具・予定表・対戦",
+   "scenes": [
+    "部屋(家にひとり・あつ)〔11-room-alone〕",
+    "部屋(下へ・できること)〔12-room-alone-scroll〕",
+    "部屋 → おしゃべり〔13-room-chat〕",
+    "部屋 → 1人に贈る〔14-room-solo-gift〕",
+    "部屋 → マスモンで対戦(β)〔14b-room-masmon-battle〕",
+    "部屋 → 家具〔15-room-furn〕"
+   ],
+   "usd_est": 0.238
+  },
+  {
+   "custom_id": "l005",
+   "area": "部屋・家具・予定表・対戦",
+   "scenes": [
+    "部屋 → 予定表〔16-room-plan〕",
+    "部屋(出かけている・ドラ)〔21-room-away〕",
+    "部屋(みゅあ)〔22-room-pair〕"
+   ],
+   "usd_est": 0.2223
+  },
+  {
+   "custom_id": "l006",
+   "area": "助手のマスモン・育成ノート",
+   "scenes": [
+    "部屋 → 助手のマスモン〔17-room-masmon〕",
+    "家 → 育成ノート〔17b-house-note〕",
+    "育成ノート(下へ)〔17c-house-note-scroll〕",
+    "助手のマスモン(タブ deck)〔18-masmon-tab-deck〕",
+    "助手のマスモン(タブ mons)〔18-masmon-tab-mons〕",
+    "助手のマスモン(タブ taste)〔18-masmon-tab-taste〕"
+   ],
+   "usd_est": 0.238
+  },
+  {
+   "custom_id": "l007",
+   "area": "助手のマスモン・育成ノート",
+   "scenes": [
+    "助手のマスモン(タブ team)〔18-masmon-tab-team〕"
+   ],
+   "usd_est": 0.212
+  },
+  {
+   "custom_id": "l008",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "町 → 場所の窓(battle)〔30-town-battle〕",
+    "町 → 場所の窓(cafe)〔30-town-cafe〕",
+    "町 → 場所の窓(cardroom)〔30-town-cardroom〕",
+    "町 → 場所の窓(clinic)〔30-town-clinic〕",
+    "町 → 場所の窓(library)〔30-town-library〕",
+    "町 → 場所の窓(market)〔30-town-market〕"
+   ],
+   "usd_est": 0.238
+  },
+  {
+   "custom_id": "l009",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "町 → 場所の窓(plaza)〔30-town-plaza〕",
+    "町 → 場所の窓(ranch)〔30-town-ranch〕",
+    "町 → 場所の窓(studio)〔30-town-studio〕",
+    "町 → 場所の窓(temple)〔30-town-temple〕",
+    "町〔30-town〕",
+    "町 → モンヒロバトルの窓(下へ)〔33-place-battle-scroll〕"
+   ],
+   "usd_est": 0.2379
+  },
+  {
+   "custom_id": "l010",
+   "area": "町・場所の窓・修行を見る",
+   "scenes": [
+    "修行を見る〔34-watch-train〕"
+   ],
+   "usd_est": 0.212
+  },
+  {
+   "custom_id": "l011",
+   "area": "きずな・アルバム・紹介",
+   "scenes": [
+    "きずな〔40-kizuna〕",
+    "きずな(関係図)〔41-kizuna-mid〕",
+    "きずな(ペアの一覧)〔42-kizuna-end〕",
+    "思い出アルバム〔43-album〕",
+    "紹介(一覧)〔50-profile-list〕",
+    "紹介(みゅあ)〔51-profile-detail〕"
+   ],
+   "usd_est": 0.2378
+  },
+  {
+   "custom_id": "l012",
+   "area": "きずな・アルバム・紹介",
+   "scenes": [
+    "紹介(みゅあ・下へ)〔52-profile-detail-scroll〕"
+   ],
+   "usd_est": 0.212
+  },
+  {
+   "custom_id": "l013",
+   "area": "フレンド",
+   "scenes": [
+    "フレンド〔60-friend-tab〕",
+    "フレンド(下へ)〔61-friend-tab-scroll〕",
+    "フレンドの家〔62-friend-house〕",
+    "フレンドの家(タブ)〔64-friend-vtabs〕"
+   ],
+   "usd_est": 0.2275
+  },
+  {
+   "custom_id": "l014",
+   "area": "夜(23時)",
+   "scenes": [
+    "家(夜23時)〔night-house〕",
+    "部屋(夜・起きている)〔night-room-awake〕",
+    "部屋(夜・寝ている)〔night-room-sleep〕",
+    "町(夜)〔night-town〕"
+   ],
+   "usd_est": 0.2274
+  }
+ ]
+}
