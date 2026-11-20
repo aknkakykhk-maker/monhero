@@ -229,6 +229,24 @@ const rhythmMultiTeamResult = (members, round, participants, closed = false) => 
   return { rows, waiting, average, mvpId, rank: scores.length ? rhythmRankForScore(average) : null };
 };
 
+// ---- 部屋の音(2026-11-20 音の点検 F2・F3)。鳴らすのはノーツの音と同じ出口(RHYTHM_NOTE_SE_RUNTIME.playCue)。守りもノーツの音と同じ ----
+// F2 人・マスモンが加わった: 部屋ごとに一度でも見た人を覚え、初めて見た人(自分以外)が増えたら1回。部屋に入った直後・画面を開き直した直後は、
+// いる人を覚えるだけで鳴らさない(自分が入ったときに、先にいた人の数だけ鳴らさない)。抜けて戻った人・通信のゆらぎで消えて戻った人でも鳴らさない
+const rhythmMultiJoinCue = (memo, code, ids, selfId) => {
+  if (!memo || !code) return false;
+  const list = (Array.isArray(ids) ? ids : []).filter((id) => id && id !== selfId);
+  if (memo.code !== code) { memo.code = code; memo.seen = new Set(list); return false; }
+  let fresh = false;
+  list.forEach((id) => { if (!memo.seen.has(id)) { memo.seen.add(id); fresh = true; } });
+  return fresh;
+};
+// F3 みんなの結果で MVP を発表する音: 結果が出そろって MVP が決まったところで、ライブ(round)ごとに1回
+const rhythmMultiMvpCueRound = (memo, round, shown, waiting, mvpId) => {
+  if (!memo || !round || !shown || waiting || !mvpId || memo.round === round) return '';
+  memo.round = round;
+  return round;
+};
+
 // ---- 受け取った知らせを、安全な形へ作り直す。知らない形・壊れた値は捨てる ----
 const rhythmMultiCleanRoom = (raw) => {
   if (!raw || typeof raw !== 'object' || !RHYTHM_MULTI_PHASES.includes(raw.ph)) return null;
@@ -4438,6 +4456,26 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </div>
   );
 
+  const members = view ? view.members : [];
+  const phase = room ? room.phase : 'matching';
+  const participant = !!room && room.participants.includes(view.selfId);
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
+  // 結果を見せる: 自分が参加したライブで、だれかが終わっていて、まだ「次へ」を押していないとき
+  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || (me && me.res && me.res.startId === room.round));
+  // 部屋の音(F2 人・マスモンが加わった / F3 MVP の発表)。部屋の全員の画面で、それぞれ1回
+  const joinCueRef = React.useRef({ code: '', seen: new Set() });
+  const memberIdsKey = view ? view.members.map((m) => m.id).join(',') : '';
+  React.useEffect(() => {
+    if (!view) return;
+    if (rhythmMultiJoinCue(joinCueRef.current, view.code, view.members.map((m) => m.id), view.selfId)) { try { RHYTHM_NOTE_SE_RUNTIME.playCue('join'); } catch (_) { /* 音が出なくても続ける */ } }
+  }, [view && view.code, memberIdsKey]);
+  const mvpCueRef = React.useRef({ round: '' });
+  const mvpCueKey = rhythmMultiMvpCueRound({ round: mvpCueRef.current.round }, room && room.round, showResult, !!(team && team.waiting), team && team.mvpId);
+  React.useEffect(() => {
+    if (!mvpCueKey || mvpCueRef.current.round === mvpCueKey) return;
+    mvpCueRef.current.round = mvpCueKey;
+    try { RHYTHM_NOTE_SE_RUNTIME.playCue('mvp'); } catch (_) { /* 音が出なくても続ける */ }
+  }, [mvpCueKey]);
   // ①モードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」「ソロモード、マルチモード、
   // マスモン選択などいれられる場所を作る」「マルチのベテランはなくしていい」。参考はプロセカの SELECT ROOM)。
   // ここは RHYTHM_MODE_SELECT の画面として描く(modeSelect を受け取ったとき)。部屋に入ったら onRoomEntered で
@@ -4716,12 +4754,6 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   // RHYTHM_MULTI で部屋にいない(出た・閉じられた)ときは、すぐモードえらびへ戻す(下の useEffect が戻す。そのあいだは空の画面)
   if (!view && !searching) return <main data-rhythm-multi data-rhythm-multi-step="leaving" className={shell} />;
 
-  const members = view ? view.members : [];
-  const phase = room ? room.phase : 'matching';
-  const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
-  // 結果を見せる: 自分が参加したライブで、だれかが終わっていて、まだ「次へ」を押していないとき
-  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || (me && me.res && me.res.startId === room.round));
 
   // ②マッチング。上半分に5人のカード、下に部屋の情報とボタン(横画面では左右に並べる)
   if (!view || view.full || (phase === 'matching' && !countdown)) {
