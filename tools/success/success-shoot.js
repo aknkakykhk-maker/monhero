@@ -125,6 +125,8 @@ const makeRun = async (kind) => {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
+      // SHOT_CSS='…' … 撮る前にその CSS を足す(例: iPhone の上の帯を再現する :root{--msx-sat:47px} .msx-wrap{padding-top:47px!important})
+      if (process.env.SHOT_CSS) await page.addInitScript((css) => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }); }, process.env.SHOT_CSS);
       await page.addInitScript((tut) => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: tut ? { open: 1, firstend: 1, prep: 1, scn: 1 } : { open: 1, firstend: 1, prep: 1, team: 1, bring: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1, scn: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} }, !!process.env.SHOT_TUT); // SHOT_TUT=1: ターン・トレーニング・結果の説明を未読にして撮る(説明の窓の出る所を見る。測る値は窓が重なるので見ない)
       // フレンドから借りる画面(S2FL・S2FD・S2FT)用の偽のフレンド1人と貸し出し1体。ページの中だけで返す(本番のサーバーへは送らない)
       if (SHOTS.some(([n]) => /^S2F[LDTX]/.test(n))) {

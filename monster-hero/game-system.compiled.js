@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31b6121b6d609e0e
+// source-sha256: 7a462076810c28ff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173881,6 +173881,7 @@ const MSX_CSS = `
 .msx .v-ft button.on{background:#fde047;color:#1e1b4b}
 .msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
+
 .msx-ov.msx-ov-deep{z-index:41;background:#0b0920f7}
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
@@ -173894,6 +173895,9 @@ const MSX_CSS = `
    縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
    本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
 .msx .v-body>.msx-ov{position:fixed;inset:0}
+/* 画面に固定した窓は外枠(.msx-wrap)の safe-area の余白を通らないので、窓の幕の上下で iPhone の切り欠き・時計の帯の分を空ける
+   (2026-11-20 窓口 M4。外枠の中に出るほかの窓は外枠が空けているので足さない)。--msx-sat は止め絵で帯を再現するときだけ使う */
+.msx .v-body>.msx-ov{padding-top:max(14px,calc(var(--msx-sat,env(safe-area-inset-top)) + 8px));padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px))}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
