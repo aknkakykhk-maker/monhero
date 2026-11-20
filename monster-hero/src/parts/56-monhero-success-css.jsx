@@ -456,7 +456,7 @@ const MSX_CSS = `
 .msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
-.msx .v-s6team .v-s6hd .ed{display:flex;align-items:center;justify-content:center;line-height:1;margin:0 -6px 0 0;min-height:44px;min-width:44px;padding:0 6px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}
+.msx .v-s6team .v-s6hd .v-edhit{display:flex;align-items:center;justify-content:flex-end;min-height:44px;min-width:64px;margin:0 -4px 0 0;padding:0 4px;background:none;border:0;font:inherit} /* 押せる所は44px・見た目はほかの行の「変える」と同じ */
 .msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
@@ -537,7 +537,7 @@ const MSX_CSS = `
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
 .msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:4px 10px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}

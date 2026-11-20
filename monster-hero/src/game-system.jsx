@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 604e9d82968cf291
+// generated-sha256: fd7c3ef6543248bf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85535,7 +85535,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
 .msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ld{margin:10px 3% 0;text-align:left;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(12px,3.4vw,13.5px);font-weight:800;line-height:1.65;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
 .msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-note{display:inline-block;background:#1e1b3ae6;border:1px solid #f9a8d4aa;border-radius:99px;padding:2px 12px}
@@ -85579,7 +85579,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
-      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span><small>ストーリー {idx + 1}/{n}</small></div>
+      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
       <div className="scn-sc">
         <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
         {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
@@ -85590,7 +85590,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
           <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
           <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
           <div className="scn-dt">
-            <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div>
+            {many ? <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div> : null}
             {many ? null : <span className="scn-note">ほかのストーリーは 準備中です</span>}
           </div>
         </div>
@@ -86762,7 +86762,8 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
-        <MsxEvHead kind="story" label="メインストーリー 序章" title={`${msxAidName(s.aid)}編のはじまり`}/>
+        {/* 選んだストーリーの名前で始める(再点検 msx-IN: 「ヒーローへの道」を選んだのに「みゅあ編」とだけ出ていた)。上の帯の「〇〇編」は助手の呼び名 */}
+        <MsxEvHead kind="story" label={`ストーリー 序章・${msxAidName(s.aid)}編`} title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
@@ -89849,7 +89850,7 @@ const MSX_CSS = `
 .msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
-.msx .v-s6team .v-s6hd .ed{display:flex;align-items:center;justify-content:center;line-height:1;margin:0 -6px 0 0;min-height:44px;min-width:44px;padding:0 6px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}
+.msx .v-s6team .v-s6hd .v-edhit{display:flex;align-items:center;justify-content:flex-end;min-height:44px;min-width:64px;margin:0 -4px 0 0;padding:0 4px;background:none;border:0;font:inherit} /* 押せる所は44px・見た目はほかの行の「変える」と同じ */
 .msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
@@ -89930,7 +89931,7 @@ const MSX_CSS = `
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
 .msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:4px 10px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
@@ -92351,13 +92352,13 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       <div className="v-lmain">
       {/* 編成は④の共通の型の札(小)で6体を1列に並べ、名前まで読めるようにする(点検 2026-11: 約22pxの顔だけで、だれで育てるのか分からなかった) */}
       <div className="v-sum v-s6team" data-msx-s6-team>
-        <div className="v-s6hd"><span className="k">編成</span><button type="button" className="ed" onClick={() => setStep(1)}>変える</button></div>
+        <div className="v-s6hd"><span className="k">編成</span><button type="button" className="v-edhit" onClick={() => setStep(1)}><span className="ed">変える</span></button></div>
         {typeof MonsucMonCard === 'function' ? (
           <MonsucCardGrid size="s">{members.map((m, i) => <MonsucMonCard key={i} size="s" m={{ species: m.species, nick: m.name || null, colors: m.colors || null, grade: m.rank && m.rank !== 'base' ? m.rank : '' }} tag={m.friend ? { text: 'フレンド', kind: 'friend' } : null}/>)}</MonsucCardGrid>
         ) : null}
       </div>
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">ストーリー</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
-      <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}</span>{/* 題はストーリーの行の1つだけ(再点検 msx-S6: 題が2つ並んでいた) */}<span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       {/* 何に何を足すのかを言葉で(「初めの上乗せ」だけでは伝わらなかった) */}
       <div className="v-sum"><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small></> : '編成のモンスターからの足し分はありません'}</span></div>
@@ -92446,7 +92447,7 @@ const msxTpCardM = (rec, mem, species) => ({
 });
 const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null);
 // 伸びが上がる能力の短い字(札の下の数字の欄)。例「📖+4 🎯+3」
-const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}`).join(' ') : '');
+const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}%`).join(' ') : '');
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {

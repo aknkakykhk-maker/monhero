@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bfe565604c0e0871
+// source-sha256: e87749a327e9ed02
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164349,7 +164349,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
 .msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ld{margin:10px 3% 0;text-align:left;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(12px,3.4vw,13.5px);font-weight:800;line-height:1.65;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
 .msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-note{display:inline-block;background:#1e1b3ae6;border:1px solid #f9a8d4aa;border-radius:99px;padding:2px 12px}
@@ -164402,7 +164402,7 @@ function MsxScenarioSelect({
     type: "button",
     className: "bk",
     onClick: onBack
-  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "ストーリー ", idx + 1, "/", n)), React.createElement("div", {
+  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), many ? React.createElement("small", null, "ストーリー ", idx + 1, "/", n) : null), React.createElement("div", {
     className: "scn-sc"
   }, React.createElement("img", {
     className: "bg",
@@ -164436,10 +164436,10 @@ function MsxScenarioSelect({
     key: i
   }, i ? React.createElement("br", null) : null, t)))), React.createElement("div", {
     className: "scn-dt"
-  }, React.createElement("div", null, MSX_STORIES.map((x, i) => React.createElement("i", {
+  }, many ? React.createElement("div", null, MSX_STORIES.map((x, i) => React.createElement("i", {
     key: x.id,
     className: i === idx ? '' : 'off'
-  }))), many ? null : React.createElement("span", {
+  }))) : null, many ? null : React.createElement("span", {
     className: "scn-note"
   }, "ほかのストーリーは 準備中です"))), many ? React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
@@ -166750,8 +166750,8 @@ function MsxRunIntro({
     alt: ""
   }), React.createElement(MsxEvHead, {
     kind: "story",
-    label: "メインストーリー 序章",
-    title: `${msxAidName(s.aid)}編のはじまり`
+    label: `ストーリー 序章・${msxAidName(s.aid)}編`,
+    title: `${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`
   }), React.createElement("div", {
     className: "v-talk msx-intro-talk"
   }, who ? React.createElement(React.Fragment, null, React.createElement("span", {
@@ -172760,7 +172760,7 @@ const MSX_CSS = `
 .msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
-.msx .v-s6team .v-s6hd .ed{display:flex;align-items:center;justify-content:center;line-height:1;margin:0 -6px 0 0;min-height:44px;min-width:44px;padding:0 6px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}
+.msx .v-s6team .v-s6hd .v-edhit{display:flex;align-items:center;justify-content:flex-end;min-height:44px;min-width:64px;margin:0 -4px 0 0;padding:0 4px;background:none;border:0;font:inherit} /* 押せる所は44px・見た目はほかの行の「変える」と同じ */
 .msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
@@ -172841,7 +172841,7 @@ const MSX_CSS = `
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
 .msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:4px 10px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
@@ -177452,9 +177452,11 @@ function MsxStart({
       className: "k"
     }, "編成"), React.createElement("button", {
       type: "button",
-      className: "ed",
+      className: "v-edhit",
       onClick: () => setStep(1)
-    }, "変える")), typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+    }, React.createElement("span", {
+      className: "ed"
+    }, "変える"))), typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
       size: "s"
     }, members.map((m, i) => React.createElement(MonsucMonCard, {
       key: i,
@@ -177483,7 +177485,7 @@ function MsxStart({
       onClick: () => setStep(2)
     }, React.createElement("span", {
       className: "k"
-    }, "助手"), React.createElement("span", null, msxAidName(aid), "編「", sc.title, "」"), React.createElement("span", {
+    }, "助手"), React.createElement("span", null, msxAidName(aid)), React.createElement("span", {
       className: "ed"
     }, "変える")), React.createElement("button", {
       type: "button",
@@ -177639,7 +177641,7 @@ const msxTpCardM = (rec, mem, species) => ({
   fav: mem && Array.isArray(mem.top) ? mem.top.slice(0, 2) : []
 });
 const msxTpPow = (rec, mem) => rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null;
-const msxTpBonusText = mem => mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}+${Math.round(mem.bonus && mem.bonus[k] || 0)}`).join(' ') : '';
+const msxTpBonusText = mem => mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}+${Math.round(mem.bonus && mem.bonus[k] || 0)}%`).join(' ') : '';
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
