@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe6b0ba4b122acbf
+// source-sha256: a0c9da6b42d84c48
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42281,6 +42281,7 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   delay: -(k * 13 % 11),
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
+const rhythmCelebrateSeWhen = (title, failed, showCelebrate) => !title || failed ? null : showCelebrate ? 'celebrate' : 'result';
 const rhythmFullComboBandMode = settings => {
   const v = rhythmFxPick(settings, 'fullComboBig');
   if (v === 'OFF' || v === 'NONE') return 'off';
@@ -44282,6 +44283,11 @@ const RhythmTapTest = ({
         touchReport
       }
     }));
+    if (rhythmCelebrateSeWhen(celebrateTitle, failed, showCelebrate) === 'result') {
+      try {
+        RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
+      } catch {}
+    }
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     setLuckyRush(false);
     if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
