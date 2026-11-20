@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3acc094dfbf75e40
+// source-sha256: dc787529562a3d18
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167167,7 +167167,7 @@ function MsxRunIntro({
     alt: ""
   }), React.createElement(MsxEvHead, {
     kind: "story",
-    label: `ストーリー 序章・${msxAidName(s.aid)}編`,
+    label: "ストーリー 序章",
     title: `${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`
   }), React.createElement("div", {
     className: "v-talk msx-intro-talk"
@@ -173247,7 +173247,7 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
-.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
+.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvnum{font-size:16px;color:#fde68a}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}
@@ -174219,7 +174219,7 @@ const MSX_SCENARIOS = Object.freeze([{
   title: 'いっしょに、ヒーローズファイナルへ!',
   lead: '明るく元気なムードメーカーと、笑いながらヒーローズファイナルの優勝を目指す物語。初めての育成におすすめ',
   tag: 'やさしい',
-  perk: '遊ぶ・休むで減るストレスが1.3倍になる。褒めたときに上がる甘え度が+1(忠誠度が上がりやすい)',
+  perk: '遊ぶ・休むで減るストレスが1.3倍になる。褒めたときに上がる甘え度が+1',
   eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束']
 }, {
   aid: 'atsu',
@@ -177577,11 +177577,14 @@ function MsxStart({
       alt: ""
     })), React.createElement("div", {
       className: "tx"
-    }, React.createElement("h4", null, React.createElement("small", null, msxAidName(aid), "編"), sc.title), React.createElement("div", {
+    }, React.createElement("h4", {
+      style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+    }, React.createElement("small", null, msxAidName(aid), "編"), typeof jaWrap === 'function' ? jaWrap(sc.title) : sc.title), React.createElement("div", {
       style: {
-        marginTop: 4
+        marginTop: 4,
+        ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {})
       }
-    }, sc.lead), React.createElement("div", {
+    }, typeof jaWrap === 'function' ? jaWrap(sc.lead) : sc.lead), React.createElement("div", {
       style: {
         marginTop: 5
       }
@@ -177589,9 +177592,11 @@ function MsxStart({
       className: "chip on"
     }, sc.tag)))), React.createElement("div", {
       className: "v-kv v-kvst"
-    }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk, React.createElement("small", {
+    }, React.createElement("b", null, "助手の効き"), React.createElement("span", {
+      style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+    }, typeof jaWrap === 'function' ? jaWrap(sc.perk) : sc.perk, React.createElement("small", {
       className: "v-kvsub"
-    }, "忠誠度は甘え度と恐れ度の合計。高いほどトレーニングがよく伸びる"))), combo && React.createElement("div", {
+    }, "甘え度は褒めると上がり、高いほどトレーニングがよく伸びる"))), combo && React.createElement("div", {
       className: "v-kv v-kvst"
     }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("div", {
       className: "v-combo",
@@ -177616,7 +177621,9 @@ function MsxStart({
       }
     }, "+", MSX_STAT_ICON[c], MSX_STAT_NAME[c])))))), React.createElement("div", {
       className: "v-kv v-kvst"
-    }, React.createElement("b", null, "初めの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), React.createElement("small", {
+    }, React.createElement("b", null, "初めの親密度"), React.createElement("span", null, React.createElement("b", {
+      className: "v-kvnum"
+    }, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4))), " / ", SUC.BOND && SUC.BOND.max || 100, React.createElement("small", {
       className: "v-kvsub"
     }, `ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`))), React.createElement("div", {
       className: "v-eps"

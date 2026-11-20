@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 85c3365f5ea17954
+// generated-sha256: 7233ecb250569050
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87009,7 +87009,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
         {/* 選んだストーリーの名前で始める(再点検 msx-IN: 「ヒーローへの道」を選んだのに「みゅあ編」とだけ出ていた)。上の帯の「〇〇編」は助手の呼び名 */}
-        <MsxEvHead kind="story" label={`ストーリー 序章・${msxAidName(s.aid)}編`} title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
+        <MsxEvHead kind="story" label="ストーリー 序章" title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
@@ -90174,7 +90174,7 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
-.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
+.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvnum{font-size:16px;color:#fde68a}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}
@@ -91150,7 +91150,7 @@ const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中。β版で選べるのはみゅあだけ(56-monsuc-beta.jsx の MSX_BETA_AIDS)
 const MSX_SCENARIOS = Object.freeze([
   { aid: 'mua', no: 1, title: 'いっしょに、ヒーローズファイナルへ!', lead: '明るく元気なムードメーカーと、笑いながらヒーローズファイナルの優勝を目指す物語。初めての育成におすすめ', tag: 'やさしい',
-    perk: '遊ぶ・休むで減るストレスが1.3倍になる。褒めたときに上がる甘え度が+1(忠誠度が上がりやすい)', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
+    perk: '遊ぶ・休むで減るストレスが1.3倍になる。褒めたときに上がる甘え度が+1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
   { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
     perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
 ]);
@@ -92565,12 +92565,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       </div>
       <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
         <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
-          <h4><small>{msxAidName(aid)}編</small>{sc.title}</h4>
-          <div style={{ marginTop: 4 }}>{sc.lead}</div>
+          <h4 style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}><small>{msxAidName(aid)}編</small>{typeof jaWrap === 'function' ? jaWrap(sc.title) : sc.title}</h4>
+          <div style={{ marginTop: 4, ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(sc.lead) : sc.lead}</div>
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span></div></div></div>
-        <div className="v-kv v-kvst"><b>助手の効き</b><span>{sc.perk}<small className="v-kvsub">忠誠度は甘え度と恐れ度の合計。高いほどトレーニングがよく伸びる</small></span></div>{/* 見出しを上・中身を下に(開-38: 左の細い見出しが言葉の途中で折れた)。忠誠度を一言で(開-40) */}
+        <div className="v-kv v-kvst"><b>助手の効き</b><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(sc.perk) : sc.perk}<small className="v-kvsub">甘え度は褒めると上がり、高いほどトレーニングがよく伸びる</small></span></div>{/* 見出しを上・中身を下に(開-38: 左の細い見出しが言葉の途中で折れた)。忠誠度を一言で(開-40) */}
         {combo && <div className="v-kv v-kvst"><b>トレーニングの組み合わせ</b><div className="v-combo" data-msx-train-combo>{MSX_STATS.map((k) => <div key={k} className="v-combo-r"><span className="v-ctag main" style={{ borderColor: MSX_STAT_COLOR[k], color: MSX_STAT_COLOR[k], background: `${MSX_STAT_COLOR[k]}1f` }}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="v-combo-a">→</span>{combo[k].map((c) => <span key={c} className="v-ctag" style={{ color: MSX_STAT_COLOR[c] }}>+{MSX_STAT_ICON[c]}{MSX_STAT_NAME[c]}</span>)}</div>)}</div></div>}
-        <div className="v-kv v-kvst"><b>初めの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}<small className="v-kvsub">{`ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`}</small></span></div>{/* 仲良し度は上の札から消し、ここ1か所で親密度との関係を言う(開-39) */}
+        <div className="v-kv v-kvst"><b>初めの親密度</b><span><b className="v-kvnum">{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}</b> / {(SUC.BOND && SUC.BOND.max) || 100}<small className="v-kvsub">{`ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`}</small></span></div>{/* 仲良し度は上の札から消し、ここ1か所で親密度との関係を言う(開-39) */}
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!'}」</div></div>
       </div>

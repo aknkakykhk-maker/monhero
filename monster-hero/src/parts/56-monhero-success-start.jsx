@@ -647,12 +647,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       </div>
       <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
         <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
-          <h4><small>{msxAidName(aid)}編</small>{sc.title}</h4>
-          <div style={{ marginTop: 4 }}>{sc.lead}</div>
+          <h4 style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}><small>{msxAidName(aid)}編</small>{typeof jaWrap === 'function' ? jaWrap(sc.title) : sc.title}</h4>
+          <div style={{ marginTop: 4, ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(sc.lead) : sc.lead}</div>
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span></div></div></div>
-        <div className="v-kv v-kvst"><b>助手の効き</b><span>{sc.perk}<small className="v-kvsub">忠誠度は甘え度と恐れ度の合計。高いほどトレーニングがよく伸びる</small></span></div>{/* 見出しを上・中身を下に(開-38: 左の細い見出しが言葉の途中で折れた)。忠誠度を一言で(開-40) */}
+        <div className="v-kv v-kvst"><b>助手の効き</b><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(sc.perk) : sc.perk}<small className="v-kvsub">甘え度は褒めると上がり、高いほどトレーニングがよく伸びる</small></span></div>{/* 見出しを上・中身を下に(開-38: 左の細い見出しが言葉の途中で折れた)。忠誠度を一言で(開-40) */}
         {combo && <div className="v-kv v-kvst"><b>トレーニングの組み合わせ</b><div className="v-combo" data-msx-train-combo>{MSX_STATS.map((k) => <div key={k} className="v-combo-r"><span className="v-ctag main" style={{ borderColor: MSX_STAT_COLOR[k], color: MSX_STAT_COLOR[k], background: `${MSX_STAT_COLOR[k]}1f` }}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="v-combo-a">→</span>{combo[k].map((c) => <span key={c} className="v-ctag" style={{ color: MSX_STAT_COLOR[c] }}>+{MSX_STAT_ICON[c]}{MSX_STAT_NAME[c]}</span>)}</div>)}</div></div>}
-        <div className="v-kv v-kvst"><b>初めの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}<small className="v-kvsub">{`ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`}</small></span></div>{/* 仲良し度は上の札から消し、ここ1か所で親密度との関係を言う(開-39) */}
+        <div className="v-kv v-kvst"><b>初めの親密度</b><span><b className="v-kvnum">{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}</b> / {(SUC.BOND && SUC.BOND.max) || 100}<small className="v-kvsub">{`ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`}</small></span></div>{/* 仲良し度は上の札から消し、ここ1か所で親密度との関係を言う(開-39) */}
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!'}」</div></div>
       </div>
