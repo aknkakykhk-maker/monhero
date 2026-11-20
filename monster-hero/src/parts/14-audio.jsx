@@ -127,6 +127,7 @@ const Audio_ = (() => {
     "audio/bgm-against-my-own-shadow.mp3": "b43d691d4773",
     "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
     "audio/bgm-altar-world-tree.mp3": "eeeeada93d95",
+    "audio/bgm-amakakeru-tsubasa.mp3": "2b283f9e6aea",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
