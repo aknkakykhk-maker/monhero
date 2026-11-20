@@ -937,9 +937,9 @@ const MSX_CSS = `
 /* 詳細の窓の技の升目(2026-11-20 M1D の点検: 技の名前が出ない・升が小さい・覚えた/まだの見分け・覚え方が切れる)。
    升目を上の全幅に・技の説明はその下。升は 48px でそろえ、升の下に技の名前を2行まで(「・」と言葉の切れ目で折る)。まだの技は点線の枠と薄い名前 */
 .msx-md-tw .msx-md-tg{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;justify-content:stretch}
-.msx .msx-md-tw .msx-md-tg .tc,.msx-md-tw .msx-md-tg .no{width:48px;justify-self:center;margin-bottom:28px}
-.msx-md-tw .msx-md-tg .tc .tnm{position:absolute;top:calc(100% + 2px);left:50%;transform:translateX(-50%);width:76px;font-size:10px;font-weight:800;line-height:1.2;color:#f1f5f9;text-align:center;word-break:auto-phrase;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;pointer-events:none}
-.msx-md-tw .msx-md-tg .tc.tg-not .tnm{color:#94a3b8}
+.msx .msx-md-tw .msx-md-tg .tc,.msx-md-tw .msx-md-tg .no{width:48px;justify-self:center;margin-bottom:26px}
+.msx-md-tw .msx-md-tg .tc .tnm{position:absolute;top:calc(100% + 2px);left:50%;transform:translateX(-50%);width:78px;font-size:10.5px;font-weight:900;line-height:1.15;color:#fff;text-shadow:0 1px 2px #000;text-align:center;word-break:auto-phrase;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;pointer-events:none}
+.msx-md-tw .msx-md-tg .tc.tg-not .tnm{color:#cbd5e1;font-weight:800}
 .msx .msx-md-tw .msx-md-tg .tc.tg-not{border-style:dashed}
 /* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
 .msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,56px));gap:4px;align-content:start;justify-content:center}
