@@ -8,6 +8,11 @@
 'use strict';
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..');
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(社長の指摘の較正。tools/browser/serve-rev.js)
+const serveRev = require('./serve-rev');
+const FROM_REV = serveRev.make(root);
+// 大きさの釣り合いを測る(tools/browser/ui-measure.js)。<置き場>/_measure.jsonl に残る
+const uiMeasure = require('./ui-measure');
 const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
 const OUT = path.resolve(opt('--out', 'life-shots'));
@@ -51,6 +56,7 @@ const route = async (r) => {
   const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, waitFaces, finishTalk } = require(path.resolve(root, 'tools/assistant/life-browser-shared'));
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''), file = path.join(root, rel);
+    if (file.startsWith(root) && serveRev.serve(FROM_REV, root, file, res, MIME[path.extname(file).toLowerCase()])) return;
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
   });
@@ -79,6 +85,7 @@ const route = async (r) => {
       await page.waitForTimeout(settle);
       const file = `${sizeId}${tag}-${name}.png`;
       await page.screenshot({ path: path.join(OUT, file) });
+      await uiMeasure.record(page, path.join(OUT, file));
       log.shots.push(file);
     };
     const click = (s, o = {}) => page.locator(s).first().click({ timeout: 4000, ...o });

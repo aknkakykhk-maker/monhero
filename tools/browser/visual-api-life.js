@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const gw = require('../analysis/gateway-client');
+const uiMeasure = require('./ui-measure');
 
 const argv = process.argv.slice(2);
 const opt = (n, d = '') => { const i = argv.indexOf(n); return i >= 0 && i + 1 < argv.length ? argv[i + 1] : d; };
@@ -57,6 +58,7 @@ const areaOf = (k) => AREAS.find((a) => a.re.test(k)) || { key: 'etc', name: '�
 
 const collect = (dir) => {
   const scenes = new Map();
+  const meas = uiMeasure.load(dir); // 撮るときに測った大きさの釣り合い(visual-life-shoot.js が残す)
   for (const f of fs.readdirSync(dir).sort()) {
     const m = /^(tate|pc)(?:-(first|night))?-(.+)\.png$/.exec(f);
     if (!m) continue;
@@ -65,20 +67,22 @@ const collect = (dir) => {
     const key = `${m[2] || ''}:${m[2] === 'night' ? 'night-' : ''}${code}`;
     const sc = scenes.get(key) || scenes.set(key, { key, label: `${m[2] === 'first' ? '初めての人 ' : ''}${labelOf(m[2] === 'night' ? `night-${code}` : code)}〔${m[3]}〕`, shots: {} }).get(key);
     sc.shots[m[1]] = path.join(dir, f);
+    (sc.machine = sc.machine || {})[m[1]] = uiMeasure.lines(meas.get(f));
   }
   return [...scenes.values()];
 };
 
 const img = (file) => ({ type: 'image', media_type: 'image/png', data: fs.readFileSync(file).toString('base64') });
 const buildRequests = (scenes) => {
-  const system = fs.readFileSync(PROMPT_FILE, 'utf8');
+  // 共通の「大きさの釣り合い」と「測った数字の扱い」を続けて渡す(モンサク・助手ライフ・モンビーで同じ)
+  const system = `${fs.readFileSync(PROMPT_FILE, 'utf8')}\n${fs.readFileSync(path.join(__dirname, 'prompts', 'common-balance.md'), 'utf8')}`;
   const reqs = [];
   for (const a of [...AREAS, { key: 'etc', name: 'その他' }]) {
     const list = scenes.filter((s) => areaOf(s.key).key === a.key);
     for (let i = 0; i < list.length; i += MAX_SCENES) {
       const part = list.slice(i, i + MAX_SCENES);
       const content = [{ type: 'text', text: `まとまり: ${a.name}(${part.length}場面)。止め絵の前に名札を置きます。` }];
-      for (const sc of part) for (const z of SIZES) if (sc.shots[z]) { content.push({ type: 'text', text: `【${sc.label}@${z}】${SIZE_NAME[z]}` }); content.push(img(sc.shots[z])); }
+      for (const sc of part) for (const z of SIZES) if (sc.shots[z]) { const mm = (sc.machine || {})[z] || []; content.push({ type: 'text', text: `【${sc.label}@${z}】${SIZE_NAME[z]}${mm.length ? ` / 機械の見つけ物(machine): ${mm.join(' ・ ')}` : ''}` }); content.push(img(sc.shots[z])); }
       content.push({ type: 'text', text: '上の止め絵を点検し、決めた形の JSON の配列だけを返してください。' });
       reqs.push({ custom_id: `l${String(reqs.length + 1).padStart(3, '0')}`, area: a.name, scenes: part.map((s) => s.label),
         request: { system, cache_system: true, messages: [{ role: 'user', content }], max_tokens: MAX_TOKENS, effort: 'high' } });
