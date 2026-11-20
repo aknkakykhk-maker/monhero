@@ -317,6 +317,31 @@ const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   if (typeof assistantCostumeSaleIn === 'function' && assistantCostumeSaleIn(costume, 'beatPoint')) lines.push('いまはビートP', '交換所で買えます');
   return lines;
 };
+// 着替えの全身絵プレビュー(2026-11-20 社長「着替えを買うとき、全身絵でプレビューを見たい。一覧のカードからも、購入確認の窓にも」)。
+// 服の imageDir の末尾が服の名前で、ASSISTANT_FULLBODY_ART のキー「助手id:服の名前」の後ろ半分とそろう
+// (いま着ている服から引く assistantWornOutfitName と同じ引き方を、商品の服で引く)。
+// 全身絵の無い服(表に無い)は null=プレビューを出さず、従来表示のままにする。表情は通常(normal)で、
+// 表情ぶんの絵が無いときは表情なしの絵(<名前>.png)へ落とす(assistantFullBodyImage と同じ作り)
+const marketCostumeFullbodySrc = (item) => {
+  if (!item || item.type !== 'costume') return null;
+  const costume = typeof assistantCostumeById === 'function' ? assistantCostumeById(item.id) : null;
+  if (!costume || !costume.imageDir || typeof ASSISTANT_FULLBODY_ART === 'undefined') return null;
+  const assistantId = item.assistantId || costume.assistantId;
+  if (!assistantId) return null;
+  const name = ASSISTANT_FULLBODY_ART[`${assistantId}:${String(costume.imageDir).split('/').pop()}`];
+  if (!name) return null;
+  const exprs = typeof ASSISTANT_FULLBODY_EXPRESSIONS !== 'undefined' ? ASSISTANT_FULLBODY_EXPRESSIONS[name] : null;
+  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes('normal') ? '__normal' : ''}.png`;
+};
+// 詳細と購入確認の、頭(アイコンと名前)の下に出す全身絵。着替え以外・絵の無い服では何も出さない。
+// 全身絵は縦長なので、高さを決めて object-contain で全体を収める(引き伸ばし・切り抜きをしない)
+const MarketCostumePreview = ({ item }) => {
+  const src = marketCostumeFullbodySrc(item);
+  if (!src) return null;
+  return <div data-market-costume-preview className="mt-3 flex justify-center rounded-2xl border border-white/10 bg-black/30 px-2 py-3">
+    <img src={src} alt={`${item.name}の全身の絵`} className="max-h-[320px] w-auto max-w-full object-contain"/>
+  </div>;
+};
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
@@ -462,6 +487,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
+    <MarketCostumePreview item={item}/>
     {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{helpWrap(item.desc)}</p>}
     {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
       <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
@@ -536,6 +562,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
   const canConfirm=maxQuantity>0&&!pending;
   return <MarketModal label={`${item.name}の${meta.verb}`} border={meta.border} onClose={pending?null:onCancel}>
     <MarketModalHead item={item} accent={meta.text}/>
+    <MarketCostumePreview item={item}/>
     <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">{meta.have}</span><strong className={`mt-1 block text-xl font-black font-mono ${meta.text}`}>{meta.emoji} {safeBalance.toLocaleString()}</strong></div>
     {stackable&&<>
       <div className="mt-3 text-center text-[11px] font-black text-slate-300">{meta.verb}する数</div>
