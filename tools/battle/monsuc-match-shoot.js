@@ -75,7 +75,7 @@ const measure = (page) => page.evaluate(() => {
     await shot('2-card');
     await click('.msc-card button:has-text("技"), button:has-text("技"):not(:has-text("全部"))');
     await shot('3-card-tech');
-    await click('button:has-text("準備完了")');
+    await click('[data-msc-ready]');
     await page.waitForTimeout(1500);
     for (let i = 0; i < 3; i++) { if (!(await click('button:has-text("試合開始"), button:has-text("いくよ"), [data-msc-cutin] button'))) break; await page.waitForTimeout(800); }
     await page.waitForTimeout(6000);
