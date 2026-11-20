@@ -519,6 +519,7 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
+.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}

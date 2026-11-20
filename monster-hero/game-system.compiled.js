@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25084861c74eddc8
+// source-sha256: ccfc90befb6494c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173248,6 +173248,7 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
+.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvsub{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#cbd5e1;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}
@@ -174219,7 +174220,7 @@ const MSX_SCENARIOS = Object.freeze([{
   title: 'いっしょに、ヒーローズファイナルへ!',
   lead: '明るく元気なムードメーカーと、笑いながらヒーローズファイナルの優勝を目指す物語。初めての育成におすすめ',
   tag: 'やさしい',
-  perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1',
+  perk: '遊ぶ・休むで減るストレスが1.3倍になる。褒めたときに上がる甘え度が+1(忠誠度が上がりやすい)',
   eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束']
 }, {
   aid: 'atsu',
@@ -177587,12 +177588,12 @@ function MsxStart({
       }
     }, React.createElement("span", {
       className: "chip on"
-    }, sc.tag), " ", React.createElement("span", {
-      className: "chip p"
-    }, "仲良し度 Lv", aidLv)))), React.createElement("div", {
-      className: "v-kv"
-    }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk)), combo && React.createElement("div", {
-      className: "v-kv"
+    }, sc.tag)))), React.createElement("div", {
+      className: "v-kv v-kvst"
+    }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk, React.createElement("small", {
+      className: "v-kvsub"
+    }, "忠誠度は甘え度と恐れ度の合計。高いほどトレーニングがよく伸びる"))), combo && React.createElement("div", {
+      className: "v-kv v-kvst"
     }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("div", {
       className: "v-combo",
       "data-msx-train-combo": true
@@ -177615,8 +177616,10 @@ function MsxStart({
         color: MSX_STAT_COLOR[c]
       }
     }, "+", MSX_STAT_ICON[c], MSX_STAT_NAME[c])))))), React.createElement("div", {
-      className: "v-kv"
-    }, React.createElement("b", null, "初めの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
+      className: "v-kv v-kvst"
+    }, React.createElement("b", null, "初めの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), React.createElement("small", {
+      className: "v-kvsub"
+    }, `ふだんの${msxAidName(aid)}との仲良し度(Lv${aidLv})が高いほど高く始まる。助手もトレーニングに来て、タッグになる`))), React.createElement("div", {
       className: "v-eps"
     }, sc.eps.map((t, i) => React.createElement("div", {
       key: i
