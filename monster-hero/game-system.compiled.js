@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88cf5cca6e0b7fe3
+// source-sha256: d83098de149bdc93
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164715,7 +164715,7 @@ const msxTevNextText = (run, o) => {
   const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
   if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、${name}がいる\nトレーニングをまた選んだとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、${name}の顔が出ている\nトレーニングをまた選んだとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
 };
 function MsxTevGauge({
   g,
@@ -165013,7 +165013,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-who .gr{left:50%;bottom:-3%;width:70%;height:10%}
 .msx .msx-tev.tb2 .tev-who.me{animation:tevWob 1.1s ease-in-out infinite}
 @keyframes tevWob{0%,100%{rotate:-3deg}50%{rotate:3deg}}
-.msx .msx-tev .tev-q{position:absolute;right:4%;top:-4%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-q{position:absolute;right:20%;top:2%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
 .msx .msx-tev .tev-bang{position:absolute;right:0;top:-8%;font-size:36px;font-weight:900;font-style:italic;color:#fde047;-webkit-text-stroke:3px #7c2d12;paint-order:stroke fill;animation:tevBang .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes tevBang{from{opacity:0;scale:.3}to{opacity:1;scale:1}}
 .msx .msx-tev.wow.tb3{animation:tevShake .42s .1s ease-out both}
@@ -165082,7 +165082,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
-.msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
+.msx .msx-tev .tev-next b{color:#94a3b8;white-space:nowrap;font-size:12px}
 .msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;top:58px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
 .msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
 .msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
