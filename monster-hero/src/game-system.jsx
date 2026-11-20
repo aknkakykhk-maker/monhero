@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bd67b75ec2a25d10
+// generated-sha256: 10b5221d79dc72bf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15289,8 +15289,11 @@ const useBubbleCollapse = (collapseKey) => {
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null }) => {
   const [open, setOpen] = useState(defaultOpen);
+  // menu … [{ key, label, onClick }]。渡すと、吹き出しを押したときに小さなメニュー(渡した項目+「📖 詳しく見る」)を出す。
+  //   HOME は吹き出しの中に「💬 おしゃべり」と「タップで詳しく」の2つの押し所があり、違いが分からなかった(r1119-050 窓-36)。押し所を吹き出し1つにまとめ、機能は減らさない
+  const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
   const bubbleSetting = useAssistantBubbleState();
@@ -15366,7 +15369,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!((paragraphs && paragraphs.length) || topic);
-  const Wrapper = hasDetail ? 'button' : 'div';
+  const menuItems = Array.isArray(menu) ? menu.filter((m) => m && typeof m.onClick === 'function') : [];
+  const useMenu = menuItems.length > 0;
+  const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   if (bubbleHidden) return null;
   // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
@@ -15389,7 +15394,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
         </button>
         <Wrapper
-          {...(hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
+          {...(useMenu ? { onClick:()=>setMenuOpen(!menuOpen), 'aria-label':`${who.name}のメニューを開く`, 'aria-expanded':menuOpen, 'data-bubble-menu-toggle':'' } : hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
           className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
           style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
           {/* oneLine … 名前とセリフを1行に並べ、はみ出す分は … で切る。「タップで詳しく」は右端の小さな「›」(高さ36px以内。
@@ -15410,11 +15415,19 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
             style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
-          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{hasDetail&&<><span data-bubble-more-text>タップで詳しく</span><ChevronRight size={11}/></>}</span>}
+          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
         {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
           className="mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90">▴</button>}
+        {useMenu&&menuOpen&&<>
+          {/* 外を押すとメニューが閉じる(幕は透明。後ろの施設をうっかり押さない) */}
+          <div className="fixed inset-0" style={{ zIndex:60 }} onClick={()=>setMenuOpen(false)} data-bubble-menu-backdrop aria-hidden="true"/>
+          <div role="menu" data-bubble-menu className="absolute left-[56px] top-full mt-1 flex flex-col gap-1 rounded-2xl border-2 p-1.5 shadow-xl" style={{ zIndex:61, borderColor:color, backgroundColor:'rgba(15,23,42,0.97)', minWidth:'168px' }}>
+            {menuItems.map((m)=><button key={m.key||m.label} type="button" role="menuitem" data-bubble-menu-item={m.key||''} {...(m.attr||{})} onClick={()=>{ setMenuOpen(false); m.onClick(); }} className="min-h-[44px] rounded-xl px-3 text-left text-[12px] font-black text-white bg-white/10 active:scale-[.98]">{m.label}</button>)}
+            {hasDetail&&<button type="button" role="menuitem" data-bubble-menu-item="detail" onClick={()=>{ setMenuOpen(false); setOpen(true); }} className="min-h-[44px] rounded-xl px-3 text-left text-[12px] font-black text-white bg-white/10 active:scale-[.98]">📖 詳しく見る</button>}
+          </div>
+        </>}
       </div>
       {open&&(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
@@ -50162,11 +50175,8 @@ function HomeScreen({
 
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る)。
             設定「ホームの助手コメント」が「切」のときは、この枠ごと出さない(2026-11-17 あっくん) */}
-        {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
-          {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
-              吹き出しが高くなり、横持ちでは施設の札「M/B管理」、小さい画面ではジャックの吹き出しにかぶって押せなくなっていた
-              (raid-jack-home-say-tap-check)。吹き出しの中身はボタン(詳しい説明を開く)なので、入れ子にせず上に重ねる。左は顔(48px)+すき間(8px)+吹き出しの内側。吹き出しには footerSpace で、下の行の左にボタンの幅ぶんの空きを取らせる */}
-          {typeof onOpenAssistantChat==='function'&&<button type="button" data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10 rounded-full border border-pink-300/70 bg-pink-500/85 px-1.5 py-px text-[9px] font-black leading-tight text-white shadow active:scale-95" style={{left:'64px'}}>💬 おしゃべり</button>}
+        {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}/>
+          {/* 「💬 おしゃべり」は吹き出しの中に重ねず、吹き出しを押したときのメニューに入れた(押し所が2つで違いが分からなかった。r1119-050 窓-36) */}
         </div>}
       </main>
     
