@@ -24,8 +24,17 @@ if(block){
   check('描き方などを一緒に入れる',s.draw==='gpu'&&s.gpu==='Apple GPU'&&s.dpr===3);
   const bytes=Buffer.byteLength(JSON.stringify(s));
   check('送る大きさが小さい(400バイト未満。stats は4KBまで)',bytes<400,`${bytes}バイト`);
+  // 100ms を超えたコマの時刻(2026-11-21 r1119-057)。曲の何秒目・何ms を「秒:ms;」で、1曲に16個まで。数は全部
+  D.reset();t=1000;D.tick(t,3,0);
+  for(let i=0;i<30;i++){t+=16.7;D.tick(t,3,i*16.7);}
+  t+=140;D.tick(t,3,2345);t+=16.7;D.tick(t,3,2362);t+=400;D.tick(t,3);// 曲の時刻が無いコマは -1
+  for(let i=0;i<20;i++){t+=120;D.tick(t,3,5000+i*120);}
+  const L=D.snapshot();
+  check('100ms を超えたコマを数え、曲の何秒目・何ms を残す',L.over100===22&&L.long.split(';').length===16&&L.long.startsWith('2.3:140;-1:400;5:120'),`over100=${L.over100} long=${L.long}`);
+  check('100ms 超の時刻を足しても送る大きさが小さい(600バイト未満)',Buffer.byteLength(JSON.stringify({...L,draw:'gpu',gpu:'Apple GPU'}))<600);
   D.reset();const z=D.snapshot();
-  check('演奏の始めに数え直す・数が無いときは null',z.n===0&&z.avg===null&&z.tickAvg===null&&z.p95===null);
+  check('演奏の始めに数え直す・数が無いときは null',z.n===0&&z.avg===null&&z.tickAvg===null&&z.p95===null&&z.over100===0&&z.long==='');
+  check('演奏画面が曲の時刻を渡す',/RHYTHM_FRAME_DIAG\.tick\(frameNowMs,[^;]*,songTimeMs\)/.test(play));
 }
 // 2. 演奏画面: 足すだけ・壊れても診断の行は送れる
 check('診断の行の stats に frame を足すだけ(既存の timing などは残す)',/timing:RHYTHM_TIMING_DIAG\.snapshot\(\),[\s\S]{0,80}\.\.\.\(frame&&typeof frame==='object'\?\{frame\}:\{\}\)/.test(play));

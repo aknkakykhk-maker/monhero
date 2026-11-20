@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f1169b69db195c3
+// generated-sha256: 8fffb74b4cbba5a7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -27686,7 +27686,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.fadedOut=true;
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
-if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
+if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN,songTimeMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
   const disposeRun=useCallback(()=>{rhythmSongPrepSignal(false,song.songId);rhythmSongPlaySignal(false,song.songId);if(songIntroRef.current&&rhythmSongIntroHolds===songIntroRef.current.holds)rhythmSongIntroHolds=null;songIntroRef.current=null;setSongIntro(null);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
@@ -36283,6 +36283,11 @@ const friendsPlaceFromRow = (place, records) => {
 };
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
+// モンヒロビートの曲が鳴っているあいだ(30-rhythm-play の window.__mhSongPlaying)は送らない(2026-11-21 r1119-057・演奏中の止まり)。
+// 演奏画面に入ったら曲が鳴る前(幕のあいだ)に送り、鳴っているあいだに来た分は曲の終わりから少し待って送る
+const FRIEND_PUBLISH_BEFORE_SONG_MS = 300;
+const FRIEND_PUBLISH_AFTER_SONG_MS = 1500;
+const friendsSongPlaying = () => { try { return typeof window !== 'undefined' && !!window.__mhSongPlaying; } catch (e) { return false; } };
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
@@ -69440,7 +69445,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -90874,6 +90879,7 @@ const MSX_CSS = `
 .msx .v-ft button.on{background:#fde047;color:#1e1b4b}
 .msx-scroll{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .msx-ov{position:absolute;inset:0;z-index:40;background:#0b0920cc;display:flex;align-items:center;justify-content:center;padding:14px}
+
 .msx-ov.msx-ov-deep{z-index:41;background:#0b0920f7}
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
@@ -90887,6 +90893,9 @@ const MSX_CSS = `
    縦でも同じにする(社長の実機の指摘: 詳細の窓の「閉じる」と、後ろの左上・下の「← 戻る」が両方見えて二重だった)。
    本文の中で開いた窓も、見出しの帯・下の帯ごと幕で覆い、閉じる操作は窓の中の1つにする */
 .msx .v-body>.msx-ov{position:fixed;inset:0}
+/* 画面に固定した窓は外枠(.msx-wrap)の safe-area の余白を通らないので、窓の幕の上下で iPhone の切り欠き・時計の帯の分を空ける
+   (2026-11-20 窓口 M4。外枠の中に出るほかの窓は外枠が空けているので足さない)。--msx-sat は止め絵で帯を再現するときだけ使う */
+.msx .v-body>.msx-ov{padding-top:max(14px,calc(var(--msx-sat,env(safe-area-inset-top)) + 8px));padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px))}
 .msx-row{display:flex;align-items:center;gap:6px}
 /* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
 .msx-md{padding:8px 10px}
@@ -126659,15 +126668,21 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!friendsActive) return undefined;
     refreshFriendRequests();
-    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests(); }, 3 * 60 * 1000);
+    // 曲が鳴っているあいだは見に行かない(次の回に回す。r1119-057 演奏中の止まり)
+    const timer = setInterval(() => { if ((typeof document === 'undefined' || !document.hidden) && !friendsSongPlaying()) refreshFriendRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
+  // ★モンヒロビートの曲が鳴っているあいだは送らず、曲が終わってから1回送る(2026-11-21 r1119-057)。
+  //   送るときの自己ベストの読み直し・記録づくりが1コマを長くし、ノーツが止まって飛んでいた(演奏の始まりの数秒後と2分ごと)。
+  //   演奏画面に入ったときの「演奏中」の知らせは、曲が鳴る前(幕のあいだ)に送る(下の useEffect)
   const friendLatestRef = useRef({});
   const friendPublishRef = useRef(0);
+  const friendPublishDeferredRef = useRef(false);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
+    if (friendsSongPlaying()) { friendPublishDeferredRef.current = true; return; }
     const id = await ensureBreederId();
     if (!id) return;
     const latest = friendLatestRef.current;
@@ -126718,10 +126733,19 @@ function MonsterHeroGame() {
   }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
-    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    // 演奏画面に入ったら、曲が鳴り始める前(幕のあいだ)に送る。待つと曲の頭に重なる
+    const wait = gameState === 'RHYTHM_PLAY' ? FRIEND_PUBLISH_BEFORE_SONG_MS : Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
   }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
+  // 曲が鳴っていて送らなかった分は、曲が終わってから送る(結果の画面が出そろうまで少し待つ)
+  useEffect(() => {
+    if (!friendsActive || typeof window === 'undefined') return undefined;
+    let timer = null;
+    const onEnd = () => { if (!friendPublishDeferredRef.current) return; friendPublishDeferredRef.current = false; clearTimeout(timer); timer = setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS); };
+    window.addEventListener('mh:song-play-end', onEnd);
+    return () => { clearTimeout(timer); window.removeEventListener('mh:song-play-end', onEnd); };
+  }, [friendsActive, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);

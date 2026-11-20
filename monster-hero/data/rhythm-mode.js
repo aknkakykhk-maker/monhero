@@ -1983,14 +1983,17 @@ const RHYTHM_FRAME_DIAG=(()=>{
   // 熱で端末が速さを落とすと後半が遅くなるので、その差で手当ての前後を比べる。2分に届かない曲は late が null
   const EARLY_MS=30000,LATE_MS=120000;
   const win=()=>({hist:new Uint32Array(BINS),n:0,sum:0,over34:0});
-  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0,early=null,late=null;
+  // long … 1コマが 100ms を超えた時刻(2026-11-21 r1119-057「ノーツが一瞬止まって飛ぶ」)。[曲の何秒目(0.1秒)・何ms] を1曲に LONG_MAX 個まで。
+  //   曲と難易度は同じ行(song_id・difficulty)にある。送る形は「秒:ms」を ; でつないだ文字(stats の 4KB を超えないよう短く)。over100 は全部の数
+  const LONG_MS=100,LONG_MAX=16;
+  let gapHist=null,tickHist=null,n=0,sum=0,max=0,over17=0,over34=0,over50=0,tickN=0,tickSum=0,last=0,first=0,startOver50=0,startMax=0,early=null,late=null,over100=0,long=[];
   // モンスターノーツの前後(2026-10-16 社長「モンスターノーツでかくつくの直ってない」)。手元の測り方では実機と合わないので、実機の遊んだ記録に残す。
   //   叩いた時刻(判定した瞬間)の 0.5秒前〜3秒後のコマのうち、間隔が 25ms を超えたものだけを [叩いてからのms・間隔・そのコマの JS の ms] で覚える(1回に12個まで)。
   //   JS の ms が小さいのに間隔が長いコマは、JS の外(合成・塗り・画像の用意・音)で止まっている。cue … その間に何をしたか(カットイン・能力の文字・音)と叩いてからのms。
   //   1曲に6回まで。行の大きさの上限(stats は 4KB)を超えないよう、送る側(rhythmTouchDiagOf)が大きさを見て削る
   const MON_PRE=500,MON_POST=3000,MON_SLOW=25,MON_MAX=6,MON_LIST=12;
   let ring=[],marks=[];
-  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;early=win();late=win();ring=[];marks=[];};
+  const reset=()=>{gapHist=new Uint32Array(BINS);tickHist=new Uint32Array(BINS);n=0;sum=0;max=0;over17=0;over34=0;over50=0;tickN=0;tickSum=0;last=0;first=0;startOver50=0;startMax=0;early=win();late=win();ring=[];marks=[];over100=0;long=[];};
   const nowMs=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
   const addWin=(w,gap)=>{w.n++;w.sum+=gap;if(gap>34.3)w.over34++;w.hist[Math.min(BINS-1,Math.floor(gap))]++;};
   reset();
@@ -1998,11 +2001,11 @@ const RHYTHM_FRAME_DIAG=(()=>{
   const r1=v=>Math.round(v*10)/10;
   return {
     reset,
-    // frameNowMs … requestAnimationFrame の時刻。tickMs … そのコマのゲームの処理(JS)の時間
-    tick(frameNowMs,tickMs){
+    // frameNowMs … requestAnimationFrame の時刻。tickMs … そのコマのゲームの処理(JS)の時間。songMs … 曲の時刻(無くてもよい)
+    tick(frameNowMs,tickMs,songMs){
       const t=Number(frameNowMs);
       if(Number.isFinite(t)){
-        if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;gapHist[Math.min(BINS-1,Math.floor(gap))]++;
+        if(last>0){const gap=t-last;if(gap>0&&gap<1000){n++;sum+=gap;if(gap>max)max=gap;if(gap>17.7)over17++;if(gap>34.3)over34++;if(gap>50)over50++;if(gap>LONG_MS){over100++;const sm=Number(songMs);if(long.length<LONG_MAX)long.push(`${Number.isFinite(sm)?Math.round(sm/100)/10:-1}:${Math.round(gap)}`);}gapHist[Math.min(BINS-1,Math.floor(gap))]++;
           if(t-first<=START_MS){if(gap>50)startOver50++;if(gap>startMax)startMax=gap;}
           if(t-first<=EARLY_MS)addWin(early,gap);else if(t-first>=LATE_MS)addWin(late,gap);}}
         else first=t;
@@ -2031,7 +2034,7 @@ const RHYTHM_FRAME_DIAG=(()=>{
     // meta … 描き方など(draw・gpu・dpr・w・h・cores・effect・fps・light)
     snapshot(meta){
       const winOf=w=>w&&w.n?{n:w.n,avg:r1(w.sum/w.n),p95:pct(w.hist,w.n,.95),over34:w.over34}:null;
-      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,startOver50,startMax:Math.round(startMax),early:winOf(early),late:winOf(late),
+      return {n,avg:n?r1(sum/n):null,p95:pct(gapHist,n,.95),max:Math.round(max),over17,over34,over50,over100,long:long.join(';'),startOver50,startMax:Math.round(startMax),early:winOf(early),late:winOf(late),
         tickAvg:tickN?r1(tickSum/tickN):null,tickP95:pct(tickHist,tickN,.95),...(meta&&typeof meta==='object'?meta:{})};
     },
   };
