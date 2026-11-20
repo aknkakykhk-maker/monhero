@@ -551,10 +551,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       {typeof MsxPickTools === 'function' && !few ? <MsxPickTools q={pickQ} onQ={setPickQ} sorts={[['std', '標準'], ['name', '名前'], ['species', '種族']]} sort={pickSort} onSort={setPickSort} rev={pickRev} onRev={setPickRev} count={list.length} total={listAll.length}/> : null}
       </div>
       <div className="v-gridw" data-msx-pick-list>
-        <div className="v-grid6 pk1">
-          {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><span className="v-g6f"><MsxMonFace species={x.sp} alt={msxMonName(x.sp)}/></span><span className="v-g6n">{x.nm}</span></button>)
-            : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
-        </div>
+        {/* 札は④の共通の型(MonsucMonCard の小・MonsucCardGrid の5列。docs/spec/MONSUC_UI.md の 8)。独自の大きさの顔アイコンは作らない */}
+        {list.length ? (typeof MonsucMonCard === 'function' ? (
+          <MonsucCardGrid size="s">
+            {list.map((x) => <MonsucMonCard key={x.key} size="s" m={{ species: x.sp, nick: x.nm, colors: x.colors || null, awake: x.awake || 0 }} on={x.on} onClick={() => setPick(x.pick)} attrs={{ 'data-msx-pick-mon': x.sp, 'aria-label': x.nm, 'aria-pressed': x.on }}/>)}
+          </MonsucCardGrid>
+        ) : null) : <span className="msx-note">{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
       </div>
       </div>
       {/* 選んだ子(r1119 ⑦ 社長「見た目悪い」): 草原の帯と詳細の箱で画面の半分を取っていたのをやめ、左に立ち絵・右に能力の棒と伸びやすさの字の1枚にまとめる。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d07e6f375b181c13
+// source-sha256: c46b7dfc71502399
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172239,8 +172239,6 @@ const MSX_CSS = `
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
 .msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
-.msx .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px 6px;padding:2px 2px 6px}
-.msx .v-grid6.pk1 .v-g6n{font-size:10.5px;transform:none;overflow:hidden;text-overflow:clip;letter-spacing:-.04em}
 .msx .v-body.p1 .v-gridw{margin-top:2px;border-radius:12px;background:#0f0d2466;padding:0 4px}
 .msx .v-p1sel{flex:none;display:flex;gap:8px;padding:7px;margin-top:6px}
 .msx .v-p1art{position:relative;flex:0 0 31%;min-height:128px;border-radius:11px;overflow:hidden;background:#0f0d24;border:1px solid #4a4380}
@@ -172321,7 +172319,6 @@ const MSX_CSS = `
   .msx.land .v-body.p1 .v-p1bar{flex-wrap:wrap}
   .msx.land .v-body.p1 .v-p1bar>.v-tabs{flex:1 1 100%}
   .msx.land .v-body.p1 .v-p1note{display:none}
-  .msx.land .v-body.p1 .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
   .msx.land .v-body.p1 .v-p1st b{font-size:12.5px}
 }
 .msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
@@ -176160,26 +176157,27 @@ function MsxStart({
     }) : null), React.createElement("div", {
       className: "v-gridw",
       "data-msx-pick-list": true
-    }, React.createElement("div", {
-      className: "v-grid6 pk1"
-    }, list.length ? list.map(x => React.createElement("button", {
-      type: "button",
+    }, list.length ? typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+      size: "s"
+    }, list.map(x => React.createElement(MonsucMonCard, {
       key: x.key,
-      className: x.on ? 'on' : '',
-      onClick: () => setPick(x.pick)
-    }, React.createElement("span", {
-      className: "v-g6f"
-    }, React.createElement(MsxMonFace, {
-      species: x.sp,
-      alt: msxMonName(x.sp)
-    })), React.createElement("span", {
-      className: "v-g6n"
-    }, x.nm))) : React.createElement("span", {
-      className: "msx-note",
-      style: {
-        gridColumn: '1 / -1'
+      size: "s",
+      m: {
+        species: x.sp,
+        nick: x.nm,
+        colors: x.colors || null,
+        awake: x.awake || 0
+      },
+      on: x.on,
+      onClick: () => setPick(x.pick),
+      attrs: {
+        'data-msx-pick-mon': x.sp,
+        'aria-label': x.nm,
+        'aria-pressed': x.on
       }
-    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')))), React.createElement("div", {
+    }))) : null : React.createElement("span", {
+      className: "msx-note"
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), React.createElement("div", {
       className: "v-card sel v-p1sel",
       "data-msx-start-sel": true
     }, React.createElement("div", {

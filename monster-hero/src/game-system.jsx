@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a8358a1bdeeda8ff
+// generated-sha256: 9ca8042d721ef10d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89505,8 +89505,6 @@ const MSX_CSS = `
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
 .msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
-.msx .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px 6px;padding:2px 2px 6px}
-.msx .v-grid6.pk1 .v-g6n{font-size:10.5px;transform:none;overflow:hidden;text-overflow:clip;letter-spacing:-.04em}
 .msx .v-body.p1 .v-gridw{margin-top:2px;border-radius:12px;background:#0f0d2466;padding:0 4px}
 .msx .v-p1sel{flex:none;display:flex;gap:8px;padding:7px;margin-top:6px}
 .msx .v-p1art{position:relative;flex:0 0 31%;min-height:128px;border-radius:11px;overflow:hidden;background:#0f0d24;border:1px solid #4a4380}
@@ -89587,7 +89585,6 @@ const MSX_CSS = `
   .msx.land .v-body.p1 .v-p1bar{flex-wrap:wrap}
   .msx.land .v-body.p1 .v-p1bar>.v-tabs{flex:1 1 100%}
   .msx.land .v-body.p1 .v-p1note{display:none}
-  .msx.land .v-body.p1 .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
   .msx.land .v-body.p1 .v-p1st b{font-size:12.5px}
 }
 .msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
@@ -91753,10 +91750,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       {typeof MsxPickTools === 'function' && !few ? <MsxPickTools q={pickQ} onQ={setPickQ} sorts={[['std', '標準'], ['name', '名前'], ['species', '種族']]} sort={pickSort} onSort={setPickSort} rev={pickRev} onRev={setPickRev} count={list.length} total={listAll.length}/> : null}
       </div>
       <div className="v-gridw" data-msx-pick-list>
-        <div className="v-grid6 pk1">
-          {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><span className="v-g6f"><MsxMonFace species={x.sp} alt={msxMonName(x.sp)}/></span><span className="v-g6n">{x.nm}</span></button>)
-            : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
-        </div>
+        {/* 札は④の共通の型(MonsucMonCard の小・MonsucCardGrid の5列。docs/spec/MONSUC_UI.md の 8)。独自の大きさの顔アイコンは作らない */}
+        {list.length ? (typeof MonsucMonCard === 'function' ? (
+          <MonsucCardGrid size="s">
+            {list.map((x) => <MonsucMonCard key={x.key} size="s" m={{ species: x.sp, nick: x.nm, colors: x.colors || null, awake: x.awake || 0 }} on={x.on} onClick={() => setPick(x.pick)} attrs={{ 'data-msx-pick-mon': x.sp, 'aria-label': x.nm, 'aria-pressed': x.on }}/>)}
+          </MonsucCardGrid>
+        ) : null) : <span className="msx-note">{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
       </div>
       </div>
       {/* 選んだ子(r1119 ⑦ 社長「見た目悪い」): 草原の帯と詳細の箱で画面の半分を取っていたのをやめ、左に立ち絵・右に能力の棒と伸びやすさの字の1枚にまとめる。
