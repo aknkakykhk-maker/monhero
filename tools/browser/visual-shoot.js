@@ -23,6 +23,11 @@ const path = require('path');
 const http = require('http');
 const { spawnSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(社長の指摘の較正。tools/browser/serve-rev.js)
+const serveRev = require('./serve-rev');
+const FROM_REV = serveRev.make(ROOT);
+// 大きさの釣り合いを測る(tools/browser/ui-measure.js)。指摘は results.json に「測る:」の種類で入る
+const uiMeasure = require('./ui-measure');
 const { SCENES, SIZES, MONSUC_DEEP } = require('./visual-scenes');
 const { measurePage, contrastFromPixels, diffAgainst } = require('./visual-detect');
 const { openSession } = require('../playbot/lib/session');
@@ -68,6 +73,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'applica
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
     const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    if (f.startsWith(ROOT) && serveRev.serve(FROM_REV, ROOT, f, res, MIME[path.extname(f)])) return;
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
     fs.createReadStream(f).pipe(res);
@@ -113,6 +119,7 @@ async function shootSize(size, server) {
       if (!png) { add(sc, size, '開けなかった', '止め絵が撮れない', ''); continue; }
       fs.writeFileSync(path.join(OUT, rel), png);
       const m = await measurePage(s.page).catch(() => null);
+      for (const x of await uiMeasure.record(s.page, path.join(OUT, rel), { scene: sc.id, size: size.tag })) add(sc, size, `測る:${x.kind}`, x.detail, rel, { priority: x.pri });
       if (m) {
         if (m.textLen === 0) add(sc, size, '真っ白', '画面に文字が1つも無い', rel);
         m.badText.slice(0, 5).forEach((b) => add(sc, size, '変な字', `「${b.text}」(${b.where})`, rel));
