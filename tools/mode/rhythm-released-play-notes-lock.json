@@ -1557,9 +1557,9 @@
    "assist": "ab301fc92a7d6d1d"
   },
   "rebellion_short/hell": {
-   "notes": "f76bd9eea8762b22",
-   "mirror": "1101cbd5313aef00",
-   "assist": "72f8fcb73d1d7ab1"
+   "notes": "db6675f69b769603",
+   "mirror": "169cfc0d83004fe7",
+   "assist": "e0db621adbfac66d"
   },
   "altar_world_tree/easy": {
    "notes": "5e8b4372bfc57907",
@@ -1680,6 +1680,726 @@
    "notes": "0782b5ccf3a3cc6c",
    "mirror": "5d2870874242193e",
    "assist": "300d03c9c258054a"
+  },
+  "lamia/easy": {
+   "notes": "ef7ade45d8860706",
+   "mirror": "2d1018f954898c6b",
+   "assist": "ef7ade45d8860706"
+  },
+  "lamia/normal": {
+   "notes": "e7cc659d5eb5008b",
+   "mirror": "8341730d9e91a3f6",
+   "assist": "0e0dbc3364d67784"
+  },
+  "lamia/hard": {
+   "notes": "6f8d8de9058f92f1",
+   "mirror": "c6c5b6ec84dda3c4",
+   "assist": "1ff11f59c3f9e9e4"
+  },
+  "lamia/expert": {
+   "notes": "e1b17e0f82ff6fc8",
+   "mirror": "c6b96955323dcb9e",
+   "assist": "bd423e932282e82c"
+  },
+  "lamia/master": {
+   "notes": "06229b3e3b1af595",
+   "mirror": "decf0e024c3a6e11",
+   "assist": "589164d426775d81"
+  },
+  "lamia/hell": {
+   "notes": "6a987790ea7c5f7c",
+   "mirror": "5f1d830d6f35f079",
+   "assist": "0e095f88be33ed6f"
+  },
+  "saudade/easy": {
+   "notes": "e3f9e52acc37db89",
+   "mirror": "272c9edd536676f9",
+   "assist": "e3f9e52acc37db89"
+  },
+  "saudade/normal": {
+   "notes": "8f34f9e93f10980a",
+   "mirror": "33e9b37c4f28d94e",
+   "assist": "80c06446d02b759a"
+  },
+  "saudade/hard": {
+   "notes": "af0455784bb378d5",
+   "mirror": "769f6e9737e217b0",
+   "assist": "c9ceabb9a968529f"
+  },
+  "saudade/expert": {
+   "notes": "e72a09028dd26a94",
+   "mirror": "d66de8fbee3a8508",
+   "assist": "5b09a533751f1ac2"
+  },
+  "saudade/master": {
+   "notes": "ade2e41efda9accb",
+   "mirror": "a0073313c4835aaf",
+   "assist": "5b5801e2889726b0"
+  },
+  "saudade/hell": {
+   "notes": "3e656162d4dde87d",
+   "mirror": "efe616952a54691a",
+   "assist": "6fc5880ef0f409a1"
+  },
+  "saudade_short/easy": {
+   "notes": "9bcc70b8462f7e58",
+   "mirror": "e8701346bb3bf75d",
+   "assist": "9bcc70b8462f7e58"
+  },
+  "saudade_short/normal": {
+   "notes": "30b38425eb6df1d8",
+   "mirror": "f7f19d502b8179b4",
+   "assist": "6ace151a4bb55619"
+  },
+  "saudade_short/hard": {
+   "notes": "1ff04455bd7ebce1",
+   "mirror": "6eb0ba0a256a8990",
+   "assist": "4d3560c76625973f"
+  },
+  "saudade_short/expert": {
+   "notes": "d4883eeeefcfda2c",
+   "mirror": "41919f7f8d65f27b",
+   "assist": "beb1c87def1c6b8d"
+  },
+  "saudade_short/master": {
+   "notes": "903bcdd470a5b184",
+   "mirror": "da4b8443c493a8a4",
+   "assist": "3e7f983470fb0710"
+  },
+  "saudade_short/hell": {
+   "notes": "26a443453344824e",
+   "mirror": "0c666cc010bd11cb",
+   "assist": "6fe6d24fcd360ec7"
+  },
+  "megalovania_sans/easy": {
+   "notes": "98b5b9bb454a24c8",
+   "mirror": "766b8dff0320a8d4",
+   "assist": "98b5b9bb454a24c8"
+  },
+  "megalovania_sans/normal": {
+   "notes": "4e162a7e34a8afa9",
+   "mirror": "20b4c6d219570742",
+   "assist": "d7e732d1fa80991e"
+  },
+  "megalovania_sans/hard": {
+   "notes": "c44c8bdb25a8b7ba",
+   "mirror": "e58016346e24862c",
+   "assist": "eb3ed24fcedba237"
+  },
+  "megalovania_sans/expert": {
+   "notes": "9cc1d5e5e3c337d5",
+   "mirror": "ed0bd0767f6b5ad0",
+   "assist": "b4d31f4403c2a822"
+  },
+  "megalovania_sans/master": {
+   "notes": "6f6faa2abb95e632",
+   "mirror": "9d404dd7909b6ca9",
+   "assist": "5d8046b28165d94e"
+  },
+  "megalovania_sans/hell": {
+   "notes": "5240e7953eb79268",
+   "mirror": "0e2783ee84e7b970",
+   "assist": "ec235b7cdca4f5fe"
+  },
+  "megalovania_smash/easy": {
+   "notes": "5d5bcd4de4174561",
+   "mirror": "1febaefa9a22f0a8",
+   "assist": "5d5bcd4de4174561"
+  },
+  "megalovania_smash/normal": {
+   "notes": "1e4dee58aa8266a0",
+   "mirror": "67ddd96a6826ebc2",
+   "assist": "07a012e92820bad9"
+  },
+  "megalovania_smash/hard": {
+   "notes": "3e220d427c1f5ead",
+   "mirror": "720d09587e037d7f",
+   "assist": "77ca5e7b36e4c450"
+  },
+  "megalovania_smash/expert": {
+   "notes": "a2eb145d8871888b",
+   "mirror": "3fd85167caf77837",
+   "assist": "a74c78d2671db69a"
+  },
+  "megalovania_smash/master": {
+   "notes": "b2f5f347d29418bc",
+   "mirror": "e6669b0a2a5f8206",
+   "assist": "273bbdb3afacbdbd"
+  },
+  "megalovania_smash/hell": {
+   "notes": "301f73facef28ffa",
+   "mirror": "41d9d0cc895a65cb",
+   "assist": "f5d84709d0a9870e"
+  },
+  "departure/easy": {
+   "notes": "45e68a2cc1f2b20e",
+   "mirror": "c1a1b97df0152a88",
+   "assist": "45e68a2cc1f2b20e"
+  },
+  "departure/normal": {
+   "notes": "b124713bf4c901cd",
+   "mirror": "9b2cea756c03786d",
+   "assist": "7dbd34b7b129b058"
+  },
+  "departure/hard": {
+   "notes": "35fadbeccce51c6a",
+   "mirror": "9a9cfa518b219edf",
+   "assist": "1cb5ea78f7f97951"
+  },
+  "departure/expert": {
+   "notes": "dd21377e29e83ee8",
+   "mirror": "3dc476c46166f5dd",
+   "assist": "911f6967d3d99045"
+  },
+  "departure/master": {
+   "notes": "080285a8b28782a7",
+   "mirror": "18b23c9128f61979",
+   "assist": "4468f296b89f23c1"
+  },
+  "departure/hell": {
+   "notes": "fbc4b7ba41790d5e",
+   "mirror": "d961da70420429ca",
+   "assist": "6bdc42a79c12d9ec"
+  },
+  "departure_short/easy": {
+   "notes": "1d29b5c232ef49eb",
+   "mirror": "0b2d1e5f5ccdf76a",
+   "assist": "1d29b5c232ef49eb"
+  },
+  "departure_short/normal": {
+   "notes": "e5b74774164c0956",
+   "mirror": "0a04db5dbd75fbdc",
+   "assist": "b8d934ceeeec256f"
+  },
+  "departure_short/hard": {
+   "notes": "7ba1f13f27ffff08",
+   "mirror": "135d1efdc0ead396",
+   "assist": "bd7eaceec60dcae1"
+  },
+  "departure_short/expert": {
+   "notes": "f7ece9644e4131a3",
+   "mirror": "63ec2e04623d3234",
+   "assist": "5b4bf4e5a9cf2ea5"
+  },
+  "departure_short/master": {
+   "notes": "4fc5ebc5c51adeb0",
+   "mirror": "b6c114a12cd2443b",
+   "assist": "1b1bc1e077ccd15d"
+  },
+  "departure_short/hell": {
+   "notes": "624163a750bdc346",
+   "mirror": "7f1c7556c932309a",
+   "assist": "91708db4a1740494"
+  },
+  "rpg/easy": {
+   "notes": "fd486c3a37dc6313",
+   "mirror": "8dac2553634e6fca",
+   "assist": "fd486c3a37dc6313"
+  },
+  "rpg/normal": {
+   "notes": "89ca6d41afa14e17",
+   "mirror": "c217f408a45d6472",
+   "assist": "3bcaed39fa74231f"
+  },
+  "rpg/hard": {
+   "notes": "f69a417e31eeb0d0",
+   "mirror": "cadca6c35ac7b70e",
+   "assist": "bb2db397136a4e39"
+  },
+  "rpg/expert": {
+   "notes": "1cdec019aaf52cb5",
+   "mirror": "3ccede21213c857e",
+   "assist": "4cbb3e1675a2ab3c"
+  },
+  "rpg/master": {
+   "notes": "b2c9c76a52f6fce0",
+   "mirror": "1c862711a12400b6",
+   "assist": "9f1195eab3e62ac5"
+  },
+  "rpg/hell": {
+   "notes": "0ebd64be81334709",
+   "mirror": "82e733618cfefe80",
+   "assist": "12073bbfcaa693c1"
+  },
+  "rpg_short/easy": {
+   "notes": "3388543a61340f2b",
+   "mirror": "ab993c623158b1d8",
+   "assist": "3388543a61340f2b"
+  },
+  "rpg_short/normal": {
+   "notes": "5eefe3cdf9ca10e7",
+   "mirror": "a235c24a6516a184",
+   "assist": "cec7887b2d7f1aab"
+  },
+  "rpg_short/hard": {
+   "notes": "2b890de08b148cf4",
+   "mirror": "08e9c308a50441d3",
+   "assist": "503edca5b386c2ed"
+  },
+  "rpg_short/expert": {
+   "notes": "577b0d6fbe04c04a",
+   "mirror": "488d56829ef53392",
+   "assist": "b66bb5133fa4fd6c"
+  },
+  "rpg_short/master": {
+   "notes": "8c23dac5688756a3",
+   "mirror": "6c4c25f0157f7f8d",
+   "assist": "b58fd9ef71eaab4f"
+  },
+  "rpg_short/hell": {
+   "notes": "448d12d5bea4c4be",
+   "mirror": "51d341046cb731da",
+   "assist": "e7102bb944c09224"
+  },
+  "midnight_studio/easy": {
+   "notes": "7f71d2ba4c7bffa0",
+   "mirror": "4e3da33895c4ab32",
+   "assist": "7f71d2ba4c7bffa0"
+  },
+  "midnight_studio/normal": {
+   "notes": "2712d6727db0458c",
+   "mirror": "bafa4721deb152b9",
+   "assist": "b7d2886540ead068"
+  },
+  "midnight_studio/hard": {
+   "notes": "0f71eacf7483ca0a",
+   "mirror": "2147fbe171cf8af2",
+   "assist": "bd71a800edf2ded4"
+  },
+  "midnight_studio/expert": {
+   "notes": "df1c1295b4493ab2",
+   "mirror": "afdd2e69e1395888",
+   "assist": "65ae32de7f6fb32d"
+  },
+  "midnight_studio/master": {
+   "notes": "bfd32b33b293270d",
+   "mirror": "ed2f4cbc83f33f55",
+   "assist": "4a60ebca1e0cadd4"
+  },
+  "midnight_studio/hell": {
+   "notes": "8944e1919af0e28e",
+   "mirror": "20e4683400db132d",
+   "assist": "04f2c046e8d79665"
+  },
+  "midnight_studio_short/easy": {
+   "notes": "d7771bab11093177",
+   "mirror": "6dd75c9561c1e116",
+   "assist": "d7771bab11093177"
+  },
+  "midnight_studio_short/normal": {
+   "notes": "d95c6ad669bbf3c0",
+   "mirror": "56b1942d7bf4bf2b",
+   "assist": "37bb78b08540dcb5"
+  },
+  "midnight_studio_short/hard": {
+   "notes": "383a3a123e11e7f7",
+   "mirror": "108f295ae160d83c",
+   "assist": "17523a456e0f9f0b"
+  },
+  "midnight_studio_short/expert": {
+   "notes": "bb09ec1d17bec578",
+   "mirror": "1ee64426055c3b9b",
+   "assist": "cb7380a14b5a3158"
+  },
+  "midnight_studio_short/master": {
+   "notes": "4cde13a7c46442c3",
+   "mirror": "74d9fd5de2e3af87",
+   "assist": "a7bd8a1f7f0b3b6d"
+  },
+  "midnight_studio_short/hell": {
+   "notes": "6dc1942e45782afe",
+   "mirror": "81349d9eca35b1ec",
+   "assist": "20aee7debee64798"
+  },
+  "hopes_and_dreams/easy": {
+   "notes": "06662baf8fdce8b1",
+   "mirror": "42ff9d79bd377204",
+   "assist": "06662baf8fdce8b1"
+  },
+  "hopes_and_dreams/normal": {
+   "notes": "6d1053de771a335c",
+   "mirror": "91d4a54ddab23a2b",
+   "assist": "5af4ab502d15b208"
+  },
+  "hopes_and_dreams/hard": {
+   "notes": "3aa111b7763be386",
+   "mirror": "66ff3ec018cee40f",
+   "assist": "d3aff435fa202ff3"
+  },
+  "hopes_and_dreams/expert": {
+   "notes": "827b3183ceec33b0",
+   "mirror": "8fc93f82d8106eae",
+   "assist": "15d1439f893a6d55"
+  },
+  "hopes_and_dreams/master": {
+   "notes": "5d7ab31fb9d3536d",
+   "mirror": "45e0c257e13ef8fd",
+   "assist": "199ce2a145f7656f"
+  },
+  "hopes_and_dreams/hell": {
+   "notes": "442cbff148cba748",
+   "mirror": "7b2682f235114b86",
+   "assist": "14ad87b280bb32f1"
+  },
+  "hopes_and_dreams_short/easy": {
+   "notes": "38b6ea2093e0d71b",
+   "mirror": "94bdf519d1d36d9c",
+   "assist": "38b6ea2093e0d71b"
+  },
+  "hopes_and_dreams_short/normal": {
+   "notes": "2d5b26b1e4579760",
+   "mirror": "8586fd8a8fc4e530",
+   "assist": "08333270b2088995"
+  },
+  "hopes_and_dreams_short/hard": {
+   "notes": "cc71a04e67ea8fb6",
+   "mirror": "e28883a437fd9bab",
+   "assist": "3e7b0cfa6a9dc8c6"
+  },
+  "hopes_and_dreams_short/expert": {
+   "notes": "3001f7a3b82f42c3",
+   "mirror": "3c478af234a7de28",
+   "assist": "bad0229a84745ad0"
+  },
+  "hopes_and_dreams_short/master": {
+   "notes": "d7481d6b455d9651",
+   "mirror": "0746a705fe4a4fcf",
+   "assist": "28d5d8bd557ebbbf"
+  },
+  "hopes_and_dreams_short/hell": {
+   "notes": "b205a04667cc32a3",
+   "mirror": "297f4418e2a7fa90",
+   "assist": "66dba2f5fc20d92a"
+  },
+  "sparkling_pink_overture/easy": {
+   "notes": "04b18fa30467c641",
+   "mirror": "112c09025bc3ee04",
+   "assist": "04b18fa30467c641"
+  },
+  "sparkling_pink_overture/normal": {
+   "notes": "5fc6ac1b6a6d3ab4",
+   "mirror": "f7c3b74bdf066535",
+   "assist": "578bc9390333471d"
+  },
+  "sparkling_pink_overture/hard": {
+   "notes": "634df51a68ff611f",
+   "mirror": "6b766439a046c936",
+   "assist": "7ea1d28744dd21b5"
+  },
+  "sparkling_pink_overture/expert": {
+   "notes": "d605117b610fb421",
+   "mirror": "fded24b9a27da6b8",
+   "assist": "940272c9f8d9f73f"
+  },
+  "sparkling_pink_overture/master": {
+   "notes": "d64846171a64ef98",
+   "mirror": "aef77721191d662e",
+   "assist": "22421c9121034653"
+  },
+  "sparkling_pink_overture/hell": {
+   "notes": "51efc87c7cccfc67",
+   "mirror": "8f5669866d0738bd",
+   "assist": "f774acfee65851f1"
+  },
+  "seasons_of_a_little_plaza/easy": {
+   "notes": "bf47e717a28f8ffa",
+   "mirror": "cf8869099ccceba6",
+   "assist": "bf47e717a28f8ffa"
+  },
+  "seasons_of_a_little_plaza/normal": {
+   "notes": "37a6059e475503d9",
+   "mirror": "53c1bcaa2b9d6a82",
+   "assist": "878d1fd596ba6061"
+  },
+  "seasons_of_a_little_plaza/hard": {
+   "notes": "05560a3718cc0e4d",
+   "mirror": "ac9f65afe64ad589",
+   "assist": "60ac36be7856dd59"
+  },
+  "seasons_of_a_little_plaza/expert": {
+   "notes": "dae1fdd1227b3c62",
+   "mirror": "58f8a833b34fef64",
+   "assist": "f0b54e769381960c"
+  },
+  "seasons_of_a_little_plaza/master": {
+   "notes": "13a919c636f049c6",
+   "mirror": "6b59da6d140f6446",
+   "assist": "1f12b6911417ea21"
+  },
+  "seasons_of_a_little_plaza/hell": {
+   "notes": "f96576db7ebda270",
+   "mirror": "d75765f46d8157f1",
+   "assist": "26f2aef9382f2c3c"
+  },
+  "eiyuu_no_akashi/easy": {
+   "notes": "5cd34e845e821571",
+   "mirror": "3fd970e6f9ba5082",
+   "assist": "5cd34e845e821571"
+  },
+  "eiyuu_no_akashi/normal": {
+   "notes": "be041037e5856eac",
+   "mirror": "9d5faab2418085b1",
+   "assist": "d507bff4813540f6"
+  },
+  "eiyuu_no_akashi/hard": {
+   "notes": "caf7808ebcfb25e8",
+   "mirror": "a9d16d2be3bfd50c",
+   "assist": "c35d3d5c8681e1ed"
+  },
+  "eiyuu_no_akashi/expert": {
+   "notes": "72ffa26f767e2fa6",
+   "mirror": "2d9f73917c74eef9",
+   "assist": "324cf115591ea7a0"
+  },
+  "eiyuu_no_akashi/master": {
+   "notes": "95d98df8060f2192",
+   "mirror": "58768c001eb4adad",
+   "assist": "608b4a6b88333ec6"
+  },
+  "eiyuu_no_akashi/hell": {
+   "notes": "5db2822523ac2083",
+   "mirror": "39a856fab5bbfb8e",
+   "assist": "7b67d54a3330312e"
+  },
+  "eiyuu_no_akashi_milktea/easy": {
+   "notes": "2f55b7bcd8b52203",
+   "mirror": "2e55d48361eabaa2",
+   "assist": "2f55b7bcd8b52203"
+  },
+  "eiyuu_no_akashi_milktea/normal": {
+   "notes": "82f9a601ac020e47",
+   "mirror": "f5bb47e1c29e4cc6",
+   "assist": "d82fcd7cc8a86c9f"
+  },
+  "eiyuu_no_akashi_milktea/hard": {
+   "notes": "feadaf3a9d550870",
+   "mirror": "9329e5f2efa60e4c",
+   "assist": "d4915a515485b398"
+  },
+  "eiyuu_no_akashi_milktea/expert": {
+   "notes": "3a3b7cae7de408d1",
+   "mirror": "bd2118798a030ead",
+   "assist": "27dcf9fb643ff04a"
+  },
+  "eiyuu_no_akashi_milktea/master": {
+   "notes": "b572e9defd79394e",
+   "mirror": "d812ea53de2bdcec",
+   "assist": "38fb5c67f64486e8"
+  },
+  "eiyuu_no_akashi_milktea/hell": {
+   "notes": "be0e6cdbcf7a2a13",
+   "mirror": "e2ee709b24ba611f",
+   "assist": "8c3ed80731a3314c"
+  },
+  "gourmet_race_64/easy": {
+   "notes": "a42b494214ee2eb8",
+   "mirror": "eaddd512533f1212",
+   "assist": "a42b494214ee2eb8"
+  },
+  "gourmet_race_64/normal": {
+   "notes": "7c6c318c69ae5c94",
+   "mirror": "35181c2c65f279cd",
+   "assist": "ca3d31828014aedc"
+  },
+  "gourmet_race_64/hard": {
+   "notes": "2db65745588f5425",
+   "mirror": "e4ff2aa45becba61",
+   "assist": "19a48d383d9d0f63"
+  },
+  "gourmet_race_64/expert": {
+   "notes": "ad92755cc127b13b",
+   "mirror": "d650ac3d3fa26910",
+   "assist": "babedb91b1be09f3"
+  },
+  "gourmet_race_64/master": {
+   "notes": "e0c02a58259d618e",
+   "mirror": "9ba7981d17a583dd",
+   "assist": "a7aab2c398ef505b"
+  },
+  "gourmet_race_64/hell": {
+   "notes": "87301c767dc63f80",
+   "mirror": "33368099fb835217",
+   "assist": "544432e01e7c0252"
+  },
+  "gourmet_race_dx/easy": {
+   "notes": "75fefb4a703d2580",
+   "mirror": "66bab3643625e1e7",
+   "assist": "75fefb4a703d2580"
+  },
+  "gourmet_race_dx/normal": {
+   "notes": "87a1a92413d03c83",
+   "mirror": "572c8d508c0b24a1",
+   "assist": "4fef1e15cfaf09b8"
+  },
+  "gourmet_race_dx/hard": {
+   "notes": "e8b6f312c2e1aa27",
+   "mirror": "09e642f1f726ae05",
+   "assist": "4d4b47c768f14695"
+  },
+  "gourmet_race_dx/expert": {
+   "notes": "c05b0fb5c15eba0f",
+   "mirror": "4912eb416293b0c0",
+   "assist": "65bae70ada199271"
+  },
+  "gourmet_race_dx/master": {
+   "notes": "103c410f33f28138",
+   "mirror": "ca3feeff2fff7cb1",
+   "assist": "9eeeab3d78e72cb0"
+  },
+  "gourmet_race_dx/hell": {
+   "notes": "ffd78d7a047516f9",
+   "mirror": "4f9a708cd53eb386",
+   "assist": "82d1bf4ffb7d5918"
+  },
+  "dr_wily_stage_1/easy": {
+   "notes": "9b3157978d7899f8",
+   "mirror": "82acef34a8741657",
+   "assist": "9b3157978d7899f8"
+  },
+  "dr_wily_stage_1/normal": {
+   "notes": "8a98d68cc99c5f10",
+   "mirror": "cbabd78211c1c9fc",
+   "assist": "45eb31cbd76ca0ad"
+  },
+  "dr_wily_stage_1/hard": {
+   "notes": "38e4ab2f57191145",
+   "mirror": "e6b51b95476e8898",
+   "assist": "56142c2b4f130fcf"
+  },
+  "dr_wily_stage_1/expert": {
+   "notes": "cf9090c83ed664e7",
+   "mirror": "31c2ed4fbbc34588",
+   "assist": "c61a3985fea8b059"
+  },
+  "dr_wily_stage_1/master": {
+   "notes": "aa0d368407b8a5a4",
+   "mirror": "3865a846d1d00eec",
+   "assist": "8af5422b70859d6c"
+  },
+  "dr_wily_stage_1/hell": {
+   "notes": "c7be9d965d076845",
+   "mirror": "4731e07c0ac1ac1c",
+   "assist": "43806309c076f96e"
+  },
+  "dr_wily_stage_1_okkussenman/easy": {
+   "notes": "8ea06a07f0abf09c",
+   "mirror": "73a975e9056efc26",
+   "assist": "8ea06a07f0abf09c"
+  },
+  "dr_wily_stage_1_okkussenman/normal": {
+   "notes": "565f5e22344a4465",
+   "mirror": "427d71bb2cd02e6e",
+   "assist": "718ae620b963603f"
+  },
+  "dr_wily_stage_1_okkussenman/hard": {
+   "notes": "1b0118971e41749a",
+   "mirror": "5563c21d37f3fac5",
+   "assist": "d9f53d1beb2722a1"
+  },
+  "dr_wily_stage_1_okkussenman/expert": {
+   "notes": "9bd7e64dd40c2830",
+   "mirror": "df68f878b6a67a0e",
+   "assist": "7ad458f7225b2a79"
+  },
+  "dr_wily_stage_1_okkussenman/master": {
+   "notes": "c3bfd583662a6044",
+   "mirror": "ccfbe0a8f3be8ab5",
+   "assist": "98d11d027092cc7e"
+  },
+  "dr_wily_stage_1_okkussenman/hell": {
+   "notes": "f6eb729f98da1cde",
+   "mirror": "01b5efc64ad78b3a",
+   "assist": "a88b2519ddb576d0"
+  },
+  "erfolg/easy": {
+   "notes": "2d7e0c1e0f50630c",
+   "mirror": "1f87180e6909a9a8",
+   "assist": "2d7e0c1e0f50630c"
+  },
+  "erfolg/normal": {
+   "notes": "70681c9a2c9d7b88",
+   "mirror": "066f2f5e5ec2ac9f",
+   "assist": "c10ef51c2e240040"
+  },
+  "erfolg/hard": {
+   "notes": "d3809631fb3a927c",
+   "mirror": "799bbdf7c6fa3dc1",
+   "assist": "f7bcba86ebb0f263"
+  },
+  "erfolg/expert": {
+   "notes": "7aabb5b9a81e31dc",
+   "mirror": "b46b8be511ef0b98",
+   "assist": "4f7f4bf20491ba7d"
+  },
+  "erfolg/master": {
+   "notes": "f5c14e2708cfb8b1",
+   "mirror": "2eca33efdde802f0",
+   "assist": "c9e8f9cc084faa4d"
+  },
+  "erfolg/hell": {
+   "notes": "6ae558330cbb0de7",
+   "mirror": "6693b72af04ed843",
+   "assist": "29cf7c213005f530"
+  },
+  "erfolg_piano/easy": {
+   "notes": "4e720fe194f99271",
+   "mirror": "005aa75ab0bd6b28",
+   "assist": "4e720fe194f99271"
+  },
+  "erfolg_piano/normal": {
+   "notes": "1decd5557214b63f",
+   "mirror": "068026f483d02f4b",
+   "assist": "9cdc5b05a3a1e297"
+  },
+  "erfolg_piano/hard": {
+   "notes": "f8b0607aaa69874d",
+   "mirror": "7d81c968b5c7813f",
+   "assist": "3c772c7879854264"
+  },
+  "erfolg_piano/expert": {
+   "notes": "bc1125bfae85c24e",
+   "mirror": "7999f9ae572d7aa1",
+   "assist": "63dac68ded533935"
+  },
+  "erfolg_piano/master": {
+   "notes": "beaadbe235690457",
+   "mirror": "c238ee92fdd7adcc",
+   "assist": "4e5a85eaf20b9981"
+  },
+  "erfolg_piano/hell": {
+   "notes": "ff3f22f0a9d68b18",
+   "mirror": "d22f9ab0c1feb703",
+   "assist": "c051043009590862"
+  },
+  "amakakeru_tsubasa/easy": {
+   "notes": "02221f817f586f28",
+   "mirror": "8650e0b8284cefdc",
+   "assist": "02221f817f586f28"
+  },
+  "amakakeru_tsubasa/normal": {
+   "notes": "99e5b7e7dbb51854",
+   "mirror": "ae11b33e118a0aba",
+   "assist": "998b16bf4abdc207"
+  },
+  "amakakeru_tsubasa/hard": {
+   "notes": "afa3eec157d2f968",
+   "mirror": "32f875750a7b9165",
+   "assist": "5649a538d1e7e754"
+  },
+  "amakakeru_tsubasa/expert": {
+   "notes": "303cbeaa662b0293",
+   "mirror": "4163d0409edcc405",
+   "assist": "3cdc415db3524572"
+  },
+  "amakakeru_tsubasa/master": {
+   "notes": "d9408d420fa6db6b",
+   "mirror": "24a3fcb618bd83f7",
+   "assist": "5005252aa8672ba0"
+  },
+  "amakakeru_tsubasa/hell": {
+   "notes": "4a7eb7afd0879ca8",
+   "mirror": "bab86de3102ed349",
+   "assist": "7cd35ad120f03d2e"
   }
  },
  "history": [
@@ -1727,6 +2447,11 @@
     "evans/master",
     "evans/hell"
    ]
+  },
+  {
+   "at": "2026-11-20 20:42",
+   "reason": "社長の判断(r1119-041): Rebellion short HELL 0:32.9 の HOLD を位置だけ直す",
+   "changedCount": 145
   }
  ]
 }

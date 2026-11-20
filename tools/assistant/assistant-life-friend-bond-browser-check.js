@@ -128,7 +128,7 @@ const textProblems = (page, sel) => page.evaluate((s) => {
       await page.waitForTimeout(500);
       { const t = await page.locator('[data-alb-guests]').innerText().catch(() => '');
         check(`② お客さん帳に あおいさん(ドラと話した・置き手紙・届いたすてき)と ゆうとさん(ももすけが遊びに来た)(${v.id})`, /あおいさん/.test(t) && /ドラと話した/.test(t) && /置き手紙/.test(t) && /💗すてき/.test(t) && /ゆうとさん/.test(t) && /ももすけが遊びに来た/.test(t), t.replace(/\n/g, ' ').slice(0, 200));
-        check(`② 来てくれた日に「🤝 スタンプ +1」と友情の札(${v.id})`, (t.match(/スタンプ \+1/g) || []).length === 2 && /Lv1 顔みしり/.test(t), t.replace(/\n/g, ' ').slice(0, 200));
+        check(`② 来てくれた日に「🌸 スタンプ +1」と、家の行にご縁の札(${v.id})`, (t.match(/スタンプ \+1/g) || []).length === 2 && /ご縁Lv1 顔みしり/.test(await page.locator('[data-alf-houses]').innerText().catch(() => '')), t.replace(/\n/g, ' ').slice(0, 200));
         check(`② 形のちがう「すてき」は出さない(${v.id})`, !/bad spot|<b>/.test(t));
         check(`② 「🚶 返しに行く」が2人ぶん(${v.id})`, (await page.locator('[data-alb-return]').count()) === 2); }
       { const ng = await textProblems(page, '[data-alb-guests]'); check(`② お客さん帳の字が折れない・はみ出さない(${v.id})`, ng.filter(x => !/縦にはみ出す/.test(x)).length === 0, [...new Set(ng)].join(' / ')); }

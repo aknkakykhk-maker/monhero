@@ -24,12 +24,14 @@ function MsxAssistCard({ a, n }) {
       role={more ? 'button' : undefined} tabIndex={more ? 0 : undefined} aria-expanded={more ? open : undefined}
       onClick={more ? () => setOpen(!open) : undefined} onKeyDown={more ? (e) => { if (e.key === 'Enter' || e.key === ' ') setOpen(!open); } : undefined}>
       <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
-      <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b>
-        <span className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter><small>目盛り</small>{Array.from({ length: dots }, (_, i) => <s key={i} className={i < lit ? 'on' : ''}/>)}<i>{n}</i>/{a.max}</span></div>
+      {/* 数字は説明の文の1か所だけ(見出しの「+10%」と文の「+10%」が二重だった)。目盛りは数だけ(丸と数の二重をやめた)。
+          上限・効く場面は全幅のボタンをやめ、見出しの右の小さな印で開く(2026-11-20 r1119-033 育-43・育-46・育-47・育-150・育-155) */}
+      <div className="bd"><div className="hd"><b>{a.name}</b>
+        <span className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>目盛り</small><i>{n}</i>/{a.max}</span>
+        {more ? <span className="mr" aria-hidden="true">{open ? '▲' : 'ⓘ'}</span> : null}</div>
         <div className="tx">{short}</div>
         {open && note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
-        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}
-        {more ? <span className="mr" aria-hidden="true">{open ? '閉じる ▲' : '上限・効く場面 ▼'}</span> : null}</div>
+        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}</div>
     </div>
   );
 }
@@ -112,7 +114,9 @@ const MSX_ASD_CSS = `
 .msx-md-ac .pips s{display:inline-block;width:6px;height:6px;border-radius:50%;background:#334155;border:1px solid #64748b;text-decoration:none}
 .msx-md-ac .pips s.on{background:#22d3ee;border-color:#a5f3fc}
 .msx-md-ac .pips i{margin-left:3px}
-.msx-md-ac .mr{display:block;margin-top:6px;padding:7px 0;text-align:center;border-radius:8px;background:#0f172a;border:1px solid #4a4380;color:#f9a8d4;font-size:11.5px;font-weight:900}
+.msx .msx-md-ac{position:relative}
+.msx .msx-md-ac>.bd>.hd>.mr{position:absolute;right:7px;top:7px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;border-radius:50%;background:#0f172a;border:1px solid #4a4380;color:#f9a8d4;font-size:12px;font-weight:900}
+.msx .msx-md-ac>.bd>.hd>b{padding-right:26px}
 .msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#94a3b8;line-height:1.4}
 `;
 let msxAsdCssDone = false;
