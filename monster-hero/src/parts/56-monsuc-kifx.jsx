@@ -45,11 +45,13 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
         <div className="msx-ki-sum" key="s0">
           <div className="h">獲得賞金</div>
           <div className="v-num r"><b>{msxFmt(fame)}<small>G</small>{dFame != null ? <em className={dFame < 0 ? 'dn' : ''}>{sign(dFame)}G</em> : null}</b></div>
-          <div className="h">総合力</div>
-          <div className="v-num r"><b>{msxFmt(ev.power)}{dPow != null ? <em className={dPow < 0 ? 'dn' : ''}>{sign(dPow)}</em> : null}</b></div>
+          {/* 総合力は上の帯にもあるので、ここはこの章で伸びた分を主役にする(2026-11-20 r1119-033 育-118) */}
+          <div className="h">{dPow != null ? 'この章で伸びた総合力' : '総合力'}</div>
+          <div className="v-num r"><b>{dPow != null ? <span className={dPow < 0 ? 'dn' : 'up'}>{sign(dPow)}</span> : msxFmt(ev.power)}</b></div>
         </div>
       </>) : (<>
-        <div className="msx-ki-next" key="t1"><small>NEXT</small><div><span>あと</span><b>{left}</b><span className="tn">ターン</span></div></div>
+        {/* 残りのターンは上の帯の1か所だけ。ここは次の段の名前を1行で出す(2026-11-20 r1119-033 育-119) */}
+        <div className="msx-ki-next" key="t1" data-msx-ki-left={left}><small>NEXT</small><div><b className="nm">{isFinal ? 'ヒーローズファイナル' : P[now].name}</b></div></div>
         <div className="msx-ki-lad" key="l1">
           {rungs.map((r, j) => (<React.Fragment key={r.i}>
             {j ? <i className="up" aria-hidden="true">▲</i> : null}
@@ -91,6 +93,8 @@ const MSX_KI_CSS = `
 .msx .v-scene.msx-ki{container-type:size}
 @container (max-height:330px){.msx .msx-ki .msx-ki-next small{font-size:24px}.msx .msx-ki .msx-ki-next div{font-size:17px}.msx .msx-ki .msx-ki-next div b{font-size:44px}}
 .msx .msx-ki .msx-ki-next div span.tn{margin-left:10px}
+.msx .msx-ki .msx-ki-next div b.nm{font-size:min(32px,8.4cqw);white-space:nowrap}
+.msx .msx-ki-sum .v-num .up{color:#86efac}.msx .msx-ki-sum .v-num .dn{color:#fca5a5}
 .msx .msx-ki-lad{position:absolute;left:0;right:0;top:36%;z-index:4;display:flex;flex-direction:column;align-items:center;gap:1px}
 .msx .msx-ki-lad .up{font-style:normal;font-size:10px;line-height:10px;color:#e2e8f0aa}
 .msx .msx-ki-lad .rg{position:relative;width:62%;min-height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#e2e8f0;background:#334155e6;border:1.5px solid #64748b;border-radius:8px;text-align:center;animation:msxKiUp .35s ease-out both;animation-delay:calc(.15s + var(--j) * .08s)}

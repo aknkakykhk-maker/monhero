@@ -95,17 +95,16 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const helpers = Array.from(new Set((o.stages || []).flat()));
     void stg;
     const body = (<>
-      <MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)}/>
+      {/* 体力の減りは帯の棒が前の値から縮んで見せる(2026-11-20 r1119-033 育-79: 文に書くだけで棒が動かなかった) */}
+      <MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)} hpFrom={Number.isFinite(res.hp0) ? res.hp0 : null}/>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[o.course] || 'forest_evening'}.jpg`} alt=""/><div className="sh"/>{learned ? <div className="v-burst"/> : null}
         <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/><MsxMonArt run={run} className="mon" noPeak style={{ bottom: '16%', height: '44%', ...(learned ? {} : { filter: 'grayscale(.25)' }) }}/>
         {/* 覚えた/覚えなかったをはっきり(2026-11-15 社長 r1115-063): 覚えた=金・覚えられなかった=灰・技を選ばなかった=修行終わり */}
         <div className={`v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`} style={{ top: '5%', fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32 }} data-msx-r3-qstamp={learned ? 'hit' : tries.length ? 'miss' : 'none'}>{learned ? (missed.length ? '1つ覚えた!' : '技を覚えた!') : tries.length ? '覚えられなかった…' : '修行終わり!'}
           <small>{learnedAll.length > 1 ? `✨ ${learnedAll.map((x) => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}の間合い)` : tries.length ? `次は覚える率が +${SH.miss || 15}%` : '能力が上がった'}</small></div>
-        <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>
-          {/* 2026-11-14 社長: 修行は決まった数値で上がる(行き先の基礎+編成の得意)。上がった能力を全部出す */}
-          <span className="v-chip">{MSX_STAT_KEYS_R3.filter((k) => gains[k]).map((k) => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'}</span>
-          {helpers.length ? <span className="v-chip ylw">👥 編成のおかげ ×{helpers.length}体</span> : null}
-        </div>
+        {/* 上がった能力は下の能力の札の「+」の1か所だけ(2026-11-20 r1119-033 育-67・育-76: 場面の札・能力の札・下の文の3か所に出ていた)。
+            場面には、いっしょに修行した編成の数だけを出す(下の文の「いっしょに修行した」は消した・育-68・育-77) */}
+        {helpers.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}><span className="v-chip ylw" data-msx-r3-qhelp>👥 編成の{helpers.length}体が いっしょに修行した</span></div> : null}
       </div>
       {tries.length ? <div className="q-res" data-msx-r3-qres>{tries.map((x) => (
         <div key={x.id} className={`q-ri ${x.hit ? 'hit' : 'miss'}`} data-msx-r3-qri={x.hit ? 'hit' : 'miss'}>
@@ -130,9 +129,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div className="q-bd-mul msx-kp">{mulLine(o.mulInfo, o.super)}</div></> : null}
       </div>); })() : null}
       <MsxStRow who={s} stats={s.stats} ups={gains}/>
-      <div className="v-log"><span className="hd2">⚔ 修行のけっか</span><br/>
-        {Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">+{g}</b></span>) : '能力は上がらなかった'}
-        {helpers.length ? <>(編成のモンスター <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>
+      <div className="v-log msx-kp"><span className="hd2">⚔ 修行のけっか</span><br/>
+        {Object.keys(gains).length ? null : <>能力は上がらなかった<br/></>}
         体力が <b className="gd">{Math.max(0, res.hp0 - s.hp)}</b> 下がった
         {learnedAll.length ? <>/技{learnedAll.map((x, i) => <React.Fragment key={x.id}>{i ? 'と' : ''}「<b className="ga">{x.name}</b>」</React.Fragment>)}を覚えた!</> : null}
         {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}
@@ -141,7 +139,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     // 技を覚えたら節目の演出(覚えた技の動き・押せばとばせる)
     const fx = learned && !fxDone && typeof MsxFxMoment === 'function'
       ? <MsxFxMoment kind="tech" title={learned.name} sub="技をおぼえた!" species={s.species} colors={run.colors} skill={{ kind: 'normal', name: learned.name }} onDone={() => setFxDone(true)}/> : null;
-    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={<>{body}{fx}</>} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>次へ ▶(叱る/褒める)</button></div>}/>;
+    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={<>{body}{fx}</>} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>次へ ▶</button></div>}/>;
   }
 
   // ---- 修行に出る(Q1)・案A(2026-11-14 社長が選んだ。参考 v3 20〜32秒・te-67・te-68) ----
@@ -260,7 +258,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   </>);
   const hpShort = shortOf(isSuper);
   const foot = (<>
-    {!want.length ? <div className="q-note msx-kp" data-msx-r3-qnote>技を選ばなくても修行できます(能力だけ上がります)</div> : null}
+    {/* 「技を選ばなくても修行できます」は上の吹き出し「選ばなくても能力は上がるよ」と二重なのでやめた(2026-11-20 r1119-033 育-62・育-64) */}
     {hpShort ? <div className="q-hpng msx-kp" data-msx-r3-qhp>💔 {isSuper ? '超修行' : '修行'}は体力を {hpOf(isSuper)} 使う。体力があと <b>{hpShort}</b> 足りない(休む・遊ぶで回復)</div> : null}
     <div className="v-ft">{/* 戻るは左上の1つ(2026-11-20 r1119-013 ⑥ API 点検) */}<button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
