@@ -12,6 +12,15 @@ const msxBirthCalm = () => {
   try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
 };
 
+// 演出を飛ばす「スキップ」(r1119-051 の呼び名・2026-11-20 社長「左側に一瞬"飛ばす"みたいなのが出ていた」)。
+//   誕生・合体・覚醒の演出で同じ形: 演出の初めから右下の決まった場所にずっと出し、演出が終わったら静かに消す(ちらつかせない)。
+//   show=false で薄れて消える(押せなくなる)。attrs で各演出の目印(data-msx-birth-skip など)を付ける
+const MSX_FX_SKIP_CSS = '.msx-fx-skip{position:absolute;right:12px;bottom:12px;z-index:8;min-height:44px;padding:0 18px;border-radius:999px;background:rgba(15,13,36,.82);border:2px solid rgba(255,255,255,.6);color:#fff;font-size:14px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}.msx-fx-skip.off{opacity:0;pointer-events:none}';
+function MsxFxSkip({ show = true, onSkip, attrs = null }) {
+  return (<><style>{MSX_FX_SKIP_CSS}</style>
+    <button type="button" className={`msx-fx-skip${show ? '' : ' off'}`} aria-hidden={show ? undefined : 'true'} tabIndex={show ? 0 : -1} onClick={(e) => { e.stopPropagation(); if (show && onSkip) onSkip(); }} {...(show && attrs ? attrs : {})}>スキップ ⏭</button></>);
+}
+
 function MsxBirth({ run, v, ev, onDone }) {
   msxBirthEnsureCss();
   const calm = msxBirthCalm();
@@ -28,7 +37,7 @@ function MsxBirth({ run, v, ev, onDone }) {
   const name = run.nick || (typeof msxMonName === 'function' ? msxMonName(s.species) : '');
   return (<>
     {typeof MsxBand === 'function' ? <MsxBand s={s} v={v} ev={ev}/> : null}
-    <div className={`v-scene msx-birth st${st}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-birth={st}>
+    <div className={`v-scene msx-birth st${st}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-birth={st} onClick={() => setSt((n) => Math.min(3, n + 1))}>{/* 画面を押すと次の段へ(早送りのボタンはやめた・再点検 msx-IN) */}
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <span className="msx-birth-dim" aria-hidden="true"/>
       {st < 3 ? <span className="msx-birth-stone" aria-hidden="true"><img src={msxBirthStone()} alt=""/>{st >= 1 ? <i className="glow"/> : null}</span> : null}
@@ -36,10 +45,11 @@ function MsxBirth({ run, v, ev, onDone }) {
       {st === 2 ? <span className="msx-birth-flash" aria-hidden="true"/> : null}
       {st >= 3 ? <><div className="gr" style={{ bottom: 'calc(14% - 5px)' }}/>
         <MsxMonArt run={run} className="mon msx-birth-mon" style={{ bottom: '14%', height: '46%' }} live noPeak/></> : null}
-      <div className="msx-birth-head"><small>{fused ? '合体円盤石' : 'ベースモンの円盤石'}</small>{st >= 3 ? `${name}が生まれた!` : '円盤石が光りはじめた…'}</div>
-      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-birth-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-birth-skip>スキップ ⏭</button></div> : null}
+      {!calm ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-msx-birth-skip': 1 }}/> : null}
+      <div className="msx-birth-head"><small>{fused ? '合体円盤石' : 'ベースモンの円盤石'}</small>{st >= 3 ? `${name}が生まれた!` : null}</div>{/* 上の札は場所の名前だけ。語りは下の文の1か所(再点検 msx-IN: 同じ出来事を2か所で語っていた) */}
+      
     </div>
-    <div className="v-log">{st >= 3 ? <>円盤石から、<b>{name}</b>が生まれた! ここから育成がはじまる。</> : <>円盤石が、あたたかい光につつまれていく…</>}</div>
+    <div className="v-log">{st >= 3 ? <>ここから<b>{name}</b>の育成がはじまる。</> : <>円盤石が、あたたかい光につつまれていく…</>}</div>
     <div className="v-ft"><button type="button" className="go" disabled={st < 3} onClick={onDone} data-msx-birth-next>育成を始める ▶</button></div>
   </>);
 }

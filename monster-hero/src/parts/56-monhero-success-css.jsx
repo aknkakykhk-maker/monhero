@@ -334,7 +334,7 @@ const MSX_CSS = `
 .msx .v-stamp{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;line-height:1;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 26px #fb923c,0 0 50px #fde047;transform:rotate(-4deg);white-space:nowrap}
 .msx .v-stamp small{display:block;font-size:13px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:8px;transform:rotate(4deg)}
 .msx .v-stamp.ok{color:#fff;-webkit-text-stroke:2px #be185d;text-shadow:0 4px 0 #9d174d,0 0 18px #f472b6;font-size:46px}
-.msx .v-stamp.ng{color:#cbd5e1;-webkit-text-stroke:2px #334155;text-shadow:0 4px 0 #1e293b;font-size:46px;transform:rotate(3deg)}
+.msx .v-stamp.ng{color:#fff;-webkit-text-stroke:2px #0f172a;paint-order:stroke fill;text-shadow:0 4px 0 #0f172a,0 0 12px rgba(0,0,0,.9);font-size:46px;transform:rotate(3deg);width:max-content;max-width:92%;margin:0 auto;padding:2px 14px 6px;border-radius:14px;background:rgba(2,6,23,.72)} /* バ-03・05: 背景に埋もれない(白い字・濃いふち・暗い下地) */
 .msx .v-stamp.zz{color:#c4b5fd;-webkit-text-stroke:2px #4c1d95;text-shadow:0 4px 0 #4c1d95;font-size:46px;transform:rotate(-2deg)}
 .msx .v-prop{position:absolute;font-size:64px;line-height:1;filter:drop-shadow(0 6px 4px #0008)}
 .msx .v-log{background:#fff;color:#1e1b4b;border-radius:14px;padding:8px 12px;margin-top:6px;font-size:12.5px;font-weight:800;line-height:1.6;border:2px solid #f9a8d4}
@@ -520,6 +520,7 @@ const MSX_CSS = `
 .msx .v-sc .tx h4{margin:0;font-size:15px;font-weight:900;color:#fde047;line-height:1.25}
 .msx .v-sc .tx h4 small{display:block;font-size:10px;color:#f9a8d4}
 .msx .v-kv{display:flex;gap:6px;margin-top:4px;font-size:10.5px;line-height:1.4}.msx .v-kv>b{flex:none;width:58px;color:#f9a8d4;font-size:10px}
+.msx .v-kv.v-kvst{flex-direction:column;gap:2px;font-size:12px}.msx .v-kv.v-kvst>b{width:auto;font-size:12px;white-space:nowrap}.msx .v-kvnum{font-size:16px;color:#fde68a}.msx .v-kvsub{display:block;margin-top:2px;font-size:12px;font-weight:700;color:#e2e8f0;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-combo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .msx .v-combo-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .msx .v-ctag{display:inline-flex;align-items:center;justify-content:center;text-align:center;border:1px solid #475569;border-radius:99px;padding:1px 7px;font-size:10.5px;font-weight:900;line-height:1.5;color:#cbd5e1;white-space:nowrap;background:#0f172a}
