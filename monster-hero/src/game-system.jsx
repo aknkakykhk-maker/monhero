@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d07911f9a8ead54a
+// generated-sha256: e7fad7c85eeda441
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90425,7 +90425,7 @@ const MSX_CSS = `
 .msx .msx-tp-tm .mcd .mcd-gd{font-size:10px}
 .msx .msx-tp-tm .mcd .mcd-f.empty .mcd-plus{font-size:15px;color:#cbd5e1}
 .msx .msx-tp-tm.on .mcd-f{box-shadow:0 0 0 3px #fde047}
-.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i{font-size:10px}
+.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i,.msx .msx-tp-list .mcd.s .mcd-gd,.msx .msx-tp-tm .mcd.s .mcd-gd{font-size:10px}
 .msx .msx-tp-tm>.fr{position:absolute;right:2px;bottom:2px;font-size:13px;line-height:1}
 .msx .msx-tp>.msx-tp-list{display:block;padding:2px 6px 10px}
 .msx .msx-tp>.msx-tp-list .mcd-grid{padding:4px 0}
@@ -91890,7 +91890,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
             {!sameBond ? <small className="msx-t6b">親密度 {m.bond0}・タッグ +{m.tag}%</small> : null}
           </div>); })}
       </MonsucCardGrid></div>
-      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え</div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
     </>);

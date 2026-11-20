@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 850699b0ba7aeafb
+// source-sha256: d1ab90d4c5e7f9d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173159,7 +173159,7 @@ const MSX_CSS = `
 .msx .msx-tp-tm .mcd .mcd-gd{font-size:10px}
 .msx .msx-tp-tm .mcd .mcd-f.empty .mcd-plus{font-size:15px;color:#cbd5e1}
 .msx .msx-tp-tm.on .mcd-f{box-shadow:0 0 0 3px #fde047}
-.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i{font-size:10px}
+.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i,.msx .msx-tp-list .mcd.s .mcd-gd,.msx .msx-tp-tm .mcd.s .mcd-gd{font-size:10px}
 .msx .msx-tp-tm>.fr{position:absolute;right:2px;bottom:2px;font-size:13px;line-height:1}
 .msx .msx-tp>.msx-tp-list{display:block;padding:2px 6px 10px}
 .msx .msx-tp>.msx-tp-list .mcd-grid{padding:4px 0}
@@ -176420,7 +176420,7 @@ function MsxStart({
     }))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え"), React.createElement("button", {
+    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
