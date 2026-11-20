@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c65b58484aac749
+// source-sha256: a8596c6f0de65c4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66427,8 +66427,13 @@ function PlayerRankUpFx({
 }
 const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
 const TIME_OF_DAY_SLOTS = Object.freeze([Object.freeze({
+  id: 'night',
+  from: 0,
+  icon: '🌙',
+  label: '深夜'
+}), Object.freeze({
   id: 'morning',
-  from: 5,
+  from: 6,
   icon: '🌅',
   label: '朝'
 }), Object.freeze({
@@ -66440,10 +66445,10 @@ const TIME_OF_DAY_SLOTS = Object.freeze([Object.freeze({
   id: 'evening',
   from: 16,
   icon: '🌇',
-  label: '夕'
+  label: '夕方'
 }), Object.freeze({
   id: 'night',
-  from: 19,
+  from: 18,
   icon: '🌙',
   label: '夜'
 })]);
@@ -66518,7 +66523,7 @@ const timeOfDaySetSettings = patch => {
 const timeOfDayTick = () => {
   const slot = timeOfDayAt(),
     minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
-  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  if (slot === TIME_OF_DAY_STORE.slot && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot;
   TIME_OF_DAY_STORE.minute = minute;
   timeOfDayEmit();
@@ -113153,6 +113158,14 @@ const assistantLifeSlotGainOf = amount => Number.isFinite(amount) && amount > 0 
 const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLife === true;
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => typeof jstDayKey4 === 'function' ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
+const ASSISTANT_LIFE_TIME_NAMES_FALLBACK = Object.freeze([[0, '深夜'], [6, '朝'], [10, '昼'], [16, '夕方'], [18, '夜']]);
+const assistantLifeTimeNameOf = hour => {
+  const h = (Math.floor(Number(hour)) % 24 + 24) % 24;
+  const list = typeof TIME_OF_DAY_SLOTS !== 'undefined' && Array.isArray(TIME_OF_DAY_SLOTS) && TIME_OF_DAY_SLOTS.length ? TIME_OF_DAY_SLOTS.map(s => [s.from, s.label]) : ASSISTANT_LIFE_TIME_NAMES_FALLBACK;
+  let name = list[0][1];
+  for (const [from, label] of list) if (Number.isFinite(h) && h >= from) name = label;
+  return name;
+};
 const ASSISTANT_LIFE_PER_DAY = 12;
 const assistantLifeSixIndexOfHour = h => Math.max(0, ASSISTANT_LIFE_SLOTS.findIndex(s => h >= s.from && h < s.to));
 const assistantLifeSlotBuild = (day, j, hourForV1) => {
@@ -113163,7 +113176,7 @@ const assistantLifeSlotBuild = (day, j, hourForV1) => {
     j,
     i,
     id: six.id,
-    label: six.label,
+    label: typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(j * 2) : six.label,
     from: j * 2,
     to: j * 2 + 2,
     absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1)
@@ -115029,7 +115042,7 @@ const assistantLifeTimeLook = (now = Date.now()) => {
     if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod];
   } catch {}
   const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
-  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+  return h >= 6 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 18 ? 'evening' : 'night';
 };
 const ASSISTANT_LIFE_VIEW = Object.freeze({
   morning: ['images/story-bg/monhero_plaza.jpg', 'images/story-bg/forest_morning.jpg'],
@@ -116153,12 +116166,7 @@ const assistantLifeTodLabel = (now = Date.now()) => {
   try {
     if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now);
   } catch (_) {}
-  return {
-    morning: '朝',
-    noon: '昼',
-    evening: '夕',
-    night: '夜'
-  }[assistantLifeTimeLook(now)];
+  return typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(new Date(Number(now) + 9 * 3600000).getUTCHours()) : '';
 };
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
@@ -123710,6 +123718,7 @@ function AssistantLifeDailyCard({
   }
   const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
   const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  const slotName = slot && Number.isFinite(slot.from) && typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(slot.from) : slotDef ? slotDef.label : '';
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
@@ -123744,7 +123753,7 @@ function AssistantLifeDailyCard({
     "data-assistant-life-daily": true
   }, React.createElement("p", {
     className: "flex items-center gap-2 px-1 text-[13px] font-black text-amber-200"
-  }, cardIconNode(scene.icon, 14), " ", slotDef.label, "の できごと ", React.createElement("span", {
+  }, cardIconNode(scene.icon, 14), " ", slotName, "の できごと ", React.createElement("span", {
     className: "text-[10.5px] font-bold text-slate-300"
   }, "あと約", leftH, "時間")), React.createElement("div", {
     className: "mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1"
@@ -123767,7 +123776,7 @@ function AssistantLifeDailyCard({
       plan,
       place: cast.place,
       slotId: slot.id,
-      slotLabel: slotDef.label
+      slotLabel: slotName
     }),
     className: "shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95"
   }, "見に行く ▶") : React.createElement("button", {
