@@ -822,14 +822,18 @@ const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
   atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
 });
-// その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す(画像のパスはここに集める)。服の全身画が無いときは null(今の立ち絵へ)
-const assistantFullBodyImage = (who, expression = 'happy') => {
-  if (!who || !who.id) return null;
-  const outfit = assistantWornOutfitName(who);
-  const name = ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id];
+// 全身画の名前(ASSISTANT_FULLBODY_ART の値)と表情から、絵の置き場所を返す(画像のパスはここに集める)。
+//   その表情の絵が無いときは、表情なしの絵(<名前>.png)。マーケットの着替えの全身絵プレビュー(20-market-notices-help.jsx)もここを使う
+const assistantFullBodyImageOf = (name, expression = 'happy') => {
   if (!name) return null;
   const exprs = ASSISTANT_FULLBODY_EXPRESSIONS[name];
   return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes(expression) ? `__${expression}` : ''}.png`;
+};
+// その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す。服の全身画が無いときは null(今の立ち絵へ)
+const assistantFullBodyImage = (who, expression = 'happy') => {
+  if (!who || !who.id) return null;
+  const outfit = assistantWornOutfitName(who);
+  return assistantFullBodyImageOf(ASSISTANT_FULLBODY_ART[outfit ? `${who.id}:${outfit}` : who.id], expression);
 };
 
 
