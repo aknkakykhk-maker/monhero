@@ -76,7 +76,7 @@ const SAMPLE = (() => {
         today: !!document.querySelector('[data-assistant-life-benefit-row="today"],[data-assistant-life-benefit-line="today"]'), fold: (document.querySelector('[data-assistant-life-benefit-fold]') || {}).getAttribute?.('data-assistant-life-benefit-fold') || '' };
     });
     check(`${T}① 家の断面図が得の帯より上・4部屋×2段・8部屋・家は1つ・「みんなの今」の一覧は出ない`, a.top && a.above && a.grid4 === (v.w < v.h ? 1 : 0) && a.houses === 1 && a.rooms === 8 && !a.status, JSON.stringify({ top: a.top, above: a.above, grid4: a.grid4, houses: a.houses, rooms: a.rooms, status: a.status }));
-    check(`${T}② 出かけ先の丸(丘・カード部屋・おやつ屋さん・スタジオ)と1行・できごとの2人に ❗`, ['hill', 'cardroom', 'cafe', 'studio'].every(p => a.places.includes(p)) && /家に2人 ・ おでかけ6人/.test(a.sum) && a.sum.includes(`次にみんなが動くのは ${a.next}`) && a.ev.length === 2, JSON.stringify({ places: a.places, sum: a.sum, next: a.next, ev: a.ev }));
+    check(`${T}② 出かけ先の丸(丘・カード部屋・おやつ屋さん・スタジオ)と1行・できごとの2人に ❗`, ['hill', 'cardroom', 'cafe', 'studio'].every(p => a.places.includes(p)) && /家に2人 ・ おでかけ6人/.test(a.sum) && !a.sum.includes('みんなが動く') /* 時刻は上の題の行だけ(2026-11-20 総点検 A-2) */ && a.ev.length === 2, JSON.stringify({ places: a.places, sum: a.sum, next: a.next, ev: a.ev }));
     check(`${T}③ 得の帯は「今日・次」をたたむ`, a.fold === 'closed', JSON.stringify({ fold: a.fold }));
     const l1 = await layout(page);
     check(`${T}⑥ 押せる所は44px以上・はみ出さない(トップ)`, l1.small.length === 0 && l1.over === 0, JSON.stringify(l1));

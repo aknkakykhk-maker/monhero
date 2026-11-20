@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4e707126a757b4fd
+// generated-sha256: dd958ad14cd75a5b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67197,7 +67197,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   kiki:      { social: 0.65, fav: 'library',     w: { snack: 3, practice: 1, training: 3, cards: 1, walk: 2, idle: 2, sleep: 1, read: 1, battle: 4.5, checkup: 0 },
                slot: { morning: { walk: 1.5 }, afternoon: { snack: 1.5 } }, note: '静かな図書室が好き。朝の散歩とおやつ。ゴーレムの育成はしっかり' },
   momosuke:  { social: 0.8,  fav: 'studio',   w: { snack: 2, practice: 4, training: 2, cards: 1, walk: 2, idle: 1, sleep: 1, read: 0, battle: 4.5, checkup: 0 },
-               slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと' },
+               slot: { evening: { practice: 2 }, night: { practice: 1.3 } }, note: '夕方から夜はモンヒロビートでレッスン。見てほしいのでだれかと' },
   dra:       { social: 0.6,  fav: 'home',     w: { snack: 3, practice: 1, training: 1, cards: 1, walk: 1, idle: 2, sleep: 4, read: 0, battle: 1.5, checkup: 0 },
                slot: { noon: { sleep: 2 }, afternoon: { sleep: 2 } }, clingy: true, note: '昼寝が好き。だれか来てほしいのに家でごろごろしがち(さみしくなりやすい)' },
   atsu:      { social: 0.6,  fav: 'studio',    w: { snack: 1, practice: 3, training: 4, cards: 2, walk: 1, idle: 1, sleep: 1, read: 0, battle: 9, checkup: 0 },
@@ -67205,9 +67205,9 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
   kyuko:     { social: 0.5,  fav: 'library',  w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 1, idle: 1, sleep: 1, read: 3, battle: 3, checkup: 0 },
                slot: { afternoon: { read: 3, cards: 1.5 } }, solo: ['afternoon'], note: '午後は図書室でひとりの時間。カードの研究も好き' },
   sorashido: { social: 0.8,  fav: 'cardroom', w: { snack: 1, practice: 3, training: 1, cards: 4, walk: 1, idle: 1, sleep: 1, read: 1, battle: 6, checkup: 0 },
-               slot: { night: { cards: 2, battle: 0.5 }, evening: { cards: 1.3 } }, note: '夜はカード部屋で研究と計算。だれかを巻きこみたい' },
+               slot: { night: { cards: 2, battle: 0.5 }, evening: { cards: 1.3 } }, note: '夜はMFバトルカードで研究と計算。だれかを巻きこみたい' },
   erubin:    { social: 0.7,  fav: 'cardroom',   w: { snack: 2, practice: 1, training: 2, cards: 3, walk: 3, idle: 1, sleep: 1, read: 1, battle: 9, checkup: 0 },
-               slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
+               slot: { morning: { walk: 1.3 }, evening: { cards: 1.3 } }, caring: true, note: 'MFバトルカード(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く' },
 });
 // 1人ずつの生活のリズム(2026-11-07 社長「夜は家に帰る人が増えたり夜ふかしとか性格によって変えてもいい」)。
 //   時間ごとに、したいことの重みへ掛ける数。夜ふかしの助手は深夜もモンヒロビートで練習したり部屋で起きていたりする。表は docs/progress/assistant-peer/LIFE-HOUSE-PLAN.md の 11
@@ -68650,7 +68650,10 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 };
 // 時間が変わって様子が決まったら、組の過ごし方を書く(同じ時間は1回だけ)
 // 画面に出す時間帯の言葉(朝・昼・夕・夜)。見出しの札・HOME と同じ区切りにそろえる(居場所の入れかわりの6つの区切りとは別。2026-11-07 ミハリ L8・ハナビ)
+// 助手ライフの時間帯の呼び名は、区切りの表 ASSISTANT_LIFE_SLOTS(深夜・朝・昼・午後・夕方・夜)の1つから引く(2026-11-20 総点検 S-6:
+//   15時に上の題は「昼」(HOME の時間帯の表)、下は「午後のできごと」(この表)と言い分けていた)。表が無いときだけ HOME の呼び名
 const assistantLifeTodLabel = (now = Date.now()) => {
+  try { if (typeof assistantLifeSlotAt === 'function') { const l = assistantLifeSlotAt(now).label; if (l) return l; } } catch (_) {}
   try { if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now); } catch (_) {}
   return { morning: '朝', noon: '昼', evening: '夕', night: '夜' }[assistantLifeTimeLook(now)];
 };
@@ -68781,6 +68784,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
 .mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:normal}.mhl-tile b>span,.mhl-tile small>span{white-space:nowrap}
+.mhl-tile.mhl-main{flex:1.8 1 0%;min-height:66px}.mhl-tile.mhl-main i{font-size:22px}.mhl-tile.mhl-main b{font-size:17px}.mhl-tile.mhl-main small{font-size:11px}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
 .mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
@@ -69144,7 +69148,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const canCardNow = typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id);
   const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && !!onGiveFurn;
   const beatRow = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <AssistantLifeDoRow k="beat" icon="🎵" label={asleep ? '起こしてモンヒロビートに誘う' : atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う'} sub={atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)'} gain={atBeat && beatFree ? '券なし' : ''} on={() => onBeat(id)}/>;
-  const cardRow = canCardNow && <AssistantLifeDoRow k={cardSpent ? 'card-spent' : 'card'} icon="🃏" label="MFバトルカードで対戦する" sub="カード部屋にいる助手と対戦すると、ごほうびアップ" gain={`ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`} on={() => onCard(id)} disabled={!!cardSpent} why={cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : ''}/>;
+  const cardRow = canCardNow && <AssistantLifeDoRow k={cardSpent ? 'card-spent' : 'card'} icon="🃏" label="MFバトルカードで対戦する" sub="MFバトルカードにいる助手と対戦すると、ごほうびアップ" gain={`ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`} on={() => onCard(id)} disabled={!!cardSpent} why={cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : ''}/>;
   // その場所ならではの得がある行(カード部屋での対戦・ビートで券なし)は、いちばん上に
   const hotBeat = !!(atBeat && beatFree && !asleep), hotCard = !!(canCardNow && !cardSpent);
   const doList = uiV2 && typeof AssistantLifeDoRow === 'function' ? (
@@ -69252,7 +69256,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
           {/*   この時間帯で使い切ったら、灰色の押せないボタンに(言い方はカード部の cardLifeSpentText。2026-11-08 社長 Q2 A) */}
           {typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && onCard && !asleep && assistantLifeHouseCardIds().includes(id) && (assistantLifeCardSpent(id)
             ? <button type="button" disabled className="mhl-btn col-span-2 cursor-not-allowed bg-slate-600 text-slate-200 opacity-80" data-assistant-life-room-act="card-spent">{typeof cardLifeSpentText === 'function' ? cardLifeSpentText(assistantLifeCardSpent(id)) : '🃏 ごほうびアップは使い切りました'}</button>
-            : <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 カード部屋で対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
+            : <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 MFバトルカードで対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
           </>)}
           {/* はっきり分かる閉じるボタン(家具のシートと同じ形。2026-11-08 窓口)。横はボタンの段ごと下に止まるので、いつも見える */}
           <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
@@ -69818,7 +69822,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const houseW = land ? Math.min(560, Math.round(vw * 0.64) - pad * 2) : Math.min(380, vw - pad * 2);
   const tiles = (
     <div className={land ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'} data-assistant-life-today>
-      <button type="button" className={`mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`} data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}>
+      <button type="button" className={`mhl-tile mhl-watch mhl-main${land ? ' col-span-2' : ''}${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`} data-assistant-life-today-act="watch" disabled={watchLeft <= 0 || !unwatched.length} onClick={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}>
         {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
         <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? (guideSeen === false ? '👆 まずはここ' : '🤝💗 アップ') : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).length} onClick={() => { if (uiV2) { setCallPicker(true); return; } const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id))[0]; if (id) setRoomId(id); }}>
@@ -69849,11 +69853,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       </div>
       {/* 時間帯と、みんなが動くまで(題を切らないよう2段目に。2026-11-07 社長「文字列も気をつけて」) */}
       <p className="mt-0.5 text-[10px] font-bold text-slate-200" data-assistant-life-clock>{assistantLifeTodLabel()} ・ <span data-assistant-life-next-slot className="whitespace-nowrap">{assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</span></p>
-      <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
+      {/* にぎわいの帯は家だけに出す(2026-11-20 総点検 §10。きずな・紹介・フレンドでは各画面の中身より目立っていた) */}
+      {(!uiV2 || tab === 'house') && <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・モンヒロバトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
         <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
-      </div>
+      </div>}
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;
   // 新UIのみ: 家の部屋札と同じ居場所データを参照する。未登場の助手は表示しない。
@@ -69885,7 +69890,6 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const houseView = (
     <div className="relative pt-1">
       {uiV2 && typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) && <AssistantLifeFirstGuide land={land} canWatch={!!unwatched.length} onClose={markGuideSeen} onWatch={() => { markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}/>}
-      {topOn && typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札は家の上(PLAN・fable の指摘 11-12 キズナ) */}
       {topOn && <div className="mb-1 flex justify-center" data-assistant-life-top-house><AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2 grid4/></div>}
       {topOn && typeof AssistantLifeTopStrip === 'function' && <AssistantLifeTopStrip life={life} ids={ids} evIds={evIds} onPlace={(p, id) => { setMapFocusPlace(ASSISTANT_LIFE_MAP_ORDER.includes(p) ? p : 'home'); setMapFocusAssistantId(id); setTab('where'); }}/>}
       {topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
@@ -69894,7 +69898,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         onWatch={() => { if (unwatched[0]) watch(unwatched[0]); }} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }} onRoad={() => setTab('friends')} onGuide={() => setGuideOpen(true)}/>}
       {uiV2 && !topOn && typeof AssistantLifeDailyCard === 'function' && <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/>}
       {uiV2 && typeof AssistantLifePlanBand === 'function' && <AssistantLifePlanBand ids={ids} land={land}/>}
-      {!topOn && typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札(キズナ・印 assistantMasmonPlan が偽なら何も出さない。新UIの家は家の上に出す) */}
+      {/* 📒 育成ノートの札は、家の絵と今日のできごとの下(2026-11-20 総点検 §10: 家でいちばん目立つのは「見守る」にする。前は家の真上でいちばん大きかった) */}
+      {typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートの札(キズナ・印 assistantMasmonPlan が偽なら何も出さない。新UIの家は家の上に出す) */}
       <div className={land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end'} style={{ paddingInline: pad }}>{uiV2 ? null : findBtn}</div>
       {/* トップの家を出すときは、下の家の絵と「みんなの今」の一覧は出さない(同じものが上にある。2026-11-11 社長「部屋の列は外す」) */}
       {!topOn && <AssistantLifeHouseArt width={houseW} land={land} look={look} rooms={rooms} metSet={metSet} onOpen={setRoomId} diary={diary} pop={!!intro} onBoard={() => setBoardOpen(true)} life={life} peerSt={peerSt} v2={uiV2}/>}
@@ -71833,7 +71838,7 @@ function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
             <span>{ASSISTANT_LIFE_PLACE_ICON[p] || '🚶'} {assistantLifePlaceShow(p)}{ev ? ' ❗' : ''}</span>
           </button>); })}
       </div>}
-      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人{next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''}</p>
+      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人</p>{/* 次にみんなが動く時刻は、上の題の行(「午後 ・ あと1時間でみんなが動く」)の1か所だけに出す(2026-11-20 総点検 A-2: 時刻の話が1画面に3〜5か所) */}
     </div>);
 }
 
@@ -76284,17 +76289,19 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
   const allyCard = (
     <div className="mhm-card" data-assistant-masmon-allies>
       <p className="text-[10px] font-black text-slate-400">道中で仲間にしやすい3体</p>
+      {/* まだ1体もいないときは、点線の空き枠3つを並べず1行に(2026-11-20 総点検 §10: いる子より空き枠が目立っていた) */}
+      {!allies.length ? <p className="mt-1 text-[11px] font-bold text-slate-400" data-assistant-masmon-allies-empty>まだいません(編成のマスモンが増えると、ここに並びます)</p> :
       <div className="mt-1 grid grid-cols-3 gap-1.5">
         {[0, 1, 2].map(i => { const t = allies[i]; return t
           ? <button key={t.monster} type="button" className="text-center" data-assistant-masmon-ally={t.monster} onClick={() => onOpen(t)}><div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? cell : 84}/></div><p className="mt-0.5 truncate text-[10.5px] font-black text-white">{t.nick}</p><p className="truncate text-[9px] font-bold text-amber-200">Lv.{t.lv}</p></button>
           : <div key={`e${i}`} className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-[9.5px] font-bold text-slate-500" style={{ minHeight: cell + 30 }}>まだ</div>; })}
-      </div>
+      </div>}
     </div>);
   const formCard = (
     <div className="mhm-card" data-assistant-masmon-formation>
       <p className="flex items-baseline justify-between text-[10px] font-black text-slate-400"><span>編成</span><span className="text-amber-200">{team.length}/{ASSISTANT_MASMON_DRAW_MAX}</span></p>
       <div className="mt-1 grid grid-cols-4 gap-1.5">
-        {slots.map(({ t, ok }) => ok
+        {slots.filter(x => x.ok).map(({ t, ok }) => ok
           ? <button key={t.monster} type="button" className="relative text-center" data-assistant-masmon-team={t.monster} onClick={() => onOpen(t)}>
               {t.lead && <em className="mhm-lead absolute left-0 top-0 z-[1]" style={{ fontSize: 8.5 }}>勇者</em>}
               <div className="mhm-stage"><AssistantMasmonPic t={t} size={cell}/></div>
@@ -76302,10 +76309,15 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
             </button>
           : (() => { const m = t.unknown ? null : assistantMasmonMon(t.monster); return (
             <div key={t.monster} className="text-center" data-assistant-masmon-wait={t.monster}>
-              <div className="mhm-stage"><div className="mhm-pic grid place-items-center" style={{ width: cell, height: cell }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.5) }} data-assistant-masmon-unknown>？</span>}</div></div>
+              <div className="mhm-stage grid place-items-center" style={{ height: cell }}><div className="mhm-pic grid place-items-center opacity-60" style={{ width: Math.round(cell * 0.55), height: Math.round(cell * 0.55) }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.3) }} data-assistant-masmon-unknown>？</span>}</div></div>
               <p className="mt-0.5 truncate text-[9.5px] font-bold text-sky-200">🔒 Lv{t.welcome}</p>
             </div>); })())}
       </div>
+      {/* まだ迎えていない枠は、絵の枠を並べず小さな札の1行に(2026-11-20 総点検 §10: 空の「?」の枠がいる子より目立っていた) */}
+      {slots.some(x => !x.ok) && <div className="mt-1.5 flex flex-wrap items-center gap-1" data-assistant-masmon-wait-row>
+        <span className="text-[10.5px] font-bold text-slate-400">まだの枠:</span>
+        {slots.filter(x => !x.ok).map(({ t }) => <span key={t.monster} className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200" data-assistant-masmon-wait={t.monster}>🔒 仲良し度Lv{t.welcome}</span>)}
+      </div>}
     </div>);
   return (<>
     <div className={`grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -78721,7 +78733,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
         {list.map(p => (
           <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
             className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`}>
-            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]} <span className="text-[10px] font-bold text-slate-400">{assistantLifeBodyLabel(p)[1]}</span></> : ASSISTANT_LIFE_PLACES[p]}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
+            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]}</> : (typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p])}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
             {assistantLifePlanPerk(p) && <span className="block text-[10px] font-bold text-amber-200">得: {assistantLifePlanPerk(p)}</span>}
             {typeof AssistantLifeBodyPlaceStat === 'function' && <AssistantLifeBodyPlaceStat place={p} abs={abs}/>}
           </button>))}
@@ -85506,7 +85518,7 @@ const MSX_BETA_CSS = `
 const MSX_STORIES = Object.freeze([
   Object.freeze({
     id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: 'ヒーローズファイナル',
-    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
+    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる。', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
     about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
     rows: Object.freeze([
       ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'],
@@ -85537,7 +85549,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
 .msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ld{margin:10px 3% 0;text-align:left;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(12px,3.4vw,13.5px);font-weight:800;line-height:1.65;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
 .msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-note{display:inline-block;background:#1e1b3ae6;border:1px solid #f9a8d4aa;border-radius:99px;padding:2px 12px}
@@ -85581,7 +85593,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
-      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span><small>シナリオ {idx + 1}/{n}</small></div>
+      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
       <div className="scn-sc">
         <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
         {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
@@ -85590,15 +85602,15 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
         <div className="scn-tx">
           <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
-          <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
+          <div className="scn-ld"><div style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{typeof jaWrap === 'function' ? jaWrap(t) : t}</React.Fragment>)}</div></div>{/* 言葉の途中で折らない(API 点検: 「日ま/で」と折れた) */}
           <div className="scn-dt">
-            <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div>
-            {many ? null : <span className="scn-note">ほかのシナリオは 準備中です</span>}
+            {many ? <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div> : null}
+            {many ? null : <span className="scn-note">ほかのストーリーは 準備中です</span>}
           </div>
         </div>
         {many ? <>
-          <button type="button" aria-label="前のシナリオ" onClick={() => setIdx((i) => (i + n - 1) % n)} style={{ position: 'absolute', left: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>◀</button>
-          <button type="button" aria-label="次のシナリオ" onClick={() => setIdx((i) => (i + 1) % n)} style={{ position: 'absolute', right: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>▶</button>
+          <button type="button" aria-label="前のストーリー" onClick={() => setIdx((i) => (i + n - 1) % n)} style={{ position: 'absolute', left: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>◀</button>
+          <button type="button" aria-label="次のストーリー" onClick={() => setIdx((i) => (i + 1) % n)} style={{ position: 'absolute', right: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>▶</button>
         </> : null}
       </div>
       <div className="scn-ft">
@@ -85674,70 +85686,228 @@ const msxCheerType = (m) => {
   return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
 };
 
-function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
+// ---- 6つの拍(r1119-034・案 docs/progress/scenario/monsuc-event-flow/README.md) ----
+//   1 入り(帯が滑り込む・自動)→ 2 場面(育成中の子だけ・間をとる・自動)→ 3 見せ場(編成の子が出てくる・地の文)
+//   → 4 台詞(助手の名札つきのひとこと)→ 5 結果が弾ける(自動)→ 6 つづく。「飛ばす」は結果だけを1枚で出す(-1)
+//   拍の位置は呼ぶ側(MsxPlay)が持つ(足元のボタンと分け合うため)。保存はしない(続きから開くと拍1から)
+// 結果の拍の一言(数字は弾けと札が出すので、文はきっかけだけ)
+const MSX_TEV_RES = Object.freeze({ self: (n) => `${n}といっしょに、夢中で体を動かした。`, rest: (n) => `${n}とゆっくり休んで、元気が出た。`, talk: (n) => `${n}とたくさん話して、気持ちが軽くなった。`, tip: (n) => `${n}に教わったコツが、体に入ってきた。`, pal: (n) => `${n}と、ますます なかよくなった。`, friend: (n) => `${n}と、ますます なかよくなった。` });
+const MSX_TEV_WAIT = Object.freeze({ in: 1300, scene: 900 });
+// 1つの窓は2行・30字まで。長い文は「。」などの区切りで窓を分ける
+const msxTevSplit = (t) => {
+  const s = String(t || '').trim(); if (!s) return [];
+  const parts = s.match(/[^。！？!?…]+[。！？!?…]*[」』）)]?/g) || [s];
+  const out = []; let cur = '';
+  for (const p of parts) { if (cur && (cur + p).length > 30 && !(p.length < 10 && (cur + p).length <= 44)) { out.push(cur); cur = p; } else cur += p; }
+  if (cur) out.push(cur);
+  return out;
+};
+// 台本の行(地の文・助手)を拍に並べる。呼ぶ側の足元も同じ並びを使う
+const msxTevSteps = (run, o, ctx) => {
+  const s = run.s; const e = o.event; const m = s.team[e.who];
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  const se = msxSuc && msxSuc.script; const c = { ...ctx, cheer: name };
+  // 助手の台本は共通の台本より後ろに読まれるので、選択肢の札より後ろ(after)に並ぶ。地の文は前(lines)だけ・台詞は両方から
+  const take = (ev) => ({ narr: (ev.lines || []).filter((r) => r && r.t && r.who === 'narr'), talk: [...(ev.lines || []), ...(ev.after || [])].filter((r) => r && r.t && r.who !== 'narr') });
+  let got = { narr: [], talk: [] };
+  try {
+    if (e.story && se && typeof se.event === 'function') {
+      got = take(se.event(`cheer.${msxCheerType(m)}.ep${e.story}`, c));
+      if (!got.narr.length) got = take(se.event(`cheer.base.ep${e.story}`, c));
+    } else if (se && typeof se.event === 'function') got = take(se.event(`cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, c));
+  } catch (er) { got = { narr: [], talk: [] }; }
+  const narr = got.narr; const talk = got.talk;
+  if (!narr.length) narr.push({ who: 'narr', t: `${name}と、すこし特別な時間をすごした。` });
+  const steps = e.story ? [{ b: 1 }, { b: 2 }] : [{ b: 1 }]; // 小さな出来事は間をとらない
+  narr.forEach((r) => msxTevSplit(r.t).forEach((t) => steps.push({ b: 3, who: 'narr', t })));
+  talk.forEach((r) => msxTevSplit(r.t).forEach((t) => steps.push({ b: 4, who: r.who, e: r.e, t })));
+  // 結果は1つずつ: 能力(と体力・ストレスなど)→ 親密度
+  const pops = msxTevPops(s, o); const bFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : s.bond[e.who];
+  if (pops.length) steps.push({ b: 5 });
+  if (bFrom !== s.bond[e.who]) steps.push({ b: 5, k: 'bond' });
+  if (!pops.length && bFrom === s.bond[e.who]) steps.push({ b: 5 });
+  if (msxTevNextText(run, o)) steps.push({ b: 6 });
+  return steps;
+};
+// 弾けさせる結果(親密度はハートの棒が受け持つので入れない)
+const msxTevPops = (s, o) => {
+  const e = o.event; const d = e.d && typeof e.d === 'object' ? e.d : null; const out = [];
+  if (d && d.stat && Number(d.up) > 0) out.push({ k: 'st', t: `${MSX_STAT_NAME[d.stat] || '能力'} +${d.up}` });
+  const fromTo = (now, dv, max) => (Number.isFinite(now) && Number.isFinite(dv) && dv ? `(${Math.max(0, Math.min(max, Math.round(now - dv)))}→${Math.round(now)})` : '');
+  msxTevChanges(s, o).filter((t) => !/親密度/.test(t)).forEach((t) => {
+    const tx = t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '');
+    const sub = d && /^体力/.test(tx) ? fromTo(s.hp, d.hp, s.hpMax) : d && /^ストレス/.test(tx) ? fromTo(s.stress, d.stress, 100) : '';
+    out.push({ k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up', t: tx, sub });
+  });
+  return out;
+};
+
+// 「つづく」の文(その1・その2のあとだけ)。2行目で言葉を折らないよう、改行の場所を決めて返す
+const msxTevNextText = (run, o) => {
+  const s = run.s; const e = o.event; const m = s.team[e.who];
+  const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
+  if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
+};
+
+function MsxTevMini({ s, v }) {
+  const cal = typeof msxCalendar === 'function' ? msxCalendar(s.turn) : null;
+  return <div className="tev-mini" data-msx-tev-mini><b>{v && v.period ? v.period.name : ''}</b>{cal ? <span>{cal.year}年目 {cal.month}月</span> : null}<span>体力 {Math.max(0, Math.round(s.hp))}/{Math.max(1, Math.round(s.hpMax))}</span></div>;
+}
+
+function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = MSX_TEV_STYLE }) {
   msxTevEnsureCss();
   const s = run.s; const e = o.event; const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  const line = e.story ? (msxPickLine({ ...ctx, cheer: name }, `cheer.${msxCheerType(m)}.ep${e.story}`, { who: 'narr' }) || msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' })) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
-  const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
-  const ch = msxTevChanges(s, o);
+  const title = e.story ? `${name}との出来事` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
+  const steps = React.useMemo(() => msxTevSteps(run, o, ctx), [s.turn, e.who, e.story, e.lottery]);
+  // 見せ場の驚き(「!!」と画面の揺れ)は、地の文が驚きの場面のときだけ(台本の動きの印は次の段で足す)
+  const firstNarr = steps.find((x) => x.b === 3); const surprise = !!(e.story && firstNarr && /[!！?？]|気づ|いつの間/.test(firstNarr.t));
+  const sum = at < 0;
+  const i = sum ? steps.length - 1 : Math.max(0, Math.min(steps.length - 1, at));
+  const st = steps[i]; const b = sum ? 7 : st.b;
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const pops = msxTevPops(s, o);
   const bondNow = s.bond[e.who];
   const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const bondUp = bondNow !== bondFrom || (e.d && e.d.bond);
+  const bk = !sum && st.k === 'bond'; // 結果の2つ目(親密度)の拍
+  const bondAt = 500; // 拍に入って 0.5 秒でハートが満ちる
   const [bondOn, setBondOn] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setBondOn(true), 700); return () => clearTimeout(t); }, []);
-  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const next = () => { if (!go) return; if (i < steps.length - 1 && !sum) go(i + 1); else if (onNext) onNext(); };
+  // 待ちの長い拍(入り・場面・結果)は自動で次へ
+  useEffect(() => {
+    setBondOn(calm || sum || b > 5);
+    if (sum) return undefined;
+    const ids = [];
+    if (b === 1) ids.push(setTimeout(next, calm ? 300 : MSX_TEV_WAIT.in));
+    if (b === 2) ids.push(setTimeout(next, MSX_TEV_WAIT.scene));
+    if (b === 5) { if (bk) ids.push(setTimeout(() => setBondOn(true), calm ? 0 : bondAt)); if (i < lastI) ids.push(setTimeout(next, bk ? 2400 : 600 + pops.length * 700 + 900)); }
+    return () => ids.forEach(clearTimeout);
+  }, [i, sum]);
+  msxUseTimedSe(sum ? [] : b === 1 ? [['actTag', 0]] : surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? [['actIdea', 80]] : b === 5 ? (bk ? [['itemBond', bondAt]] : pops.map((p, k) => ['actTagSpark', 300 + k * 700])) : [], [i, sum]);
+  const bondShow = (b >= 5 && bondOn) || sum ? bondNow : bondFrom;
   const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
+  const shown = b >= 5 ? s.stats : (ups ? { ...s.stats, [e.d.stat]: s.stats[e.d.stat] - e.d.up } : s.stats);
+  const palOn = b >= 3; const pair = b >= 3;
+  const nx = msxTevNextText(run, o);
+  const lastI = steps.length - 1;
+  const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
+  const aidWho = talk && talk.who !== 'narr' && talk.who !== 'mon' ? talk.who : null;
+  const palImg = m ? (m.colors && m.colors.some && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+    ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+    : <img src={msxMonImg(m.species)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>) : null;
   return (<>
-    <div className={`v-scene msx-tev s-${style}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style}>
+    <div className={`v-scene msx-tev s-${style} tb${b}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style} data-msx-tev-beat={sum ? 'sum' : b} onClick={sum ? undefined : next}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
-      <div className="gr" style={{ left: '29%', bottom: 'calc(40% - 5px)' }}/>
-      <MsxMonArt run={run} className="mon" style={{ left: '29%', bottom: '40%', height: '22%' }} live/>
-      <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
-      {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
-      <div className="v-talk tev-talk" style={JA_LABEL_STYLE}>{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{jaWrap(line.t)}」</div> : <div>{jaWrap(line.t)}</div>) : <div>{jaWrap(`${name}と、すこし特別な時間をすごした。`)}</div>}</div>
-      <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={e.story ? `${name}との出来事` : title}/>
-      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%`, transition: 'width .9s ease-out' }}/></i><em data-msx-tev-bond>{bondShow}{e.d && e.d.bond ? <small> ({e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond})</small> : null}</em></div>
-      {/* 入り方 */}
-      {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
-      {style === 'b' ? <div className="tev-in-b" aria-hidden="true"><div className="band">{typeof MsxMonFace === 'function' ? <MsxMonFace species={s.species} colors={run.colors}/> : <img src={msxMonThumb(s.species)} alt=""/>}<b>{name}との出来事!</b>{m && typeof MsxMonFace === 'function' ? <MsxMonFace species={m.species} colors={m.colors}/> : <img src={m ? msxMonThumb(m.species) : ''} alt=""/>}</div></div> : null}
-      {style === 'c' ? <div className="tev-in-c" aria-hidden="true"><span className="fl"/><div className="rb">EVENT</div></div> : null}
+      <div className={`tev-who me${pair ? ' pair' : ''}`}><div className="gr"/><MsxMonArt run={run} className="tev-art" style={{}} live/>{surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? <span className="tev-bang" aria-hidden="true">!!</span> : null}{b === 2 && surprise ? <span className="tev-q" aria-hidden="true">?</span> : null}</div>
+      {m ? <div className={`tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`}><div className="gr"/><div className="tev-art">{palImg}</div></div> : null}
+      {b === 5 && !bk && !calm ? <div className="tev-dust" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ animationDelay: `${k * 0.07}s`, top: `${44 + (k % 3) * 6}%` }}/>)}</div> : null}
+      {b >= 2 ? <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={title}/> : null}
+      {((b === 5 && bk) || b === 6) && bondUp ? <div className={`tev-bond${bk ? ' big' : ''}${bondOn && bondNow >= 100 ? ' max' : ''}`} data-msx-tev-bond-row><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%` }}/></i><em data-msx-tev-bond>{bondShow}<small>/100</small>{bondNow !== bondFrom ? <small className="dl"> ({bondNow > bondFrom ? '+' : ''}{bondNow - bondFrom})</small> : null}</em>{bondOn && bondNow >= 100 ? <strong className="mx">MAX!</strong> : null}</div> : null}
+      {b === 5 && !bk ? <div className="tev-pops" data-msx-tev-pops>{pops.map((p, k) => <b key={k} className={`tev-pop ${p.k}`} style={{ animationDelay: `${0.3 + k * 0.7}s` }}>{p.t}{p.sub ? <small>{p.sub}</small> : null}</b>)}</div> : null}
+      {talk ? <div className={`v-talk tev-talk${aidWho ? ' say' : ' narr'}`} style={JA_LABEL_STYLE} key={i} data-msx-tev-talk={aidWho ? 'say' : 'narr'}>
+        {aidWho ? <><img className="fc" src={msxFace(aidWho, talk.e || 'happy')} alt=""/><span className="who">{msxAidName(aidWho)}</span></> : null}
+        <div>{jaWrap(talk.t)}</div>
+        {go ? <span className="tev-tap" aria-hidden="true">▼</span> : null}
+      </div> : null}
+      {b === 5 ? <div className="v-talk tev-talk narr" style={JA_LABEL_STYLE} key={`res${i}`} data-msx-tev-talk="res"><div>{jaWrap(bk ? (bondNow >= 100 ? `${name}と、すっかり なかよしになった!` : `${name}との距離が、ぐっと縮まった。`) : (MSX_TEV_RES[e.story ? 'self' : e.lottery] || MSX_TEV_RES.self)(name))}</div></div> : null}
+      {b === 6 && nx ? <div className="tev-next" data-msx-ev-next><b>つづく</b><span style={JA_WRAP_STYLE}>{nx.split('\n').map((t, k) => <React.Fragment key={k}>{k ? <br/> : null}{jaWrap(t)}</React.Fragment>)}</span></div> : null}
+      {sum ? <div className="tev-sum" data-msx-tev-sum>
+        {bondUp ? <div className="r bd">💗 {name}との親密度{bondNow >= 100 ? ' MAX!' : ` +${bondNow - bondFrom}`}<small style={{ display: 'block' }}>{bondFrom} → {bondNow}</small></div> : null}
+        {pops.map((p, k) => <div key={k} className={`r ${p.k}`}>{p.t}{p.sub ? <small> {p.sub}</small> : null}</div>)}
+        {nx ? <div className="nx"><b>つづく</b><span style={JA_WRAP_STYLE}>{nx.split('\n').map((t, k) => <React.Fragment key={k}>{k ? <br/> : null}{jaWrap(t)}</React.Fragment>)}</span></div> : null}</div> : null}
+      {style === 'b' && b === 1 ? <div className="tev-in-b" aria-hidden="true"><div className="band">{typeof MsxMonFace === 'function' ? <MsxMonFace species={s.species} colors={run.colors}/> : <img src={msxMonThumb(s.species)} alt=""/>}<b>{title}!</b>{m && typeof MsxMonFace === 'function' ? <MsxMonFace species={m.species} colors={m.colors}/> : <img src={m ? msxMonThumb(m.species) : ''} alt=""/>}</div></div> : null}
     </div>
-    {ups ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
-    <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
-    {e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? <MsxEvNext text={bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}といっしょにトレーニングしたとき` : `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`}/> : null}
+    {ups ? <MsxStRow who={s} stats={shown} ups={b >= 5 && !sum ? ups : null}/> : null}
   </>);
 }
 
 const MSX_TEV_CSS = `
-.msx .msx-tev .tev-pal{transform:translateX(-50%) scaleX(-1)}
-.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:48px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;color:#fbcfe8;background:#0f0d24cc;border-radius:999px;padding:3px 10px;z-index:3}
-.msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
-.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
-.msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.msx .msx-tev .sh{transition:background .5s}
+.msx .msx-tev.tb1 .sh{background:#000d}
+.msx .msx-tev.tb6 .sh{background:linear-gradient(180deg,#0006,#000a)}
+.msx .msx-tev .tev-who{position:absolute;bottom:24%;height:40%;aspect-ratio:1;transform:translateX(-50%);transition:left .6s cubic-bezier(.3,1,.4,1),height .6s,opacity .5s,filter .5s;z-index:2}
+.msx .msx-tev.tb1 .tev-who{opacity:0}
+.msx .msx-tev .tev-who.me{left:50%}
+.msx .msx-tev .tev-who.me.pair{left:29%;height:33%}
+.msx .msx-tev .tev-who.pal{left:31%;height:35%;opacity:0;filter:brightness(0);z-index:1}
+.msx .msx-tev .tev-who.pal.on{left:71%;opacity:1;filter:none}
+.msx .msx-tev .tev-who.pal.on.back{left:52%;z-index:1}
+.msx .msx-tev .tev-who.pal.bye{left:76%}
+.msx .msx-tev .tev-who .tev-art{position:absolute;inset:0;display:block;width:100%;height:100%;filter:drop-shadow(0 8px 5px #0009)}
+.msx .msx-tev .tev-who.pal .tev-art{transform:scaleX(-1)}
+.msx .msx-tev .tev-who.pal.bye .tev-art{transform:none}
+.msx .msx-tev .tev-who .gr{left:50%;bottom:-3%;width:70%;height:10%}
+.msx .msx-tev.tb2 .tev-who.me{animation:tevWob 1.1s ease-in-out infinite}
+@keyframes tevWob{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+.msx .msx-tev .tev-q{position:absolute;right:4%;top:-4%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-bang{position:absolute;right:0;top:-8%;font-size:36px;font-weight:900;font-style:italic;color:#fde047;-webkit-text-stroke:3px #7c2d12;paint-order:stroke fill;animation:tevBang .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes tevBang{from{opacity:0;scale:.3}to{opacity:1;scale:1}}
+.msx .msx-tev.wow.tb3{animation:tevShake .42s .1s ease-out both}
+@keyframes tevShake{0%,100%{translate:0}20%{translate:-6px 2px}40%{translate:5px -2px}60%{translate:-3px 1px}80%{translate:2px 0}}
+.msx .msx-tev.wow.tb3 .tev-who.me .tev-art{animation:tevHop .5s .1s ease-out both}
+@keyframes tevHop{0%,100%{translate:0}40%{translate:0 -18%}}
+.msx .msx-tev .tev-who.pal.wag{animation:tevWag .9s ease-in-out 2}
+@keyframes tevWag{0%,100%{rotate:0deg}25%{rotate:-5deg}75%{rotate:5deg}}
+.msx .msx-tev .tev-talk{bottom:8px;z-index:4;min-height:54px;animation:tevUp .3s ease-out both}
+.msx .msx-tev .tev-talk.narr{background:#0f0d24eb;color:#f8fafc;border:1px solid #a5b4fc66;padding:10px 26px 10px 14px;font-size:13.5px;line-height:1.65}
+.msx .msx-tev .tev-talk.say{padding:14px 26px 10px 64px;font-size:13.5px;line-height:1.65}
+.msx .msx-tev .tev-talk.say .who{left:64px}
+.msx .msx-tev .tev-talk .fc{position:absolute;left:8px;bottom:8px;width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;background:#fde68a;border:2px solid #fb923c}
+.msx .msx-tev .tev-tap{position:absolute;right:10px;bottom:6px;font-size:10px;color:#fb923c;animation:tevTap 1s ease-in-out infinite}
+.msx .msx-tev .tev-talk.narr .tev-tap{color:#a5b4fc}
+@keyframes tevTap{0%,100%{translate:0;opacity:.5}50%{translate:0 3px;opacity:1}}
+@keyframes tevUp{from{opacity:0;translate:0 10px}to{opacity:1;translate:0}}
+.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:50px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#fbcfe8;background:#0f0d24d9;border-radius:999px;padding:4px 10px;z-index:3;animation:tevUp .3s ease-out both}
+.msx .msx-tev .tev-bond i{flex:1;height:8px;border-radius:6px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185);transition:width .9s ease-out}
+.msx .msx-tev .tev-bond em{font-style:normal;color:#fff;font-size:12px}
 .msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
-.msx .msx-tev .tev-talk{bottom:8px;z-index:4}
-.msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
-.msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
-.msx .tev-in-a{position:absolute;inset:0;z-index:6;background:#000;pointer-events:none;animation:tevA 1.1s ease-out both}
-@keyframes tevA{0%{opacity:1}35%{opacity:1}100%{opacity:0}}
-.msx .msx-tev.s-a .v-ev-h{animation:tevTitle .5s .6s ease-out both}
-@keyframes tevTitle{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.msx .msx-tev .tev-bond.max{box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6}
+.msx .msx-tev .tev-bond .mx{color:#fde047;font-size:12px;font-style:italic;animation:tevBang .45s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-pops{position:absolute;left:0;right:0;top:24%;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:none}
+.msx .msx-tev .tev-pop{max-width:92%;text-align:center;line-height:1.2;font-size:21px;font-weight:900;color:#fff;-webkit-text-stroke:3px #9d174d;paint-order:stroke fill;text-shadow:0 0 14px #f9a8d4;animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-pop small{display:block;font-size:14px;font-style:normal;-webkit-text-stroke-width:2px}
+.msx .msx-tev .tev-bond em small.dl{color:#fde047;font-size:11px}
+.msx .msx-tev .tev-bond.big em small.dl{font-size:17px}
+.msx .msx-tev .tev-sum .r small{font-size:12px;color:#cbd5e1}
+.msx .msx-tev .tev-sum .nx{display:flex;gap:8px;align-items:baseline}
+.msx .msx-tev .tev-pop.st{font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
+.msx .msx-tev .tev-pop.gd{-webkit-text-stroke-color:#0f766e;text-shadow:0 0 14px #5eead4}
+.msx .msx-tev .tev-who.pal.on.tsh{opacity:.45}
+.msx .msx-tev .tev-bond.big{top:58px;left:12%;right:12%;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:16px;font-size:13px;background:#1f0f2ee6;border:2px solid #f472b6}
+.msx .msx-tev .tev-bond.big i{flex:1 1 100%;height:12px}
+.msx .msx-tev .tev-bond.big em{font-size:18px}
+.msx .msx-tev .tev-bond.big .mx{font-size:22px}
+.msx .msx-tev .tev-sum .r.bd{color:#fbcfe8;font-size:19px}
+.msx .msx-tev .tev-pop.dn{-webkit-text-stroke-color:#1e3a8a;text-shadow:none}
+@keyframes tevPop{0%{opacity:0;scale:.2;translate:0 30px}60%{opacity:1;scale:1.15}100%{opacity:1;scale:1;translate:0}}
+.msx .msx-tev .tev-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
+.msx .msx-tev .tev-dust i{position:absolute;left:70%;width:9px;height:9px;border-radius:50%;background:#fef9c3;box-shadow:0 0 10px #fde047,0 0 4px #fff;animation:tevDust .75s ease-in both}
+@keyframes tevDust{0%{left:70%;opacity:0}20%{opacity:1}100%{left:30%;opacity:0;scale:.4}}
+.msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
+.msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
+.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
+.msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
+.msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
+.msx .msx-tev .tev-sum .r.st{color:#fef08a;font-size:22px}
+.msx .msx-tev .tev-sum .r.dn{color:#93c5fd}
+.msx .msx-tev .tev-sum .nx{margin-top:2px;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:left;line-height:1.5}
+.msx .msx-tev .tev-sum .nx b{color:#fdba74}
+.msx .tev-mini{flex:none;display:flex;gap:10px;align-items:center;margin-top:5px;padding:3px 12px;border-radius:999px;background:#1d1740;border:1px solid #3b3566;font-size:11px;font-weight:800;color:#cbd5e1}
+.msx .tev-mini b{color:#fff}
 .msx .tev-in-b{position:absolute;inset:0;z-index:6;pointer-events:none;display:flex;align-items:center;animation:tevBfade 1.4s ease-in both}
 .msx .tev-in-b .band{width:120%;margin-left:-10%;transform:skewY(-6deg);display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0;background:linear-gradient(90deg,#db2777,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#db2777);box-shadow:0 0 0 3px #fff,0 0 30px #f472b6;animation:tevBand 1.4s cubic-bezier(.2,.9,.3,1) both}
 .msx .tev-in-b .band img{width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid #fff;object-fit:contain}
 .msx .tev-in-b .band b{font-size:20px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #9d174d;paint-order:stroke fill;white-space:nowrap}
 @keyframes tevBand{0%{transform:skewY(-6deg) translateX(110%)}25%,75%{transform:skewY(-6deg) translateX(0)}100%{transform:skewY(-6deg) translateX(-110%)}}
 @keyframes tevBfade{0%,80%{opacity:1}100%{opacity:0}}
-.msx .tev-in-c{position:absolute;inset:0;z-index:6;pointer-events:none}
-.msx .tev-in-c .fl{position:absolute;inset:0;background:#fff;animation:tevCfl .7s ease-out both}
-.msx .tev-in-c .rb{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:44px;font-weight:900;font-style:italic;letter-spacing:.2em;color:#fff7cc;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 18px #fde047,0 4px 0 #78350f;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:6px 0;animation:tevCrb 1.5s ease-out both}
-@keyframes tevCfl{0%{opacity:.95}100%{opacity:0}}
-@keyframes tevCrb{0%{opacity:0;transform:scaleX(.2)}18%{opacity:1;transform:scaleX(1.05)}26%{transform:scaleX(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
-.msx .msx-tev.s-c .bg{animation:tevZoom 1.6s ease-out both}
-@keyframes tevZoom{from{transform:scale(1.12)}to{transform:scale(1)}}
-.msx .msx-tev.calm .tev-in-a,.msx .msx-tev.calm .tev-in-b,.msx .msx-tev.calm .tev-in-c{display:none}
-@media (prefers-reduced-motion: reduce){.msx .tev-in-a,.msx .tev-in-b,.msx .tev-in-c{display:none}.msx .msx-tev .bg,.msx .msx-tev .v-ev-h{animation:none}}
+.msx .msx-tev.calm,.msx .msx-tev.calm *{animation:none!important;transition:none!important}
+.msx .msx-tev.calm .tev-in-b{display:none}
+@media (prefers-reduced-motion: reduce){.msx .tev-in-b{display:none}.msx .msx-tev,.msx .msx-tev *{animation:none!important}}
 `;
 let msxTevCssDone = false;
 const msxTevEnsureCss = () => {
@@ -86764,7 +86934,8 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
-        <MsxEvHead kind="story" label="メインストーリー 序章" title={`${msxAidName(s.aid)}編のはじまり`}/>
+        {/* 選んだストーリーの名前で始める(再点検 msx-IN: 「ヒーローへの道」を選んだのに「みゅあ編」とだけ出ていた)。上の帯の「〇〇編」は助手の呼び名 */}
+        <MsxEvHead kind="story" label={`ストーリー 序章・${msxAidName(s.aid)}編`} title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
@@ -88318,6 +88489,38 @@ function AssistantLifeFriendPage({ life }) {
   // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
   const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
   const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
+  // まだ見ていない「来てくれた・帰ってきた」があるときは、行き来の知らせを家の一覧より先に(2026-11-20 API の点検: 訪ねるが知らせより目立っていた)
+  const nowFirst = !!((st.back && !st.back.seen) || st.came.some(c => !c.seen));
+  const housesBlock = (<>
+      {/* フレンドの家と「🚪 訪ねる」をいちばん上に(来てくれた・帰ってきたの知らせがまだのときは、その下)(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
+      <div data-alf-houses style={hideIfEmpty}>
+        {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
+          <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-[12px] font-black leading-snug text-slate-100"><span className="whitespace-nowrap">［プレイヤー］</span><wbr/><span className="whitespace-nowrap">{f.name}さんの家</span>{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
+              <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
+                return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
+              {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
+              <div className="mt-0.5 flex gap-0.5">{alfHomeIds(f.house).slice(0, 6).map(id => <AlfFace key={id} id={id} size={22}/>)}</div>
+            </div>
+            <button type="button" disabled={can === 'off'} className="min-h-[48px] min-w-[120px] shrink-0 rounded-xl bg-amber-300 px-4 py-2 text-[15px] font-black text-slate-950 shadow-lg disabled:opacity-40" data-alf-act="look" onClick={() => setVisit(f)}>🚪 訪ねる</button>
+            <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
+            {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
+          </div>); })
+          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
+        {waiting.map(f => (
+          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-black text-slate-300">［プレイヤー］{f.name}さんの家</p>
+              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
+            </div>
+            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
+          </div>))}
+      </div>
+  </>);
   return (
     <div className="px-3 pb-3 pt-1" data-alf-page="on">
       {alfEmpty && (
@@ -88326,10 +88529,11 @@ function AssistantLifeFriendPage({ life }) {
           <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
           <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
         </div>)}
+      {!nowFirst && housesBlock}
       {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>分かった</button>
+          <button type="button" className="mt-1 min-h-[44px] rounded-xl border border-slate-400/60 px-3 py-1 text-[12px] font-bold text-slate-200" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>分かった</button>
         </div>)}
       <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
       <div className={card} data-alf-now style={hideIfEmpty}>
@@ -88339,6 +88543,7 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
+      {nowFirst && housesBlock}
       {!alfEmpty && typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
@@ -88359,32 +88564,6 @@ function AssistantLifeFriendPage({ life }) {
               ? <div className="mt-1 flex flex-wrap gap-1">{ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => <button key={k} type="button" className="rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100" data-alf-thanks={k} onClick={() => assistantLifeFriendThanks(n.id, k)}>{t}</button>)}</div>
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
-      </div>
-      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
-      <div data-alf-houses style={hideIfEmpty}>
-        {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
-          <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-100">［プレイヤー］{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
-              <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
-                return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
-              {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
-              <div className="mt-0.5 flex gap-0.5">{alfHomeIds(f.house).slice(0, 6).map(id => <AlfFace key={id} id={id} size={22}/>)}</div>
-            </div>
-            <button type="button" disabled={can === 'off'} className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1.5 text-[11px] font-black text-slate-950 disabled:opacity-40" data-alf-act="look" onClick={() => setVisit(f)}>🚪 訪ねる</button>
-            <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
-            {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
-          </div>); })
-          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
-        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
-        {waiting.map(f => (
-          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-300">［プレイヤー］{f.name}さんの家</p>
-              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
-            </div>
-            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
-          </div>))}
       </div>
       {!alfEmpty && typeof AlfSentNotes === 'function' && <AlfSentNotes s={s} card={card} sec={sec} onVisit={setVisit}/>}
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
@@ -88468,7 +88647,9 @@ const ALB_TABLE_LIKES = 'assistant_life_friend_likes';
 const ALB_MAX = Object.freeze({ houses: 3, likes: 3, friends: 100 });
 // 友情Lv に要るスタンプの数(Lv1〜Lv10)と呼び名(見た目の札)
 const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
-const ALB_TITLES = Object.freeze(['はじめまして', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', 'なかよし', '大のなかよし', 'いつもの人', '親友', '大親友', '心の友', 'かけがえのない友']);
+// 名前は「ご縁Lv」。助手どうしの「友情Lv」・あなたとの「仲良し度」と同じ言葉を使わない(2026-11-20 総点検 S-2: 「はじめまして」「なかよし」「親友」が3つの値の段で重なっていた)。
+//   呼び名は見た目だけ(保存はスタンプの数だけ。名前を変えても記録は変わらない)
+const ALB_TITLES = Object.freeze(['ごあいさつ', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', '行きつけ', '通い合う仲', 'いつもの人', '気心の知れた仲', '家族ぐるみ', '心の友', '末長いご縁']);
 const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
 const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({ c: '天井', w: '壁', f: '床' });
@@ -88688,7 +88869,7 @@ function AlfBondChip({ id, always = false }) {
   if (!albEnabled() || !s.bond) return null;
   const st = albOne(s.bond, id).st;
   if (!st && !always) return null;
-  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🤝 Lv{albLv(st)} {albTitle(st)}</span>;
+  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🌸 ご縁Lv{albLv(st)} {albTitle(st)}</span>;
 }
 function AlfFavShelf({ fv }) {
   if (!fv) return null;
@@ -88716,7 +88897,7 @@ function AlfBondBar({ friend, more, onOpen, compact = false }) {
   return (
     <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
       <span className="min-w-0 flex-1">
-        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🤝 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🤝 友情Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
+        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
         <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
       </span>
       <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
@@ -88737,7 +88918,7 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 14, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
+        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
         <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -88778,7 +88959,7 @@ function AlfBondView({ friend, more, land = false }) {
   return (
     <div className="px-3 pb-4 pt-2" data-alf-bond-view>
       <div className={card} data-alf-bond-view-friend>
-        <p className="text-[15px] font-black text-pink-100">🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
+        <p className="text-[15px] font-black text-pink-100">🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200"><span className="whitespace-nowrap">「{albTitle(x.st)}」</span> <span className="whitespace-nowrap">スタンプ {x.st}個</span>{nx ? <> <span className="whitespace-nowrap">あと{nx.need}個で「{ALB_TITLES[albLv(x.st) + 1]}」</span></> : null}</p>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -88829,14 +89010,14 @@ function AlfGuestBook({ s, card, sec, onVisit }) {
         return (
           <div key={id} className="border-b border-slate-700/60 py-1 last:border-0" data-alb-guest={id}>
             <div className="flex items-center gap-1.5">
-              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん<AlfBondChip id={id} always/></p>
+              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん{!house && <AlfBondChip id={id} always/>}</p>{/* 家の一覧に出ている人は、ご縁の札を家の行だけに(2026-11-20 API の点検: 同じ札が2か所) */}
               <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">{alfAgoText(last)}・{days}日</span>
               {house ? <button type="button" className="shrink-0 rounded-xl bg-orange-400 px-2 py-1 text-[10.5px] font-black text-slate-950" data-alb-return={id} onClick={() => onVisit(house)}>🚶 返しに行く</button> : null}
             </div>
-            <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🤝 スタンプ +1</span> : null}</p>
+            <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🌸 スタンプ +1</span> : null}</p>
           </div>); })
         : <p className="text-[11px] text-slate-400" data-alb-guests-none>この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。</p>}
-      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人との友情スタンプが1個たまります(1人につき1日1個)。</p>
+      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。</p>
     </div>
   </>);
 }
@@ -88864,7 +89045,7 @@ function AlfFavEditor({ s, card, sec }) {
         {row('m', '🐾 自慢のマスモン', fav.m ? `${fav.m.aid}|${fav.m.mo}` : '', mons, v => { const [aid, mo] = String(v).split('|'); albSaveFav({ m: v ? { aid, mo } : null }); })}
         {row('s', '🎵 好きな曲(最近モンヒロビートで遊んだ曲から)', fav.s || '', songList.map(x => ({ v: x, label: x })), v => albSaveFav({ s: v || null }))}
         <label className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>🪑 集めた家具の数を見せる</span><input type="checkbox" checked={fav.fn} data-alb-fav-fn onChange={e => albSaveFav({ fn: e.target.checked })}/></label>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
       </> : null}
     </div>
   </>);
@@ -89858,6 +90039,13 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+.msx .v-sum .v-sumsub{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx .v-s6det{margin-top:2px}.msx .v-s6det>summary{display:flex;align-items:center;min-height:44px;cursor:pointer;color:#7dd3fc;font-size:12px;font-weight:900}.msx .v-s6det .v-s6row{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;padding:2px 0;border-top:1px solid #3b3566}.msx .v-s6det .v-s6row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
+.msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
+.msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
+.msx .v-s6team .v-s6hd .v-edhit{display:flex;align-items:center;justify-content:flex-end;min-height:44px;min-width:64px;margin:0 -4px 0 0;padding:0 4px;background:none;border:0;font:inherit} /* 押せる所は44px・見た目はほかの行の「変える」と同じ */
+.msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
 .msx .v-lmain{display:contents}
@@ -89936,8 +90124,8 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
+.msx .v-sum .k{min-width:46px;font-size:12px;color:#fbcfe8;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:6px 12px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
@@ -92278,7 +92466,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = (<>
-      <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる</small></div>
+      <div className="v-h">どの助手と育てる?<small>助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる</small></div>
       <div className="v-faces">
         {MSX_SCENARIOS.filter((x) => msxAidOpen(x.aid)).map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
         {/* 準備中の助手は7人の黒い影を並べず、1枚にまとめる(Q-3-8)。押すとみゅあの一言(tut.lock) */}
@@ -92289,7 +92477,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       </div>
       <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
         <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
-          <h4><small>シナリオ {sc.no}・{msxAidName(aid)}編</small>{sc.title}</h4>
+          <h4><small>{msxAidName(aid)}編</small>{sc.title}</h4>
           <div style={{ marginTop: 4 }}>{sc.lead}</div>
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
         <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
@@ -92299,7 +92487,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!'}」</div></div>
       </div>
     </>);
-    go = `${msxAidName(aid)}編で始める ▶`;
+    go = `${msxAidName(aid)}編にする ▶`; // 「始める」は 6/6 の「育成を始める」だけに使う(押しても育成は始まらないため)
   } else if (step === 3) {
     const has = (id) => (meta.items && meta.items[id]) || 0;
     const toggle = (id) => setItems((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]));
@@ -92334,7 +92522,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
         {items.some((id) => !coreItems(id)) && <div className="msx-note" style={{ marginTop: 6 }}>まだ効き目が入っていない物があります(その物は持っていっても数は減りません)</div>}
       </div>
     </>);
-    go = 'これでいく ▶';
+    go = '次へ ▶';
   } else if (step === 4) {
     const onDye = (idx, colorId) => setColors((cur) => { const n = cur.slice(); while (n.length <= idx) n.push(null); n[idx] = colorId; return n; });
     const onCustom = (idx) => { const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(colors[idx]) : null; const h = p ? (p.h + 40) % 360 : 200; if (typeof _encodeCustomColorId === 'function') onDye(idx, _encodeCustomColorId(h, 0.7, 0.85)); };
@@ -92353,9 +92541,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
       </div>
       </div>
     </>);
-    go = 'これで決める ▶';
+    go = '次へ ▶';
   } else {
-    const startAdd = {}; members.forEach((m) => { if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v; });
+    // 初めの能力に足す分: 芯の newRun と同じ計算(編成の6体それぞれの、いちばん高い能力 ÷ 25 を、その能力に足す。受け継ぎ草を持ちこむと ×2)。
+    //   2/6 の札の「📖+4」などはトレーニングの効き(%)で、別の物(r1120 窓口: 6/6 の数字が 2/6 の札と合わないように見えた)
+    const startMul = items.some((id) => SUC.ITEMS && SUC.ITEMS[id] && SUC.ITEMS[id].good === 'uketsugu') ? ((SUC.GOOD && SUC.GOOD.uketsugu && SUC.GOOD.uketsugu.start) || 2) : 1;
+    const startAdd = {}; members.forEach((m) => { if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v * startMul; });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
     // 能力の上限アップ(r1115-103): 編成で 999 より上がる能力だけ出す
     const capUp = typeof SUC.capOfTeam === 'function' ? Object.entries(SUC.capOfTeam(members)).filter(([, v]) => v > 999) : [];
@@ -92367,15 +92558,24 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
         {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
           ? <span className="mon" style={{ left: '36%', bottom: '16%', height: '62%' }}><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
           : <img className="mon" src={msxMonImg(species)} alt="" style={{ left: '36%', bottom: '16%', height: '62%' }}/>}
-        <span className="v-nm" style={{ left: '36%', bottom: 6 }}>{name}<small>{msxMonName(species)}</small></span>
+        <span className="v-nm" style={{ left: '36%', bottom: 6 }}>{name}{name !== msxMonName(species) ? <small>{msxMonName(species)}</small> : null}</span>
         <img src={msxBody(aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, width: '50%', height: '78%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
       </div>
       <div className="v-lmain">
-      <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><MsxMonFace species={m.species} colors={m.colors}/></span>)}<span className="ed">変える</span></button>
-      {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
-      <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
+      {/* 編成は④の共通の型の札(小)で6体を1列に並べ、名前まで読めるようにする(点検 2026-11: 約22pxの顔だけで、だれで育てるのか分からなかった) */}
+      <div className="v-sum v-s6team" data-msx-s6-team>
+        <div className="v-s6hd"><span className="k">編成</span><button type="button" className="v-edhit" onClick={() => setStep(1)}><span className="ed">変える</span></button></div>
+        {typeof MonsucMonCard === 'function' ? (
+          <MonsucCardGrid size="s">{members.map((m, i) => <MonsucMonCard key={i} size="s" m={{ species: m.species, nick: m.name || null, colors: m.colors || null, grade: m.rank && m.rank !== 'base' ? m.rank : '' }} tag={m.friend ? { text: 'フレンド', kind: 'friend' } : null}/>)}</MonsucCardGrid>
+        ) : null}
+      </div>
+      {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">ストーリー</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
+      <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}</span>{/* 題はストーリーの行の1つだけ(再点検 msx-S6: 題が2つ並んでいた) */}<span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
-      <div className="v-sum"><span className="k">初めの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
+      {/* 何に何を足すのかを言葉で(「初めの上乗せ」だけでは伝わらなかった) */}
+      <div className="v-sum v-s6add" data-msx-s6-add><span className="k">初めの能力に足す分</span><span>{Object.keys(startAdd).length ? <>{Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}<small className="v-sumsub">{`編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`}</small>
+        {/* どの子から何が来たかの内訳(API 点検: 式だけでは分からない)。押すと開く */}
+        <details className="v-s6det"><summary>内訳を見る</summary>{members.map((m, i) => (m.startAdd && m.startAdd.v > 0 ? <span key={i} className="v-s6row"><b>{m.name || msxMonName(m.species)}</b>{`${MSX_STAT_NAME[m.startAdd.stat]} +${m.startAdd.v * startMul}`}</span> : null))}</details></> : '編成のモンスターからの足し分はありません'}</span></div>
       {capUp.length ? <div className="v-sum" data-msx-start-cap><span className="k">能力の上限</span><span>{capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・')}</span></div> : null}
       <button type="button" className="v-big" onClick={start}>🌱 育成を始める</button>
       </div>
@@ -93348,6 +93548,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [tevAt, setTevAt] = useState({ k: '', i: 0 }); // 編成の子のイベントの拍の位置(56-monsuc-tevent.jsx・6つの拍。-1 = 飛ばして結果だけ)。保存しない
   const [askLeave, setAskLeave] = useState(false); // 能力の画面で、決定していない振り分けがあるまま戻るとき(r1115-202 L8)
   const [sel, setSel] = useState(null);
   // トレーニングを選ぶ画面: 場面か丸いボタンの列を左右にスライドすると、となりのトレーニングに替わる(2026-11-14 社長「スライドでも動くようにして」)。
@@ -93535,8 +93736,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
-    body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>飛ばす ⏭</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
+    // 出来事の間は上の帯を畳む(期・月・体力だけの細い帯)。拍は6つ(入り→場面→見せ場→台詞→結果→つづく)で、押すたびに進む
+    const tk = `${s.turn}-${run.out.event.who}`; const tAt = tevAt.k === tk ? tevAt.i : 0; const tGo = (n) => setTevAt({ k: tk, i: n });
+    const tSteps = typeof msxTevSteps === 'function' ? msxTevSteps(run, run.out, ctx) : [];
+    const tLast = tAt < 0 || tAt >= tSteps.length - 1;
+    body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
+    foot = tAt < 0
+      ? <div className="v-ft"><button type="button" className="off" disabled>飛ばす ⏭</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {

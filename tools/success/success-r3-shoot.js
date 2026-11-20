@@ -12,6 +12,11 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const ROOT = path.resolve(__dirname, '..', '..');
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(社長の指摘の較正。tools/browser/serve-rev.js)
+const serveRev = require('../browser/serve-rev');
+const FROM_REV = serveRev.make(ROOT);
+// 撮った止め絵ごとに大きさの釣り合いを測り、置き場の _measure.jsonl に残す(tools/browser/ui-measure.js。UI_MEASURE=0 で止める)
+const uiMeasure = require('../browser/ui-measure');
 const SHOT_DIR = process.env.SHOT_DIR || '';
 // 一部だけ回す: ONLY=<画面の名前をコンマで>(例: ONLY=C1,C1w で大会の受付だけ)。名前は下の表 SHOTS の1つ目
 let failed = 0;
@@ -82,6 +87,7 @@ const makeRun = async (kind) => {
 (async () => {
   const server = await new Promise((r) => { const s = http.createServer((req, res) => {
     const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    if (f.startsWith(ROOT) && serveRev.serve(FROM_REV, ROOT, f, res, TYPES[path.extname(f)])) return;
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -315,7 +321,7 @@ const makeRun = async (kind) => {
         if (name === 'E9') { const e = await page.evaluate(async (w0) => { const b = await storeGet(MSX_KEYS.box, null); const m = b && b.mons && b.mons[0]; const w1 = await loadRhythmEventPoints(); return { rank: m && m.rank, d: w1 - w0, end: msxSuc.SUC.beatOfEnd(m && m.rank) }; }, beat0); e.want = e.end + pend0;
           check(`${label}: 引退したら、総合力のランクのビートPが1回だけ足される`, e.d === e.want, JSON.stringify(e)); }
         if (name === 'E9') check(`${label}: 保存枠に1体入り、途中の育成が消える`, m.boxN === 1 && (m.run === null || m.run === 'null'), `保存枠 ${m.boxN}体`);
-        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `r3-${name}${tag ? `-${tag}` : ''}.png`) }); }
+        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `r3-${name}${tag ? `-${tag}` : ''}.png`) }); await uiMeasure.record(page, path.join(SHOT_DIR, `r3-${name}${tag ? `-${tag}` : ''}.png`)); }
       }
       await page.close();
     }

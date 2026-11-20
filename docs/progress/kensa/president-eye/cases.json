@@ -1,0 +1,412 @@
+{
+ "_": "社長が実機で見つけた見た目の件(試験)。直す前の版で撮り、点検(測る検査 + API)が拾えるかを tools/browser/president-eye-calibrate.js で見る。新しい指摘が来たら1件足して回す。shoot.tool: msx/r3/arc = tools/success/success-*-shoot.js の名札、home = visual-shoot.js の場面 id、life = visual-life-shoot.js の場面の名前。rev: 直す前のコミット(HEAD は今の版)。expect.measure: 測る検査が出すべき種類(ui-measure.js の kind)。expect.api: API の what/fix に当たるべき言葉(正規表現)",
+ "cases": [
+  {
+   "id": "M1",
+   "game": "モンサク",
+   "title": "「つづく」の札の折り返しと中央そろえ",
+   "screen": "編成の子のイベント(つづく ▶ …)",
+   "rev": "b218bd93^",
+   "pr": "#6933",
+   "president": "「トレーニン/グ」で折れている・2行の中央そろえはおかしい",
+   "shoot": {
+    "tool": "msx",
+    "only": "TV1",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-TV1.png",
+    "msx-TV1-pc.png"
+   ],
+   "expect": {
+    "measure": [
+     "言葉の途中で折り返し",
+     "2行以上の中央そろえ"
+    ],
+    "api": "途中で(折|改行)|中央そろえ|割れ"
+   }
+  },
+  {
+   "id": "M2",
+   "game": "モンサク",
+   "title": "トレーニング画面の下の二重の行",
+   "screen": "育成の毎ターン トレーニングを選ぶ",
+   "rev": "764d82c7^1",
+   "pr": "#6931",
+   "president": "同じ数字が2か所に出ている(下の行の「ライフ+4・命中+10・回避+28」)",
+   "shoot": {
+    "tool": "msx",
+    "only": "T1",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-T1.png",
+    "msx-T1-pc.png"
+   ],
+   "expect": {
+    "measure": [
+     "同じ数字が二重"
+    ],
+    "api": "(2|3|２|３|二|三)(か所|箇所|回)|二重|重複|同じ(数字|値|情報)"
+   }
+  },
+  {
+   "id": "M3",
+   "game": "モンサク",
+   "title": "合体の窓",
+   "screen": "お別れ・合体(確認)",
+   "rev": "HEAD",
+   "pr": "(今の版)",
+   "president": "合体の窓が古い作りのまま(ほかの窓とそろっていない・生まれる子が見えない)",
+   "shoot": {
+    "tool": "r3",
+    "only": "F2",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "r3-F2.png",
+    "r3-F2-pc.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "古い|ほかの窓|そろって(い)?ない|小さ(い|な)(アイコン|絵)|見せ場|喜び"
+   }
+  },
+  {
+   "id": "M4",
+   "game": "モンサク",
+   "title": "イベント図鑑の上の切れ",
+   "screen": "イベント図鑑(一覧)",
+   "rev": "5cfb1d2b^",
+   "pr": "#6893",
+   "president": "見た目悪い・上が切れている",
+   "shoot": {
+    "tool": "msx",
+    "only": "DX1",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-DX1.png",
+    "msx-DX1-pc.png"
+   ],
+   "expect": {
+    "measure": [
+     "上が切れている"
+    ],
+    "api": "上が?(切れ|欠け|見切れ)|画面の外|はみ出"
+   },
+   "note": "ブラウザの大きさ(390×844・390×664・PC)では上は切れない。社長の実機(iPhone の安全な領域・アドレスバー)の事情と見る。再現できない件として数に入れる"
+  },
+  {
+   "id": "M5",
+   "game": "モンサク",
+   "title": "お話の締めの「終わり」の中心ずれ(字間)",
+   "screen": "イベント回想 → お話の締め(終わり)",
+   "rev": "3a92dd1a^",
+   "pr": "#6921",
+   "president": "「終わり」が真ん中からずれている",
+   "shoot": {
+    "tool": "home",
+    "only": "replay-end",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "shots/tate/replay-end.png",
+    "shots/pc/replay-end.png"
+   ],
+   "expect": {
+    "measure": [
+     "字の中心がずれる"
+    ],
+    "api": "中心|真ん中|中央.*ずれ|ずれ.*中央|左に寄|右に寄"
+   }
+  },
+  {
+   "id": "M6",
+   "game": "モンサク",
+   "title": "イベント回想の見出しの絵文字",
+   "screen": "プロフィール → イベント回想(まとまりを開いた所)",
+   "rev": "3a92dd1a^",
+   "pr": "#6921",
+   "president": "見出しが絵文字の分だけずれて見える",
+   "shoot": {
+    "tool": "home",
+    "only": "replay-list",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "shots/tate/replay-list.png",
+    "shots/pc/replay-list.png"
+   ],
+   "expect": {
+    "measure": [
+     "字の中心がずれる"
+    ],
+    "api": "絵文字|中心|真ん中|ずれ"
+   }
+  },
+  {
+   "id": "M7",
+   "game": "モンサク",
+   "title": "育成イベントの結果に見せ場が無い",
+   "screen": "育成イベント(選んだあとの結果)",
+   "rev": "HEAD",
+   "pr": "(今の版)",
+   "president": "イベントに見せ場が無い(上がる瞬間が下の箱に並ぶだけ)",
+   "shoot": {
+    "tool": "msx",
+    "only": "E2",
+    "sizes": "base"
+   },
+   "shots": [
+    "msx-E2.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "見せ場|演出|地味|並ぶだけ|目立たな|盛り上が"
+   }
+  },
+  {
+   "id": "B1",
+   "game": "モンビー",
+   "title": "曲えらびの右側(決定のボタンが小さい・下が空いている)",
+   "screen": "曲えらび(ソロライブ)",
+   "rev": "HEAD",
+   "pr": "(今の版)",
+   "president": "決定のボタンが小さい・右の列の下が空いている",
+   "shoot": {
+    "tool": "home",
+    "only": "beat-songs",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "shots/tate/beat-songs.png",
+    "shots/pc/beat-songs.png"
+   ],
+   "expect": {
+    "measure": [
+     "大事なボタンが小さい",
+     "下が空いている"
+    ],
+    "api": "(決定|ボタン).{0,12}小さ|小さ.{0,12}(決定|ボタン)|空いて|空き|余白"
+   }
+  },
+  {
+   "id": "L1",
+   "game": "助手ライフ",
+   "title": "思い出アルバムの暗幕の上に帯とタブ",
+   "screen": "きずな → 思い出アルバム",
+   "rev": "acd5c4afb",
+   "pr": "#6830(社長の報告・r1118-001)",
+   "president": "アルバムを開いたまま、上の帯と下のタブが押せる",
+   "shoot": {
+    "tool": "life",
+    "only": "43-album",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "tate-43-album.png",
+    "pc-43-album.png"
+   ],
+   "expect": {
+    "measure": [
+     "暗幕の上に窓の外の部品"
+    ],
+    "api": "(帯|タブ).{0,20}(押せ|上に|明る|かぶ|重な)|暗幕|幕が"
+   }
+  },
+  {
+   "id": "L2",
+   "game": "助手ライフ",
+   "title": "部屋の寝顔の絵が大きすぎる",
+   "screen": "部屋(夜・寝ている)",
+   "rev": "実機の止め絵",
+   "pr": "#6287(r1115-005)",
+   "president": "寝顔のサイズがおかしくなってる(布団からはみ出す)",
+   "shoot": null,
+   "shots": [
+    "repo:docs/progress/assistant-room/report-1115/sleep-face-big-iphone.jpg"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "(寝顔|顔).{0,30}(大き|はみ出|透け|半透明|溶け込)|布団|枕.{0,10}(はみ出|かぶ)"
+   },
+   "note": "古い版を偽のデータで撮ると、夜でも寝ている助手の部屋にならない(撮影の道具の並びが今の版向け)。社長が送った本番の止め絵を API に見せる。測る検査は DOM が無いので対象外"
+  },
+  {
+   "id": "L3",
+   "game": "助手ライフ",
+   "title": "修行の観戦「きょうの修行」の段が分かりにくい",
+   "screen": "町 → 修行を見る",
+   "rev": "1fb5c1508^",
+   "pr": "#6325(r1115-027)",
+   "president": "「世界を揺らせ 1→8(+7・見習い)」が何の数か分からない",
+   "shoot": {
+    "tool": "life",
+    "only": "34-watch-train",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "tate-34-watch-train.png",
+    "pc-34-watch-train.png",
+    "repo:docs/progress/assistant-room/report-1115/shugyo-result-words.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "(1→8|見習い).{0,40}(何の|何な|分か[らり]|説明)|何の(数|値).{0,30}(1→8|見習い|熟練)"
+   },
+   "note": "古い版の撮影は試合の観戦の途中(結果の段の前)で止まる。社長が送った本番の止め絵も API に見せる"
+  },
+  {
+   "id": "L4",
+   "game": "助手ライフ",
+   "title": "部屋の立ち絵が左右で切れる",
+   "screen": "部屋(起きている・あつ)",
+   "rev": "実機の止め絵",
+   "pr": "r1115-018",
+   "president": "全身画の立ち絵が左右で切れている(肩・腕が縦にまっすぐ切れる)",
+   "shoot": null,
+   "shots": [
+    "repo:docs/progress/assistant-room/report-1115/room-awake-cut-atsu-iphone.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "(立ち絵|全身|肩|腕|体).{0,20}(切れ|見切れ|欠け)|(左右).{0,10}(切れ|まっすぐ)"
+   },
+   "note": "API は2回(指示書に「絵の端の切れ」を足した後も)、立ち絵の右の肩と腕が縦にまっすぐ切れている所を挙げなかった。本番の止め絵だけで DOM が無いので、測る検査も当てられない"
+  },
+  {
+   "id": "L5",
+   "game": "助手ライフ",
+   "title": "町の地図の助手の顔の大きさがばらばら",
+   "screen": "町",
+   "rev": "実機の止め絵",
+   "pr": "r1115-031",
+   "president": "場所の上に並ぶ助手の絵の大きさが助手ごとにばらばら",
+   "shoot": null,
+   "shots": [
+    "repo:docs/progress/assistant-room/report-1115/town-face-size.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "顔.{0,20}(大きさ|サイズ).{0,10}(ばらばら|そろ|違|まちまち)|(大きさ|サイズ).{0,10}(ばらばら|まちまち).{0,20}(顔|助手|絵)|(助手|顔).{0,30}(ばらばら|不ぞろい)"
+   }
+  },
+  {
+   "id": "L6",
+   "game": "助手ライフ",
+   "title": "助手ライフの家が分かりづらい・ごちゃついている",
+   "screen": "家(開いてすぐ)",
+   "rev": "0428d6b60",
+   "pr": "(2026-11-11 の版)",
+   "president": "助手ライフはとにかく分かりづらい・全体的に分かりにくいしみにくい",
+   "shoot": {
+    "tool": "life",
+    "only": "01-house-open",
+    "sizes": "tate,pc"
+   },
+   "shots": [
+    "tate-01-house-open.png",
+    "pc-01-house-open.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "分かりにく|わかりにく|分かりづら|多すぎ|ごちゃ|迷う|詰め込|何を(押|す)"
+   }
+  },
+  {
+   "id": "M8",
+   "game": "モンサク",
+   "rev": "HEAD",
+   "pr": "(今の版・r1119-039)",
+   "title": "借りる一覧でフレンドのアシスト効果が見えない",
+   "screen": "フレンドから借りる(一覧)",
+   "president": "借りる一覧で、フレンドのアシスト効果が見えない(札に出るのは伸び2つだけ)",
+   "shoot": {
+    "tool": "msx",
+    "only": "S2FL",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-S2FL.png",
+    "msx-S2FL-pc.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "(札|一覧|行).{0,40}アシスト.{0,25}(出てい|出ない|無い|ない|見えな|載って)|アシスト(効果)?.{0,25}(札|一覧|行).{0,15}(出てい|出ない|無い|ない|載って)|アシスト.{0,20}詳細を開(か|く)"
+   }
+  },
+  {
+   "id": "M9",
+   "game": "モンサク",
+   "rev": "HEAD",
+   "pr": "(今の版・r1119-039)",
+   "title": "「効果・詳細」が札の外の横長の札・下に大きな空き・出ていない札の説明が常に出る",
+   "screen": "フレンドから借りる(一覧)",
+   "president": "「効果・詳細」が札の外の別の横長の札になっていて見にくい。下に大きな空き。出ていない札(アシスト重複・編成不可)の説明文が常に出ている",
+   "shoot": {
+    "tool": "msx",
+    "only": "S2FL",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-S2FL.png",
+    "msx-S2FL-pc.png"
+   ],
+   "expect": {
+    "measure": [
+     "大きな空き"
+    ],
+    "api": "効果・詳細.{0,40}(離れ|外|別|横長|札)|(アシスト重複|編成不可).{0,40}(常に|いつも|出ていない|無いのに|ないのに)|説明.{0,20}(常に|いつも)"
+   }
+  },
+  {
+   "id": "M10",
+   "game": "モンサク",
+   "rev": "HEAD",
+   "pr": "(今の版・r1119-039)",
+   "title": "モンスターの詳細(フレンド)にアシスト効果の一覧が無い",
+   "screen": "フレンドから借りる → 効果・詳細",
+   "president": "モンスターの詳細(フレンド)に、アシスト効果の一覧が無い",
+   "shoot": {
+    "tool": "msx",
+    "only": "S2FD",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-S2FD.png",
+    "msx-S2FD-pc.png"
+   ],
+   "expect": {
+    "measure": [],
+    "api": "アシスト(効果)?(の一覧)?.{0,10}(が)?(無い|ない|見えな|隠れ|出ていない)"
+   },
+   "note": "今の版を偽の貸し出し(アシスト3つ)で撮ると、詳細の「アシスト」のタブに3つの効果が出ている。社長の実機ではフレンドの子のアシストが出なかった(送られたアシストの確かめで外れた・タブが閉じていた など)と見る"
+  },
+  {
+   "id": "M11",
+   "game": "モンサク",
+   "rev": "HEAD",
+   "pr": "(今の版・r1119-039)",
+   "title": "技の升目の説明が「(零 =」で折り返す",
+   "screen": "フレンドから借りる → 効果・詳細 → 技",
+   "president": "技の升目の説明が「(零 =」で折り返している",
+   "shoot": {
+    "tool": "msx",
+    "only": "S2FT",
+    "sizes": "base,pc"
+   },
+   "shots": [
+    "msx-S2FT.png",
+    "msx-S2FT-pc.png"
+   ],
+   "expect": {
+    "measure": [
+     "記号や括弧の所で折り返し"
+    ],
+    "api": "(零|=|括弧).{0,20}(折|改行)|折り返.{0,20}(零|括弧|=)"
+   },
+   "note": "縦 390 の撮影では「ランク・/暗い升」で折れ、「(零 =」では折れない(社長の iPhone とは字の幅が違う)。測る検査は、試しのページで「(零 =/くっついた」を拾うことを確かめた"
+  }
+ ]
+}
