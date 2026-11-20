@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b244f144df905351
+// source-sha256: d4a8313f62e38dd8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -191590,6 +191590,7 @@ const monsucLendMember = (row, SUC) => {
   if (okShape && list.length) {
     let budget = 0;
     try {
+      const allTechs = typeof SUC.techsOf === 'function' ? SUC.techsOf(m.species).filter(Boolean).map(t => t.id) : [];
       const best = SUC.memberOf({
         kind: 'raised',
         species: m.species,
@@ -191597,9 +191598,14 @@ const monsucLendMember = (row, SUC) => {
         lv: 999,
         loy: 100,
         pop: 100,
-        masteries: [100, 100, 100, 100, 100, 100, 100, 100]
+        techs: allTechs,
+        masteries: allTechs.map(() => 100),
+        mast: allTechs.map(() => 100),
+        pv: 2
       });
-      budget = SUC.assistPointsOf(best.power);
+      const pNow = SUC.assistPointsOf(best.power);
+      const pOld = Math.min(400, Math.max(20, Math.floor((Number(best.power) || 0) / 50)));
+      budget = Math.max(pNow, pOld);
     } catch (_) {
       budget = 0;
     }
