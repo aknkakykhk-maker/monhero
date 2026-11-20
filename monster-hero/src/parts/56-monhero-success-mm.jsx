@@ -250,7 +250,7 @@ function MsxR3Box({ onClose }) {
     title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxBody(aid, 'happy')} alt=""/>
-        {!bubOff ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
+        {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
           <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
@@ -276,7 +276,7 @@ function MsxR3Box({ onClose }) {
       {/* 升の見せ方はマスモンボックスの一覧と同じ(名前に札を重ねない。メモモンであることは見出しと下の数で分かる・r1119-006) */}
       <div className="mm-tabs"><button type="button" className={atab === 'list' ? 'on' : ''} onClick={() => { setAtab('list'); setApick([]); }} data-msx-assist-tab-list>一覧</button>
         <button type="button" className={atab === 'rm' ? 'on' : ''} onClick={() => { setAtab('rm'); setApick([]); setMsg(''); }} data-msx-assist-tab-rm>外す</button></div>
-      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}押すと、{'​'}アシスト効果と使い道が見られます</>}</div>
+      <div className="mm-hint msx-kp" data-msx-assist-why={atab === 'rm' ? undefined : ''}>{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}育成・合体・貸し出しには使えず、{'​'}育成を始めるときの編成に入れると{'​'}アシスト効果と得意な能力が効きます。{'​'}押すと詳細</>}</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
         {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length} hideFull/> : null}
@@ -291,7 +291,7 @@ function MsxR3Box({ onClose }) {
         const kAt = kp && Number.isFinite(kp.at) && kp.at > 0 ? new Date(kp.at) : null;
         return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
           info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
-          foot={<><div className="mm-hint msx-kp" data-msx-assist-why>メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。{'​'}育成を始めるときの編成に入れると、{'​'}アシスト効果と得意な能力が効きます</div>
+          foot={<>{/* 使い道の注意文は一覧の上の1か所だけ(詳細の窓と二重だった・2026-11-20 r1119-033 育-53) */}
             <div className="mm-acts"><button type="button" onClick={() => { setApick([acur.id]); setAAsk(true); }} data-msx-assist-detail-rm>外す</button></div></>}
           onClose={() => { setAsel(null); setMsg(''); }}/>);
       })() : null}

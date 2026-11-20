@@ -171,8 +171,8 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   const TAB_ICON = { story: '📕', daily: '☀️', team: '🤝', self: '🌱', season: '🎐', cup: '🏆', issa: '🧪', awake: '✨' };
   const aids = [...new Set(list.story.map((x) => x.aid))];
   return (
-    <ModalSheet title={<span className="mdx-ttl">📖 イベント図鑑<b>{got}<small> / {all.length}</small></b></span>} label="イベント図鑑" onClose={onClose} dataProps={{ 'data-msx-dex': '' }} bodyClassName="mdx"
-      footer={open ? <ModalSheetButton back onClick={() => (chosen ? setChosen(null) : setOpen(null))} data-msx-dex-back>{chosen ? '← 選ぶ前に戻る' : '← 一覧へ戻る'}</ModalSheetButton> : null}>
+    // 1つ前へは見出しの左の「← 戻る」、下のボタンはいつも「閉じる」(図鑑ごと閉じる)にそろえる(下の働きが画面ごとに変わっていた。r1119-033 窓-15)
+    <ModalSheet title={<span className="mdx-ttl">{open ? <button type="button" className="mdx-hbk" data-mh-back onClick={(e) => { e.stopPropagation(); if (chosen) setChosen(null); else setOpen(null); }} data-msx-dex-back>← 戻る</button> : null}📖 イベント図鑑<b>{got}<small> / {all.length}</small></b></span>} label="イベント図鑑" onClose={onClose} dataProps={{ 'data-msx-dex': '' }} bodyClassName="mdx">
       {/* 出口は1つ(⑥ #6889・#6898): 読んでいる間は足のボタンが「戻る」、一覧では「閉じる」 */}
       {open ? null : <div className="mdx-bar"><i style={{ width: `${all.length ? (got / all.length) * 100 : 0}%` }}/></div>}
       {/* 分類の札は 4つ×2段の升目(2026-11-20 API 点検: 横に流すと右の札が「育成モン」で切れて読めない)。字は短い名前、正式な名前は読み上げの名札に */}
@@ -210,6 +210,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
 
 const MSX_DEX_CSS = `
 .mdx-ttl{display:flex;align-items:baseline;gap:10px;width:100%}
+.mdx-hbk{flex:none;align-self:center;min-height:44px;padding:0 10px;border-radius:99px;background:#334155;border:1px solid #ffffff33;font-size:12px;font-weight:900;color:#e0f2fe;white-space:nowrap}
 .mdx-ttl b{margin-left:auto;font-size:17px;color:#fde047}.mdx-ttl b small{font-size:12px;color:#cbd5e1}
 .mdx{display:flex;flex-direction:column;gap:8px;color:#f1f5f9}
 .mdx-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;flex:none}

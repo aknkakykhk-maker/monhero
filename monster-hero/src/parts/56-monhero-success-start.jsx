@@ -93,7 +93,9 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
-      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
+      {/* 中断は戻ると同じ場所・同じ形だと、戻るつもりで育成を中断しそうになる。赤い別の形にする(r1119-033 窓-22・31・34・46・47)。
+          back が空のとき(お話・結果の流れの中)は左上に何も出さず、下の「次へ」だけで進める(窓-29・30・43) */}
+      {back ? <button type="button" className={`bk${back === '中断' ? ' pause' : ''}`} data-mh-back onClick={onBack} data-msx-hd-pause={back === '中断' ? '' : undefined}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button> : null}
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
@@ -215,6 +217,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => (initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech')); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)。initialTab='assist' でアシストから開く(編成の効果確認)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
+  const [legOpen, setLegOpen] = useState(false); // 升目の見方(押して開く。表の上に小さな字で詰めていた・API 再点検 2026-11-20)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
@@ -238,7 +241,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 超えた矛盾した表示になる(2026-11-18 実機報告・ランキング詳細)。cap がある画面では値は上限以下なので変わらない
   const capBase = (k) => (SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({ cap }, k) : (cap && Number.isFinite(cap[k]) ? Math.max(999, cap[k]) : 999));
   const capK = (k) => Math.max(capBase(k), Number(st && st[k]) || 0);
-  const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
+  // 間合い適性は下の技の升目の列の見出しに出す(上の「適性」タブと二重だった・2026-11-20 r1119-033 育-31)。升目の見出しが無い(grades が無い)ときだけタブを残す
+  const TOP = grades ? [['base', '基礎'], ['feat', '特徴']] : [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
@@ -292,7 +296,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           <div className="msx-md-bot" data-msx-detail-techs style={btab !== 'tech' && (Array.isArray(assists) || (Array.isArray(info) && info.some(Boolean))) ? { display: 'none' } : undefined}>
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             {/* 升目の見方(2026-11-20 r1119-033 育-165・育-184: 列の「零」・升の数字・左下の丸に説明が無かった) */}
-            <div className="msx-md-leg" data-msx-detail-legend>列は技の届く間合い(零 = くっついた距離)・升の数字は技のランク・暗い升はまだ覚えていない技{mastery ? '・左下の丸は熟練' : ''}</div>
+            <button type="button" className="msx-md-legb" aria-expanded={legOpen} onClick={() => setLegOpen(!legOpen)} data-msx-detail-legend-open>{legOpen ? '▲ 見方を閉じる' : 'ⓘ 升目の見方'}</button>
+            {legOpen ? <div className="msx-md-leg" data-msx-detail-legend>{[`列は届く間合い(零はくっついた距離)${grades ? '・上の字は適性' : ''}`, '升の左上はランク', '暗い升はまだ覚えていない', '×は技が無い', pick ? '⇄は選べる技の数' : null, mastery ? '左下の丸は熟練' : null].filter(Boolean).map((t, i) => <span key={i} style={{ display: 'block' }}>・{t}</span>)}</div> : null}
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
                   // 升に出す技: 覚えた技(はじめからの技を含む)があればそれ → 選んだ技 → 並びの1つ目。
@@ -329,14 +334,14 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           return (<div className="msx-ov msx-fade msx-ov-deep" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
-              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)}</div>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜押した技を｜修行で覚えます。｜あとで｜選び直せます。｜覚えた技と｜熟練は｜そのまま残ります`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
                 <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} data-msx-techpick-opt={t.id} onClick={() => { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); }}>
                   <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`} data-msx-techpick-icon><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span></span>
                   <span className="tpb"><b>{msxTechNm(t.name)}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb" data-msx-techpick-grades><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>ガッツダウン {grade('gd', t.gd)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small>{msxTechMoveTxt(t) ? <small className="tp-nb"><i>使ったあと {msxTechMoveTxt(t)}</i></small> : null}<small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
                   <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
-              <button type="button" className="msx-dt-close" data-msx-techpick-close onClick={() => setPickCell(null)}>閉じる</button>
+              {/* 技を押すとその場で決まって窓が閉じる。下は取り消しだと分かる「やめる」(r1119-033 窓-52) */}<button type="button" className="msx-dt-close" data-mh-back data-msx-techpick-close onClick={() => setPickCell(null)}>やめる</button>
             </div></div>); })() : null}
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
         <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>

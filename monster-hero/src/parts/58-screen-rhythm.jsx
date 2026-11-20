@@ -926,7 +926,7 @@ function RhythmRankingScreen({
           <button type="button" data-rhythm-ranking-pending-send onClick={async()=>{if(onResendRhythmRankingPending)await onResendRhythmRankingPending();refresh();}}
             className="min-h-[44px] shrink-0 rounded-lg border border-amber-300/50 bg-amber-500/20 px-3 text-[10px] font-black text-amber-50 active:scale-[.98]">いま送る</button>
         </div>}
-        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
+        <div data-rhythm-ranking-scroll className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
               「ランキングページに余計な説明が多くて見にくい／横画面対応、ページ説明みたいの、
               助手のコメント、これはなくしていいとおもう」)。

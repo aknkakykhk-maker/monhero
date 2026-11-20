@@ -206,6 +206,8 @@ const MSC_CSS = `
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
 .msc-foot>*{flex:1}
+/* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
+.msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
 .msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
 .msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
 .msc-bk{position:relative;padding:8px 6px 10px 8px}
@@ -533,9 +535,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const aptRow = (sp, me) => { const gs = aptOf(sp, me); const order = me ? [0, 1, 2, 3] : [3, 2, 1, 0]; return <div className="msc-apt">{order.map((d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(gs[d]) ? 'S' : gs[d]}>{AMBW_DIST[d]}</span>)}</div>; };
   return (
     <div className="msc-wrap" data-msc-card>
-      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
+      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
-        <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
+        {/* 大会名は上の見出しの1か所だけ(絵の上の札は二重だった。r1119-033 窓-07) */}
         <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><MscMyMon sp={o.species} colors={o.colors}/></div>
         <div className="vs">VS</div>

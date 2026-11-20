@@ -110,10 +110,10 @@ function MsxQfxRows({ run, o, keys }) {
         <span className="qg-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
         <span className="qg-bar"><i className="qg-base"/>{parts.map((x, n) => { const w = (x.v / maxG) * 42; const l = 52 + acc; acc += w;
           return <i key={n} className="qg-seg" style={{ left: `${l}%`, width: `${w}%`, background: x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length], '--d': `${0.35 + (d0 + n) * 0.3}s` }}/>; })}</span>
-        <span className="qg-v"><small>{msxFmt(before)}→</small><b style={{ '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s` }}>{msxFmt(after)}</b></span>
+        <span className="qg-v"><small>{msxFmt(before)}</small><b style={{ '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s` }}>→{msxFmt(after)}</b></span>
         <span className="qg-parts">{parts.map((x, n) => { const m = x.src === 'team' ? (s.team || [])[x.i] : null;
           return (<span key={n} className={`qg-p ${x.src}`} style={{ '--d': `${0.3 + (d0 + n) * 0.3}s`, '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length] }} data-msx-qg-part={x.src}>
-            {m ? <MsxMonFace species={m.species} colors={m.colors}/> : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small> : <small>行き先</small>}
+            {m ? <MsxMonFace species={m.species} colors={m.colors}/> : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{typeof msxMemberName === 'function' ? msxMemberName(m) : '編成'}</small> : <small>行き先</small>}
             <i className="fly" aria-hidden="true">+{x.v}</i></span>); })}</span>
       </div>); })}
   </div>);
@@ -315,7 +315,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .qg-p{position:relative;display:inline-flex;align-items:center;gap:3px;padding:1px 6px 1px 2px;border-radius:99px;background:#1e293b;border:1.5px solid var(--c);animation:msxQgIn .3s ease-out var(--d) both}
 .msx .msx-qst .qg-p img{width:22px;height:22px;border-radius:50%;background:#fff;object-fit:contain}.msx .msx-qst .qg-p em{font-style:normal;font-size:15px;width:22px;text-align:center}
 .msx .msx-qst .qg-p b{font-size:12.5px;font-weight:900;color:var(--c)}.msx .msx-qst .qg-p small{font-size:9.5px;font-weight:800;color:#cbd5e1}
-.msx .msx-qst .qg-p .fly{position:absolute;left:8px;top:-4px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
+.msx .msx-qst .qg-p .fly{position:absolute;left:auto;right:-6px;top:-18px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
 .msx .msx-qst .qg-cap{position:absolute;left:8px;right:8px;bottom:8px;text-align:center;font-size:11.5px;font-weight:800;color:#f8fafc;text-shadow:0 1px 2px #000;z-index:4;background:#0b0920a6;border-radius:8px;padding:3px 6px}
 .msx .msx-qst .qlot{position:absolute;left:8px;right:8px;bottom:24px;display:grid;gap:6px;z-index:4}
 .msx .msx-qst .ql{display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"ti nm rs" "lb lb lb";column-gap:8px;row-gap:5px;align-items:center;background:#0f172ae6;border:2px solid #64748b;border-radius:12px;padding:6px 9px;animation:msxActBan .3s ease-out var(--d) both}
