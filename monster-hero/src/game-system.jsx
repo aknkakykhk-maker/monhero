@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cdc700719af36c48
+// generated-sha256: ff0bb5683936bb19
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90425,7 +90425,7 @@ const MSX_CSS = `
 .msx .msx-tp-tm .mcd .mcd-gd{font-size:10px}
 .msx .msx-tp-tm .mcd .mcd-f.empty .mcd-plus{font-size:15px;color:#cbd5e1}
 .msx .msx-tp-tm.on .mcd-f{box-shadow:0 0 0 3px #fde047}
-.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i{font-size:10px}
+.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i,.msx .msx-tp-list .mcd.s .mcd-gd,.msx .msx-tp-tm .mcd.s .mcd-gd{font-size:10px}
 .msx .msx-tp-tm>.fr{position:absolute;right:2px;bottom:2px;font-size:13px;line-height:1}
 .msx .msx-tp>.msx-tp-list{display:block;padding:2px 6px 10px}
 .msx .msx-tp>.msx-tp-list .mcd-grid{padding:4px 0}
@@ -91880,7 +91880,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
             {!sameBond ? <small className="msx-t6b">親密度 {m.bond0}・タッグ +{m.tag}%</small> : null}
           </div>); })}
       </MonsucCardGrid></div>
-      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も はじめの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え</div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
     </>);
@@ -92324,20 +92324,20 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>
         <div className="msx-dt-body">
           {view === 'eff' ? (list.length ? <>
-            <div className="msx-ef-how">数字は編成の合計(上限まで効く)。<b className="one">1体だけ</b>の効果は、いちばん大きい子の分だけ効く。行を押すと説明</div>
+            <div className="msx-ef-how">数字は編成の合計(上限まで効く)。<b className="one">1体だけ</b>の効果は、一番大きいモンスターの分だけ効く。行を押すと説明</div>
             {list.map((e) => { const c = capOf(e.id); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
               <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}`}>
                 <button type="button" className="msx-ef-hd" onClick={() => setOpen(on ? null : e.id)} aria-expanded={on} data-msx-effect={e.id} data-msx-assist-type={e.d.type || ''}>
                   <span className="ic">{cardIconNode(e.d.icon, 18)}</span>
                   <span className="tx"><b className="nm">{e.d.name}{e.one ? <i className="one">1体だけ</i> : null}</b>
                     {c ? <span className="gg"><i style={{ width: `${pct}%` }}/></span> : null}
-                    <small className="cap">{c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? 'いちばん大きい1体の分' : '何体ぶんでも足し合わせ'}</small></span>
+                    <small className="cap">{c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? '一番大きい1体の分' : '何体ぶんでも足し合わせ'}</small></span>
                   <span className="val">{msxEfText(AT, e.id, e.total)}</span>
                   <span className="fcs">{e.rows.slice(0, 4).map((r) => face(r.mi, !r.live))}{e.rows.length > 4 ? <small>+{e.rows.length - 4}</small> : null}</span>
                 </button>
                 {on ? <div className="msx-ef-ex" data-msx-effect-ex={e.id}>
                   <p>{msxTpAssistDesc(AT, { id: e.id, n: e.rows[0].n })}</p>
-                  {e.rows.map((r, i) => <div key={i} className={`msx-ef-mon${r.live ? '' : ' dim'}`}>{face(r.mi, !r.live)}<span className="nm">{r.name}</span><span className="v">{r.text}{r.live ? '' : '(効かない: ほかの子の方が大きい)'}</span></div>)}
+                  {e.rows.map((r, i) => <div key={i} className={`msx-ef-mon${r.live ? '' : ' dim'}`}>{face(r.mi, !r.live)}<span className="nm">{r.name}</span><span className="v">{r.text}{r.live ? '' : '(効かない: ほかのモンスターの方が大きい)'}</span></div>)}
                 </div> : null}
               </div>); })}
           </> : <div className="msx-gt-none">編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています</div>)

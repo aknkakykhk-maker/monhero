@@ -1323,7 +1323,7 @@ const MSX_CSS = `
 .msx .msx-tp-tm .mcd .mcd-gd{font-size:10px}
 .msx .msx-tp-tm .mcd .mcd-f.empty .mcd-plus{font-size:15px;color:#cbd5e1}
 .msx .msx-tp-tm.on .mcd-f{box-shadow:0 0 0 3px #fde047}
-.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i{font-size:10px}
+.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i,.msx .msx-tp-list .mcd.s .mcd-gd,.msx .msx-tp-tm .mcd.s .mcd-gd{font-size:10px}
 .msx .msx-tp-tm>.fr{position:absolute;right:2px;bottom:2px;font-size:13px;line-height:1}
 .msx .msx-tp>.msx-tp-list{display:block;padding:2px 6px 10px}
 .msx .msx-tp>.msx-tp-list .mcd-grid{padding:4px 0}

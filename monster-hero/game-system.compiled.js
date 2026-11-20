@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 867d67df5021d04a
+// source-sha256: 2b2e0aaab90a97f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173159,7 +173159,7 @@ const MSX_CSS = `
 .msx .msx-tp-tm .mcd .mcd-gd{font-size:10px}
 .msx .msx-tp-tm .mcd .mcd-f.empty .mcd-plus{font-size:15px;color:#cbd5e1}
 .msx .msx-tp-tm.on .mcd-f{box-shadow:0 0 0 3px #fde047}
-.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i{font-size:10px}
+.msx .msx-tp-list .mcd.s .mcd-note,.msx .msx-tp-list .mcd.s .mcd-fav i,.msx .msx-tp-list .mcd.s .mcd-gd,.msx .msx-tp-tm .mcd.s .mcd-gd{font-size:10px}
 .msx .msx-tp-tm>.fr{position:absolute;right:2px;bottom:2px;font-size:13px;line-height:1}
 .msx .msx-tp>.msx-tp-list{display:block;padding:2px 6px 10px}
 .msx .msx-tp>.msx-tp-list .mcd-grid{padding:4px 0}
@@ -176425,7 +176425,7 @@ function MsxStart({
     }))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, sameBond ? `どの枠も はじめの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え"), React.createElement("button", {
+    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -177759,7 +177759,7 @@ function MsxTeamEffects({
     className: "msx-ef-how"
   }, "数字は編成の合計(上限まで効く)。", React.createElement("b", {
     className: "one"
-  }, "1体だけ"), "の効果は、いちばん大きい子の分だけ効く。行を押すと説明"), list.map(e => {
+  }, "1体だけ"), "の効果は、一番大きいモンスターの分だけ効く。行を押すと説明"), list.map(e => {
     const c = capOf(e.id);
     const tot = c && c.group ? groupTotal(c.group) : e.total;
     const pct = c ? Math.min(100, tot / c.v * 100) : null;
@@ -177791,7 +177791,7 @@ function MsxTeamEffects({
       }
     })) : null, React.createElement("small", {
       className: "cap"
-    }, c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? 'いちばん大きい1体の分' : '何体ぶんでも足し合わせ')), React.createElement("span", {
+    }, c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? '一番大きい1体の分' : '何体ぶんでも足し合わせ')), React.createElement("span", {
       className: "val"
     }, msxEfText(AT, e.id, e.total)), React.createElement("span", {
       className: "fcs"
@@ -177808,7 +177808,7 @@ function MsxTeamEffects({
       className: "nm"
     }, r.name), React.createElement("span", {
       className: "v"
-    }, r.text, r.live ? '' : '(効かない: ほかの子の方が大きい)')))) : null);
+    }, r.text, r.live ? '' : '(効かない: ほかのモンスターの方が大きい)')))) : null);
   })) : React.createElement("div", {
     className: "msx-gt-none"
   }, "編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています") : members.map((m, mi) => {
