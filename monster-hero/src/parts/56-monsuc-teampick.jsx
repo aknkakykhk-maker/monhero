@@ -11,13 +11,14 @@ const MSX_TP_SORTS = Object.freeze([['power', '総合力'], ['lv', 'Lv'], ['name
 const msxNormQ = (s) => String(s == null ? '' : s).normalize('NFKC').toLowerCase();
 const msxMatchQ = (q, ...texts) => { const n = msxNormQ(q).trim(); if (!n) return true; return texts.some((t) => msxNormQ(t).includes(n)); };
 // 選ぶ画面の共通の道具(検索・並び替え・逆順・候補の件数)。並び替え・逆順は渡したときだけ出す。件数は「候補 / 全体」で、所持総数と混同しない
-function MsxPickTools({ q, onQ, sorts = null, sort, onSort, rev, onRev, count, total }) {
+// hideFull … 下に「所持数」が出ている画面では、絞り込んでいないときの件数を出さない(同じ数の二重・2026-11-20 r1119-033 育-09・育-11・育-52)
+function MsxPickTools({ q, onQ, sorts = null, sort, onSort, rev, onRev, count, total, hideFull = false }) {
   return (
     <div className="msx-pt" data-msx-pick-tools>
       <input type="search" className="msx-pt-q" value={q} onChange={(e) => onQ(e.target.value)} placeholder="名前・種族で検索" aria-label="名前・種族で検索" data-msx-pt-q/>
-      {sorts ? <label className="msx-pt-s"><select value={sort} onChange={(e) => onSort(e.target.value)} aria-label="並べ替え" data-msx-pt-sort>{sorts.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label> : null}
+      {sorts ? <label className="msx-pt-s"><select value={sort} onChange={(e) => onSort(e.target.value)} aria-label="並べ替え" data-msx-pt-sort>{sorts.map(([k, n]) => <option key={k} value={k}>並べ替え: {n}</option>)}</select></label> : null}
       {onRev ? <button type="button" className={`msx-pt-r${rev ? ' on' : ''}`} onClick={() => onRev(!rev)} aria-pressed={!!rev} data-msx-pt-rev>逆順</button> : null}
-      <span className="msx-pt-c" data-msx-pt-count>{count}{total != null && total !== count ? ` / ${total}` : ''}件</span>
+      {hideFull && (total == null || total === count) ? null : <span className="msx-pt-c" data-msx-pt-count>{count}{total != null && total !== count ? ` / ${total}` : ''}件</span>}
     </div>
   );
 }
