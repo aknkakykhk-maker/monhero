@@ -730,7 +730,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {!acting && typeof MsxBondChips === 'function' ? <MsxBondChips s={s} card={o.card} add={(SUC.BOND && SUC.BOND.train) || 8}/> : !acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
       {isTrain ? <MsxStRow who={s} stats={(!acting && typeof MsxTrainEvent === 'function' && o.event && o.event.d && o.event.d.stat && Number.isFinite(o.event.d.up) && o.event.d.up > 0) ? { ...s.stats, [o.event.d.stat]: s.stats[o.event.d.stat] - o.event.d.up } : s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
-      {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
+      {acting ? <div className="v-log" style={{ visibility: 'hidden' }} aria-hidden="true" data-msx-acting-log><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
@@ -835,7 +835,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const seasonChanged = cal.season !== prev.season;
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
-      <div className="v-scene msx-fade" style={{ flex: '1 1 0' }} data-msx-turn-scene><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%', opacity: .9 }} noPeak/><div className="v-clock">
+      <div className="v-scene msx-fade" style={{ flex: '1 1 0' }} data-msx-turn-scene><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%' }} noPeak/><div className="v-clock">
         {/* 期と年は上の帯に出ているので、暦は月だけ(育-26) */}
         <div className="v-cal msx-pop"><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
         {/* 残りのターンは上の帯の1か所だけ(2026-11-20 r1119-033 育-19・育-26・育-95: 帯・暦の下・大会の札に同じ数が3回出ていた) */}
@@ -844,7 +844,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
     </>);
-    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
+    // 月替わりは見せ場が無いので 1.5秒で自動で次へ(押せばすぐ進む・2026-11-20 r1119-033 育-20・育-96)。止め絵を撮る道具(webdriver)では止めておく
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<MsxAutoNext key={`an-${s.turn}`} ms={1500} onGo={() => toMain({ ...run, out: null })}/><button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
   }
   // ---- 大会(中身は回3) ----
   // 大会の1戦(phase 'battle'。当日の準備 preOn のときを除く)と終わり(phase 'over')は、上の MsxR3 が受け持つ(回3)。ここへは来ない
@@ -985,11 +986,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
-          {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key === 'final' ? <span className="v-chip hot">🏆 ヒーローズファイナル</span> : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
+          {/* ヒーローズファイナルの間は、上の帯(このあと◯◯)と大会のボタンに出るので、場面の札は出さない(三重だった・2026-11-20 r1119-033 育-49) */}
+          {v.period.key === 'final' ? null : preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
           {/* ピークが何に効くかを札の中に書く(2026-11-20 r1119-033 育-108) */}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが一番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
-          {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
-          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
+          <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
         <span className="v-nm">{run.nick}</span>

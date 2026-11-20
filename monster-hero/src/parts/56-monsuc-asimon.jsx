@@ -26,12 +26,16 @@ function MsxAssistCard({ a, n }) {
       <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
       {/* 数字は説明の文の1か所だけ(見出しの「+10%」と文の「+10%」が二重だった)。目盛りは数だけ(丸と数の二重をやめた)。
           上限・効く場面は全幅のボタンをやめ、見出しの右の小さな印で開く(2026-11-20 r1119-033 育-43・育-46・育-47・育-150・育-155) */}
+      {/* 見出しは効果名だけ。数字は説明の文の1か所(目盛りの数が見出しの横にあると「+3」と二重に見えた)。
+          目盛りは文の下に、次の目盛りで何が増えるかと一緒に出す(2026-11-20 r1119-033 育-07) */}
       <div className="bd"><div className="hd"><b>{a.name}</b>
-        <span className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>目盛り</small><i>{n}</i>/{a.max}</span>
         {more ? <span className="mr" aria-hidden="true">{open ? '▲' : 'ⓘ'}</span> : null}</div>
         <div className="tx">{short}</div>
+        <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
+          <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
         {open && note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
-        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}</div>
+        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}
+        {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>
   );
 }
@@ -43,6 +47,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
   const assists = mem && Array.isArray(mem.assists) && mem.assists.length ? mem.assists : rec && Array.isArray(rec.assists) ? rec.assists : [];
   const got = AT ? assists.filter((x) => x && AT.BY_ID[x.id]).map((x) => ({ a: AT.BY_ID[x.id], n: AT.fromSaved(x) })).filter((x) => x.n > 0) : [];
   const [tab, setTab] = useState(got.length || kind === 'base' ? 'assist' : 'stat');
+  const [kvTip, setKvTip] = useState(null); // 4つの数字の札を押すと、その言葉の説明を1行で出す(長い説明の段落をやめた・育-08)
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : { species: mem.species };
   const pow = rec && Number.isFinite(rec.score) ? rec.score : mem.power;
@@ -53,16 +58,19 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
       <div className="msx-sheet msx-asd" onClick={(e) => e.stopPropagation()}>
         <h3>アシスト詳細</h3>
         <div className="msx-asd-top">
-          <div className="art"><MonsucMonCard m={cm} size="l" tag={{ text: role, kind: kind === 'friend' ? 'friend' : kind === 'memo' ? 'memo' : kind === 'base' ? 'base' : 'box' }}/></div>
+          {/* 名前と種類は右の見出しだけ(絵の札の名前帯・種類の札と二重だった・2026-11-20 r1119-033 育-102)。空いた分は絵を大きく */}
+          <div className="art nostrip"><MonsucMonCard m={cm} size="l"/></div>
           <div className="inf">
-            <b className="nm">{name}</b><small className="sub">{sub}</small>
+            <b className="nm">{name}</b><small className="sub">{sub && String(sub).includes(role) ? sub : [role, sub].filter(Boolean).join('・')}</small>
             <div className="kv" data-msx-asd-support>
-              <span><i>初めの親密度</i><b>{mem.bond0}</b></span>
-              <span><i>友情タッグ</i><b>+{Math.round(Number(mem.tag) || 0)}%</b></span>
-              <span><i>得意率</i><b>{Math.round((Number(mem.fav) || 0) * 100)}%</b></span>
-              <span><i>総合力</i><b>{kind === 'base' ? '—' : msxFmt(pow || 0)}</b></span>
+              {[['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'],
+                ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'],
+                ['fav', '得意率', `${Math.round((Number(mem.fav) || 0) * 100)}%`, '得意な能力のトレーニングに来やすい。'],
+                kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => (
+                <button type="button" key={k} className={kvTip === k ? 'on' : ''} aria-expanded={kvTip === k} onClick={() => setKvTip(kvTip === k ? null : k)} data-msx-asd-kv={k}><i>{t}</i><b>{v}</b></button>))}
             </div>
-            <small className="asd-kvn">初めの親密度=育成を始めたときの親密度。友情タッグ=親密度80からの伸び。得意率=得意な能力のトレーニングに来やすさ</small>
+            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 得意な能力のトレーニングに来やすい。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
+              : <small className="asd-kvn">数字を押すと説明</small>}
             {top.length ? <div className="asd-up" data-msx-asd-up><i>伸びが上がる</i>{top.map((k) => <span key={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]} <b>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</b></span>)}</div> : null}
           </div>
         </div>
@@ -70,7 +78,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
           {onMore ? <button type="button" className="more" onClick={onMore} data-msx-asd-more>技・素質</button> : null}</div>
         <div className="msx-dt-body msx-asd-body">
           {tab === 'assist' ? (got.length ? <>
-            <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類){kind === 'memo' ? '(メモモンは育成に使えず、アシスト効果と伸びが上がる能力だけ効く)' : ''}</div>
+            <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類)</div>
             {got.map(({ a, n }) => <MsxAssistCard key={a.id} a={a} n={n}/>)}</>
             : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : 'アシスト効果はまだありません'}</div>)
             : <div className="msx-asd-st" data-msx-asd-stats>{MSX_STATS.map((k) => <span key={k}><i>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</i><b>{Math.round((mem.stats && mem.stats[k]) || 0)}</b></span>)}</div>}
@@ -86,12 +94,12 @@ const MSX_ASD_CSS = `
 .msx .msx-asd{display:flex;flex-direction:column;max-height:calc(100% - 24px)}
 .msx .msx-asd h3{text-align:center}
 .msx .msx-asd-top{display:flex;gap:10px;align-items:flex-start;margin-top:4px}
-.msx .msx-asd-top .art{flex:0 0 34%;max-width:150px}
+.msx .msx-asd-top .art{flex:0 0 38%;max-width:170px}.msx .msx-asd-top .art.nostrip .mcd-strip,.msx .msx-asd-top .art.nostrip .mcd-lv,.msx .msx-asd-top .art.nostrip .mcd-fav{display:none}
 .msx .msx-asd-top .inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .msx .msx-asd-top .nm{font-size:16px;font-weight:900;line-height:1.2;overflow-wrap:anywhere}
 .msx .msx-asd-top .sub{font-size:11px;color:#cbd5e1;font-weight:800}
 .msx .msx-asd-top .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.msx .msx-asd-top .kv span{display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #4a4380;border-radius:9px;padding:3px 2px}
+.msx .msx-asd-top .kv button{display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #4a4380;border-radius:9px;padding:3px 2px;color:#fff;font:inherit;min-height:40px}.msx .msx-asd-top .kv button.on{border-color:#f472b6}
 .msx .msx-asd-top .kv i{font-style:normal;font-size:11px;color:#cbd5e1;font-weight:800;white-space:nowrap}
 .msx .msx-asd-top .kv b{font-size:15px;color:#fde68a;font-weight:900;line-height:1.2}
 .msx .msx-asd-top .asd-up{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:12px;font-weight:800;align-items:center}
@@ -117,7 +125,8 @@ const MSX_ASD_CSS = `
 .msx .msx-md-ac{position:relative}
 .msx .msx-md-ac>.bd>.hd>.mr{position:absolute;right:7px;top:7px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;border-radius:50%;background:#0f172a;border:1px solid #4a4380;color:#f9a8d4;font-size:12px;font-weight:900}
 .msx .msx-md-ac>.bd>.hd>b{padding-right:26px}
-.msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#94a3b8;line-height:1.4}
+.msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#cbd5e1;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .pips .nx{font-size:10px;color:#94a3b8;font-weight:800;margin-left:4px}
 `;
 let msxAsdCssDone = false;
 const msxAsdEnsureCss = () => {
