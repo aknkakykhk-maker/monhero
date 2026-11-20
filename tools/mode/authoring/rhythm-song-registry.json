@@ -1957,6 +1957,28 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "amakakeru_tsubasa": {
+   "flowPlacement": true,
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "audio": "monster-hero/audio/bgm-amakakeru-tsubasa.mp3",
+   "chartRevision": 40,
+   "audioSha256": "2b283f9e6aea890ceacdbc12c7fc11b138bd6a37d7895f5cee08f3f5f05d1fc2",
+   "durationMs": 109296,
+   "analyzedTiming": {
+    "bpm": 207.76,
+    "beatZeroMs": 2021,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "sustainScale": {
+    "MASTER": 0.2
+   }
   }
  }
 }

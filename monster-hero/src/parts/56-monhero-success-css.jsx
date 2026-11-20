@@ -848,6 +848,20 @@ const MSX_CSS = `
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
 .msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* スマホを横にしたときの案内(2026-11-20 r1119-026)。横長で高さが小さく、指で触る端末だけに出す(PC のマウスでは出さない)。
+   案内は上に重ねるだけで、下の画面はそのまま残る(回しても進み具合を失わない)。
+   重なり順はバトルの演出(決着の大写し 9700・判定 9650)より上の 9800(ミハリの指摘: バトルの画面で案内が下にもぐっていた) */
+.msx-portrait-only{display:none}
+@media (orientation:landscape) and (max-height:540px) and (hover:none) and (pointer:coarse){
+.msx-portrait-only{position:absolute;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:radial-gradient(circle at 50% 40%,#2a1f55 0,#0b0920 70%);color:#fff;text-align:center;touch-action:none}
+.msx-portrait-only .in{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;padding:0 20px}
+.msx-portrait-only .ph{width:72px;height:72px;display:flex;align-items:center;justify-content:center}
+.msx-portrait-only .ph span{display:block;font-size:48px;line-height:1;transform:rotate(-90deg);animation:msxRotatePhone 2.4s ease-in-out infinite}
+.msx-portrait-only b{font-size:18px;font-weight:900;color:#fde68a}
+.msx-portrait-only p{margin:0;font-size:13px;font-weight:700;line-height:1.6;color:#e2e8f0}
+}
+@keyframes msxRotatePhone{0%,20%{transform:rotate(-90deg)}50%,80%{transform:rotate(0deg)}100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){.msx-portrait-only .ph span{animation:none;transform:rotate(0deg)}}
 .msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .msx.land{max-width:none}
 .msx img{display:block}
@@ -950,6 +964,7 @@ const MSX_CSS = `
 .msx .sym.info::before{width:20px;height:20px;border:2.5px solid currentColor;border-radius:50%;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) 50% 3px/2.5px 2.5px no-repeat,linear-gradient(currentColor,currentColor) 50% 7.5px/2.5px 6px no-repeat}
 /* 注意: 全ボタンの ::after は「押せる範囲を広げる」用(838行)。記号の線は ::before だけで描く */
 .msx .msx-md-alt{margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+.msx .msx-md-alt.top{margin:4px 0 6px;min-height:36px}
 /* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
 .msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
 .msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
