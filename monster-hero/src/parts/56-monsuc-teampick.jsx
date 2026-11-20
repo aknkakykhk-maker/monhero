@@ -99,7 +99,7 @@ function MsxTpDetail({ it, SUC, onClose }) {
     const fr = it.kind === 'friend';
     return <MsxAssistDetail rec={m0} mem={it.mem} kind={it.kind} name={fr ? it.name : m0 ? (m0.nick || msxMonName(m0.species)) : msxMonName(it.species)}
       sub={fr ? `${it.friendName}さん・Lv.${Math.round(Number(it.mem.lv) || 1)}` : m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン'}
-      dropped={fr ? it.dropped || 0 : 0} onMore={() => setMore(true)} onClose={onClose}/>;
+      dropped={fr ? it.dropped || 0 : 0} droppedNames={fr ? it.droppedNames || [] : []} onMore={() => setMore(true)} onClose={onClose}/>;
   }
   if (it.kind === 'friend' && it.mem) { // フレンドの技・素質(今までの詳細の中身のまま)
     const mem = it.mem; const fm = it.m || {};
@@ -237,7 +237,8 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
     // 貸し出しに入っていたのに、端末の確かめ(能力に比べて大きすぎる)で外れたアシスト効果の数
     const sent = row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.length : 0;
     const dropped = Math.max(0, sent - (m && Array.isArray(m.assists) ? m.assists.length : 0));
-    return { row, m, mem, dropped, dup: mem ? msxTpDupOf(mem, others) : [] }; })
+    const droppedNames = dropped && row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.map((a) => (a && msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : null)).filter(Boolean) : [];
+    return { row, m, mem, dropped, droppedNames, dup: mem ? msxTpDupOf(mem, others) : [] }; })
     .filter((x) => only === 'all' || (x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only)));
   const listF = fq.trim() ? list0.filter((x) => msxMatchQ(fq, (x.row.lend && x.row.lend.name) || (x.m && x.m.name) || '', msxMonName(x.m ? x.m.species : (x.row.lend && x.row.lend.species)))) : list0;
   const fby = {
@@ -283,7 +284,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
           <button type="button" className="go" onClick={() => { if (!cand) { if (curId) onPick(null); else onClose(); return; } if (cand === curId) { onClose(); return; } if (candX && candX.m) onPick(candX.m); }} data-msx-fp-ok>決定</button>
         </div>
       </div>
-      {look ? <MsxTpDetail it={{ kind: 'friend', rec: null, species: look.m.species, mem: look.mem, name: (look.row.lend && look.row.lend.name) || look.m.name, friendName: look.row.name || 'フレンド', dropped: look.dropped, m: look.m }} SUC={SUC} onClose={() => setLook(null)}/> : null}
+      {look ? <MsxTpDetail it={{ kind: 'friend', rec: null, species: look.m.species, mem: look.mem, name: (look.row.lend && look.row.lend.name) || look.m.name, friendName: look.row.name || 'フレンド', dropped: look.dropped, droppedNames: look.droppedNames, m: look.m }} SUC={SUC} onClose={() => setLook(null)}/> : null}
     </div>
   );
 }

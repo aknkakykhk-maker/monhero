@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 635a50cb3247bf58
+// source-sha256: 0d979ac87a0ad546
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -178364,6 +178364,7 @@ function MsxTpDetail({
       name: fr ? it.name : m0 ? m0.nick || msxMonName(m0.species) : msxMonName(it.species),
       sub: fr ? `${it.friendName}さん・Lv.${Math.round(Number(it.mem.lv) || 1)}` : m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン',
       dropped: fr ? it.dropped || 0 : 0,
+      droppedNames: fr ? it.droppedNames || [] : [],
       onMore: () => setMore(true),
       onClose: onClose
     });
@@ -178765,11 +178766,13 @@ function MsxFriendPick({
     })() : null;
     const sent = row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.length : 0;
     const dropped = Math.max(0, sent - (m && Array.isArray(m.assists) ? m.assists.length : 0));
+    const droppedNames = dropped && row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.map(a => a && msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : null).filter(Boolean) : [];
     return {
       row,
       m,
       mem,
       dropped,
+      droppedNames,
       dup: mem ? msxTpDupOf(mem, others) : []
     };
   }).filter(x => only === 'all' || x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only));
@@ -178939,6 +178942,7 @@ function MsxFriendPick({
       name: look.row.lend && look.row.lend.name || look.m.name,
       friendName: look.row.name || 'フレンド',
       dropped: look.dropped,
+      droppedNames: look.droppedNames,
       m: look.m
     },
     SUC: SUC,
@@ -190512,6 +190516,7 @@ function MsxAssistDetail({
   sub,
   kind = 'box',
   dropped = 0,
+  droppedNames = [],
   onMore = null,
   onClose
 }) {
@@ -190612,7 +190617,7 @@ function MsxAssistDetail({
     style: {
       padding: 8
     }
-  }, kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : dropped > 0 ? `このフレンドのアシスト効果(${dropped}つ)は、能力に比べて大きすぎるため確かめで外れ、効きません。伸びが上がる能力だけ効きます` : 'アシスト効果はまだありません') : React.createElement("div", {
+  }, kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : dropped > 0 ? `このモンスターのアシスト効果(${droppedNames.length ? droppedNames.join('・') : `${dropped}つ`})は、能力から取れる強さを超えているため、編成に入れても効きません。伸びが上がる能力だけ効きます` : 'アシスト効果はまだありません') : React.createElement("div", {
     className: "msx-asd-st",
     "data-msx-asd-stats": true
   }, MSX_STATS.map(k => React.createElement("span", {

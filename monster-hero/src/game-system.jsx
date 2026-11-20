@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb75afe77d4f1d16
+// generated-sha256: bd67b75ec2a25d10
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92899,7 +92899,7 @@ function MsxTpDetail({ it, SUC, onClose }) {
     const fr = it.kind === 'friend';
     return <MsxAssistDetail rec={m0} mem={it.mem} kind={it.kind} name={fr ? it.name : m0 ? (m0.nick || msxMonName(m0.species)) : msxMonName(it.species)}
       sub={fr ? `${it.friendName}さん・Lv.${Math.round(Number(it.mem.lv) || 1)}` : m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン'}
-      dropped={fr ? it.dropped || 0 : 0} onMore={() => setMore(true)} onClose={onClose}/>;
+      dropped={fr ? it.dropped || 0 : 0} droppedNames={fr ? it.droppedNames || [] : []} onMore={() => setMore(true)} onClose={onClose}/>;
   }
   if (it.kind === 'friend' && it.mem) { // フレンドの技・素質(今までの詳細の中身のまま)
     const mem = it.mem; const fm = it.m || {};
@@ -93037,7 +93037,8 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
     // 貸し出しに入っていたのに、端末の確かめ(能力に比べて大きすぎる)で外れたアシスト効果の数
     const sent = row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.length : 0;
     const dropped = Math.max(0, sent - (m && Array.isArray(m.assists) ? m.assists.length : 0));
-    return { row, m, mem, dropped, dup: mem ? msxTpDupOf(mem, others) : [] }; })
+    const droppedNames = dropped && row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.map((a) => (a && msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : null)).filter(Boolean) : [];
+    return { row, m, mem, dropped, droppedNames, dup: mem ? msxTpDupOf(mem, others) : [] }; })
     .filter((x) => only === 'all' || (x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only)));
   const listF = fq.trim() ? list0.filter((x) => msxMatchQ(fq, (x.row.lend && x.row.lend.name) || (x.m && x.m.name) || '', msxMonName(x.m ? x.m.species : (x.row.lend && x.row.lend.species)))) : list0;
   const fby = {
@@ -93083,7 +93084,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
           <button type="button" className="go" onClick={() => { if (!cand) { if (curId) onPick(null); else onClose(); return; } if (cand === curId) { onClose(); return; } if (candX && candX.m) onPick(candX.m); }} data-msx-fp-ok>決定</button>
         </div>
       </div>
-      {look ? <MsxTpDetail it={{ kind: 'friend', rec: null, species: look.m.species, mem: look.mem, name: (look.row.lend && look.row.lend.name) || look.m.name, friendName: look.row.name || 'フレンド', dropped: look.dropped, m: look.m }} SUC={SUC} onClose={() => setLook(null)}/> : null}
+      {look ? <MsxTpDetail it={{ kind: 'friend', rec: null, species: look.m.species, mem: look.mem, name: (look.row.lend && look.row.lend.name) || look.m.name, friendName: look.row.name || 'フレンド', dropped: look.dropped, droppedNames: look.droppedNames, m: look.m }} SUC={SUC} onClose={() => setLook(null)}/> : null}
     </div>
   );
 }
@@ -97441,7 +97442,7 @@ function MsxAssistCard({ a, n }) {
 }
 
 // rec … 保存枠の子(ボックス・メモモン)。フレンドは null / mem … 芯の memberOf の結果 / kind … 'box' | 'memo' | 'friend' | 'base'
-function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0, onMore = null, onClose }) {
+function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0, droppedNames = [], onMore = null, onClose }) {
   msxAsdEnsureCss();
   const AT = msxAsAT();
   const assists = mem && Array.isArray(mem.assists) && mem.assists.length ? mem.assists : rec && Array.isArray(rec.assists) ? rec.assists : [];
@@ -97481,7 +97482,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', dropped = 0
           {tab === 'assist' ? (got.length ? <>
             <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類)</div>
             {got.map(({ a, n }) => <MsxAssistCard key={a.id} a={a} n={n}/>)}</>
-            : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : dropped > 0 ? `このフレンドのアシスト効果(${dropped}つ)は、能力に比べて大きすぎるため確かめで外れ、効きません。伸びが上がる能力だけ効きます` : 'アシスト効果はまだありません'}</div>)
+            : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : dropped > 0 ? `このモンスターのアシスト効果(${droppedNames.length ? droppedNames.join('・') : `${dropped}つ`})は、能力から取れる強さを超えているため、編成に入れても効きません。伸びが上がる能力だけ効きます` : 'アシスト効果はまだありません'}</div>)
             : <div className="msx-asd-st" data-msx-asd-stats>{MSX_STATS.map((k) => <span key={k}><i>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</i><b>{Math.round((mem.stats && mem.stats[k]) || 0)}</b></span>)}</div>}
         </div>
         <button type="button" className="msx-dt-close" data-msx-asd-close onClick={onClose}>閉じる</button>
