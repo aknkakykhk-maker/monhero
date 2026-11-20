@@ -215,6 +215,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => (initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech')); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)。initialTab='assist' でアシストから開く(編成の効果確認)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
+  const [legOpen, setLegOpen] = useState(false); // 升目の見方(押して開く。表の上に小さな字で詰めていた・API 再点検 2026-11-20)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
@@ -238,7 +239,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 超えた矛盾した表示になる(2026-11-18 実機報告・ランキング詳細)。cap がある画面では値は上限以下なので変わらない
   const capBase = (k) => (SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({ cap }, k) : (cap && Number.isFinite(cap[k]) ? Math.max(999, cap[k]) : 999));
   const capK = (k) => Math.max(capBase(k), Number(st && st[k]) || 0);
-  const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
+  // 間合い適性は下の技の升目の列の見出しに出す(上の「適性」タブと二重だった・2026-11-20 r1119-033 育-31)。升目の見出しが無い(grades が無い)ときだけタブを残す
+  const TOP = grades ? [['base', '基礎'], ['feat', '特徴']] : [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
@@ -292,7 +294,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           <div className="msx-md-bot" data-msx-detail-techs style={btab !== 'tech' && (Array.isArray(assists) || (Array.isArray(info) && info.some(Boolean))) ? { display: 'none' } : undefined}>
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             {/* 升目の見方(2026-11-20 r1119-033 育-165・育-184: 列の「零」・升の数字・左下の丸に説明が無かった) */}
-            <div className="msx-md-leg" data-msx-detail-legend>列は技の届く間合い(零 = くっついた距離)・升の数字は技のランク・暗い升はまだ覚えていない技{mastery ? '・左下の丸は熟練' : ''}</div>
+            <button type="button" className="msx-md-legb" aria-expanded={legOpen} onClick={() => setLegOpen(!legOpen)} data-msx-detail-legend-open>{legOpen ? '▲ 見方を閉じる' : 'ⓘ 升目の見方'}</button>
+            {legOpen ? <div className="msx-md-leg" data-msx-detail-legend>{[`列は届く間合い(零はくっついた距離)${grades ? '・上の字は適性' : ''}`, '升の左上はランク', '暗い升はまだ覚えていない', '×は技が無い', pick ? '⇄は選べる技の数' : null, mastery ? '左下の丸は熟練' : null].filter(Boolean).map((t, i) => <span key={i} style={{ display: 'block' }}>・{t}</span>)}</div> : null}
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
                   // 升に出す技: 覚えた技(はじめからの技を含む)があればそれ → 選んだ技 → 並びの1つ目。

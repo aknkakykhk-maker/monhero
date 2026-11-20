@@ -83,6 +83,29 @@ function MsxBuffPop({ b, onClose }) {
   return typeof document !== 'undefined' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, document.body) : node;
 }
 
+// 決まった時間で自動に次へ進める見えない部品(月替わりの画面・育-20・育-96)。一度だけ呼ぶ。止め絵を撮る道具(navigator.webdriver)では動かさない
+function MsxAutoNext({ ms = 1500, onGo }) {
+  const done = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.webdriver) return undefined;
+    const id = setTimeout(() => { if (done.current) return; done.current = true; onGo(); }, ms);
+    return () => { done.current = true; clearTimeout(id); };
+  }, []);
+  return null;
+}
+// 悪い「ようす」の札。押すと何にどれだけ効くか・治し方を1行で出す(2026-11-20 r1119-033 育-106: 通院すべきか決められなかった)
+//   数字は芯(data/monhero-success.js)の RATE.saboriGuse(失敗率 +5%)・CLINIC(通院 1回目70%・2回目は必ず)のまま
+const MSX_YOSU_TIP = {
+  sabori: ['😪', 'サボりグセ', 'トレーニングの失敗率が +5%。治るまで続く。通院で治る(1回目は70%・2回目は必ず)'],
+  utsu: ['😢', 'どんより', '忠誠度(甘え・恐れ)が動かなくなる。治るまで続く。遊ぶか通院で治る'],
+};
+function MsxYosuChips({ s }) {
+  const [tip, setTip] = useState(null);
+  const keys = ['sabori', 'utsu'].filter((k) => s && s.yosu && s.yosu[k]);
+  if (!keys.length) return null;
+  return (<>{keys.map((k) => { const [ic, nm] = MSX_YOSU_TIP[k]; return (
+    <button type="button" key={k} className={`v-chip bad msx-yosu-chip${tip === k ? ' on' : ''}`} aria-expanded={tip === k} data-msx-yosu={k} onClick={() => setTip(tip === k ? null : k)}>{ic} ようす: {nm}<small className="v-chip-sub">{tip === k ? MSX_YOSU_TIP[k][2] : '押すと効き目'}</small></button>); })}</>);
+}
 function MsxBuffChips({ s }) {
   msxBuffEnsureCss();
   const [open, setOpen] = useState(null);
