@@ -37,7 +37,10 @@ const msxReactPreview = (s, how) => {
     const st = 10; const pp = r.state.pp || 0; const lim = Math.abs(r.state.pol) === 3 && Math.abs(pp) >= st - 1;
     const side = how === 'praise' ? '甘い' : '厳しい';
     const moved = r.state.pol !== s.pol;
-    parts.push(lim ? `方針 これ以上${side}側へは動かない` : moved ? `方針 ${side}側へ1段` : `方針 ${side}側へ1点(あと${st - Math.abs(pp)}点で次の段)`);
+    // 「1点」「次の段」が何か分からなかったので、次の方針の名前と、あと何回で変わるかで書く(2026-11-20 r1119-033 育-35・育-36・育-72・育-73)
+    const nextName = MSX_POLICY_SCALE[Math.max(0, Math.min(6, (r.state.pol || 0) + 3 + (how === 'praise' ? -1 : 1)))];
+    const per = Math.max(1, Math.abs((r.state.pp || 0) - (s.pp || 0)) || 1); const times = Math.max(1, Math.ceil((st - Math.abs(pp)) / per));
+    parts.push(lim ? `方針はこれ以上 ${side}側へ動かない` : moved ? `方針が「${MSX_POLICY_SCALE[(r.state.pol || 0) + 3]}」に変わる` : `あと${times}回で 方針「${nextName}」`);
     return parts.join('・');
   } catch (e) { return null; }
 };
@@ -162,7 +165,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
           {use ? <em>−{use}</em> : hpGain && gainTag ? <em className={hpGain > 0 ? 'hl' : ''} data-msx-band-hp-gain>{hpGain > 0 ? `+${hpGain}` : hpGain}</em> : null}<b>{hp}<small className={max > 100 ? 'cap' : ''}>/{max}{max > 100 ? '▲' : ''}</small></b></div>
         <div className="v-ga st"><span>💢 ストレス</span>
           <div className="tr"><i style={{ width: `${s.stress}%`, ...(grow(stFrom, s.stress) || {}) }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
-          {stAdd ? <em className="pl">+{stAdd}</em> : stGain ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
+          {stAdd ? <em className="pl">+{stAdd}</em> : stGain && gainTag ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
       <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span>
         {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}>{msxLwAmt(x)}<small>{(Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : ''}{msxLwWhy(x.w)}{l.length > 1 ? ` ほか${l.length - 1}` : ''}</small></span>; })()}</div>
@@ -712,7 +715,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const hpUp = !isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.round(s.hp - o.hpFrom) : 0;
     const stDown = !isTrain && Number.isFinite(o.stFrom) ? Math.round(o.stFrom - s.stress) : 0;
     body = (<>
-      {bandS ? <MsxBand s={bandS} v={SUC.peek(bandS)} ev={SUC.evaluate(bandS)} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom })}/> : <MsxBand s={s} v={v} ev={ev} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom })}/>}
+      {bandS ? <MsxBand s={bandS} v={SUC.peek(bandS)} ev={SUC.evaluate(bandS)} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom, gainTag: typeof MsxGaugeFx !== 'function' })}/> : <MsxBand s={s} v={v} ev={ev} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom, gainTag: typeof MsxGaugeFx !== 'function' })}/>}
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
         {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => { setActAt(null); setActFrom(null); }}/> : null}
@@ -795,15 +798,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           </div> : null}
         </div>
       </div>
-      {done ? <div className="v-log" data-msx-react-res={chips.length}><span className="hd2">📋 結果</span><br/>
-        {chips.length ? chips.map((c, i) => <span key={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>) : '変わったことはなかった'}</div> : null}
-      <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span style={{ color: '#fde047' }}>いまの方針: {MSX_POLICY_SCALE[pol + 3]}</span><span>厳しい</span><span>超スパルタ</span></div>
+      {/* 変わった数は下のゲージ(前から後へ動く)の1か所だけ。白い結果の箱は、何も変わらなかったときだけ(2026-11-20 r1119-033 育-33) */}
+      {done && !chips.length ? <div className="v-log" data-msx-react-res={0}><span className="hd2">📋 結果</span><br/>変わったことはなかった</div> : <span hidden data-msx-react-res={done ? chips.length : undefined}/>}
+      <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span>普通</span><span>厳しい</span><span>超スパルタ</span></div>
         <div className="m">{MSX_POLICY_SCALE.map((n, i) => <i key={n} className={i === pol + 3 ? 'on' : ''}/>)}</div>
         <div className="two">{done && done.from
           ? <MsxReactGauges from={done.from} to={{ ama: s.ama, fear: s.fear, loy }}/>
           : <><div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
           <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></>}</div>
-        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4, ...JA_LABEL_STYLE }}>{jaWrap(`忠誠度 ${loy} = 甘え度 ${s.ama} + 恐れ度 ${s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`)}</div></div>
+        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4, ...JA_LABEL_STYLE }}>{jaWrap(`忠誠度は 甘え度と恐れ度の合計。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`)}</div></div>
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>次へ ▶</button></div>
@@ -1116,8 +1119,9 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
     <div className="v-scene home dk" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       {ifxOn ? <MsxItemUseFx key={ifx.id} run={run} fx={ifx} onDone={() => setIfx(null)}/> : null}
       <div className="v-bagw">
-        <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small></div>{/* 閉じるは左上の「← 戻る」1つ(M-7) */}
-        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
+        {/* 見出しの「持ち物」は上の帯(戻るの横)にあるので、ここは決まりの1行だけ(育-109)。選んだ物の個数は下の札の ×N だけ */}
+        <div className="t"><small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small></div>{/* 閉じるは左上の「← 戻る」1つ(M-7) */}
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
@@ -1336,7 +1340,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
   return (<>
-    {picked && Number.isFinite(picked.hp0) ? <MsxBand s={s} v={v} ev={ev} hpFrom={picked.hp0} stFrom={picked.st0}/> : <MsxBand s={s} v={v} ev={ev}/>}
+    {picked && Number.isFinite(picked.hp0) ? <MsxBand s={s} v={v} ev={ev} hpFrom={picked.hp0} stFrom={picked.st0} gainTag={typeof MsxGaugeFx !== 'function'}/> : <MsxBand s={s} v={v} ev={ev}/>}
     <div className="v-scene" style={{ flex: '1 1 0' }}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
@@ -1358,7 +1362,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`gfx-${s.turn}-${picked.scenes.join('|')}`} items={msxGfxItemsOf(picked, s)}/> : null}
-      {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0} skip={typeof MsxGaugeFx === 'function' ? msxGfxItemsOf(picked, s).filter((x) => Math.round(x.from) !== Math.round(x.to)).map((x) => x.k) : null}/> : null}
       {isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? <MsxEvNext text={`第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`}/> : null}
       {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}

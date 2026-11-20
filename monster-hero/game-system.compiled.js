@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b6a535e94045e2a2
+// source-sha256: fb18fad0bdb36382
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163916,10 +163916,12 @@ const msxEvDeltaChips = d => {
 };
 function MsxEvResult({
   delta,
-  hasStats
+  hasStats,
+  skip = null
 }) {
-  const chips = msxEvDeltaChips(delta);
-  if (!chips.length && hasStats) return null;
+  const all = msxEvDeltaChips(delta);
+  const chips = all.filter(c => !(Array.isArray(skip) && skip.includes(c.k)));
+  if (!chips.length && (hasStats || all.length)) return null;
   const grant = typeof msxBuffGrantText === 'function';
   const row = chips.filter(c => !(c.buff && grant));
   const bufs = chips.filter(c => c.buff && grant);
@@ -166867,11 +166869,11 @@ function MsxKiShow({
     key: "s0"
   }, React.createElement("div", {
     className: "h"
-  }, "獲得賞金"), React.createElement("div", {
+  }, dFame != null ? 'この章の獲得賞金' : '獲得賞金'), React.createElement("div", {
     className: "v-num r"
-  }, React.createElement("b", null, msxFmt(fame), React.createElement("small", null, "G"), dFame != null ? React.createElement("em", {
-    className: dFame < 0 ? 'dn' : ''
-  }, sign(dFame), "G") : null)), React.createElement("div", {
+  }, React.createElement("b", null, dFame != null ? React.createElement("span", {
+    className: dFame < 0 ? 'dn' : 'up'
+  }, sign(dFame), React.createElement("small", null, "G")) : React.createElement(React.Fragment, null, msxFmt(fame), React.createElement("small", null, "G")))), React.createElement("div", {
     className: "h"
   }, dPow != null ? 'この章で伸びた総合力' : '総合力'), React.createElement("div", {
     className: "v-num r"
@@ -172881,12 +172883,12 @@ const MSX_CSS = `
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:11px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.5}
 .msx .v-a3 .ex b{color:#fff}
-.msx .v-a3 .ex .exd{display:block;font-size:9.5px;color:#94a3b8;font-weight:700;margin-top:1px}
+.msx .v-a3 .ex .exd{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700;margin-top:1px}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button:not(.chip){flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
 .msx .v-a3 .ctl button:disabled{opacity:.35}
 .msx .v-a3 .gauge{flex:1 1 auto;height:12px;border-radius:6px;background:#3a3054;position:relative;overflow:hidden;cursor:pointer}.msx .v-a3 .gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f59e0b,#fde68a)}
 .msx .v-a3 .gauge s{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,10,30,.55)}
-.msx .v-a3 .c{flex:0 0 46px;text-align:right;font-size:10.5px;font-weight:800;color:#fde68a}
+.msx .v-a3 .c{flex:0 0 auto;min-width:46px;white-space:nowrap;text-align:right;font-size:10.5px;font-weight:800;color:#fde68a}
 .msx .v-a3 .ctl .chip.sym{flex:0 0 44px;width:44px;height:44px;padding:0;border-radius:12px;border:1.5px solid #6d5fa6;background:#2f2550;color:#fff} /* −/＋ を能力ポイントの画面と同じ 44px の押せる四角に(API 点検 r3-E2: 20px 前後で「⊂⊃」に見えた) */
 .msx .v-a3 .ctl .chip.sym.plus{background:linear-gradient(180deg,#fde047,#f59e0b);border-color:#fde68a;color:#422006}
 .msx .v-a3 .ctl .chip.sym::before{width:16px;height:16px;background-size:16px 3px}.msx .v-a3 .ctl .chip.sym.plus::before{background-size:16px 3px,3px 16px}
@@ -173697,7 +173699,7 @@ const MSX_CSS = `
 .msx .msx-team6c~.msx-heat-btn{margin-top:auto} /* 余った高さは表の上に回し、下に空きを残さない */
 .msx .msx-team6c .mcd-grid.m{padding:2px 4px;gap:8px 10px}
 .msx .msx-team6c .msx-t6w{display:flex;flex-direction:column;gap:2px;min-width:0}
-.msx .msx-team6c .msx-t6b{font-size:10.5px;font-weight:800;color:#cbd5e1;text-align:center;white-space:nowrap}
+.msx .msx-team6c .msx-t6b{display:block;font-size:10.5px;font-weight:800;color:#cbd5e1;text-align:center;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;max-width:100%} /* PC で隣の札の字と重なっていた(育-06・育-90) */
 .msx .msx-ft3 button{flex:1 1 0}.msx .msx-ft3 button.go{flex:1.6 1 0}
 .msx .msx-ft3 button:disabled{opacity:.45}
 /* ④段2: 効果一覧(編成の合計の表・効果ごと/モンスターごと) */
@@ -176921,7 +176923,7 @@ function MsxStart({
       className: "v-h"
     }, "編成の6体", React.createElement("small", {
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
+    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
       className: "msx-team6 msx-team6c",
       "data-msx-team6": true
     }, React.createElement(MonsucCardGrid, {
@@ -176945,7 +176947,10 @@ function MsxStart({
         key: i,
         className: "msx-t6w"
       }, React.createElement(MonsucMonCard, {
-        m: msxTpCardM(rec, m, m.species),
+        m: {
+          ...msxTpCardM(rec, m, m.species),
+          fav: []
+        },
         size: "m",
         tag: role,
         num: msxTpBonusText(m),
@@ -176962,11 +176967,11 @@ function MsxStart({
         }
       }), !sameBond ? React.createElement("small", {
         className: "msx-t6b"
-      }, "親密度 ", m.bond0, "・タッグ +", m.tag, "%") : null);
+      }, "親密度 ", m.bond0, "・", '\u200b', "タッグ +", m.tag, "%") : null);
     }))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え"), React.createElement("button", {
+    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "カードの下は、そのモンスターと いっしょにトレーニングしたときに 伸びが上がる能力と割合。カードを押すと入れ替え"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -177511,8 +177516,7 @@ function MsxStart({
   if (full) return full;
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "戻る",
-    onBack: back,
-    right: `${step + 1} / 6`
+    onBack: back
   }), React.createElement("div", {
     className: `v-body st${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`
   }, React.createElement(MsxSteps, {
@@ -177637,7 +177641,7 @@ const msxTpCardM = (rec, mem, species) => ({
   fav: mem && Array.isArray(mem.top) ? mem.top.slice(0, 2) : []
 });
 const msxTpPow = (rec, mem) => rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null;
-const msxTpBonusText = mem => mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}+${Math.round(mem.bonus && mem.bonus[k] || 0)}`).join(' ') : '';
+const msxTpBonusText = mem => mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}+${Math.round(mem.bonus && mem.bonus[k] || 0)}%`).join(' ') : '';
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
@@ -177949,7 +177953,13 @@ function MsxTeamPick({
   }, "得意: 全て"), MSX_STATS.map(k => React.createElement("option", {
     key: k,
     value: k
-  }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]))))), tab === 'memo' ? React.createElement("div", {
+  }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]))))), items.some(x => {
+    const mk = markOf(x);
+    return mk && mk.c !== 'in';
+  }) ? React.createElement("div", {
+    className: "msx-tp-note msx-kp",
+    "data-msx-tp-marknote": true
+  }, "「同じ種類」は編成にもういる種類、", '\u200b', "「育てる種」は育てるモンスターと同じ種類の印です。", '\u200b', "どちらも入れられます") : null, tab === 'memo' ? React.createElement("div", {
     className: "msx-tp-note",
     "data-msx-assist-head": true
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
@@ -178455,8 +178465,11 @@ function MsxBaseMons({
   }), React.createElement("div", {
     className: "v-body"
   }, React.createElement("div", {
-    className: "v-h"
-  }, "ベースモン", React.createElement("small", null, "押すと、能力・素質・間合い適性・技の升目が見られます")), React.createElement("div", {
+    className: "msx-note msx-kp",
+    style: {
+      padding: '6px 4px'
+    }
+  }, "押すと、能力・素質・間合い適性・技の升目が見られます"), React.createElement("div", {
     className: "msx-scroll",
     "data-msx-basemon-scroll": true
   }, React.createElement("div", {
@@ -178587,7 +178600,10 @@ const msxReactPreview = (s, how) => {
     const lim = Math.abs(r.state.pol) === 3 && Math.abs(pp) >= st - 1;
     const side = how === 'praise' ? '甘い' : '厳しい';
     const moved = r.state.pol !== s.pol;
-    parts.push(lim ? `方針 これ以上${side}側へは動かない` : moved ? `方針 ${side}側へ1段` : `方針 ${side}側へ1点(あと${st - Math.abs(pp)}点で次の段)`);
+    const nextName = MSX_POLICY_SCALE[Math.max(0, Math.min(6, (r.state.pol || 0) + 3 + (how === 'praise' ? -1 : 1)))];
+    const per = Math.max(1, Math.abs((r.state.pp || 0) - (s.pp || 0)) || 1);
+    const times = Math.max(1, Math.ceil((st - Math.abs(pp)) / per));
+    parts.push(lim ? `方針はこれ以上 ${side}側へ動かない` : moved ? `方針が「${MSX_POLICY_SCALE[(r.state.pol || 0) + 3]}」に変わる` : `あと${times}回で 方針「${nextName}」`);
     return parts.join('・');
   } catch (e) {
     return null;
@@ -178929,7 +178945,7 @@ function MsxBand({
     }
   }) : null), stAdd ? React.createElement("em", {
     className: "pl"
-  }, "+", stAdd) : stGain ? React.createElement("em", {
+  }, "+", stAdd) : stGain && gainTag ? React.createElement("em", {
     className: stGain < 0 ? 'hl' : 'pl'
   }, stGain > 0 ? `+${stGain}` : stGain) : null, React.createElement("b", null, s.stress, React.createElement("small", null, "/100")))), React.createElement("div", {
     className: "v-b3",
@@ -180334,14 +180350,16 @@ function MsxPlay({
       ev: SUC.evaluate(bandS)
     }, isTrain ? {} : {
       hpFrom: o.hpFrom,
-      stFrom: o.stFrom
+      stFrom: o.stFrom,
+      gainTag: typeof MsxGaugeFx !== 'function'
     })) : React.createElement(MsxBand, _extends({
       s: s,
       v: v,
       ev: ev
     }, isTrain ? {} : {
       hpFrom: o.hpFrom,
-      stFrom: o.stFrom
+      stFrom: o.stFrom,
+      gainTag: typeof MsxGaugeFx !== 'function'
     })), React.createElement("div", {
       className: "v-scene",
       style: {
@@ -180681,27 +180699,19 @@ function MsxPlay({
       type: "button",
       className: "v-ch n",
       onClick: () => choose(null)
-    }, "なにもしない(方針はそのまま)")) : null)), done ? React.createElement("div", {
+    }, "なにもしない(方針はそのまま)")) : null)), done && !chips.length ? React.createElement("div", {
       className: "v-log",
-      "data-msx-react-res": chips.length
+      "data-msx-react-res": 0
     }, React.createElement("span", {
       className: "hd2"
-    }, "📋 結果"), React.createElement("br", null), chips.length ? chips.map((c, i) => React.createElement("span", {
-      key: c.k
-    }, i ? '・' : '', c.name, c.val ? React.createElement(React.Fragment, null, " ", React.createElement("b", {
-      className: c.good ? 'gu' : '',
-      style: c.good ? undefined : {
-        color: '#dc2626'
-      }
-    }, c.val)) : null)) : '変わったことはなかった') : null, React.createElement("div", {
+    }, "📋 結果"), React.createElement("br", null), "変わったことはなかった") : React.createElement("span", {
+      hidden: true,
+      "data-msx-react-res": done ? chips.length : undefined
+    }), React.createElement("div", {
       className: "v-pol"
     }, React.createElement("div", {
       className: "l"
-    }, React.createElement("span", null, "超溺愛"), React.createElement("span", null, "甘い"), React.createElement("span", {
-      style: {
-        color: '#fde047'
-      }
-    }, "いまの方針: ", MSX_POLICY_SCALE[pol + 3]), React.createElement("span", null, "厳しい"), React.createElement("span", null, "超スパルタ")), React.createElement("div", {
+    }, React.createElement("span", null, "超溺愛"), React.createElement("span", null, "甘い"), React.createElement("span", null, "普通"), React.createElement("span", null, "厳しい"), React.createElement("span", null, "超スパルタ")), React.createElement("div", {
       className: "m"
     }, MSX_POLICY_SCALE.map((n, i) => React.createElement("i", {
       key: n,
@@ -180741,7 +180751,7 @@ function MsxPlay({
         marginTop: 4,
         ...JA_LABEL_STYLE
       }
-    }, jaWrap(`忠誠度 ${loy} = 甘え度 ${s.ama} + 恐れ度 ${s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`))));
+    }, jaWrap(`忠誠度は 甘え度と恐れ度の合計。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`))));
     foot = done || !RC || s.reacted ? React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -181881,16 +181891,14 @@ function MsxBag({
     className: "v-bagw"
   }, React.createElement("div", {
     className: "t"
-  }, "🎒 持ち物", React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), t ? React.createElement("div", {
+  }, React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), t ? React.createElement("div", {
     className: "v-bsel"
   }, React.createElement("span", {
     className: "e",
     style: {
       fontSize: 26
     }
-  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
-    className: "yel"
-  }, " ×", t.n) : null), React.createElement("small", null, t.desc), React.createElement("small", {
+  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
     className: "lim"
   }, t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'))) : null, React.createElement("div", {
     className: "v-bgrid"
@@ -182685,7 +182693,8 @@ function MsxEvent({
     v: v,
     ev: ev,
     hpFrom: picked.hp0,
-    stFrom: picked.st0
+    stFrom: picked.st0,
+    gainTag: typeof MsxGaugeFx !== 'function'
   }) : React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -182792,7 +182801,8 @@ function MsxEvent({
     items: msxGfxItemsOf(picked, s)
   }) : null, typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? React.createElement(MsxEvResult, {
     delta: picked.delta,
-    hasStats: Object.keys(ups).length > 0
+    hasStats: Object.keys(ups).length > 0,
+    skip: typeof MsxGaugeFx === 'function' ? msxGfxItemsOf(picked, s).filter(x => Math.round(x.from) !== Math.round(x.to)).map(x => x.k) : null
   }) : null, isStory && Number.isInteger(o.ep) && o.ep < 4 && SUC.ASTORY && SUC.ASTORY.eps[o.ep] ? React.createElement(MsxEvNext, {
     text: `第${o.ep + 1}話は ${Math.max(SUC.ASTORY.eps[o.ep].turn, s.turn + 1)}ターン目`
   }) : null, isStory && picked.branch ? React.createElement("div", {
@@ -187528,7 +187538,7 @@ function MsxR3Retire({
       className: "r"
     }, "使った ", React.createElement("span", {
       className: "yel"
-    }, used), "・残り ", ws.pts, React.createElement("br", null), "総合力 ", msxFmt(ev0.power), " → ", React.createElement("span", {
+    }, used), React.createElement("br", null), "総合力 ", msxFmt(ev0.power), " → ", React.createElement("span", {
       className: "yel"
     }, msxFmt(ev.power)), " ", React.createElement("i", {
       className: msxRankCls(ev.rank)
@@ -187554,7 +187564,7 @@ function MsxR3Retire({
       className: "mon",
       style: {
         bottom: '6%',
-        height: '88%'
+        height: '74%'
       },
       live: true
     }), React.createElement("div", {
@@ -187597,7 +187607,7 @@ function MsxR3Retire({
       onClick: () => preset('top')
     }, "全部 ", MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'), React.createElement("button", {
       type: "button",
-      className: "chip on",
+      className: "chip",
       onClick: () => preset('low')
     }, "おまかせで振る"), React.createElement("button", {
       type: "button",
@@ -187624,7 +187634,9 @@ function MsxR3Retire({
         disabled: !add,
         onPress: () => undoK(k),
         "data-msx-r3-ptminus": k
-      }), React.createElement("b", null, add), React.createElement(MsxPtBtn, {
+      }), React.createElement("b", {
+        "aria-hidden": "true"
+      }), React.createElement(MsxPtBtn, {
         disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k),
         onPress: () => spend(k),
         "data-msx-r3-plus": k,
@@ -188080,7 +188092,7 @@ function MsxR3Retire({
     className: "r"
   }, "総合力 ", msxFmt(ev.power), " から ", points, "ポイント", React.createElement("br", null), React.createElement("span", {
     className: "yel"
-  }, "使った ", cost), "・残り ", left, "(あまりは なくなる)", React.createElement("div", {
+  }, "使った ", cost), "(あまりは なくなる)", React.createElement("div", {
     className: "bar p"
   }, React.createElement("i", {
     style: {
@@ -188124,13 +188136,11 @@ function MsxR3Retire({
         className: "nm"
       }, a.name), React.createElement("span", {
         className: `rf${a.ref ? '' : ' o'}`
-      }, a.ref ? '参考' : 'オリジナル'), React.createElement("b", {
-        className: "val"
-      }, got ? AT.valueText(id, got) : '—')), React.createElement("div", {
+      }, a.ref ? '参考' : 'オリジナル')), React.createElement("div", {
         className: "ex"
       }, React.createElement("b", null, a.ex[Math.max(0, (got || 1) - 1)]), React.createElement("span", {
         className: "exd"
-      }, a.max > 1 ? `1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)}` : `${a.pt}pt`)), React.createElement("div", {
+      }, a.max > 1 ? `1目盛り ${AT.valueText(id, 1)}・最大 ${AT.valueText(id, a.max)}` : '')), React.createElement("div", {
         className: "ctl"
       }, React.createElement("button", {
         type: "button",
@@ -188166,7 +188176,7 @@ function MsxR3Retire({
         "aria-label": "ふやす"
       }), React.createElement("span", {
         className: "c"
-      }, got ? `${a.cost[got - 1]}pt` : `${a.pt}pt`)));
+      }, got ? `使った ${a.cost[got - 1]}pt` : `1目盛り ${a.pt}pt`)));
     }
     return React.createElement("div", {
       key: id,
@@ -188198,7 +188208,7 @@ function MsxR3Retire({
     className: "v-pick"
   }, "取るもの(", kinds, " / ", maxKinds, "種類): ", kinds ? Object.entries(pick).map(([id, lv], i) => React.createElement(React.Fragment, {
     key: id
-  }, i ? '・' : '', React.createElement("b", null, A[id] ? `${A[id].icon} ${A[id].name}` : id, " ", V3 ? AT.valueText(id, lv) : `段${lv}`))) : 'まだ選んでいない', React.createElement("br", null), "⚠ 決めたあとは変えられない"), res && res.full ? React.createElement("div", {
+  }, i ? '・' : '', React.createElement("b", null, A[id] ? `${A[id].icon} ${A[id].name}` : id, V3 ? '' : ` 段${lv}`))) : 'まだ選んでいない', React.createElement("br", null), "⚠ 決めたあとは変えられない"), res && res.full ? React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#f87171'

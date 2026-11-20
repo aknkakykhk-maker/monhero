@@ -43,8 +43,9 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
       {st === 0 ? (<>
         <div className="msx-ki-ttl" key="t0"><b>{MSX_KI_CHAPTER[prev]} 終了</b><span>{P[prev].name}</span></div>
         <div className="msx-ki-sum" key="s0">
-          <div className="h">獲得賞金</div>
-          <div className="v-num r"><b>{msxFmt(fame)}<small>G</small>{dFame != null ? <em className={dFame < 0 ? 'dn' : ''}>{sign(dFame)}G</em> : null}</b></div>
+          {/* 賞金も、この章で増えた分だけを出す(「1,000G +1,000G」の二重・育-121) */}
+          <div className="h">{dFame != null ? 'この章の獲得賞金' : '獲得賞金'}</div>
+          <div className="v-num r"><b>{dFame != null ? <span className={dFame < 0 ? 'dn' : 'up'}>{sign(dFame)}<small>G</small></span> : <>{msxFmt(fame)}<small>G</small></>}</b></div>
           {/* 総合力は上の帯にもあるので、ここはこの章で伸びた分を主役にする(2026-11-20 r1119-033 育-118) */}
           <div className="h">{dPow != null ? 'この章で伸びた総合力' : '総合力'}</div>
           <div className="v-num r"><b>{dPow != null ? <span className={dPow < 0 ? 'dn' : 'up'}>{sign(dPow)}</span> : msxFmt(ev.power)}</b></div>
