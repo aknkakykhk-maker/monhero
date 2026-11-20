@@ -11700,7 +11700,7 @@ const ASSISTANT_CHAT_STORY = [
   { who:'mua',      e:'troubled', t:'あ、でもね！ 名前とか住所とか電話番号みたいな大事なことは、書いちゃだめだよ' },
   { who:'kiki',     e:'normal',   t:'鈴を鳴らせるのは1日100回まででつ。朝4時に、また鳴らせるようになりまつ。' },
   { who:'momosuke', e:'normal',   t:'みんなでいっぱい鳴らしすぎた日は、鈴が早めに疲れちゃうんだって。そしたら、また明日ね♡' },
-  { who:'dra',      e:'happy',    t:'HOMEで、おでたちの吹き出しの下にある「💬 おしゃべり」を押してみろ' },
+  { who:'dra',      e:'happy',    t:'HOMEで、おでたちの吹き出しを押して「💬 おしゃべりする」を選んでみろ' },
   { who:'mua',      e:'excited',  t:'いま選んでる助手が待ってるからね！ さっそく話しかけてみて〜！' },
 ];
 const ASSISTANT_CHAT_STORY_CALLS = { mua: 'もも／ドラケン', kiki: 'ももさん／ドラさん', momosuke: 'みゅあねぇ／ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
