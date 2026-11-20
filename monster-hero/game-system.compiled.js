@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0211c857e3d073e
+// source-sha256: 76948f9329f9d22c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172263,8 +172263,6 @@ const MSX_CSS = `
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
 .msx .v-grid6 span.new::before,.msx .v-grid6 button.new::before{content:'合体';position:absolute;left:-2px;top:-5px;background:#a78bfa;color:#0f172a;font-size:10px;font-weight:900;border-radius:5px;padding:0 3px;z-index:1}
-.msx .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px 6px;padding:2px 2px 6px}
-.msx .v-grid6.pk1 .v-g6n{font-size:10.5px;transform:none;overflow:hidden;text-overflow:clip;letter-spacing:-.04em}
 .msx .v-body.p1 .v-gridw{margin-top:2px;border-radius:12px;background:#0f0d2466;padding:0 4px}
 .msx .v-p1sel{flex:none;display:flex;gap:8px;padding:7px;margin-top:6px}
 .msx .v-p1art{position:relative;flex:0 0 31%;min-height:128px;border-radius:11px;overflow:hidden;background:#0f0d24;border:1px solid #4a4380}
@@ -172345,7 +172343,6 @@ const MSX_CSS = `
   .msx.land .v-body.p1 .v-p1bar{flex-wrap:wrap}
   .msx.land .v-body.p1 .v-p1bar>.v-tabs{flex:1 1 100%}
   .msx.land .v-body.p1 .v-p1note{display:none}
-  .msx.land .v-body.p1 .v-grid6.pk1{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}
   .msx.land .v-body.p1 .v-p1st b{font-size:12.5px}
 }
 .msx .v-apt{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px;text-align:center;font-size:10px;font-weight:900}
@@ -176227,6 +176224,8 @@ function MsxStart({
       key: m.id,
       sp: m.species,
       nm: m.nick || msxMonName(m.species),
+      colors: Array.isArray(m.colors) ? m.colors : null,
+      awake: m.awake || 0,
       on: pick.box === m.id,
       pick: {
         box: m.id
@@ -176282,26 +176281,27 @@ function MsxStart({
     }) : null), React.createElement("div", {
       className: "v-gridw",
       "data-msx-pick-list": true
-    }, React.createElement("div", {
-      className: "v-grid6 pk1"
-    }, list.length ? list.map(x => React.createElement("button", {
-      type: "button",
+    }, list.length ? typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+      size: "s"
+    }, list.map(x => React.createElement(MonsucMonCard, {
       key: x.key,
-      className: x.on ? 'on' : '',
-      onClick: () => setPick(x.pick)
-    }, React.createElement("span", {
-      className: "v-g6f"
-    }, React.createElement(MsxMonFace, {
-      species: x.sp,
-      alt: msxMonName(x.sp)
-    })), React.createElement("span", {
-      className: "v-g6n"
-    }, x.nm))) : React.createElement("span", {
-      className: "msx-note",
-      style: {
-        gridColumn: '1 / -1'
+      size: "s",
+      m: {
+        species: x.sp,
+        nick: x.nm,
+        colors: x.colors || null,
+        awake: x.awake || 0
+      },
+      on: x.on,
+      onClick: () => setPick(x.pick),
+      attrs: {
+        'data-msx-pick-mon': x.sp,
+        'aria-label': x.nm,
+        'aria-pressed': x.on
       }
-    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')))), React.createElement("div", {
+    }))) : null : React.createElement("span", {
+      className: "msx-note"
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'))), React.createElement("div", {
       className: "v-card sel v-p1sel",
       "data-msx-start-sel": true
     }, React.createElement("div", {
@@ -188961,6 +188961,38 @@ const MONSUC_CARD_FRAME = Object.freeze({
   M: '#c084fc'
 });
 const monsucCardFrame = g => MONSUC_CARD_FRAME[String(g || '').trim().charAt(0).toUpperCase()] || '#6b6597';
+function MonsucFitName({
+  name
+}) {
+  const box = React.useRef(null);
+  const txt = React.useRef(null);
+  const [k, setK] = React.useState(1);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const b = box.current;
+      const t = txt.current;
+      if (!b || !t) return;
+      const w = t.scrollWidth;
+      const W = b.clientWidth;
+      setK(w > W && W > 0 ? Math.max(0.6, W / w) : 1);
+    };
+    fit();
+    if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
+    const ro = new ResizeObserver(fit);
+    ro.observe(box.current);
+    return () => ro.disconnect();
+  }, [name]);
+  return React.createElement("span", {
+    className: "mcd-nms",
+    ref: box
+  }, React.createElement("span", {
+    className: "mcd-nmt",
+    ref: txt,
+    style: k < 1 ? {
+      transform: `scaleX(${k.toFixed(3)})`
+    } : undefined
+  }, name));
+}
 function MonsucMonCard({
   m,
   size = 's',
@@ -189019,9 +189051,9 @@ function MonsucMonCard({
   }, lock) : null, on ? React.createElement("i", {
     className: "mcd-ck",
     "aria-hidden": "true"
-  }, "✓") : null), m && sz === 's' ? React.createElement("span", {
-    className: "mcd-nms"
-  }, name) : null, tag && tag.text ? React.createElement("span", {
+  }, "✓") : null), m && sz === 's' ? React.createElement(MonsucFitName, {
+    name: name
+  }) : null, tag && tag.text ? React.createElement("span", {
     className: `mcd-tag ${tag.kind || ''}`
   }, tag.text) : null, num != null && num !== '' ? React.createElement("span", {
     className: "mcd-num"
@@ -189062,7 +189094,7 @@ span.mcd{cursor:default}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
 .mcd.s .mcd-art{bottom:5%}
-.mcd .mcd-nms{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:900;font-size:11px;line-height:1.2;word-break:break-all;color:#fff;min-height:2.4em}
+.mcd .mcd-nms{display:block;white-space:nowrap;overflow:hidden;font-weight:900;font-size:11px;line-height:1.25;color:#fff;text-align:center}.mcd .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
 .mcd .mcd-slot{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:clamp(20px,30cqw,34px);height:clamp(20px,30cqw,34px);font-style:normal;font-weight:900;font-size:clamp(11px,17cqw,19px);color:#fff;background:#2563eb;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px #0008}
 .mcd .mcd-note{position:absolute;left:4%;right:4%;top:24%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mcd .mcd-lv{position:absolute;right:3%;bottom:23%;line-height:1.3;padding:0 .3em;background:#0f0d24d9;border-radius:6px;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
