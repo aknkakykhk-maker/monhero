@@ -1,0 +1,8 @@
+set -e
+cd "$(dirname "$0")"
+for v in line6 line7 line8 line7soft line8soft; do node drive.js cf2 $v 0 8000 4 out; done
+node drive.js fin hp10a 0 20000 4 out
+node drive.js zero base 0 400 4 out "R:bare-S,R:one-rivaldamashii,R:probe-rivaldamashii,X:bare-S,X:one-chokyo,X:probe-chokyo,keisho-S"
+node drive.js asv asStrong 0 400 4 out "bare-S,real-S,probe-kizuna,probe-shitsuke,probe-genki,probe-ochitsuki"
+node drive.js asv asWeak 0 400 4 out "bare-S,real-S,battle-S,probe-mitate,probe-kensho,probe-gatsu,probe-mimamori,probe-miseba,probe-tsuika,probe-haru,probe-natsu,probe-aki,probe-fuyu"
+echo 全部終わり

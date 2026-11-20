@@ -23,7 +23,8 @@ function MsxBaseMons({ data, onClose }) {
     <>
       <MsxHd back="戻る" onBack={onClose} title="🌱 ベースモン"/>
       <div className="v-body">
-        <div className="v-h">ベースモン<small>押すと、能力・素質・間合い適性・技の升目が見られます</small></div>
+        {/* 画面の名前は上の帯の「🌱 ベースモン」だけ。ここは使い方の1行(育-29) */}
+        <div className="msx-note msx-kp" style={{ padding: '6px 4px' }}>押すと、能力・素質・間合い適性・技の升目が見られます</div>
         <div className="msx-scroll" data-msx-basemon-scroll>
         <div className="msx-bm-grid" data-msx-basemon-list>
           {unlocked.map((id) => (

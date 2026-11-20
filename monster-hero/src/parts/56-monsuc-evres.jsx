@@ -18,9 +18,11 @@ const msxEvDeltaChips = (d) => {
   if (d.goal) out.push({ k: 'goal', name: (typeof MSX_FX_GOAL !== 'undefined' && MSX_FX_GOAL[d.goal]) || '期の目標が決まった', good: true });
   return out;
 };
-function MsxEvResult({ delta, hasStats }) {
-  const chips = msxEvDeltaChips(delta);
-  if (!chips.length && hasStats) return null;
+// skip … 上のゲージの演出(MsxGaugeFx)が出している物の札は出さない(体力・ストレスが帯・ゲージ・結果の3か所に出ていた・r1119-033 育-98)
+function MsxEvResult({ delta, hasStats, skip = null }) {
+  const all = msxEvDeltaChips(delta);
+  const chips = all.filter((c) => !(Array.isArray(skip) && skip.includes(c.k)));
+  if (!chips.length && (hasStats || all.length)) return null; // 動いた物がゲージに全部出ているときは、箱ごと出さない
   // ひとときの状態は、名前と「何ターン・どう効くか」を1行で出す(名前だけの札と二重にしない・r1119-033 観点8)
   const grant = typeof msxBuffGrantText === 'function';
   const row = chips.filter((c) => !(c.buff && grant)); const bufs = chips.filter((c) => c.buff && grant);

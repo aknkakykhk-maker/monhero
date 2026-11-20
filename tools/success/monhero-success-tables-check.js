@@ -59,7 +59,7 @@ const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'ass
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 8, '1体に持てる数が8でない(社長 2026-11-14)');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 10) === `いっしょにトレーニングしたとき、伸び +10%${AS.capNote ? AS.capNote('sokoji') : ''}`, `説明の差しこみがおかしい: ${AS.describe('sokoji', 10)}`);
+ok(AS.describe('sokoji', 10) === `いっしょにトレーニングしたとき、能力の上がる量 +10%${AS.capNote ? AS.capNote('sokoji') : ''}`, `説明の差しこみがおかしい: ${AS.describe('sokoji', 10)}`);
 // 書き方の型(社長 2026-11-14): どの効果も型(k)を持ち、「点」「段」を使わない・文頭は効く場面
 const SCENE_HEAD = /^(いっしょにトレーニングしたとき、|成長のピークの外でいっしょに|\d+〜\d+月にいっしょに|「.+」のトレーニングにいっしょに来たとき、|このモンスター|編成にいるだけで、|助手が来たトレーニングでは、)/;
 for (const a of AS.LIST) {

@@ -88,7 +88,8 @@ const screenInfo = (page) => page.evaluate(() => {
   const clip = [...root.querySelectorAll('button, .v-card, .v-opt, .v-log, .v-h, .v-chip, .v-kv, b, small')].filter((e) => e.children.length < 3 && e.scrollWidth > e.clientWidth + 2 && getComputedStyle(e).overflowX !== 'visible' && e.clientWidth > 0).map((e) => (e.innerText || '').replace(/\s+/g, ' ').slice(0, 24));
   const imgs = [...root.querySelectorAll('img')].filter((i) => i.complete && (!i.naturalWidth)).map((i) => (i.getAttribute('src') || '').slice(-40));
   const stretch = [...root.querySelectorAll('img')].filter((i) => { const r = i.getBoundingClientRect(); if (!i.naturalWidth || r.width < 20 || r.height < 20 || getComputedStyle(i).objectFit !== 'fill') return false; const a = (i.naturalWidth / i.naturalHeight) / (r.width / r.height); return a > 1.25 || a < 0.8; }).map((i) => (i.getAttribute('src') || '').slice(-40));
-  return { view: root.getAttribute('data-msx-view'), text: root.innerText.replace(/\s+/g, ' ').trim(), over, clip, imgs, stretch, hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
+  const tbI = root.querySelector('[data-msx-turn]');
+  return { view: root.getAttribute('data-msx-view'), turn: tbI ? Number(tbI.getAttribute('data-msx-turn')) || 0 : 0, text: root.innerText.replace(/\s+/g, ' ').trim(), over, clip, imgs, stretch, hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
     arena: !!root.querySelector('.msa, .msc-wrap'), btns: [...root.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null).map((b) => (b.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 30)) };
 });
 
@@ -118,7 +119,8 @@ const step = (page, cfg, mem) => page.evaluate(({ cfg, mem }) => {
   mem.cupTry = 0;
   // 修行の画面: 覚えられる技を1つ(無ければ何も選ばず)→「修行する」。押せないときは戻る
   const shu = root.querySelector('[data-msx-r3-shugyo]');
-  const curTurn = ((root.innerText.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0; if (curTurn) mem.curTurn = curTurn;
+  const tbE = root.querySelector('[data-msx-turn]');
+  const curTurn = (tbE ? Number(tbE.getAttribute('data-msx-turn')) : ((root.innerText.match(/(\d+)\s*\/\s*46ターン/) || [])[1])) | 0; if (curTurn) mem.curTurn = curTurn;
   if (shu) {
     const cand = [...root.querySelectorAll('[data-msx-r3-tech].ok')];
     if (!mem.shuPicked && cand.length && !shu.disabled) { mem.shuPicked = 1; const c = cand[cand.length - 1]; mem.shuTech = c.getAttribute('data-msx-r3-tech') + ' ' + c.innerText.replace(/\s+/g, ' ').slice(0, 30); return press(c, 'shugyo-tech'); }
@@ -223,7 +225,7 @@ if (require.main === module) (async () => {
         const info = await screenInfo(page);
         if (!info) { note('真っ白', '.msx が消えた'); break; }
         const sig = info.view + '|' + info.text.slice(0, 160);
-        const turn = ((info.text.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0;
+        const turn = info.turn || (((info.text.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0);
         if (info.text.length < 20) note('真っ白', `文字がほぼ無い view=${info.view}`);
         const key = sanitize(info.text.replace(/^(?:← |⏸ )中断 みゅあ編 \d+ \/ 46ターン /, ''));
         if (!log.screens[key]) {
