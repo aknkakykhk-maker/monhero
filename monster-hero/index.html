@@ -102,7 +102,7 @@ var GAME_BUILD = '0ed0c1253884';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-20 20:11';
+window.__mhBuildDate = '2026-11-20 20:52';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -561,9 +561,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* リザルト(横・背が低い画面)。経験値の棒とランクアップの窓(約280px)が最初の画面を埋めて、曲名・点数・判定の数が下へ送らないと見えなかった
      (2026-11-20 点検 V3)。左の列に経験値の棒・ランクアップの窓、右の列に曲名・点数・判定の数を置く。縦・背の高い画面・PCは今までどおり */
   @media (orientation: landscape) and (max-height: 520px) {
-    [data-rhythm-result-scroll] { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
+    [data-rhythm-result-scroll] { container-type: size; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
     [data-rhythm-result-scroll] > * { grid-column: 2; min-width: 0; }
-    [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; }
+    [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; min-height: calc(100cqh - 16px); display: flex; flex-direction: column; justify-content: space-between; }
     /* 左の飾りのジャケットは、曲の札に同じ絵があるので隠し、場所を右の列へ回す。曲の札・点数・判定の表は少し詰める */
     [data-rhythm-result-hero] > div[aria-hidden="true"] { display: none; }
     [data-rhythm-result-hero] { width: 17%; max-width: 150px; }
@@ -579,9 +579,9 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     [data-rhythm-result-song] { padding: 4px 8px; }
     [data-rhythm-result-score-card] { padding-top: 4px; padding-bottom: 4px; }
   }
-  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
+  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] { container-type: size; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
   [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > * { grid-column: 2; min-width: 0; }
-  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; }
+  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; min-height: calc(100cqh - 16px); display: flex; flex-direction: column; justify-content: space-between; }
   [data-mh-view-rotation="true"] [data-rhythm-result-hero] > div[aria-hidden="true"] { display: none; }
   [data-mh-view-rotation="true"] [data-rhythm-result-hero] { width: 17%; max-width: 150px; }
   [data-mh-view-rotation="true"] [data-rhythm-result-hero]:not(:has([data-rhythm-result-hero-gains])) { display: none; }
