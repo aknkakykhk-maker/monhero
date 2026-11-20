@@ -124,7 +124,7 @@ const makeRun = async (kind) => {
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
     ['X13', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-btab=assist']], ['X14', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-btab=info']], ['X15', 'box', ['@openbox', '@mmlist', '@boxmon=b2', '#detail-btab=assist']], // 詳細の下の段のタブ(技・アシスト・育成情報・r1115-095)
-    ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
+    ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-btab=tech']],
     ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
     ['X11', 'box', ['@openbox', '@mmlist', '@boxmon=bx3']], ['X12', 'box', ['@openbox', '@mmlist', '@boxmon=bx5']], // 資料に無い技(オリジナルの子)の影絵の絵
     ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
