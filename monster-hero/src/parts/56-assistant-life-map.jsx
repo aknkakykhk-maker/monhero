@@ -415,6 +415,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
         <div className="fixed inset-0" style={{ zIndex: 30 }} data-assistant-life-map-sheet={sheetPlace}>
           <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setSheet(null)}/>
           <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
+            <button type="button" aria-label="閉じる" data-assistant-life-map-sheet-close data-mhl-sheet-close onClick={() => setSheet(null)} className="absolute right-2 top-2 z-[5] min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-800 text-[18px] font-black leading-none text-white active:scale-95">✕</button>{/* 窓は右上の ✕(総点検 V-2。前は下の大きい「閉じる」) */}
             <p className="mhl-en">WHERE · {String(sheetPlace).toUpperCase()}</p>
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
             <p className="text-[10.5px] font-bold text-slate-300" style={JA_WRAP_STYLE} data-assistant-life-map-sheet-home>{jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」のボタンの下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」のボタン${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)}</p>
@@ -433,7 +434,6 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
               <p className="mt-3 text-[11px] font-black text-amber-200" data-assistant-life-map-sheet-town style={JA_WRAP_STYLE}>{jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')}</p>
               {sheetTown.map(([id, p]) => row(id, p, true))}
             </>)}
-            <button type="button" data-assistant-life-map-sheet-close data-mhl-sheet-close onClick={() => setSheet(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
           </div>
         </div>)}
     </div>);

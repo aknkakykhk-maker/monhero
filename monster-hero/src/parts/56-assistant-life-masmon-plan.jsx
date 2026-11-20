@@ -340,11 +340,11 @@ const AMGP_OPTIONS = Object.freeze(['A', ...AMG_KEYS.map(k => `L:${k}`), ...AMG_
 const amgpOptionLabel = (c) => (c === 'A' ? '🍃 助手にまかせる' : c === 'R' ? '😴 休み' : c === 'P' ? '🎈 遊び' : c === 'S' ? '⚔ 修行(いなければ軽い訓練)' : `${c[0] === 'H' ? '🏋 重' : '💪 軽'} ${amgpCodeName(c)}(${amgpStatName(c.slice(2))})`);
 function AmgpShell({ title, sub, tabs, tab, setTab, onClose, land, children, ro = false }) {
   return (
-    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/60" data-amgp-note={ro ? 'readonly' : 'mine'}>
+    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-[#0b1020]/90" data-amgp-note={ro ? 'readonly' : 'mine'}>
       <div className="flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white" style={{ height: land ? '96dvh' : '92dvh' }}>
         {/* 横向きは頭と切り替えを1行にまとめ、予定の見える高さを広げる(fable の指摘 11-12・568×320 で約190px だった) */}
         <div className={`flex items-center gap-2 px-3 ${land ? 'pt-1.5' : 'pt-3'}`}>
-          <button type="button" onClick={onClose} data-mhl-sheet-close className={`${land ? 'min-h-[40px]' : 'min-h-[44px]'} shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black`}>閉じる</button>
+          <button type="button" onClick={onClose} aria-label="閉じる" data-mhl-sheet-close className="order-last min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-800 text-[18px] font-black leading-none text-white active:scale-95">✕</button>{/* 窓は右上の ✕(総点検 V-2。前は左上の「閉じる」) */}
           <div className="min-w-0 flex-1"><p className={`truncate font-black ${land ? 'text-[14px]' : 'text-[16px]'}`}>📒 {title}</p>{!land && <p className="truncate text-[10.5px] font-bold text-slate-300">{sub}</p>}</div>
           {land && <div className="flex shrink-0 gap-1" role="tablist">{tabs.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} data-amgp-tab={k} onClick={() => setTab(k)} className={`min-h-[40px] rounded-xl px-2.5 text-[12px] font-black ${tab === k ? 'bg-emerald-400 text-emerald-950' : 'bg-slate-800 text-slate-200'}`}>{label}</button>)}</div>}
         </div>
