@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 907c647b70667730
+// generated-sha256: 064181bf3677dce6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85002,6 +85002,40 @@ function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   return <MsxIssaMeet run={run} v={v} ev={ev} ctx={ctx} onChoose={choose}/>;
 }
 
+// ---- イッサ博士の登場動画(r1119-059)。登場のときに1回だけ流し、最後の決めポーズ(= 止め絵 MSX_ISSA_ART と同じ絵)で止め絵へ替える ----
+//   透過の WebM が本命。Apple の WebKit(iPhone・iPad のブラウザ全部と Mac の Safari)は WebM の透過を描けないことがあるので、
+//   背景付きの mp4 を場面いっぱいに流す。どちらも読めない・自動再生できない・動きを減らす設定のときは、今までの止め絵の登場のまま
+const MSX_ISSA_VID = Object.freeze({ alpha: 'images/success/issa-entrance-alpha.webm', bg: 'images/success/issa-entrance-bg.mp4' });
+const msxIssaVidKind = () => {
+  try {
+    if (typeof document === 'undefined' || typeof navigator === 'undefined') return null;
+    if (typeof window !== 'undefined' && (window.__msxIssaVidForce === 'alpha' || window.__msxIssaVidForce === 'bg')) return window.__msxIssaVidForce; // 撮影の道具だけが使う
+    const v = document.createElement('video'); if (!v || typeof v.canPlayType !== 'function') return null;
+    const ua = String(navigator.userAgent || '');
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+    const appleWebkit = ios || (/AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/.test(ua));
+    if (!appleWebkit && v.canPlayType('video/webm; codecs="vp9"')) return 'alpha';
+    if (v.canPlayType('video/mp4; codecs="avc1.64001F"') || v.canPlayType('video/mp4')) return 'bg';
+    return null;
+  } catch (e) { return null; }
+};
+// 動画1本。音は無いので muted・playsinline(勝手に全画面にしない)。2.5秒たっても流れ始めなければ止め絵へ
+function MsxIssaVid({ kind, out = false, onEnd }) {
+  const ref = useRef(null); const on = useRef(false); const done = useRef(false);
+  const end = () => { if (!done.current) { done.current = true; onEnd(); } };
+  useEffect(() => {
+    const v = ref.current; if (!v) { end(); return undefined; }
+    v.muted = true; v.defaultMuted = true; v.playsInline = true;
+    if (typeof window !== 'undefined' && Number(window.__msxIssaVidRate) > 0) v.playbackRate = Number(window.__msxIssaVidRate); // 撮影の道具だけが使う(遅く流して始まりの絵を撮る)
+    const t = setTimeout(() => { if (!on.current) end(); }, 2500);
+    try { const p = v.play(); if (p && typeof p.catch === 'function') p.catch(end); } catch (e) { end(); }
+    return () => clearTimeout(t);
+  }, []);
+  const props = { ref, src: MSX_ISSA_VID[kind], muted: true, playsInline: true, 'webkit-playsinline': 'true', preload: 'auto', disablePictureInPicture: true, controls: false,
+    onPlaying: () => { on.current = true; }, onEnded: end, onError: end, 'aria-hidden': 'true', 'data-msx-issa-vid': kind };
+  return kind === 'alpha' ? <div className="msx-is-vw"><video className="msx-is-vid" {...props}/></div> : <video className={`msx-is-vbg${out ? ' out' : ''}`} {...props}/>;
+}
+
 function MsxIssaMeet({ run, v, ev, ctx, onChoose }) {
   const { SUC } = msxSuc;
   const s = run.s;
@@ -85010,16 +85044,23 @@ function MsxIssaMeet({ run, v, ev, ctx, onChoose }) {
   const meet = msxPickLine(ctx, s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first', { who: 'issa' });
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(calm ? [] : [['issaIn', 120]], []);
   const sel = MSX_ISSA_KEYS.find((x) => x.key === pick);
+  // 登場動画: 'play' → (背景付きだけ 'out' で0.3秒かけて消す)→ null(止め絵)。一度でも流したら、止め絵の入りの動きは付けない
+  const [vid, setVid] = useState(() => (calm ? null : msxIssaVidKind()));
+  const [vOut, setVOut] = useState(false);
+  const usedVid = useRef(Boolean(vid));
+  const vidEnd = () => { if (vid === 'bg') { setVOut(true); setTimeout(() => setVid(null), 300); } else setVid(null); };
   return (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className={`v-scene msx-is meet${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-issa="meet">
       <img className="bg" src="images/story-bg/monhero_night.jpg" alt=""/><div className="sh" style={{ background: '#0f0d2466' }}/>
-      <span className="msx-is-ring" aria-hidden="true"/>
-      <span className="msx-is-spark" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--i': i }}/>)}</span>
-      <img className="v-issa msx-is-in" src={MSX_ISSA_ART} alt="イッサ博士"/>
+      {usedVid.current ? null : <><span className="msx-is-ring" aria-hidden="true"/>
+      <span className="msx-is-spark" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ '--i': i }}/>)}</span></>}
+      {vid === 'alpha' ? <MsxIssaVid kind="alpha" onEnd={vidEnd}/> : <img className={`v-issa${usedVid.current ? '' : ' msx-is-in'}`} src={MSX_ISSA_ART} alt="イッサ博士" data-msx-issa-still/>}
       <div className="v-machine msx-is-mc">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
       <MsxEvHead kind="issa" className="msx-is-band" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }} title="イッサ博士があらわれた!"/>
-      <div className="v-ibub msx-is-bub" style={MSX_IS_WRAP}>{msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)}</div>
+      {vid ? null : <div className="v-ibub msx-is-bub" style={MSX_IS_WRAP}>{msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)}</div>}
+      {vid === 'bg' ? <MsxIssaVid kind="bg" out={vOut} onEnd={vidEnd}/> : null}
+      {usedVid.current && typeof MsxFxSkip === 'function' ? <MsxFxSkip show={Boolean(vid) && !vOut} onSkip={vidEnd} attrs={{ 'data-msx-issa-skip': 1 }}/> : null}
     </div>
     <div className="v-six msx-is-six">
       {MSX_ISSA_KEYS.map((x, i) => { const p = SUC.issaRate(s, x.key); const dots = Math.max(1, Math.min(4, Math.round(p * 4))); return (
@@ -85088,6 +85129,10 @@ const MSX_IS_CSS = `
 .msx .msx-is .v-issa{transition:filter .4s,transform .4s}
 .msx .msx-is .v-issa.back{transform:translateX(-14%) scale(.92);filter:brightness(.8) drop-shadow(0 6px 6px #000a)}
 .msx .msx-is .v-issa.sad{filter:grayscale(.45) brightness(.82) drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vw{position:absolute;left:2%;bottom:-58%;height:150%;aspect-ratio:305/900;pointer-events:none}
+.msx .msx-is-vw video{position:absolute;left:-43.4%;top:-6.97%;width:187.3%;height:112.9%;max-width:none;max-height:none;object-fit:fill;filter:drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 6%;z-index:7;background:#0b1030;transition:opacity .3s;pointer-events:none}
+.msx .msx-is-vbg.out{opacity:0}
 .msx .msx-is.meet .msx-is-in{animation:msxIsIn .62s cubic-bezier(.2,1.25,.4,1) both}
 .msx .msx-is.meet .msx-is-mc{animation:msxIsUp .45s ease-out .35s both}
 .msx .msx-is.meet .msx-is-band{animation:msxIsBand .4s cubic-bezier(.2,1.3,.4,1) .45s both}

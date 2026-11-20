@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 723a17efc6416c8f
+// source-sha256: dc7587541479cb94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163225,6 +163225,86 @@ function MsxIssa({
     onChoose: choose
   });
 }
+const MSX_ISSA_VID = Object.freeze({
+  alpha: 'images/success/issa-entrance-alpha.webm',
+  bg: 'images/success/issa-entrance-bg.mp4'
+});
+const msxIssaVidKind = () => {
+  try {
+    if (typeof document === 'undefined' || typeof navigator === 'undefined') return null;
+    if (typeof window !== 'undefined' && (window.__msxIssaVidForce === 'alpha' || window.__msxIssaVidForce === 'bg')) return window.__msxIssaVidForce;
+    const v = document.createElement('video');
+    if (!v || typeof v.canPlayType !== 'function') return null;
+    const ua = String(navigator.userAgent || '');
+    const ios = /iPad|iPhone|iPod/.test(ua) || navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1;
+    const appleWebkit = ios || /AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/.test(ua);
+    if (!appleWebkit && v.canPlayType('video/webm; codecs="vp9"')) return 'alpha';
+    if (v.canPlayType('video/mp4; codecs="avc1.64001F"') || v.canPlayType('video/mp4')) return 'bg';
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+function MsxIssaVid({
+  kind,
+  out = false,
+  onEnd
+}) {
+  const ref = useRef(null);
+  const on = useRef(false);
+  const done = useRef(false);
+  const end = () => {
+    if (!done.current) {
+      done.current = true;
+      onEnd();
+    }
+  };
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) {
+      end();
+      return undefined;
+    }
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    if (typeof window !== 'undefined' && Number(window.__msxIssaVidRate) > 0) v.playbackRate = Number(window.__msxIssaVidRate);
+    const t = setTimeout(() => {
+      if (!on.current) end();
+    }, 2500);
+    try {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(end);
+    } catch (e) {
+      end();
+    }
+    return () => clearTimeout(t);
+  }, []);
+  const props = {
+    ref,
+    src: MSX_ISSA_VID[kind],
+    muted: true,
+    playsInline: true,
+    'webkit-playsinline': 'true',
+    preload: 'auto',
+    disablePictureInPicture: true,
+    controls: false,
+    onPlaying: () => {
+      on.current = true;
+    },
+    onEnded: end,
+    onError: end,
+    'aria-hidden': 'true',
+    'data-msx-issa-vid': kind
+  };
+  return kind === 'alpha' ? React.createElement("div", {
+    className: "msx-is-vw"
+  }, React.createElement("video", _extends({
+    className: "msx-is-vid"
+  }, props))) : React.createElement("video", _extends({
+    className: `msx-is-vbg${out ? ' out' : ''}`
+  }, props));
+}
 function MsxIssaMeet({
   run,
   v,
@@ -163243,6 +163323,15 @@ function MsxIssaMeet({
   });
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(calm ? [] : [['issaIn', 120]], []);
   const sel = MSX_ISSA_KEYS.find(x => x.key === pick);
+  const [vid, setVid] = useState(() => calm ? null : msxIssaVidKind());
+  const [vOut, setVOut] = useState(false);
+  const usedVid = useRef(Boolean(vid));
+  const vidEnd = () => {
+    if (vid === 'bg') {
+      setVOut(true);
+      setTimeout(() => setVid(null), 300);
+    } else setVid(null);
+  };
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -163262,7 +163351,7 @@ function MsxIssaMeet({
     style: {
       background: '#0f0d2466'
     }
-  }), React.createElement("span", {
+  }), usedVid.current ? null : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "msx-is-ring",
     "aria-hidden": "true"
   }), React.createElement("span", {
@@ -163273,10 +163362,14 @@ function MsxIssaMeet({
     style: {
       '--i': i
     }
-  }))), React.createElement("img", {
-    className: "v-issa msx-is-in",
+  })))), vid === 'alpha' ? React.createElement(MsxIssaVid, {
+    kind: "alpha",
+    onEnd: vidEnd
+  }) : React.createElement("img", {
+    className: `v-issa${usedVid.current ? '' : ' msx-is-in'}`,
     src: MSX_ISSA_ART,
-    alt: "イッサ博士"
+    alt: "イッサ博士",
+    "data-msx-issa-still": true
   }), React.createElement("div", {
     className: "v-machine msx-is-mc"
   }, "⚙️💡", React.createElement("small", null, "のびのび装置"), React.createElement(MsxMonArt, {
@@ -163295,10 +163388,20 @@ function MsxIssaMeet({
       borderRadius: '0 99px 99px 0'
     },
     title: "イッサ博士があらわれた!"
-  }), React.createElement("div", {
+  }), vid ? null : React.createElement("div", {
     className: "v-ibub msx-is-bub",
     style: MSX_IS_WRAP
-  }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`))), React.createElement("div", {
+  }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)), vid === 'bg' ? React.createElement(MsxIssaVid, {
+    kind: "bg",
+    out: vOut,
+    onEnd: vidEnd
+  }) : null, usedVid.current && typeof MsxFxSkip === 'function' ? React.createElement(MsxFxSkip, {
+    show: Boolean(vid) && !vOut,
+    onSkip: vidEnd,
+    attrs: {
+      'data-msx-issa-skip': 1
+    }
+  }) : null), React.createElement("div", {
     className: "v-six msx-is-six"
   }, MSX_ISSA_KEYS.map((x, i) => {
     const p = SUC.issaRate(s, x.key);
@@ -163537,6 +163640,10 @@ const MSX_IS_CSS = `
 .msx .msx-is .v-issa{transition:filter .4s,transform .4s}
 .msx .msx-is .v-issa.back{transform:translateX(-14%) scale(.92);filter:brightness(.8) drop-shadow(0 6px 6px #000a)}
 .msx .msx-is .v-issa.sad{filter:grayscale(.45) brightness(.82) drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vw{position:absolute;left:2%;bottom:-58%;height:150%;aspect-ratio:305/900;pointer-events:none}
+.msx .msx-is-vw video{position:absolute;left:-43.4%;top:-6.97%;width:187.3%;height:112.9%;max-width:none;max-height:none;object-fit:fill;filter:drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 6%;z-index:7;background:#0b1030;transition:opacity .3s;pointer-events:none}
+.msx .msx-is-vbg.out{opacity:0}
 .msx .msx-is.meet .msx-is-in{animation:msxIsIn .62s cubic-bezier(.2,1.25,.4,1) both}
 .msx .msx-is.meet .msx-is-mc{animation:msxIsUp .45s ease-out .35s both}
 .msx .msx-is.meet .msx-is-band{animation:msxIsBand .4s cubic-bezier(.2,1.3,.4,1) .45s both}
