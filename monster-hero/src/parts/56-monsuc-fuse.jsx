@@ -280,11 +280,8 @@ const MONSUC_FUSE_CSS = `
 .mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
 .mf-flash{position:absolute;inset:0;z-index:3;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
 .mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
-.mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
-.mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
 .mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;text-align:center} /* 字を真ん中に(合体中…が左へ寄っていた・r1115-202) */
 .mf-next:disabled{opacity:.4}
-.mf-skip{position:relative;z-index:2;margin:0 16px 22px;min-height:44px;padding:0 22px;border-radius:99px;background:rgba(15,23,42,.8);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:14px;font-weight:900}
 .mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
 @keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
@@ -323,7 +320,8 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
       </div>
       {st === 2 ? <span className="mf-flash" aria-hidden="true"/> : null}{/* 光は画面ぜんぶに(窓-09: 場の帯だけが白くなっていた) */}
       {st >= 3 ? <button type="button" className="mf-next" onClick={(e) => { e.stopPropagation(); onDone(); }} data-monsuc-fuse-show-next>次へ ▶</button>
-        : <button type="button" className="mf-skip" onClick={(e) => { e.stopPropagation(); setSt(3); }} data-monsuc-fuse-skip>飛ばす ⏭</button>}{/* 押せない「合体中…」の帯はやめ、演出の間は「飛ばす」だけ(窓-38) */}
+        : null}{/* 押せない「合体中…」の帯はやめた(窓-38) */}
+      {typeof MsxFxSkip === 'function' ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-monsuc-fuse-skip': 1 }}/> : null}{/* 演出を飛ばすのは右下のスキップ(誕生・覚醒と同じ形) */}
     </div>
   );
 }

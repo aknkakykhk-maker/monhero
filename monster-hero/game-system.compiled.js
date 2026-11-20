@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3120267eb368ea95
+// source-sha256: abecf7fd16460a3e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161758,11 +161758,8 @@ const MONSUC_FUSE_CSS = `
 .mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
 .mf-flash{position:absolute;inset:0;z-index:3;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
 .mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
-.mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
-.mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
 .mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;text-align:center} /* 字を真ん中に(合体中…が左へ寄っていた・r1115-202) */
 .mf-next:disabled{opacity:.4}
-.mf-skip{position:relative;z-index:2;margin:0 16px 22px;min-height:44px;padding:0 22px;border-radius:99px;background:rgba(15,23,42,.8);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:14px;font-weight:900}
 .mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
 @keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
@@ -161846,15 +161843,13 @@ function MonsucFuseShow({
       onDone();
     },
     "data-monsuc-fuse-show-next": true
-  }, "次へ ▶") : React.createElement("button", {
-    type: "button",
-    className: "mf-skip",
-    onClick: e => {
-      e.stopPropagation();
-      setSt(3);
-    },
-    "data-monsuc-fuse-skip": true
-  }, "飛ばす ⏭"));
+  }, "次へ ▶") : null, typeof MsxFxSkip === 'function' ? React.createElement(MsxFxSkip, {
+    show: st < 3,
+    onSkip: () => setSt(3),
+    attrs: {
+      'data-monsuc-fuse-skip': 1
+    }
+  }) : null);
 }
 const MONSUC_SHOP_OFFERS = Object.freeze([{
   itemId: 'oil',
@@ -162483,7 +162478,8 @@ function MsxAwakeShow({
       flex: '1 1 0'
     },
     "data-msx-awake": k,
-    "data-msx-awake-step": st
+    "data-msx-awake-step": st,
+    onClick: () => setSt(n => Math.min(3, n + 1))
   }, React.createElement("img", {
     className: "bg",
     src: msxSceneBg(s.turn).bg,
@@ -162535,17 +162531,13 @@ function MsxAwakeShow({
     "aria-hidden": "true"
   }) : null, st >= 2 ? React.createElement("div", {
     className: `msx-aw-stamp k${k} msx-pop`
-  }, k === 2 ? '超覚醒!!' : '覚醒!', React.createElement("small", null, "全能力 +", fire.add)) : null, st < 3 && !calm ? React.createElement("div", {
-    className: "msx-aw-ctl"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(n => Math.min(3, n + 1)),
-    "data-msx-awake-ff": true
-  }, "早送り ⏩"), React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(3),
-    "data-msx-awake-skip": true
-  }, "飛ばす ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
+  }, k === 2 ? '超覚醒!!' : '覚醒!', React.createElement("small", null, "全能力 +", fire.add)) : null, !calm && typeof MsxFxSkip === 'function' ? React.createElement(MsxFxSkip, {
+    show: st < 3,
+    onSkip: () => setSt(3),
+    attrs: {
+      'data-msx-awake-skip': 1
+    }
+  }) : null), st >= 2 ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: fire.ups
@@ -162617,8 +162609,6 @@ const MSX_AW_CSS = `
 .msx .msx-aw-slash{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 .msx .msx-aw-slash i{position:absolute;left:-20%;width:140%;height:7px;top:calc(48% + var(--i) * 14%);border-radius:7px;transform:rotate(-14deg);background:linear-gradient(90deg,transparent,#fff 30%,#fde047 60%,transparent);box-shadow:0 0 14px #fde047;animation:msxAwSlash .5s ease-out both;animation-delay:calc(.15s + var(--i) * .22s)}
 .msx .msx-aw.k2 .msx-aw-slash i{background:linear-gradient(90deg,transparent,#fff 20%,#f472b6 45%,#60a5fa 65%,#fde047 80%,transparent);box-shadow:0 0 16px #f472b6}
-.msx .msx-aw-ctl{position:absolute;left:0;right:0;bottom:8px;z-index:7;display:flex;justify-content:center;gap:10px}
-.msx .msx-aw-ctl button{min-width:92px;padding:5px 12px;border-radius:999px;background:#0f0d24cc;border:1.5px solid #fde047;color:#fde047;font-size:12px;font-weight:900;text-align:center}
 @keyframes msxAwTame{from{transform:translateX(-50%) scale(.82)}to{transform:translateX(-50%) scale(1)}}
 @keyframes msxAwShake{0%{transform:translateX(-50%) translate(0,0)}25%{transform:translateX(-50%) translate(-2px,1px)}50%{transform:translateX(-50%) translate(2px,-1px)}75%{transform:translateX(-50%) translate(-1px,-1px)}100%{transform:translateX(-50%) translate(0,0)}}
 @keyframes msxAwHead{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
@@ -162672,6 +162662,23 @@ const msxBirthCalm = () => {
     return false;
   }
 };
+const MSX_FX_SKIP_CSS = '.msx-fx-skip{position:absolute;right:12px;bottom:12px;z-index:8;min-height:44px;padding:0 18px;border-radius:999px;background:rgba(15,13,36,.82);border:2px solid rgba(255,255,255,.6);color:#fff;font-size:14px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}.msx-fx-skip.off{opacity:0;pointer-events:none}';
+function MsxFxSkip({
+  show = true,
+  onSkip,
+  attrs = null
+}) {
+  return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_FX_SKIP_CSS), React.createElement("button", _extends({
+    type: "button",
+    className: `msx-fx-skip${show ? '' : ' off'}`,
+    "aria-hidden": show ? undefined : 'true',
+    tabIndex: show ? 0 : -1,
+    onClick: e => {
+      e.stopPropagation();
+      if (show && onSkip) onSkip();
+    }
+  }, show && attrs ? attrs : {}), "スキップ ⏭"));
+}
 function MsxBirth({
   run,
   v,
@@ -162743,20 +162750,22 @@ function MsxBirth({
     },
     live: true,
     noPeak: true
-  })) : null, React.createElement("div", {
+  })) : null, !calm ? React.createElement(MsxFxSkip, {
+    show: st < 3,
+    onSkip: () => setSt(3),
+    attrs: {
+      'data-msx-birth-skip': 1
+    }
+  }) : null, React.createElement("div", {
     className: "msx-birth-head"
   }, React.createElement("small", null, fused ? '合体円盤石' : 'ベースモンの円盤石'), st >= 3 ? `${name}が生まれた!` : null)), React.createElement("div", {
     className: "v-log"
   }, st >= 3 ? React.createElement(React.Fragment, null, "ここから", React.createElement("b", null, name), "の育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
     className: "v-ft"
-  }, st < 3 ? React.createElement("button", {
+  }, React.createElement("button", {
     type: "button",
     className: "go",
-    onClick: () => setSt(3),
-    "data-msx-birth-skip": true
-  }, "飛ばす ⏭") : React.createElement("button", {
-    type: "button",
-    className: "go",
+    disabled: st < 3,
     onClick: onDone,
     "data-msx-birth-next": true
   }, "育成を始める ▶")));

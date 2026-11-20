@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 16bc503fde75f7d5
+// generated-sha256: c47860625cc87599
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84195,11 +84195,8 @@ const MONSUC_FUSE_CSS = `
 .mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
 .mf-flash{position:absolute;inset:0;z-index:3;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
 .mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
-.mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
-.mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
 .mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;text-align:center} /* 字を真ん中に(合体中…が左へ寄っていた・r1115-202) */
 .mf-next:disabled{opacity:.4}
-.mf-skip{position:relative;z-index:2;margin:0 16px 22px;min-height:44px;padding:0 22px;border-radius:99px;background:rgba(15,23,42,.8);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:14px;font-weight:900}
 .mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
 @keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
@@ -84238,7 +84235,8 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
       </div>
       {st === 2 ? <span className="mf-flash" aria-hidden="true"/> : null}{/* 光は画面ぜんぶに(窓-09: 場の帯だけが白くなっていた) */}
       {st >= 3 ? <button type="button" className="mf-next" onClick={(e) => { e.stopPropagation(); onDone(); }} data-monsuc-fuse-show-next>次へ ▶</button>
-        : <button type="button" className="mf-skip" onClick={(e) => { e.stopPropagation(); setSt(3); }} data-monsuc-fuse-skip>飛ばす ⏭</button>}{/* 押せない「合体中…」の帯はやめ、演出の間は「飛ばす」だけ(窓-38) */}
+        : null}{/* 押せない「合体中…」の帯はやめた(窓-38) */}
+      {typeof MsxFxSkip === 'function' ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-monsuc-fuse-skip': 1 }}/> : null}{/* 演出を飛ばすのは右下のスキップ(誕生・覚醒と同じ形) */}
     </div>
   );
 }
@@ -84565,7 +84563,7 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
   const big = st < 2;
   return (<>
     {typeof MsxBand === 'function' ? <MsxBand s={s} v={v} ev={ev}/> : null}
-    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} data-msx-awake={k} data-msx-awake-step={st}>
+    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} data-msx-awake={k} data-msx-awake-step={st} onClick={() => setSt((n) => Math.min(3, n + 1))}>{/* 画面を押すと次の段へ(早送りのボタンの代わり) */}
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       {st < 3 ? <span className="msx-aw-dim" aria-hidden="true"/> : <span className="msx-aw-after" aria-hidden="true"/>}
       {st === 1 || st === 2 ? <span className="msx-aw-qi" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <i key={i} style={{ '--i': i }}/>)}</span> : null}
@@ -84575,7 +84573,7 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
       {st < 2 ? <div className={`msx-aw-head k${k}`}><small>育成イベント</small>{run.nick}{k === 2 ? '超覚醒!!' : '覚醒!!'}</div> : null}
       {st === 2 ? <span className="msx-aw-flash" aria-hidden="true"/> : null}
       {st >= 2 ? <div className={`msx-aw-stamp k${k} msx-pop`}>{k === 2 ? '超覚醒!!' : '覚醒!'}<small>全能力 +{fire.add}</small></div> : null}
-      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-awake-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-awake-skip>飛ばす ⏭</button></div> : null}
+      {!calm && typeof MsxFxSkip === 'function' ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-msx-awake-skip': 1 }}/> : null}{/* 早送りはやめ、右下のスキップ1つ(r1119-051・誕生・合体と同じ形) */}
     </div>
     {st >= 2 ? <MsxStRow who={s} stats={s.stats} ups={fire.ups}/> : null}
     <div className="v-log">
@@ -84641,8 +84639,6 @@ const MSX_AW_CSS = `
 .msx .msx-aw-slash{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 .msx .msx-aw-slash i{position:absolute;left:-20%;width:140%;height:7px;top:calc(48% + var(--i) * 14%);border-radius:7px;transform:rotate(-14deg);background:linear-gradient(90deg,transparent,#fff 30%,#fde047 60%,transparent);box-shadow:0 0 14px #fde047;animation:msxAwSlash .5s ease-out both;animation-delay:calc(.15s + var(--i) * .22s)}
 .msx .msx-aw.k2 .msx-aw-slash i{background:linear-gradient(90deg,transparent,#fff 20%,#f472b6 45%,#60a5fa 65%,#fde047 80%,transparent);box-shadow:0 0 16px #f472b6}
-.msx .msx-aw-ctl{position:absolute;left:0;right:0;bottom:8px;z-index:7;display:flex;justify-content:center;gap:10px}
-.msx .msx-aw-ctl button{min-width:92px;padding:5px 12px;border-radius:999px;background:#0f0d24cc;border:1.5px solid #fde047;color:#fde047;font-size:12px;font-weight:900;text-align:center}
 @keyframes msxAwTame{from{transform:translateX(-50%) scale(.82)}to{transform:translateX(-50%) scale(1)}}
 @keyframes msxAwShake{0%{transform:translateX(-50%) translate(0,0)}25%{transform:translateX(-50%) translate(-2px,1px)}50%{transform:translateX(-50%) translate(2px,-1px)}75%{transform:translateX(-50%) translate(-1px,-1px)}100%{transform:translateX(-50%) translate(0,0)}}
 @keyframes msxAwHead{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
@@ -84699,6 +84695,15 @@ const msxBirthCalm = () => {
   try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
 };
 
+// 演出を飛ばす「スキップ」(r1119-051 の呼び名・2026-11-20 社長「左側に一瞬"飛ばす"みたいなのが出ていた」)。
+//   誕生・合体・覚醒の演出で同じ形: 演出の初めから右下の決まった場所にずっと出し、演出が終わったら静かに消す(ちらつかせない)。
+//   show=false で薄れて消える(押せなくなる)。attrs で各演出の目印(data-msx-birth-skip など)を付ける
+const MSX_FX_SKIP_CSS = '.msx-fx-skip{position:absolute;right:12px;bottom:12px;z-index:8;min-height:44px;padding:0 18px;border-radius:999px;background:rgba(15,13,36,.82);border:2px solid rgba(255,255,255,.6);color:#fff;font-size:14px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}.msx-fx-skip.off{opacity:0;pointer-events:none}';
+function MsxFxSkip({ show = true, onSkip, attrs = null }) {
+  return (<><style>{MSX_FX_SKIP_CSS}</style>
+    <button type="button" className={`msx-fx-skip${show ? '' : ' off'}`} aria-hidden={show ? undefined : 'true'} tabIndex={show ? 0 : -1} onClick={(e) => { e.stopPropagation(); if (show && onSkip) onSkip(); }} {...(show && attrs ? attrs : {})}>スキップ ⏭</button></>);
+}
+
 function MsxBirth({ run, v, ev, onDone }) {
   msxBirthEnsureCss();
   const calm = msxBirthCalm();
@@ -84723,12 +84728,12 @@ function MsxBirth({ run, v, ev, onDone }) {
       {st === 2 ? <span className="msx-birth-flash" aria-hidden="true"/> : null}
       {st >= 3 ? <><div className="gr" style={{ bottom: 'calc(14% - 5px)' }}/>
         <MsxMonArt run={run} className="mon msx-birth-mon" style={{ bottom: '14%', height: '46%' }} live noPeak/></> : null}
+      {!calm ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-msx-birth-skip': 1 }}/> : null}
       <div className="msx-birth-head"><small>{fused ? '合体円盤石' : 'ベースモンの円盤石'}</small>{st >= 3 ? `${name}が生まれた!` : null}</div>{/* 上の札は場所の名前だけ。語りは下の文の1か所(再点検 msx-IN: 同じ出来事を2か所で語っていた) */}
       
     </div>
     <div className="v-log">{st >= 3 ? <>ここから<b>{name}</b>の育成がはじまる。</> : <>円盤石が、あたたかい光につつまれていく…</>}</div>
-    <div className="v-ft">{st < 3 ? <button type="button" className="go" onClick={() => setSt(3)} data-msx-birth-skip>飛ばす ⏭</button>
-      : <button type="button" className="go" onClick={onDone} data-msx-birth-next>育成を始める ▶</button>}</div>{/* 押せる物は下の1つだけ(演出の間は「飛ばす」、生まれたら「育成を始める」) */}
+    <div className="v-ft"><button type="button" className="go" disabled={st < 3} onClick={onDone} data-msx-birth-next>育成を始める ▶</button></div>
   </>);
 }
 

@@ -12,6 +12,15 @@ const msxBirthCalm = () => {
   try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
 };
 
+// 演出を飛ばす「スキップ」(r1119-051 の呼び名・2026-11-20 社長「左側に一瞬"飛ばす"みたいなのが出ていた」)。
+//   誕生・合体・覚醒の演出で同じ形: 演出の初めから右下の決まった場所にずっと出し、演出が終わったら静かに消す(ちらつかせない)。
+//   show=false で薄れて消える(押せなくなる)。attrs で各演出の目印(data-msx-birth-skip など)を付ける
+const MSX_FX_SKIP_CSS = '.msx-fx-skip{position:absolute;right:12px;bottom:12px;z-index:8;min-height:44px;padding:0 18px;border-radius:999px;background:rgba(15,13,36,.82);border:2px solid rgba(255,255,255,.6);color:#fff;font-size:14px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}.msx-fx-skip.off{opacity:0;pointer-events:none}';
+function MsxFxSkip({ show = true, onSkip, attrs = null }) {
+  return (<><style>{MSX_FX_SKIP_CSS}</style>
+    <button type="button" className={`msx-fx-skip${show ? '' : ' off'}`} aria-hidden={show ? undefined : 'true'} tabIndex={show ? 0 : -1} onClick={(e) => { e.stopPropagation(); if (show && onSkip) onSkip(); }} {...(show && attrs ? attrs : {})}>スキップ ⏭</button></>);
+}
+
 function MsxBirth({ run, v, ev, onDone }) {
   msxBirthEnsureCss();
   const calm = msxBirthCalm();
@@ -36,12 +45,12 @@ function MsxBirth({ run, v, ev, onDone }) {
       {st === 2 ? <span className="msx-birth-flash" aria-hidden="true"/> : null}
       {st >= 3 ? <><div className="gr" style={{ bottom: 'calc(14% - 5px)' }}/>
         <MsxMonArt run={run} className="mon msx-birth-mon" style={{ bottom: '14%', height: '46%' }} live noPeak/></> : null}
+      {!calm ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-msx-birth-skip': 1 }}/> : null}
       <div className="msx-birth-head"><small>{fused ? '合体円盤石' : 'ベースモンの円盤石'}</small>{st >= 3 ? `${name}が生まれた!` : null}</div>{/* 上の札は場所の名前だけ。語りは下の文の1か所(再点検 msx-IN: 同じ出来事を2か所で語っていた) */}
       
     </div>
     <div className="v-log">{st >= 3 ? <>ここから<b>{name}</b>の育成がはじまる。</> : <>円盤石が、あたたかい光につつまれていく…</>}</div>
-    <div className="v-ft">{st < 3 ? <button type="button" className="go" onClick={() => setSt(3)} data-msx-birth-skip>飛ばす ⏭</button>
-      : <button type="button" className="go" onClick={onDone} data-msx-birth-next>育成を始める ▶</button>}</div>{/* 押せる物は下の1つだけ(演出の間は「飛ばす」、生まれたら「育成を始める」) */}
+    <div className="v-ft"><button type="button" className="go" disabled={st < 3} onClick={onDone} data-msx-birth-next>育成を始める ▶</button></div>
   </>);
 }
 

@@ -70,7 +70,7 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
   const big = st < 2;
   return (<>
     {typeof MsxBand === 'function' ? <MsxBand s={s} v={v} ev={ev}/> : null}
-    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} data-msx-awake={k} data-msx-awake-step={st}>
+    <div className={`v-scene msx-aw k${k} st${st}`} style={{ flex: '1 1 0' }} data-msx-awake={k} data-msx-awake-step={st} onClick={() => setSt((n) => Math.min(3, n + 1))}>{/* 画面を押すと次の段へ(早送りのボタンの代わり) */}
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       {st < 3 ? <span className="msx-aw-dim" aria-hidden="true"/> : <span className="msx-aw-after" aria-hidden="true"/>}
       {st === 1 || st === 2 ? <span className="msx-aw-qi" aria-hidden="true">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <i key={i} style={{ '--i': i }}/>)}</span> : null}
@@ -80,7 +80,7 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
       {st < 2 ? <div className={`msx-aw-head k${k}`}><small>育成イベント</small>{run.nick}{k === 2 ? '超覚醒!!' : '覚醒!!'}</div> : null}
       {st === 2 ? <span className="msx-aw-flash" aria-hidden="true"/> : null}
       {st >= 2 ? <div className={`msx-aw-stamp k${k} msx-pop`}>{k === 2 ? '超覚醒!!' : '覚醒!'}<small>全能力 +{fire.add}</small></div> : null}
-      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-awake-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-awake-skip>飛ばす ⏭</button></div> : null}
+      {!calm && typeof MsxFxSkip === 'function' ? <MsxFxSkip show={st < 3} onSkip={() => setSt(3)} attrs={{ 'data-msx-awake-skip': 1 }}/> : null}{/* 早送りはやめ、右下のスキップ1つ(r1119-051・誕生・合体と同じ形) */}
     </div>
     {st >= 2 ? <MsxStRow who={s} stats={s.stats} ups={fire.ups}/> : null}
     <div className="v-log">
@@ -146,8 +146,6 @@ const MSX_AW_CSS = `
 .msx .msx-aw-slash{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 .msx .msx-aw-slash i{position:absolute;left:-20%;width:140%;height:7px;top:calc(48% + var(--i) * 14%);border-radius:7px;transform:rotate(-14deg);background:linear-gradient(90deg,transparent,#fff 30%,#fde047 60%,transparent);box-shadow:0 0 14px #fde047;animation:msxAwSlash .5s ease-out both;animation-delay:calc(.15s + var(--i) * .22s)}
 .msx .msx-aw.k2 .msx-aw-slash i{background:linear-gradient(90deg,transparent,#fff 20%,#f472b6 45%,#60a5fa 65%,#fde047 80%,transparent);box-shadow:0 0 16px #f472b6}
-.msx .msx-aw-ctl{position:absolute;left:0;right:0;bottom:8px;z-index:7;display:flex;justify-content:center;gap:10px}
-.msx .msx-aw-ctl button{min-width:92px;padding:5px 12px;border-radius:999px;background:#0f0d24cc;border:1.5px solid #fde047;color:#fde047;font-size:12px;font-weight:900;text-align:center}
 @keyframes msxAwTame{from{transform:translateX(-50%) scale(.82)}to{transform:translateX(-50%) scale(1)}}
 @keyframes msxAwShake{0%{transform:translateX(-50%) translate(0,0)}25%{transform:translateX(-50%) translate(-2px,1px)}50%{transform:translateX(-50%) translate(2px,-1px)}75%{transform:translateX(-50%) translate(-1px,-1px)}100%{transform:translateX(-50%) translate(0,0)}}
 @keyframes msxAwHead{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
