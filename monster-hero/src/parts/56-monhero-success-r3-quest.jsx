@@ -96,7 +96,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     void stg;
     const body = (<>
       {/* 体力の減りは帯の棒が前の値から縮んで見せる(2026-11-20 r1119-033 育-79: 文に書くだけで棒が動かなかった) */}
-      <MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)} hpFrom={Number.isFinite(res.hp0) ? res.hp0 : null}/>
+      <MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)} hpFrom={Number.isFinite(res.hp0) ? res.hp0 : null} gainTag={false}/>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[o.course] || 'forest_evening'}.jpg`} alt=""/><div className="sh"/>{learned ? <div className="v-burst"/> : null}
         <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/><MsxMonArt run={run} className="mon" noPeak style={{ bottom: '16%', height: '44%', ...(learned ? {} : { filter: 'grayscale(.25)' }) }}/>
         {/* 覚えた/覚えなかったをはっきり(2026-11-15 社長 r1115-063): 覚えた=金・覚えられなかった=灰・技を選ばなかった=修行終わり */}
@@ -129,8 +129,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         <div className="q-bd-mul msx-kp">{mulLine(o.mulInfo, o.super)}</div></> : null}
       </div>); })() : null}
       <MsxStRow who={s} stats={s.stats} ups={gains}/>
+      {/* 体力の減りは上の帯の棒が縮んで見せ、数は下の文の1か所だけ(帯の「−30」は出さない・2026-11-20 r1119-033 観点8) */}
       <div className="v-log msx-kp"><span className="hd2">⚔ 修行のけっか</span><br/>
-        {Object.keys(gains).length ? null : <>能力は上がらなかった<br/></>}
+        {Object.keys(gains).length ? null : <>能力は上がらなかった/</>}
         体力が <b className="gd">{Math.max(0, res.hp0 - s.hp)}</b> 下がった
         {learnedAll.length ? <>/技{learnedAll.map((x, i) => <React.Fragment key={x.id}>{i ? 'と' : ''}「<b className="ga">{x.name}</b>」</React.Fragment>)}を覚えた!</> : null}
         {missed.length ? <>/{missed.join('・')}は覚えられなかった</> : null}

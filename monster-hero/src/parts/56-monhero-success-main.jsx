@@ -125,7 +125,7 @@ const msxLwNow = (s) => { const l = msxLwList(s); const t = Number(s && s.turn) 
 const msxBandMem = { id: null, loy: 0, pop: 0, dl: 0, dp: 0, tl: 0, tp: 0 };
 const MSX_BAND_DELTA_MS = 2600;
 // hpFrom / stFrom … 休む・遊ぶ・通院の結果で、体力・ストレスの棒を前の値から伸び縮みさせる(2026-11-14 社長「休んだときのゲージの変動がない」)
-function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null }) {
+function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, gainTag = true }) {
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax); const hp = Math.max(0, Math.min(max, s.hp));
   const after = Math.max(0, hp - use);
@@ -159,7 +159,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
       <div className="v-b2">
         <div className={`v-ga hp${after < max * 0.3 ? ' low' : ''}`}><span>❤️ 体力</span>
           <div className="tr"><i style={{ width: `${after / max * 100}%`, ...(grow(Number.isFinite(hpFrom) ? hpFrom / max * 100 : NaN, after / max * 100) || {}) }}/>{use ? <u style={{ left: `${after / max * 100}%`, width: `${Math.min(hp, use) / max * 100}%` }}/> : null}{max > 100 ? <s style={{ left: `${100 / max * 100}%` }}/> : null}</div>
-          {use ? <em>−{use}</em> : hpGain ? <em className={hpGain > 0 ? 'hl' : ''} data-msx-band-hp-gain>{hpGain > 0 ? `+${hpGain}` : hpGain}</em> : null}<b>{hp}<small className={max > 100 ? 'cap' : ''}>/{max}{max > 100 ? '▲' : ''}</small></b></div>
+          {use ? <em>−{use}</em> : hpGain && gainTag ? <em className={hpGain > 0 ? 'hl' : ''} data-msx-band-hp-gain>{hpGain > 0 ? `+${hpGain}` : hpGain}</em> : null}<b>{hp}<small className={max > 100 ? 'cap' : ''}>/{max}{max > 100 ? '▲' : ''}</small></b></div>
         <div className="v-ga st"><span>💢 ストレス</span>
           <div className="tr"><i style={{ width: `${s.stress}%`, ...(grow(stFrom, s.stress) || {}) }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
           {stAdd ? <em className="pl">+{stAdd}</em> : stGain ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
@@ -826,7 +826,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-scene msx-fade" style={{ flex: '1 1 0' }} data-msx-turn-scene><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%', opacity: .9 }} noPeak/><div className="v-clock">
-        <div className="v-cal msx-pop"><div className="y">{v.period.name}・{cal.year}年目</div><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
+        {/* 期と年は上の帯に出ているので、暦は月だけ(育-26) */}
+        <div className="v-cal msx-pop"><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
         {/* 残りのターンは上の帯の1か所だけ(2026-11-20 r1119-033 育-19・育-26・育-95: 帯・暦の下・大会の札に同じ数が3回出ていた) */}
         {v.period.key === 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 ヒーローズファイナル</div> : v.period.left <= 1 ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 このあと期末の大会</div> : null}
         {seasonChanged ? <div className="v-chip" style={{ position: 'static' }}>{MSX_SEASON[cal.season]}になった</div> : null}
@@ -898,7 +899,6 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
           {/* 計算の途中(基本▶編成▶タッグ)は見せず、「上がる量が何倍か」と内訳を1行で(2026-11-20 r1119-033 育-22・育-105) */}
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span data-msx-train-mult>上がる量 <b className="mx">×{card.mult}</b></span></div>
-          <div className="ch"><span>編成のアシスト +{Math.round(card.add * 100)}%</span>{tags.length ? <span className="tgx">🤝 タッグ{tags.length}人 +{Math.round(card.tag * 100)}%</span> : null}</div>
           {/* Lv は下の丸に出ているので、ここは次の Lv までだけ(観点8) */}
           {trainLv ? <div className="v-lvx"><b>{trainLv >= 5 ? 'トレーニングLv が 一番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i></div> : null}
         </div>}
@@ -1243,7 +1243,6 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
       <div className="v-card pk" data-msx-pts>
         <div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント</b></div>
         <div className="msx-row" style={{ justifyContent: 'space-around', margin: '6px 0' }}>
-          <div className="v-num"><small>持っている点</small><b>{s.pts}</b></div>
           <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>

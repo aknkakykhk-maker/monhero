@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2fa24531c89dbbd6
+// source-sha256: b6a535e94045e2a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166881,9 +166881,7 @@ function MsxKiShow({
     className: "msx-ki-next",
     key: "t1",
     "data-msx-ki-left": left
-  }, React.createElement("small", null, "NEXT"), React.createElement("div", null, React.createElement("b", {
-    className: "nm"
-  }, isFinal ? 'ヒーローズファイナル' : P[now].name))), React.createElement("div", {
+  }, React.createElement("small", null, "NEXT")), React.createElement("div", {
     className: "msx-ki-lad",
     key: "l1"
   }, rungs.map((r, j) => React.createElement(React.Fragment, {
@@ -178820,7 +178818,8 @@ function MsxBand({
   use = 0,
   stAdd = 0,
   hpFrom = null,
-  stFrom = null
+  stFrom = null,
+  gainTag = true
 }) {
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax);
@@ -178908,7 +178907,7 @@ function MsxBand({
     style: {
       left: `${100 / max * 100}%`
     }
-  }) : null), use ? React.createElement("em", null, "−", use) : hpGain ? React.createElement("em", {
+  }) : null), use ? React.createElement("em", null, "−", use) : hpGain && gainTag ? React.createElement("em", {
     className: hpGain > 0 ? 'hl' : '',
     "data-msx-band-hp-gain": true
   }, hpGain > 0 ? `+${hpGain}` : hpGain) : null, React.createElement("b", null, hp, React.createElement("small", {
@@ -180851,8 +180850,6 @@ function MsxPlay({
     }, React.createElement("div", {
       className: "v-cal msx-pop"
     }, React.createElement("div", {
-      className: "y"
-    }, v.period.name, "・", cal.year, "年目"), React.createElement("div", {
       className: "mth"
     }, cal.month, React.createElement("small", null, "月")), React.createElement("div", {
       className: "old"
@@ -181131,11 +181128,7 @@ function MsxPlay({
       "data-msx-train-mult": true
     }, "上がる量 ", React.createElement("b", {
       className: "mx"
-    }, "×", card.mult))), React.createElement("div", {
-      className: "ch"
-    }, React.createElement("span", null, "編成のアシスト +", Math.round(card.add * 100), "%"), tags.length ? React.createElement("span", {
-      className: "tgx"
-    }, "🤝 タッグ", tags.length, "人 +", Math.round(card.tag * 100), "%") : null), trainLv ? React.createElement("div", {
+    }, "×", card.mult))), trainLv ? React.createElement("div", {
       className: "v-lvx"
     }, React.createElement("b", null, trainLv >= 5 ? 'トレーニングLv が 一番上' : card.next ? `あと${card.next}回で Lv.${trainLv + 1}` : ''), React.createElement("i", null, React.createElement("u", {
       style: {
@@ -182312,8 +182305,6 @@ function MsxStats({
       margin: '6px 0'
     }
   }, React.createElement("div", {
-    className: "v-num"
-  }, React.createElement("small", null, "持っている点"), React.createElement("b", null, s.pts)), React.createElement("div", {
     className: "v-num"
   }, React.createElement("small", null, "使う点"), React.createElement("b", {
     style: {
@@ -186490,7 +186481,8 @@ function MsxR3Shugyo({
       s: s,
       v: SUC.peek(s),
       ev: SUC.evaluate(s),
-      hpFrom: Number.isFinite(res.hp0) ? res.hp0 : null
+      hpFrom: Number.isFinite(res.hp0) ? res.hp0 : null,
+      gainTag: false
     }), React.createElement("div", {
       className: "v-scene",
       style: {
@@ -186626,7 +186618,7 @@ function MsxR3Shugyo({
       className: "v-log msx-kp"
     }, React.createElement("span", {
       className: "hd2"
-    }, "⚔ 修行のけっか"), React.createElement("br", null), Object.keys(gains).length ? null : React.createElement(React.Fragment, null, "能力は上がらなかった", React.createElement("br", null)), "体力が ", React.createElement("b", {
+    }, "⚔ 修行のけっか"), React.createElement("br", null), Object.keys(gains).length ? null : React.createElement(React.Fragment, null, "能力は上がらなかった/"), "体力が ", React.createElement("b", {
       className: "gd"
     }, Math.max(0, res.hp0 - s.hp)), " 下がった", learnedAll.length ? React.createElement(React.Fragment, null, "/技", learnedAll.map((x, i) => React.createElement(React.Fragment, {
       key: x.id
@@ -187136,7 +187128,6 @@ function MsxR3GameOver({
   };
   void v;
   void ev;
-  const used = Math.max(0, Number(s.rematchUsed) || 0);
   const body = React.createElement(React.Fragment, null, React.createElement("div", {
     className: "v-scene dk",
     style: {
@@ -187178,11 +187169,9 @@ function MsxR3GameOver({
   }, "育成は ここまで…", React.createElement("small", null, "デビュー戦に 3回 負けた"))), React.createElement("div", {
     className: "v-card"
   }, React.createElement("div", {
-    className: "v-kv msx-kp"
-  }, React.createElement("b", null, "砂時計"), React.createElement("span", null, "負けた試合をやり直す物。デビュー戦に3回負けると、残っていても育成は終わる", used ? `(この育成で${used}回 使った)` : '')), React.createElement("div", {
     className: "v-kv"
   }, React.createElement("b", null, "記録"), React.createElement("span", null, s.turn, "ターン・トレーニング ", s.log && s.log.train || 0, "回")), React.createElement("div", {
-    className: "v-kv"
+    className: "v-kv msx-kp"
   }, React.createElement("b", null, "もちかえり"), React.createElement("span", null, "持ちこみ・使ったアイテム・修行チケットは戻らない。マスモンボックスには入らない"))), React.createElement(MsxSay, {
     aid: s.aid,
     ex: "troubled",

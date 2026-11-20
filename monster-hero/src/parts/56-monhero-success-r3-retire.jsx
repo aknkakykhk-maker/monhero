@@ -42,16 +42,14 @@ function MsxR3GameOver({ run, setRun, onPause }) {
   };
   // 終わった育成なので、上の帯(残りのターン・体力・ストレス)は出さない(2026-11-20 r1119-033 育-14)。負けは題の下の1か所だけ(育-12)
   void v; void ev;
-  const used = Math.max(0, Number(s.rematchUsed) || 0);
   const body = (<>
     <div className="v-scene dk" style={{ flex: '1 1 0', minHeight: 220 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>
       <div className="gr" style={{ bottom: 'calc(36% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '36%', height: '30%', filter: 'grayscale(.6) drop-shadow(0 8px 5px #0009)', transform: 'translateX(-50%) rotate(-8deg)' }}/>
       <div className="v-stamp ng msx-pop" data-msx-r3-over-ttl style={{ top: '5%', fontSize: 36, letterSpacing: 0, color: '#fee2e2', WebkitTextStroke: '3px #450a0a', paintOrder: 'stroke fill', textShadow: '0 3px 0 #450a0a, 0 0 12px #000' }}>育成は ここまで…<small>デビュー戦に 3回 負けた</small></div></div>
     <div className="v-card">
-      {/* 砂時計は負けた試合のやり直しに使う物。残っていても、デビュー戦に3回負けると育成は終わる(育-13) */}
-      <div className="v-kv msx-kp"><b>砂時計</b><span>負けた試合をやり直す物。デビュー戦に3回負けると、残っていても育成は終わる{used ? `(この育成で${used}回 使った)` : ''}</span></div>
+      {/* 「砂時計 残り 3/3」は、もう使えない物の数で迷わせたのでやめた(育-13) */}
       <div className="v-kv"><b>記録</b><span>{s.turn}ターン・トレーニング {(s.log && s.log.train) || 0}回</span></div>
-      <div className="v-kv"><b>もちかえり</b><span>持ちこみ・使ったアイテム・修行チケットは戻らない。マスモンボックスには入らない</span></div></div>
+      <div className="v-kv msx-kp"><b>もちかえり</b><span>持ちこみ・使ったアイテム・修行チケットは戻らない。マスモンボックスには入らない</span></div></div>
     <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっとトレーニングしてから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`}/>
     {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="over" title="育成は ここまで…" sub="デビュー戦に 3回 負けた" species={s.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
     {log ? <div className="v-card">{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</div> : null}

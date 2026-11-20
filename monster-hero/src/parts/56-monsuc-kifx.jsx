@@ -51,7 +51,7 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
         </div>
       </>) : (<>
         {/* 残りのターンは上の帯の1か所だけ。ここは次の段の名前を1行で出す(2026-11-20 r1119-033 育-119) */}
-        <div className="msx-ki-next" key="t1" data-msx-ki-left={left}><small>NEXT</small><div><b className="nm">{isFinal ? 'ヒーローズファイナル' : P[now].name}</b></div></div>
+        <div className="msx-ki-next" key="t1" data-msx-ki-left={left}><small>NEXT</small></div>
         <div className="msx-ki-lad" key="l1">
           {rungs.map((r, j) => (<React.Fragment key={r.i}>
             {j ? <i className="up" aria-hidden="true">▲</i> : null}
