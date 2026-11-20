@@ -1407,7 +1407,7 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
     <div className="mhm-card" data-assistant-masmon-formation>
       <p className="flex items-baseline justify-between text-[10px] font-black text-slate-400"><span>編成</span><span className="text-amber-200">{team.length}/{ASSISTANT_MASMON_DRAW_MAX}</span></p>
       <div className="mt-1 grid grid-cols-4 gap-1.5">
-        {slots.map(({ t, ok }) => ok
+        {slots.filter(x => x.ok).map(({ t, ok }) => ok
           ? <button key={t.monster} type="button" className="relative text-center" data-assistant-masmon-team={t.monster} onClick={() => onOpen(t)}>
               {t.lead && <em className="mhm-lead absolute left-0 top-0 z-[1]" style={{ fontSize: 8.5 }}>勇者</em>}
               <div className="mhm-stage"><AssistantMasmonPic t={t} size={cell}/></div>
@@ -1419,6 +1419,11 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
               <p className="mt-0.5 truncate text-[9.5px] font-bold text-sky-200">🔒 Lv{t.welcome}</p>
             </div>); })())}
       </div>
+      {/* まだ迎えていない枠は、絵の枠を並べず小さな札の1行に(2026-11-20 総点検 §10: 空の「?」の枠がいる子より目立っていた) */}
+      {slots.some(x => !x.ok) && <div className="mt-1.5 flex flex-wrap items-center gap-1" data-assistant-masmon-wait-row>
+        <span className="text-[10.5px] font-bold text-slate-400">まだの枠:</span>
+        {slots.filter(x => !x.ok).map(({ t }) => <span key={t.monster} className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200" data-assistant-masmon-wait={t.monster}>🔒 仲良し度Lv{t.welcome}</span>)}
+      </div>}
     </div>);
   return (<>
     <div className={`grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>

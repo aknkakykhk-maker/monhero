@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e92a17cf5849df0
+// generated-sha256: 3578ec8f520ffc2f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76301,7 +76301,7 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
     <div className="mhm-card" data-assistant-masmon-formation>
       <p className="flex items-baseline justify-between text-[10px] font-black text-slate-400"><span>編成</span><span className="text-amber-200">{team.length}/{ASSISTANT_MASMON_DRAW_MAX}</span></p>
       <div className="mt-1 grid grid-cols-4 gap-1.5">
-        {slots.map(({ t, ok }) => ok
+        {slots.filter(x => x.ok).map(({ t, ok }) => ok
           ? <button key={t.monster} type="button" className="relative text-center" data-assistant-masmon-team={t.monster} onClick={() => onOpen(t)}>
               {t.lead && <em className="mhm-lead absolute left-0 top-0 z-[1]" style={{ fontSize: 8.5 }}>勇者</em>}
               <div className="mhm-stage"><AssistantMasmonPic t={t} size={cell}/></div>
@@ -76313,6 +76313,11 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
               <p className="mt-0.5 truncate text-[9.5px] font-bold text-sky-200">🔒 Lv{t.welcome}</p>
             </div>); })())}
       </div>
+      {/* まだ迎えていない枠は、絵の枠を並べず小さな札の1行に(2026-11-20 総点検 §10: 空の「?」の枠がいる子より目立っていた) */}
+      {slots.some(x => !x.ok) && <div className="mt-1.5 flex flex-wrap items-center gap-1" data-assistant-masmon-wait-row>
+        <span className="text-[10.5px] font-bold text-slate-400">まだの枠:</span>
+        {slots.filter(x => !x.ok).map(({ t }) => <span key={t.monster} className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200" data-assistant-masmon-wait={t.monster}>🔒 仲良し度Lv{t.welcome}</span>)}
+      </div>}
     </div>);
   return (<>
     <div className={`grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -88318,16 +88323,12 @@ function AssistantLifeFriendPage({ life }) {
   // まだ何も起きていない(フレンドの家も行き来も置き手紙も無い)ときは、空の箱を並べずに案内1つにする(2026-11-11 社長「わかりづらさをどんどん改善して」・ナカヨシ12)
   const alfEmpty = !houses.length && !waiting.length && !st.out && !(st.back && !st.back.seen) && !st.came.length && !notes.length;
   const hideIfEmpty = alfEmpty ? { display: 'none' } : undefined;
-  return (
-    <div className="px-3 pb-3 pt-1" data-alf-page="on">
-      {alfEmpty && (
-        <div className={card} data-alf-empty-guide>
-          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
-          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
-          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
-        </div>)}
-      {/* フレンドの家と「🚪 訪ねる」をいちばん上に(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
+  // まだ見ていない「来てくれた・帰ってきた」があるときは、行き来の知らせを家の一覧より先に(2026-11-20 API の点検: 訪ねるが知らせより目立っていた)
+  const nowFirst = !!((st.back && !st.back.seen) || st.came.some(c => !c.seen));
+  const housesBlock = (<>
+      {/* フレンドの家と「🚪 訪ねる」をいちばん上に(来てくれた・帰ってきたの知らせがまだのときは、その下)(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
       <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
       <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
@@ -88353,6 +88354,16 @@ function AssistantLifeFriendPage({ life }) {
             <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
           </div>))}
       </div>
+  </>);
+  return (
+    <div className="px-3 pb-3 pt-1" data-alf-page="on">
+      {alfEmpty && (
+        <div className={card} data-alf-empty-guide>
+          <p className="text-[13px] font-black text-amber-200">🏘 フレンドができると、ここがにぎやかになります</p>
+          <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
+        </div>)}
+      {!nowFirst && housesBlock}
       {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
@@ -88366,6 +88377,7 @@ function AssistantLifeFriendPage({ life }) {
         {!st.out && !(st.back && !st.back.seen) && !st.came.length && <p className="text-[11px] text-slate-400">いまは、みんな家にいます。</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-slate-300" data-alf-today><span className="whitespace-nowrap">助手が行った {st.go}/{lim.go}</span><span className="whitespace-nowrap">来てくれた {st.come}/{lim.come}</span><span className="whitespace-nowrap">置き手紙 {st.look}通</span><span className="whitespace-nowrap">おみやげ {st.beatP}/{ALF_BEAT_P.dayMax}P</span></p>
       </div>
+      {nowFirst && housesBlock}
       {!alfEmpty && typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
@@ -88832,7 +88844,7 @@ function AlfGuestBook({ s, card, sec, onVisit }) {
         return (
           <div key={id} className="border-b border-slate-700/60 py-1 last:border-0" data-alb-guest={id}>
             <div className="flex items-center gap-1.5">
-              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん<AlfBondChip id={id} always/></p>
+              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん{!house && <AlfBondChip id={id} always/>}</p>{/* 家の一覧に出ている人は、ご縁の札を家の行だけに(2026-11-20 API の点検: 同じ札が2か所) */}
               <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">{alfAgoText(last)}・{days}日</span>
               {house ? <button type="button" className="shrink-0 rounded-xl bg-orange-400 px-2 py-1 text-[10.5px] font-black text-slate-950" data-alb-return={id} onClick={() => onVisit(house)}>🚶 返しに行く</button> : null}
             </div>

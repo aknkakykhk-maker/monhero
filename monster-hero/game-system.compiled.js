@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c136cc6ed4d9ffd6
+// source-sha256: 4a726a93272eadac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -144747,7 +144747,7 @@ function AssistantMasmonFormation({
     className: "text-amber-200"
   }, team.length, "/", ASSISTANT_MASMON_DRAW_MAX)), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
-  }, slots.map(({
+  }, slots.filter(x => x.ok).map(({
     t,
     ok
   }) => ok ? React.createElement("button", {
@@ -144804,7 +144804,18 @@ function AssistantMasmonFormation({
     }, "？"))), React.createElement("p", {
       className: "mt-0.5 truncate text-[9.5px] font-bold text-sky-200"
     }, "🔒 Lv", t.welcome));
-  })())));
+  })())), slots.some(x => !x.ok) && React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap items-center gap-1",
+    "data-assistant-masmon-wait-row": true
+  }, React.createElement("span", {
+    className: "text-[10.5px] font-bold text-slate-400"
+  }, "まだの枠:"), slots.filter(x => !x.ok).map(({
+    t
+  }) => React.createElement("span", {
+    key: t.monster,
+    className: "rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200",
+    "data-assistant-masmon-wait": t.monster
+  }, "🔒 仲良し度Lv", t.welcome))));
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: `grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`
   }, React.createElement("div", {
@@ -170091,22 +170102,15 @@ function AssistantLifeFriendPage({
   const hideIfEmpty = alfEmpty ? {
     display: 'none'
   } : undefined;
-  return React.createElement("div", {
-    className: "px-3 pb-3 pt-1",
-    "data-alf-page": "on"
-  }, alfEmpty && React.createElement("div", {
-    className: card,
-    "data-alf-empty-guide": true
-  }, React.createElement("p", {
-    className: "text-[13px] font-black text-amber-200"
-  }, "🏘 フレンドができると、ここがにぎやかになります"), React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
-  }, "・🚪 フレンドの家を訪ねて、助手や家具を見られます", React.createElement("br", null), "・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます"), React.createElement("p", {
-    className: "mt-1 text-[11px] leading-snug text-slate-300"
-  }, "フレンドが助手ライフを開くと、その人の家がここに並びます。")), React.createElement("p", {
+  const nowFirst = !!(st.back && !st.back.seen || st.came.some(c => !c.seen));
+  const housesBlock = React.createElement(React.Fragment, null, React.createElement("p", {
     className: sec,
     style: hideIfEmpty
-  }, "🏠 フレンドの家"), React.createElement("div", {
+  }, "🏠 フレンドの家"), houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE,
+    "data-alf-bond-note": true
+  }, jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
     "data-alf-houses": true,
     style: hideIfEmpty
   }, houses.length ? houses.map(f => {
@@ -170188,7 +170192,20 @@ function AssistantLifeFriendPage({
     className: "text-[10px] leading-snug text-slate-300"
   }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
     className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
-  }, "🚪 まだ")))), !s.intro && !alfEmpty && React.createElement("div", {
+  }, "🚪 まだ")))));
+  return React.createElement("div", {
+    className: "px-3 pb-3 pt-1",
+    "data-alf-page": "on"
+  }, alfEmpty && React.createElement("div", {
+    className: card,
+    "data-alf-empty-guide": true
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-amber-200"
+  }, "🏘 フレンドができると、ここがにぎやかになります"), React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
+  }, "・🚪 フレンドの家を訪ねて、助手や家具を見られます", React.createElement("br", null), "・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます"), React.createElement("p", {
+    className: "mt-1 text-[11px] leading-snug text-slate-300"
+  }, "フレンドが助手ライフを開くと、その人の家がここに並びます。")), !nowFirst && housesBlock, !s.intro && !alfEmpty && React.createElement("div", {
     className: card,
     "data-alf-intro": true
   }, React.createElement("p", {
@@ -170281,7 +170298,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "置き手紙 ", st.look, "通"), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), !alfEmpty && typeof AlfGuestBook === 'function' && React.createElement(AlfGuestBook, {
+  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), nowFirst && housesBlock, !alfEmpty && typeof AlfGuestBook === 'function' && React.createElement(AlfGuestBook, {
     s: s,
     card: card,
     sec: sec,
@@ -171275,7 +171292,7 @@ function AlfGuestBook({
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
       className: "min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100"
-    }, names[id], "さん", React.createElement(AlfBondChip, {
+    }, names[id], "さん", !house && React.createElement(AlfBondChip, {
       id: id,
       always: true
     })), React.createElement("span", {

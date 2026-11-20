@@ -377,7 +377,7 @@ function AlfGuestBook({ s, card, sec, onVisit }) {
         return (
           <div key={id} className="border-b border-slate-700/60 py-1 last:border-0" data-alb-guest={id}>
             <div className="flex items-center gap-1.5">
-              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん<AlfBondChip id={id} always/></p>
+              <p className="min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100">{names[id]}さん{!house && <AlfBondChip id={id} always/>}</p>{/* 家の一覧に出ている人は、ご縁の札を家の行だけに(2026-11-20 API の点検: 同じ札が2か所) */}
               <span className="shrink-0 whitespace-nowrap text-[10px] text-slate-400">{alfAgoText(last)}・{days}日</span>
               {house ? <button type="button" className="shrink-0 rounded-xl bg-orange-400 px-2 py-1 text-[10.5px] font-black text-slate-950" data-alb-return={id} onClick={() => onVisit(house)}>🚶 返しに行く</button> : null}
             </div>
