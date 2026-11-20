@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76948f9329f9d22c
+// source-sha256: c99c44f4afb87aee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172311,6 +172311,10 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+.msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
+.msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.msx .v-s6team .v-s6hd .ed{margin:-8px -4px -8px 0;min-height:36px;padding:0 4px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}
+.msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
 .msx .v-lmain{display:contents}
@@ -176965,21 +176969,33 @@ function MsxStart({
       }
     })), React.createElement("div", {
       className: "v-lmain"
-    }, React.createElement("button", {
-      type: "button",
-      className: "v-sum",
-      onClick: () => setStep(1)
+    }, React.createElement("div", {
+      className: "v-sum v-s6team",
+      "data-msx-s6-team": true
+    }, React.createElement("div", {
+      className: "v-s6hd"
     }, React.createElement("span", {
       className: "k"
-    }, "編成"), members.map((m, i) => React.createElement("span", {
+    }, "編成"), React.createElement("button", {
+      type: "button",
+      className: "ed",
+      onClick: () => setStep(1)
+    }, "変える")), typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+      size: "s"
+    }, members.map((m, i) => React.createElement(MonsucMonCard, {
       key: i,
-      className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, React.createElement(MsxMonFace, {
-      species: m.species,
-      colors: m.colors
-    }))), React.createElement("span", {
-      className: "ed"
-    }, "変える")), typeof msxScenarioOf === 'function' ? React.createElement("button", {
+      size: "s",
+      m: {
+        species: m.species,
+        nick: m.name || null,
+        colors: m.colors || null,
+        grade: m.rank && m.rank !== 'base' ? m.rank : ''
+      },
+      tag: m.friend ? {
+        text: 'フレンド',
+        kind: 'friend'
+      } : null
+    }))) : null), typeof msxScenarioOf === 'function' ? React.createElement("button", {
       type: "button",
       className: "v-sum",
       onClick: () => setScn(null)
