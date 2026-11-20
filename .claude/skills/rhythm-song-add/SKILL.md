@@ -553,6 +553,8 @@ node tools/mode/rhythm-released-chart-lock-check.js    # 公開中の曲が控�
 node tools/mode/rhythm-released-chart-lock-check.js --update --reason "新曲 <曲名> を公開"
 ```
 
+**新曲の重さを測る**(2026-11-21 r1119-058): `node tools/mode/rhythm-stall-check.js --song <曲id>`(HARD・約10分。前の版に無い曲は基準の曲 crossing_field と比べ、止まりが増えたら NG)
+
 **起動時の読み込みが増えたのが譜面だけであることを確かめる。**
 
 ```bash
