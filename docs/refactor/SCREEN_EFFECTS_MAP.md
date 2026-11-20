@@ -167,6 +167,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `triggerShake(big); if(big) Audio_.se.crit(); }, hitAt` | screen | 投げっぱなし | 敵の技が当たる瞬間の揺れと会心音。止めても揺れないだけ |
 | `setEffect(null); proceedAfterUniqueUpgrade(); }, ms` | progress | 投げっぱなし | 固有技の強化結果(SKILL UP!)を消して次の画面へ進む。止めると進行が止まる |
 | `setTimeout(publishFriendProfile, wait)` | 対象外 | 止める | フレンドに見せる自分のプロフィールの公開。アプリ全体で1回(effect の後始末で止める) |
+| `setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS)` | 対象外 | 止める | 曲の最中に後回しにしたプロフィールの公開を、曲が終わってから1回だけ送る(effect の後始末で止める) |
 | `if (!closed) onClose(); }, 0` | 対象外 | 止める | 通信を作れなかったとき、呼び出し側へ閉じたことを知らせる(音ゲーのマルチ) |
 | `reconnectTimer = setTimeout(` | 対象外 | 止める | 通信が切れたとき2.5秒後に繋ぎ直す。閉じたら止める(音ゲーのマルチ) |
 | `resolve(rhythmMultiBestRoom(rooms, '')); }, RHYTHM_MULTI_LOBBY_LISTEN_MS` | 対象外 | await | ロビーの部屋一覧を待つ時間切れ。待っている Promise を resolve する |

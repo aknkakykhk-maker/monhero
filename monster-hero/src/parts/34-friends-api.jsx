@@ -599,6 +599,11 @@ const friendsPlaceFromRow = (place, records) => {
 };
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
+// モンヒロビートの曲が鳴っているあいだ(30-rhythm-play の window.__mhSongPlaying)は送らない(2026-11-21 r1119-057・演奏中の止まり)。
+// 演奏画面に入ったら曲が鳴る前(幕のあいだ)に送り、鳴っているあいだに来た分は曲の終わりから少し待って送る
+const FRIEND_PUBLISH_BEFORE_SONG_MS = 300;
+const FRIEND_PUBLISH_AFTER_SONG_MS = 1500;
+const friendsSongPlaying = () => { try { return typeof window !== 'undefined' && !!window.__mhSongPlaying; } catch (e) { return false; } };
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';

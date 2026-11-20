@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a444c98250432a64
+// generated-sha256: 44b396898b1d19cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -27686,7 +27686,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.fadedOut=true;
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
-if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
+if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN,songTimeMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
   const disposeRun=useCallback(()=>{rhythmSongPrepSignal(false,song.songId);rhythmSongPlaySignal(false,song.songId);if(songIntroRef.current&&rhythmSongIntroHolds===songIntroRef.current.holds)rhythmSongIntroHolds=null;songIntroRef.current=null;setSongIntro(null);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
@@ -36283,6 +36283,11 @@ const friendsPlaceFromRow = (place, records) => {
 };
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
+// モンヒロビートの曲が鳴っているあいだ(30-rhythm-play の window.__mhSongPlaying)は送らない(2026-11-21 r1119-057・演奏中の止まり)。
+// 演奏画面に入ったら曲が鳴る前(幕のあいだ)に送り、鳴っているあいだに来た分は曲の終わりから少し待って送る
+const FRIEND_PUBLISH_BEFORE_SONG_MS = 300;
+const FRIEND_PUBLISH_AFTER_SONG_MS = 1500;
+const friendsSongPlaying = () => { try { return typeof window !== 'undefined' && !!window.__mhSongPlaying; } catch (e) { return false; } };
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
@@ -126599,15 +126604,21 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!friendsActive) return undefined;
     refreshFriendRequests();
-    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests(); }, 3 * 60 * 1000);
+    // 曲が鳴っているあいだは見に行かない(次の回に回す。r1119-057 演奏中の止まり)
+    const timer = setInterval(() => { if ((typeof document === 'undefined' || !document.hidden) && !friendsSongPlaying()) refreshFriendRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
+  // ★モンヒロビートの曲が鳴っているあいだは送らず、曲が終わってから1回送る(2026-11-21 r1119-057)。
+  //   送るときの自己ベストの読み直し・記録づくりが1コマを長くし、ノーツが止まって飛んでいた(演奏の始まりの数秒後と2分ごと)。
+  //   演奏画面に入ったときの「演奏中」の知らせは、曲が鳴る前(幕のあいだ)に送る(下の useEffect)
   const friendLatestRef = useRef({});
   const friendPublishRef = useRef(0);
+  const friendPublishDeferredRef = useRef(false);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
+    if (friendsSongPlaying()) { friendPublishDeferredRef.current = true; return; }
     const id = await ensureBreederId();
     if (!id) return;
     const latest = friendLatestRef.current;
@@ -126658,10 +126669,19 @@ function MonsterHeroGame() {
   }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
-    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    // 演奏画面に入ったら、曲が鳴り始める前(幕のあいだ)に送る。待つと曲の頭に重なる
+    const wait = gameState === 'RHYTHM_PLAY' ? FRIEND_PUBLISH_BEFORE_SONG_MS : Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
   }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
+  // 曲が鳴っていて送らなかった分は、曲が終わってから送る(結果の画面が出そろうまで少し待つ)
+  useEffect(() => {
+    if (!friendsActive || typeof window === 'undefined') return undefined;
+    let timer = null;
+    const onEnd = () => { if (!friendPublishDeferredRef.current) return; friendPublishDeferredRef.current = false; clearTimeout(timer); timer = setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS); };
+    window.addEventListener('mh:song-play-end', onEnd);
+    return () => { clearTimeout(timer); window.removeEventListener('mh:song-play-end', onEnd); };
+  }, [friendsActive, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);
