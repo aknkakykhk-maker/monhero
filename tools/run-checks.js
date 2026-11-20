@@ -131,6 +131,7 @@ const FORCE_CHECKS = [
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
   // モンヒロビートの重さ(2026-11-21 r1119-058 社長「モンビーは重さチェックもちゃんとしたほうがいい」)。本物の演奏画面を CPU を遅くして測り、origin/main より止まりが増えたら NG
   { re: /^monster-hero\/src\/parts\/(28-rhythm-shared|30-rhythm-play)\.jsx$|^monster-hero\/data\/rhythm-mode\.js$|^tools\/mode\/rhythm-stall-check\.js$/, checks: ['mode/rhythm-stall-check.js'], why: 'モンヒロビートの演奏画面の止まり(50ms 超のコマ)が origin/main より増えていないか' },
+  { re: /^monster-hero\/src\/parts\/(34-friends-api|60-app)\.jsx$|^tools\/friends\/friend-publish-song-quiet-check\.js$/, checks: ['friends/friend-publish-song-quiet-check.js'], why: '曲が鳴っているあいだ、フレンドの知らせを走らせないか(r1119-057)' },
   // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る
   { re: /^monster-hero\/src\/parts\/(39-rhythm-song-owned|20-market-notices-help|55-screen-breeder-market|41-screen-ui)\.jsx$|^tools\/mode\/rhythm-song-shop-check\.js$/, checks: ['mode/rhythm-song-shop-check.js'], why: 'ビートP交換所の「曲」の売り場(ジャケットの拡大・試し聴き・説明の折れ・札の空き)' },
   // 🔄横(絵を90度回す)の端の黒い帯(2026-11-14 社長「何回も言ってんだから」。2026-09-29・11-12・11-14 と戻ってきた)。

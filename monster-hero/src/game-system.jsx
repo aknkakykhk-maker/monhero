@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bcf0753a408e2dd3
+// generated-sha256: b945df9c252ede28
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -27686,7 +27686,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.fadedOut=true;
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
-if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
+if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);RHYTHM_FRAME_DIAG.tick(frameNowMs,perfTickStart?performance.now()-perfTickStart:NaN,songTimeMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
   const disposeRun=useCallback(()=>{rhythmSongPrepSignal(false,song.songId);rhythmSongPlaySignal(false,song.songId);if(songIntroRef.current&&rhythmSongIntroHolds===songIntroRef.current.holds)rhythmSongIntroHolds=null;songIntroRef.current=null;setSongIntro(null);stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
@@ -36283,6 +36283,11 @@ const friendsPlaceFromRow = (place, records) => {
 };
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
+// モンヒロビートの曲が鳴っているあいだ(30-rhythm-play の window.__mhSongPlaying)は送らない(2026-11-21 r1119-057・演奏中の止まり)。
+// 演奏画面に入ったら曲が鳴る前(幕のあいだ)に送り、鳴っているあいだに来た分は曲の終わりから少し待って送る
+const FRIEND_PUBLISH_BEFORE_SONG_MS = 300;
+const FRIEND_PUBLISH_AFTER_SONG_MS = 1500;
+const friendsSongPlaying = () => { try { return typeof window !== 'undefined' && !!window.__mhSongPlaying; } catch (e) { return false; } };
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
@@ -69440,7 +69445,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -90610,6 +90615,14 @@ const MSX_CSS = `
 .msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
 .msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+/* 受付の札の下の段: 左に優勝の賞品の印・右に賞金(r1119-052) */
+.msx .v-cup2 .tx .gr{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;min-width:0}
+.msx .v-cup2 .tx .gr .g{flex:none}
+.msx .v-cup2 .pzc{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.msx .v-cup2 .pzc .pc{display:inline-flex;align-items:center;gap:1px;height:20px;padding:0 5px;border-radius:10px;background:#1e293b;border:1px solid #475569;font-size:13px;line-height:1}
+.msx .v-cup2 .pzc .pc.rare{border-color:#f59e0b;background:#3b2a0a}
+.msx .v-cup2 .pzc .pc small{font-size:10px;font-weight:900;color:#e2e8f0;white-space:nowrap}
+.msx .v-cup2.ng .pzc{opacity:.45}
 .msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
 .msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
 .msx .v-cup2 .ok{display:block;color:#86efac;font-size:10.5px;font-weight:900;line-height:1.3}
@@ -95583,6 +95596,23 @@ const MsxR3PrizeBox = ({ prizes, onPick }) => {
       <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><MsxR3PrizeName name={x.name}/></button>)}</div></> : null}
   </>);
 };
+// 受付の一覧の札に、優勝でもらえる賞品の印を並べる(r1119-052 社長「受付の一覧に賞品を出す」・参考 te-01 の賞金の右の印)。
+//   賞金は右の数字・修行チケット(賞金ランクで増える)とライバルの上乗せ(右上の帯)は出さない。押すと確認の窓で詳しく見られる
+const msxR3PrizeChips = (SUC, c) => {
+  let all = []; try { all = msxR3Prizes(SUC, c); } catch (e) { all = []; }
+  return all.filter((x) => !['g', 'tk', 'rv', 'rvpts'].includes(x.id)).map((x) => {
+    const m = /([+＋×][0-9,]+)$/.exec(String(x.name || '').replace(/｜/g, ''));
+    return { ...x, n: m ? m[1] : '' };
+  });
+};
+const MsxR3PrizeChips = ({ SUC, c }) => {
+  const ch = msxR3PrizeChips(SUC, c); if (!ch.length) return <span className="pzc"/>;
+  const show = ch.slice(0, 4); const more = ch.length - show.length;
+  return (<span className="pzc" data-msx-r3-cup-prizes={c.id} aria-label={`賞品 ${ch.map((x) => String(x.name || '').replace(/｜/g, '')).join('・')}`}>
+    {show.map((x) => <span key={x.id} className={`pc${x.rare ? ' rare' : ''}`}><span className="i">{typeof msxItemIco === 'function' ? msxItemIco(x, '15px') : x.e}</span>{x.n ? <small>{x.n}</small> : null}</span>)}
+    {more > 0 ? <span className="pc more"><small>+{more}</small></span> : null}
+  </span>);
+};
 const MSX_R3_FC_CLASS = Object.freeze({ easy: 'fc-e', good: 'fc-g', even: 'fc-v', hard: 'fc-h', none: 'fc-n' });
 function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const { SUC } = msxSuc;
@@ -95669,7 +95699,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : <span className="ok">出場できます</span>}
               {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{msxBreederLabel(c.rival.breeder, c.rival.kind)}</small> : null}</span> : null}
-              <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
+              <div className="gr"><MsxR3PrizeChips SUC={SUC} c={c}/><span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span></div>
             </div>
             {c.rival ? <span className="rvb">能力ポイント1.5倍</span> : null}
           </button>);
@@ -126578,15 +126608,21 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!friendsActive) return undefined;
     refreshFriendRequests();
-    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests(); }, 3 * 60 * 1000);
+    // 曲が鳴っているあいだは見に行かない(次の回に回す。r1119-057 演奏中の止まり)
+    const timer = setInterval(() => { if ((typeof document === 'undefined' || !document.hidden) && !friendsSongPlaying()) refreshFriendRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
+  // ★モンヒロビートの曲が鳴っているあいだは送らず、曲が終わってから1回送る(2026-11-21 r1119-057)。
+  //   送るときの自己ベストの読み直し・記録づくりが1コマを長くし、ノーツが止まって飛んでいた(演奏の始まりの数秒後と2分ごと)。
+  //   演奏画面に入ったときの「演奏中」の知らせは、曲が鳴る前(幕のあいだ)に送る(下の useEffect)
   const friendLatestRef = useRef({});
   const friendPublishRef = useRef(0);
+  const friendPublishDeferredRef = useRef(false);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
+    if (friendsSongPlaying()) { friendPublishDeferredRef.current = true; return; }
     const id = await ensureBreederId();
     if (!id) return;
     const latest = friendLatestRef.current;
@@ -126637,10 +126673,19 @@ function MonsterHeroGame() {
   }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
-    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    // 演奏画面に入ったら、曲が鳴り始める前(幕のあいだ)に送る。待つと曲の頭に重なる
+    const wait = gameState === 'RHYTHM_PLAY' ? FRIEND_PUBLISH_BEFORE_SONG_MS : Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
   }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
+  // 曲が鳴っていて送らなかった分は、曲が終わってから送る(結果の画面が出そろうまで少し待つ)
+  useEffect(() => {
+    if (!friendsActive || typeof window === 'undefined') return undefined;
+    let timer = null;
+    const onEnd = () => { if (!friendPublishDeferredRef.current) return; friendPublishDeferredRef.current = false; clearTimeout(timer); timer = setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS); };
+    window.addEventListener('mh:song-play-end', onEnd);
+    return () => { clearTimeout(timer); window.removeEventListener('mh:song-play-end', onEnd); };
+  }, [friendsActive, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);

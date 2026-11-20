@@ -1285,7 +1285,7 @@ const kyukoWinterCostume = Object.freeze({
 });
 // ききのツインテール(2026-11-20 社長)。売り場はダイヤショップ 100,000(ほかの衣装と同じ。買い物の出し分けは無い)。
 //   絵は images/assistant/twintail/(立ち絵は stand-twintail、全身画は fullbody/kiki_twintail)。お話「イメチェン」でも着る(STORY_OUTFIT_DIRS の twintail)
-const KIKI_TWINTAIL_COSTUME_ART = "images/assistant/twintail/face/kiki_happy.PNG?v=725e2956e3ac";
+const KIKI_TWINTAIL_COSTUME_ART = "images/assistant/twintail/face/kiki_happy.PNG?v=f2e519677acb";
 const kikiTwintailCostume = Object.freeze({
   id: 'kiki_twintail_v1', assistantId: 'kiki',
   name: 'ツインテール', desc: 'ききの新しい髪型の着せ替え。曲「僕たちのページは晴れ模様」のジャケット絵で結んでもらった、大きなうさ耳リボンのツインテールです。',
