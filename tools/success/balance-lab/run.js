@@ -43,7 +43,7 @@ const makeLab = () => {
     const p = REAL[kind.replace(/^(real|battle)-/, '')];
     const picks = kind.startsWith('battle-')
       ? AT.LIST.filter((a) => a.type === 'battle').map((a) => ({ id: a.id, n: a.max }))
-      : AT.autoPick(AT.pointsOf(p.power));
+      : AT.autoPick(AT.pointsOf(p.power)).picks; // autoPick は { picks, used, left } を返す。配列(picks)だけを渡す(入れ物ごと渡すと芯が読めずアシストが空になっていた・2026-11-20)
     return TEAM_SP.map((x, i) => {
       const st = {}; K.forEach((k, j) => { st[k] = Math.round(p.sum / 6 * (0.7 + ((i + j) % 4) * 0.2)); });
       return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: p.loy, pop: p.pop, techs: SUC.techsOf(x).slice(0, p.techs).map((t) => t.id), assists: picks };
@@ -104,7 +104,7 @@ const makeLab = () => {
   };
 
   // 1回の育成。返り: 1行(数だけ。名前などの個人の情報は入らない)
-  const runOne = (i, { spy = null } = {}) => {
+  const runOne = (i, { spy = null, onEvent = null } = {}) => {
     const cond = condOf(i);
     const id = `lab-${i}`;
     let s = SUC.newRun({ id, species: cond.species, aid: cond.aid, team: teamOf(cond.team), aidBondLv: 1 });
@@ -132,9 +132,11 @@ const makeLab = () => {
       const ev = (slot) => {
         if (!SUC.events) return;
         const x = SUC.events.open(s, slot); s = x.state; const e = x.out.ev;
-        if (!e || e.watch) return;
+        if (!e) return;
+        // 選択肢の無い出来事(記念日など)も、ゲームと同じく pick(s, null) で効き目をかける(前は素通りしていた・2026-11-20)
+        if (e.watch) { const y = SUC.events.pick(s, null); if (y.out.ok) { s = y.state; if (onEvent) onEvent(e.id); } return; }
         const ok = e.choices.filter((c) => c.ok); if (!ok.length) return;
-        const y = SUC.events.pick(s, ok[0].c); if (y.out.ok) s = y.state;
+        const y = SUC.events.pick(s, ok[0].c); if (y.out.ok) { s = y.state; if (onEvent) onEvent(e.id); }
       };
       ev('start');
       const a = chooseAct(s, SUC.peek(s), cond.strategy, rnd, focus);
@@ -161,7 +163,7 @@ const makeLab = () => {
     };
   };
 
-  return { SUC, GAME, engine, condOf, runOne, species, aids, strategies, teams: TEAMS.slice() };
+  return { SUC, GAME, engine, condOf, runOne, teamOf, species, aids, strategies, teams: TEAMS.slice() };
 };
 
 module.exports = { makeLab, STRATEGIES, TEAMS, K };
