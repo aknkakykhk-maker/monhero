@@ -135,7 +135,7 @@ const seed = () => {
       const fitOf = () => page.evaluate(() => { const els = [...document.querySelectorAll('[data-msa-tn]')]; const bad = els.filter((el) => el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('.msa-tn-s')].some((s) => s.getClientRects().length > 1) || parseFloat(getComputedStyle(el).fontSize) < 7).map((el) => el.textContent); return { n: els.length, bad: bad.length, ex: bad.slice(0, 3) }; });
       const fitCards = await fitOf();
       await clickSel('[data-msxm-all]'); await page.waitForTimeout(OUT ? 1400 : 300); await still('11-manual-all'); const fitAll = await fitOf(); await closeSheet();
-      await page.evaluate(() => { const c = [...document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]')].find((x) => !x.disabled); if (c) c.click(); });
+      await page.evaluate(() => { const c = [...document.querySelectorAll('[data-msa-foe] [data-msa-dc-card], [data-ambw-cards="B"] [data-msa-dc-card]')].find((x) => !x.disabled); if (c) c.click(); });
       await page.waitForTimeout(OUT ? 1500 : 400); await still('12-foe-list');
       const fitList = await fitOf();
       console.log(`技名(幅 ${WIDTH}): 札 ${JSON.stringify(fitCards)} / 全部 ${JSON.stringify(fitAll)} / 相手の一覧 ${JSON.stringify(fitList)}`);

@@ -318,6 +318,7 @@ const AMBB_CSS = `
 @media (orientation:portrait) and (min-height:741px){
   .ambw.ambb-full{overflow-y:auto}
   .ambw.ambb-full .ambw-in{height:auto;min-height:100%}
+  .ambw.ambb-full .ambw-top{position:sticky;top:0;z-index:8;background:#191331}
   .ambw.ambb-full [data-ambb-watch]{flex:none}
   .ambw.ambb-full .ambb-stagewrap{flex:none}
   .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(300px,50vh,420px);min-height:0}
