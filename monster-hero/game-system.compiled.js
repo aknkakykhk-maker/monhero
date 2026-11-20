@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60b23fa956b6089f
+// source-sha256: 723a17efc6416c8f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -190979,7 +190979,7 @@ function MsxAssistDetail({
   }, {
     bond: '初めの親密度 … 育成を始めたときの親密度。',
     tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。',
-    fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。',
+    fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。友情タッグと同じ強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。',
     pow: '総合力 … 6つの能力から出す強さ。'
   }[kvTip]) : React.createElement("small", {
     className: "asd-kvn"
