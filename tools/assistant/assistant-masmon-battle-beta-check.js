@@ -168,7 +168,7 @@ const seed = () => {
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch]'), { timeout: 10000 }).catch(() => {});
     await page.waitForFunction(() => !!document.querySelector('.ambw-dmg, .msa-dmg'), { timeout: 30000 }).catch(() => {});
     await clickSel('[data-ambb-pause]');
-    check('観戦が始まり、手前は2体', await page.evaluate(() => !!document.querySelector('[data-ambb-watch]') && document.querySelectorAll('[data-ambw-panel="A"] .ambw-bn').length === 1));
+    check('観戦が始まり、手前は2体', await page.evaluate(() => !!document.querySelector('[data-ambb-watch]') && document.querySelectorAll('[data-ambb-bench="A"] .ambw-bn').length === 1));
     await shot('3-watch');
     await clickSel('[data-ambb-skip]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-review]') && !!document.querySelector('[data-ambb-if] .ambb-if'), { timeout: 30000 }).catch(() => {});
@@ -296,14 +296,14 @@ const seed = () => {
     });
     await page.waitForTimeout(1500);
     const pos2 = await page.evaluate(() => Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos));
-    check('段3: 一覧の技(か帯の手)を選ぶと試合が進み、一覧は閉じる', !!picked && pos2 > man.pos && !(await page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msa-sheet]'))), `${picked} ${man.pos}→${pos2}`);
+    check('段3: 一覧の技(か帯の手)を選ぶと試合が進み、一覧は閉じる', !!picked && pos2 > man.pos && !(await page.evaluate(() => !!document.querySelector('[data-msa-sheet-host="manual"]'))), `${picked} ${man.pos}→${pos2}`);
     // 相手の札: 押すと一覧(見るだけ・☆ なし)
-    await page.evaluate(() => { const c = document.querySelector('[data-ambb-foe-tech]'); if (c) c.click(); });
+    await page.evaluate(() => { const c = document.querySelector('[data-msa-foe] [data-msa-dc-card]:not([disabled])'); if (c) c.click(); });
     await page.waitForTimeout(300);
-    const foeSheet = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-sheet-row]').length, use: document.querySelectorAll('[data-ambb-techlist="B"] [data-msxm-tech]').length, star: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-rep]').length }));
+    const foeSheet = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-msa-sheet-host="B"] [data-msa-sheet-row]').length, use: document.querySelectorAll('[data-msa-sheet-host="B"] [data-msxm-tech]').length, star: document.querySelectorAll('[data-msa-sheet-host="B"] [data-msa-rep]').length }));
     await shot('8-foe-techs');
-    check('段3: 「相手の技」を押すと、相手の技の一覧(見るだけ・代表は決められない)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
-    await page.evaluate(() => { const b = document.querySelector('[data-ambb-techlist] [data-msa-sheet-close]'); if (b) b.click(); });
+    check('段3: 相手の技の枠を押すと、その間合いの相手の技の一覧(見るだけ・代表は決められない。2026-11-19 段3 で「👀 相手の技」から枠へ)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
+    await page.evaluate(() => { const b = document.querySelector('[data-msa-sheet-host] [data-msa-sheet-close]'); if (b) b.click(); });
     // 全部の技(帯のボタン)。相手の手を見せている間は帯が出ないので、帯が出るまで待つ
     //   試合の種は時刻から作るので、先に決着して振り返りになっていたら、手動の試合をやり直して帯を待つ(ミハリ6: 5回中2回落ちた)。
     //   帯が出ても相手の手を見せている間に描き直されて押せないことがある(ミハリ6: 6回中2回)ので、押して一覧が出たかを確かめ、出なければ帯を待って押し直す
