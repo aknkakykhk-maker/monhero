@@ -103,7 +103,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
-    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
+    ['I1', 'mid', ['cont', 'issa']], ['I1V', 'mid', ['vidforce:alpha', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['I1B', 'mid', ['vidforce:bg', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
@@ -210,6 +210,9 @@ const makeRun = async (kind) => {
               if (sc && sc.getAttribute('data-msx-tev-beat') === '5') await new Promise((r) => setTimeout(r, 1100));
               return true;
             }
+            // イッサ博士の登場動画(r1119-059): どちらの版を流すかを決めて開く / 流しながら決まった間隔で撮る(SHOT_SEQ=I1V,I1B。止めて時刻を飛ばすと頭なしのブラウザは透過の動画を描かない)
+            if (st.startsWith('vidforce:')) { window.__msxIssaVidForce = st.slice(9); return true; }
+            if (st.startsWith('vidrate:')) { window.__msxIssaVidRate = Number(st.slice(8)); return true; }
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
