@@ -533,9 +533,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const aptRow = (sp, me) => { const gs = aptOf(sp, me); const order = me ? [0, 1, 2, 3] : [3, 2, 1, 0]; return <div className="msc-apt">{order.map((d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(gs[d]) ? 'S' : gs[d]}>{AMBW_DIST[d]}</span>)}</div>; };
   return (
     <div className="msc-wrap" data-msc-card>
-      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
+      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
-        <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
+        {/* 大会名は上の見出しの1か所だけ(絵の上の札は二重だった。r1119-033 窓-07) */}
         <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><MscMyMon sp={o.species} colors={o.colors}/></div>
         <div className="vs">VS</div>

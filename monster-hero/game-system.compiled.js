@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25084861c74eddc8
+// source-sha256: 6aeb999f3cae4c8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155790,14 +155790,12 @@ function MonsucBattleCard({
   }, React.createElement("button", {
     className: "msc-btn g s",
     onClick: onBack
-  }, "← 表へ"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・1戦")), React.createElement("div", {
+  }, "← 戻る"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star), "・1戦")), React.createElement("div", {
     className: "msc-vs",
     style: {
       backgroundImage: `url(${venue})`
     }
   }, React.createElement("div", {
-    className: "cap"
-  }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
     className: "mon a"
   }, (() => {
     const im = React.createElement(MscMyMon, {
@@ -172833,6 +172831,7 @@ const MSX_CSS = `
 .msx.land{}
 .msx .v-hd{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:4px 10px 0}
 .msx .v-hd .bk{background:#2b3348;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-hd .bk.pause{background:#3b0d18;border:1.5px solid #f87171aa;color:#fecaca;border-radius:8px}
 .msx .v-hd .ti{flex:1;min-width:0;font-size:12.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-hd .ti small{color:#cbd5e1;font-size:10px;font-weight:700;margin-left:4px}
 .msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
@@ -173459,10 +173458,11 @@ const MSX_CSS = `
 .msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
 .msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
 .msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff}
-.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0003;cursor:pointer;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
 .msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
 .msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
-.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}
+/* 賞品の説明は窓を重ねず、吹き出しにして押すと消える(閉じるが2つ並んでいた。r1119-033 窓-10) */
+.msx .v-cupwin .dbox{box-shadow:0 6px 16px #0006}.msx .v-cupwin .dbox .hint{display:block;font-size:10.5px;font-weight:800;color:#64748b}
 .msx .v-cupwin .dbox .own{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#1e1b4b;margin:0 0 8px;text-align:left}.msx .v-cupwin .dbox .own i{font-style:normal;background:#92400e;color:#fff;border-radius:99px;padding:2px 10px}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
@@ -175976,12 +175976,13 @@ function MsxHd({
 }) {
   return React.createElement("div", {
     className: "v-hd"
-  }, React.createElement("button", {
+  }, back ? React.createElement("button", {
     type: "button",
-    className: "bk",
+    className: `bk${back === '中断' ? ' pause' : ''}`,
     "data-mh-back": true,
-    onClick: onBack
-  }, back === '中断' ? '⏸ 中断' : `← ${back}`), sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
+    onClick: onBack,
+    "data-msx-hd-pause": back === '中断' ? '' : undefined
+  }, back === '中断' ? '⏸ 中断' : `← ${back}`) : null, sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
     className: "ti",
     "data-msx-hd-sc": true
   }, sub) : React.createElement("span", {
@@ -181051,7 +181052,7 @@ function MsxPlay({
       type: "button",
       className: "off",
       disabled: true
-    }, "飛ばす ⏭"), React.createElement("button", {
+    }, "イベントを飛ばす ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => afterAct({
@@ -181065,7 +181066,7 @@ function MsxPlay({
       type: "button",
       onClick: () => tGo(-1),
       "data-msx-tev-skip": true
-    }, "飛ばす ⏭"), React.createElement("button", {
+    }, "イベントを飛ばす ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tLast ? toReact(run) : tGo(tAt + 1),
@@ -181299,14 +181300,7 @@ function MsxPlay({
         phase: 'main'
       }),
       "data-msx-react-next": true
-    }, "次へ ▶")) : React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => choose(null)
-    }, "飛ばす ⏭"), React.createElement("span", {
-      className: "v-wait"
-    }, "選んでね"));
+    }, "次へ ▶")) : null;
   } else if (phase === 'issa') {
     body = React.createElement(MsxIssa, {
       run: run,
@@ -184910,7 +184904,12 @@ function MsxR3Cup({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "h"
-  }, "大会参加確認"), React.createElement("div", {
+  }, wcOk ? '大会参加確認' : '大会の詳細'), wcOk ? null : React.createElement("div", {
+    className: "q ng",
+    style: {
+      marginTop: 0
+    }
+  }, now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'), React.createElement("div", {
     className: `sign g-${wc.grade || 'n'}`
   }, React.createElement("span", {
     className: "e"
@@ -184945,9 +184944,7 @@ function MsxR3Cup({
     onPick: setPrz
   }), wcOk ? React.createElement("div", {
     className: "q"
-  }, "この大会に参加しますか?") : React.createElement("div", {
-    className: "q ng"
-  }, now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'), React.createElement("div", {
+  }, "この大会に参加しますか?") : null, React.createElement("div", {
     className: "bt"
   }, wcOk ? React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
@@ -184983,8 +184980,7 @@ function MsxR3Cup({
     className: "det",
     onClick: () => setPrz(null)
   }, React.createElement("div", {
-    className: "dbox",
-    onClick: e => e.stopPropagation()
+    className: "dbox"
   }, React.createElement("div", {
     className: "e"
   }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, msxPh(prz.name)), React.createElement("p", {
@@ -184992,16 +184988,12 @@ function MsxR3Cup({
   }, msxPh(prz.desc)), SUC.ITEMS && SUC.ITEMS[prz.id] ? React.createElement("div", {
     className: "own",
     "data-msx-r3-prize-own": prz.id
-  }, React.createElement("i", null, "所持数"), React.createElement("span", null, s.bag && s.bag[prz.id] || 0)) : null, React.createElement("button", {
-    type: "button",
-    onClick: () => setPrz(null)
-  }, "閉じる"))) : null)) : null);
+  }, React.createElement("i", null, "所持数"), React.createElement("span", null, s.bag && s.bag[prz.id] || 0)) : null, React.createElement("small", {
+    className: "hint"
+  }, "押すと消えます"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
-    type: "button",
-    onClick: onBack
-  }, "← 戻る"), React.createElement("button", {
     type: "button",
     className: cur && cur.done && cur.entry.ok ? 'on' : 'off',
     disabled: !(cur && cur.done && cur.entry.ok),
@@ -185768,8 +185760,7 @@ function MsxR3PreDesk({
     className: "det",
     onClick: () => setPrz(null)
   }, React.createElement("div", {
-    className: "dbox",
-    onClick: e => e.stopPropagation()
+    className: "dbox"
   }, React.createElement("div", {
     className: "e"
   }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, msxPh(prz.name)), React.createElement("p", {
@@ -185777,16 +185768,12 @@ function MsxR3PreDesk({
   }, msxPh(prz.desc)), SUC.ITEMS && SUC.ITEMS[prz.id] ? React.createElement("div", {
     className: "own",
     "data-msx-r3-prize-own": prz.id
-  }, React.createElement("i", null, "所持数"), React.createElement("span", null, s.bag && s.bag[prz.id] || 0)) : null, React.createElement("button", {
-    type: "button",
-    onClick: () => setPrz(null)
-  }, "閉じる"))) : null)) : null);
+  }, React.createElement("i", null, "所持数"), React.createElement("span", null, s.bag && s.bag[prz.id] || 0)) : null, React.createElement("small", {
+    className: "hint"
+  }, "押すと消えます"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
-    type: "button",
-    onClick: onBack
-  }, "← 戻る"), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: () => setWin(true),
@@ -188198,7 +188185,7 @@ function MsxR3Retire({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setPtListNow([])
-    }, "元に戻す"), React.createElement("button", {
+    }, "振り直す"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => {
@@ -188518,7 +188505,7 @@ function MsxR3Retire({
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "戻る",
+      back: "",
       onBack: () => setStep('done'),
       right: right,
       body: React.createElement(MsxBest3, {
@@ -188597,7 +188584,7 @@ function MsxR3Retire({
     }, "この記録はランキングに載せられませんでした")) : null);
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "初めの画面へ",
+      back: "",
       onBack: () => {
         setRun(null);
         onPause();
@@ -190565,7 +190552,7 @@ function MsxArcTalk({
   const s = run.s;
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "中断",
+    back: "",
     onBack: onPause,
     right: "",
     body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement("div", {
@@ -190745,7 +190732,7 @@ function MsxArcSpecial({
   const next = () => page + 1 < pages ? setPage(page + 1) : onDone();
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "中断",
+    back: "",
     onBack: onPause,
     right: "",
     body: React.createElement(React.Fragment, null, React.createElement("style", null, MSX_ARC_CSS), React.createElement("div", {
