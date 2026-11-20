@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: caa0dce7e2734821
+// generated-sha256: a9cadd809824d1a5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4880,6 +4880,7 @@ const BGM_TRACKS = [
   { id:'melo_dr_wily_stage_1_okkussenman', name:'Dr.WILY STAGE 1（おっくせんまん版）', creator:'ゴム', src:'audio/bgm-dr-wily-stage-1-okkussenman.mp3', gain:1, loop:true },
   { id:'melo_erfolg', name:'Erfolg', creator:'浜渦正志', src:'audio/bgm-erfolg.mp3', gain:1, loop:true },
   { id:'melo_erfolg_piano', name:'Erfolg（ピアノ ver.）', creator:'浜渦正志', src:'audio/bgm-erfolg-piano.mp3', gain:1, loop:true },
+  { id:'melo_amakakeru_tsubasa', name:'天翔る翼', creator:'浜渦正志', src:'audio/bgm-amakakeru-tsubasa.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -5936,7 +5937,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ sparklingPinkStoryEvent:'melo_sparkling_pink_overture', erubinJoinStoryEvent:'original_event_01', rhythmGrandOpenEvent:'kaze_ga_soyogu', cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', pandoraWingsStoryEvent:'melo_rebellion', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ sparklingPinkStoryEvent:'melo_sparkling_pink_overture', kikiTwintailStoryEvent:'melo_seasons_of_a_little_plaza', erubinJoinStoryEvent:'original_event_01', rhythmGrandOpenEvent:'kaze_ga_soyogu', cardBattleIntroEvent:'atsu_cup_theme', cardCupStoryEvent:'melo_toriko', pandoraWingsStoryEvent:'melo_rebellion', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -5972,6 +5973,8 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // assistant_chat_story … 助手とおしゃべりのお話(2026-10-14)。既定はタクティクスの導入と同じ曲
 // atsu_join_2026_10_22 … あつの加入のお話(2026-10-22)。既定は Against My Own Shadow(社長の指定)。BGMアレンジの画面に枠を並べるのはあつの公開のとき
 // card_battle_intro_2026 … MFバトルカードのはじまりのお話(2026-10-26 公開)。既定は MF × ICHIKA MIX(社長「イベントBGM、MFいちかにして」)
+// kiki_twintail_2026_11 … ききのツインテールのお話「イメチェン」(2026-11-20)。既定はお話の題材になった、ききの曲「僕たちのページは晴れ模様」。
+//   このお話だけ枠の登録が漏れていて専用BGMが流れなかった(2026-11-20 実機報告を受けて追加)
 // 会話イベントの台本で、その行までに書かれた最後の bgm:'<曲id>'。無ければ null(=会話イベントの曲のまま)。
 // 曲の表(BGM_TRACKS)に無い id は使わない(2026-10-17 社長「途中で変わるのいいね」)
 const eventScriptBgmAt = (script, step) => {
@@ -5987,7 +5990,7 @@ const eventScriptBgmAt = (script, step) => {
   return found;
 };
 const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
-const EVENT_BGM_SCENES = Object.freeze({ sparkling_pink_kiki_story:'sparklingPinkStoryEvent', erubin_join_2026_11:'erubinJoinStoryEvent', rhythm_grand_open_teaser:'rhythmGrandOpenEvent', rhythm_grand_open:'rhythmGrandOpenEvent', card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', pandora_wings_2026_ep1:'pandoraWingsStoryEvent',pandora_wings_2026_ep2:'pandoraWingsStoryEvent',pandora_wings_2026_ep3:'pandoraWingsStoryEvent',pandora_wings_2026_ep4:'pandoraWingsStoryEvent',pandora_wings_2026_ep5:'pandoraWingsStoryEvent',pandora_wings_2026_ep6:'pandoraWingsStoryEvent',pandora_wings_2026_ep7:'pandoraWingsStoryEvent',pandora_wings_2026_ep8:'pandoraWingsStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ sparkling_pink_kiki_story:'sparklingPinkStoryEvent', kiki_twintail_2026_11:'kikiTwintailStoryEvent', erubin_join_2026_11:'erubinJoinStoryEvent', rhythm_grand_open_teaser:'rhythmGrandOpenEvent', rhythm_grand_open:'rhythmGrandOpenEvent', card_battle_intro_2026:'cardBattleIntroEvent', card_cup_2026_10_31:'cardCupStoryEvent', pandora_wings_2026_ep1:'pandoraWingsStoryEvent',pandora_wings_2026_ep2:'pandoraWingsStoryEvent',pandora_wings_2026_ep3:'pandoraWingsStoryEvent',pandora_wings_2026_ep4:'pandoraWingsStoryEvent',pandora_wings_2026_ep5:'pandoraWingsStoryEvent',pandora_wings_2026_ep6:'pandoraWingsStoryEvent',pandora_wings_2026_ep7:'pandoraWingsStoryEvent',pandora_wings_2026_ep8:'pandoraWingsStoryEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -6272,6 +6275,7 @@ const Audio_ = (() => {
     "audio/bgm-against-my-own-shadow.mp3": "b43d691d4773",
     "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
     "audio/bgm-altar-world-tree.mp3": "eeeeada93d95",
+    "audio/bgm-amakakeru-tsubasa.mp3": "2b283f9e6aea",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -33133,6 +33137,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
+    'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
@@ -33224,6 +33229,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
+    'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
@@ -33315,6 +33321,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
+    'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
@@ -33406,6 +33413,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
+    'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
@@ -33497,6 +33505,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
+    'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
@@ -33588,6 +33597,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
+    'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
@@ -33679,6 +33689,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'うぉぉぉ！ Lv.100、セッションマスターです・・・！'], ['happy', 'ここまでの記録、全部宝物です笑']],
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
+    'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
@@ -33770,6 +33781,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
+    'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
@@ -38051,7 +38063,7 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)
@@ -89798,6 +89810,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
+.msx .v-body>.v-cupwin{position:fixed;inset:0}
+.v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+.v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+.v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
@@ -89946,6 +89964,20 @@ const MSX_CSS = `
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
 .msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* スマホを横にしたときの案内(2026-11-20 r1119-026)。横長で高さが小さく、指で触る端末だけに出す(PC のマウスでは出さない)。
+   案内は上に重ねるだけで、下の画面はそのまま残る(回しても進み具合を失わない)。
+   重なり順はバトルの演出(決着の大写し 9700・判定 9650)より上の 9800(ミハリの指摘: バトルの画面で案内が下にもぐっていた) */
+.msx-portrait-only{display:none}
+@media (orientation:landscape) and (max-height:540px) and (hover:none) and (pointer:coarse){
+.msx-portrait-only{position:absolute;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:radial-gradient(circle at 50% 40%,#2a1f55 0,#0b0920 70%);color:#fff;text-align:center;touch-action:none}
+.msx-portrait-only .in{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;padding:0 20px}
+.msx-portrait-only .ph{width:72px;height:72px;display:flex;align-items:center;justify-content:center}
+.msx-portrait-only .ph span{display:block;font-size:48px;line-height:1;transform:rotate(-90deg);animation:msxRotatePhone 2.4s ease-in-out infinite}
+.msx-portrait-only b{font-size:18px;font-weight:900;color:#fde68a}
+.msx-portrait-only p{margin:0;font-size:13px;font-weight:700;line-height:1.6;color:#e2e8f0}
+}
+@keyframes msxRotatePhone{0%,20%{transform:rotate(-90deg)}50%,80%{transform:rotate(0deg)}100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){.msx-portrait-only .ph span{animation:none;transform:rotate(0deg)}}
 .msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .msx.land{max-width:none}
 .msx img{display:block}
@@ -90177,6 +90209,17 @@ const MSX_CSS = `
 /* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
 :where(.msx) button,:where(.msx) [role=button]{position:relative;min-height:0}
 .msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* 広がり(44px)が隣の段の札に重ならないようにする(2026-11-19 r1119-013 ⑥ M-6・ミハリの指摘)。札の中を押しても、下の段の札の広がりに当たって
+   隣の札が押されていた(図鑑の分類・助手の札、能力ポイントの「1P〜MAX」の下の「まとめて」)。札そのものを 36px にして段の間を 8px 空け、
+   広がりは段の間の半分(上下 4px)まで。見張り: tools/success/success-shoot.js「札の端を押しても隣の札に当たらない」 */
+.msx .msx-dex-tabs,.msx .msx-dex-aids{row-gap:8px}
+.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-pt-bulk .chip{min-height:36px}
+.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-pt-bulk .chip::after{height:calc(100% + 11px)} /* 広がりの 100% は枠の内側(36 - 枠 1.5×2)。+11px で 44px、枠の外へは上下 4px ずつ */
+.msx .msx-pt-bulk{margin-top:8px}
+/* 図鑑の一覧の行も、行そのものを 44px にする(行の間 5px に、上下 4px の広がりが重なっていた) */
+.msx .msx-dex-row{min-height:44px}
+/* イッサ博士の選択肢は札そのものが大きいので広げない(小さい画面で、上下の選択肢の札に重なっていた) */
+.msx .v-ix::after{height:100%}
 /* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
 .msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
 .msx.land .v-ft{position:sticky;bottom:0;z-index:3}
@@ -90413,11 +90456,6 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
-/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
-   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
-.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
-.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
-.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
 /* ④段2(r1119-011・U-4): 枠を選ぶ画面を共通の型(MonsucMonCard・MONSUC_UI.md の 8)へ。上の6枠も下の一覧も同じ縦長の札。
    タブ・検索の段は1行・見た目 36px・押せる範囲 44px。下のボタンは同じ高さ・同じ形で、主は「決定」だけ */
 .msx .msx-tp-team{padding:6px;gap:5px}
@@ -91364,7 +91402,8 @@ function MsxSteps({ n }) {
 function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, right }) {
   return (
     <div className="v-hd">
-      <button type="button" className="bk" data-mh-back onClick={onBack}>← {back}</button>
+      {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
+      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
@@ -92831,6 +92870,15 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>キャンセル</button></div></div>}
       </div>
+      {/* スマホを横にしたときの案内(2026-11-20 r1119-026 社長: モンサクは縦向きで遊ぶ)。出し入れは CSS だけで決める(.msx-portrait-only)。
+          画面の進み具合はそのまま(案内を上に重ねるだけ)なので、試合中や育成中に回しても、縦に戻せば続きから遊べる。保存には触らない */}
+      <div className="msx-portrait-only" data-msx-portrait-only role="alert" aria-live="polite">
+        <div className="in">
+          <div className="ph" aria-hidden="true"><span>📱</span></div>
+          <b>スマホを縦向きにしてね</b>
+          <p>モンヒロサクセスは縦向きで遊べます。<br/>縦に戻すと、そのまま続きから遊べます。</p>
+        </div>
+      </div>
     </div>
   );
   return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined' ? ReactDOM.createPortal(node, document.body) : node;
@@ -93279,7 +93327,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <span>体力 <b>−{pv ? Math.round(pv.hp || 0) : 0}</b></span>
       </div> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」(下にも同じ矢印の戻るがあった) */}<button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
   }
   // ---- 休む・遊ぶ・通院を選ぶ(Issue #6807 UI-2: 入口の1タップで即確定せず、選ぶ前に見込みを出し、共通位置の実行ボタンで確定。トレーニングと同じ形) ----
   else if (sub === 'care') {
@@ -93318,7 +93366,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </> : <span>{selCare.nm}の見込みは出せません</span>}
       </div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button><button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
+    foot = <div className="v-ft">{/* 選び直すのは左上の「← 戻る」 */}<button type="button" className="go" disabled={!selCare.ok || (selCare.kind === 'clinic' && !cp)} onClick={() => doAct({ kind: selCare.kind })} data-msx-care-go>{selCare.e} {selCare.nm}{selCare.kind === 'clinic' ? 'する' : ''}</button></div>;
   }
   // ---- メイン ----
   else {
@@ -93392,6 +93440,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     <>
       {/* 詳しく・記録・メニューの窓を開いている間も、左上は「← 戻る」(その窓を閉じる)。中断は確認なしに抜けるので、窓の上からは押させない(M-2) */}
       {(detail || sheet) && !subPanel ? <MsxHd back="戻る" onBack={() => (detail ? setDetail(false) : setSheet(null))} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
+        : (sub === 'train' || sub === 'care') && phase === 'main' && !run.out ? <MsxHd back="戻る" onBack={() => { setSub('main'); setSel(null); }} sub={sub === 'train' ? 'トレーニング' : '休む・遊ぶ'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : subPanel ? <MsxHd back="戻る" onBack={() => (sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main'))} sub={sub === 'bag' ? '持ち物' : '能力'} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
         : <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>}
       <div className="v-body">{body}</div>
@@ -93614,7 +93663,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
         <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={(x) => { if (ptTab === 'mastery') setUnitM(x); else setUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
         {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
         {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
-        <div className="msx-row" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip on" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
+        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip on" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
         <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。刻みは使うポイントの合計(10Pなら合計10点ぶん)。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
@@ -93761,6 +93810,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
+/* 押せない決めるボタンは透けさせず、字を読めるようにする(2026-11-20 r1119-013 ⑥ API 点検。「お別れする(0体)」の字が地とほぼ同じ色だった) */
+.msx .v-ft button.go:disabled{opacity:1;color:#cbd5e1}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
@@ -95487,7 +95538,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const foot = (<>
     {!want.length ? <div className="q-note msx-kp" data-msx-r3-qnote>技を選ばなくても修行できます(能力だけ上がります)</div> : null}
     {hpShort ? <div className="q-hpng msx-kp" data-msx-r3-qhp>💔 {isSuper ? '超修行' : '修行'}は体力を {hpOf(isSuper)} 使う。体力があと <b>{hpShort}</b> 足りない(休む・遊ぶで回復)</div> : null}
-    <div className="v-ft"><button type="button" onClick={onBack}>← 戻る</button><button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
+    <div className="v-ft">{/* 戻るは左上の1つ(2026-11-20 r1119-013 ⑥ API 点検) */}<button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }
 
@@ -95550,7 +95601,8 @@ function MsxR3GameOver({ run, setRun, onPause }) {
     {log ? <div className="v-card">{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</div> : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={() => setLog(!log)}>📖 記録を見る</button><button type="button" className="go" disabled={busy} onClick={again} data-msx-r3-again>もう1回 初めから ▶</button></div>;
-  return <MsxR3Frame run={run} back="閉じる" onBack={onPause} body={body} foot={foot}/>;
+  // 終わりの画面のボタンは行き先が分かる言葉にする(2026-11-19 r1119-025・U-22。前は「← 閉じる」で、どこへ行くか分からなかった)
+  return <MsxR3Frame run={run} back="初めの画面へ" onBack={onPause} body={body} foot={foot}/>;
 }
 
 // ---- 引退 ----
@@ -95638,7 +95690,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxStRow who={ws} stats={ws.stats}/>
       <MsxSay aid={s.aid} ex="excited" text={`「${grade.label} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`}/>
     </>);
-    return <MsxR3Frame run={run} back={s.pts > 0 ? '戻る' : '閉じる'} onBack={s.pts > 0 ? () => setStep('e3') : onPause} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e1')} data-msx-r3-e0>次へ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back={s.pts > 0 ? '戻る' : '初めの画面へ'} onBack={s.pts > 0 ? () => setStep('e3') : onPause} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e1')} data-msx-r3-e0>次へ ▶</button></div>}/>;
   }
 
   // ---- E3 能力ポイントをまとめて使う ----
@@ -95702,7 +95754,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
     const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>元に戻す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>決定 ▶</button></div>;
-    return <MsxR3Frame run={run} back="閉じる" onBack={onPause} right={right} body={body} foot={foot}/>;
+    return <MsxR3Frame run={run} back="初めの画面へ" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
   // ---- E1 振り返り ----
@@ -95789,7 +95841,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
-    return <MsxR3Frame run={run} back="閉じる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
   }
   if (step === 'done') {
     const rankRes = rankFix || (res && res.rank) || null;
@@ -95804,7 +95856,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
       {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
-    return <MsxR3Frame run={run} back="閉じる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="初めの画面へ" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }
   const body = (<>
     <div className="v-pt"><div className="n">アシストポイント<b>{left}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {points}</small></b></div>
@@ -96330,6 +96382,8 @@ const MSX_MM_CSS = `
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
+/* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
+.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
@@ -142065,7 +142119,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM'],['pandoraWingsStoryEvent','鍵の向こう側へのお話 BGM'],['sparklingPinkStoryEvent','ききの「初めての曲」のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM'],['cardCupStoryEvent','個人杯のお話 BGM'],['pandoraWingsStoryEvent','鍵の向こう側へのお話 BGM'],['sparklingPinkStoryEvent','ききの「初めての曲」のお話 BGM'],['kikiTwintailStoryEvent','ききの「ツインテール」のお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モード選び BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -148051,7 +148105,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : null;
         const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };
         // 記事の上の戻るは短く「項目一覧」(戻り先のカテゴリ名は長く「← 基本ルール…」と切れていた。2026-10-26 開発部 e02)
-        const backLabel = topic ? '項目一覧' : cat ? 'ヘルプへ' : '閉じる';
+        // 出口は上の戻る1つ(2026-11-19 r1119-025 社長: 下の「分かった！冒険に戻る」は外す)。行き先が分かる言葉にする(B-3「行き先+へ戻る」)
+        const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
         const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
         const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
         const topicIndex = topic ? cat.topics.findIndex(t=>t.id===topic.id) : -1;
@@ -148061,9 +148116,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const helpSeen = helpNewSeenIds();
         const helpNewBadge = <span data-help-new aria-label="新しい項目" className="shrink-0 text-[17px] leading-none">🆕</span>;
         return (
-        <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
+        <div data-mh-help className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
-            <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
+            <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
             <button onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
@@ -148153,9 +148208,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
           </div>
           {/* 横向きの背の低い画面では下の帯を1行に詰め、一覧を広く見せる(ボタンが大きく一覧が1行ぶんしか見えなかった。ダメダシ見回り 10/26 #4) */}
-          <footer className="shrink-0 p-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:gap-3 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 rounded-2xl font-black text-sm active:scale-95">分かった！冒険に戻る</button>
-            <button aria-label="" onClick={requestDebugSettings} className="mt-5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 mx-auto [@media(orientation:landscape)_and_(max-height:520px)]:mx-0 [@media(orientation:landscape)_and_(max-height:520px)]:shrink-0 block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+          <footer className="shrink-0 px-4 py-1 bg-slate-900 border-t border-white/10 text-center">
+            {/* 「分かった！冒険に戻る」は置かない(r1119-025・U-22)。上の戻る(項目一覧へ戻る/ヘルプへ戻る/閉じる)と出口が2つあり、横では高さの 1/6 を使っていた */}
+            <button aria-label="" onClick={requestDebugSettings} className="mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}

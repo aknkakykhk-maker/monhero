@@ -473,6 +473,8 @@ const MSX_MM_CSS = `
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
+/* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
+.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
