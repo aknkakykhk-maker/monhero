@@ -251,7 +251,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
         {list.map(p => (
           <button key={p} type="button" data-assistant-life-plan-place={p} disabled={typeof assistantLifeBodyCanGo === 'function' && !assistantLifeBodyCanGo(id, p)} onClick={() => { assistantLifePlanSet(abs, id, p); onDone && onDone(); }}
             className={`min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`}>
-            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]} <span className="text-[10px] font-bold text-slate-400">{assistantLifeBodyLabel(p)[1]}</span></> : ASSISTANT_LIFE_PLACES[p]}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
+            {ASSISTANT_LIFE_PLAN_ICON[p]} {(typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p)) ? <>{assistantLifeBodyLabel(p)[0]}</> : (typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p])}{p === fav ? ((typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()) ? ' ♥ 好きな場所' : ' ♥') : ''}
             {assistantLifePlanPerk(p) && <span className="block text-[10px] font-bold text-amber-200">得: {assistantLifePlanPerk(p)}</span>}
             {typeof AssistantLifeBodyPlaceStat === 'function' && <AssistantLifeBodyPlaceStat place={p} abs={abs}/>}
           </button>))}

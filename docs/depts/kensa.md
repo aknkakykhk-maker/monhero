@@ -20,6 +20,7 @@ node tools/ctx.js brief               いまの状態
 
 - node tools/ctx.js gate --base <公開前のコミット>(何を見るかが出る)
 - 本物の画面を縦・横・🔄横で開いて撮り、自分で見る
+- 見た目の点検は、撮るときに大きさの釣り合いを測る(tools/browser/ui-measure.js。撮影の道具に付いていて _measure.jsonl に残る)。社長の指摘を拾えるかは node tools/browser/president-eye-calibrate.js --out <置き場> --shoot で確かめる(件は docs/progress/kensa/president-eye/cases.json。新しい指摘が来たら1件足して回す)
 - 公開の前: `node tools/ctx.js gate`(ミハリ確認が要るかを機械が判定。`run-checks.js --changed` の最後にも出る)
 
 ## 関係する決まり

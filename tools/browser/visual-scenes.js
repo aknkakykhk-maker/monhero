@@ -35,6 +35,27 @@ const via = (steps) => async (s) => {
   return true;
 };
 
+// イベント回想を開く(プロフィール → イベント回想 → 先頭のまとまり)。end=true なら1話目を再生して締めの「終わり」まで送る
+const openReplay = async (s, end) => {
+  if (!(await via([/^プロフィールを開く$/])(s))) return false;
+  const click = (sel, re) => s.page.evaluate(([q, r]) => { const b = [...document.querySelectorAll(q)].find((x) => !r || new RegExp(r).test(x.innerText || '')); if (!b) return false; b.scrollIntoView({ block: 'center' }); b.click(); return true; }, [sel, re]).catch(() => false);
+  if (!(await click('button', 'イベント回想'))) return false;
+  await s.wait(900);
+  if (!(await click('[data-event-replay-group]'))) return false;
+  await s.wait(900);
+  if (!end) return true;
+  if (!(await click('[data-event-replay-episodes] button'))) return false;
+  await s.wait(1200);
+  for (let i = 0; i < 200; i++) {
+    if (await s.page.evaluate(() => /終\s*わ\s*り/.test(document.body.innerText)).catch(() => false)) { await s.wait(1500); return true; }
+    const title = await s.page.evaluate(() => /タップで始まります/.test(document.body.innerText)).catch(() => false);
+    const hit = !title && (await click('button', '^\\s*(次へ|つぎへ|続ける)'));
+    if (!hit) await s.page.mouse.click(s.page.viewportSize().width / 2, s.page.viewportSize().height * 0.75).catch(() => {});
+    await s.wait(300);
+  }
+  return false;
+};
+
 // HOME の札をラベル(aria-label か文字)で押す
 const homeBtn = (label) => async (s) => {
   const ok = await s.page.evaluate((l) => {
@@ -225,6 +246,9 @@ const SCENES = [
   { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/]) },
   { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: via([/の説明を開く$/]) },
   { id: 'profile', area: 'HOME', name: 'プロフィール', go: via([/^プロフィールを開く$/]) },
+  // イベント回想(社長の指摘の較正 president-eye: 回想の見出しの絵文字・お話の締めの「終わり」の中心)
+  { id: 'replay-list', area: 'HOME', name: 'プロフィール → イベント回想(まとまりを開いた所)', go: (s) => openReplay(s, false) },
+  { id: 'replay-end', area: 'HOME', name: 'イベント回想 → お話の締め(終わり)', go: (s) => openReplay(s, true) },
   { id: 'mission', area: 'HOME', name: 'ミッション', go: via([/^ミッション/]) },
   { id: 'gift', area: 'HOME', name: 'ギフト', go: via([/^ギフト/]) },
   { id: 'temple', area: 'HOME', name: '神殿', go: via([/^神殿$/]) },
