@@ -322,6 +322,10 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(350);
         }
         await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
+        if (process.env.SHOT_TINY) { // SHOT_TINY=10: この大きさ(px)より小さい字を、字と className で書き出す(添え字の 8px 探し・④ 2026-11-20)
+          const tiny = await page.evaluate((lim) => { const out = new Map(); document.querySelectorAll('.msx *').forEach((e) => { const t = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(); if (!t) return; const r = e.getBoundingClientRect(); if (!r.width) return; const fs = parseFloat(getComputedStyle(e).fontSize); if (fs < lim) { const k = `${fs.toFixed(1)}px ${e.tagName.toLowerCase()}.${String(e.className || '').split(' ').join('.')} <${e.parentElement && String(e.parentElement.className || '').split(' ')[0]}> 「${t.slice(0, 12)}」`; out.set(k, (out.get(k) || 0) + 1); } }); return [...out].map(([k, n]) => `${k} ×${n}`); }, Number(process.env.SHOT_TINY) || 10);
+          if (tiny.length) console.log(`  小さい字 ${name}${tag ? `(${tag})` : ''}:\n    ${tiny.join('\n    ')}`);
+        }
         const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)
