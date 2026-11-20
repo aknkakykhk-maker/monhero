@@ -206,11 +206,11 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
       for (const n of document.querySelectorAll('[data-assistant-life-name]')) if (n.getClientRects().length > 1) ng.push(`名前の途中で折れる: ${n.textContent}`);
       const cut = (b) => { if (!b.getClientRects().length) return false; const rg = document.createRange(); rg.selectNodeContents(b); const tw = rg.getBoundingClientRect().width; return tw * 1.1 > b.clientWidth; }; /* 札は部屋の幅いっぱいの箱(2026-11-08 ナカヨシ8)。字の幅に1割を足しても、その行の幅に収まるか */ /* 「何をしているか」の札(2026-11-15 r1115-136)は字の大きさを文に合わせるので、自分の文の塊が札の幅に収まるかを見る */ for (const b of document.querySelectorAll('[data-assistant-life-room-say-text]')) { if (!b.getClientRects().length) continue; const br = b.getBoundingClientRect(); if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll('[data-assistant-life-say-chunk]')].some(c => { const r = c.getBoundingClientRect(); return r.right > br.right + 1 || r.left < br.left - 1; })) ng.push(`札が切れる: ${b.textContent}`); } for (const b of document.querySelectorAll('[data-assistant-life-room-away] b:not([data-assistant-life-room-say-text])')) { const own = b.textContent, mark = own.split(' ')[0]; for (const name of Object.keys(ASSISTANT_LIFE_PLACES).map(assistantLifePlaceShow)) { b.textContent = `${mark} ${name}へ`; if (cut(b)) ng.push(`札が切れる: ${b.textContent}`); } b.textContent = own; } for (const b of document.querySelectorAll('[data-assistant-life-room-away] small')) if (cut(b)) ng.push(`札が切れる: ${b.textContent}`);
       for (const p of document.querySelectorAll('[data-assistant-life-board-item]')) if (p.scrollHeight > p.clientHeight + 2) ng.push(`掲示板が切れる: ${p.textContent}`);
-      // ミハリ L8・L10: 時間帯の言葉は HOME の札と同じ(朝・昼・夕・夜)。区切りの名前(午後・深夜)・略称「モンビー」を画面に出さない
+      // ミハリ L8・L10: 時間帯の言葉は HOME の札と同じ(r1119-044 から 朝・昼・夕方・夜・深夜)。内側の区切りの名前(午後)・略称「モンビー」を画面に出さない
       const scr = document.querySelector('[data-assistant-life-screen]'); const all = scr ? scr.innerText : '';
       const ck = document.querySelector('[data-assistant-life-clock]');
       if (!ck || !ck.textContent.startsWith(timeOfDayLabelAt())) ng.push(`見出しの時間帯が HOME とちがう: ${ck && ck.textContent}`);
-      for (const w of ['午後', '深夜', 'モンビー']) if (all.includes(w)) ng.push(`画面に「${w}」`);
+      for (const w of ['午後', 'モンビー']) if (all.includes(w)) ng.push(`画面に「${w}」`);
       return ng;
     });
     check('⑫ 家の文字が切れない・助手の名前の途中で折れない・時間帯の言葉が HOME と同じ・区切りの名前と略称を出さない(縦)', textOk.length === 0, textOk.slice(0, 3).join(' / '));
