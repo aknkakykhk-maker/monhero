@@ -696,6 +696,14 @@ const MSX_CSS = `
 .msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
 .msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+/* 受付の札の下の段: 左に優勝の賞品の印・右に賞金(r1119-052) */
+.msx .v-cup2 .tx .gr{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;min-width:0}
+.msx .v-cup2 .tx .gr .g{flex:none}
+.msx .v-cup2 .pzc{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.msx .v-cup2 .pzc .pc{display:inline-flex;align-items:center;gap:1px;height:20px;padding:0 5px;border-radius:10px;background:#1e293b;border:1px solid #475569;font-size:13px;line-height:1}
+.msx .v-cup2 .pzc .pc.rare{border-color:#f59e0b;background:#3b2a0a}
+.msx .v-cup2 .pzc .pc small{font-size:10px;font-weight:900;color:#e2e8f0;white-space:nowrap}
+.msx .v-cup2.ng .pzc{opacity:.45}
 .msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
 .msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
 .msx .v-cup2 .ok{display:block;color:#86efac;font-size:10.5px;font-weight:900;line-height:1.3}

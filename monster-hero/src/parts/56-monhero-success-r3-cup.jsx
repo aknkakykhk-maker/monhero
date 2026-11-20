@@ -103,6 +103,23 @@ const MsxR3PrizeBox = ({ prizes, onPick }) => {
       <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><MsxR3PrizeName name={x.name}/></button>)}</div></> : null}
   </>);
 };
+// 受付の一覧の札に、優勝でもらえる賞品の印を並べる(r1119-052 社長「受付の一覧に賞品を出す」・参考 te-01 の賞金の右の印)。
+//   賞金は右の数字・修行チケット(賞金ランクで増える)とライバルの上乗せ(右上の帯)は出さない。押すと確認の窓で詳しく見られる
+const msxR3PrizeChips = (SUC, c) => {
+  let all = []; try { all = msxR3Prizes(SUC, c); } catch (e) { all = []; }
+  return all.filter((x) => !['g', 'tk', 'rv', 'rvpts'].includes(x.id)).map((x) => {
+    const m = /([+＋×][0-9,]+)$/.exec(String(x.name || '').replace(/｜/g, ''));
+    return { ...x, n: m ? m[1] : '' };
+  });
+};
+const MsxR3PrizeChips = ({ SUC, c }) => {
+  const ch = msxR3PrizeChips(SUC, c); if (!ch.length) return <span className="pzc"/>;
+  const show = ch.slice(0, 4); const more = ch.length - show.length;
+  return (<span className="pzc" data-msx-r3-cup-prizes={c.id} aria-label={`賞品 ${ch.map((x) => String(x.name || '').replace(/｜/g, '')).join('・')}`}>
+    {show.map((x) => <span key={x.id} className={`pc${x.rare ? ' rare' : ''}`}><span className="i">{typeof msxItemIco === 'function' ? msxItemIco(x, '15px') : x.e}</span>{x.n ? <small>{x.n}</small> : null}</span>)}
+    {more > 0 ? <span className="pc more"><small>+{more}</small></span> : null}
+  </span>);
+};
 const MSX_R3_FC_CLASS = Object.freeze({ easy: 'fc-e', good: 'fc-g', even: 'fc-v', hard: 'fc-h', none: 'fc-n' });
 function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const { SUC } = msxSuc;
@@ -189,7 +206,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : <span className="ok">出場できます</span>}
               {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><MsxRivalThumb rival={c.rival}/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{msxBreederLabel(c.rival.breeder, c.rival.kind)}</small> : null}</span> : null}
-              <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
+              <div className="gr"><MsxR3PrizeChips SUC={SUC} c={c}/><span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span></div>
             </div>
             {c.rival ? <span className="rvb">能力ポイント1.5倍</span> : null}
           </button>);
