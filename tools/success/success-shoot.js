@@ -412,6 +412,38 @@ const makeRun = async (kind) => {
         { const px = await measureBtnPixels(page); check(`${name}${tag ? `(${tag})` : ''}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
+        // 押した札と違う札に当たらない(2026-11-19 r1119-013 ⑥ M-6 のミハリの指摘)。見えているボタンの上の端・下の端(内側 2px)と真ん中を押して、
+        //   別のボタンに当たる所を数える。押せる範囲を広げた見えない縁(::after)が隣の札に重なると、札の中を押しても隣が押される
+        {
+          const miss = await page.evaluate(() => {
+            const out = [];
+            const vis = (r) => r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+            // 入ってくる動きの途中の札は、位置が動いている最中なので数えない(撮る時刻しだいで重なって見える)
+            const moving = (e) => !!e && typeof e.getAnimations === 'function' && e.getAnimations().some((x) => x.playState === 'running');
+            for (const el of document.querySelectorAll('.msx button')) {
+              if (el.disabled || moving(el)) continue;
+              // 送り箱で切れて見えない所は数えない(送り箱の外の「閉じる」や下の帯の下に隠れているだけで、押せる所ではない)
+              const r0 = el.getBoundingClientRect(); const r = { left: r0.left, right: r0.right, top: r0.top, bottom: r0.bottom };
+              for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+                const c = getComputedStyle(a); if (c.overflowY === 'visible' && c.overflowX === 'visible') continue;
+                const q = a.getBoundingClientRect(); r.top = Math.max(r.top, q.top); r.bottom = Math.min(r.bottom, q.bottom); r.left = Math.max(r.left, q.left); r.right = Math.min(r.right, q.right);
+              }
+              r.width = r.right - r.left; r.height = r.bottom - r.top; if (!vis(r)) continue;
+              // 真ん中が押せるボタンだけを見る(窓の裏に隠れたボタンは数えない)
+              const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              if (!mid || !(mid === el || el.contains(mid))) continue;
+              for (const y of [r.top + 2, r.bottom - 2]) {
+                if (y < 0 || y >= innerHeight) continue;
+                const hit = document.elementFromPoint(r.left + r.width / 2, y);
+                const hb = hit && hit.closest('button');
+                if (hb && hb !== el && !el.contains(hb) && !hb.contains(el) && !moving(hb)) out.push(`${(el.innerText || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}→${(hb.innerText || hb.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}`);
+              }
+            }
+            return out;
+          });
+          if (process.env.TAP_DUMP) console.log('TAP', name, tag, miss.length, miss.slice(0, 6).join(' / '));
+          else check(`${L}: 札の端を押しても隣の札に当たらない`, miss.length === 0, miss.slice(0, 4).join(' / '));
+        }
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }
       await page.close();

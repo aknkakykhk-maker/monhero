@@ -983,6 +983,17 @@ const MSX_CSS = `
 /* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
 :where(.msx) button,:where(.msx) [role=button]{position:relative;min-height:0}
 .msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* 広がり(44px)が隣の段の札に重ならないようにする(2026-11-19 r1119-013 ⑥ M-6・ミハリの指摘)。札の中を押しても、下の段の札の広がりに当たって
+   隣の札が押されていた(図鑑の分類・助手の札、能力ポイントの「1P〜MAX」の下の「まとめて」)。札そのものを 36px にして段の間を 8px 空け、
+   広がりは段の間の半分(上下 4px)まで。見張り: tools/success/success-shoot.js「札の端を押しても隣の札に当たらない」 */
+.msx .msx-dex-tabs,.msx .msx-dex-aids{row-gap:8px}
+.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-pt-bulk .chip{min-height:36px}
+.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-pt-bulk .chip::after{height:calc(100% + 8px)}
+.msx .msx-pt-bulk{margin-top:8px}
+/* 図鑑の一覧の行も、行そのものを 44px にする(行の間 5px に、上下 4px の広がりが重なっていた) */
+.msx .msx-dex-row{min-height:44px}
+/* イッサ博士の選択肢は札そのものが大きいので広げない(小さい画面で、上下の選択肢の札に重なっていた) */
+.msx .v-ix::after{height:100%}
 /* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
 .msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
 .msx.land .v-ft{position:sticky;bottom:0;z-index:3}
@@ -1218,14 +1229,6 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
-/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
-   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
-.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
-.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
-.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
-/* M-6 の残り(2026-11-19 r1119-013 ⑥): 詳しくのタブ(高さ24)・図鑑の分類の札と助手の札(24)・詳しくを開く札(22)・大会の月の ◀ ▶(30) */
-.msx .msx-md-tabs button,.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-dt-more,.msx .ar{position:relative}
-.msx .msx-md-tabs button::after,.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-dt-more::after{content:"";position:absolute;inset:-10px -2px}
-.msx .ar::after{content:"";position:absolute;inset:-7px 0}
+
 `;
 
