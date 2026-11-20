@@ -2,6 +2,14 @@
 
 モンサク「大きな賭け」で博士があらわれる場面(`MsxIssaMeet`)に、登場の動画を1回だけ流す。最後の決めポーズで、今までの止め絵(issa-hakase.png)へ切り替える(同じ絵・同じ位置なので、つなぎ目は見えない)。
 
+## 動画(ゲームの画面の録画・普通の速さ・縦 390×844)
+
+- 透過の版(本命): [rec-alpha.mp4](rec-alpha.mp4)(6.0秒。場面が開いてから吹き出しが出るまで)
+- iPhone の Safari 向けの背景付きの版: [rec-ios-bg.mp4](rec-ios-bg.mp4)(6.2秒。最後に元の場面へ戻って吹き出しが出るまで)
+- 録り方: `SHOT_SIZES=base SHOT_ONLY=I1VR,I1BR SHOT_RECORD=<フォルダ> node tools/success/success-shoot.js` → `msx-rec.json` の印の時刻から ffmpeg で切り出して H.264 にした
+
+## 止め絵
+
 | | 透過の版(本命・WebM) | iPhone・iPad・Mac の Safari(背景付きの mp4) |
 |---|---|---|
 | ①始まり | ![](alpha-1-start.png) | ![](ios-bg-1-start.png) |
