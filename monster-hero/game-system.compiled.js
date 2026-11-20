@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b2e0aaab90a97f1
+// source-sha256: 90e0aca9687d869d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172530,6 +172530,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
+.msx .v-body>.v-cupwin{position:fixed;inset:0}
+.v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+.v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+.v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
@@ -172909,6 +172915,17 @@ const MSX_CSS = `
 /* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
 :where(.msx) button,:where(.msx) [role=button]{position:relative;min-height:0}
 .msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* 広がり(44px)が隣の段の札に重ならないようにする(2026-11-19 r1119-013 ⑥ M-6・ミハリの指摘)。札の中を押しても、下の段の札の広がりに当たって
+   隣の札が押されていた(図鑑の分類・助手の札、能力ポイントの「1P〜MAX」の下の「まとめて」)。札そのものを 36px にして段の間を 8px 空け、
+   広がりは段の間の半分(上下 4px)まで。見張り: tools/success/success-shoot.js「札の端を押しても隣の札に当たらない」 */
+.msx .msx-dex-tabs,.msx .msx-dex-aids{row-gap:8px}
+.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-pt-bulk .chip{min-height:36px}
+.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-pt-bulk .chip::after{height:calc(100% + 11px)} /* 広がりの 100% は枠の内側(36 - 枠 1.5×2)。+11px で 44px、枠の外へは上下 4px ずつ */
+.msx .msx-pt-bulk{margin-top:8px}
+/* 図鑑の一覧の行も、行そのものを 44px にする(行の間 5px に、上下 4px の広がりが重なっていた) */
+.msx .msx-dex-row{min-height:44px}
+/* イッサ博士の選択肢は札そのものが大きいので広げない(小さい画面で、上下の選択肢の札に重なっていた) */
+.msx .v-ix::after{height:100%}
 /* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
 .msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
 .msx.land .v-ft{position:sticky;bottom:0;z-index:3}
@@ -173145,11 +173162,6 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
-/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
-   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
-.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
-.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
-.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
 /* ④段2(r1119-011・U-4): 枠を選ぶ画面を共通の型(MonsucMonCard・MONSUC_UI.md の 8)へ。上の6枠も下の一覧も同じ縦長の札。
    タブ・検索の段は1行・見た目 36px・押せる範囲 44px。下のボタンは同じ高さ・同じ形で、主は「決定」だけ */
 .msx .msx-tp-team{padding:6px;gap:5px}
@@ -174993,7 +175005,7 @@ function MsxHd({
     className: "bk",
     "data-mh-back": true,
     onClick: onBack
-  }, "← ", back), sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
+  }, back === '中断' ? '⏸ 中断' : `← ${back}`), sub && title === '🌱 モンヒロサクセス' ? React.createElement("span", {
     className: "ti",
     "data-msx-hd-sc": true
   }, sub) : React.createElement("span", {
@@ -180581,12 +180593,6 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => {
-        setSub('main');
-        setSel(null);
-      }
-    }, "← 戻る"), React.createElement("button", {
-      type: "button",
       className: "go",
       disabled: !card,
       onClick: () => doAct({
@@ -180693,9 +180699,6 @@ function MsxPlay({
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
-      type: "button",
-      onClick: () => setSub('main')
-    }, "← 戻る"), React.createElement("button", {
       type: "button",
       className: "go",
       disabled: !selCare.ok || selCare.kind === 'clinic' && !cp,
@@ -180964,6 +180967,14 @@ function MsxPlay({
     back: "戻る",
     onBack: () => detail ? setDetail(false) : setSheet(null),
     sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }) : (sub === 'train' || sub === 'care') && phase === 'main' && !run.out ? React.createElement(MsxHd, {
+    back: "戻る",
+    onBack: () => {
+      setSub('main');
+      setSel(null);
+    },
+    sub: sub === 'train' ? 'トレーニング' : '休む・遊ぶ',
     right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
   }) : subPanel ? React.createElement(MsxHd, {
     back: "戻る",
@@ -181737,7 +181748,7 @@ function MsxStats({
     plus: plus,
     minus: minus
   }) : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "msx-row",
+    className: "msx-row msx-pt-bulk",
     style: {
       gap: 6,
       marginBottom: 6
@@ -182273,6 +182284,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
+/* 押せない決めるボタンは透けさせず、字を読めるようにする(2026-11-20 r1119-013 ⑥ API 点検。「お別れする(0体)」の字が地とほぼ同じ色だった) */
+.msx .v-ft button.go:disabled{opacity:1;color:#cbd5e1}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:0;cursor:pointer}
@@ -186375,9 +186388,6 @@ function MsxR3Shugyo({
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
-    onClick: onBack
-  }, "← 戻る"), React.createElement("button", {
-    type: "button",
     className: `go${hpShort ? ' off' : ''}`,
     disabled: tickets <= 0 || hpShort > 0,
     onClick: go,
@@ -186576,7 +186586,7 @@ function MsxR3GameOver({
   }, "もう1回 初めから ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "閉じる",
+    back: "初めの画面へ",
     onBack: onPause,
     body: body,
     foot: foot
@@ -186751,7 +186761,7 @@ function MsxR3Retire({
     }));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: s.pts > 0 ? '戻る' : '閉じる',
+      back: s.pts > 0 ? '戻る' : '初めの画面へ',
       onBack: s.pts > 0 ? () => setStep('e3') : onPause,
       right: right,
       body: body,
@@ -187031,7 +187041,7 @@ function MsxR3Retire({
     }, "決定 ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "初めの画面へ",
       onBack: onPause,
       right: right,
       body: body,
@@ -187336,7 +187346,7 @@ function MsxR3Retire({
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "戻る",
       onBack: () => setStep('done'),
       right: right,
       body: React.createElement(MsxBest3, {
@@ -187415,7 +187425,7 @@ function MsxR3Retire({
     }, "この記録はランキングに載せられませんでした")) : null);
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "閉じる",
+      back: "初めの画面へ",
       onBack: () => {
         setRun(null);
         onPause();
@@ -188735,6 +188745,8 @@ const MSX_MM_CSS = `
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
+/* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
+.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
 `;
 const MSX_BOX_HOST = {
   open: null,
@@ -272956,7 +272968,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? '項目一覧' : cat ? 'ヘルプへ' : '閉じる';
+      const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -272969,6 +272981,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-[17px] leading-none"
       }, "🆕");
       return React.createElement("div", {
+        "data-mh-help": true,
         className: "fixed inset-0 flex flex-col",
         style: {
           position: 'fixed',
@@ -272984,7 +272997,9 @@ function MonsterHeroGame() {
         }
       }, React.createElement("button", {
         onClick: goBack,
-        className: "shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"
+        "data-mh-help-back": true,
+        "data-mh-back": true,
+        className: "shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"
       }, React.createElement(ArrowLeft, {
         size: 16
       }), React.createElement("span", {
@@ -273164,18 +273179,11 @@ function MonsterHeroGame() {
           backgroundColor: cat.color
         }
       }, "次: ", nextTopic.title)))), React.createElement("footer", {
-        className: "shrink-0 p-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:gap-3 bg-slate-900 border-t border-white/10 text-center",
-        style: {
-          backgroundColor: '#0f172a',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
+        className: "shrink-0 px-4 py-1 bg-slate-900 border-t border-white/10 text-center"
       }, React.createElement("button", {
-        onClick: () => setShowHelp(false),
-        className: "mh-button mh-button-primary w-full min-h-[52px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[40px] py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 rounded-2xl font-black text-sm active:scale-95"
-      }, "分かった！冒険に戻る"), React.createElement("button", {
         "aria-label": "",
         onClick: requestDebugSettings,
-        className: "mt-5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 mx-auto [@media(orientation:landscape)_and_(max-height:520px)]:mx-0 [@media(orientation:landscape)_and_(max-height:520px)]:shrink-0 block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
+        className: "mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
       }, "💊")));
     })(), titleModal, showOfficialTitleConfirm && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
