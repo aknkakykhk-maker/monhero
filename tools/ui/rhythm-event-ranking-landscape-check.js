@@ -22,6 +22,7 @@ const TOL = 24; // 画面の端のふつうの余白(見出しの上の数px〜2
 const POSTURES = [
   ['tate-390', 390, 844, false, { top: 59, bottom: 34, left: 0, right: 0 }],
   ['yoko-844', 844, 390, false, { top: 0, bottom: 21, left: 47, right: 47 }],
+  ['pc-1280', 1280, 800, false, { top: 0, bottom: 0, left: 0, right: 0 }],
   ['rot-390', 390, 844, true, { top: 59, bottom: 34, left: 0, right: 0 }],
   ['rot-430', 430, 932, true, { top: 59, bottom: 34, left: 0, right: 0 }],
   ['rot-safari', 390, 664, true, { top: 0, bottom: 0, left: 0, right: 0 }],
@@ -89,7 +90,7 @@ const allowOf = (rot, w, h, safe) => (rot ? { left: safe.top, top: 0, right: 0, 
       const land = w > h;
       check(`${name}: 部門(曲)のボタンが、下のメニューに隠れない`, m.divBottom === null || (m.menuTop !== null && m.divBottom <= m.menuTop + 1), JSON.stringify(m));
       check(`${name}: ランキング(順位・記録なしの欄)が、最初の画面に見える(下のメニューより上に20px以上)`, m.bodyTop !== null && m.menuTop !== null && m.bodyTop <= m.menuTop - 20, JSON.stringify(m));
-      if (land || rot) check(`${name}: 今回/前回・イベント名・詳細が1行に並ぶ`, m.sameRow, JSON.stringify(m));
+      if ((land && h < 520) || rot) check(`${name}: 今回/前回・イベント名・詳細が1行に並ぶ`, m.sameRow, JSON.stringify(m));
       await page.close();
     }
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
