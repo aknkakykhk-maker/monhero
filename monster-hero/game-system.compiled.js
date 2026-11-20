@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cd8ff1c5e0015cc2
+// source-sha256: 51986692fe19f6e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161637,10 +161637,14 @@ function MonsucFuseSheet({
       colors: Array.isArray(plan.child.colors) ? plan.child.colors : []
     }
   })) : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
-    className: "text-[14px] font-black text-amber-100"
-  }, plan.child.gen, "代目", React.createElement("small", {
+    className: "text-[16px] font-black text-amber-100",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseSpName(plan.child.species), "が生まれます", React.createElement("small", {
     className: "block text-[12px] font-bold text-slate-200"
-  }, "まだ育てていないマスモンとして生まれます"), React.createElement("small", {
+  }, plan.child.gen, "代目・まだ育てていないマスモン"), React.createElement("small", {
     className: "mt-1 block text-[12px] font-bold text-slate-200"
   }, "成長の型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''))), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
@@ -161654,11 +161658,13 @@ function MonsucFuseSheet({
   }, monsucFuseSpName(plan.child.species), "の初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), keys.map(k => React.createElement("p", {
     key: k,
     className: "flex justify-between text-[12px] font-black"
-  }, React.createElement("span", null, names[k]), React.createElement("span", null, plan.base[k], " → ", React.createElement("b", {
+  }, React.createElement("span", null, names[k]), React.createElement("span", null, React.createElement("small", {
+    className: "text-[11px] text-slate-400"
+  }, plan.base[k], " → "), React.createElement("b", {
     className: "text-amber-200"
-  }, plan.child.st[k]), " ", React.createElement("small", {
-    className: "text-fuchsia-200"
-  }, "(+", plan.add[k], ")"))))), React.createElement("p", {
+  }, plan.child.st[k]), " ", React.createElement("b", {
+    className: "ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100"
+  }, "+", plan.add[k]))))), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-200",
     "data-monsuc-fuse-techs": true
   }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
@@ -161738,7 +161744,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;white-space:nowrap;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
@@ -161799,7 +161805,7 @@ function MonsucFuseShow({
     alt: ""
   }), React.createElement("div", {
     className: "mf-head"
-  }, React.createElement("small", null, "合体"), (t => typeof jaWrap === 'function' ? jaWrap(t) : t)(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…')), st < 3 ? React.createElement("div", {
+  }, React.createElement("small", null, "合体"), (t => typeof jaWrap === 'function' ? jaWrap(t) : t)(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体がひとつになっていく…')), st < 3 ? React.createElement("div", {
     className: "mf-ctl"
   }, React.createElement("button", {
     type: "button",
