@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d12f3c5b6a6a8b1
+// source-sha256: 7e767a98de455fb2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173225,6 +173225,7 @@ const MSX_CSS = `
 .msx .v-b3 .v-lw small{font-size:10.5px;color:#cbd5e1;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .msx .v-lwl .r{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx .v-lwl .r i{flex:none;font-style:normal;color:#94a3b8;width:4.6em}.msx .v-lwl .r span{flex:1;min-width:0}.msx .v-lwl .r b{flex:none;color:#fde68a}
+.msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:30px} /* 編成の子の札(押すとアシスト詳細) */
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -178204,6 +178205,29 @@ const msxGfxItemsOf = (p, s) => {
   add('pop', '⭐', '人気', p.pop0, Math.round(Number(s.pop) || 0), 100);
   return o;
 };
+function MsxCmTap({
+  m,
+  className,
+  attrs,
+  children
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  const root = open && ref.current ? ref.current.closest('.msx') : null;
+  return React.createElement(React.Fragment, null, React.createElement("button", _extends({
+    type: "button",
+    ref: ref,
+    className: `${className} msx-cm-tap`,
+    onClick: () => setOpen(true),
+    "aria-label": `${msxMemberName(m)}のアシスト効果を見る`
+  }, attrs || {}), children), open && root && typeof MsxAssistDetail === 'function' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(React.createElement(MsxAssistDetail, {
+    mem: m,
+    kind: m.kind === 'base' ? 'base' : 'team',
+    name: msxMemberName(m),
+    sub: m.kind === 'base' ? 'ベースモン' : `Lv.${m.lv || 1}・${msxMonName(m.species)}`,
+    onClose: () => setOpen(false)
+  }), root) : null);
+}
 const MSX_LW_WHY = Object.freeze({
   turnHp: ['体力に余裕', '体力を半分以上残してターンを終えた'],
   turnLow: ['体力が少ない', '体力が半分より少ないままターンを終えた'],
@@ -180514,9 +180538,13 @@ function MsxPlay({
       const m = s.team[i];
       const tag = s.bond[i] >= tagAt;
       const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s));
-      return React.createElement("div", {
+      return React.createElement(MsxCmTap, {
         key: i,
-        className: `v-cm${tag ? ' tag' : ''}`
+        m: m,
+        className: `v-cm${tag ? ' tag' : ''}`,
+        attrs: {
+          'data-msx-cm': i
+        }
       }, React.createElement(MsxPf, {
         m: m,
         bond: s.bond[i],
@@ -189065,7 +189093,7 @@ function MsxAssistDetail({
     species: mem.species
   };
   const pow = rec && Number.isFinite(rec.score) ? rec.score : mem.power;
-  const role = kind === 'friend' ? 'フレンド' : kind === 'memo' ? 'メモモン' : kind === 'base' ? 'ベースモン' : 'マスモン';
+  const role = kind === 'friend' ? 'フレンド' : kind === 'memo' ? 'メモモン' : kind === 'base' ? 'ベースモン' : kind === 'team' ? '編成' : 'マスモン';
   const top = Array.isArray(mem.top) ? mem.top.slice(0, 3) : [];
   return React.createElement("div", {
     className: "msx-ov msx-fade msx-asd-ov",

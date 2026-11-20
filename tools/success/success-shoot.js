@@ -91,7 +91,7 @@ const makeRun = async (kind) => {
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carryall', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['IN', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip']], ['IN2', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip', 'introNext', 'introNext']], // 育成の始まりの場面(2026-11-14)
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
@@ -160,6 +160,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('efrow:')) { const d = document.querySelectorAll('[data-msx-effect]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
             if (st === 'tpdetail') { const d = document.querySelector('[data-msx-tp-detail]'); if (d) d.click(); return !!d; }
             if (st === 'asdcard') { const d = document.querySelector('[data-msx-assist-detail] [data-msx-assist-card][role=button]'); if (d) d.click(); return !!d; }
+            if (st === 'cmtap') { const d = document.querySelector('[data-msx-cm]'); if (d) d.click(); return !!d; }
             if (st === 'efmon') { const d = document.querySelector('[data-msx-ef-view="mon"]'); if (d) d.click(); return !!d; }
             if (st === 'unlockall') { // ベースモンを全種解放にして開き直す(社長の実機と同じく30体ほどから選ぶ一覧を撮る。r1119 ⑦)
               localStorage.setItem('mh_unlocked_monsters', JSON.stringify(msxSuc.SUC.speciesList.filter((id) => ALL_PLAYER_MONSTERS[id])));
