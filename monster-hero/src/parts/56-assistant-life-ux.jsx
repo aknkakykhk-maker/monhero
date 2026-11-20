@@ -572,7 +572,7 @@ function AssistantLifeDailySceneView({ plan, place, look, slotLabel, slotId, onC
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 35%,rgba(10,6,30,.85) 78%)' }}/>
       {typeof AssistantLifeStands === 'function' && <AssistantLifeStands ids={plan.ids}/>}
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 px-3" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))' }}>
-        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="家へ戻る" className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-black/50 px-3 text-[12px] font-black text-white">← 家へ戻る</button>
+        <button type="button" data-assistant-life-daily-scene-back onClick={onClose} aria-label="戻る" className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-black/50 px-3 text-[12px] font-black text-white">← 戻る</button>
         <p className="rounded-full bg-black/60 px-3 py-1 text-[12px] font-black text-amber-100">{plan.kind === 'rare' ? `✨ めずらしいできごと「${plan.title}」` : `${slotLabel}のできごと ・ ${placeName}`}</p>
       </div>
       <div className="absolute inset-x-3 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-slate-950/90 p-2 text-white" style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', maxHeight: '52%' }}

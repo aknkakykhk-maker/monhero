@@ -1246,9 +1246,16 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
     </div>);
 }
 // 渡す前の確かめ(道具10種類・2人の好み・上がる量)は 56-assistant-life-gifts.jsx の AssistantLifeGiftSheet
-// はじめて道具を手に入れたときの案内(HOME で1回だけ。mh_assistant_life_item_intro_v1)
+// はじめて道具を手に入れたときの案内(1回だけ。mh_assistant_life_item_intro_v1)
+// 出すのは、助手ライフで初めて「🎁 贈る」を押したとき(2026-11-20 総点検 F-1: 前は助手ライフを開く前の HOME で出て、
+//   まだ知らない「友情Lv・仲良し度・好み・1日の回数」を一度に言っていた)。押すまでは HOME でも助手ライフでも出さない。
+//   合図は覚えない(ページの中だけ)。見たかどうかは今までどおり mh_assistant_life_item_intro_v1 に残す(意味は変えない)
+const ASSISTANT_LIFE_ITEM_INTRO_ARM = { on: false, subs: new Set() };
+const assistantLifeItemIntroArm = () => { if (ASSISTANT_LIFE_ITEM_INTRO_ARM.on) return; ASSISTANT_LIFE_ITEM_INTRO_ARM.on = true; ASSISTANT_LIFE_ITEM_INTRO_ARM.subs.forEach(f => { try { f(); } catch (_) {} }); };
 function AssistantLifeItemIntro({ peerItems }) {
   const [state, setState] = React.useState('loading'); // loading | show | done
+  const [armed, setArmed] = React.useState(ASSISTANT_LIFE_ITEM_INTRO_ARM.on);
+  React.useEffect(() => { const f = () => setArmed(true); ASSISTANT_LIFE_ITEM_INTRO_ARM.subs.add(f); return () => { ASSISTANT_LIFE_ITEM_INTRO_ARM.subs.delete(f); }; }, []);
   const have = ASSISTANT_LIFE_ITEM_KINDS.find(k => peerItems && Number(peerItems[k.kind]) > 0);
   // 掛け合いが流れているあいだは待つ(重ねない)
   const peer = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
@@ -1258,22 +1265,19 @@ function AssistantLifeItemIntro({ peerItems }) {
     Promise.resolve(storeGet(ASSISTANT_LIFE_ITEM_INTRO_KEY, false, false)).catch(() => false).then(v => { if (alive) setState(v === true ? 'done' : 'show'); });
     return () => { alive = false; };
   }, [!!have]);
-  if (!assistantLifeEnabled() || !have || state !== 'show' || (peer && peer.talking)) return null;
+  if (!assistantLifeEnabled() || !have || !armed || state !== 'show' || (peer && peer.talking)) return null;
   const info = assistantLifeItemInfo(have.kind);
-  const close = (open) => { setState('done'); try { storeSet(ASSISTANT_LIFE_ITEM_INTRO_KEY, true, false); } catch {} if (open) assistantLifeOpenScreen(); };
+  const close = () => { setState('done'); try { storeSet(ASSISTANT_LIFE_ITEM_INTRO_KEY, true, false); } catch {} };
   const guide = (typeof assistantById === 'function') ? assistantById('mua') : null;
   return (
-    <div data-assistant-life-item-intro className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ zIndex: 8800 }}>
+    <div data-assistant-life-item-intro className="fixed inset-0 flex items-center justify-center bg-black/60 px-4" style={{ zIndex: 9400 }}>
       <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300 bg-[#1c1405] p-3 shadow-2xl">
         <div className="flex items-center gap-2">
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
           <p className="text-[14px] font-black text-amber-200">初めての {info.emoji} {info.name}！</p>
         </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に贈れるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 好きな物だと多めに上がるよ。好みは<span className="whitespace-nowrap">贈ると分かる！</span><br/>④ 同じ道具は1日1回・<span className="whitespace-nowrap">合わせて1日3回まで</span></p>
-        <div className="mt-2 flex gap-2">
-          <button type="button" data-assistant-life-item-intro-close onClick={() => close(false)} className="min-h-[44px] flex-1 rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">あとで</button>
-          <button type="button" data-assistant-life-item-intro-open onClick={() => close(true)} className="min-h-[44px] flex-[2] rounded-xl border border-amber-300/70 bg-amber-400/20 text-[12px] font-black text-amber-100 active:scale-[.98]">「助手ライフ」を開く</button>
-        </div>
+        <p className="mt-2 text-[12px] leading-relaxed text-white" style={{ textAlign: 'left' }}>① 贈ると、あなたとの<span className="whitespace-nowrap">💗 仲良し度</span>が上がるよ<br/>② 好きな物だと多めに上がる。好みは<span className="whitespace-nowrap">贈ると分かる！</span><br/>③ 1日に、<span className="whitespace-nowrap">2人に3回・1人に3回</span>まで</p>
+        <button type="button" data-assistant-life-item-intro-close data-assistant-life-item-intro-open onClick={close} className="mt-2 min-h-[44px] w-full rounded-xl border border-amber-300/70 bg-amber-400/20 text-[13px] font-black text-amber-100 active:scale-[.98]">分かった</button>
       </div>
     </div>);
 }

@@ -55,6 +55,9 @@ const toHome = async (page) => {
     await page.waitForTimeout(500);
   }
   for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+  // 部屋の「できること」は、話す・贈る・誘う のほかを「もっと見る」に畳んだ(2026-11-20 総点検 F-5)。
+  //   畳んだ行を押す検査が多いので、ここで開いた状態にしておく(ページの中の値だけ・保存しない)。見た目を撮る道具は window.__mhKeepRoomFold で閉じたまま
+  await page.evaluate(() => { try { if (!window.__mhKeepRoomFold && typeof ASSISTANT_LIFE_ROOM_MORE === 'object') ASSISTANT_LIFE_ROOM_MORE.open = true; } catch (_) {} }).catch(() => {});
 };
 const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
 // HOME のドックと顔バッジの見張り(2026-11-17 ホーム一新で、旧 homeFacesProblems=「札の下の顔の列」から置き換え)。
