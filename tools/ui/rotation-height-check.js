@@ -46,6 +46,7 @@ const REVIEWED = {
   // ③ document.body へ直に出す窓
   '56-monsuc-fuse.jsx|92dvh|1': 'outside モンヒロサクセスの合体の画面の小窓(モンヒロサクセスの画面の中だけで開く・モンヒロビートの中では開かない・2026-11-12)',
   '56-monhero-success-main.jsx|portal|1': 'outside モンヒロサクセスの育成の画面(画面いっぱいの枠で、中は縦・横・幅320で組み直す。モンヒロビートの中では開かない・tools/success/success-shoot.js が横844×390で確かめる・2026-11-12)',
+  '56-monsuc-buff.jsx|portal|1': 'outside モンヒロサクセスの毎ターンの画面で、ひとときの状態のラベルを押したときの小さな説明の窓(育成の画面でしか開かない・高さ約220pxで横持ち390pxに収まる・モンヒロビートの中では開かない・2026-11-20 r1119-029)',
   '44-time-of-day.jsx|portal|1': 'outside HOME の時刻の札を押したときの小さな窓(HOME でしか開かない・高さ約150pxで横持ち390pxに収まる)',
   '24-battle-fx.jsx|portal|1': 'outside バトルの演出',
   '44-time-of-day.jsx|portal|1': 'outside HOME の時計の表示形式のシート(TimeOfDayClock の home 付きは 69-screen-home.jsx だけ。HOME で開く物で、モンヒロビートの中では開かない・2026-11-11 開発部が確かめた)',
