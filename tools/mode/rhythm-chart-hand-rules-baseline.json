@@ -3088,6 +3088,41 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
+  "amakakeru_tsubasa/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "amakakeru_tsubasa/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "amakakeru_tsubasa/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 51,
+   "heldHandSwitch": 0
+  },
+  "amakakeru_tsubasa/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 15,
+   "heldHandSwitch": 0
+  },
+  "amakakeru_tsubasa/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 23,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3249,6 +3284,16 @@
    "at": "2026-11-19T12:52",
    "reason": "新曲 Erfolg を公開",
    "changed": 10
+  },
+  {
+   "at": "2026-11-19T23:38",
+   "reason": "新曲 天翔る翼 を公開",
+   "changed": 5
+  },
+  {
+   "at": "2026-11-20T00:43",
+   "reason": "天翔る翼の譜面を作り直し(密度増に伴う件数の増加を確認)",
+   "changed": 3
   }
  ]
 }
