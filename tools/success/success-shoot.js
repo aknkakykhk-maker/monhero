@@ -103,7 +103,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
-    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
+    ['I1', 'mid', ['cont', 'issa']], ['I1V', 'mid', ['vidforce:alpha', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['I1B', 'mid', ['vidforce:bg', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['I1VR', 'mid', ['vidforce:alpha', 'cont', 'mark', 'issa', 'wait:5000']], ['I1BR', 'mid', ['vidforce:bg', 'cont', 'mark', 'issa', 'wait:5000']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
@@ -123,7 +123,10 @@ const makeRun = async (kind) => {
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
     for (const [w, h, tag, fscale] of sizes) {
-      const page = await browser.newPage({ viewport: { width: w, height: h } });
+      // SHOT_RECORD=<フォルダ> … 動きを録画する(Playwright の recordVideo)。'mark' の手順の時刻を msx-<名前>.json に残し、あとで ffmpeg で切り出す
+      const REC = process.env.SHOT_RECORD || '';
+      const page = await browser.newPage({ viewport: { width: w, height: h }, ...(REC ? { recordVideo: { dir: REC, size: { width: w, height: h } } } : {}) });
+      const recT0 = Date.now(); const recMarks = [];
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
       await page.addInitScript((tut) => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: tut ? { open: 1, firstend: 1, prep: 1, scn: 1 } : { open: 1, firstend: 1, prep: 1, team: 1, bring: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1, scn: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} }, !!process.env.SHOT_TUT); // SHOT_TUT=1: ターン・トレーニング・結果の説明を未読にして撮る(説明の窓の出る所を見る。測る値は窓が重なるので見ない)
@@ -163,6 +166,7 @@ const makeRun = async (kind) => {
         const seqShot = async () => { if (seq) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}~${String(seqN++).padStart(2, '0')}${tag ? `-${tag}` : ''}.png`) }); } };
         await seqShot();
         for (const st of steps) {
+          if (st === 'mark') { recMarks.push((Date.now() - recT0) / 1000); continue; }
           const done = await page.evaluate(async (st) => {
             const btn = (re) => [...document.querySelectorAll('.msx button')].find((b) => re.test(b.innerText || '') && !b.disabled);
             const click = (re) => { const b = btn(re); if (b) b.click(); return !!b; };
@@ -210,6 +214,9 @@ const makeRun = async (kind) => {
               if (sc && sc.getAttribute('data-msx-tev-beat') === '5') await new Promise((r) => setTimeout(r, 1100));
               return true;
             }
+            // イッサ博士の登場動画(r1119-059): どちらの版を流すかを決めて開く / 流しながら決まった間隔で撮る(SHOT_SEQ=I1V,I1B。止めて時刻を飛ばすと頭なしのブラウザは透過の動画を描かない)
+            if (st.startsWith('vidforce:')) { window.__msxIssaVidForce = st.slice(9); return true; }
+            if (st.startsWith('vidrate:')) { window.__msxIssaVidRate = Number(st.slice(8)); return true; }
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
@@ -518,7 +525,9 @@ const makeRun = async (kind) => {
         }
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); await uiMeasure.record(page, path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`)); }
       }
+      const recVid = REC ? page.video() : null;
       await page.close();
+      if (recVid) { const p = await recVid.path(); const to = path.join(REC, `msx-rec${tag ? `-${tag}` : ''}.webm`); fs.renameSync(p, to); fs.writeFileSync(to.replace(/\.webm$/, '.json'), JSON.stringify({ marks: recMarks })); }
     }
     await page0.close();
   } finally { await browser.close(); server.close(); }

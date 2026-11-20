@@ -1034,8 +1034,8 @@ function AssistantLifeBand({ metIds }) {
   const nameOf = (id) => (assistantById(id) || {}).name || id;
   const g = life.groups[0];
   const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
-  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
-  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : (life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '');
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${assistantLifePlaceLabel(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${assistantLifePlaceLabel(lonely[1].place)}でさみしそう` : (life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '');
   const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
   return (
     <div data-assistant-life-band className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: 8400, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>

@@ -49,7 +49,7 @@ const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden'
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
 // 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
-const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze(Object.fromEntries(['studio', 'ranch', 'cardroom'].map(k => { const w = typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places[k]; return [k, w ? [w.show, w.line] : [ASSISTANT_LIFE_PLACES[k], ASSISTANT_LIFE_PLACES[k]]]; }))); // [画面の名前, 台本の言葉](言葉の表から)
 // 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
 //   そこの最後からここを呼ぶので、予定表・地図の場所の窓・家の帯の「いま行くと得」が同じ文になる
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
@@ -413,7 +413,7 @@ function AssistantLifeBodyPanel({ id, cur }) {
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
           <p key={r.abs} className="flex flex-wrap items-center gap-x-1 text-[10.5px] font-bold leading-tight text-slate-200" data-assistant-life-body-forecast-row={r.abs}>
             <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
-            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと</span>
+            <span className="min-w-0 flex-1 truncate">{assistantLifePlaceLabel(r.place)}のあと</span>
             <span className="shrink-0 whitespace-nowrap">疲れ{r.fat}・ストレス{r.st}</span>
             {r.risk > 0 && <span className="shrink-0 whitespace-nowrap text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
           </p>); })}
