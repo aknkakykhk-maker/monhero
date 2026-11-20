@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b85f965f7a1a807
+// source-sha256: 3acc094dfbf75e40
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161747,20 +161747,21 @@ const MONSUC_FUSE_CSS = `
 .mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;white-space:nowrap;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
-.mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
-.mf-mon.a{left:6%}.mf-mon.b{right:6%}
-.mf-show.st0 .mf-mon.a{left:6%;animation:mfBobA 1.1s ease-in-out infinite}.mf-show.st0 .mf-mon.b{right:6%;animation:mfBobB 1.1s ease-in-out infinite}
+.mf-mon{position:absolute;bottom:14%;height:58%;max-width:min(40%,260px);object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
+.mf-mon.a{left:max(6%,calc(50% - 300px))}.mf-mon.b{right:max(6%,calc(50% - 300px))}/* 広い画面でも2体を真ん中寄りに(窓-37) */
+.mf-show.st0 .mf-mon.a{left:max(6%,calc(50% - 300px));animation:mfBobA 1.1s ease-in-out infinite}.mf-show.st0 .mf-mon.b{right:max(6%,calc(50% - 300px));animation:mfBobB 1.1s ease-in-out infinite}
 .mf-show.st1 .mf-mon.a{left:calc(50% - 20%);transform:scale(.35);opacity:.25}.mf-show.st1 .mf-mon.b{right:calc(50% - 20%);transform:scale(.35);opacity:.25}
 .mf-show.st2 .mf-mon,.mf-show.st3 .mf-mon{display:none}
 .mf-stone{position:absolute;left:50%;bottom:26%;width:44%;max-width:210px;aspect-ratio:1/1;transform:translateX(-50%);animation:mfShake .18s linear infinite}
 .mf-stone img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
 .mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
-.mf-flash{position:absolute;inset:0;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
+.mf-flash{position:absolute;inset:0;z-index:3;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
 .mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
 .mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
 .mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
 .mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;text-align:center} /* 字を真ん中に(合体中…が左へ寄っていた・r1115-202) */
 .mf-next:disabled{opacity:.4}
+.mf-skip{position:relative;z-index:2;margin:0 16px 22px;min-height:44px;padding:0 22px;border-radius:99px;background:rgba(15,23,42,.8);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:14px;font-weight:900}
 .mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
 @keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
@@ -161798,7 +161799,10 @@ function MonsucFuseShow({
   const stone = typeof DISC_STONE_BASE === 'string' ? DISC_STONE_BASE : 'images/disc-icons/disc-stone-base.PNG';
   return React.createElement("div", {
     className: `mf-show st${st}${calm ? ' calm' : ''}`,
-    "data-monsuc-fuse-show": st
+    "data-monsuc-fuse-show": st,
+    onClick: () => {
+      if (st < 3) setSt(n => Math.min(3, n + 1));
+    }
   }, React.createElement("img", {
     className: "bgimg",
     src: "images/story-bg/monhero_plaza.jpg",
@@ -161810,17 +161814,7 @@ function MonsucFuseShow({
       display: 'block',
       whiteSpace: 'nowrap'
     }
-  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…')), st < 3 ? React.createElement("div", {
-    className: "mf-ctl"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(n => Math.min(3, n + 1)),
-    "data-monsuc-fuse-ff": true
-  }, "早送り ⏩"), React.createElement("button", {
-    type: "button",
-    onClick: () => setSt(3),
-    "data-monsuc-fuse-skip": true
-  }, "飛ばす ⏭")) : null, React.createElement("div", {
+  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…')), React.createElement("div", {
     className: "mf-stage"
   }, React.createElement("img", {
     className: "mf-mon a",
@@ -161836,20 +161830,30 @@ function MonsucFuseShow({
   }, React.createElement("img", {
     src: stone,
     alt: ""
-  }), React.createElement("i", null)) : null, st === 2 ? React.createElement("span", {
-    className: "mf-flash",
-    "aria-hidden": "true"
-  }) : null, st >= 3 ? React.createElement("img", {
+  }), React.createElement("i", null)) : null, st >= 3 ? React.createElement("img", {
     className: "mf-child",
     src: monsucFuseImg(child),
     alt: ""
-  }) : null), React.createElement("button", {
+  }) : null), st === 2 ? React.createElement("span", {
+    className: "mf-flash",
+    "aria-hidden": "true"
+  }) : null, st >= 3 ? React.createElement("button", {
     type: "button",
     className: "mf-next",
-    disabled: st < 3,
-    onClick: onDone,
+    onClick: e => {
+      e.stopPropagation();
+      onDone();
+    },
     "data-monsuc-fuse-show-next": true
-  }, st >= 3 ? '次へ ▶' : '合体中…'));
+  }, "次へ ▶") : React.createElement("button", {
+    type: "button",
+    className: "mf-skip",
+    onClick: e => {
+      e.stopPropagation();
+      setSt(3);
+    },
+    "data-monsuc-fuse-skip": true
+  }, "飛ばす ⏭"));
 }
 const MONSUC_SHOP_OFFERS = Object.freeze([{
   itemId: 'oil',
