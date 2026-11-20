@@ -118,3 +118,78 @@
 - B 重なり 3件
 - C 逆転 4件(ノーツ数が減るのはこの4件だけ)
 - 合計 **68件**
+
+## D. Grievous Lady の EASY・NORMAL の「早い」疑い(数字で確かめた結果・時刻だけ直す案)
+
+窓口の指示(社長は耳で確かめない)で、数字で確かめた。**ずれは本物**。
+- 物差し: 同じ曲の MASTER(打点とのずれの中央 -6ms。HARD -6・EXPERT -7)。1つの16分は BPM 210 で **71ms**(既存の打点の解析 `grievous-lady-v3-audio.json` の `gridMs`。解析は作り直していない)。
+- 比べ方: EASY・NORMAL のノーツを1つずつ、MASTER のいちばん近いノーツと時刻で比べ、さらに打点(解析の onsets)とも突き合わせた。
+- 結果: **EASY 27個・NORMAL 27個(同じ時刻)が、MASTER のそのノーツより 71〜72ms(16分ひとつ)ちょうど早く、音の打点よりも 40〜105ms 早い**。
+  うち 22個は3つ以上固まっている(**0:10.8〜0:12.2 の4個・0:39.4〜0:48.5 の11個・1:17.1〜1:26.8 の7個**)=作るときの不具合。残り5個は単発で、同じ向きのずれ(参考)。
+  HARD・EXPERT・MASTER は MASTER との差が 16分ひとつの物がほぼない(HARD 2・EXPERT 1。打点とのずれもない)。
+- 16分ひとつ**遅い**物は、打点より遅い向きでは 0 個(MASTER との比較だけなら 24〜25個あるが、打点とは合っているので不具合ではない)。
+- ほかの曲: 打点の解析がある 76曲の EASY・NORMAL・HARD に同じ比べ方(MASTER より16分早い・遅い、かつ打点とも同じ向きにずれる固まり)を当てて数えた。**Grievous Lady 以外は 0 曲・0 件**。この不具合は Grievous Lady の EASY・NORMAL だけ。
+- 直し方: **時刻を MASTER の同じノーツへ合わせる**(例: 10811ms → 10883ms)。種類・位置・ノーツの数は変えない(54個の時刻だけ)。
+  直したあとの打点とのずれは -34〜43ms に収まる(MASTER と同じ)。時刻が変わる難易度の満点の上限は変わらない。自己ベストの点数の見方は変わらない(押す時刻が音に合うので、取りやすくなる側)。
+- 注意: 動かした時刻が、同じ譜面の隣のノーツ(HOLD・スライドの帯を含む)と重ならないことは、直すときに確かめる(ここではまだ譜面を触っていない)。
+
+| # | 難易度 | 時刻 | 種類 | 今 | 直した後 | 区分 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | EASY | 0:10.81 | TAP | 10811ms(MASTER の TAP 10883ms より 72ms 早い・音の打点より 85ms 早い) | 10883ms(MASTER と同じ時刻・打点とのずれ -13ms) | 固まり |
+| 2 | EASY | 0:11.38 | TAP | 11383ms(MASTER の SLIDE 11454ms より 71ms 早い・音の打点より 105ms 早い) | 11454ms(MASTER と同じ時刻・打点とのずれ -34ms) | 固まり |
+| 3 | EASY | 0:11.95 | TAP | 11954ms(MASTER の TAP 12026ms より 72ms 早い・音の打点より 78ms 早い) | 12026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 固まり |
+| 4 | EASY | 0:12.24 | TAP | 12240ms(MASTER の TAP 12311ms より 71ms 早い・音の打点より 80ms 早い) | 12311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 5 | EASY | 0:31.95 | TAP | 31954ms(MASTER の TAP 32026ms より 72ms 早い・音の打点より 78ms 早い) | 32026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 単発(参考) |
+| 6 | EASY | 0:39.38 | TAP | 39383ms(MASTER の TAP 39454ms より 71ms 早い・音の打点より 81ms 早い) | 39454ms(MASTER と同じ時刻・打点とのずれ -10ms) | 固まり |
+| 7 | EASY | 0:40.24 | TAP | 40240ms(MASTER の TAP 40311ms より 71ms 早い・音の打点より 80ms 早い) | 40311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 8 | EASY | 0:40.53 | TAP | 40526ms(MASTER の TAP 40597ms より 71ms 早い・音の打点より 82ms 早い) | 40597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 9 | EASY | 0:40.81 | TAP | 40811ms(MASTER の TAP 40883ms より 72ms 早い・音の打点より 77ms 早い) | 40883ms(MASTER と同じ時刻・打点とのずれ -5ms) | 固まり |
+| 10 | EASY | 0:43.67 | TAP | 43669ms(MASTER の TAP 43740ms より 71ms 早い・音の打点より 83ms 早い) | 43740ms(MASTER と同じ時刻・打点とのずれ -12ms) | 固まり |
+| 11 | EASY | 0:44.24 | TAP | 44240ms(MASTER の TAP 44311ms より 71ms 早い・音の打点より 80ms 早い) | 44311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 12 | EASY | 0:45.95 | TAP | 45954ms(MASTER の TAP 46026ms より 72ms 早い・音の打点より 78ms 早い) | 46026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 固まり |
+| 13 | EASY | 0:46.24 | TAP | 46240ms(MASTER の TAP 46311ms より 71ms 早い・音の打点より 80ms 早い) | 46311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 14 | EASY | 0:46.53 | TAP | 46526ms(MASTER の SLIDE 46597ms より 71ms 早い・音の打点より 82ms 早い) | 46597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 15 | EASY | 0:47.10 | TAP | 47097ms(MASTER の TAP 47169ms より 72ms 早い・音の打点より 79ms 早い) | 47169ms(MASTER と同じ時刻・打点とのずれ -7ms) | 固まり |
+| 16 | EASY | 0:48.53 | TAP | 48526ms(MASTER の TAP 48597ms より 71ms 早い・音の打点より 82ms 早い) | 48597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 17 | EASY | 1:08.53 | TAP | 68526ms(MASTER の TAP 68597ms より 71ms 早い・音の打点より 90ms 早い) | 68597ms(MASTER と同じ時刻・打点とのずれ -19ms) | 単発(参考) |
+| 18 | EASY | 1:11.10 | TAP | 71097ms(MASTER の TAP 71169ms より 72ms 早い・音の打点より 31ms 早い) | 71169ms(MASTER と同じ時刻・打点とのずれ -15ms) | 単発(参考) |
+| 19 | EASY | 1:17.10 | TAP | 77097ms(MASTER の TAP 77168ms より 71ms 早い・音の打点より 87ms 早い) | 77168ms(MASTER と同じ時刻・打点とのずれ -16ms) | 固まり |
+| 20 | EASY | 1:19.10 | TAP | 79097ms(MASTER の TAP 79169ms より 72ms 早い・音の打点より 79ms 早い) | 79169ms(MASTER と同じ時刻・打点とのずれ -7ms) | 固まり |
+| 21 | EASY | 1:21.67 | TAP | 81669ms(MASTER の TAP 81740ms より 71ms 早い・音の打点より 83ms 早い) | 81740ms(MASTER と同じ時刻・打点とのずれ -12ms) | 固まり |
+| 22 | EASY | 1:23.10 | TAP | 83097ms(MASTER の TAP 83169ms より 72ms 早い・音の打点より 103ms 早い) | 83169ms(MASTER と同じ時刻・打点とのずれ -31ms) | 固まり |
+| 23 | EASY | 1:24.24 | TAP | 84240ms(MASTER の TAP 84311ms より 71ms 早い・音の打点より 72ms 早い) | 84311ms(MASTER と同じ時刻・打点とのずれ -1ms) | 固まり |
+| 24 | EASY | 1:24.53 | TAP | 84526ms(MASTER の TAP 84597ms より 71ms 早い・音の打点より 82ms 早い) | 84597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 25 | EASY | 1:26.81 | TAP | 86811ms(MASTER の SLIDE 86883ms より 72ms 早い・音の打点より 29ms 早い) | 86883ms(MASTER と同じ時刻・打点とのずれ 43ms) | 固まり |
+| 26 | EASY | 1:57.10 | TAP | 117097ms(MASTER の TAP 117168ms より 71ms 早い・音の打点より 79ms 早い) | 117168ms(MASTER と同じ時刻・打点とのずれ -8ms) | 単発(参考) |
+| 27 | EASY | 2:10.81 | TAP | 130811ms(MASTER の TAP 130883ms より 72ms 早い・音の打点より 85ms 早い) | 130883ms(MASTER と同じ時刻・打点とのずれ -13ms) | 単発(参考) |
+| 28 | NORMAL | 0:10.81 | TAP | 10811ms(MASTER の TAP 10883ms より 72ms 早い・音の打点より 85ms 早い) | 10883ms(MASTER と同じ時刻・打点とのずれ -13ms) | 固まり |
+| 29 | NORMAL | 0:11.38 | TAP | 11383ms(MASTER の SLIDE 11454ms より 71ms 早い・音の打点より 105ms 早い) | 11454ms(MASTER と同じ時刻・打点とのずれ -34ms) | 固まり |
+| 30 | NORMAL | 0:11.95 | TAP | 11954ms(MASTER の TAP 12026ms より 72ms 早い・音の打点より 78ms 早い) | 12026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 固まり |
+| 31 | NORMAL | 0:12.24 | TAP | 12240ms(MASTER の TAP 12311ms より 71ms 早い・音の打点より 80ms 早い) | 12311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 32 | NORMAL | 0:31.95 | TAP | 31954ms(MASTER の TAP 32026ms より 72ms 早い・音の打点より 78ms 早い) | 32026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 単発(参考) |
+| 33 | NORMAL | 0:39.38 | TAP | 39383ms(MASTER の TAP 39454ms より 71ms 早い・音の打点より 81ms 早い) | 39454ms(MASTER と同じ時刻・打点とのずれ -10ms) | 固まり |
+| 34 | NORMAL | 0:40.24 | TAP | 40240ms(MASTER の TAP 40311ms より 71ms 早い・音の打点より 80ms 早い) | 40311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 35 | NORMAL | 0:40.53 | TAP | 40526ms(MASTER の TAP 40597ms より 71ms 早い・音の打点より 82ms 早い) | 40597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 36 | NORMAL | 0:40.81 | TAP | 40811ms(MASTER の TAP 40883ms より 72ms 早い・音の打点より 77ms 早い) | 40883ms(MASTER と同じ時刻・打点とのずれ -5ms) | 固まり |
+| 37 | NORMAL | 0:43.67 | TAP | 43669ms(MASTER の TAP 43740ms より 71ms 早い・音の打点より 83ms 早い) | 43740ms(MASTER と同じ時刻・打点とのずれ -12ms) | 固まり |
+| 38 | NORMAL | 0:44.24 | TAP | 44240ms(MASTER の TAP 44311ms より 71ms 早い・音の打点より 80ms 早い) | 44311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 39 | NORMAL | 0:45.95 | TAP | 45954ms(MASTER の TAP 46026ms より 72ms 早い・音の打点より 78ms 早い) | 46026ms(MASTER と同じ時刻・打点とのずれ -6ms) | 固まり |
+| 40 | NORMAL | 0:46.24 | TAP | 46240ms(MASTER の TAP 46311ms より 71ms 早い・音の打点より 80ms 早い) | 46311ms(MASTER と同じ時刻・打点とのずれ -9ms) | 固まり |
+| 41 | NORMAL | 0:46.53 | TAP | 46526ms(MASTER の SLIDE 46597ms より 71ms 早い・音の打点より 82ms 早い) | 46597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 42 | NORMAL | 0:47.10 | TAP | 47097ms(MASTER の TAP 47169ms より 72ms 早い・音の打点より 79ms 早い) | 47169ms(MASTER と同じ時刻・打点とのずれ -7ms) | 固まり |
+| 43 | NORMAL | 0:48.53 | TAP | 48526ms(MASTER の TAP 48597ms より 71ms 早い・音の打点より 82ms 早い) | 48597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 44 | NORMAL | 1:08.53 | TAP | 68526ms(MASTER の TAP 68597ms より 71ms 早い・音の打点より 90ms 早い) | 68597ms(MASTER と同じ時刻・打点とのずれ -19ms) | 単発(参考) |
+| 45 | NORMAL | 1:11.10 | TAP | 71097ms(MASTER の TAP 71169ms より 72ms 早い・音の打点より 31ms 早い) | 71169ms(MASTER と同じ時刻・打点とのずれ -15ms) | 単発(参考) |
+| 46 | NORMAL | 1:17.10 | TAP | 77097ms(MASTER の TAP 77168ms より 71ms 早い・音の打点より 87ms 早い) | 77168ms(MASTER と同じ時刻・打点とのずれ -16ms) | 固まり |
+| 47 | NORMAL | 1:19.10 | TAP | 79097ms(MASTER の TAP 79169ms より 72ms 早い・音の打点より 79ms 早い) | 79169ms(MASTER と同じ時刻・打点とのずれ -7ms) | 固まり |
+| 48 | NORMAL | 1:21.67 | TAP | 81669ms(MASTER の TAP 81740ms より 71ms 早い・音の打点より 83ms 早い) | 81740ms(MASTER と同じ時刻・打点とのずれ -12ms) | 固まり |
+| 49 | NORMAL | 1:23.10 | TAP | 83097ms(MASTER の TAP 83169ms より 72ms 早い・音の打点より 103ms 早い) | 83169ms(MASTER と同じ時刻・打点とのずれ -31ms) | 固まり |
+| 50 | NORMAL | 1:24.24 | TAP | 84240ms(MASTER の TAP 84311ms より 71ms 早い・音の打点より 72ms 早い) | 84311ms(MASTER と同じ時刻・打点とのずれ -1ms) | 固まり |
+| 51 | NORMAL | 1:24.53 | TAP | 84526ms(MASTER の TAP 84597ms より 71ms 早い・音の打点より 82ms 早い) | 84597ms(MASTER と同じ時刻・打点とのずれ -11ms) | 固まり |
+| 52 | NORMAL | 1:26.81 | TAP | 86811ms(MASTER の SLIDE 86883ms より 72ms 早い・音の打点より 29ms 早い) | 86883ms(MASTER と同じ時刻・打点とのずれ 43ms) | 固まり |
+| 53 | NORMAL | 1:57.10 | TAP | 117097ms(MASTER の TAP 117168ms より 71ms 早い・音の打点より 79ms 早い) | 117168ms(MASTER と同じ時刻・打点とのずれ -8ms) | 単発(参考) |
+| 54 | NORMAL | 2:10.81 | TAP | 130811ms(MASTER の TAP 130883ms より 72ms 早い・音の打点より 85ms 早い) | 130883ms(MASTER と同じ時刻・打点とのずれ -13ms) | 単発(参考) |
+
+### 件数(D)
+- Grievous Lady EASY 27 + NORMAL 27 = **54件**(うち固まり 44件=22個×2難易度、単発 10件)。ほかの曲は 0件。
+- これで一覧は合計 **122件**(A 61 + B 3 + C 4 + D 54)。
