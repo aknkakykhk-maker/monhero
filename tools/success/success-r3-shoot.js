@@ -101,7 +101,8 @@ const makeRun = async (kind) => {
     ['C1', 'mid', ['cont', /^🏆大会/]],
     ['C1w', 'mid', ['cont', /^🏆大会/, '@cup']], ['C1p', 'mid', ['cont', /^🏆大会/, '@cup', '@prize=g']], ['C1m', 'mid', ['cont', /^🏆大会/, '@next-month']], // 受付の作り直し(確認の窓・賞品の詳細・次の月)
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
-    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['MA1', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '@@h', '*[data-msxm-move="1"]', 'w600', '@@h', 'w5400', '@@h']], ['MA2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="-1"]', 'w6000']], // 手動の試合: 札の案A・場の高さが番で変わらない・零で吹き飛ばし(r1115-050②・074・185・193)
+    ['B1', 'win', ['cont', '@cupintro-go']], ['B1p', 'win', ['cont', '@cupintro-go', '*[data-msc-skip]', 'w700', '*[data-msc-entrant="foe"]']], ['B1q', 'win', ['cont', '@cupintro-go', '*[data-msc-entrant="1"]']], // 組み合わせ表の行を押した窓(バ-45: 決勝の相手/ほかの出場者)
+    ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['MA1', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '@@h', '*[data-msxm-move="1"]', 'w600', '@@h', 'w5400', '@@h']], ['MA2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="-1"]', 'w6000']], // 手動の試合: 札の案A・場の高さが番で変わらない・零で吹き飛ばし(r1115-050②・074・185・193)
     ['G2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="1"]', 'w6000']], // 手動の試合の2ラウンド目の自分の番: 上の帯と操作欄のガッツが同じ(r1115-187)
     // 続きの止め絵(SHOT_SEQ で名指ししたときだけ撮る。見せ場と流れの点検 r1119-033): 大会の1試合を受付から結果まで
     ...((process.env.SHOT_SEQ || '').split(',').includes('SQC') ? [['SQC', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w1500', '*[data-msa-ctl="manual"]', ...Array(12).fill('w3000'), 'w1500', /^結果へ/, '%next', '@next']]] : []),
