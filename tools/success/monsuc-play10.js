@@ -67,7 +67,7 @@ const openEntry = async (page) => {
   await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
   await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-  await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
+  await page.locator('[data-mh-help]').waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
   const btn = page.locator('[data-debug-monhero-success]');
@@ -225,7 +225,7 @@ if (require.main === module) (async () => {
         const sig = info.view + '|' + info.text.slice(0, 160);
         const turn = ((info.text.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0;
         if (info.text.length < 20) note('真っ白', `文字がほぼ無い view=${info.view}`);
-        const key = sanitize(info.text.replace(/^← 中断 みゅあ編 \d+ \/ 46ターン /, ''));
+        const key = sanitize(info.text.replace(/^(?:← |⏸ )中断 みゅあ編 \d+ \/ 46ターン /, ''));
         if (!log.screens[key]) {
           log.screens[key] = info.text.slice(0, 900);
           if (info.over.length) { note('はみ出し', `T${turn} ${info.over.slice(0, 3).join('/')}`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-over-t${turn}-${log.findings.length}.png`) }); }

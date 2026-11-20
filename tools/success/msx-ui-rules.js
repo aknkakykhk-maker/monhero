@@ -16,7 +16,9 @@ function msxUiRulesMeasure() {
   const ft = [...root.querySelectorAll('.v-ft')].filter(vis).pop();
   let blank = null;
   if (body && ft && window.innerHeight > window.innerWidth && body.scrollHeight <= body.clientHeight + 2) {
-    const kids = [...body.children].filter((e) => vis(e) && getComputedStyle(e).position !== 'absolute' && getComputedStyle(e).position !== 'fixed');
+    // display:contents の器(開始の段の .v-lmain)は箱を作らないので、その中身を子として数える
+    const flat = (els) => els.flatMap((e) => (getComputedStyle(e).display === 'contents' ? flat([...e.children]) : [e]));
+    const kids = flat([...body.children]).filter((e) => vis(e) && getComputedStyle(e).position !== 'absolute' && getComputedStyle(e).position !== 'fixed');
     // 中身の無い空き箱(押し下げ用の <div style="flex:1"/>)は中身に数えない
     const real = kids.filter((e) => e.children.length || (e.innerText || '').trim() || e.tagName === 'IMG');
     if (real.length) blank = Math.round(ft.getBoundingClientRect().top - Math.max(...real.map((e) => e.getBoundingClientRect().bottom)));

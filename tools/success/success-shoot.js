@@ -73,7 +73,8 @@ const makeRun = async (kind) => {
   const sizesAll = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [390, 664, 'ip'], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
   const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
-  const sizes = onlySizes.length ? sizesAll.filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
+  // s568 = 小さい横 568×320(見た目の点検 visual-shoot.js --monsuc-deep が名指しするときだけ撮る。r1119-014 PR3 の続き)
+  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -85,9 +86,9 @@ const makeRun = async (kind) => {
     ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
-    ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
-    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
-    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
+    ['S1', null, ['new', 'next']], ['S1U', null, ['unlockall', 'new', 'next']], ['S1UG', null, ['unlockall', 'new', 'next', 'pickmon:Golem']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
+    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], ['S2T', null, ['seedteam', 'new', 'next', 'next', 'teamauto']], ['S2TP', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0']], ['S2EA', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects']], ['S2EB', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efrow:0']], ['S2EC', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efmon']], // 効果のある編成(④段2) // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
+    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carryall', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['IN', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip']], ['IN2', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip', 'introNext', 'introNext']], // 育成の始まりの場面(2026-11-14)
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
@@ -114,7 +115,7 @@ const makeRun = async (kind) => {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
-      await page.addInitScript((tut) => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: tut ? { open: 1, firstend: 1, prep: 1, scn: 1 } : { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1, scn: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} }, !!process.env.SHOT_TUT); // SHOT_TUT=1: ターン・トレーニング・結果の説明を未読にして撮る(説明の窓の出る所を見る。測る値は窓が重なるので見ない)
+      await page.addInitScript((tut) => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: tut ? { open: 1, firstend: 1, prep: 1, scn: 1 } : { open: 1, firstend: 1, prep: 1, team: 1, bring: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1, scn: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} }, !!process.env.SHOT_TUT); // SHOT_TUT=1: ターン・トレーニング・結果の説明を未読にして撮る(説明の窓の出る所を見る。測る値は窓が重なるので見ない)
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
@@ -143,6 +144,28 @@ const makeRun = async (kind) => {
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
+            if (st === 'seedteam') { // アシスト効果を持つ育て終えた子を4体、保存枠に置いて開き直す(効果一覧・編成の札を撮る。④段2 2026-11-20)
+              const mk = (i, sp, nick, grade, score, assists) => ({ id: `shot-tm-${i}`, species: sp, nick, gen: 1, st: { life: 420, pow: 380 + i * 20, wise: 300, hit: 360, eva: 340, tough: 330 }, techs: [], mast: [], gt: 1, lv: 20 + i, loy: 60, pop: 40, raised: true, grade, score, rank: grade.charAt(0), assists });
+              localStorage.setItem(MSX_KEYS.box, JSON.stringify({ v: 1, mons: [
+                mk(1, 'Tiger', 'ライ太', 'B2', 5200, [{ id: 'sokoji', lv: 3, n: 8 }, { id: 'genki', lv: 3, n: 15 }, { id: 'shuugou', lv: 2, n: 4 }]),
+                mk(2, 'Undine', 'みずき', 'C1', 4100, [{ id: 'sokoji', lv: 2, n: 5 }, { id: 'genki', lv: 1, n: 5 }, { id: 'kaifuku', lv: 2, n: 4 }]),
+                mk(3, 'Golem', 'いわお', 'B1', 4800, [{ id: 'hagemi', lv: 2, n: 12 }, { id: 'shuugou', lv: 3, n: 6 }]),
+                mk(4, 'Pixie', 'ぴくる', 'D3', 3300, [{ id: 'kaifuku', lv: 1, n: 3 }]),
+              ] }));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 800)); return true;
+            }
+            if (st === 'teamauto') { const d = document.querySelector('[data-msx-team-auto]'); if (d && !d.disabled) d.click(); return !!d; }
+            if (st.startsWith('efrow:')) { const d = document.querySelectorAll('[data-msx-effect]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
+            if (st === 'efmon') { const d = document.querySelector('[data-msx-ef-view="mon"]'); if (d) d.click(); return !!d; }
+            if (st === 'unlockall') { // ベースモンを全種解放にして開き直す(社長の実機と同じく30体ほどから選ぶ一覧を撮る。r1119 ⑦)
+              localStorage.setItem('mh_unlocked_monsters', JSON.stringify(msxSuc.SUC.speciesList.filter((id) => ALL_PLAYER_MONSTERS[id])));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 800)); return true;
+            }
+            if (st === 'carryall') { const d = document.querySelector('[data-msx-carry-all]'); if (d) d.click(); return !!d; } // 持ちこみの段: 持っていない物も升目に出す(Q-3-6 で畳んだ)
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
@@ -159,7 +182,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('dexrow:')) { const d = document.querySelectorAll('[data-msx-dex-row]')[Number(st.slice(7))]; if (d) d.click(); return !!d; }
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
-            if (st === 'tabfuse') return click(/合体で生まれたモンスター/);
+            if (st === 'tabfuse') { const d = document.querySelector('[data-msx-tab-fuse]'); if (d) d.click(); return !!d; } // 横では「で生まれたモンスター」を隠すので印で押す
             if (st === 'pickfirst') { const d = document.querySelector('.v-grid6 button'); if (d) d.click(); return !!d; }
             if (st === 'detail') { const d = document.querySelector('[data-msx-detail-open]'); if (d) d.click(); return !!d; } // 選ぶ画面の「くわしく」(2026-11-14)
             if (st.startsWith('slot:')) { const d = document.querySelector(`[data-msx-slot="${st.slice(5)}"]`); if (d) d.click(); return !!d; } // 編成の枠を押す(2026-11-14)
@@ -297,6 +320,10 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(350);
         }
         await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
+        if (process.env.SHOT_TINY) { // SHOT_TINY=10: この大きさ(px)より小さい字を、字と className で書き出す(添え字の 8px 探し・④ 2026-11-20)
+          const tiny = await page.evaluate((lim) => { const out = new Map(); document.querySelectorAll('.msx *').forEach((e) => { const t = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(); if (!t) return; const r = e.getBoundingClientRect(); if (!r.width) return; const fs = parseFloat(getComputedStyle(e).fontSize); if (fs < lim) { const k = `${fs.toFixed(1)}px ${e.tagName.toLowerCase()}.${String(e.className || '').split(' ').join('.')} <${e.parentElement && String(e.parentElement.className || '').split(' ')[0]}> 「${t.slice(0, 12)}」`; out.set(k, (out.get(k) || 0) + 1); } }); return [...out].map(([k, n]) => `${k} ×${n}`); }, Number(process.env.SHOT_TINY) || 10);
+          if (tiny.length) console.log(`  小さい字 ${name}${tag ? `(${tag})` : ''}:\n    ${tiny.join('\n    ')}`);
+        }
         const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)
@@ -411,6 +438,38 @@ const makeRun = async (kind) => {
         { const px = await measureBtnPixels(page); check(`${name}${tag ? `(${tag})` : ''}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
+        // 押した札と違う札に当たらない(2026-11-19 r1119-013 ⑥ M-6 のミハリの指摘)。見えているボタンの上の端・下の端(内側 2px)と真ん中を押して、
+        //   別のボタンに当たる所を数える。押せる範囲を広げた見えない縁(::after)が隣の札に重なると、札の中を押しても隣が押される
+        {
+          const miss = await page.evaluate(() => {
+            const out = [];
+            const vis = (r) => r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+            // 入ってくる動きの途中の札は、位置が動いている最中なので数えない(撮る時刻しだいで重なって見える)
+            const moving = (e) => !!e && typeof e.getAnimations === 'function' && e.getAnimations().some((x) => x.playState === 'running');
+            for (const el of document.querySelectorAll('.msx button')) {
+              if (el.disabled || moving(el)) continue;
+              // 送り箱で切れて見えない所は数えない(送り箱の外の「閉じる」や下の帯の下に隠れているだけで、押せる所ではない)
+              const r0 = el.getBoundingClientRect(); const r = { left: r0.left, right: r0.right, top: r0.top, bottom: r0.bottom };
+              for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+                const c = getComputedStyle(a); if (c.overflowY === 'visible' && c.overflowX === 'visible') continue;
+                const q = a.getBoundingClientRect(); r.top = Math.max(r.top, q.top); r.bottom = Math.min(r.bottom, q.bottom); r.left = Math.max(r.left, q.left); r.right = Math.min(r.right, q.right);
+              }
+              r.width = r.right - r.left; r.height = r.bottom - r.top; if (!vis(r)) continue;
+              // 真ん中が押せるボタンだけを見る(窓の裏に隠れたボタンは数えない)
+              const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              if (!mid || !(mid === el || el.contains(mid))) continue;
+              for (const y of [r.top + 2, r.bottom - 2]) {
+                if (y < 0 || y >= innerHeight) continue;
+                const hit = document.elementFromPoint(r.left + r.width / 2, y);
+                const hb = hit && hit.closest('button');
+                if (hb && hb !== el && !el.contains(hb) && !hb.contains(el) && !moving(hb)) out.push(`${(el.innerText || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}→${(hb.innerText || hb.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 12)}`);
+              }
+            }
+            return out;
+          });
+          if (process.env.TAP_DUMP) console.log('TAP', name, tag, miss.length, miss.slice(0, 6).join(' / '));
+          else check(`${L}: 札の端を押しても隣の札に当たらない`, miss.length === 0, miss.slice(0, 4).join(' / '));
+        }
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }
       await page.close();
