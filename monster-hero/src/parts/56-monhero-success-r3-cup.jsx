@@ -200,20 +200,20 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     {wc ? (
       <div className="v-cupwin" onClick={() => { setWin(null); setPrz(null); }} data-msx-r3-cupwin>
         <div className="in" onClick={(e) => e.stopPropagation()}>
-          <div className="h">大会参加確認</div>
+          <div className="h">{wcOk ? '大会参加確認' : '大会の詳細'}</div>
+          {wcOk ? null : <div className="q ng" style={{ marginTop: 0 }}>{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
           <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
           {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${msxBreederLabel(wc.rival.breeder, wc.rival.kind)})` : ''}</span></div> : null}
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
-          {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
+          {wcOk ? <div className="q">この大会に参加しますか?</div> : null}
           <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>閉じる</button>}</div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox"><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<small className="hint">押すと消えます</small></div></div> : null}
         </div>
       </div>) : null}
   </>);
   const foot = (
-    <div className="v-ft">
-      <button type="button" onClick={onBack}>← 戻る</button>
+    <div className="v-ft">{/* 戻るは左上の1つ(r1119-033 窓-11・18・44) */}
       <button type="button" className={cur && cur.done && cur.entry.ok ? 'on' : 'off'} disabled={!(cur && cur.done && cur.entry.ok)} onClick={() => go(true)} data-msx-r3-skip>⏩ スキップ</button>
       <button type="button" className="go" disabled={!(cur && cur.entry && cur.entry.ok)} onClick={() => { setVt(s.turn); setWin(cur.id); }} data-msx-r3-enter>{cur ? '出場 ▶' : '大会を選ぶ'}</button>
     </div>
@@ -537,13 +537,12 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
           <MsxR3PrizeBox prizes={prizes} onPick={setPrz}/>
           <div className="q">この大会に参加しますか?</div>
           <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox"><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<small className="hint">押すと消えます</small></div></div> : null}
         </div>
       </div>) : null}
   </>);
   const foot = (
-    <div className="v-ft">
-      <button type="button" onClick={onBack}>← 戻る</button>
+    <div className="v-ft">{/* 戻るは左上の1つ(r1119-033 窓-11・18・44) */}
       <button type="button" className="go" onClick={() => setWin(true)} data-msx-r3-enter>出場 ▶</button>
     </div>
   );

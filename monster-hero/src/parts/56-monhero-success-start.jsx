@@ -93,7 +93,9 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
-      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
+      {/* 中断は戻ると同じ場所・同じ形だと、戻るつもりで育成を中断しそうになる。赤い別の形にする(r1119-033 窓-22・31・34・46・47)。
+          back が空のとき(お話・結果の流れの中)は左上に何も出さず、下の「次へ」だけで進める(窓-29・30・43) */}
+      {back ? <button type="button" className={`bk${back === '中断' ? ' pause' : ''}`} data-mh-back onClick={onBack} data-msx-hd-pause={back === '中断' ? '' : undefined}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button> : null}
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}

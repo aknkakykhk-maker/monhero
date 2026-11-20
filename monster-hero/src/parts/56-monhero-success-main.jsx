@@ -756,8 +756,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const tLast = tAt < 0 || tAt >= tSteps.length - 1;
     body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
     foot = tAt < 0
-      ? <div className="v-ft"><button type="button" className="off" disabled>飛ばす ⏭</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
+      ? <div className="v-ft"><button type="button" className="off" disabled>イベントを飛ばす ⏭</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>イベントを飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -817,7 +817,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>飛ばす ⏭</button><span className="v-wait">選んでね</span></div>;
+      : null; // 押せない「選んでね」と、上の「なにもしない」と同じ動きの「飛ばす」は外す(選ぶのは場面の3つだけ。r1119-033 窓-35)
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
