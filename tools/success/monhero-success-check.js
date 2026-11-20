@@ -137,7 +137,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // ---- 編成・タッグ・アシスト ----
 {
   const bm = SUC.memberOf({ kind: 'base', species: 'Mocchi' });
-  ok(bm.tag === 15 && bm.bond0 === 0 && bm.fav === 0.65, `ベースモンの基本値がずれている: ${bm.tag}/${bm.bond0}/${bm.fav}`);
+  ok(bm.tag === 15 && bm.bond0 === 0 && bm.fav === SUC.FAV_BY_RANK.base && bm.fav === 0.15, `ベースモンの基本値がずれている: ${bm.tag}/${bm.bond0}/${bm.fav}`);
   ok(bm.bonus[bm.top[0]] >= 3 && bm.bonus[bm.top[0]] <= 4.5, `ベースモンの1位の補正が 3〜4% ほどでない: ${bm.bonus[bm.top[0]]}`);
   const st = { life: 300, pow: 600, wise: 200, hit: 530, eva: 500, tough: 250 };
   const m = SUC.memberOf({ kind: 'raised', species: 'Mocchi', stats: st, lv: 30, masteries: [50, 50, 50, 50], loy: 70, pop: 40, assists: [{ id: 'kaketsuke', lv: 3 }, { id: 'sokoji', lv: 2 }, { id: 'kaketsuke', lv: 1 }, { id: 'x' }] });
@@ -145,8 +145,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(m.top.join(',') === 'pow,hit,eva', `上位3つが違う: ${m.top}`);
   ok(m.bonus.pow === 600 / 40 + SUC.RANK_ADD[m.rank] && near(m.bonus.hit, 530 / 40 * 0.9 + SUC.RANK_ADD[m.rank], 0.01) && m.bonus.life === 0, `能力の補正の式がずれている: ${JSON.stringify(m.bonus)}`);
   ok(m.tag === SUC.TAG_POWER[m.rank] && SUC.TAG_POWER.B === 25 && SUC.TAG_POWER.M === 35 && SUC.TAG_POWER.aid === 25, 'タッグの強さがランクの表でない');
-  // かけつけ 段3 の得意率(表の値で出す。第1版 +20 → 0.85・第2版 +12 → 0.77。2026-11-12)
-  ok(near(m.fav, Math.min(SUC.GATHER.favCap, SUC.GATHER.fav + SUC.ASSISTS.kaketsuke.v[m.assists.find(x => x.id === 'kaketsuke').lv - 1] / 100), 1e-9) && SUC.ASSISTS.kaketsuke.v[m.assists.find(x => x.id === 'kaketsuke').lv - 1] === 12 && m.assists.length === 2, `かけつけの得意率・同じアシストの重なりがおかしい: ${m.fav} ${m.assists.length}`);
+  // かけつけ 段3 の得意率(r1119-054: 得意率は強さの段の表 FAV_BY_RANK + 得意率アップ(1目盛り +0.5点)・45%まで。古い段3 は第2版の値 6 → 目盛り12)
+  { const kv = SUC.ASSISTS.kaketsuke.v[m.assists.find(x => x.id === 'kaketsuke').lv - 1];
+    ok(kv === 6 && Object.values(SUC.FAV_BY_RANK).some(b => near(m.fav, Math.min(SUC.GATHER.favCap, b + kv / 100), 1e-9)) && SUC.GATHER.favCap === 0.45 && SUC.FAV_BY_RANK.M === 0.35 && m.assists.length === 2, `かけつけの得意率・同じアシストの重なりがおかしい: ${m.fav} ${kv} ${m.assists.length}`); }
   ok(m.startAdd.stat === 'pow' && m.startAdd.v === 24, `はじめの能力が 1位 ÷ 25 でない: ${JSON.stringify(m.startAdd)}`);
   const so2 = SUC.ASSISTS.sokoji.v[m.assists.find(x => x.id === 'sokoji').lv - 1]; // 古い子の段2 は第3版の目盛り10(+10%)に読み替わる(2026-11-14)
   ok(so2 === 10, `古い子の段2 の底力が +10% のままでない: ${so2}`);
@@ -159,7 +160,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     for (const c of Object.values(g)) if (c.members.includes(0)) where = c.stat;
     if (!where) cnt.none += 1; else if (where === top[0]) cnt.t1 += 1; else if (where === top[1]) cnt.t2 += 1; else if (where === top[2]) cnt.t3 += 1; else cnt.other += 1;
   }
-  ok(near(cnt.t1 / n, 0.3, 0.025) && near(cnt.t2 / n, 0.2, 0.025) && near(cnt.t3 / n, 0.15, 0.02) && near(cnt.other / n, 0.2, 0.025) && near(cnt.none / n, 0.15, 0.02), `集まり方が 30/20/15/20/15% でない: ${JSON.stringify(cnt)}`);
+  // r1119-054: 来ない15% → 来たら得意率で1位の得意、ほかの5つは均等(2・3位もほかと同じ)
+  { const f = s.team[0].fav; const one = 0.85 * (1 - f) / 5;
+    ok(near(cnt.t1 / n, 0.85 * f, 0.025) && near(cnt.t2 / n, one, 0.02) && near(cnt.t3 / n, one, 0.02) && near(cnt.other / n, one * 3, 0.03) && near(cnt.none / n, 0.15, 0.02), `集まり方が「来ない15%・1位 ${Math.round(85 * f)}%・ほかは ${Math.round(one * 100)}%ずつ」でない: ${JSON.stringify(cnt)}`); }
   // タッグは親密度80から
   const card = { kind: 'train', stat: 'pow', members: [0], aid: false };
   ok(SUC.cardMult({ ...s, bond: [79, 0, 0, 0, 0, 0] }, card).tag === 0 && SUC.cardMult({ ...s, bond: [80, 0, 0, 0, 0, 0] }, card).tag > 0, '親密度80でタッグにならない');
