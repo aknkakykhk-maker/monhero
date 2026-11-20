@@ -17,7 +17,8 @@ function MsxAssistCard({ a, n }) {
   const full = AT.describe(a.id, n);
   const short = note && full.endsWith(note) ? full.slice(0, full.length - note.length) : full;
   const scene = msxAsScene(AT, a.scene);
-  const more = !!(note || scene);
+  // 上限・効く場面は短いので、たたまずに最初から出す(開く印の「▲」と窓の「閉じる」が並んで、どちらで閉じるか分からなかった。r1119-033 窓-01)
+  const more = false;
   const dots = Math.min(10, a.max); const lit = Math.round(n / Math.max(1, a.max) * dots); // 目盛りを丸で(10より多い目盛りは10個の丸に縮める。数と丸がずれないよう10まではそのまま)
   return (
     <div className={`msx-md-ac${a.type === 'battle' || a.scene === 'cup' ? ' gold' : ''}${open ? ' open' : ''}`} data-msx-assist-card={a.id} data-msx-assist-type={a.type || ''}
@@ -33,8 +34,8 @@ function MsxAssistCard({ a, n }) {
         <div className="tx">{short}</div>
         <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
           <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
-        {open && note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
-        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}
+        {note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
+        {scene ? <div className="sc">効く場面: {scene}</div> : null}
         {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>
   );
@@ -46,7 +47,8 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
   const AT = msxAsAT();
   const assists = mem && Array.isArray(mem.assists) && mem.assists.length ? mem.assists : rec && Array.isArray(rec.assists) ? rec.assists : [];
   const got = AT ? assists.filter((x) => x && AT.BY_ID[x.id]).map((x) => ({ a: AT.BY_ID[x.id], n: AT.fromSaved(x) })).filter((x) => x.n > 0) : [];
-  const [tab, setTab] = useState(got.length || kind === 'base' ? 'assist' : 'stat');
+  // ベースモンはアシスト効果を持たないので、札の切り替えを出さず能力だけ見せる(「持ちません」の1文だけの札だった。r1119-033 窓-48)
+  const [tab, setTab] = useState(got.length && kind !== 'base' ? 'assist' : 'stat');
   const [kvTip, setKvTip] = useState(null); // 4つの数字の札を押すと、その言葉の説明を1行で出す(長い説明の段落をやめた・育-08)
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : { species: mem.species };
@@ -74,7 +76,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
             {top.length ? <div className="asd-up" data-msx-asd-up><i>伸びが上がる</i>{top.map((k) => <span key={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]} <b>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</b></span>)}</div> : null}
           </div>
         </div>
-        <div className="msx-asd-tabs" role="tablist">{[['assist', 'アシスト効果'], ['stat', '能力']].map(([k, t]) => <button type="button" key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-asd-tab={k}>{t}</button>)}
+        <div className="msx-asd-tabs" role="tablist">{(kind === 'base' ? [] : [['assist', 'アシスト効果'], ['stat', '能力']]).map(([k, t]) => <button type="button" key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-asd-tab={k}>{t}</button>)}
           {onMore ? <button type="button" className="more" onClick={onMore} data-msx-asd-more>技・素質</button> : null}</div>
         <div className="msx-dt-body msx-asd-body">
           {tab === 'assist' ? (got.length ? <>
@@ -107,7 +109,8 @@ const MSX_ASD_CSS = `
 .msx .msx-asd-tabs{display:flex;gap:6px;margin:8px 0 4px}
 .msx .msx-asd-tabs button{position:relative;flex:1 1 0;height:36px;margin:4px 0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:10px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:900}
 .msx .msx-asd-tabs button::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
-.msx .msx-asd-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;border-color:transparent}
+/* 選んだ札は決めるボタン(橙)と見分けるよう、控えめな下線にする(窓-48) */
+.msx .msx-asd-tabs button.on{background:#2b2350;color:#fde047;border-color:#4a4380;box-shadow:inset 0 -3px 0 #fde047}
 .msx .msx-asd-tabs button.more{color:#f9a8d4}
 .msx .msx-asd-body{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .msx-asd-cnt{font-size:11px;font-weight:800;color:#cbd5e1;margin:2px 0}
