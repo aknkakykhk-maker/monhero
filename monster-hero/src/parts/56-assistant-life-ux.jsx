@@ -623,6 +623,6 @@ function AssistantLifeTopStrip({ life, ids, evIds = [], onPlace }) {
             <span>{ASSISTANT_LIFE_PLACE_ICON[p] || '🚶'} {assistantLifePlaceShow(p)}{ev ? ' ❗' : ''}</span>
           </button>); })}
       </div>}
-      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人{next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''}</p>
+      <p className="mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100" data-assistant-life-top-sum>家に{home}人 ・ おでかけ{list.length - home}人</p>{/* 次にみんなが動く時刻は、上の題の行(「午後 ・ あと1時間でみんなが動く」)の1か所だけに出す(2026-11-20 総点検 A-2: 時刻の話が1画面に3〜5か所) */}
     </div>);
 }
