@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fcff5f073b79187
+// source-sha256: 1260518413656210
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -178788,8 +178788,8 @@ function MsxCmTap({
   }), root) : null);
 }
 const MSX_LW_WHY = Object.freeze({
-  turnHp: ['体力に余裕', '体力を半分以上残してターンを終えた'],
-  turnLow: ['体力が少ない', '体力が半分より少ないままターンを終えた'],
+  turnHp: ['体力に余裕', '体力を7割以上残してターンを終えた'],
+  turnLow: ['体力が少なめ', '体力が7割より少ないままターンを終えた'],
   praise: ['ほめた', 'ほめた'],
   scold: ['しかった', 'しかった'],
   idle: ['ほうっておいた', 'しばらく、ほめも しかりもしなかった'],
