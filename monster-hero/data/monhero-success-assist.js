@@ -282,7 +282,7 @@
     mejirushi: { sum: true },
     ninki: { sum: true },
     peak: { sum: true },
-    rivaldamashii: { sum: true },
+    rivaldamashii: { one: true }, // 編成で1体ぶんだけ(2026-11-20 社長 r1119-042。r1115-107 の「足し合わせ・上限なし」を上書き。6体で +300% になり強すぎた)
     shokin: { sum: true },
     shugyo: { sum: true },
     shugyohp: { sum: true },

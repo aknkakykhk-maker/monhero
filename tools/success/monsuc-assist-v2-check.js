@@ -35,7 +35,8 @@ check('① 芯の種類は表の種類すべて(試合型5つは第1版の数字
 check('② 表なし・壊れた表では新しい種類を出さない', NEW11.every((id) => !S1.ASSISTS[id] && !SB.ASSISTS[id]));
 check('① 第1版の9種類は第3版の目盛りの数字・値段', V1_IDS.every((id) => same(S2.ASSISTS[id].v, AT.BY_ID[id].v) && same(S2.ASSISTS[id].cost, AT.BY_ID[id].cost)));
 check('① 人なつっこさの「はじめの親密度」も第2版', same(S2.ASSISTS.hitonatsu.start, AT.BY_ID.hitonatsu.start));
-check('① 試合型5つ(ひらめき・保留中)は第1版のまま', BATTLE.every((id) => same(S2.ASSISTS[id], S1.ASSISTS[id])));
+// 2026-11-20 社長 r1119-042「試合型の中身を画面に合わせる」: 第1版の3段ではなく、表の5目盛り(画面と同じ数字・buff)で効く
+check('① 試合型5つは表の5目盛り(画面と同じ数字・buff)', BATTLE.every((id) => same(S2.ASSISTS[id].v, AT.BY_ID[id].v) && same(S2.ASSISTS[id].buff, AT.BY_ID[id].buff) && S2.ASSISTS[id].buff.length === 5));
 check('② 表なしは第1版(3段)', V1_IDS.every((id) => S1.ASSISTS[id].v.length === 3));
 check('② 壊れた表の種類は第1版のまま', same(SB.ASSISTS.sokoji, S1.ASSISTS.sokoji));
 check('⑤ 芯の版は 5 以上(6 = 助手1人分のストーリー・2026-11-13)', mod.VERSION >= 5 && S2.VERSION === mod.VERSION);
