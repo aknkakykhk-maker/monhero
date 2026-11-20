@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f65ff9c4714689a8
+// generated-sha256: 8bafd91885a357b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84012,6 +84012,18 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
 };
 
 
+// 合体の窓の上の2枠(主の親・副の親)。札は④の型 MonsucMonCard の中(m)をそのまま使い、枠の見出しと一言だけをここで持つ
+const MONSUC_FUSE_SLOT_CSS = `
+[data-monsuc-fuse] .mfz-slots{display:flex;align-items:flex-start;justify-content:center;gap:6px;margin-top:6px;flex:none}
+[data-monsuc-fuse] .mfz-slot{width:min(34vw,128px);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;border-radius:12px;border:2px solid transparent}
+[data-monsuc-fuse] .mfz-slot.now{border-color:#f0abfc;background:#4a044e66}
+[data-monsuc-fuse] .mfz-slot .mcd{width:100%}
+[data-monsuc-fuse] .mfz-lb{font-size:13px;font-weight:900;color:#f5d0fe}
+[data-monsuc-fuse] .mfz-d{font-size:11px;font-weight:800;color:#cbd5e1;text-align:center;line-height:1.3}
+[data-monsuc-fuse] .mfz-x{align-self:center;font-size:22px;font-weight:900;color:#f0abfc;margin-top:18px}
+[data-monsuc-fuse] .mfz-sm .mfz-slot{width:min(24vw,92px)}[data-monsuc-fuse] .mfz-sm .mfz-x{margin-top:12px}
+@media (max-height:520px){[data-monsuc-fuse] .mfz-slot{width:88px}[data-monsuc-fuse] .mfz-d{display:none}}
+`;
 function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy = null, onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
@@ -84038,6 +84050,34 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
   const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
+  // ---- 選ぶ段の部品(r1120 ④の型にそろえる。保存の形は変えない) ----
+  const cardM = (m) => ({ species: m.species, nick: monsucFuseNick(m), colors: Array.isArray(m.colors) ? m.colors : [], awake: m.awake, lv: m.lv, grade: m.grade || m.rank || '', fav: Array.isArray(m.fav) ? m.fav : [] });
+  const other = main || null; // いま選んでいない側でもう決まっている親(候補から外す)
+  const cands = usableS.filter(m => !(other && m.id === other.id) && !(mat && m.id === mat.id));
+  const slot = (k, lb, m, d) => (
+    <div className={`mfz-slot${(k === 'main' ? !main : main && !mat) ? ' now' : ''}`} key={k}>
+      <b className="mfz-lb">{lb}</b>
+      {typeof MonsucMonCard === 'function' ? <MonsucMonCard size="m" m={m ? cardM(m) : null} empty="?" onClick={m ? () => { if (k === 'main') { setMain(null); setMat(null); } else setMat(null); setSure(0); setErr(''); } : null} attrs={{ 'data-monsuc-fuse-slot': k, 'aria-label': m ? `${lb}を選び直す` : `${lb}(まだ選んでいません)` }}/> : null}
+      <small className="mfz-d">{m ? '押すと選び直す' : d}</small>
+    </div>);
+  const slots = (
+    <div className="mfz-slots" data-monsuc-fuse-slots>
+      <style>{MONSUC_FUSE_SLOT_CSS}</style>
+      {slot('main', '主の親', main, '種類・主血統')}
+      <span className="mfz-x" aria-hidden="true">＋</span>
+      {slot('mat', '副の親', mat, '副血統')}
+    </div>);
+  // 0〜1体のとき: なぜ合体できないかと、合体のしかた(窓口の依頼: 0件の理由と合体のしかた)
+  const howTo = (
+    <div className="mt-2 rounded-xl border border-white/15 bg-slate-800/80 p-3 text-[12px] font-bold text-slate-200" data-monsuc-fuse-none style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      <p className="text-[13px] font-black text-white">いま合体に使えるマスモン: {usable.length}体</p>
+      <p className="mt-1">合体には、育成を最後まで終えたマスモンが2体いります。{lockedRaised.length ? '育成中の編成に入っている・貸し出し中・育成中のモンスターは使えません(下の🔒)。' : ''}</p>
+      <p className="mt-2 text-[12.5px] font-black text-fuchsia-200">合体のしかた</p>
+      <p className="mt-0.5">① 主の親を選ぶ(生まれるモンスターの種類と主血統)</p>
+      <p>② 副の親を選ぶ(副血統)</p>
+      <p>③ 生まれるモンスターの見通しを見て「合体する」</p>
+      <p className="mt-1 text-slate-300">2体はマスモンボックスからいなくなり、まだ育てていない新しいマスモンが1体生まれます</p>
+    </div>);
   const names = SUC ? SUC.STAT_NAMES : {};
   const keys = SUC ? SUC.KEYS : [];
   const sum = (st) => keys.reduce((a, k) => a + (Number(st && st[k]) || 0), 0);
@@ -84083,36 +84123,33 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
                 }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">この名前にする</button></>)}
             </div>) : null}
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
-        </div>) : !main ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+        </div>) : !(main && mat) ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto', overflowY: 'auto', overscrollBehavior: 'contain' }}>{/* 低い画面では2枠ごと縦に流す(候補の欄が0にならない) */}
+          {/* r1120 合体の窓の作り直し(④の型): 上に「主の親・副の親」の2枠、下に候補をカードの格子。いま選ぶ枠を光らせる */}
+          {slots}
+          {usable.length < 2 ? howTo : (<>
+          <p className="mt-1.5 text-[12px] font-bold text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{!main ? '主の親を選んでください。生まれるモンスターの主血統と種類は、主の親で決まります' : '副の親を選んでください。生まれるモンスターの副血統は、副の親で決まります'}</p>
+          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={cands.length} total={usable.length - (other ? 1 : 0)}/> : null}
+          <div style={{ flex: '1 0 auto' }} data-monsuc-fuse-cands>
+            {typeof MonsucMonCard === 'function'
+              ? <MonsucCardGrid size="s">{cands.map(m => <MonsucMonCard key={m.id} size="s" m={cardM(m)} onClick={() => (main ? setMat(m.id) : setMain(m.id))} attrs={{ 'data-monsuc-fuse-pick': m.id, 'aria-label': `${monsucFuseNick(m)}を${main ? '副の親' : '主の親'}にする` }}/>)}</MonsucCardGrid>
+              : cands.map(m => card(m, () => (main ? setMat(m.id) : setMain(m.id)), 'border-white/15 bg-slate-800'))}
+            {!cands.length ? <p className="mt-2 text-[12px] font-bold text-slate-300">{fq.trim() ? '検索に当てはまるモンスターがいません' : 'ほかに選べるモンスターがいません'}</p> : null}
           </div>
+          </>)}
           {lockedEl}
-          {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
-          {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
-          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)</p>}
-        </div>) : !mat ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
-          {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableS.filter(m => m.id !== main.id).length} total={usable.length - 1}/> : null}
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
-          </div>
-          {usable.length >= 2 && !usableS.filter(m => m.id !== main.id).length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
         </div>) : plan && plan.ok ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
-          <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
-            {typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
-            <p className="text-[13px] font-black">{monsucFuseSpName(plan.child.species)} <small className="text-[11px] text-amber-200">{plan.child.gen}代目 ・ 未育成</small>
-              <small className="block text-[10px] font-bold text-slate-300">型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}(生まれたモンスターの種類の型)</small></p>
+          <div className="mfz-sm">{slots}</div>
+          <p className="mt-1.5 text-[12px] font-black text-slate-200">生まれるモンスターの見通し</p>
+          <div className="mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
+            {/* 生まれる子は④の型の札(中)で大きく(窓-02: 約24pxのアイコンだけで、生まれる喜びが無かった) */}
+            {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
+            <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
-            <p className="mb-1 text-[10.5px] font-bold text-slate-300">{monsucFuseSpName(plan.child.species)}の初めの能力に、2体の強さに応じた上乗せが付きます</p>
-            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span>{plan.base[k]} → <b className="text-amber-200">{plan.child.st[k]}</b> <small className="text-fuchsia-200">(+{plan.add[k]})</small></span></p>)}
+            <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
+            <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
+            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span><b className="text-amber-200">{plan.child.st[k]}</b> <b className="ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100">+{plan.add[k]}</b></span></p>)}
           </div>
-          <p className="mt-1 text-[10.5px] font-bold text-slate-300">2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
           <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
@@ -84122,9 +84159,9 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
-        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 grid-cols-2 gap-2" data-monsuc-fuse-foot>
-          <button type="button" data-mh-back onClick={() => { setMat(null); setSure(0); setErr(''); }} className="min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
-          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
+        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 gap-2" style={{ gridTemplateColumns: '1fr 2fr' }} data-monsuc-fuse-foot>{/* 選び直すのは上の2枠を押す。いちばん押す「合体する」を大きく(API 点検) */}
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="min-h-[48px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
+          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[56px] w-full text-center rounded-xl text-[16px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
         </div>
         : !done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
@@ -84143,7 +84180,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;white-space:nowrap;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
@@ -84189,7 +84226,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
   return (
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st}>
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
-      <div className="mf-head"><small>合体</small>{((t) => (typeof jaWrap === 'function' ? jaWrap(t) : t))(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…')}</div>
+      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…'}</span></div>
       {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>飛ばす ⏭</button></div> : null}
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>
@@ -90487,6 +90524,12 @@ const MSX_CSS = `
 .msx-md{padding:8px 10px}
 /* PC で詳細の窓が画面の幅いっぱい(1250px)に広がっていた。縦の画面と同じ大きさの窓にそろえる(2026-11-20 r1119-033 育-39) */
 .msx-sheet.msx-md,.msx-sheet.msx-asd{max-width:520px;margin:0 auto}
+/* 詳細の窓だけでなく、技を選ぶ・枠に入れるモンスター・集まり・編成の効果・確かめ・ボックスの窓も PC で横いっぱいだった。幕の上の窓はすべて本体の列と同じ幅にする(2026-11-20 r1119-033 窓-14・21・26・32・49〜51・54) */
+.msx-ov>.msx-sheet{max-width:520px;margin-left:auto;margin-right:auto}
+/* 詳細の窓は、下のタブを切り替えるたびに高さが変わって画面が跳ねていた。高さを画面いっぱいに決め、閉じるは常に下に置く(窓-23)。
+   後ろの一覧の「← 戻る」が透けて、戻り方が2つあるように見えていたので、詳細の幕は濃くする(窓-25・31) */
+.msx-ov:has(>.msx-sheet.msx-md){background:#0b0920f2}
+.msx-ov>.msx-sheet.msx-md{height:100%}
 .msx-md-art .nm .nmx{display:block;font-size:15px;line-height:1.2}
 .msx-md-ti{text-align:center}
 .msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
@@ -96755,7 +96798,7 @@ function MsxR3Box({ onClose }) {
     title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxBody(aid, 'happy')} alt=""/>
-        {!bubOff ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
+        {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
           <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
@@ -96819,7 +96862,7 @@ function MsxR3Box({ onClose }) {
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
     body = (<>
       <div className="mm-tabs"><button type="button" className={tab === 'list' ? 'on' : ''} onClick={() => { setTab('list'); setPick([]); }}>一覧</button>
-        <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
+        <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>まとめてお別れ</button></div>
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
@@ -96863,13 +96906,14 @@ function MsxR3Box({ onClose }) {
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏<small>名前・色</small></button></>}
           info={more}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
-            {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
-            <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}
+            {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>貸し出しをやめる</button> : <button type="button" onClick={lend}>貸し出す</button>) : null}</div>
+            {/* お別れは取り返しがつかないので、大きいボタンにせず下の隅の小さな文字にする(押すと確かめの窓が出る。r1119-033 窓-24・27) */}
+            <div className="mm-bye-row"><button type="button" className="mm-bye-sm" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れできません(${lock})` : 'このモンスターとお別れする'}</button></div></>}
           onClose={() => { setSel(null); setPage('list'); setMsg(''); }}/>);
       })() : null}
     </>);
     foot = tab === 'bye'
-      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← やめる」(B-9) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
+      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← 戻る」(B-9・窓-17) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
       : null; // 戻るは左上の1つ(B-3)
   }
   // ---- 名前と染色を変える ----
@@ -96896,7 +96940,7 @@ function MsxR3Box({ onClose }) {
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
     {/* 左上の戻るは、その画面の1つだけの出口(B-3・B-9)。メモモンは入口へ戻る(前は下の帯と行き先が違い、一覧へ戻っていた) */}
-    <MsxHd back={(page === 'list' && tab === 'bye') || (page === 'assist' && atab === 'rm') ? 'やめる' : '戻る'} onBack={page === 'gate' ? onClose
+    <MsxHd back="戻る" onBack={page === 'gate' ? onClose
       : page === 'list' && tab === 'bye' ? () => { setTab('list'); setPick([]); }
       : page === 'list' ? () => { setPage('gate'); setMsg(''); }
       : page === 'assist' && atab === 'rm' ? () => { setAtab('list'); setApick([]); }
@@ -96986,7 +97030,11 @@ const MSX_MM_CSS = `
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
 /* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
-.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
+.msx .mm-acts:empty{display:none}
+.msx .mm-acts{grid-auto-columns:minmax(0,1fr)}
+.msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
+.msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
+.msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
@@ -148920,7 +148968,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };
         // 記事の上の戻るは短く「項目一覧」(戻り先のカテゴリ名は長く「← 基本ルール…」と切れていた。2026-10-26 開発部 e02)
         // 出口は上の戻る1つ(2026-11-19 r1119-025 社長: 下の「分かった！冒険に戻る」は外す)。行き先が分かる言葉にする(B-3「行き先+へ戻る」)
-        const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
+        // どの階層でも上の戻るは「← 戻る」にそろえ、今いる所は見出しで分かるようにする(r1119-033 窓-19。下の「項目一覧へ」は外した)
+        const backLabel = (topic || cat) ? '戻る' : '閉じる';
         const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
         const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
         const topicIndex = topic ? cat.topics.findIndex(t=>t.id===topic.id) : -1;
@@ -148934,12 +148983,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
+            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20) */}
+            <button type="button" onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label={helpAssistantOpen?'ひとことをたたむ':'ひとことを開く'} data-help-bubble-toggle className="shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95">{helpAssistantOpen?'たたむ ▲':'💬 ひとこと'}</button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={helpShort?null:"help"} collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={null} maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
@@ -149014,16 +149064,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button data-battle-tutorial-launch-all onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95">🎓 れんしゅうを最初から全部通す</button>
                   </div>
                 )}
-                <div className="pt-1 flex gap-2">
-                  <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
-                  {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}
-                </div>
+                {/* 戻るのは上の「← 戻る」1つ。下は次の項目だけ(r1119-033 窓-04・05) */}
+                {nextTopic&&<div className="pt-1 flex">
+
+                  <button onClick={()=>setHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>
+                </div>}
               </div>
             )}
           </div>
           {/* 横向きの背の低い画面では下の帯を1行に詰め、一覧を広く見せる(ボタンが大きく一覧が1行ぶんしか見えなかった。ダメダシ見回り 10/26 #4) */}
           <footer className="shrink-0 px-4 py-1 bg-slate-900 border-t border-white/10 text-center">
-            {/* 「分かった！冒険に戻る」は置かない(r1119-025・U-22)。上の戻る(項目一覧へ戻る/ヘルプへ戻る/閉じる)と出口が2つあり、横では高さの 1/6 を使っていた */}
+            {/* 「分かった！冒険に戻る」は置かない(r1119-025・U-22)。上の戻る(戻る/閉じる)と出口が2つあり、横では高さの 1/6 を使っていた */}
             <button aria-label="" onClick={requestDebugSettings} className="mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);

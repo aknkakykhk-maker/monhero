@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 12f3777e3040a68d
+// source-sha256: 417eb85d081d85df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161290,6 +161290,17 @@ const monsucFuse = async ({
     monsucFuseBusy = false;
   }
 };
+const MONSUC_FUSE_SLOT_CSS = `
+[data-monsuc-fuse] .mfz-slots{display:flex;align-items:flex-start;justify-content:center;gap:6px;margin-top:6px;flex:none}
+[data-monsuc-fuse] .mfz-slot{width:min(34vw,128px);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;border-radius:12px;border:2px solid transparent}
+[data-monsuc-fuse] .mfz-slot.now{border-color:#f0abfc;background:#4a044e66}
+[data-monsuc-fuse] .mfz-slot .mcd{width:100%}
+[data-monsuc-fuse] .mfz-lb{font-size:13px;font-weight:900;color:#f5d0fe}
+[data-monsuc-fuse] .mfz-d{font-size:11px;font-weight:800;color:#cbd5e1;text-align:center;line-height:1.3}
+[data-monsuc-fuse] .mfz-x{align-self:center;font-size:22px;font-weight:900;color:#f0abfc;margin-top:18px}
+[data-monsuc-fuse] .mfz-sm .mfz-slot{width:min(24vw,92px)}[data-monsuc-fuse] .mfz-sm .mfz-x{margin-top:12px}
+@media (max-height:520px){[data-monsuc-fuse] .mfz-slot{width:88px}[data-monsuc-fuse] .mfz-d{display:none}}
+`;
 function MonsucFuseSheet({
   box,
   saveBox,
@@ -161351,6 +161362,66 @@ function MonsucFuseSheet({
   const main = mons.find(m => m.id === mainId) || null;
   const mat = mons.find(m => m.id === matId) || null;
   const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
+  const cardM = m => ({
+    species: m.species,
+    nick: monsucFuseNick(m),
+    colors: Array.isArray(m.colors) ? m.colors : [],
+    awake: m.awake,
+    lv: m.lv,
+    grade: m.grade || m.rank || '',
+    fav: Array.isArray(m.fav) ? m.fav : []
+  });
+  const other = main || null;
+  const cands = usableS.filter(m => !(other && m.id === other.id) && !(mat && m.id === mat.id));
+  const slot = (k, lb, m, d) => React.createElement("div", {
+    className: `mfz-slot${(k === 'main' ? !main : main && !mat) ? ' now' : ''}`,
+    key: k
+  }, React.createElement("b", {
+    className: "mfz-lb"
+  }, lb), typeof MonsucMonCard === 'function' ? React.createElement(MonsucMonCard, {
+    size: "m",
+    m: m ? cardM(m) : null,
+    empty: "?",
+    onClick: m ? () => {
+      if (k === 'main') {
+        setMain(null);
+        setMat(null);
+      } else setMat(null);
+      setSure(0);
+      setErr('');
+    } : null,
+    attrs: {
+      'data-monsuc-fuse-slot': k,
+      'aria-label': m ? `${lb}を選び直す` : `${lb}(まだ選んでいません)`
+    }
+  }) : null, React.createElement("small", {
+    className: "mfz-d"
+  }, m ? '押すと選び直す' : d));
+  const slots = React.createElement("div", {
+    className: "mfz-slots",
+    "data-monsuc-fuse-slots": true
+  }, React.createElement("style", null, MONSUC_FUSE_SLOT_CSS), slot('main', '主の親', main, '種類・主血統'), React.createElement("span", {
+    className: "mfz-x",
+    "aria-hidden": "true"
+  }, "＋"), slot('mat', '副の親', mat, '副血統'));
+  const howTo = React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/15 bg-slate-800/80 p-3 text-[12px] font-bold text-slate-200",
+    "data-monsuc-fuse-none": true,
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-white"
+  }, "いま合体に使えるマスモン: ", usable.length, "体"), React.createElement("p", {
+    className: "mt-1"
+  }, "合体には、育成を最後まで終えたマスモンが2体いります。", lockedRaised.length ? '育成中の編成に入っている・貸し出し中・育成中のモンスターは使えません(下の🔒)。' : ''), React.createElement("p", {
+    className: "mt-2 text-[12.5px] font-black text-fuchsia-200"
+  }, "合体のしかた"), React.createElement("p", {
+    className: "mt-0.5"
+  }, "① 主の親を選ぶ(生まれるモンスターの種類と主血統)"), React.createElement("p", null, "② 副の親を選ぶ(副血統)"), React.createElement("p", null, "③ 生まれるモンスターの見通しを見て「合体する」"), React.createElement("p", {
+    className: "mt-1 text-slate-300"
+  }, "2体はマスモンボックスからいなくなり、まだ育てていない新しいマスモンが1体生まれます"));
   const names = SUC ? SUC.STAT_NAMES : {};
   const keys = SUC ? SUC.KEYS : [];
   const sum = st => keys.reduce((a, k) => a + (Number(st && st[k]) || 0), 0);
@@ -161501,105 +161572,100 @@ function MonsucFuseSheet({
     onClick: onClose,
     "data-mhl-sheet-close": true,
     className: "mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "閉じる")) : !main ? React.createElement("div", {
+  }, "閉じる")) : !(main && mat) ? React.createElement("div", {
     style: {
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0,
-      flex: '1 1 auto'
+      flex: '1 1 auto',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain'
     }
-  }, React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-300"
-  }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+  }, slots, usable.length < 2 ? howTo : React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "mt-1.5 text-[12px] font-bold text-slate-200",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, !main ? '主の親を選んでください。生まれるモンスターの主血統と種類は、主の親で決まります' : '副の親を選んでください。生まれるモンスターの副血統は、副の親で決まります'), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
     q: fq,
     onQ: setFq,
     sorts: typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null,
     sort: fsort,
     onSort: setFsort,
-    count: usableF.length,
-    total: usable.length
+    count: cands.length,
+    total: usable.length - (other ? 1 : 0)
   }) : null, React.createElement("div", {
     style: {
-      flex: '1 1 auto',
-      minHeight: 0,
-      overflowY: 'auto'
+      flex: '1 0 auto'
+    },
+    "data-monsuc-fuse-cands": true
+  }, typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+    size: "s"
+  }, cands.map(m => React.createElement(MonsucMonCard, {
+    key: m.id,
+    size: "s",
+    m: cardM(m),
+    onClick: () => main ? setMat(m.id) : setMain(m.id),
+    attrs: {
+      'data-monsuc-fuse-pick': m.id,
+      'aria-label': `${monsucFuseNick(m)}を${main ? '副の親' : '主の親'}にする`
     }
-  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
-    label: "name",
-    mons: usableS,
-    onPick: m => setMain(m.id),
-    attrs: m => ({
-      'data-monsuc-fuse-pick': m.id
-    })
-  }) : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))), lockedEl, usable.length >= 2 && !usableF.length ? React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold text-slate-400",
-    "data-monsuc-fuse-none": true
-  }, "育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: 0,
-      flex: '1 1 auto'
-    }
-  }, React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-300"
-  }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
-    q: fq,
-    onQ: setFq,
-    sorts: typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null,
-    sort: fsort,
-    onSort: setFsort,
-    count: usableS.filter(m => m.id !== main.id).length,
-    total: usable.length - 1
-  }) : null, React.createElement("div", {
-    style: {
-      flex: '1 1 auto',
-      minHeight: 0,
-      overflowY: 'auto'
-    }
-  }, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
-    label: "name",
-    mons: usableS.filter(m => m.id !== main.id),
-    onPick: m => setMat(m.id),
-    attrs: m => ({
-      'data-monsuc-fuse-pick': m.id
-    })
-  }) : usableS.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))), usable.length >= 2 && !usableS.filter(m => m.id !== main.id).length ? React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold text-slate-400"
-  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement("div", {
+  }))) : cands.map(m => card(m, () => main ? setMat(m.id) : setMain(m.id), 'border-white/15 bg-slate-800')), !cands.length ? React.createElement("p", {
+    className: "mt-2 text-[12px] font-bold text-slate-300"
+  }, fq.trim() ? '検索に当てはまるモンスターがいません' : 'ほかに選べるモンスターがいません') : null)), lockedEl) : plan && plan.ok ? React.createElement("div", {
     style: {
       overflowY: 'auto',
       minHeight: 0,
       flex: '1 1 auto'
     }
-  }, React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-300"
-  }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
-    className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
+  }, React.createElement("div", {
+    className: "mfz-sm"
+  }, slots), React.createElement("p", {
+    className: "mt-1.5 text-[12px] font-black text-slate-200"
+  }, "生まれるモンスターの見通し"), React.createElement("div", {
+    className: "mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
     "data-monsuc-fuse-child": plan.child.species
-  }, typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
-    className: "text-[13px] font-black"
-  }, monsucFuseSpName(plan.child.species), " ", React.createElement("small", {
-    className: "text-[11px] text-amber-200"
-  }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
-    className: "block text-[10px] font-bold text-slate-300"
-  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', "(生まれたモンスターの種類の型)"))), React.createElement("div", {
+  }, typeof MonsucMonCard === 'function' ? React.createElement("span", {
+    style: {
+      width: 'min(30vw,112px)',
+      flex: 'none'
+    }
+  }, React.createElement(MonsucMonCard, {
+    size: "m",
+    m: {
+      species: plan.child.species,
+      colors: Array.isArray(plan.child.colors) ? plan.child.colors : []
+    }
+  })) : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null, React.createElement("p", {
+    className: "text-[16px] font-black text-amber-100",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "新しいマスモンが生まれます", React.createElement("small", {
+    className: "block text-[12px] font-bold text-slate-200"
+  }, plan.child.gen, "代目・まだ育てていないマスモン"), React.createElement("small", {
+    className: "mt-1 block text-[12px] font-bold text-slate-200"
+  }, "成長の型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''))), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
     "data-monsuc-fuse-plan": true
   }, React.createElement("p", {
-    className: "mb-1 text-[10.5px] font-bold text-slate-300"
-  }, monsucFuseSpName(plan.child.species), "の初めの能力に、2体の強さに応じた上乗せが付きます"), keys.map(k => React.createElement("p", {
+    className: "mb-1 text-[11px] font-bold text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), React.createElement("p", {
+    className: "flex justify-between text-[10.5px] font-bold text-slate-400"
+  }, React.createElement("span", null, "能力"), React.createElement("span", null, "上乗せのあと・上乗せ分")), keys.map(k => React.createElement("p", {
     key: k,
     className: "flex justify-between text-[12px] font-black"
-  }, React.createElement("span", null, names[k]), React.createElement("span", null, plan.base[k], " → ", React.createElement("b", {
+  }, React.createElement("span", null, names[k]), React.createElement("span", null, React.createElement("b", {
     className: "text-amber-200"
-  }, plan.child.st[k]), " ", React.createElement("small", {
-    className: "text-fuchsia-200"
-  }, "(+", plan.add[k], ")"))))), React.createElement("p", {
-    className: "mt-1 text-[10.5px] font-bold text-slate-300"
-  }, "2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)"), React.createElement("p", {
+  }, plan.child.st[k]), " ", React.createElement("b", {
+    className: "ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100"
+  }, "+", plan.add[k]))))), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-200",
     "data-monsuc-fuse-techs": true
   }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
@@ -161629,24 +161695,23 @@ function MonsucFuseSheet({
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-err": true
   }, plan && plan.why || 'この2体では合体できません'), !done && SUC && main && mat && plan && plan.ok ? React.createElement("div", {
-    className: "mt-2 grid shrink-0 grid-cols-2 gap-2",
+    className: "mt-2 grid shrink-0 gap-2",
+    style: {
+      gridTemplateColumns: '1fr 2fr'
+    },
     "data-monsuc-fuse-foot": true
   }, React.createElement("button", {
     type: "button",
-    "data-mh-back": true,
-    onClick: () => {
-      setMat(null);
-      setSure(0);
-      setErr('');
-    },
-    className: "min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "選び直す"), React.createElement("button", {
+    onClick: onClose,
+    "data-mhl-sheet-close": true,
+    className: "min-h-[48px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
+  }, "キャンセル"), React.createElement("button", {
     type: "button",
     onClick: go,
     disabled: !ready || busy,
     "data-monsuc-fuse-go": sure,
     "data-monsuc-fuse-ready": ready ? 1 : 0,
-    className: `disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+    className: `disabled:opacity-50 min-h-[56px] w-full text-center rounded-xl text-[16px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
   }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する')) : !done && React.createElement("button", {
     type: "button",
     onClick: onClose,
@@ -161680,7 +161745,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;white-space:nowrap;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
@@ -161741,7 +161806,12 @@ function MonsucFuseShow({
     alt: ""
   }), React.createElement("div", {
     className: "mf-head"
-  }, React.createElement("small", null, "合体"), (t => typeof jaWrap === 'function' ? jaWrap(t) : t)(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…')), st < 3 ? React.createElement("div", {
+  }, React.createElement("small", null, "合体"), React.createElement("span", {
+    style: {
+      display: 'block',
+      whiteSpace: 'nowrap'
+    }
+  }, st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…')), st < 3 ? React.createElement("div", {
     className: "mf-ctl"
   }, React.createElement("button", {
     type: "button",
@@ -173505,6 +173575,12 @@ const MSX_CSS = `
 .msx-md{padding:8px 10px}
 /* PC で詳細の窓が画面の幅いっぱい(1250px)に広がっていた。縦の画面と同じ大きさの窓にそろえる(2026-11-20 r1119-033 育-39) */
 .msx-sheet.msx-md,.msx-sheet.msx-asd{max-width:520px;margin:0 auto}
+/* 詳細の窓だけでなく、技を選ぶ・枠に入れるモンスター・集まり・編成の効果・確かめ・ボックスの窓も PC で横いっぱいだった。幕の上の窓はすべて本体の列と同じ幅にする(2026-11-20 r1119-033 窓-14・21・26・32・49〜51・54) */
+.msx-ov>.msx-sheet{max-width:520px;margin-left:auto;margin-right:auto}
+/* 詳細の窓は、下のタブを切り替えるたびに高さが変わって画面が跳ねていた。高さを画面いっぱいに決め、閉じるは常に下に置く(窓-23)。
+   後ろの一覧の「← 戻る」が透けて、戻り方が2つあるように見えていたので、詳細の幕は濃くする(窓-25・31) */
+.msx-ov:has(>.msx-sheet.msx-md){background:#0b0920f2}
+.msx-ov>.msx-sheet.msx-md{height:100%}
 .msx-md-art .nm .nmx{display:block;font-size:15px;line-height:1.2}
 .msx-md-ti{text-align:center}
 .msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
@@ -189116,7 +189192,7 @@ function MsxR3Box({
       className: "mm-aid",
       src: msxBody(aid, 'happy'),
       alt: ""
-    }), !bubOff ? React.createElement("div", {
+    }), !bubOff && !fuseEl ? React.createElement("div", {
       className: "mm-bub",
       onClick: () => setBubOff(true),
       role: "button",
@@ -189330,7 +189406,7 @@ function MsxR3Box({
       },
       "data-msx-mm-tab-bye": true,
       "data-msx-r3-mmbye": true
-    }, "お別れ")), tab === 'bye' ? React.createElement("div", {
+    }, "まとめてお別れ")), tab === 'bye' ? React.createElement("div", {
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
@@ -189504,17 +189580,20 @@ function MsxR3Box({
         }, lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
           type: "button",
           onClick: unlend
-        }, "🤝 貸し出しをやめる") : React.createElement("button", {
+        }, "貸し出しをやめる") : React.createElement("button", {
           type: "button",
           onClick: lend
-        }, "🤝 貸し出す") : null, React.createElement("button", {
+        }, "貸し出す") : null), React.createElement("div", {
+          className: "mm-bye-row"
+        }, React.createElement("button", {
           type: "button",
+          className: "mm-bye-sm",
           disabled: !!lock,
           onClick: () => setByeAsk({
             ids: [cur.id]
           }),
           "data-msx-r3-bye": true
-        }, lock ? `お別れ(${lock})` : 'お別れ'))),
+        }, lock ? `お別れできません(${lock})` : 'このモンスターとお別れする'))),
         onClose: () => {
           setSel(null);
           setPage('list');
@@ -189633,7 +189712,7 @@ function MsxR3Box({
     foot = null;
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: page === 'list' && tab === 'bye' || page === 'assist' && atab === 'rm' ? 'やめる' : '戻る',
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' && tab === 'bye' ? () => {
       setTab('list');
       setPick([]);
@@ -189736,7 +189815,11 @@ const MSX_MM_CSS = `
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
 /* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
-.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
+.msx .mm-acts:empty{display:none}
+.msx .mm-acts{grid-auto-columns:minmax(0,1fr)}
+.msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
+.msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
+.msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
 `;
 const MSX_BOX_HOST = {
   open: null,
@@ -274290,7 +274373,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
+      const backLabel = topic || cat ? '戻る' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -274336,15 +274419,12 @@ function MonsterHeroGame() {
           color: accent
         }
       }, headTitle)), React.createElement("button", {
+        type: "button",
         onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": "助手のひとことを開く",
-        className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
-      }, React.createElement(AssistantFace, {
-        who: activeAssistant,
-        size: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 32 : 48,
-        accent: accent,
-        expression: assistantExpression
-      }))), helpAssistantOpen && React.createElement("div", {
+        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
+        "data-help-bubble-toggle": true,
+        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
+      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
@@ -274358,8 +274438,7 @@ function MonsterHeroGame() {
         expression: assistantExpression,
         accent: accent,
         compact: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight,
-        collapseKey: helpShort ? null : "help",
-        collapseHidden: true,
+        collapseKey: null,
         maxLines: topic ? typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 1 : 2 : typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 2 : 0
       })), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
@@ -274489,12 +274568,9 @@ function MonsterHeroGame() {
         "data-battle-tutorial-launch-all": true,
         onClick: () => startBattleTutorial('HOME'),
         className: "w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95"
-      }, "🎓 れんしゅうを最初から全部通す")), React.createElement("div", {
-        className: "pt-1 flex gap-2"
+      }, "🎓 れんしゅうを最初から全部通す")), nextTopic && React.createElement("div", {
+        className: "pt-1 flex"
       }, React.createElement("button", {
-        onClick: () => setHelpTopicId(null),
-        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
-      }, "項目一覧へ"), nextTopic && React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
         className: "min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {
