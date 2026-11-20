@@ -173,7 +173,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 
 // モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
 //   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B', antiStall: true }); // antiStall: 間合いの取り合いで技が出ないまま打ち切りにしない(バ-08)
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)

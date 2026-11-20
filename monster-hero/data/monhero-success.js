@@ -154,8 +154,8 @@
     half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
     praiseGood: [4, 0], praiseBad: [2, 0], scoldBad: [0, 4], scoldGood: [0, 1], // 甘え度・恐れ度は下げない(社長 2026-11-14「マイナスになると忠誠度が下がる」)
     win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [0, 0],
-    // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の50%以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
-    turnHpLine: 0.5, turnAma: 1, turnFear: 1,
+    // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の境(turnHpLine)以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
+    turnHpLine: 0.7, turnAma: 1, turnFear: 1, // 境は上限の7割(2026-11-20 社長 r1119-042・前は5割。体力に余裕があるときだけ甘える)
   });
   // 方針の段(-3〜+3)で、甘え度・恐れ度の上がり方が変わる(甘い側ほど甘えが上がりやすい)
   const POL_AMA = Object.freeze([1.5, 1.35, 1.2, 1, 0.8, 0.65, 0.5]);
@@ -589,11 +589,19 @@
     const ASSISTS = (() => {
       const T = AT ? AT.BY_ID : null;
       if (!T) return ASSISTS_V1;
-      if (AV3) { // 表の種類すべて。試合型だけは第1版の数字のまま(ひらめきは社長の保留中・2026-11-12)
+      if (AV3) { // 表の種類すべて。試合型も表の5目盛り(r1119-042。前は第1版の数字のままだった)
         const out = {};
         Object.values(T).forEach((a) => {
           if (!a || typeof a.id !== 'string' || !Array.isArray(a.v) || !Array.isArray(a.cost) || a.v.length !== a.cost.length || !a.v.every(Number.isFinite)) return;
-          if (a.type === 'battle') { if (ASSISTS_V1[a.id]) out[a.id] = ASSISTS_V1[a.id]; return; }
+          // 試合型: 表の5目盛り(画面と同じ数字・buff)で効かせる(2026-11-20 社長 r1119-042「中身を画面に合わせる」。前は第1版の3段のままで、4・5目盛り目が3目盛り目と同じだった)。
+          //   表の buff が目盛りの数とそろっていないときだけ、第1版の表に戻す。保存の形(assists:[{ id, lv, n }])は変えない
+          if (a.type === 'battle') {
+            const v1 = ASSISTS_V1[a.id];
+            const okBuff = Array.isArray(a.buff) && a.buff.length === a.v.length && a.buff.every(x => x && typeof x === 'object');
+            if (okBuff) out[a.id] = Object.freeze({ name: a.name, type: 'battle', v: a.v.slice(), cost: a.cost.slice(), max: a.v.length, hint: (v1 && v1.hint) || a.aid || null, buff: a.buff.map(x => Object.freeze({ ...x })) });
+            else if (v1) out[a.id] = v1;
+            return;
+          }
           out[a.id] = Object.freeze({ name: a.name, type: a.type, v: a.v.slice(), cost: a.cost.slice(), max: a.v.length, ...(a.stat ? { stat: a.stat } : {}), ...(Array.isArray(a.start) ? { start: a.start.slice() } : {}), ...(Array.isArray(a.mv) ? { mv: a.mv.slice() } : {}) });
         });
         return Object.freeze(out);

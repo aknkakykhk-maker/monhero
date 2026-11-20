@@ -183,7 +183,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       const pShown = await page.evaluate(async () => {
         const cards = [...document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]')];
         // 札は 2026-11-19 段2 から零近中遠の1列(相手の技の枠と同じ形・「命中 ○%」「ガッツ ○」)。案Aの時代は、いまの間合いの札は「命中率○%・消ガ○」(r1115-074・185)。ほかの間合いの札は撃てないので、届く間合い(「零でのみ届く」「届く間合い: …」)を出す
-        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => (c.classList.contains('now') ? /命中率? ?\d+%/.test(c.textContent) && /(消ガ|ガッツ) ?\d+/.test(c.textContent) : /命中率? ?\d+%|届く/.test(c.textContent)));
+        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => (c.classList.contains('now') ? /命中率? ?\d+%/.test(c.textContent) && /(消ガ|ガッツ) ?[−-]?\d+/.test(c.textContent) : /命中率? ?\d+%|届く/.test(c.textContent)));
         const now = cards.find((c) => c.classList.contains('now') && !c.disabled);
         if (!now) return cardOk;
         now.click(); await new Promise((r) => setTimeout(r, 150));
