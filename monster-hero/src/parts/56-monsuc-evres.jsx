@@ -12,7 +12,7 @@ const msxEvDeltaChips = (d) => {
   num('hp', '体力'); num('stress', 'ストレス', false); num('pop', '人気'); num('loyal', '忠誠'); num('bond', '親密度');
   num('fame', '賞金', true, 'G'); num('pts', '能力ポイント'); num('mastery', '技の熟練');
   const BUFFS = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  (Array.isArray(d.buffs) ? d.buffs : []).forEach((b) => { const x = BUFFS[b]; out.push({ k: `buff-${b}`, name: x ? `${x.icon} ${x.name}` : 'いい調子になった', good: x ? x.good !== false : true }); });
+  (Array.isArray(d.buffs) ? d.buffs : []).forEach((b) => { const x = BUFFS[b]; out.push({ k: `buff-${b}`, name: x ? `${x.icon} ${x.name}になった` : 'いい調子になった', good: x ? x.good !== false : true, buff: b }); }); // 中身(何ターン・どう効くか)は下の行で出す(r1119-029)
   const FLAG = typeof MSX_FX_FLAG !== 'undefined' ? MSX_FX_FLAG : {};
   ['guts', 'goalPlus', 'boost', 'fav', 'tagSeen', 'injRisk'].forEach((k) => { if (d[k]) out.push({ k, name: FLAG[k === 'boost' ? 'baseBoost' : k] || 'いいことがある', good: k !== 'injRisk' }); });
   if (d.goal) out.push({ k: 'goal', name: (typeof MSX_FX_GOAL !== 'undefined' && MSX_FX_GOAL[d.goal]) || '期の目標が決まった', good: true });
@@ -26,6 +26,7 @@ function MsxEvResult({ delta, hasStats }) {
       <span className="hd2">📋 結果</span><br/>
       {chips.length ? chips.map((c, i) => <span key={c.k} data-msx-ev-chip={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>)
         : <span data-msx-ev-none>変わったことはなかった</span>}
+      {chips.filter((c) => c.buff && typeof msxBuffGrantText === 'function').map((c) => <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-buff={c.buff} style={{ marginTop: 4, fontSize: 11.5, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c' }}>{msxBuffGrantText(c.buff)}</div>)}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6355ab6e018ead35
+// generated-sha256: 385bf67c29148bae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14574,6 +14574,13 @@ const helpDataRows = (id) => {
       return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost))
         .map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
     }
+    // モンヒロサクセスのひとときの状態(r1119-029)。名前・続くターン・効き目は芯の出来事の表(MONHERO_SUCCESS_EVENTS.BUFFS)から作る。
+    // 効き目の数を変えたときにヘルプだけ古くならないよう、書き写さない。芯が読み込まれる前は1行だけ案内を返す
+    case 'monsakuBuffs': {
+      const B = globalThis.MONHERO_SUCCESS_EVENTS && globalThis.MONHERO_SUCCESS_EVENTS.BUFFS;
+      if (!B || typeof B !== 'object') return [['ひとときの状態', '育成中の出来事で付きます']];
+      return Object.values(B).filter(b => b && b.name).map(b => [`${b.icon} ${b.name}(${b.left > 0 ? `${b.left}ターン` : '次の修行まで'})`, `${b.good === false ? '悪い: ' : '良い: '}${b.text}`]);
+    }
     case 'masuCosts':
       return [
         ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
@@ -14795,6 +14802,7 @@ const HELP_DATA_TITLES = {
   masuCosts: '神殿でかかるダイヤ',
   monsakuRanks: '評価のランク(総合力)',
   monsakuAssists: 'アシスト能力の一覧',
+  monsakuBuffs: 'ひとときの状態の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
@@ -84897,7 +84905,7 @@ const msxFxText = (f) => {
   if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
-  if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
+  if (k === 'buff') return BUFFS[a] ? (typeof msxBuffGrantText === 'function' ? msxBuffGrantText(a) : `${BUFFS[a].icon} ${BUFFS[a].name}`) : 'いい調子になる'; // 何ターン・どう効くかまで(r1119-029)
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
   if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
@@ -85084,7 +85092,7 @@ const msxEvDeltaChips = (d) => {
   num('hp', '体力'); num('stress', 'ストレス', false); num('pop', '人気'); num('loyal', '忠誠'); num('bond', '親密度');
   num('fame', '賞金', true, 'G'); num('pts', '能力ポイント'); num('mastery', '技の熟練');
   const BUFFS = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  (Array.isArray(d.buffs) ? d.buffs : []).forEach((b) => { const x = BUFFS[b]; out.push({ k: `buff-${b}`, name: x ? `${x.icon} ${x.name}` : 'いい調子になった', good: x ? x.good !== false : true }); });
+  (Array.isArray(d.buffs) ? d.buffs : []).forEach((b) => { const x = BUFFS[b]; out.push({ k: `buff-${b}`, name: x ? `${x.icon} ${x.name}になった` : 'いい調子になった', good: x ? x.good !== false : true, buff: b }); }); // 中身(何ターン・どう効くか)は下の行で出す(r1119-029)
   const FLAG = typeof MSX_FX_FLAG !== 'undefined' ? MSX_FX_FLAG : {};
   ['guts', 'goalPlus', 'boost', 'fav', 'tagSeen', 'injRisk'].forEach((k) => { if (d[k]) out.push({ k, name: FLAG[k === 'boost' ? 'baseBoost' : k] || 'いいことがある', good: k !== 'injRisk' }); });
   if (d.goal) out.push({ k: 'goal', name: (typeof MSX_FX_GOAL !== 'undefined' && MSX_FX_GOAL[d.goal]) || '期の目標が決まった', good: true });
@@ -85098,8 +85106,108 @@ function MsxEvResult({ delta, hasStats }) {
       <span className="hd2">📋 結果</span><br/>
       {chips.length ? chips.map((c, i) => <span key={c.k} data-msx-ev-chip={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>)
         : <span data-msx-ev-none>変わったことはなかった</span>}
+      {chips.filter((c) => c.buff && typeof msxBuffGrantText === 'function').map((c) => <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-buff={c.buff} style={{ marginTop: 4, fontSize: 11.5, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c' }}>{msxBuffGrantText(c.buff)}</div>)}
     </div>
   );
+}
+
+// ---- part: 56-monsuc-buff.jsx ----
+// ===== モンヒロサクセスの「ひとときの状態」を見せる(r1119-029・2026-11-20 社長「そんなのあったんだ。分かりやすくして」) =====
+// 状態の中身(名前・効き目・続くターン)は芯の SUC.events.BUFFS がただ1つの正本。ここは見せるだけで、何も保存しない。
+//   msxBuffDef(k)        … { k, icon, name, text, long, good, dur }(dur は付いたときの長さ「3ターン」「次の修行まで」)
+//   msxBuffGrantText(k)  … 付いたときの1行「🔥 やる気満々(3ターン): トレーニングの大成功 +10%・…」(出来事の結果・選択肢の詳細で使う)
+//   msxBuffNow(s)        … いま付いている物の並び(芯の6つ+「💡 コツをつかんだ」= 芯の s.hirameki)。left は残りの言い方
+//   MsxBuffChips({ s })  … 毎ターンの画面の札(良い=緑・悪い=赤)。押すと説明の窓。前のターンにあって消えた物は「切れた」の札を1ターンだけ
+// 「💡 コツをつかんだ」は、編成のモンスターに「コツを教わる」・休むの🎲トレーニングチャンスで付く芯の旗(次のトレーニングの大成功 +10%・トレーニングで消える)。
+//   名前の似た「✨ ひらめき中」(出来事・修行で技を覚えやすい)と取り違えないよう、別の名前で出す
+
+const MSX_BUFF_KOTSU = Object.freeze({ k: 'kotsu', icon: '💡', name: 'コツをつかんだ', good: true, text: '次のトレーニングの大成功 +10%', long: '次にトレーニングをしたとき、大成功が出る確率が 10% 上がります。トレーニングをすると消えます(ターンでは消えません)。', dur: '次のトレーニングまで' });
+const msxBuffTable = () => { const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null; return (E && E.BUFFS) || {}; };
+const msxBuffDef = (k) => {
+  if (k === 'kotsu') return MSX_BUFF_KOTSU;
+  const B = msxBuffTable()[k]; if (!B) return null;
+  return { k, icon: B.icon, name: B.name, text: B.text, long: B.long || B.text, good: B.good !== false, dur: B.left > 0 ? `${B.left}ターン` : '次の修行まで' };
+};
+const msxBuffGrantText = (k) => { const d = msxBuffDef(k); return d ? `${d.icon} ${d.name}(${d.dur}): ${d.text}` : ''; };
+const msxBuffNow = (s) => {
+  const out = [];
+  const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null;
+  const list = E && typeof E.buffs === 'function' ? E.buffs(s) : [];
+  list.slice(0, 2).forEach((b) => {
+    const d = msxBuffDef(b.k); if (!d) return;
+    const x = { ...d, left: Number.isFinite(b.left) ? `あと${b.left}ターン` : d.dur };
+    // 🤝息ぴったりは、だれと息が合ったかを説明に出す
+    const m = b.k === 'iki' && Number.isInteger(b.with) && s && Array.isArray(s.team) ? s.team[b.with] : null;
+    if (m && typeof msxMemberName === 'function') x.long = `${msxMemberName(m)}と息が合っています。${d.long}`;
+    out.push(x);
+  });
+  if (s && s.hirameki === true) out.push({ ...MSX_BUFF_KOTSU, left: MSX_BUFF_KOTSU.dur });
+  return out;
+};
+// 前のターンに付いていて、いま消えた物(同じ育成・ターンが1つ進んだときだけ)。保存しない覚え書き
+const msxBuffMemo = { id: null, turn: null, ks: [], gone: [] };
+const msxBuffGone = (s) => {
+  if (!s) return [];
+  const ks = msxBuffNow(s).map((b) => b.k);
+  const m = msxBuffMemo;
+  if (m.id === s.id && m.turn === s.turn) { m.ks = ks; return m.gone.filter((k) => !ks.includes(k)); }
+  const gone = m.id === s.id && Number.isInteger(m.turn) && s.turn === m.turn + 1 ? m.ks.filter((k) => !ks.includes(k)) : [];
+  m.id = s.id; m.turn = s.turn; m.ks = ks; m.gone = gone;
+  return gone;
+};
+
+const MSX_BUFF_CSS = `
+.msx .v-chip.msx-bf{cursor:pointer;font:inherit;font-size:10.5px;font-weight:900;color:inherit;display:inline-flex;align-items:center;gap:3px;min-height:26px;position:relative}
+.msx .v-chip.msx-bf::after{content:'';position:absolute;inset:-6px -4px}
+.msx .v-chip.msx-bf.g{background:#14532d;border-color:#86efac;color:#dcfce7}
+.msx .v-chip.msx-bf.b{background:#7f1d1d;border-color:#fca5a5;color:#fee2e2}
+.msx .v-chip.msx-bf.end{background:#1f2937e0;border-color:#64748b;color:#cbd5e1;font-weight:800}
+.msx .v-chip.msx-bf small{font-size:10px;font-weight:800;opacity:.9}
+.msx-bf-pop{position:fixed;inset:0;z-index:9500;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msx-bf-pop .bx{width:min(340px,100%);background:#1e1a36;border:2px solid #86efac;border-radius:14px;padding:12px;color:#f1f5f9;font-family:inherit;box-shadow:0 8px 24px #000a}
+.msx-bf-pop .bx.b{border-color:#fca5a5}
+.msx-bf-pop .hd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:900}
+.msx-bf-pop .tg{margin-left:auto;font-size:10.5px;font-weight:900;border-radius:99px;padding:2px 8px;background:#14532d;color:#dcfce7;white-space:nowrap}
+.msx-bf-pop .bx.b .tg{background:#7f1d1d;color:#fee2e2}
+.msx-bf-pop .lf{margin-top:6px;font-size:12px;font-weight:900;color:#fde047}
+.msx-bf-pop .ln{margin-top:6px;font-size:12.5px;line-height:1.6;word-break:auto-phrase}
+.msx-bf-pop .nt{margin-top:6px;font-size:10.5px;color:#94a3b8;line-height:1.5;word-break:auto-phrase}
+.msx-bf-pop button{display:block;width:100%;min-height:44px;margin-top:10px;border:0;border-radius:12px;background:#2b3348;color:#f1f5f9;font:inherit;font-size:13px;font-weight:900;cursor:pointer}
+`;
+let msxBuffCssDone = false;
+const msxBuffEnsureCss = () => {
+  if (msxBuffCssDone || typeof document === 'undefined') return;
+  msxBuffCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-buff-css', '1'); el.textContent = MSX_BUFF_CSS; document.head.appendChild(el);
+};
+
+function MsxBuffPop({ b, onClose }) {
+  if (!b) return null;
+  const node = (
+    <div className="msx-bf-pop" data-msx-buff-pop={b.k} onClick={onClose}>
+      <div className={`bx${b.good ? '' : ' b'}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={b.name}>
+        <div className="hd">{cardIconNode(b.icon, 20)} {b.name}<span className="tg">{b.good ? '良い状態' : '悪い状態'}</span></div>
+        <div className="lf">{b.ended ? 'このターンで切れました' : b.left}</div>
+        <div className="ln">{b.long}</div>
+        {b.k === 'kotsu' ? null : <div className="nt">ひとときの状態は、同時に2つまで付きます。3つ目が付くと、古いほうが消えます。</div>}
+        <button type="button" onClick={onClose} data-msx-buff-close>閉じる</button>
+      </div>
+    </div>
+  );
+  return typeof document !== 'undefined' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, document.body) : node;
+}
+
+function MsxBuffChips({ s }) {
+  msxBuffEnsureCss();
+  const [open, setOpen] = useState(null);
+  const now = msxBuffNow(s);
+  const gone = msxBuffGone(s).map((k) => msxBuffDef(k)).filter(Boolean);
+  if (!now.length && !gone.length) return null;
+  return (<>
+    {now.map((b) => <button type="button" key={b.k} className={`v-chip msx-bf ${b.good ? 'g' : 'b'}`} data-msx-buff-chip={b.k} onClick={() => setOpen(b)}>{cardIconNode(b.icon, 14)} {b.name} <small>{b.left}</small></button>)}
+    {gone.map((b) => <button type="button" key={`end-${b.k}`} className="v-chip msx-bf end" data-msx-buff-end={b.k} onClick={() => setOpen({ ...b, ended: true })}>{cardIconNode(b.icon, 14)} {b.name} <small>が切れた</small></button>)}
+    <MsxBuffPop b={open} onClose={() => setOpen(null)}/>
+  </>);
 }
 
 // ---- part: 56-monsuc-beta.jsx ----
@@ -85362,7 +85470,7 @@ const msxTevChanges = (s, o) => {
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
     if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
-    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    if (e.lottery === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');
     return out;
   }
   const SUC = msxSuc && msxSuc.SUC; const m = s.team[e.who]; const fk = m && Array.isArray(m.top) ? m.top[0] : null;
@@ -85379,7 +85487,7 @@ const msxTevChanges = (s, o) => {
     if (k === 'self') { out.push(`${stat} 小アップ`); out.push('🤝 親密度 +5'); }
     else if (k === 'rest') out.push('❤️ 体力 +10');
     else if (k === 'talk') { out.push('💢 ストレス −10'); out.push('🤝 親密度 +5'); }
-    else if (k === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    else if (k === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');
     else out.push('🤝 親密度 +10');
   }
   return out;
@@ -93392,7 +93500,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
-          {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
+          {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
         <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 648c9430513c5161
+// source-sha256: 9c709c9f99a07b24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21113,6 +21113,12 @@ const helpDataRows = id => {
         if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
         return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost)).map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
       }
+    case 'monsakuBuffs':
+      {
+        const B = globalThis.MONHERO_SUCCESS_EVENTS && globalThis.MONHERO_SUCCESS_EVENTS.BUFFS;
+        if (!B || typeof B !== 'object') return [['ひとときの状態', '育成中の出来事で付きます']];
+        return Object.values(B).filter(b => b && b.name).map(b => [`${b.icon} ${b.name}(${b.left > 0 ? `${b.left}ターン` : '次の修行まで'})`, `${b.good === false ? '悪い: ' : '良い: '}${b.text}`]);
+      }
     case 'masuCosts':
       return [['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`], ['合体（技継承なし）', '0 ダイヤ'], ['合体（技継承あり）', `${FUSION_INHERIT_COST} ダイヤ`], ['限界突破', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）']];
     case 'assistantBond':
@@ -21279,6 +21285,7 @@ const HELP_DATA_TITLES = {
   masuCosts: '神殿でかかるダイヤ',
   monsakuRanks: '評価のランク(総合力)',
   monsakuAssists: 'アシスト能力の一覧',
+  monsakuBuffs: 'ひとときの状態の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
@@ -163175,7 +163182,7 @@ const msxFxText = f => {
   if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
-  if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
+  if (k === 'buff') return BUFFS[a] ? typeof msxBuffGrantText === 'function' ? msxBuffGrantText(a) : `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
   if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
@@ -163638,8 +163645,9 @@ const msxEvDeltaChips = d => {
     const x = BUFFS[b];
     out.push({
       k: `buff-${b}`,
-      name: x ? `${x.icon} ${x.name}` : 'いい調子になった',
-      good: x ? x.good !== false : true
+      name: x ? `${x.icon} ${x.name}になった` : 'いい調子になった',
+      good: x ? x.good !== false : true,
+      buff: b
     });
   });
   const FLAG = typeof MSX_FX_FLAG !== 'undefined' ? MSX_FX_FLAG : {};
@@ -163678,7 +163686,176 @@ function MsxEvResult({
     }
   }, c.val)) : null)) : React.createElement("span", {
     "data-msx-ev-none": true
-  }, "変わったことはなかった"));
+  }, "変わったことはなかった"), chips.filter(c => c.buff && typeof msxBuffGrantText === 'function').map(c => React.createElement("div", {
+    key: `bl-${c.buff}`,
+    className: "msx-ev-bfl",
+    "data-msx-ev-buff": c.buff,
+    style: {
+      marginTop: 4,
+      fontSize: 11.5,
+      fontWeight: 800,
+      color: c.good ? '#166534' : '#b91c1c'
+    }
+  }, msxBuffGrantText(c.buff))));
+}
+const MSX_BUFF_KOTSU = Object.freeze({
+  k: 'kotsu',
+  icon: '💡',
+  name: 'コツをつかんだ',
+  good: true,
+  text: '次のトレーニングの大成功 +10%',
+  long: '次にトレーニングをしたとき、大成功が出る確率が 10% 上がります。トレーニングをすると消えます(ターンでは消えません)。',
+  dur: '次のトレーニングまで'
+});
+const msxBuffTable = () => {
+  const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null;
+  return E && E.BUFFS || {};
+};
+const msxBuffDef = k => {
+  if (k === 'kotsu') return MSX_BUFF_KOTSU;
+  const B = msxBuffTable()[k];
+  if (!B) return null;
+  return {
+    k,
+    icon: B.icon,
+    name: B.name,
+    text: B.text,
+    long: B.long || B.text,
+    good: B.good !== false,
+    dur: B.left > 0 ? `${B.left}ターン` : '次の修行まで'
+  };
+};
+const msxBuffGrantText = k => {
+  const d = msxBuffDef(k);
+  return d ? `${d.icon} ${d.name}(${d.dur}): ${d.text}` : '';
+};
+const msxBuffNow = s => {
+  const out = [];
+  const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null;
+  const list = E && typeof E.buffs === 'function' ? E.buffs(s) : [];
+  list.slice(0, 2).forEach(b => {
+    const d = msxBuffDef(b.k);
+    if (!d) return;
+    const x = {
+      ...d,
+      left: Number.isFinite(b.left) ? `あと${b.left}ターン` : d.dur
+    };
+    const m = b.k === 'iki' && Number.isInteger(b.with) && s && Array.isArray(s.team) ? s.team[b.with] : null;
+    if (m && typeof msxMemberName === 'function') x.long = `${msxMemberName(m)}と息が合っています。${d.long}`;
+    out.push(x);
+  });
+  if (s && s.hirameki === true) out.push({
+    ...MSX_BUFF_KOTSU,
+    left: MSX_BUFF_KOTSU.dur
+  });
+  return out;
+};
+const msxBuffMemo = {
+  id: null,
+  turn: null,
+  ks: [],
+  gone: []
+};
+const msxBuffGone = s => {
+  if (!s) return [];
+  const ks = msxBuffNow(s).map(b => b.k);
+  const m = msxBuffMemo;
+  if (m.id === s.id && m.turn === s.turn) {
+    m.ks = ks;
+    return m.gone.filter(k => !ks.includes(k));
+  }
+  const gone = m.id === s.id && Number.isInteger(m.turn) && s.turn === m.turn + 1 ? m.ks.filter(k => !ks.includes(k)) : [];
+  m.id = s.id;
+  m.turn = s.turn;
+  m.ks = ks;
+  m.gone = gone;
+  return gone;
+};
+const MSX_BUFF_CSS = `
+.msx .v-chip.msx-bf{cursor:pointer;font:inherit;font-size:10.5px;font-weight:900;color:inherit;display:inline-flex;align-items:center;gap:3px;min-height:26px;position:relative}
+.msx .v-chip.msx-bf::after{content:'';position:absolute;inset:-6px -4px}
+.msx .v-chip.msx-bf.g{background:#14532d;border-color:#86efac;color:#dcfce7}
+.msx .v-chip.msx-bf.b{background:#7f1d1d;border-color:#fca5a5;color:#fee2e2}
+.msx .v-chip.msx-bf.end{background:#1f2937e0;border-color:#64748b;color:#cbd5e1;font-weight:800}
+.msx .v-chip.msx-bf small{font-size:10px;font-weight:800;opacity:.9}
+.msx-bf-pop{position:fixed;inset:0;z-index:9500;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msx-bf-pop .bx{width:min(340px,100%);background:#1e1a36;border:2px solid #86efac;border-radius:14px;padding:12px;color:#f1f5f9;font-family:inherit;box-shadow:0 8px 24px #000a}
+.msx-bf-pop .bx.b{border-color:#fca5a5}
+.msx-bf-pop .hd{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:900}
+.msx-bf-pop .tg{margin-left:auto;font-size:10.5px;font-weight:900;border-radius:99px;padding:2px 8px;background:#14532d;color:#dcfce7;white-space:nowrap}
+.msx-bf-pop .bx.b .tg{background:#7f1d1d;color:#fee2e2}
+.msx-bf-pop .lf{margin-top:6px;font-size:12px;font-weight:900;color:#fde047}
+.msx-bf-pop .ln{margin-top:6px;font-size:12.5px;line-height:1.6;word-break:auto-phrase}
+.msx-bf-pop .nt{margin-top:6px;font-size:10.5px;color:#94a3b8;line-height:1.5;word-break:auto-phrase}
+.msx-bf-pop button{display:block;width:100%;min-height:44px;margin-top:10px;border:0;border-radius:12px;background:#2b3348;color:#f1f5f9;font:inherit;font-size:13px;font-weight:900;cursor:pointer}
+`;
+let msxBuffCssDone = false;
+const msxBuffEnsureCss = () => {
+  if (msxBuffCssDone || typeof document === 'undefined') return;
+  msxBuffCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-buff-css', '1');
+  el.textContent = MSX_BUFF_CSS;
+  document.head.appendChild(el);
+};
+function MsxBuffPop({
+  b,
+  onClose
+}) {
+  if (!b) return null;
+  const node = React.createElement("div", {
+    className: "msx-bf-pop",
+    "data-msx-buff-pop": b.k,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: `bx${b.good ? '' : ' b'}`,
+    onClick: e => e.stopPropagation(),
+    role: "dialog",
+    "aria-label": b.name
+  }, React.createElement("div", {
+    className: "hd"
+  }, cardIconNode(b.icon, 20), " ", b.name, React.createElement("span", {
+    className: "tg"
+  }, b.good ? '良い状態' : '悪い状態')), React.createElement("div", {
+    className: "lf"
+  }, b.ended ? 'このターンで切れました' : b.left), React.createElement("div", {
+    className: "ln"
+  }, b.long), b.k === 'kotsu' ? null : React.createElement("div", {
+    className: "nt"
+  }, "ひとときの状態は、同時に2つまで付きます。3つ目が付くと、古いほうが消えます。"), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "data-msx-buff-close": true
+  }, "閉じる")));
+  return typeof document !== 'undefined' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, document.body) : node;
+}
+function MsxBuffChips({
+  s
+}) {
+  msxBuffEnsureCss();
+  const [open, setOpen] = useState(null);
+  const now = msxBuffNow(s);
+  const gone = msxBuffGone(s).map(k => msxBuffDef(k)).filter(Boolean);
+  if (!now.length && !gone.length) return null;
+  return React.createElement(React.Fragment, null, now.map(b => React.createElement("button", {
+    type: "button",
+    key: b.k,
+    className: `v-chip msx-bf ${b.good ? 'g' : 'b'}`,
+    "data-msx-buff-chip": b.k,
+    onClick: () => setOpen(b)
+  }, cardIconNode(b.icon, 14), " ", b.name, " ", React.createElement("small", null, b.left))), gone.map(b => React.createElement("button", {
+    type: "button",
+    key: `end-${b.k}`,
+    className: "v-chip msx-bf end",
+    "data-msx-buff-end": b.k,
+    onClick: () => setOpen({
+      ...b,
+      ended: true
+    })
+  }, cardIconNode(b.icon, 14), " ", b.name, " ", React.createElement("small", null, "が切れた"))), React.createElement(MsxBuffPop, {
+    b: open,
+    onClose: () => setOpen(null)
+  }));
 }
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
@@ -164084,7 +164261,7 @@ const msxTevChanges = (s, o) => {
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
     if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
-    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    if (e.lottery === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');
     return out;
   }
   const SUC = msxSuc && msxSuc.SUC;
@@ -164110,7 +164287,7 @@ const msxTevChanges = (s, o) => {
     } else if (k === 'rest') out.push('❤️ 体力 +10');else if (k === 'talk') {
       out.push('💢 ストレス −10');
       out.push('🤝 親密度 +5');
-    } else if (k === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');else out.push('🤝 親密度 +10');
+    } else if (k === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');else out.push('🤝 親密度 +10');
   }
   return out;
 };
@@ -180825,10 +181002,9 @@ function MsxPlay({
       className: "v-chip bad"
     }, "😢 ようす: どんより") : null, s.cond ? React.createElement("span", {
       className: "v-chip bad"
-    }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
-      key: b.k,
-      className: "v-chip ylw"
-    }, cardIconNode(b.icon, 14), " ", b.name)) : null), React.createElement("span", {
+    }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, typeof MsxBuffChips === 'function' ? React.createElement(MsxBuffChips, {
+      s: s
+    }) : null), React.createElement("span", {
       className: "v-nm"
     }, run.nick)), React.createElement("div", {
       className: "v-under"

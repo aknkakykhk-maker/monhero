@@ -68,7 +68,7 @@ const msxFxText = (f) => {
   if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
-  if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
+  if (k === 'buff') return BUFFS[a] ? (typeof msxBuffGrantText === 'function' ? msxBuffGrantText(a) : `${BUFFS[a].icon} ${BUFFS[a].name}`) : 'いい調子になる'; // 何ターン・どう効くかまで(r1119-029)
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
   if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;

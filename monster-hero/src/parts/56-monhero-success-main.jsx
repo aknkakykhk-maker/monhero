@@ -956,7 +956,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
-          {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
+          {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
         <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
