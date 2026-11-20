@@ -44,6 +44,19 @@ const CHANGELOG = [
       '更新のあとに初めてゲームを開くと、ききがイメチェンを知らせるお話が流れます。あとから、プロフィールの「イベント回想」でも読めます。',
     ],
   },
+  // 新曲「天翔る翼」(2026-11-20 あっくん提供。単独1曲。ビートP500。Lv.・ノーツ数は作ったあとの値)
+  {
+    date: "2026-11-20 08:35", type:'update', group:'rhythm', status:'new',
+    title:'新曲「天翔る翼」を追加しました',
+    image:'images/song-art/amakakeru-tsubasa.jpg?v=7842190f06ad',
+    items:[
+      'モンヒロビートに「天翔る翼」を追加しました。UNLIMITED:SaGaの曲（1分49秒・BPM 208）です。作曲は浜渦正志です。',
+      'レベルは EASY Lv.10 ／ NORMAL Lv.13 ／ HARD Lv.22 ／ EXPERT Lv.33 ／ MASTER Lv.48 ／ HELL Lv.67 です。',
+      'ノーツ数は 242 ／ 273 ／ 372 ／ 427 ／ 556 ／ 522 です。',
+      'この曲はビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_amakakeru_tsubasa_v1', type:'content' },
+  },
   {
     date: "2026-11-20 06:55", type:'fix', title:'モンヒロサクセスの育成の準備で、「持ちこみ」の画面が下まで動かせないことがあったのを直しました', status:'new', group:'success',
     items:[
