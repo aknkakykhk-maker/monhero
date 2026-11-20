@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const gw = require('../analysis/gateway-client');
+const uiMeasure = require('./ui-measure');
 
 const argv = process.argv.slice(2);
 const opt = (n, d = '') => { const i = argv.indexOf(n); return i >= 0 && i + 1 < argv.length ? argv[i + 1] : d; };
@@ -118,7 +119,7 @@ const collect = () => {
         const f = path.join(home, 'shots', tag, `${sc.id}.png`);
         if (!fs.existsSync(f)) continue;
         const rel = path.join('shots', tag, `${sc.id}.png`);
-        put(`home:${sc.id}`, sc.name, tag, f, res.findings.filter((x) => x.shot === rel).map((x) => `${x.kind} ${x.detail}`.slice(0, 160)));
+        put(`home:${sc.id}`, sc.name, tag, f, res.findings.filter((x) => x.shot === rel).map((x) => (/^測る:/.test(x.kind) ? `[測る・${x.priority}] ${x.kind.slice(3)}: ${x.detail}` : `${x.kind} ${x.detail}`).slice(0, 220)));
       }
     }
   }
@@ -128,6 +129,7 @@ const collect = () => {
       const dir = path.join(deep, tool);
       if (!fs.existsSync(dir)) continue;
       const log = fs.existsSync(`${dir}.log`) ? fs.readFileSync(`${dir}.log`, 'utf8').split('\n').filter((l) => l.startsWith('NG')) : [];
+      const meas = uiMeasure.load(dir); // 撮るときに測った大きさの釣り合い(tools/browser/ui-measure.js)
       for (const f of fs.readdirSync(dir).sort()) {
         const m = new RegExp(`^${tool}-(.+?)(?:-(land|s568|s320|ip|land667|big|landbig|s320big|pc))?\\.png$`).exec(f);
         if (!m || !((m[2] || '') in SIZE_OF)) continue;
@@ -137,7 +139,7 @@ const collect = () => {
         if (code.includes('~')) { if (size === 'tate') { const [c0] = code.split('~'); const q = seqs.get(c0) || seqs.set(c0, { key: `flow:${tool}:${c0}`, label: `${FLOW_NAME[c0] || labelOf(tool, c0)}〔${tool}-${c0}〕`, frames: [] }).get(c0); q.frames.push(path.join(dir, f)); } continue; }
         const tagRe = new RegExp(`^NG: ${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\(${m[2] || 'zz'}\\))?[:：(]`);
         const mach = log.filter((l) => tagRe.test(l) && (m[2] ? l.includes(`(${m[2]})`) : !/\((land|s568|s320)\)/.test(l))).map((l) => l.replace(/^NG:\s*/, '').slice(0, 160));
-        put(`${tool}:${code}`, `${labelOf(tool, code)}〔${tool}-${code}〕`, size, path.join(dir, f), mach.slice(0, 3));
+        put(`${tool}:${code}`, `${labelOf(tool, code)}〔${tool}-${code}〕`, size, path.join(dir, f), [...uiMeasure.lines(meas.get(f)), ...mach.slice(0, 3)]);
       }
     }
   }
@@ -158,7 +160,8 @@ const pngBlock = async (file, { ref = false } = {}) => {
 
 const only = opt('--only').split(',').filter(Boolean);
 const buildRequests = async (scenes) => {
-  const system = fs.readFileSync(PROMPT_FILE, 'utf8');
+  // 共通の「大きさの釣り合い」と「測った数字の扱い」を続けて渡す(モンサク・助手ライフ・モンビーで同じ)
+  const system = `${fs.readFileSync(PROMPT_FILE, 'utf8')}\n${fs.readFileSync(path.join(__dirname, 'prompts', 'common-balance.md'), 'utf8')}`;
   const groups = [];
   for (const a of [...AREAS, { key: 'etc' }]) {
     const list = scenes.filter((sc) => areaOf(sc.key).key === a.key);

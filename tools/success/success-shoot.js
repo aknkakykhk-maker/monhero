@@ -13,6 +13,11 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const ROOT = path.resolve(__dirname, '..', '..');
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(社長の指摘の較正。tools/browser/serve-rev.js)
+const serveRev = require('../browser/serve-rev');
+const FROM_REV = serveRev.make(ROOT);
+// 撮った止め絵ごとに大きさの釣り合いを測り、置き場の _measure.jsonl に残す(tools/browser/ui-measure.js。UI_MEASURE=0 で止める)
+const uiMeasure = require('../browser/ui-measure');
 const SHOT_DIR = process.env.SHOT_DIR || '';
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -66,6 +71,7 @@ const makeRun = async (kind) => {
 (async () => {
   const server = await new Promise((r) => { const s = http.createServer((req, res) => {
     const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    if (f.startsWith(ROOT) && serveRev.serve(FROM_REV, ROOT, f, res, TYPES[path.extname(f)])) return;
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -491,7 +497,7 @@ const makeRun = async (kind) => {
           if (process.env.TAP_DUMP) console.log('TAP', name, tag, miss.length, miss.slice(0, 6).join(' / '));
           else check(`${L}: 札の端を押しても隣の札に当たらない`, miss.length === 0, miss.slice(0, 4).join(' / '));
         }
-        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
+        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); await uiMeasure.record(page, path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`)); }
       }
       await page.close();
     }
