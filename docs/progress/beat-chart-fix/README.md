@@ -81,3 +81,5 @@ node tools/mode/rhythm-chart-compare.js --released --after <作業フォルダ> 
 
 - 前からある43曲は `--make` の手の仕上げが飛ばされる(`rhythm-held-band-existing.json`)。新曲と同じ条件にするため、作業フォルダの中だけ `--mode must`(EASY〜HARD)・`keep-climax`(EXPERT・MASTER)で仕上げ直して比べた
 - ANiMA・Rebellion は作り直しの自動修正が最後の確かめで止まった(書き出しはできている)。作り直しを選ぶならこの2曲は中身を見てから
+
+- 一覧: [FIXLIST.md](FIXLIST.md)(r1119-038・直し方の案。社長のOK前は譜面を触らない)

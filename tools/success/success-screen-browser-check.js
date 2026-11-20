@@ -110,7 +110,9 @@ const look = (page) => page.evaluate(() => {
     const r = e.getBoundingClientRect(); if (!r.width || !r.height || clipped(e)) return false;
     return r.right > R.right + 1 || r.left < R.left - 1 || r.bottom > R.bottom + 1;
   }).map((e) => (e.innerText || e.className || '').replace(/\s+/g, ' ').slice(0, 24));
-  const hd = (root.innerText.match(/(\d+)\s*\/\s*46ターン/) || [])[1];
+  // ターン数は上の帯の1か所だけになったので(2026-11-20 r1119-033)、帯の印 data-msx-turn から読む
+  const tb = root.querySelector('[data-msx-turn]');
+  const hd = tb ? tb.getAttribute('data-msx-turn') : (root.innerText.match(/(\d+)\s*\/\s*46ターン/) || [])[1];
   return { ok: true, text: root.innerText.trim().length, over, view: root.getAttribute('data-msx-view'), turn: hd ? Number(hd) : null,
     hscroll: document.documentElement.scrollWidth > window.innerWidth + 1, rw: Math.round(R.width), rh: Math.round(R.height) };
 });
