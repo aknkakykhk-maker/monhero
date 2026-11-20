@@ -96,7 +96,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['T3', 'mid', ['cont', 'train', 'scrub']], ['T4', 'mid', ['cont', 'train', 'scrubup']], ['T5', 'mid', ['cont', 'train', 'cmtap']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
-    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
+    ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],

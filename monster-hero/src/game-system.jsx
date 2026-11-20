@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5097c842d84ba349
+// generated-sha256: b17d3b8aa1e03ddf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90298,7 +90298,14 @@ const MSX_CSS = `
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
-.msx-md-tw{display:grid;grid-template-columns:minmax(0,54%) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:10px;padding:5px;margin-top:3px}
+.msx-md-tw{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;background:#0f172a;border-radius:10px;padding:6px;margin-top:3px}
+/* 詳細の窓の技の升目(2026-11-20 M1D の点検: 技の名前が出ない・升が小さい・覚えた/まだの見分け・覚え方が切れる)。
+   升目を上の全幅に・技の説明はその下。升は 48px でそろえ、升の下に技の名前を2行まで(「・」と言葉の切れ目で折る)。まだの技は点線の枠と薄い名前 */
+.msx-md-tw .msx-md-tg{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;justify-content:stretch}
+.msx .msx-md-tw .msx-md-tg .tc,.msx-md-tw .msx-md-tg .no{width:48px;justify-self:center;margin-bottom:28px}
+.msx-md-tw .msx-md-tg .tc .tnm{position:absolute;top:calc(100% + 2px);left:50%;transform:translateX(-50%);width:76px;font-size:10px;font-weight:800;line-height:1.2;color:#f1f5f9;text-align:center;word-break:auto-phrase;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;pointer-events:none}
+.msx-md-tw .msx-md-tg .tc.tg-not .tnm{color:#94a3b8}
+.msx .msx-md-tw .msx-md-tg .tc.tg-not{border-style:dashed}
 /* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
 .msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,56px));gap:4px;align-content:start;justify-content:center}
 .msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
@@ -90370,8 +90377,9 @@ const MSX_CSS = `
 .msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 /* r1115-150: 覚えた技(熟練の行あり)と覚えていない技(覚え方の行)を押し分けても、右の欄の高さで窓がずれないように。
    2列のときは右の欄の高さを左の技の表に合わせ(contain:size で中身の高さを列の高さへ出さない)、はみ出す分は欄の中だけスクロール */
-.msx-md-tw>.msx-md-td{contain:size;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-@container (max-width: 359px){.msx-md-tw>.msx-md-td{contain:none;height:236px}.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
+/*   2026-11-20 M1D: 升目の下に並べた。押し分けても升目・閉じるが動かないよう欄の高さは決める(r1115-150)。ふつうの技は全部入る 280px、熟練と選び替えが両方ある技だけ欄の中で送る */
+.msx-md-tw>.msx-md-td{contain:none;height:280px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+@container (max-width: 359px){.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
 /* 育成中の「能力」(いじる物だけ・2026-11-14) */
 .msx-ab-row{display:flex;align-items:center;gap:6px;margin-top:5px}
 .msx-ab-row .n{flex:1;min-width:0;font-size:12px;font-weight:900}.msx-ab-row b{width:3em;text-align:right}
@@ -91880,8 +91888,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   const got = has(t); const canAlt = !!pick && alts.length > 1;
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
-                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}</button>;
+                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={(e) => { setPickT(t.id); const box = e.currentTarget.closest('[data-msx-detail-techs]'); setTimeout(() => { const td = box && box.querySelector('.msx-md-td'); const sc = box && box.closest('.msx-md-scroll'); if (!td || !sc) return; const a = td.getBoundingClientRect(); const c = sc.getBoundingClientRect(); if (a.bottom > c.bottom + 4) sc.scrollBy({ top: Math.round(a.bottom - c.bottom + 4) }); }, 30); }}>
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className="tnm" aria-hidden="true">{msxTechNm(t.name)}</span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}</button>;
                 }}/>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{msxTechNm(tech.name)}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -96707,6 +96715,43 @@ function MonheroSuccessBoxHost({ callNameOf, bondLvOf, onOpenChange }) {
   return <MonheroSuccessScreen key={open.at} startView="box" onClose={() => MSX_BOX_HOST.set(null)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>;
 }
 
+// ---- part: 56-monsuc-artbox.jsx ----
+// ===== モンサクのモンスターの札の「絵の中身の範囲」(生成物: node tools/success/monsuc-art-box.js。手で直さない) =====
+// { 絵のパス(?v= を外す): [絵の幅, 高さ, 中身の左, 上, 右, 下] }(px)。MonsucMonCard が、中身を札の絵の枠いっぱい(下合わせ)に収めるのに使う。
+// 表に無い絵は今までどおり絵全体を枠に収める。何も保存しない
+const MONSUC_ART_BOX = Object.freeze({
+  "images/monsters/ark.png": [1024,1024,55,212,970,813],
+  "images/monsters/dreamy.png": [640,916,0,0,640,915],
+  "images/monsters/eiki.png": [1024,1218,0,0,1024,1218],
+  "images/monsters/ghost.png": [615,916,0,0,615,916],
+  "images/monsters/golem.png": [1066,1066,137,57,930,961],
+  "images/monsters/ham.png": [1024,1024,248,54,776,969],
+  "images/monsters/iblis.png": [570,570,31,30,515,449],
+  "images/monsters/illumine.png": [792,916,0,1,792,916],
+  "images/monsters/kenshi-mocchi.png": [1254,1254,152,62,1103,1198],
+  "images/monsters/kuromy.png": [568,916,0,0,568,916],
+  "images/monsters/kyubi.png": [789,916,1,0,789,916],
+  "images/monsters/mel-whip.png": [634,916,0,0,634,916],
+  "images/monsters/melody.png": [738,916,0,0,738,916],
+  "images/monsters/mia.PNG": [1024,1536,5,15,1020,1462],
+  "images/monsters/mitarashi.png": [1000,1000,95,69,905,935],
+  "images/monsters/mocchi.png": [1024,1024,187,52,847,955],
+  "images/monsters/monol.png": [1024,1024,210,46,814,977],
+  "images/monsters/oboro.png": [1024,1024,46,84,978,940],
+  "images/monsters/orihime.png": [795,916,0,0,795,916],
+  "images/monsters/pandora.PNG": [1024,1536,26,9,971,1476],
+  "images/monsters/pixie.png": [1174,1174,317,160,885,1113],
+  "images/monsters/plant.PNG": [1024,1024,51,142,973,882],
+  "images/monsters/snegurochka.png": [1024,1024,289,55,735,969],
+  "images/monsters/spooky.png": [770,916,0,0,770,916],
+  "images/monsters/suezo.png": [1159,1159,282,261,878,1036],
+  "images/monsters/tiger.PNG": [1024,1024,254,150,993,897],
+  "images/monsters/undine.PNG": [1024,1536,218,15,938,1505],
+  "images/monsters/yaobikuni.PNG": [1024,1536,245,3,914,1504],
+  "images/monsters/yggdrasil.png": [758,915,0,1,758,915],
+  "images/monsters/zan.png": [1024,1024,77,50,947,974],
+});
+
 // ---- part: 56-monsuc-moncard.jsx ----
 // ===== モンサクのモンスター表示の共通の型(r1119-017・2026-11-20 社長「全てにサイズ感とか統一感がない」) =====
 // 決まりの本文は docs/spec/MONSUC_UI.md の「8. モンスターの札の型」。参考は docs/reference/line-mf/ の assist-hensei・deck-select・assist-card-8-detail。
@@ -96720,6 +96765,20 @@ function MonheroSuccessBoxHost({ callNameOf, bondLvOf, onOpenChange }) {
 // 小は札の幅が狭い(縦の5列でおよそ 68px)ので、名前を札の外の下に1行・11px で出し、長い名前は横に詰めて収める(MonsucFitName)
 //   (2行にすると「スネグーラチ / カ」と言葉の途中で折れた。ミハリ #6914)。
 //   Lv は小では出さない: 一覧は総合力と評価で比べる物で、Lv は札を押した詳細で見る(参考は小にも Lv があるが、5列の札に名前・総合力・Lv の3行は入らない)
+// 絵の中身(透明でない所)を、札の絵の枠いっぱい・下合わせ・左右の真ん中に置く(2026-11-20 #6914 の残り: 種族ごとに絵の余白が違い、小さく見える子があった)。
+//   中身の範囲は MONSUC_ART_BOX(生成物 56-monsuc-artbox.jsx・tools/success/monsuc-art-box.js)。表に無い絵は今までどおり絵全体を枠に収める
+//   枠の縦横比は下の CSS(.mcd-art の上下左右・札 3:4)から: 小 = 1.29、中・大 = 1.04(高さ ÷ 幅)。CSS を変えたらここも直す
+const MONSUC_ART_ASPECT = Object.freeze({ s: (1 - 0.06 - 0.05) * (4 / 3) / 0.92, m: (1 - 0.06 - 0.22) * (4 / 3) / 0.92, l: (1 - 0.06 - 0.22) * (4 / 3) / 0.92 });
+const monsucArtFit = (m, sz) => {
+  const url = typeof msxMonImg === 'function' && m ? String(msxMonImg(m.species) || '').split('?')[0] : '';
+  const b = url && typeof MONSUC_ART_BOX === 'object' ? MONSUC_ART_BOX[url] : null;
+  if (!Array.isArray(b) || b.length !== 6 || !b.every(Number.isFinite)) return { position: 'absolute', inset: 0 };
+  const [iw, ih, x0, y0, x1, y1] = b; const cw = x1 - x0; const ch = y1 - y0; const A = MONSUC_ART_ASPECT[sz] || MONSUC_ART_ASPECT.s;
+  if (!(iw > 0 && ih > 0 && cw > 0 && ch > 0)) return { position: 'absolute', inset: 0 };
+  const k = Math.min(1 / cw, A / ch); // 枠の幅を1としたときの、絵の1pxの長さ
+  const pc = (x) => `${(x * 100).toFixed(2)}%`;
+  return { position: 'absolute', left: pc((1 - cw * k) / 2 - x0 * k), top: pc((A - y1 * k) / A), width: pc(iw * k), height: pc((ih * k) / A) };
+};
 const MONSUC_CARD_FRAME = Object.freeze({ S: '#fde047', A: '#f87171', B: '#f472b6', C: '#4ade80', D: '#67e8f9', E: '#60a5fa', F: '#a78bfa', G: '#9ca3af', M: '#c084fc' });
 const monsucCardFrame = (g) => MONSUC_CARD_FRAME[String(g || '').trim().charAt(0).toUpperCase()] || '#6b6597';
 // 小の札の名前: 字は 11px のまま1行に置き、札の幅からはみ出す分だけ横に詰める(言葉の途中で2行に折らない・字を小さくしない。ミハリ #6914)
@@ -96742,7 +96801,7 @@ function MonsucMonCard({ m, size = 's', tag = null, num = null, on = false, lock
   const lv = m && Number.isFinite(Number(m.lv)) && Number(m.lv) > 0 ? Math.round(Number(m.lv)) : null;
   const inner = (<>
     <span className={`mcd-f${m ? '' : ' empty'}`} style={m ? { '--mcd-c': monsucCardFrame(grade) } : undefined}>
-      {m ? <span className="mcd-art">{typeof MsxMmArt === 'function' ? <MsxMmArt m={m} size="100%" thumb={sz === 's'}/> : null}</span> : <span className="mcd-plus" aria-hidden="true">{empty}</span>}
+      {m ? <span className="mcd-art">{typeof MsxMmArt === 'function' ? <span className="mcd-fit" style={monsucArtFit(m, sz)}><MsxMmArt m={m} size="100%" thumb={sz === 's'}/></span> : null}</span> : <span className="mcd-plus" aria-hidden="true">{empty}</span>}
       {fav.length ? <span className="mcd-fav" aria-label={`得意な能力 ${fav.map((k) => MSX_STAT_NAME[k] || k).join('・')}`}>{fav.map((k) => <i key={k}>{MSX_STAT_ICON[k]}</i>)}</span> : null}
       {grade ? <i className="mcd-gd">{grade}</i> : null}
       {m && sz !== 's' ? <span className="mcd-strip"><b className="mcd-nm" style={{ fontSize: `max(9px, min(13cqw, 86cqw / ${Math.max(1, [...name].length)}))` }}>{name}</b></span> : null}
@@ -96779,6 +96838,7 @@ span.mcd{cursor:default}
 /* 絵は下の帯の上に収める(全身・下合わせ)。帯と重ねないので名前が絵で読めなくならない */
 .mcd .mcd-art{position:absolute;left:4%;right:4%;top:6%;bottom:22%}
 .mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
+.mcd .mcd-fit{display:block}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
