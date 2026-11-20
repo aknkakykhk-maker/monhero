@@ -96,8 +96,20 @@ function MsxTpDetail({ it, SUC, onClose }) {
   // r1119-011: 先にアシモン専用の見せ方(アシスト詳細)。技・素質はそこから
   if (!more && it.mem && typeof MsxAssistDetail === 'function') {
     const m0 = it.rec;
-    return <MsxAssistDetail rec={m0} mem={it.mem} kind={it.kind} name={m0 ? (m0.nick || msxMonName(m0.species)) : msxMonName(it.species)}
-      sub={m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン'} onMore={() => setMore(true)} onClose={onClose}/>;
+    const fr = it.kind === 'friend';
+    return <MsxAssistDetail rec={m0} mem={it.mem} kind={it.kind} name={fr ? it.name : m0 ? (m0.nick || msxMonName(m0.species)) : msxMonName(it.species)}
+      sub={fr ? `${it.friendName}さん・Lv.${Math.round(Number(it.mem.lv) || 1)}` : m0 ? `Lv.${Math.round(Number(m0.lv) || 1)}・${msxMonName(m0.species)}` : 'ベースモン'}
+      dropped={fr ? it.dropped || 0 : 0} onMore={() => setMore(true)} onClose={onClose}/>;
+  }
+  if (it.kind === 'friend' && it.mem) { // フレンドの技・素質(今までの詳細の中身のまま)
+    const mem = it.mem; const fm = it.m || {};
+    const fst = MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((mem.stats && mem.stats[k]) || 0) }), {});
+    const fgrades = typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(mem); } catch (e) { return null; } })() : null;
+    return <MsxMonDetail species={mem.species} name={it.name} sub={`${it.friendName}さん・Lv.${mem.lv}・${msxMonName(mem.species)}`}
+      art={Array.isArray(mem.colors) && mem.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mem.species} src={msxMonImg(mem.species)} masuColors={mem.colors} alt="" draggable={false}/> : null}
+      st={fst} apt={msxAptOf(mem.species)} type={fm.type != null ? fm.type : null} grades={fgrades}
+      known={Array.isArray(mem.techs) ? mem.techs : []} power={mem.power} rank={mem.rank} SUC={SUC} onClose={onClose}
+      assists={Array.isArray(mem.assists) && mem.assists.length ? mem.assists : null} initialTab={null} supportSummary={null}/>;
   }
   const m = it.rec;
   const assists = it.mem && Array.isArray(it.mem.assists) && it.mem.assists.length ? it.mem.assists : (m && Array.isArray(m.assists) && m.assists.length ? m.assists : null);
@@ -116,6 +128,10 @@ function MsxTpDetail({ it, SUC, onClose }) {
     known={Array.isArray(m.techs) ? m.techs : []} power={it.mem ? it.mem.power : null} rank={m.grade ? null : m.rank} grade={m.grade} SUC={SUC} onClose={onClose}
     assists={assists} initialTab={assists ? 'assist' : null} supportSummary={support}/>;
 }
+
+// 札の下の帯に並べるアシスト効果の印(4つまで+残りの数)。フレンドと自分の子で同じ形(2026-11-20 社長「アシスト能力が見えない」)
+const msxTpAssistIcons = (AT, mem) => { const as = AT && mem && Array.isArray(mem.assists) ? mem.assists.filter((a) => a && AT.BY_ID[a.id]) : [];
+  return as.length ? <span className="msx-fp-as" data-msx-card-assists={as.length}>{as.slice(0, 4).map((a) => <i key={a.id}>{cardIconNode(AT.BY_ID[a.id].icon, 13)}</i>)}{as.length > 4 ? <small>+{as.length - 4}</small> : null}</span> : null; };
 
 // 選ぶ画面(全画面)。idx … 押した枠 / slots … いまの6枠(null は空き) / members … 編成の6体(芯の memberOf の結果)
 function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, box, assistData, friendAt = null, onFriend = null, onDone, onClose }) {
@@ -182,7 +198,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
-            <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={mk && mk.c !== 'in' ? mk.n : null}
+            <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={(mk && mk.c !== 'in') || msxTpAssistIcons(msxTpAT(), m) ? <>{mk && mk.c !== 'in' ? <b className="msx-fp-dup">{mk.n}</b> : null}{msxTpAssistIcons(msxTpAT(), m)}</> : null}
               num={x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : ''}
               attrs={{ 'data-msx-tp-item': x.key, ...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {}) }}
               onClick={() => setCand(on ? null : x.slot)}/>); })}</MonsucCardGrid>
@@ -202,18 +218,27 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
 
 // フレンドの貸し出しの一覧(全画面)。参考04
 function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, members, SUC, onPick, onOwn, onClose }) {
+  // 2026-11-20 社長「フレンドの所はいじってない? 同じ作りにできないの?」: 自分のモンスターを選ぶ画面(MsxTeamPick)と同じ作りにする。
+  //   上に編成の6枠・タブ(フレンドのタブが選ばれた形)・検索の段・同じ札(MonsucMonCard)の並び・下の 戻る/外す/効果・詳細/決定。
+  //   札の下の帯に、その子のアシスト効果の印を並べる。詳細は自分の子と同じ MsxTpDetail(アシスト詳細 → 技・素質)を通す
   const [only, setOnly] = useState('all');
   const [look, setLook] = useState(null); // 借りる前の詳細(開閉で借用状態は変えない)
   const [fq, setFq] = useState(''); // 名前・種族の検索(表示だけの絞り込み)
   const [fsort, setFsort] = useState('power');
   const [frev, setFrev] = useState(false);
+  const curId = friend && friend.friend ? friend.friend.id : null;
+  const [cand, setCand] = useState(curId); // 選んでいるフレンド(決定で借りる)
   useEffect(() => { if (lendList === null && typeof onLoad === 'function') onLoad(); }, []);
-  const others = members.filter((m) => m && !m.friend);
+  const AT = msxTpAT();
+  const others = members.filter((m, i) => m && !m.friend && i !== idx);
   const rows = lendList && lendList !== 'loading' && lendList.ok ? lendList.rows : [];
   const list0 = rows.map((row) => { let m = null; try { m = typeof monsucLendMember === 'function' ? monsucLendMember(row, SUC) : null; } catch (e) { m = null; }
     const mem = m ? (() => { try { return SUC.memberOf(m); } catch (e) { return null; } })() : null;
-    return { row, m, mem, dup: mem ? msxTpDupOf(mem, others) : [] }; })
-    .filter((x) => only === 'all' || (x.mem && x.mem.top[0] === only));
+    // 貸し出しに入っていたのに、端末の確かめ(能力に比べて大きすぎる)で外れたアシスト効果の数
+    const sent = row.lend && Array.isArray(row.lend.assists) ? row.lend.assists.length : 0;
+    const dropped = Math.max(0, sent - (m && Array.isArray(m.assists) ? m.assists.length : 0));
+    return { row, m, mem, dropped, dup: mem ? msxTpDupOf(mem, others) : [] }; })
+    .filter((x) => only === 'all' || (x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only)));
   const listF = fq.trim() ? list0.filter((x) => msxMatchQ(fq, (x.row.lend && x.row.lend.name) || (x.m && x.m.name) || '', msxMonName(x.m ? x.m.species : (x.row.lend && x.row.lend.species)))) : list0;
   const fby = {
     power: (a, b) => ((b.mem && b.mem.power) || -1) - ((a.mem && a.mem.power) || -1),
@@ -222,51 +247,44 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
   }[fsort];
   const list = listF.slice().sort(fby); // 写しを並べ替える(元の並びは変えない)
   if (frev) list.reverse();
+  const candX = cand ? list0.find((x) => x.row.friendId === cand) || null : null;
+  const asIcons = (mem) => msxTpAssistIcons(AT, mem);
+  const seenOf = (row) => { const t = row.lastSeenAt && typeof friendsLastSeenText === 'function' ? friendsLastSeenText(row.lastSeenAt, Date.now()) : null; if (t) return t;
+    const d = row.lend && row.lend.updatedAt ? Math.floor(Math.max(0, Date.now() - row.lend.updatedAt) / 86400000) : null; return d != null ? `貸し出し更新 ${d === 0 ? '今日' : `${d}日前`}` : ''; };
+  const anyMark = list.some((x) => x.dup.length || !x.m);
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-friend-pick>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>🤝 フレンドから借りる(1体まで)</b><small>{idx + 1}枠目に入ります</small></div>
+        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>{rows.length ? `貸し出し中のフレンド ${rows.length}人` : 'フレンドのモンスター'}</small></div>
+        <div className="msx-tp-team" data-msx-tp-team>{members.map((mm, i) => (
+          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`}><MonsucMonCard m={mm ? msxTpCardM(null, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{mm && mm.friend ? <b className="fr">🤝</b> : null}</div>))}</div>
+        <div className="msx-tp-tabs" data-msx-tp-tabs>
+          <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスター<small>ボックス・ベースモン</small></button>
+          <button type="button" className="fr on" data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button></div>
+        {lendList && lendList !== 'loading' && lendList.ok ? <div className="msx-tp-bar"><MsxPickTools q={fq} onQ={setFq} sorts={[['power', '総合力'], ['lv', 'Lv'], ['name', '名前']]} sort={fsort} onSort={setFsort} rev={frev} onRev={setFrev} count={list.length} total={rows.length}/>
+          <label className="msx-tp-sel"><select value={only} onChange={(e) => setOnly(e.target.value)} aria-label="得意な能力で絞る" data-msx-fp-only><option value="all">得意: 全て</option>{MSX_STATS.map((k) => <option key={k} value={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</option>)}</select></label></div> : null}
         {friendAt != null && friendAt !== idx ? <div className="msx-tp-note" data-msx-fp-move>フレンドは1体まで。選ぶと、{friendAt + 1}枠目のフレンドがこの枠へ移ります</div> : null}
-        <div className="msx-tp-chips" data-msx-fp-only>{[['all', '全て'], ...MSX_STATS.map((k) => [k, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`])].map(([k, n]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{n}</button>)}</div>
-        {lendList && lendList !== 'loading' && lendList.ok ? <div className="msx-tp-bar"><MsxPickTools q={fq} onQ={setFq} sorts={[['power', '総合力'], ['lv', 'Lv'], ['name', '名前']]} sort={fsort} onSort={setFsort} rev={frev} onRev={setFrev} count={list.length} total={rows.length}/></div> : null}
-        <div className="msx-tp-list one" data-msx-fp-list>
+        {anyMark ? <div className="msx-tp-note" data-msx-fp-marknote>「重複」… 1体だけ効く効果が、編成のほかのモンスターと重なっている</div> : null}
+        <div className="msx-tp-list" data-msx-fp-list>
           {lendList === null || lendList === 'loading' ? <div className="msx-tp-none">探しています…</div>
             : !lendList.ok ? <div className="msx-tp-none">{typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません'}</div>
             : !list.length ? <div className="msx-tp-none">{rows.length ? (fq.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません') : '貸し出しているフレンドはいません'}</div>
-            : list.map(({ row, m, mem, dup }) => { const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId); const name = (row.lend && row.lend.name) || (m && m.name) || ''; const sp = m ? m.species : row.lend && row.lend.species;
-              // 最後に開いた時刻は名簿(sbFetchFriendRoster)の lastSeenAt が正本。無いときは貸し出しの更新時刻を「貸し出し更新」と正確にラベルして出す(最終ログインとは書かない)
-              const seenText = row.lastSeenAt && typeof friendsLastSeenText === 'function' ? friendsLastSeenText(row.lastSeenAt, Date.now()) : null;
-              const lendDays = !seenText && row.lend && row.lend.updatedAt ? Math.floor(Math.max(0, Date.now() - row.lend.updatedAt) / 86400000) : null; return (
-              <div key={row.friendId} className="msx-tp-w">
-              <button type="button" className={`msx-fp-r${on ? ' on' : ''}${m ? '' : ' lk'}`} disabled={!m} data-msx-fp-row={row.friendId} onClick={() => onPick(on ? null : m)}>
-                <span className="fc">{sp ? (m && Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(sp)} alt=""/>) : null}{mem && mem.rank && mem.kind !== 'base' ? <i className={`rk ${msxRankCls(mem.rank)}`}>{mem.rank}</i> : null}</span>
-                <span className="tx"><small>{row.name || 'フレンド'}</small><b>{name}</b>
-                  {seenText ? <small data-msx-fp-seen>{seenText}</small> : lendDays != null ? <small data-msx-fp-seen>貸し出し更新 {lendDays === 0 ? '今日' : `${lendDays}日前`}</small> : null}
-                  <span className="tp">{mem ? mem.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}+${Math.round(mem.bonus[k] || 0)}%`}</span>) : null}</span></span>
-                <span className="st">
-                  <i className="mk sp" data-msx-fp-friend>フレンド</i>
-                  {on ? <i className="mk in">借りている</i> : null}
-                  {!m ? <i className="mk lk" data-msx-fp-ng>編成不可</i> : null}
-                  {dup.length ? <i className="mk dup" data-msx-fp-dup title={dup.map((a) => (msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : a.id)).join('・')}>アシスト重複</i> : null}
-                </span>
-              </button>
-              {m && mem ? <button type="button" className="msx-tp-dt" data-msx-fp-detail={row.friendId} onClick={() => setLook({ m, mem })}>効果・詳細</button> : null}
-              </div>); })}
+            : <MonsucCardGrid size="s">{list.map(({ row, m, mem, dup }) => { const on = cand === row.friendId; const sp = m ? m.species : row.lend && row.lend.species;
+              const cm = mem ? { ...msxTpCardM(null, mem, sp), nick: (row.lend && row.lend.name) || (m && m.name) || '' } : { species: sp, nick: (row.lend && row.lend.name) || '' };
+              return (<MonsucMonCard key={row.friendId} m={sp ? cm : null} size="s" on={on} slot={on ? idx + 1 : null} lock={m ? null : '編成不可'}
+                note={m ? <>{dup.length ? <b className="msx-fp-dup" data-msx-fp-dup>重複</b> : null}{asIcons(mem)}</> : null}
+                num={mem ? msxFmt(mem.power) : ''}
+                attrs={{ 'data-msx-fp-row': row.friendId }} onClick={m ? () => setCand(on ? null : row.friendId) : null}/>); })}</MonsucCardGrid>}
         </div>
-        <div className="msx-tp-note">「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター</div>
+        {candX ? <div className="msx-tp-note" data-msx-fp-who>{candX.row.name || 'フレンド'}さんの{(candX.row.lend && candX.row.lend.name) || ''}{seenOf(candX.row) ? `・${seenOf(candX.row)}` : ''}</div> : null}
         <div className="v-ft msx-tp-ft">
           <button type="button" onClick={onClose} data-msx-fp-back>戻る</button>
-          <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスターにする</button>
+          <button type="button" onClick={() => setCand(null)} disabled={!cand} className={cand ? '' : 'off'} data-msx-fp-clear>外す</button>
+          {candX && candX.m && candX.mem ? <button type="button" onClick={() => setLook(candX)} data-msx-fp-detail={candX.row.friendId}>効果・詳細</button> : null}
+          <button type="button" className="go" onClick={() => { if (!cand) { if (curId) onPick(null); else onClose(); return; } if (cand === curId) { onClose(); return; } if (candX && candX.m) onPick(candX.m); }} data-msx-fp-ok>決定</button>
         </div>
       </div>
-      {look && look.mem && typeof MsxMonDetail === 'function' ? (() => { const mem = look.mem; const m = look.m; const fst = MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((mem.stats && mem.stats[k]) || 0) }), {});
-        const fgrades = typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(mem); } catch (e) { return null; } })() : null;
-        const fassists = Array.isArray(mem.assists) && mem.assists.length ? mem.assists : null;
-        return <MsxMonDetail species={mem.species} name={m.name || mem.name} sub={`フレンド・Lv.${mem.lv}・${msxMonName(mem.species)}`}
-          art={Array.isArray(mem.colors) && mem.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mem.species} src={msxMonImg(mem.species)} masuColors={mem.colors} alt="" draggable={false}/> : null}
-          st={fst} apt={msxAptOf(mem.species)} type={m.type != null ? m.type : null} grades={fgrades}
-          known={Array.isArray(mem.techs) ? mem.techs : []} power={mem.power} rank={mem.rank} SUC={SUC} onClose={() => setLook(null)}
-          assists={fassists} initialTab={fassists ? 'assist' : null} supportSummary={msxTpSupport(mem, SUC)}/>; })() : null}
+      {look ? <MsxTpDetail it={{ kind: 'friend', rec: null, species: look.m.species, mem: look.mem, name: (look.row.lend && look.row.lend.name) || look.m.name, friendName: look.row.name || 'フレンド', dropped: look.dropped, m: look.m }} SUC={SUC} onClose={() => setLook(null)}/> : null}
     </div>
   );
 }
@@ -314,7 +332,7 @@ function MsxTeamEffects({ members, onClose }) {
   const groupTotal = (grp) => list.filter((e) => { const c = capOf(e.id); return c && c.group === grp; }).reduce((t, e) => t + e.total, 0);
   const face = (mi, dim) => { const m = members[mi]; return <span key={mi} className={`msx-ef-fc${dim ? ' dim' : ''}`}><MsxMonFace species={m.species} colors={m.colors}/></span>; };
   return (
-    <div className="msx-ov msx-fade" data-msx-team-effects onClick={onClose}>
+    <div className="msx-ov msx-fade" data-msx-team-effects role="dialog" aria-modal="true" onClick={onClose}>
       <div className="msx-sheet msx-dt msx-ef" onClick={(e) => e.stopPropagation()}>
         <h3>編成の効果<small>{list.length}種類</small></h3>
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>

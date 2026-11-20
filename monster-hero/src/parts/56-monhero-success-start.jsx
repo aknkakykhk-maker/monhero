@@ -164,6 +164,25 @@ const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]); // 技の升目の列の並び(
 // head(d) … 見出しに添える間合い適性 { g: 'A', add: 10 }(2026-11-15 社長 r1115-080)。g だけなら適性の字だけ・add があれば修行の率の増減も出す
 // 技の名前を言葉の切れ目(「・」と空白のあと)だけで折る(2026-11-15 社長 r1115-156①「スターバースト・ストリー/ム」が NG)。CSS の keep-all と組で使う
 const msxTechNm = (name) => String(name == null ? '' : name).replace(/([・ 　])/g, '$1\u200b');
+// 升の下の技名: 文字の種類の境(カタカナ・漢字・ひらがな)でだけ折り返し、一番長いかたまりが1行に入る字の大きさにする
+//   (「メロディ苺クッ/キー」「スウィートパ/レード」のように言葉の途中で折れていた・2026-11-20 社長の実機)
+const msxTechNmNode = (name) => {
+  const t = String(name == null ? '' : name);
+  const kind = (c) => (/[\u30a0-\u30ff\uff66-\uff9f]/.test(c) ? 'k' : /[\u3040-\u309f]/.test(c) ? 'h' : /[\u4e00-\u9fff\u3005]/.test(c) ? 'j' : /[・ 　]/.test(c) ? 's' : 'o');
+  const seg = []; let cur = '';
+  [...t].forEach((c, i, a) => { const k = kind(c); if (cur && k !== 's' && kind(a[i - 1]) !== k && !(k === 'h' && kind(a[i - 1]) === 'j')) { seg.push(cur); cur = ''; } cur += c; if (k === 's') { seg.push(cur); cur = ''; } });
+  if (cur) seg.push(cur);
+  // 8字を超えるカタカナのかたまりは、まん中に近い「ー・小さい字・ト」の後ろで2つに分ける(メロディ/タクトライト・スウィート/パレード)
+  const split = (x) => { const a = [...x]; const k0 = kind(a[0]); if (a.length <= 6 || (k0 !== 'k' && k0 !== 'h')) return [x];
+    const small = /[ーァィゥェォャュョッンぁぃぅぇぉゃゅょっん]/; const after = k0 === 'k' ? /[ーィェォト]/ : /[んの]/; let best = -1;
+    for (let i = 3; i <= a.length - 2; i += 1) if (after.test(a[i - 1]) && !small.test(a[i]) && !(a[i - 1] === 'ー' && /[トドクス]/.test(a[i])) && (best < 0 || Math.abs(i - a.length / 2) < Math.abs(best - a.length / 2))) best = i;
+    return best < 0 ? [x] : [a.slice(0, best).join(''), a.slice(best).join('')]; };
+  const segs = seg.flatMap(split).reduce((o, x) => { if (o.length && [...x].length === 1) o[o.length - 1] += x; else o.push(x); return o; }, []); // 1字だけのかたまり(「鼻」)は前に付ける
+  seg.length = 0; seg.push(...segs);
+  const long = Math.max(1, ...seg.map((x) => [...x].length));
+  const fs = Math.max(10, Math.min(10.5, Math.floor(70 / long * 2) / 2)); // 10px より小さくしない(字の小ささの決まり)
+  return <span style={{ fontSize: fs, wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{seg.map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</span>;
+};
 // 使ったあとに間合いが動く技(資料の moveTo)の説明(r1115-156②)。近づく向きは自分が動く・遠ざかる向きは相手を飛ばす
 const msxTechMoveTxt = (t) => {
   if (!t || t.moveTo == null || !Number.isInteger(t.moveTo)) return '';
@@ -242,7 +261,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 間合い適性は下の技の升目の列の見出しに出す(上の「適性」タブと二重だった・2026-11-20 r1119-033 育-31)。升目の見出しが無い(grades が無い)ときだけタブを残す
   const TOP = grades ? [['base', '基礎'], ['feat', '特徴']] : [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
-    <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
+    // role="dialog" … 開いている間は右上の「更新あり」を出さずに待つ(WaitForOverlayClose・見出しに重なっていた 2026-11-20 社長の実機)
+    <div className="msx-ov msx-fade" data-msx-detail role="dialog" aria-modal="true" onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
         <h3 className="msx-md-ti">モンスターの詳細</h3>
         <div className="msx-md-scroll">
@@ -307,7 +327,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={(e) => { setPickT(t.id); const box = e.currentTarget.closest('[data-msx-detail-techs]'); setTimeout(() => { const td = box && box.querySelector('.msx-md-td'); const sc = box && box.closest('.msx-md-scroll'); if (!td || !sc) return; const a = td.getBoundingClientRect(); const c = sc.getBoundingClientRect(); if (a.bottom > c.bottom + 4) sc.scrollBy({ top: Math.round(a.bottom - c.bottom + 4) }); }, 30); }}>
-                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className="tnm" aria-hidden="true">{msxTechNm(t.name)}</span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span>{/* 消費ガッツは右の欄の1か所だけ(升の右下の数と二重だった・2026-11-20 r1119-033 M1D) */}{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}</button>;
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className="tnm" aria-hidden="true">{msxTechNmNode(t.name)}</span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span>{/* 消費ガッツは右の欄の1か所だけ(升の右下の数と二重だった・2026-11-20 r1119-033 M1D) */}{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}</button>;
                 }}/>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{msxTechNm(tech.name)}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
