@@ -124,6 +124,9 @@ function alwaysChecks() {
   catch { return []; }
 }
 const FORCE_CHECKS = [
+  // フルコンボ等の音が設定ごとに1回だけ鳴る(2026-11-20 社長「フルコンボのとき鳴っていた SE が無くなっている」)
+  { re: /^monster-hero\/src\/parts\/30-rhythm-play\.jsx$|^tools\/mode\/rhythm-fullcombo-se-check\.js$/, checks: ['mode/rhythm-fullcombo-se-check.js'], why: 'フルコンボ等の音が設定ごとに1回だけ鳴る' },
+  { re: /^monster-hero\/src\/parts\/(30-rhythm-play|77-screen-rhythm-multi|43-player-rank-ui|14-audio)\.jsx$|^tools\/mode\/rhythm-scene-se-check\.js$/, checks: ['mode/rhythm-scene-se-check.js'], why: 'モンヒロビートの場面の音(3・2・1・新記録・入室・MVP・数え上げ)が何回・いつ鳴るか' },
   // 選び方そのもの(2026-11-11)。選び方を直したら、名指しで読む検査が漏れていないか・どの領域にも入らない検査が無いかを確かめる
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
   // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る

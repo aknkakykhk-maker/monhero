@@ -2,7 +2,7 @@
 // モンヒロサクセスのβ版(56-monsuc-beta.jsx・2026-11-13)を実ブラウザで確かめる。
 //   はじめて開くとβ版の話(2択)が出る → 見た印 mh_monsuc_beta_v1 が残り、開き直しても二度と出ない /
 //   タイトルに「β」/ 助手はみゅあだけ選べ、ほかは「準備中」で、押すとみゅあの一言 / 準備の説明は最初の1回だけ /
-//   育成の記念日(ジュニア期8月)が出来事の表にあり、体力 +50・ストレス −10 で一度きり(芯を node で回す)
+//   育成の記念日(ジュニア期8月)が出来事の表にあり、体力 +30(r1119-042 で +50 から)・ストレス −10 で一度きり(芯を node で回す)
 // 使い方: node tools/success/monsuc-beta-browser-check.js
 'use strict';
 const fs = require('fs');
@@ -99,7 +99,7 @@ const annivCheck = () => {
   check('記念日: ターン13のはじめに出る', id === 'ev.self.anniv', String(id));
   if (id !== 'ev.self.anniv') return;
   const p = EV.pick(r.state, null);
-  check('記念日: 体力が上限の50%回復', p.state.hp === Math.min(s13.hpMax, s13.hp + s13.hpMax * 0.5), `${s13.hp} → ${p.state.hp} / ${s13.hpMax}`);
+  check('記念日: 体力が上限の30%回復(r1119-042 で 50% から)', p.state.hp === Math.min(s13.hpMax, s13.hp + s13.hpMax * 0.3), `${s13.hp} → ${p.state.hp} / ${s13.hpMax}`);
   check('記念日: ストレス −10', p.state.stress === s13.stress - 10, `${s13.stress} → ${p.state.stress}`);
   const r2 = EV.open({ ...p.state, turn: 14, acted: false }, 'start');
   check('記念日: 一度きり(次のターンに出ない)', !(r2.out.ev && r2.out.ev.id === 'ev.self.anniv'));
@@ -165,7 +165,7 @@ const annivCheck = () => {
     // 閉じて開き直すと、β版の話はもう出ない
     await page.locator('.v-hd .bk').click(); await page.waitForTimeout(200);
     for (let i = 0; i < 3 && await page.locator('.v-hd .bk').count(); i++) { await page.locator('.v-hd .bk').first().click(); await page.waitForTimeout(250); }
-    if (await page.locator('[data-msx-scenario]').count()) { await page.locator('.scn-ft .bk').click(); await page.waitForTimeout(250); } // ストーリー選択(2026-11-14)の もどる
+    if (await page.locator('[data-msx-scenario]').count()) { await page.locator('.scn-hd .bk').click(); await page.waitForTimeout(250); } // ストーリー選択(2026-11-14)の もどる
     await page.locator('[data-debug-monhero-success]').dispatchEvent('click');
     await page.waitForSelector('.msx[data-msx-view="home"]', { timeout: 20000 });
     await page.waitForTimeout(800);

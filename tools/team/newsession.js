@@ -17,7 +17,7 @@ const { pick } = require('./model-pick');
 const { latest } = require('./handoff');
 const { linesFor } = require('./requests');
 
-const HQ = 'session_014GTmSNS2ae9tRr57k3zFjC';
+const HQ = 'session_0113GBaCCe57vnmvsZ6f3TFr';
 
 // 会話の題(Claude アプリの一覧に出る)。2026-11-20 社長「API はセッション名わかりやすくして」:
 //   台帳の番号(r1119-024②)や丸数字が題を埋め、API を使う会話かどうかが28字で切れて見えなかった。
@@ -69,8 +69,8 @@ function build(d, job, { name, kind, failed, to } = {}) {
   P.push('・画面の文(ボタン・見出し・説明など)は、漢字で書ける所は漢字にする(戻る・閉じる・次へ・選ぶ)。台詞だけは個性で変えてよい');
   P.push('・できた物から1つずつ PR にし、溜めてから出さない。ミハリの OK が届いたら窓口を待たずにマージする');
   P.push('・止め絵は枝の docs/progress/ にコミットし、関係する決めごと(台帳の行・参考の絵)ごとに止め絵のどこで満たすかを書いた突き合わせ表を一緒に送る。満たさない行は直してから');
-  P.push('・点検(見た目・文言・バランス)は極力 API で回す(r1119-022): 重い・繰り返しの点検(全画面・多くの止め絵・数値の分析)は API(撮影 tools/browser/visual-*.js → 送る口 tools/analysis/gateway-client.js・合言葉は環境が自動で付ける・1日 $25 まで)。直しながらの小さな確かめ・仕様の正しさ・動きや音は会話で。どちらか迷う物は窓口へ(社長が決める)。使った額は報告に書く');
-  P.push('・見た目・文言だけの直しは、ミハリを待たずに API で確かめて公開する(r1119-031): gate が「要らない」なら node tools/browser/monsuc-visual-pr.js --changed --base origin/main で差分の画面を API に見せ、高・中の指摘が無ければマージ。「要る」(新機能・保存データ・ランキング)だけミハリへ');
+  P.push('・分析の API(撮影 tools/browser/visual-*.js → 送る口 tools/analysis/gateway-client.js)の点検は、社長が頼んだ時だけ使う(r1119-056)。依頼文に「API で」と書いてある仕事だけ使い、使った額は報告に書く。それ以外は自分の判断で API を使わない');
+  P.push('・見た目・文言だけの直しは、ミハリを待たずに公開してよい: gate が「要らない」なら、撮影と測る検査(success-shoot など)を通し、止め絵を自分の目で見て確かめてからマージ。「要る」(新機能・保存データ・ランキング)だけミハリへ');
   P.push('・判断や設計が要る・結果がおかしい・2回やって駄目 → 自分で続けず窓口へ');
   P.push(`・「会話が長くなった」という知らせが出たら、区切りで node tools/ctx.js handoff ${d.id} --write → 窓口へ`);
   P.push(`・社長の頼みは完了まで追う: node tools/ctx.js todo ${d.id}`);

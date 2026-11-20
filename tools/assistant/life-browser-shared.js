@@ -55,6 +55,9 @@ const toHome = async (page) => {
     await page.waitForTimeout(500);
   }
   for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+  // 部屋の「できること」は、話す・贈る・誘う のほかを「もっと見る」に畳んだ(2026-11-20 総点検 F-5)。
+  //   畳んだ行を押す検査が多いので、ここで開いた状態にしておく(ページの中の値だけ・保存しない)。見た目を撮る道具は window.__mhKeepRoomFold で閉じたまま
+  await page.evaluate(() => { try { if (!window.__mhKeepRoomFold && typeof ASSISTANT_LIFE_ROOM_MORE === 'object') ASSISTANT_LIFE_ROOM_MORE.open = true; } catch (_) {} }).catch(() => {});
 };
 const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
 // HOME のドックと顔バッジの見張り(2026-11-17 ホーム一新で、旧 homeFacesProblems=「札の下の顔の列」から置き換え)。
@@ -106,6 +109,8 @@ const homeDockProblems = (page) => page.evaluate(() => {
     if (dockR && hit(p.r, dockR)) ng.push(`${p.c}×ドック`);
   }
   for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) if (hit(parts[i].r, parts[j].r)) ng.push(`${parts[i].c}×${parts[j].c}`);
+  // 吹き出しと、イベントのときだけ HOME に出る部品(ジャック・食事・案内の帯)も重ならない(2026-11-20 assistant-check の静的な位置の確かめを、ここで測る形にした)
+  if (vis(bubble)) for (const [sel, c] of [['.mh-home-raid-jack-img', 'ジャック'], ['.mh-home-meal', '食事'], ['.mh-home-tour-banner', '案内の帯']]) for (const e of document.querySelectorAll(sel)) if (vis(e) && hit(R(bubble), R(e))) ng.push(`吹き出し×${c}`);
   for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) {
     const k = box.getAttribute('data-assistant-life-home-faces'); const f = R(box);
     for (const p of parts) if (hit(f, p.r)) ng.push(`${k}のバッジ×${p.c}`);

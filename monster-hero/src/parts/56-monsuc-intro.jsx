@@ -35,12 +35,12 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
         {/* 選んだストーリーの名前で始める(再点検 msx-IN: 「ヒーローへの道」を選んだのに「みゅあ編」とだけ出ていた)。上の帯の「〇〇編」は助手の呼び名 */}
-        <MsxEvHead kind="story" label={`ストーリー 序章・${msxAidName(s.aid)}編`} title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
+        <MsxEvHead kind="story" label="ストーリー 序章" title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
     <div className="v-ft">
-      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>飛ばす ⏭</button> : null}
+      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>スキップ ⏭</button> : null}
       <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成を始める ▶' : '次へ ▶'}</button>
     </div>
   </>);

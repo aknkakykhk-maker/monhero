@@ -108,6 +108,12 @@ const __mod = { exports: {} };
   //   (モンサクの大会だけ judgeTie:'B' = 自分の負け)。roundLimit・gutsPlan.regen・judge:'life' を渡したときだけ、それに替わる(練習の設定)
   //   2026-11-15 r1115-133 社長: 自動ガッツ回復は元の 0.75倍(5〜11)。ためた番の合計はどの種も CHARGE_TOTAL(遅い種ほど上乗せが多い)
   const REGEN_MUL = 0.75;
+  // 間合いの取り合い(モンサクの試合だけ・入力 antiStall:true のときだけ。2026-11-20 バ-08「30ラウンドずっとダメージ0」):
+  //   届く間合いが重ならない2体は「届く方へ1歩」を選び合い、技が一度も出ないまま打ち切りまで行く。
+  //   技が出ないまま両方が STALL_MOVES 回ずつ動いたら、片方が動くのをやめる(ためる・ガード)。やめる側は取り合いのたびに交互
+  //   (1回目は先に気づいた側・2回目はもう片方)。渡さない試合(助手マスモン・フレンド対戦のサーバ)は今までと同じ
+  const STALL_MOVES = 2;
+  const STALL_PAIN = 60;
   const CHARGE_TOTAL = 16;
   const chargeAddOf = (u) => Math.max(0, CHARGE_TOTAL - (u && u.regen > 0 ? u.regen : 0));
   const ROUND_PER_UNIT = 30;
@@ -479,6 +485,9 @@ const __mod = { exports: {} };
     const threatNow = bestThreat(f, u, dist, foeNextGuts);
     const hpFrac = u.hp / u.maxHp;
     const danger = threatNow / Math.max(1, u.hp);          // 次の一撃で失う割合
+    // 間合いの取り合いで、この側が動くのをやめる番か(antiStall のときだけ)
+    const stl = st.stall;
+    const yieldNow = !!(ctx.antiStall && stl && stl.by && side === (stl.breaks % 2 === 0 ? stl.by : (stl.by === 'A' ? 'B' : 'A')));
 
     // 技
     let bestTech = 0;
@@ -514,6 +523,7 @@ const __mod = { exports: {} };
       // どの技も届かない距離にいるなら、届く方へ
       const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd));
       if (toReach) score += 20;
+      if (yieldNow) score -= STALL_PAIN;
       cands.push({ type: 'move', step, score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ふきとばし(零距離だけ): 相手が1手打ったあとに遠へ。遠の方が自分に得(自分の遠の技が強い・相手の零の技が怖い)なら選ぶ
@@ -525,6 +535,7 @@ const __mod = { exports: {} };
       const toReach = !reachHere && u.moves.some(mv => inRange(mv, 3));
       if (toReach) score += 20;
       if (st.blow) score -= 30;                                  // 相手のふきとばしが待っている(どのみち遠になる)
+      if (yieldNow) score -= STALL_PAIN;
       cands.push({ type: 'blow', score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ガード(相手が撃ってこなければ無駄になるので、見込みは 6 割)
@@ -533,7 +544,7 @@ const __mod = { exports: {} };
       let score = saved / u.maxHp * 100 * (0.4 + 0.6 * sty.caution) * (0.8 + (1 - hpFrac) * 0.6) * (0.5 + 0.5 * skill);
       score -= bestTech * (0.45 - 0.15 * (sty.caution - 1));
       cands.push({ type: 'guard', score, why: hpFrac < 0.5 ? 'lowHp' : 'block' });
-    }
+    } else if (yieldNow) cands.push({ type: 'guard', score: -STALL_PAIN / 2, why: 'block' }); // 動くのをやめる番は、ためられなくても待てるように
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
       const afterGuts = Math.min(GUTS_MAX, u.guts + chargeAddOf(u) + u.regen);   // ためた番の上乗せ + 次の自動ガッツ回復(r1115-133)
@@ -714,7 +725,8 @@ const __mod = { exports: {} };
     //   版10から gutsPlan で効くのは regen だけ(move・charge は無視。移動・ガードの上乗せは無く、ためた番の合計は CHARGE_TOTAL=r1115-110・133)
     const regenMul = gp && gp.regen !== undefined ? mulOf(gp.regen) : REGEN_MUL;
     for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = regenEff(x.regen, regenMul);
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap), antiStall: inp.antiStall === true };
+    if (ctx.antiStall) state.stall = { A: 0, B: 0, by: null, breaks: 0 };   // 間合いの取り合いを数える(技が出ないまま動いた回数)
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -755,6 +767,8 @@ const __mod = { exports: {} };
         return;
       }
       let c;
+      const stl = state.stall;
+      if (stl && !stl.by && stl.A >= STALL_MOVES && stl.B >= STALL_MOVES) stl.by = side;   // 取り合いに先に気づいた側
       if (ctl[side]) { const got = yield { kind: 'act', side }; c = Object.assign({}, got, { why: got.aiWhy || 'player' }); }
       else c = chooseAction(ctx, side);
       if (c.type === 'tech') {
@@ -814,6 +828,10 @@ const __mod = { exports: {} };
       }
       u.swapCooldown = Math.max(0, u.swapCooldown - 1);
       u.moveStreak = c.type === 'move' || c.type === 'blow' ? u.moveStreak + 1 : 0;
+      if (stl) {
+        if (c.type === 'tech') { if (stl.by) stl.breaks++; stl.A = 0; stl.B = 0; stl.by = null; }
+        else if (c.type === 'move' || c.type === 'blow') stl[side]++;
+      }
       if (c.type === 'move' || c.type === 'blow') u.moveLv++;
       else if (c.type !== 'swap') u.moveLv = Math.max(0, u.moveLv - 1);
       else u.moveLv = 0;                               // 引っ込んだ子は戻ると0から
@@ -966,7 +984,7 @@ const __mod = { exports: {} };
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap, antiStall: flow.ctx.antiStall }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };

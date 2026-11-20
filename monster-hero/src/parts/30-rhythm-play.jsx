@@ -1167,6 +1167,14 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
 const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
   x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+/* 称号(FULL COMBO!・ALL EXCELLENT!!・ALL MARVELOUS!!)の音をいつ鳴らすか。'celebrate'=お祝い画面に入ったとき / 'result'=お祝い画面が出ない設定で結果に入ったとき / null=鳴らさない(称号なし・失敗)。どの設定でも1回だけ */
+const rhythmCelebrateSeWhen=(title,failed,showCelebrate)=>!title||failed?null:showCelebrate?'celebrate':'result';
+// 演奏前・再開前の数え(READY・3・2・1)で音を鳴らすのは数字だけ(2026-11-20 音の点検 F6)
+const rhythmCountdownCueOf=step=>/^[1-9]$/.test(String(step));
+// 新記録の音(playNewRecord)を鳴らすか・いつ鳴らすか(2026-11-20 音の点検 F7)。「NEW RECORD」の札が出るときは、初めてのクリアでも
+// 演出が出ない設定でも1回鳴らす。フルコンボの音を結果へ進むところで鳴らしたとき(rhythmCelebrateSeWhen が 'result')は、重ならないよう少し遅らせる
+const RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS=800;
+const rhythmRecordSeDelayOf=(isNewRecord,failed,practice,celebrateSeWhen)=>!isNewRecord||failed||practice?null:celebrateSeWhen==='result'?RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS:0;
 /* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
    'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
    「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
@@ -2354,7 +2362,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const previousBestScore=Math.max(0,Math.floor(Number(run.startBestScore)||0));
     const recordFx=isNewRecord&&previousBestScore>0&&!failed&&!tutorial&&!calibrating&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
       ?{id:`${Date.now()}-${score}`,previous:previousBestScore,score}:null;
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    // 新記録の音(F7)。演出(recordFx)の有無と分けて、札が出るときに1回。id は結果へあとから項目が足されても鳴り直さないための印
+    const recordSeDelay=rhythmRecordSeDelayOf(isNewRecord,failed,tutorial||calibrating,rhythmCelebrateSeWhen(celebrateTitle,failed,showCelebrate));
+    const recordSe=recordSeDelay===null?null:{id:`${Date.now()}-${score}-se`,delayMs:recordSeDelay};
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,recordSe,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    /* フルコンボ・ALL EXCELLENT・ALL MARVELOUS の音は、お祝い画面が出ない設定(軽量モード・演出量が最小・フルコン演出OFF)でも鳴らす(2026-11-20 社長
+       「フルコンボのとき鳴っていた SE が気づいたら無くなっている」)。お祝い画面が出るときは、その画面に入ったところで鳴る(下の status==='celebrate')ので、ここでは鳴らさない(二重に鳴らさない)。
+       ノーツの効果音がOFF・音量0・全体ミュートのときは playFullCombo の中で鳴らない */
+    if(rhythmCelebrateSeWhen(celebrateTitle,failed,showCelebrate)==='result'){try{RHYTHM_NOTE_SE_RUNTIME.playFullCombo();}catch{}}
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
@@ -2383,7 +2398,6 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   useEffect(()=>{
     if(!recordFxId)return undefined;
     const fx=view.result.recordFx,el=recordScoreRef.current;
-    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
     let raf=0;
     const reduce=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const put=value=>{if(el)el.textContent=Math.round(value).toLocaleString();};
@@ -2402,6 +2416,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const timer=setTimeout(()=>setRecordFxHiddenFor(recordFxId),RHYTHM_RECORD_FX_TOTAL_MS);
     return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);clearTimeout(timer);};
   },[recordFxId]);
+  /* 新記録の音は、結果の画面に出たところで1回(演出が出ない設定・初めてのクリアでも。2026-11-20 音の点検 F7)。依存は印(id)だけ */
+  const recordSeId=view.status==='result'&&view.result&&view.result.recordSe?view.result.recordSe.id:null;
+  useEffect(()=>{
+    if(!recordSeId)return undefined;
+    const delay=Math.max(0,Number(view.result.recordSe.delayMs)||0);
+    const timer=setTimeout(()=>{try{RHYTHM_NOTE_SE_RUNTIME.playNewRecord();}catch{}},delay);
+    return ()=>clearTimeout(timer);
+  },[recordSeId]);
   useEffect(()=>{
     if(view.status!=='celebrate')return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -2723,6 +2745,8 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
       if(!mountedRef.current||generation!==generationRef.current){countdownResolveRef.current=null;clearCountdown();done(false);return;}
       if(index>=steps.length){setCountdownStep(null);countdownTimerRef.current=null;done(true);return;}
       setCountdownStep(steps[index]);
+      /* 3・2・1 の数字ごとに短い音を1回(READY は鳴らさない。2026-11-20 音の点検 F6)。ノーツの効果音OFF・音量0・全体ミュートでは playCue の中で鳴らない */
+      if(rhythmCountdownCueOf(steps[index]))try{RHYTHM_NOTE_SE_RUNTIME.playCue('count');}catch{}
       index++;
       countdownTimerRef.current=setTimeout(step,RHYTHM_COUNTDOWN_STEP_MS);
     };

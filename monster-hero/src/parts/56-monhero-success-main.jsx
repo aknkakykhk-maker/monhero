@@ -113,10 +113,11 @@ function MsxCmTap({ m, className, attrs, children }) {
 
 // 甘え度・恐れ度が何で動いたか(芯の s.lw・r1119-019)。短い字は上の帯の右、長い字は能力のページの一覧
 const MSX_LW_WHY = Object.freeze({
-  turnHp: ['体力に余裕', '体力を半分以上残してターンを終えた'], turnLow: ['体力が少ない', '体力が半分より少ないままターンを終えた'],
-  praise: ['ほめた', 'ほめた'], scold: ['しかった', 'しかった'], idle: ['ほうっておいた', 'しばらく、ほめも しかりもしなかった'],
-  play: ['遊んだ', 'いっしょに遊んだ'], meal: ['ごはん', 'ごはんを食べた'], mealSkip: ['ごはん抜き', 'ごはんを抜いた'],
-  story: ['お話', 'お話の出来事'], item: ['アイテム', 'アイテムを使った'], win: ['勝った', '試合に勝った'], away: ['家出', '家出から戻った'], event: ['出来事', '出来事があった'],
+  // 短い字は「〇〇で 🍬甘え+3」と読めるよう名詞にそろえる(2026-11-20 バ-31「甘え+3 勝った」が不自然)
+  turnHp: ['体力の余裕', '体力を7割以上残してターンを終えた'], turnLow: ['体力不足', '体力が7割より少ないままターンを終えた'],
+  praise: ['ほめたこと', 'ほめた'], scold: ['叱ったこと', '叱った'], idle: ['放っておいたこと', 'しばらく、ほめも叱りもしなかった'],
+  play: ['遊び', 'いっしょに遊んだ'], meal: ['ごはん', 'ごはんを食べた'], mealSkip: ['ごはん抜き', 'ごはんを抜いた'],
+  story: ['お話', 'お話の出来事'], item: ['アイテム', 'アイテムを使った'], win: ['勝利', '試合に勝った'], away: ['家出', '家出から戻った'], event: ['出来事', '出来事があった'],
 });
 const msxLwWhy = (w, long) => { const r = MSX_LW_WHY[w]; return r ? r[long ? 1 : 0] : '出来事'; };
 const msxLwAmt = (x) => [x.a ? `🍬甘え+${x.a}` : '', x.f ? `⚡恐れ+${x.f}` : ''].filter(Boolean).join(' ');
@@ -152,7 +153,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
         {/* 最後の期は参考(taikai-entry 175)どおり「HF進出」の札と、ヒーローズファイナルの日なら「当日」・その前は「あと◯ターン」(3ターン目から1戦ずつ) */}
         {v.period.key === 'final' ? (
           <div className="v-turn hf" data-msx-hfband={v.period.at >= 3 ? 'day' : 3 - v.period.at}><span className="ph hf">HF進出<small>{cal.year}年目 {cal.month}月</small></span>
-            <div className="n">{v.period.at >= 3 && s.over ? <b className="hfday">終了</b> : v.period.at >= 3 ? <>このあと<b className="hfday" data-msx-hfround>{['1回戦', '準決勝', '決勝'][Math.min(2, v.period.at - 3)]}</b></> : <>あと<b>{3 - v.period.at}</b>ターン</>}</div></div>
+            <div className="n">{v.period.at >= 3 && s.over ? <b className="hfday">終了</b> : v.period.at >= 3 ? <b className="hfday" data-msx-hfround>大会の日</b> : <>あと<b>{3 - v.period.at}</b>ターン</>}</div></div>
         ) : (
           <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
             <div className="n">残り<b>{v.period.left}</b>ターン</div></div>
@@ -168,7 +169,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
           {stAdd ? <em className="pl">+{stAdd}</em> : stGain && gainTag ? <em className={stGain < 0 ? 'hl' : 'pl'}>{stGain > 0 ? `+${stGain}` : stGain}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
       <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span>
-        {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}>{msxLwAmt(x)}<small>{(Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : ''}{msxLwWhy(x.w)}{l.length > 1 ? ` ほか${l.length - 1}` : ''}</small></span>; })()}</div>
+        {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}><small>{(Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : ''}{msxLwWhy(x.w)}で </small>{msxLwAmt(x)}{l.length > 1 ? <small>{` ほか${l.length - 1}`}</small> : null}</span>; })()}</div>
     </div>
   );
 }
@@ -523,7 +524,8 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   return (
     <>
       {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
-      <MsxHd back="HOMEへ戻る" onBack={onClose}/>
+      {/* モンサクの最初の画面の名前は「モンサクルーム」(ゲーム全体の HOME と言い分ける。r1119-049 窓-33) */}
+      <MsxHd back="HOMEへ戻る" onBack={onClose} sub="モンサクルーム"/>
       <div className="v-body v-hm">
         <div className="v-scene hm">
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
@@ -746,7 +748,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>飛ばす ⏭</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>次へ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>スキップ ⏭</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>次へ ▶</button></div>;
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
@@ -757,7 +759,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
     foot = tAt < 0
       ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう一度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>イベントを飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
+      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>スキップ ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -827,7 +829,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   else if (phase === 'turn' && typeof MsxKiShow === 'function' && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn) {
     const doneKi = () => { setKiAt(s.turn); setRun({ ...run, ki: { p: v.period.index, fame: Number.isFinite(s.fameTotal) ? s.fameTotal : 0, power: ev.power } }); };
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxKiShow key={`ki-${s.turn}`} run={run} v={v} ev={ev} ki={run.ki} onDone={doneKi}/></>;
-    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={doneKi} data-msx-ki-skip>飛ばす ⏭</button></div>;
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={doneKi} data-msx-ki-skip>スキップ ⏭</button></div>;
   }
   else if (phase === 'turn') {
     const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -840,6 +842,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-cal msx-pop"><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
         {/* 残りのターンは上の帯の1か所だけ(2026-11-20 r1119-033 育-19・育-26・育-95: 帯・暦の下・大会の札に同じ数が3回出ていた) */}
         {v.period.key === 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 ヒーローズファイナル</div> : v.period.left <= 1 ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 このあと期末の大会</div> : null}
+        {/* バ-28: 大会のあとの月替わりで、何の大会でどうだったかが分からない → 前の月の大会の結果を札で出す */}
+        {(() => { const e = (Array.isArray(run.log) ? run.log : []).filter((x) => x && Number(x.turn) === s.turn - 1 && /: (優勝|負け)$/.test(String(x.t || ''))).pop(); if (!e) return null; const [nm, rs] = String(e.t).split(': '); return <div className={`v-chip${rs === '優勝' ? ' hot' : ''}`} style={{ position: 'static', fontSize: 16, padding: '6px 16px', ...(rs === '優勝' ? { background: 'linear-gradient(90deg,#b45309,#f59e0b)', color: '#fff', border: '2px solid #fde047', boxShadow: '0 0 14px #fde04788' } : {}) }} data-msx-turn-cup={rs === '優勝' ? 'win' : 'lose'}>{rs === '優勝' ? `🏆 ${nm} 優勝!` : `${nm} は 負け…`}</div>; })()}
         {seasonChanged ? <div className="v-chip" style={{ position: 'static' }}>{MSX_SEASON[cal.season]}になった</div> : null}
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
@@ -986,8 +990,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
-          {/* ヒーローズファイナルの間は、上の帯(このあと◯◯)と大会のボタンに出るので、場面の札は出さない(三重だった・2026-11-20 r1119-033 育-49) */}
-          {v.period.key === 'final' ? null : preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
+          {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
+          {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
           {/* ピークが何に効くかを札の中に書く(2026-11-20 r1119-033 育-108) */}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが一番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
           <MsxYosuChips s={s}/>

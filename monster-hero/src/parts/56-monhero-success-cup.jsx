@@ -173,7 +173,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 
 // モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
 //   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B', antiStall: true }); // antiStall: 間合いの取り合いで技が出ないまま打ち切りにしない(バ-08)
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -205,6 +205,9 @@ const MSC_CSS = `
 .msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+/* 2026-11-20 再点検 バ-02・58: PC(1280×800)で「結果だけ見る・試合へ」が画面の下で切れていた → ボタンの段は下に留め、低い画面では能力の行を詰める */
+.msc-wrap .msc-foot{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg,#0000,#140f2a 30%);padding-bottom:max(4px,env(safe-area-inset-bottom))}
+@media (max-height:860px) and (min-width:700px){.msc-st{height:25px}}
 .msc-foot>*{flex:1}
 /* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
 .msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
@@ -223,6 +226,9 @@ const MSC_CSS = `
 .msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
 .msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
 .msc-face img{width:120%;height:120%;object-fit:contain}
+/* 2026-11-20 再点検 バ-56・66: 絵が右端に約28pxで押し込まれ、誰か分からない → 名前の左に大きく置く */
+.msc-row .msc-face{order:-1;width:38px;height:38px;max-height:calc(100% - 2px);margin-left:0}
+.msc-row .msc-no{order:-2}
 .msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
@@ -238,7 +244,8 @@ const MSC_CSS = `
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
-.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
+.msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
@@ -289,6 +296,7 @@ const MSC_CSS = `
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
+.msc-fcnote{margin:-2px 2px 0;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:center}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
 .msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
 .msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
@@ -321,18 +329,22 @@ const MSC_CSS = `
 .msc-hero{position:relative;flex:1 1 auto;min-height:330px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.38) 0 9deg,rgba(253,186,116,.08) 9deg 18deg);animation:msc-spin 14s linear infinite}
 .msc-hero.lose .msc-rays{display:none}
-.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.55),rgba(15,23,42,.8))}
+.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.78),rgba(15,23,42,.9));-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)} /* バ-03: 観客席の点に字が埋もれる → 暗く・ぼかす */
 @keyframes msc-spin{to{transform:rotate(360deg)}}
 .msc-hero .big{position:absolute;z-index:3;left:0;right:0;top:14px;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;animation:msc-fade .5s ease-out both}
 .msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
-.msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
+.msc-hero.lose .big{left:50%;right:auto;width:max-content;max-width:92%;color:#fff;-webkit-text-stroke:2px #0f172a;paint-order:stroke fill;text-shadow:0 4px 0 #0f172a,0 0 14px rgba(0,0,0,.9);font-size:46px;background:rgba(2,6,23,.72);border-radius:14px;padding:0 16px 4px;animation:msc-lose-drop .7s cubic-bezier(.3,1.5,.6,1) both}
+@keyframes msc-lose-drop{from{opacity:0;transform:translate(-50%,-60px) rotate(0)}to{opacity:1;transform:translate(-50%,0) rotate(-4deg)}}
+.msc-hero.lose .sub{top:92px}
 .msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
 .msc-hero .sub .nw{display:inline-block;white-space:nowrap}
 .msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
 .msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 .msc-hero.win .who{height:46%}
 .msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
-.msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-hero.lose .who img{filter:grayscale(.75) brightness(.72) drop-shadow(0 8px 8px rgba(0,0,0,.5));transform-origin:50% 100%;animation:msc-droop 1.1s ease-out .2s both} /* バ-03: しょんぼり(うなだれて沈む) */
+@keyframes msc-droop{from{transform:none}to{transform:translateY(7%) rotate(-7deg) scaleY(.93)}}
+@media (prefers-reduced-motion:reduce){.msc-hero.lose .who img,.msc-hero.lose .big{animation:none}.msc-hero.lose .who img{transform:translateY(7%) rotate(-7deg) scaleY(.93)}.msc-hero.lose .big{transform:translate(-50%,0) rotate(-4deg)}}
 @keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
 /* 優勝の画面(2026-11-14 社長): 勝ったモンスターを大きく・明るく、字と帯に隠れない所へ。上から 優勝! → モンスター → 大会の帯 → ライバルの帯 と縦に並べて重ねない */
 .msc-hero.hi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 10px}
@@ -352,17 +364,26 @@ const MSC_CSS = `
 .msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。一番長い「修行チケット」「能力ポイント」が入る幅) */
 .msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
 .msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
+.msc-rw.band{padding:12px 12px;font-size:15px;box-shadow:0 0 16px rgba(253,224,71,.35)}.msc-rw.band .v{font-size:15px;color:#fef9c3;font-weight:900}.msc-rw.band .k em{font-style:normal;margin-left:4px;color:#fde047}
+.msc-rws{display:flex;flex-direction:column;gap:4px}.msc-rw.sm{padding:5px 10px;font-size:12px;font-weight:700;border-radius:10px}.msc-rw.sm .i{font-size:15px}.msc-rw.sm .v{font-size:12px}
+.msc-pops{position:absolute;z-index:4;right:6px;top:22%;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.msc-pops b{font-size:22px;font-weight:900;color:#fff;-webkit-text-stroke:1.5px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 12px rgba(251,191,36,.9);background:rgba(15,12,34,.55);border-radius:10px;padding:1px 8px;white-space:nowrap;animation:msc-pop-in .5s cubic-bezier(.3,1.6,.6,1) both}
+@keyframes msc-pop-in{from{opacity:0;transform:translateX(-30px) scale(.4)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.msc-pops b{animation:none}}
 .msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
 .msc-again h3{margin:0;text-align:center;font-size:15px;font-weight:900}
 .msc-again p{margin:0;text-align:center;font-size:11.5px;color:#cbd5e1}
 .msc-again p em{font-style:normal;color:#fde047;font-weight:900}
 .msc-pick{display:flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 10px;color:#fff;font-weight:900;font-size:14px;text-align:left;cursor:pointer;min-height:48px}
 .msc-pick img{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
-.msc-pick small{display:block;font-size:11px;font-weight:700;opacity:.9}
+.msc-pick small{display:block;font-size:12px;font-weight:700;opacity:.95}
+.msc-pick>span{flex:1;min-width:0}
+.msc-pick .n{flex:0 0 auto;font-size:20px;font-weight:900;line-height:1;padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.28)} /* バ-43: 持っている数は右端に大きく */
+.msc-pick .n small{display:inline;font-size:11px;margin-right:1px}
 .msc-pick.sand{background:linear-gradient(90deg,#ea580c,#f59e0b)}
 .msc-pick.rain{background:linear-gradient(90deg,#be185d,#6d28d9,#2563eb)}
 .msc-pick.quit{background:#334155;justify-content:center;font-size:13px}
-.msc-pick:disabled{opacity:.4;cursor:default}
+.msc-pick:disabled{background:#475569;color:#fff;cursor:default;opacity:1}.msc-pick:disabled img{filter:grayscale(1);opacity:.7}.msc-pick:disabled small{color:#e2e8f0} /* バ-44: 押せない札も字は読めるまま・理由を1行 */
 .msc-cut{position:relative;flex:1 1 auto;min-height:380px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-cut .word{position:absolute;z-index:3;left:0;right:0;top:20px;text-align:center;font-size:56px;font-weight:900;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.9);animation:msc-fade .45s ease-out both}
 .msc-cut .sub{position:absolute;z-index:3;left:8px;right:8px;top:94px;text-align:center;font-size:13px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.85)}
@@ -440,7 +461,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
-    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}の{Z}1回戦は{Z} これからだよ」</>,
+    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう。{Z}{info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ。{Z}まずは{Z} 1回戦を{Z} 見ていこう」</>,
     upsets.length ? <>「<em>大穴!{Z} {nm(E[upsets[0]])}</em> が{Z} 勝ち上がったぞ!{Z} {info.meName}も{Z} 1回戦を{Z} 勝ち上がり!」</> : <>「1回戦が{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 順当に{Z} 勝ち上がり!」</>,
     foeNo >= 4 ? <>「<em>大穴!{Z} {nm(foe)}</em>{Z} 決勝まで{Z} きたぞ!{Z} {info.meName}は{Z} 準決勝も{Z} 勝って{Z} 決勝へ!」</> : <>「準決勝も{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 決勝へ!{Z} 反対の山からは{Z} <em>{nm(foe)}</em>」</>,
   ];
@@ -452,7 +473,8 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
   return (
     <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
-      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      {/* 2026-11-20 再点検 バ-06・16・19・41: 大会名が戻るの横と表の見出しで二重だった → 表の見出しだけにする */}
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
@@ -474,12 +496,14 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      {/* 2026-11-20 再点検 バ-07・20: 1回戦の途中で決勝の顔合わせを先に言っていた・「見せるだけの演出です」の裏話で冷めた → 決勝の顔合わせは表が決勝まで進んでから出し、裏話の文はやめる */}
+      <div className="msc-note">{st >= 3 ? <><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。</> : null}<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>スキップ ⏭</button> : null}</div>
       <div className="msc-foot">
         {/* 「(優勝ずみ)」を後ろに付けると、半分の幅では単語の途中で折れて読めなかった(2026-11-17 社長)。押せないときの副題と同じ形で、優勝ずみも副題にする */}
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">優勝ずみ</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">一度優勝したので使えます</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
+        {/* 2026-11-20 再点検 バ-55: 進むボタンは「試合へ」にそろえる(表は「決勝へ」・試合の前は「準備完了」とばらばらだった) */}
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
@@ -550,6 +574,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
+      {/* 2026-11-20 再点検 バ-57: 「零」が何か初めての人に分からない → 間合いの言葉を1行で添える */}
+      <div className="msc-fcnote" data-msc-dist-note>間合いは 零(くっつく)・近・中・遠 の順に離れます</div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="msc-sheet grow" key={tab}>
         {tab === 'st' && <>
@@ -580,7 +606,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
+        <button className="msc-btn" data-msc-ready onClick={onReady}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
@@ -650,6 +676,12 @@ function MonsucCupWin({ suc, s, info, match, out, onNext }) {
   const mid = info.kind === 'summit' && Number.isInteger(info.round) && info.round < SUM.length - 1;
   const winWord = mid ? '勝ち抜け!' : '優勝!';
   const nextName = mid && SUM[info.round + 1] ? String(SUM[info.round + 1].name || '').replace(/^ヒーローズファイナル\s*/, '') : '';
+  // バ-39: 能力・忠誠度・人気の上がり幅は、モンスターの横に大きな数字で順に飛び出させる。賞金ランクの昇格は帯で、ほかの細かい物は最後に小さく
+  const POP_K = ['能力', '忠誠度', '人気'];
+  const pops = rows.filter((r) => POP_K.includes(r.k)).flatMap((r) => (r.k === '能力' ? String(r.v).split('・') : [`${r.k} ${r.v}`])).filter(Boolean);
+  const isBand = (r) => r.big && /ランク|称号/.test(r.k);
+  const band = rows.filter((r) => !POP_K.includes(r.k) && isBand(r));
+  const small = rows.filter((r) => !POP_K.includes(r.k) && !isBand(r));
   return (
     <div className="msc-wrap" data-msc-win>
       <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
@@ -658,9 +690,11 @@ function MonsucCupWin({ suc, s, info, match, out, onNext }) {
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
         <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
+        {pops.length ? <div className="msc-pops" data-msc-win-pops>{pops.map((t, k) => <b key={k} style={{ animationDelay: `${0.6 + k * 0.32}s` }}>{t}</b>)}</div> : null}
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>能力ポイント1.5倍</em></div>}
       </div>
-      {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
+      {band.map((r, k) => <div key={`b${k}`} className="msc-rw big band" data-msc-win-band style={{ animationDelay: `${0.6 + pops.length * 0.32 + k * 0.2}s` }}><span className="i">{r.i}</span><span className="k">{r.k}{/ランク/.test(r.k) ? <em>UP!</em> : null}</span><span className="v">{r.v}</span></div>)}
+      {small.length ? <div className="msc-rws" data-msc-win-small>{small.map((r, k) => <div key={k} className="msc-rw sm" style={{ animationDelay: `${0.9 + pops.length * 0.32 + k * 0.08}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}</div> : null}
       <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : mid ? `「${info.meName}、勝ち抜けだよ! つぎは${nextName || '次の戦'}!」` : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
       <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
     </div>
@@ -694,8 +728,8 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
         <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>残り {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
-        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>同じ相手と もう一度(持っている ×{has('sand')})</small></span></button>
-        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}(持っている ×{has('rainbow')})</small></span></button>
+        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>{can('sand') ? '同じ相手と もう一度' : mscRematchNg(left, has('sand'))}</small></span><b className="n" aria-label={`持っている数 ${has('sand')}`}><small>×</small>{has('sand')}</b></button>
+        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{!can('rainbow') ? mscRematchNg(left, has('rainbow')) : info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}</small></span><b className="n" aria-label={`持っている数 ${has('rainbow')}`}><small>×</small>{has('rainbow')}</b></button>
         <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(ヒーローズファイナルは ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
       </div>
       <div className="msc-talk"><img src={mscFace(s.aid, 'sad')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}「おしかった! {why} もう1回 いく?」</p></div>
@@ -703,6 +737,8 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
   );
 }
 
+// 砂時計が押せないわけ(バ-44): やり直しの回数を使い切った/持っていない
+const mscRematchNg = (left, n) => (left <= 0 ? '今回の育成では もう使えない(やり直しは使い切った)' : n <= 0 ? '持っていないので 使えない' : '今は 使えない');
 // ---- 入れ物: 組み合わせ表 → バトルカード → (カットイン) → 試合 → 優勝 / 負け ----
 function MonsucCupShow(props) {
   const { s } = props;

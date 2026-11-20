@@ -1733,12 +1733,13 @@ function AssistantMasmonSheet({ id, land = false, onClose, bondLv = null }) {
   return (
     <div className="absolute inset-0" style={{ zIndex: 30 }} data-assistant-masmon-sheet={id} data-assistant-masmon-tab={tab}>
       <style>{ASSISTANT_MASMON_CSS}</style>
-      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/70" onClick={onClose}/>
+      {/* 地は不透明に(2026-11-20 総点検 F-11: 裏の部屋の「← 家へ」「おしゃべりする」が透けて、字が二重に見えた) */}
+      <button type="button" aria-label="閉じる" className="absolute inset-0 bg-[#0b1020]" onClick={onClose}/>
       <div className={`mhm-panel ${land ? 'is-land' : ''}`}>
         <div className="flex items-center gap-2">
           {typeof AssistantFace === 'function' && <span className="shrink-0 rounded-full ring-2 ring-pink-300"><AssistantFace who={who} size={38} accent={who.accent}/></span>}
           <div className="min-w-0 flex-1"><p className="mhl-en">MASMON · {String(who.id).toUpperCase()}</p><p className="truncate text-[19px] font-black text-white">{who.name}のマスモン</p></div>
-          <button type="button" className="mhl-btn shrink-0 bg-slate-700 px-3" data-assistant-masmon-close data-mhl-sheet-close onClick={onClose}>閉じる</button>
+          <button type="button" aria-label="閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-800 text-[18px] font-black leading-none text-white active:scale-95" data-assistant-masmon-close data-mhl-sheet-close onClick={onClose}>✕</button>{/* 窓は右上の ✕ にそろえる(総点検 V-2) */}
         </div>
         <div className="mt-2 grid grid-cols-4 gap-1" role="tablist">
           {ASSISTANT_MASMON_TABS.map(([k, label]) => (
