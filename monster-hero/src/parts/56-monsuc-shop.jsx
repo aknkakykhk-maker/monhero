@@ -72,3 +72,77 @@ function MonsucShopList({ points = 0, busy = false, disabled = false, openSheet,
     })}
   </>;
 }
+
+// ===== 持ちこみの段から開くビートP交換所(2026-11-19 作業ボード id48・あっくん決定) =====
+// 育成をはじめる前の「持ちこみ」で、持っていない・足りない物に気づいたときに、その場で交換できるようにする。
+// マーケットの画面へ移ると、MsxStart の準備(選んだモンスター・編成・助手・持ちこみ)が消えてしまうので、画面は移さず、
+// ランキングの画面(MonsucRankScreen)と同じ形の重ね画面で開く。中身はマーケットの「モンサク」タブと同じ一覧
+// (MonsucShopList)と確認の窓(MarketPurchaseSheet)で、買う処理も同じ monsucShopBuy(値段は表から決め直す・
+// ビートPと持ちこみの数を1つの取引で保存する)。
+// 閉じるときは、買ったかどうかを onClose(bought) で返し、親(MonheroSuccessScreen)が持ちこみの数を読み直す
+//   (読み直さないと、育成をはじめるときに古い数で保存し直して、買った分が消える)。
+function MonsucCarryShop({ onClose }) {
+  const [points, setPoints] = React.useState(0);
+  const [sheet, setSheet] = React.useState(null);
+  const [sheetQuantity, setSheetQuantity] = React.useState(1);
+  const [sheetPending, setSheetPending] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const boughtRef = React.useRef(false);
+  const busyRef = React.useRef(false); // マーケットの confirmSheet と同じ、二度押しで2回買わないための見張り
+  React.useEffect(() => { let alive = true; (async () => { try { const p = await loadRhythmEventPoints(); if (alive) setPoints(Math.max(0, Math.floor(Number(p) || 0))); } catch (e) {} })(); return () => { alive = false; }; }, []);
+  const openSheet = (next) => { setError(''); setSheetQuantity(1); setSheet(next); };
+  const closeSheet = () => { if (!sheetPending) setSheet(null); };
+  const onExchange = async (offer, count) => {
+    if (busyRef.current) return { ok: false, reason: 'busy' };
+    busyRef.current = true;
+    try {
+      const r = await monsucShopBuy(offer.id, count);
+      if (r && r.ok) { boughtRef.current = true; setPoints(r.eventPoints); }
+      else setError(monsucShopReasonText(r && r.reason));
+      return r;
+    } catch (e) {
+      setError(monsucShopReasonText('save'));
+      return { ok: false, reason: 'save' };
+    } finally { busyRef.current = false; }
+  };
+  const confirmSheet = async (count) => {
+    if (!sheet || sheetPending) return;
+    setSheetPending(true);
+    try {
+      const result = await sheet.confirm(count);
+      if (result === true || (result && result.ok)) setSheet(null);
+    } finally { setSheetPending(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }} data-msx-carry-shop>
+      <div className="flex items-center gap-2 px-3 pt-3">
+        <button type="button" onClick={() => onClose(boughtRef.current)} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
+        <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
+        <div className="ml-auto text-[12px] font-black text-violet-200">🎟️ {points.toLocaleString()} ビートP</div>
+      </div>
+      <div className="px-3 pt-2">
+        <div className="text-[18px] font-black">🛒 ビートP交換所</div>
+        <div className="text-[11px] text-slate-300 leading-snug">持ちこみの品をビートPと交換できます。交換した物は、戻った先の「持ちこみ」でそのまま選べます</div>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
+        <div className={MARKET_GRID_CLASS}>
+          <MonsucShopList points={points} busy={sheetPending} disabled={sheetPending} openSheet={openSheet} onExchange={onExchange}/>
+        </div>
+      </div>
+      {sheet && typeof MarketPurchaseSheet === 'function' ? <MarketPurchaseSheet
+        item={sheet.item}
+        balance={points}
+        stackable={!!sheet.stackable}
+        countUnit={sheet.countUnit || '個'}
+        grantAmount={sheet.grantAmount || 0}
+        grantUnit={sheet.grantUnit || ''}
+        quantity={sheetQuantity}
+        onQuantity={setSheetQuantity}
+        pending={sheetPending}
+        error={error}
+        onConfirm={confirmSheet}
+        onCancel={closeSheet}
+      /> : null}
+    </div>
+  );
+}
