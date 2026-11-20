@@ -1389,6 +1389,6 @@ const MSX_CSS = `
 .msx .v-b3 .v-lw small{font-size:10.5px;color:#cbd5e1;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .msx .v-lwl .r{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx .v-lwl .r i{flex:none;font-style:normal;color:#94a3b8;width:4.6em}.msx .v-lwl .r span{flex:1;min-width:0}.msx .v-lwl .r b{flex:none;color:#fde68a}
-.msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:30px} /* 編成の子の札(押すとアシスト詳細) */
+.msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:30px} /* 編成のモンスターの札(押すとアシスト詳細) */
 `;
 
