@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d87eeab614d858b
+// source-sha256: 77a0af370bae40b4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163272,33 +163272,41 @@ const MSX_EV_TITLE = Object.freeze({
 });
 const MSX_DEX_TABS = Object.freeze([{
   key: 'story',
-  name: 'メインストーリー'
+  name: 'メインストーリー',
+  short: ['メイン', 'ストーリー']
 }, {
   key: 'daily',
   name: 'ふだん',
+  short: ['ふだん'],
   kinds: ['daily', 'small']
 }, {
   key: 'team',
   name: '編成のモンスター',
+  short: ['編成の', 'モンスター'],
   kinds: ['team']
 }, {
   key: 'self',
   name: '育成モンスター',
+  short: ['育成', 'モンスター'],
   kinds: ['self', 'body', 'goal']
 }, {
   key: 'season',
   name: '季節の行事',
+  short: ['季節の', '行事'],
   kinds: ['season']
 }, {
   key: 'cup',
   name: '大会まわり',
+  short: ['大会', 'まわり'],
   kinds: ['cup']
 }, {
   key: 'issa',
-  name: 'イッサ博士'
+  name: 'イッサ博士',
+  short: ['イッサ', '博士']
 }, {
   key: 'awake',
-  name: '覚醒・超覚醒'
+  name: '覚醒・超覚醒',
+  short: ['覚醒・', '超覚醒']
 }]);
 const msxDexList = () => {
   const SUC = msxSuc && msxSuc.SUC;
@@ -163451,14 +163459,19 @@ function MsxDex({
     dataProps: {
       'data-msx-dex': ''
     },
-    bodyClassName: "mdx"
+    bodyClassName: "mdx",
+    footer: open ? React.createElement(ModalSheetButton, {
+      back: true,
+      onClick: () => chosen ? setChosen(null) : setOpen(null),
+      "data-msx-dex-back": true
+    }, chosen ? '← 選ぶ前に戻る' : '← 一覧へ戻る') : null
   }, React.createElement("div", {
     className: "mdx-bar"
   }, React.createElement("i", {
     style: {
       width: `${all.length ? got / all.length * 100 : 0}%`
     }
-  })), React.createElement("div", {
+  })), open ? null : React.createElement("div", {
     className: "mdx-tabs",
     role: "tablist"
   }, MSX_DEX_TABS.map(tb => {
@@ -163470,6 +163483,7 @@ function MsxDex({
       "aria-selected": tb.key === tab,
       key: tb.key,
       className: tb.key === tab ? 'on' : '',
+      "aria-label": tb.name,
       onClick: () => {
         setTab(tb.key);
         setOpen(null);
@@ -163479,7 +163493,9 @@ function MsxDex({
       className: "i"
     }, TAB_ICON[tb.key] || '📄'), React.createElement("span", {
       className: "n"
-    }, tb.name), React.createElement("small", null, n, "/", L.length));
+    }, (tb.short || [tb.name]).map((w, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i ? React.createElement("br", null) : null, w))), React.createElement("small", null, n, "/", L.length));
   })), tab === 'story' && !open ? React.createElement("div", {
     className: "mdx-aids"
   }, aids.map(a => {
@@ -163505,12 +163521,7 @@ function MsxDex({
     "data-msx-dex-read": open.id
   }, React.createElement("div", {
     className: "h"
-  }, React.createElement("b", null, open.title), React.createElement("button", {
-    type: "button",
-    className: "chip",
-    onClick: () => chosen ? setChosen(null) : setOpen(null),
-    "data-msx-dex-back": true
-  }, "← 戻る")), open.awake ? React.createElement("div", {
+  }, React.createElement("b", null, open.title)), open.awake ? React.createElement("div", {
     className: "ln"
   }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
     className: "ln"
@@ -163581,7 +163592,7 @@ function MsxDex({
       alt: ""
     }) : TAB_ICON[tab] || '📄' : st === 'lock' ? '🔒' : '？'), React.createElement("span", {
       className: "tx"
-    }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ▶' : st === 'lock' ? '準備中' : 'まだ'));
+    }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ›' : st === 'lock' ? '準備中' : 'まだ'));
   }) : React.createElement("div", {
     className: "mdx-none"
   }, "まだありません")));
@@ -163594,30 +163605,34 @@ const MSX_DEX_CSS = `
 .mdx-bar i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
 .mdx-tabs{display:flex;gap:2px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;border-bottom:2px solid #334155;flex:none;margin:0 -2px}
 .mdx-tabs::-webkit-scrollbar{display:none}
+.msx-dex .mdx-tabs,.mdx .mdx-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;touch-action:auto}
+.mdx .mdx-tabs button{min-width:0;padding:5px 2px 4px}
+.mdx .mdx-tabs button .n{font-size:12px;line-height:1.15;white-space:nowrap;text-align:center;min-height:2.3em;display:flex;align-items:center}
+.mdx .mdx-tabs{row-gap:6px}
 .mdx-tabs button{flex:0 0 auto;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 8px 5px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;color:#94a3b8;font-weight:900}
 .mdx-tabs button .i{font-size:17px;line-height:1}.mdx-tabs button .n{font-size:12px;white-space:nowrap}.mdx-tabs button small{font-size:10px;color:#64748b}
 .mdx-tabs button.on{color:#fff;border-bottom-color:#fb923c;background:linear-gradient(180deg,#0000,#fb923c22)}
 .mdx-tabs button.on small{color:#fdba74}
-.mdx-aids{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;scrollbar-width:none;padding:2px 2px 4px;flex:none}
+.mdx-aids{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 4px;padding:2px 2px 4px;flex:none}
 .mdx-aids::-webkit-scrollbar{display:none}
-.mdx-aids button{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;color:#e2e8f0}
+.mdx-aids button{min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;color:#e2e8f0}
 .mdx-aids .f{position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#1e1a36;border:3px solid #334155;box-sizing:border-box}
 .mdx-aids .f img{width:100%;height:100%;object-fit:cover}
 .mdx-aids .f em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172acc;font-style:normal;font-size:18px}
-.mdx-aids b{font-size:11.5px;font-weight:900;white-space:nowrap}.mdx-aids small{font-size:10px;color:#94a3b8}
+.mdx-aids b{font-size:11.5px;font-weight:900;white-space:nowrap;max-width:100%}.mdx-aids small{font-size:10px;color:#94a3b8}
 .mdx-aids button.on .f{border-color:#fde047;box-shadow:0 0 0 2px #fde04755,0 4px 10px #0008}
 .mdx-aids button.on b{color:#fde047}
 .mdx-aids button.lock b{color:#64748b}
 .mdx-list,.mdx-read{display:flex;flex-direction:column;gap:6px}
-.mdx-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;text-align:left;color:#fff}
+.mdx-row{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 10px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;text-align:left;color:#fff}
 .mdx-row .ic{flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;background:#0f172a;overflow:hidden}
 .mdx-row .ic img{width:100%;height:100%;object-fit:cover}
 .mdx-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .mdx-row .tx b{font-size:13px;font-weight:900;line-height:1.3}.mdx-row .tx small{font-size:10.5px;color:#94a3b8;font-weight:800}
 .mdx-row em{flex:none;font-style:normal;font-size:11px;font-weight:900;padding:3px 9px;border-radius:999px}
-.mdx-row.got{border-color:#a78bfa;background:linear-gradient(90deg,#2e1065,#1e1a36)}.mdx-row.got em{background:#7c3aed;color:#fff}
-.mdx-row.no{opacity:.85}.mdx-row.no .ic{color:#64748b;border:1.5px dashed #475569}.mdx-row.no .tx b{color:#94a3b8}.mdx-row.no em{background:#334155;color:#cbd5e1}
-.mdx-row.lock{opacity:.6}.mdx-row.lock em{background:#1f2937;color:#94a3b8}
+.mdx-row.got{border-color:#a78bfa;background:linear-gradient(90deg,#2e1065,#1e1a36)}.mdx-row.got em{background:none;padding:0;color:#c4b5fd;font-size:12px}
+.mdx-row.no{opacity:.85}.mdx-row.no .ic{color:#64748b;border:1.5px dashed #475569}.mdx-row.no .tx b{color:#94a3b8}.mdx-row.no em{background:none;padding:0;color:#94a3b8}
+.mdx-row.lock{opacity:.6}.mdx-row.lock em{background:none;padding:0;color:#94a3b8}
 .mdx-none{font-size:12px;color:#94a3b8;text-align:center;padding:12px}
 .mdx-read .h{display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:8px}
 .mdx-read .h .chip{flex:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:900;border:1.5px solid #475569;background:#1e1a36;color:#fff}
