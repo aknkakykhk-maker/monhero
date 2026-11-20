@@ -694,6 +694,12 @@ const MSX_CSS = `
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+/* 大会参加確認の窓は画面の高さを超えない(中だけ送る)。ボタンの段は下に貼り付ける(2026-11-20 r1119-013 ⑥ API 点検 #4)。
+   横向けの並びは作らない(2026-11-20 社長: モンサクの横向きはいったん非対応) */
+.msx .v-body>.v-cupwin{position:fixed;inset:0}
+.v-cupwin{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}
+.v-cupwin .in{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+.v-cupwin .in>.bt{position:sticky;bottom:-12px;z-index:2;margin-bottom:-12px;padding-bottom:12px;background:#fffbeb;box-shadow:0 -10px 10px -4px #fffbeb}
 .msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
@@ -842,6 +848,20 @@ const MSX_CSS = `
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
 .msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* スマホを横にしたときの案内(2026-11-20 r1119-026)。横長で高さが小さく、指で触る端末だけに出す(PC のマウスでは出さない)。
+   案内は上に重ねるだけで、下の画面はそのまま残る(回しても進み具合を失わない)。
+   重なり順はバトルの演出(決着の大写し 9700・判定 9650)より上の 9800(ミハリの指摘: バトルの画面で案内が下にもぐっていた) */
+.msx-portrait-only{display:none}
+@media (orientation:landscape) and (max-height:540px) and (hover:none) and (pointer:coarse){
+.msx-portrait-only{position:absolute;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:radial-gradient(circle at 50% 40%,#2a1f55 0,#0b0920 70%);color:#fff;text-align:center;touch-action:none}
+.msx-portrait-only .in{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;padding:0 20px}
+.msx-portrait-only .ph{width:72px;height:72px;display:flex;align-items:center;justify-content:center}
+.msx-portrait-only .ph span{display:block;font-size:48px;line-height:1;transform:rotate(-90deg);animation:msxRotatePhone 2.4s ease-in-out infinite}
+.msx-portrait-only b{font-size:18px;font-weight:900;color:#fde68a}
+.msx-portrait-only p{margin:0;font-size:13px;font-weight:700;line-height:1.6;color:#e2e8f0}
+}
+@keyframes msxRotatePhone{0%,20%{transform:rotate(-90deg)}50%,80%{transform:rotate(0deg)}100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){.msx-portrait-only .ph span{animation:none;transform:rotate(0deg)}}
 .msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .msx.land{max-width:none}
 .msx img{display:block}
@@ -1073,6 +1093,17 @@ const MSX_CSS = `
 /* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
 :where(.msx) button,:where(.msx) [role=button]{position:relative;min-height:0}
 .msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+/* 広がり(44px)が隣の段の札に重ならないようにする(2026-11-19 r1119-013 ⑥ M-6・ミハリの指摘)。札の中を押しても、下の段の札の広がりに当たって
+   隣の札が押されていた(図鑑の分類・助手の札、能力ポイントの「1P〜MAX」の下の「まとめて」)。札そのものを 36px にして段の間を 8px 空け、
+   広がりは段の間の半分(上下 4px)まで。見張り: tools/success/success-shoot.js「札の端を押しても隣の札に当たらない」 */
+.msx .msx-dex-tabs,.msx .msx-dex-aids{row-gap:8px}
+.msx .msx-dex-tabs button,.msx .msx-dex-aids button,.msx .msx-pt-bulk .chip{min-height:36px}
+.msx .msx-dex-tabs button::after,.msx .msx-dex-aids button::after,.msx .msx-pt-bulk .chip::after{height:calc(100% + 11px)} /* 広がりの 100% は枠の内側(36 - 枠 1.5×2)。+11px で 44px、枠の外へは上下 4px ずつ */
+.msx .msx-pt-bulk{margin-top:8px}
+/* 図鑑の一覧の行も、行そのものを 44px にする(行の間 5px に、上下 4px の広がりが重なっていた) */
+.msx .msx-dex-row{min-height:44px}
+/* イッサ博士の選択肢は札そのものが大きいので広げない(小さい画面で、上下の選択肢の札に重なっていた) */
+.msx .v-ix::after{height:100%}
 /* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
 .msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
 .msx.land .v-ft{position:sticky;bottom:0;z-index:3}
@@ -1309,11 +1340,6 @@ const MSX_CSS = `
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
-/* 押せる所を 44px まで広げる(2026-11-19 r1119-013 ⑥ M-6)。見た目は変えず、見えない当たりの縁だけ足す。
-   左上の戻る(36px)・下の帯のボタン(36px)・札(chip。24px) */
-.msx .v-hd .bk,.msx .v-ft button,.msx .chip{position:relative}
-.msx .v-hd .bk::after,.msx .v-ft button::after{content:"";position:absolute;inset:-4px -2px}
-.msx .chip::after{content:"";position:absolute;inset:-10px -2px}
 /* ④段2(r1119-011・U-4): 枠を選ぶ画面を共通の型(MonsucMonCard・MONSUC_UI.md の 8)へ。上の6枠も下の一覧も同じ縦長の札。
    タブ・検索の段は1行・見た目 36px・押せる範囲 44px。下のボタンは同じ高さ・同じ形で、主は「決定」だけ */
 .msx .msx-tp-team{padding:6px;gap:5px}
