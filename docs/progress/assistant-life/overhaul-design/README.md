@@ -1,6 +1,6 @@
 # 助手ライフの作り直し: 配置図(案)— 2026-11-20 ナカヨシ
 
-- 仕様書の案: [`docs/spec/ASSISTANT_LIFE.md`](../../../spec/ASSISTANT_LIFE.md)(1本の線・値を4本に畳む・用語・数・保存・作る順・社長に決めてほしいこと)
+- 仕様書(社長の答えを入れた版・r1119-043): [`docs/spec/ASSISTANT_LIFE.md`](../../../spec/ASSISTANT_LIFE.md)(1本の線・値を4本に畳む・用語・数・保存・作る順・社長に決めてほしいこと)
 - 元: 総点検 [`docs/progress/kensa/assistant-life-overhaul-2026-11/`](../../kensa/assistant-life-overhaul-2026-11/README.md)・社長の決定 r1119-040
 - **ゲームのコードは変えていない。** 「前」は総点検の本番の止め絵(偽のデータ・15:00)、「後」は手で描いた枠の図
 

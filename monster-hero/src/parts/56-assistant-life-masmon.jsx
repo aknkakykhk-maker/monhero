@@ -1395,17 +1395,19 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
   const allyCard = (
     <div className="mhm-card" data-assistant-masmon-allies>
       <p className="text-[10px] font-black text-slate-400">道中で仲間にしやすい3体</p>
+      {/* まだ1体もいないときは、点線の空き枠3つを並べず1行に(2026-11-20 総点検 §10: いる子より空き枠が目立っていた) */}
+      {!allies.length ? <p className="mt-1 text-[11px] font-bold text-slate-400" data-assistant-masmon-allies-empty>まだいません(編成のマスモンが増えると、ここに並びます)</p> :
       <div className="mt-1 grid grid-cols-3 gap-1.5">
         {[0, 1, 2].map(i => { const t = allies[i]; return t
           ? <button key={t.monster} type="button" className="text-center" data-assistant-masmon-ally={t.monster} onClick={() => onOpen(t)}><div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? cell : 84}/></div><p className="mt-0.5 truncate text-[10.5px] font-black text-white">{t.nick}</p><p className="truncate text-[9px] font-bold text-amber-200">Lv.{t.lv}</p></button>
           : <div key={`e${i}`} className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-[9.5px] font-bold text-slate-500" style={{ minHeight: cell + 30 }}>まだ</div>; })}
-      </div>
+      </div>}
     </div>);
   const formCard = (
     <div className="mhm-card" data-assistant-masmon-formation>
       <p className="flex items-baseline justify-between text-[10px] font-black text-slate-400"><span>編成</span><span className="text-amber-200">{team.length}/{ASSISTANT_MASMON_DRAW_MAX}</span></p>
       <div className="mt-1 grid grid-cols-4 gap-1.5">
-        {slots.map(({ t, ok }) => ok
+        {slots.filter(x => x.ok).map(({ t, ok }) => ok
           ? <button key={t.monster} type="button" className="relative text-center" data-assistant-masmon-team={t.monster} onClick={() => onOpen(t)}>
               {t.lead && <em className="mhm-lead absolute left-0 top-0 z-[1]" style={{ fontSize: 8.5 }}>勇者</em>}
               <div className="mhm-stage"><AssistantMasmonPic t={t} size={cell}/></div>
@@ -1413,10 +1415,15 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
             </button>
           : (() => { const m = t.unknown ? null : assistantMasmonMon(t.monster); return (
             <div key={t.monster} className="text-center" data-assistant-masmon-wait={t.monster}>
-              <div className="mhm-stage"><div className="mhm-pic grid place-items-center" style={{ width: cell, height: cell }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.5) }} data-assistant-masmon-unknown>？</span>}</div></div>
+              <div className="mhm-stage grid place-items-center" style={{ height: cell }}><div className="mhm-pic grid place-items-center opacity-60" style={{ width: Math.round(cell * 0.55), height: Math.round(cell * 0.55) }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.3) }} data-assistant-masmon-unknown>？</span>}</div></div>
               <p className="mt-0.5 truncate text-[9.5px] font-bold text-sky-200">🔒 Lv{t.welcome}</p>
             </div>); })())}
       </div>
+      {/* まだ迎えていない枠は、絵の枠を並べず小さな札の1行に(2026-11-20 総点検 §10: 空の「?」の枠がいる子より目立っていた) */}
+      {slots.some(x => !x.ok) && <div className="mt-1.5 flex flex-wrap items-center gap-1" data-assistant-masmon-wait-row>
+        <span className="text-[10.5px] font-bold text-slate-400">まだの枠:</span>
+        {slots.filter(x => !x.ok).map(({ t }) => <span key={t.monster} className="rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200" data-assistant-masmon-wait={t.monster}>🔒 仲良し度Lv{t.welcome}</span>)}
+      </div>}
     </div>);
   return (<>
     <div className={`grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`}>
