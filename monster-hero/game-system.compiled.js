@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53ecd455ac476cd2
+// source-sha256: 9f7715fdbbfd2563
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -269517,8 +269517,10 @@ function MonsterHeroGame() {
         className: "block text-[14px] font-black text-white leading-tight",
         style: JA_LABEL_STYLE
       }, React.createElement("span", {
-        "aria-hidden": "true"
-      }, activeGroup.emoji, " "), jaWrap(activeGroup.label)), React.createElement("small", {
+        "aria-hidden": "true",
+        "data-event-replay-head-emoji": true,
+        className: "block text-[16px] leading-none mb-0.5"
+      }, activeGroup.emoji), jaWrap(activeGroup.label)), React.createElement("small", {
         className: "block text-[10px] font-black tabular-nums",
         style: {
           color: activeGroup.color
@@ -271890,6 +271892,7 @@ function MonsterHeroGame() {
         }, event.openingLogo.badge)) : parts.series && React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
+            paddingLeft: '.3em',
             animation: 'storyEndCard 1s ease-out .2s both'
           }
         }, parts.series), React.createElement("p", {
@@ -271969,6 +271972,7 @@ function MonsterHeroGame() {
         }, React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
+            paddingLeft: '.3em',
             animation: `storyEndCard 1s ease-out ${delay + .2}s both`
           }
         }, parts.series), React.createElement("p", {
@@ -271986,6 +271990,7 @@ function MonsterHeroGame() {
           "data-story-ending-fin": true,
           className: "mt-5 text-[38px] font-black tracking-[.4em]",
           style: {
+            paddingLeft: '.4em',
             animation: `storyEndFin 1.4s ease-out ${delay + .9}s both`,
             background: 'linear-gradient(180deg,#fde68a,#f0abfc)',
             WebkitBackgroundClip: 'text',
