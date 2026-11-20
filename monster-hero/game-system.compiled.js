@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f0f421eb8507c77d
+// source-sha256: 8dbb07ffd1c64f3b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164174,7 +164174,7 @@ function MsxScenarioSelect({
     type: "button",
     className: "bk",
     onClick: onBack
-  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "シナリオ ", idx + 1, "/", n)), React.createElement("div", {
+  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "ストーリー ", idx + 1, "/", n)), React.createElement("div", {
     className: "scn-sc"
   }, React.createElement("img", {
     className: "bg",
@@ -164213,9 +164213,9 @@ function MsxScenarioSelect({
     className: i === idx ? '' : 'off'
   }))), many ? null : React.createElement("span", {
     className: "scn-note"
-  }, "ほかのシナリオは 準備中です"))), many ? React.createElement(React.Fragment, null, React.createElement("button", {
+  }, "ほかのストーリーは 準備中です"))), many ? React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
-    "aria-label": "前のシナリオ",
+    "aria-label": "前のストーリー",
     onClick: () => setIdx(i => (i + n - 1) % n),
     style: {
       position: 'absolute',
@@ -164229,7 +164229,7 @@ function MsxScenarioSelect({
     }
   }, "◀"), React.createElement("button", {
     type: "button",
-    "aria-label": "次のシナリオ",
+    "aria-label": "次のストーリー",
     onClick: () => setIdx(i => (i + 1) % n),
     style: {
       position: 'absolute',
@@ -176807,7 +176807,7 @@ function MsxStart({
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "だれの物語で育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる")), React.createElement("div", {
+    }, "どの助手と育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる")), React.createElement("div", {
       className: "v-faces"
     }, MSX_SCENARIOS.filter(x => msxAidOpen(x.aid)).map(x => React.createElement("button", {
       type: "button",
@@ -176852,7 +176852,7 @@ function MsxStart({
       alt: ""
     })), React.createElement("div", {
       className: "tx"
-    }, React.createElement("h4", null, React.createElement("small", null, "助手のお話 ", sc.no, "・", msxAidName(aid), "編"), sc.title), React.createElement("div", {
+    }, React.createElement("h4", null, React.createElement("small", null, msxAidName(aid), "編"), sc.title), React.createElement("div", {
       style: {
         marginTop: 4
       }
@@ -177118,9 +177118,10 @@ function MsxStart({
     }, "染色はこの端末では使えません"))));
     go = '次へ ▶';
   } else {
+    const startMul = items.some(id => SUC.ITEMS && SUC.ITEMS[id] && SUC.ITEMS[id].good === 'uketsugu') ? SUC.GOOD && SUC.GOOD.uketsugu && SUC.GOOD.uketsugu.start || 2 : 1;
     const startAdd = {};
     members.forEach(m => {
-      if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v;
+      if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v * startMul;
     });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
     const capUp = typeof SUC.capOfTeam === 'function' ? Object.entries(SUC.capOfTeam(members)).filter(([, v]) => v > 999) : [];
@@ -177222,7 +177223,7 @@ function MsxStart({
       onClick: () => setScn(null)
     }, React.createElement("span", {
       className: "k"
-    }, "シナリオ"), React.createElement("span", null, msxScenarioOf(scn).name), React.createElement("span", {
+    }, "ストーリー"), React.createElement("span", null, msxScenarioOf(scn).name), React.createElement("span", {
       className: "ed"
     }, "変える")) : null, React.createElement("button", {
       type: "button",
@@ -177246,9 +177247,9 @@ function MsxStart({
       className: "v-sum"
     }, React.createElement("span", {
       className: "k"
-    }, "初めの能力"), React.createElement("span", null, Object.keys(startAdd).length ? React.createElement(React.Fragment, null, Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・'), React.createElement("small", {
+    }, "初めの能力に足す分"), React.createElement("span", null, Object.keys(startAdd).length ? React.createElement(React.Fragment, null, Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・'), React.createElement("small", {
       className: "v-sumsub"
-    }, "編成のモンスターの効果で、育成の初めに足されます")) : '編成のモンスターからの足し分はありません')), capUp.length ? React.createElement("div", {
+    }, `編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`)) : '編成のモンスターからの足し分はありません')), capUp.length ? React.createElement("div", {
       className: "v-sum",
       "data-msx-start-cap": true
     }, React.createElement("span", {
