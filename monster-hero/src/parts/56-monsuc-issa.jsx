@@ -139,7 +139,7 @@ function MsxIssaResult({ run, res, v, ev, ctx, onNext }) {
       {done && k ? <div className={`v-stamp msx-pop ${win ? 'msx-is-win' : 'ng'}`} style={{ top: '3%', fontSize: win ? 46 : 40 }}>{win ? '大成功!' : '失敗…'}<small>{win ? '装置がぴかーっと光った' : '装置から煙が…'}</small></div> : null}
       {st === 0 ? <div className="v-ibub" style={{ top: 'auto', bottom: 8, left: 8, right: '44%', ...MSX_IS_WRAP }}>{msxIsJw('「スイッチ、オン! …どうなるかな〜?」')}</div> : null}
       {done && said ? <div className="v-ibub msx-is-bub2" style={{ top: 'auto', bottom: 8, left: 8, right: '44%', ...MSX_IS_WRAP }}>{msxIsJw(`「${said.t}」`)}</div> : null}
-      {st < 2 && !calm ? <div className="msx-is-ctl"><button type="button" onClick={() => setSt(2)} data-msx-issa-skip>飛ばす ⏭</button></div> : null}
+      {st < 2 && !calm ? <div className="msx-is-ctl"><button type="button" onClick={() => setSt(2)} data-msx-issa-skip>スキップ ⏭</button></div> : null}
     </div>
     {done ? (<>
       {hasUps ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}

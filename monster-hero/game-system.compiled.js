@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 969a2ac2b49c8cda
+// source-sha256: 29b6b596e212064a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42280,6 +42280,7 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   delay: -(k * 13 % 11),
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
+const rhythmCelebrateSeWhen = (title, failed, showCelebrate) => !title || failed ? null : showCelebrate ? 'celebrate' : 'result';
 const rhythmFullComboBandMode = settings => {
   const v = rhythmFxPick(settings, 'fullComboBig');
   if (v === 'OFF' || v === 'NONE') return 'off';
@@ -44281,6 +44282,11 @@ const RhythmTapTest = ({
         touchReport
       }
     }));
+    if (rhythmCelebrateSeWhen(celebrateTitle, failed, showCelebrate) === 'result') {
+      try {
+        RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
+      } catch {}
+    }
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     setLuckyRush(false);
     if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
@@ -155335,6 +155341,9 @@ const MSC_CSS = `
 .msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+/* 2026-11-20 再点検 バ-02・58: PC(1280×800)で「結果だけ見る・試合へ」が画面の下で切れていた → ボタンの段は下に留め、低い画面では能力の行を詰める */
+.msc-wrap .msc-foot{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg,#0000,#140f2a 30%);padding-bottom:max(4px,env(safe-area-inset-bottom))}
+@media (max-height:860px) and (min-width:700px){.msc-st{height:25px}}
 .msc-foot>*{flex:1}
 /* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
 .msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
@@ -155353,6 +155362,9 @@ const MSC_CSS = `
 .msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
 .msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
 .msc-face img{width:120%;height:120%;object-fit:contain}
+/* 2026-11-20 再点検 バ-56・66: 絵が右端に約28pxで押し込まれ、誰か分からない → 名前の左に大きく置く */
+.msc-row .msc-face{order:-1;width:38px;height:38px;max-height:calc(100% - 2px);margin-left:0}
+.msc-row .msc-no{order:-2}
 .msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
@@ -155368,7 +155380,8 @@ const MSC_CSS = `
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
-.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
+.msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
@@ -155419,6 +155432,7 @@ const MSC_CSS = `
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
+.msc-fcnote{margin:-2px 2px 0;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:center}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
 .msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
 .msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
@@ -155602,7 +155616,7 @@ function MonsucBracket({
   const top = E[no.indexOf(1)] || E[0];
   const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
   const foeNo = no[fi];
-  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
+  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう。", Z, info.meName, "が", Z, " 戦うのは", Z, " 決勝の1戦だよ」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "が", Z, " 戦うのは", Z, " 決勝の1戦だよ。", Z, "まずは", Z, " 1回戦を", Z, " 見ていこう」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
   const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " 能力ポイントが1.5倍!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
@@ -155615,7 +155629,7 @@ function MonsucBracket({
     className: "msc-btn g s",
     "data-msc-close": true,
     onClick: onClose
-  }, "← 戻る"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+  }, "← 戻る")), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
     className: "msc-head"
@@ -155674,19 +155688,13 @@ function MonsucBracket({
     }
   }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
     className: "msc-note"
-  }, React.createElement("b", null, "決勝は ", React.createElement("span", {
+  }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
     className: "nw"
-  }, info.meName, " VS ", nm(foe))), "。", React.createElement("span", {
+  }, info.meName, " VS ", nm(foe))), "。") : null, React.createElement("span", {
     className: "nw"
   }, "左の数字は人気の順"), React.createElement("span", {
     className: "nw"
-  }, "(1が 一番人気)。"), React.createElement("small", null, React.createElement("span", {
-    className: "nw"
-  }, "ほかの試合の結果は、"), React.createElement("span", {
-    className: "nw"
-  }, "見せるだけの演出です"), React.createElement("span", {
-    className: "nw"
-  }, "(戦うのは決勝の1戦だけ)"))), React.createElement("div", {
+  }, "(1が 一番人気)。")), React.createElement("div", {
     className: "msc-talk"
   }, React.createElement("img", {
     src: mscFace(s.aid),
@@ -155704,7 +155712,7 @@ function MonsucBracket({
     className: "msc-sk",
     "data-msc-skip": true,
     onClick: () => setStage(3)
-  }, "SKIP ▸▸") : null), React.createElement("div", {
+  }, "スキップ ⏭") : null), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
@@ -155713,14 +155721,14 @@ function MonsucBracket({
     onClick: () => canSkip && onResultOnly()
   }, "⏩ 結果だけ見る", canSkip ? React.createElement("small", {
     className: "msc-qsub"
-  }, "優勝ずみ") : React.createElement("small", {
+  }, "一度優勝したので使えます") : React.createElement("small", {
     className: "msc-qsub",
     "data-msc-quick-why": true
   }, "一度優勝すると使えます")), React.createElement("button", {
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
-  }, "⚔ 決勝へ")));
+  }, "⚔ 試合へ ▶")));
 }
 function MonsucBattleCard({
   suc,
@@ -155857,6 +155865,9 @@ function MonsucBattleCard({
     key: dn,
     className: reach[d] ? 'y' : ''
   }, dn))))), React.createElement("div", {
+    className: "msc-fcnote",
+    "data-msc-dist-note": true
+  }, "間合いは 零(くっつく)・近・中・遠 の順に離れます"), React.createElement("div", {
     className: "msc-tabs"
   }, [['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => React.createElement("button", {
     key: k,
@@ -155977,7 +155988,7 @@ function MonsucBattleCard({
     className: "msc-btn",
     "data-msc-ready": true,
     onClick: onReady
-  }, "準備完了")));
+  }, "⚔ 試合へ ▶")));
 }
 function MonsucCutin({
   s,
@@ -161830,7 +161841,7 @@ function MonsucFuseShow({
     type: "button",
     onClick: () => setSt(3),
     "data-monsuc-fuse-skip": true
-  }, "飛ばす ⏭")) : null, React.createElement("div", {
+  }, "スキップ ⏭")) : null, React.createElement("div", {
     className: "mf-stage"
   }, React.createElement("img", {
     className: "mf-mon a",
@@ -162550,7 +162561,7 @@ function MsxAwakeShow({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-awake-skip": true
-  }, "飛ばす ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
+  }, "スキップ ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: fire.ups
@@ -162759,7 +162770,7 @@ function MsxBirth({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-birth-skip": true
-  }, "飛ばす ⏭")) : null), React.createElement("div", {
+  }, "スキップ ⏭")) : null), React.createElement("div", {
     className: "v-log"
   }, st >= 3 ? React.createElement(React.Fragment, null, "円盤石から、", React.createElement("b", null, name), "が生まれた! ここから育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
     className: "v-ft"
@@ -163204,7 +163215,7 @@ function MsxIssaResult({
     type: "button",
     onClick: () => setSt(2),
     "data-msx-issa-skip": true
-  }, "飛ばす ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
+  }, "スキップ ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: ups
@@ -164528,7 +164539,8 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
+/* 戻るはほかのモンサクの画面と同じ丸い形にそろえる(金色の四角だった。r1119-049 窓-33) */
+.msx .scn-hd .bk{flex:none;display:inline-flex;align-items:center;min-height:36px;background:#2b3348;color:#fff;border:0;border-radius:99px;font-weight:900;font-size:11px;padding:4px 10px;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -164572,6 +164584,7 @@ function MsxScenarioSelect({
   }, React.createElement("button", {
     type: "button",
     className: "bk",
+    "data-mh-back": true,
     onClick: onBack
   }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), many ? React.createElement("small", null, "ストーリー ", idx + 1, "/", n) : null), React.createElement("div", {
     className: "scn-sc"
@@ -167284,7 +167297,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "飛ばす ⏭") : null, React.createElement("button", {
+  }, "スキップ ⏭") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -179503,10 +179516,10 @@ function MsxBand({
     className: "n"
   }, v.period.at >= 3 && s.over ? React.createElement("b", {
     className: "hfday"
-  }, "終了") : v.period.at >= 3 ? React.createElement(React.Fragment, null, "このあと", React.createElement("b", {
+  }, "終了") : v.period.at >= 3 ? React.createElement("b", {
     className: "hfday",
     "data-msx-hfround": true
-  }, ['1回戦', '準決勝', '決勝'][Math.min(2, v.period.at - 3)])) : React.createElement(React.Fragment, null, "あと", React.createElement("b", null, 3 - v.period.at), "ターン"))) : React.createElement("div", {
+  }, "大会の日") : React.createElement(React.Fragment, null, "あと", React.createElement("b", null, 3 - v.period.at), "ターン"))) : React.createElement("div", {
     className: "v-turn"
   }, React.createElement("span", {
     className: "ph"
@@ -180471,7 +180484,8 @@ function MsxHome({
     onClose: () => setDex(false)
   }) : null, React.createElement(MsxHd, {
     back: "HOMEへ戻る",
-    onBack: onClose
+    onBack: onClose,
+    sub: "モンサクルーム"
   }), React.createElement("div", {
     className: "v-body v-hm"
   }, React.createElement("div", {
@@ -181124,7 +181138,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "飛ばす ⏭"), React.createElement("button", {
+    }, "スキップ ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -181177,7 +181191,7 @@ function MsxPlay({
       type: "button",
       onClick: () => tGo(-1),
       "data-msx-tev-skip": true
-    }, "イベントを飛ばす ⏭"), React.createElement("button", {
+    }, "スキップ ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tLast ? toReact(run) : tGo(tAt + 1),
@@ -181457,7 +181471,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "飛ばす ⏭"));
+    }, "スキップ ⏭"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -182006,10 +182020,7 @@ function MsxPlay({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
-    }, MSX_SEASON[cal.season], "・", scn.time), v.period.key === 'final' ? null : preOn ? React.createElement("span", {
-      className: "v-chip hot",
-      "data-msx-pre-chip": true
-    }, "🏆 ", preName, " 当日") : v.period.left <= 1 ? React.createElement("span", {
+    }, MSX_SEASON[cal.season], "・", scn.time), v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? React.createElement("span", {
       className: "v-chip hot",
       "data-msx-cup-soon": true
     }, "🏆 このあと期末の大会") : null, pkI.state === 'in' ? React.createElement("span", {
@@ -184562,14 +184573,15 @@ function MsxR3Frame({
   run,
   right,
   body,
-  foot
+  foot,
+  rankName = ''
 }) {
   const s = run.s;
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement(MsxHd, {
     back: back,
     onBack: onBack,
     sub: `${msxAidName(s.aid)}編`,
-    right: right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G`
+    right: right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`
   }), React.createElement("div", {
     className: "v-body r3"
   }, body), foot);
@@ -184864,7 +184876,6 @@ function MsxR3Cup({
     };
     onActed(next);
   };
-  const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
@@ -184911,7 +184922,7 @@ function MsxR3Cup({
     }
   }), React.createElement("div", {
     className: "v-ev-h"
-  }, React.createElement("small", null, cal.year, "年目 ", cal.month, "月・", v.period.name), "🏆 大会の受付"), React.createElement("div", {
+  }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub",
     style: {
       left: '38%',
@@ -184919,9 +184930,6 @@ function MsxR3Cup({
       bottom: 8
     }
   }, openLine.t)), React.createElement("div", {
-    className: "v-cupbar",
-    "data-msx-r3-fame": true
-  }, React.createElement("span", null, "いまの賞金"), React.createElement("b", null, msxFmt(s.fame), React.createElement("small", null, "G")), rank ? React.createElement("i", null, "賞金の段 ", rank.name) : null), React.createElement("div", {
     className: "v-cupmon"
   }, React.createElement("button", {
     type: "button",
@@ -184997,13 +185005,12 @@ function MsxR3Cup({
     style: {
       margin: 0
     }
-  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。", toForced ? React.createElement("span", {
-    className: "yel"
-  }, ' 期末の大会まで ', React.createElement("span", {
+  }, React.createElement("b", null, "出ると"), React.createElement("span", {
+    className: "msx-kp",
     style: {
-      whiteSpace: 'nowrap'
+      textAlign: 'left'
     }
-  }, `あと${toForced}ターン`)) : null))), wc ? React.createElement("div", {
+  }, msxPh('1戦だけ・｜1ターン使う・｜体力は減りません・｜勝つと賞金と賞品。')))), wc ? React.createElement("div", {
     className: "v-cupwin",
     onClick: () => {
       setWin(null);
@@ -185124,7 +185131,8 @@ function MsxR3Cup({
     run: run,
     onBack: onBack,
     body: body,
-    foot: foot
+    foot: foot,
+    rankName: rank ? rank.name : ''
   });
 }
 function MsxR3Watch({
@@ -185358,9 +185366,9 @@ function MsxR3Bracket({
     pathLength: "1"
   }))), React.createElement("div", {
     className: "win"
-  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), React.createElement("div", {
+  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), stage >= 3 ? React.createElement("div", {
     className: "v-bnt"
-  }, React.createElement("b", null, "決勝は ", run.nick, " VS ", foeName), "。", React.createElement("span", null, "ほかの試合の結果は、見せるだけの演出です(戦うのは決勝の1戦だけ)")), React.createElement("div", {
+  }, React.createElement("b", null, "決勝は ", run.nick, " VS ", foeName)) : null, React.createElement("div", {
     className: "v-ann"
   }, React.createElement("div", {
     className: "pic"
@@ -185374,7 +185382,7 @@ function MsxR3Bracket({
     className: "sk",
     onClick: () => setStage(3),
     "data-msx-r3-bsk": true
-  }, "飛ばす ⏭") : null));
+  }, "スキップ ⏭") : null));
   const foot = debug ? React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -185390,7 +185398,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ ▶")) : React.createElement("div", {
+  }, "⚔ 試合へ ▶")) : React.createElement("div", {
     className: "v-ft"
   }, skip ? React.createElement("button", {
     type: "button",
@@ -185413,7 +185421,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ ▶"));
+  }, "⚔ 試合へ ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
     back: "中断",
@@ -185606,6 +185614,9 @@ const MSX_R3_INTRO_CSS = `
 .msx-cupin .logo{position:relative;text-align:center;padding:0 12px;animation:msxCupinLogo .5s ease-out .45s both}
 .msx-cupin .logo small{display:inline-block;font-size:12px;font-weight:900;color:#1e1b4b;background:#fde68a;border-radius:99px;padding:2px 12px;margin-bottom:4px;letter-spacing:.06em}
 .msx-cupin .logo b{display:block;font-size:min(9vw,34px);font-weight:900;color:#fff;line-height:1.15;-webkit-text-stroke:2px #1e293b;paint-order:stroke fill;text-shadow:0 3px 0 #1e293b,0 0 18px rgba(255,255,255,.55);word-break:keep-all;overflow-wrap:anywhere}
+.msx-cupin .pzl{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:94%;animation:msxCupinLogo .5s ease-out .7s both}
+.msx-cupin .pzl span{font-size:13px;font-weight:900;color:#fff;background:#0f0b22cc;border:1px solid #fde68a88;border-radius:99px;padding:3px 10px;white-space:nowrap}
+.msx-cupin .pzl span.g{font-size:15px;color:#fde047;border-color:#fde047}
 @keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
 @keyframes msxCupinCrest{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
 @keyframes msxCupinLogo{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
@@ -185628,6 +185639,15 @@ function MsxR3CupIntro({
     return () => clearTimeout(id);
   }, []);
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup : '';
+  const pz = (() => {
+    try {
+      const S = msxSuc.SUC;
+      if (b.kind === 'cup') return [];
+      return msxR3ForcedPrizes(S, b).filter(x => x.id !== 'tk').slice(0, 4);
+    } catch (_) {
+      return [];
+    }
+  })();
   const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_INTRO_CSS), React.createElement("div", {
     className: "msx-cupin",
@@ -185645,7 +185665,13 @@ function MsxR3CupIntro({
     className: "e"
   }, msxR3BattleIcon(b))), React.createElement("div", {
     className: "logo"
-  }, React.createElement("small", null, label), React.createElement("b", null, title))));
+  }, React.createElement("small", null, label), React.createElement("b", null, title)), pz.length ? React.createElement("div", {
+    className: "pzl",
+    "data-msx-r3-cupintro-prize": true
+  }, pz.map(x => React.createElement("span", {
+    key: x.id,
+    className: x.id === 'g' ? 'g' : ''
+  }, x.e, " ", String(x.name).replace(/｜/g, '').replace(/\u00a0/g, ' ')))) : null));
 }
 const msxR3ForcedPrizes = (SUC, b) => {
   const F = b.kind === 'summit' ? null : (SUC.FORCED || {})[b.kind] || {};
@@ -185767,7 +185793,7 @@ function MsxR3PreDesk({
     }
   }), React.createElement("div", {
     className: "v-ev-h"
-  }, React.createElement("small", null, cal.year, "年目 ", cal.month, "月・", v.period.name), "🏆 大会の受付"), React.createElement("div", {
+  }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub msx-kp",
     style: {
       left: '44%',
@@ -185777,9 +185803,6 @@ function MsxR3PreDesk({
       fontSize: 13
     }
   }, openLine.t)), React.createElement("div", {
-    className: "v-cupbar",
-    "data-msx-r3-fame": true
-  }, React.createElement("span", null, "いまの賞金"), React.createElement("b", null, msxFmt(s.fame), React.createElement("small", null, "G")), rank ? React.createElement("i", null, "賞金の段 ", rank.name) : null), React.createElement("div", {
     className: "v-cupmon"
   }, React.createElement("span", {
     className: "ar",
@@ -185894,7 +185917,8 @@ function MsxR3PreDesk({
     run: run,
     onBack: onBack,
     body: body,
-    foot: foot
+    foot: foot,
+    rankName: rank ? rank.name : ""
   });
 }
 function MsxR3Battle({
@@ -186373,7 +186397,7 @@ function MsxR3Battle({
         style: {
           textAlign: 'center'
         }
-      }, "🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ") : null);
+      }, "🍽 ごほうびのごはんは、ファームで待っているよ") : null);
       return React.createElement(MsxR3Frame, {
         run: run,
         back: "中断",
@@ -186534,7 +186558,7 @@ function MsxR3Battle({
         className: "go",
         onClick: () => setIntroSeen(introKey),
         "data-msx-r3-cupintro-go": true
-      }, "飛ばす ⏭"))
+      }, "スキップ ⏭"))
     });
   }
   const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
@@ -188715,7 +188739,7 @@ function MsxR3Retire({
           onPause();
         },
         "data-msx-r3-home": true
-      }, "ホームへ ▶"))
+      }, "モンサクルームへ ▶"))
     });
   }
   const body = React.createElement(React.Fragment, null, React.createElement("div", {

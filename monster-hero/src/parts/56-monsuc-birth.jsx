@@ -37,7 +37,7 @@ function MsxBirth({ run, v, ev, onDone }) {
       {st >= 3 ? <><div className="gr" style={{ bottom: 'calc(14% - 5px)' }}/>
         <MsxMonArt run={run} className="mon msx-birth-mon" style={{ bottom: '14%', height: '46%' }} live noPeak/></> : null}
       <div className="msx-birth-head"><small>{fused ? '合体円盤石' : 'ベースモンの円盤石'}</small>{st >= 3 ? `${name}が生まれた!` : '円盤石が光りはじめた…'}</div>
-      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-birth-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-birth-skip>飛ばす ⏭</button></div> : null}
+      {st < 3 && !calm ? <div className="msx-aw-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-msx-birth-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-msx-birth-skip>スキップ ⏭</button></div> : null}
     </div>
     <div className="v-log">{st >= 3 ? <>円盤石から、<b>{name}</b>が生まれた! ここから育成がはじまる。</> : <>円盤石が、あたたかい光につつまれていく…</>}</div>
     <div className="v-ft"><button type="button" className="go" disabled={st < 3} onClick={onDone} data-msx-birth-next>育成を始める ▶</button></div>

@@ -472,32 +472,27 @@ check('セリフをJSXへ直接書いていない', (() => {
   return texts.every(t => !source.includes(t));
 })());
 check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//.test(source));
-// HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
-// かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
+// HOME の作り直し(2026-11-17)で、吹き出しは上の帯の下に流れで置く形(position:relative)になった。
+// 重ならないことは CSS の数値でなく、ブラウザで実際の位置を測って確かめる(下の「ブラウザで測っている」)
 // 2026-10-23 からセリフは2行まで(maxLines={2})だったが、幅320で「…」で切れた(2026-10-24 窓口)。いまは全文を出し、伸びたぶん「M/B管理」の札を下げる(home-layout-check)
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
-  has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
+  has('.mh-home-assistant{position:relative;z-index:5;width:70%;margin:3px 0 0 3%;pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:68%}}')
     // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下の行(左の空き)へ重ねる。
     // 吹き出しの下へ1段足すと高くなり、横持ちの「M/B管理」・小さい画面のジャックの吹き出しにかぶった(2026-10-16。raid-jack-home-say-tap-check)
     && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')
     && has('data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10'));
-// 上のプロフィールカードに重ならないことを、CSSの数値から計算して確かめる。
-// safe-area は帯にも吹き出しにも同じだけ効くので、比べるのは固定の px だけでよい
-check('HOMEの吹き出しはプロフィールカードの下に来る', (() => {
-  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : null; };
-  const headerPad = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
-  const avatar = num(/\.mh-home-avatar\{flex:0 0 (\d+)px/);
-  const playerPad = num(/\.mh-home-player\{[^}]*padding:(\d+)px/);
-  const assistantTop = num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
-  if ([headerPad, avatar, playerPad, assistantTop].some(v => v == null)) return false;
-  // プロフィールカードの下端 = 帯の上余白 + (アイコン + 上下の内側余白 + 枠線)
-  const cardBottom = headerPad + avatar + playerPad * 2 + 2;
-  return assistantTop >= cardBottom + 6;
-})(), (() => {
-  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : 0; };
-  const cardBottom = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env/) + num(/\.mh-home-avatar\{flex:0 0 (\d+)px/) + num(/\.mh-home-player\{[^}]*padding:(\d+)px/) * 2 + 2;
-  return `カード下端 ${cardBottom}px / 吹き出し ${num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env/)}px`;
+// 上のプロフィールカード・下のドック・右端のボタン・画面の端に重ならないことは、ブラウザで実際の位置を測って確かめる
+// (前は CSS の top の数値から計算していたが、流れで置く形になって数値が無くなった)。
+// 測る道具 homeDockProblems(tools/assistant/life-browser-shared.js)が吹き出しを測る物に入れていて、
+// HOME の配置の検査(tools/assistant/assistant-life-home-layout-check.js)が縦 390×844 と横で回していることを見張る
+check('HOMEの吹き出しの置き場所は、ブラウザで縦と横の実際の位置を測っている', (() => {
+  const rd = (f) => { try { return fs.readFileSync(path.join(__dirname, f), 'utf8'); } catch { return ''; } };
+  const shared = rd('assistant/life-browser-shared.js'), layout = rd('assistant/assistant-life-home-layout-check.js');
+  const measured = /document\.querySelector\('\.mh-home-assistant'\)[^\n]*parts\.push\(\{ c: '吹き出し'/.test(shared)
+    && /parts\.push\(\{ c: '上の帯'/.test(shared) && /ng\.push\(`\$\{p\.c\}が画面の外`\)/.test(shared) && /\$\{p\.c\}×ドック/.test(shared);
+  const sizes = /w: 390, h: 844/.test(layout) && /w: 844, h: 390/.test(layout) && /homeFacesProblems\(page\)/.test(layout);
+  return measured && sizes;
 })());
 // はじめての案内で、光らせた場所が画面の下のほうにあるときは説明を上へ寄せる。
 // バトルやミッションを説明しているときに、説明の吹き出しがその上に重なっていた

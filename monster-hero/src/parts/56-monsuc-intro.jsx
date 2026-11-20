@@ -40,7 +40,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
       </div>
     </div>
     <div className="v-ft">
-      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>飛ばす ⏭</button> : null}
+      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>スキップ ⏭</button> : null}
       <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成を始める ▶' : '次へ ▶'}</button>
     </div>
   </>);

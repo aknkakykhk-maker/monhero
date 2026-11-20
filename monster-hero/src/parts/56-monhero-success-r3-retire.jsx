@@ -313,7 +313,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
       {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
-    return <MsxR3Frame run={run} back="" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>モンサクルームへ ▶</button></div>}/>;
   }
   const body = (<>
     <div className="v-pt"><div className="n">アシストポイント<b>{left}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {points}</small></b></div>
