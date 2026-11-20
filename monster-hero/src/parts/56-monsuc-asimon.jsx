@@ -44,7 +44,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : { species: mem.species };
   const pow = rec && Number.isFinite(rec.score) ? rec.score : mem.power;
-  const role = kind === 'friend' ? 'フレンド' : kind === 'memo' ? 'メモモン' : kind === 'base' ? 'ベースモン' : 'マスモン';
+  const role = kind === 'friend' ? 'フレンド' : kind === 'memo' ? 'メモモン' : kind === 'base' ? 'ベースモン' : kind === 'team' ? '編成' : 'マスモン';
   const top = Array.isArray(mem.top) ? mem.top.slice(0, 3) : [];
   return (
     <div className="msx-ov msx-fade msx-asd-ov" data-msx-assist-detail onClick={onClose}>
