@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dc40537eae09263
+// source-sha256: fffd04cf68c8bcf6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112677,7 +112677,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         practice: 1.3
       }
     },
-    note: '夕方から夜は練習スタジオでレッスン。見てほしいのでだれかと'
+    note: '夕方から夜はモンヒロビートでレッスン。見てほしいのでだれかと'
   },
   dra: {
     social: 0.6,
@@ -112778,7 +112778,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
         cards: 1.3
       }
     },
-    note: '夜はカード部屋で研究と計算。だれかを巻きこみたい'
+    note: '夜はMFバトルカードで研究と計算。だれかを巻きこみたい'
   },
   erubin: {
     social: 0.7,
@@ -112804,7 +112804,7 @@ const ASSISTANT_LIFE_PREFS = Object.freeze({
       }
     },
     caring: true,
-    note: 'カード部屋(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く'
+    note: 'MFバトルカード(デュラハン)と広場の散歩。さみしそうな助手のそばへ行く'
   }
 });
 const ASSISTANT_LIFE_RHYTHM = Object.freeze({
@@ -116145,6 +116145,12 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 };
 const assistantLifeTodLabel = (now = Date.now()) => {
   try {
+    if (typeof assistantLifeSlotAt === 'function') {
+      const l = assistantLifeSlotAt(now).label;
+      if (l) return l;
+    }
+  } catch (_) {}
+  try {
     if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now);
   } catch (_) {}
   return {
@@ -116305,6 +116311,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
 .mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:normal}.mhl-tile b>span,.mhl-tile small>span{white-space:nowrap}
+.mhl-tile.mhl-main{flex:1.8 1 0%;min-height:66px}.mhl-tile.mhl-main i{font-size:22px}.mhl-tile.mhl-main b{font-size:17px}.mhl-tile.mhl-main small{font-size:11px}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
 .mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
@@ -117182,7 +117189,7 @@ function AssistantLifeRoomSheet({
     k: cardSpent ? 'card-spent' : 'card',
     icon: "🃏",
     label: "MFバトルカードで対戦する",
-    sub: "カード部屋にいる助手と対戦すると、ごほうびアップ",
+    sub: "MFバトルカードにいる助手と対戦すると、ごほうびアップ",
     gain: `ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
     on: () => onCard(id),
     disabled: !!cardSpent,
@@ -117583,7 +117590,7 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
-  }, "🃏 カード部屋で対戦する ", React.createElement("span", {
+  }, "🃏 MFバトルカードで対戦する ", React.createElement("span", {
     className: "mhl-card-up"
   }, "ごほうびアップ")))), React.createElement("button", {
     type: "button",
@@ -118908,7 +118915,7 @@ function AssistantLifeHouse({
     "data-assistant-life-today": true
   }, React.createElement("button", {
     type: "button",
-    className: `mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`,
+    className: `mhl-tile mhl-watch mhl-main${land ? ' col-span-2' : ''}${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`,
     "data-assistant-life-today-act": "watch",
     disabled: watchLeft <= 0 || !unwatched.length,
     onClick: () => {
@@ -119039,7 +119046,7 @@ function AssistantLifeHouse({
   }, assistantLifeTodLabel(), " ・ ", React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "whitespace-nowrap"
-  }, assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), React.createElement("div", {
+  }, assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), (!uiV2 || tab === 'house') && React.createElement("div", {
     className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
@@ -119136,8 +119143,6 @@ function AssistantLifeHouse({
       markGuideSeen();
       if (unwatched[0]) watch(unwatched[0]);
     }
-  }), topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
-    land: land
   }), topOn && React.createElement("div", {
     className: "mb-1 flex justify-center",
     "data-assistant-life-top-house": true
@@ -119207,7 +119212,7 @@ function AssistantLifeHouse({
   }), uiV2 && typeof AssistantLifePlanBand === 'function' && React.createElement(AssistantLifePlanBand, {
     ids: ids,
     land: land
-  }), !topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+  }), typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
     land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
@@ -124180,7 +124185,7 @@ function AssistantLifeTopStrip({
   })), React.createElement("p", {
     className: "mt-0.5 rounded-lg bg-slate-950/70 px-2 py-0.5 text-[11px] font-bold text-slate-100",
     "data-assistant-life-top-sum": true
-  }, "家に", home, "人 ・ おでかけ", list.length - home, "人", next != null ? ` ・ 次にみんなが動くのは ${next}:00` : ''));
+  }, "家に", home, "人 ・ おでかけ", list.length - home, "人"));
 }
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
@@ -144703,7 +144708,10 @@ function AssistantMasmonFormation({
     "data-assistant-masmon-allies": true
   }, React.createElement("p", {
     className: "text-[10px] font-black text-slate-400"
-  }, "道中で仲間にしやすい3体"), React.createElement("div", {
+  }, "道中で仲間にしやすい3体"), !allies.length ? React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-400",
+    "data-assistant-masmon-allies-empty": true
+  }, "まだいません(編成のマスモンが増えると、ここに並びます)") : React.createElement("div", {
     className: "mt-1 grid grid-cols-3 gap-1.5"
   }, [0, 1, 2].map(i => {
     const t = allies[i];
@@ -144739,7 +144747,7 @@ function AssistantMasmonFormation({
     className: "text-amber-200"
   }, team.length, "/", ASSISTANT_MASMON_DRAW_MAX)), React.createElement("div", {
     className: "mt-1 grid grid-cols-4 gap-1.5"
-  }, slots.map(({
+  }, slots.filter(x => x.ok).map(({
     t,
     ok
   }) => ok ? React.createElement("button", {
@@ -144767,12 +144775,15 @@ function AssistantMasmonFormation({
       className: "text-center",
       "data-assistant-masmon-wait": t.monster
     }, React.createElement("div", {
-      className: "mhm-stage"
-    }, React.createElement("div", {
-      className: "mhm-pic grid place-items-center",
+      className: "mhm-stage grid place-items-center",
       style: {
-        width: cell,
         height: cell
+      }
+    }, React.createElement("div", {
+      className: "mhm-pic grid place-items-center opacity-60",
+      style: {
+        width: Math.round(cell * 0.55),
+        height: Math.round(cell * 0.55)
       }
     }, m ? React.createElement("img", {
       src: m.imgUrl,
@@ -144787,13 +144798,24 @@ function AssistantMasmonFormation({
     }) : React.createElement("span", {
       className: "font-black text-slate-500",
       style: {
-        fontSize: Math.round(cell * 0.5)
+        fontSize: Math.round(cell * 0.3)
       },
       "data-assistant-masmon-unknown": true
     }, "？"))), React.createElement("p", {
       className: "mt-0.5 truncate text-[9.5px] font-bold text-sky-200"
     }, "🔒 Lv", t.welcome));
-  })())));
+  })())), slots.some(x => !x.ok) && React.createElement("div", {
+    className: "mt-1.5 flex flex-wrap items-center gap-1",
+    "data-assistant-masmon-wait-row": true
+  }, React.createElement("span", {
+    className: "text-[10.5px] font-bold text-slate-400"
+  }, "まだの枠:"), slots.filter(x => !x.ok).map(({
+    t
+  }) => React.createElement("span", {
+    key: t.monster,
+    className: "rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10.5px] font-bold text-sky-200",
+    "data-assistant-masmon-wait": t.monster
+  }, "🔒 仲良し度Lv", t.welcome))));
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: `grid gap-2 ${land ? 'grid-cols-2' : 'grid-cols-1'}`
   }, React.createElement("div", {
@@ -149858,9 +149880,7 @@ function AssistantLifePlanPicker({
       onDone && onDone();
     },
     className: `min-h-[44px] rounded-xl px-1.5 text-left text-[12px] font-black leading-tight ${cur === p ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95 disabled:opacity-35`
-  }, ASSISTANT_LIFE_PLAN_ICON[p], " ", typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p) ? React.createElement(React.Fragment, null, assistantLifeBodyLabel(p)[0], " ", React.createElement("span", {
-    className: "text-[10px] font-bold text-slate-400"
-  }, assistantLifeBodyLabel(p)[1])) : ASSISTANT_LIFE_PLACES[p], p === fav ? typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? ' ♥ 好きな場所' : ' ♥' : '', assistantLifePlanPerk(p) && React.createElement("span", {
+  }, ASSISTANT_LIFE_PLAN_ICON[p], " ", typeof assistantLifeBodyLabel === 'function' && assistantLifeBodyLabel(p) ? React.createElement(React.Fragment, null, assistantLifeBodyLabel(p)[0]) : typeof assistantLifePlaceShow === 'function' ? assistantLifePlaceShow(p) : ASSISTANT_LIFE_PLACES[p], p === fav ? typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn() ? ' ♥ 好きな場所' : ' ♥' : '', assistantLifePlanPerk(p) && React.createElement("span", {
     className: "block text-[10px] font-bold text-amber-200"
   }, "得: ", assistantLifePlanPerk(p)), typeof AssistantLifeBodyPlaceStat === 'function' && React.createElement(AssistantLifeBodyPlaceStat, {
     place: p,
@@ -164323,7 +164343,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   name: 'ヒーローへの道',
   en: 'ROAD TO HERO',
   badge: 'ヒーローズファイナル',
-  lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
+  lead: ['町の育成場で、きみと1体のモンスターの物語が始まる。', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
   rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの9段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
@@ -164351,7 +164371,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
 .msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ld{margin:10px 3% 0;text-align:left;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(12px,3.4vw,13.5px);font-weight:800;line-height:1.65;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
 .msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-note{display:inline-block;background:#1e1b3ae6;border:1px solid #f9a8d4aa;border-radius:99px;padding:2px 12px}
@@ -164404,7 +164424,7 @@ function MsxScenarioSelect({
     type: "button",
     className: "bk",
     onClick: onBack
-  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), React.createElement("small", null, "シナリオ ", idx + 1, "/", n)), React.createElement("div", {
+  }, "← 戻る"), React.createElement("span", null, "📖 ストーリー選択"), many ? React.createElement("small", null, "ストーリー ", idx + 1, "/", n) : null), React.createElement("div", {
     className: "scn-sc"
   }, React.createElement("img", {
     className: "bg",
@@ -164434,18 +164454,20 @@ function MsxScenarioSelect({
     className: "scn-ti"
   }, React.createElement("b", null, sc.name), React.createElement("small", null, sc.en)), React.createElement("div", {
     className: "scn-ld"
-  }, React.createElement("div", null, sc.lead.map((t, i) => React.createElement(React.Fragment, {
+  }, React.createElement("div", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, sc.lead.map((t, i) => React.createElement(React.Fragment, {
     key: i
-  }, i ? React.createElement("br", null) : null, t)))), React.createElement("div", {
+  }, i ? React.createElement("br", null) : null, typeof jaWrap === 'function' ? jaWrap(t) : t)))), React.createElement("div", {
     className: "scn-dt"
-  }, React.createElement("div", null, MSX_STORIES.map((x, i) => React.createElement("i", {
+  }, many ? React.createElement("div", null, MSX_STORIES.map((x, i) => React.createElement("i", {
     key: x.id,
     className: i === idx ? '' : 'off'
-  }))), many ? null : React.createElement("span", {
+  }))) : null, many ? null : React.createElement("span", {
     className: "scn-note"
-  }, "ほかのシナリオは 準備中です"))), many ? React.createElement(React.Fragment, null, React.createElement("button", {
+  }, "ほかのストーリーは 準備中です"))), many ? React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
-    "aria-label": "前のシナリオ",
+    "aria-label": "前のストーリー",
     onClick: () => setIdx(i => (i + n - 1) % n),
     style: {
       position: 'absolute',
@@ -164459,7 +164481,7 @@ function MsxScenarioSelect({
     }
   }, "◀"), React.createElement("button", {
     type: "button",
-    "aria-label": "次のシナリオ",
+    "aria-label": "次のストーリー",
     onClick: () => setIdx(i => (i + 1) % n),
     style: {
       position: 'absolute',
@@ -164579,10 +164601,149 @@ const msxCheerType = m => {
   for (let i = 0; i < k.length; i++) h = h * 31 + k.charCodeAt(i) >>> 0;
   return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
 };
+const MSX_TEV_RES = Object.freeze({
+  self: n => `${n}といっしょに、夢中で体を動かした。`,
+  rest: n => `${n}とゆっくり休んで、元気が出た。`,
+  talk: n => `${n}とたくさん話して、気持ちが軽くなった。`,
+  tip: n => `${n}に教わったコツが、体に入ってきた。`,
+  pal: n => `${n}と、ますます なかよくなった。`,
+  friend: n => `${n}と、ますます なかよくなった。`
+});
+const MSX_TEV_WAIT = Object.freeze({
+  in: 1300,
+  scene: 900
+});
+const msxTevSplit = t => {
+  const s = String(t || '').trim();
+  if (!s) return [];
+  const parts = s.match(/[^。！？!?…]+[。！？!?…]*[」』）)]?/g) || [s];
+  const out = [];
+  let cur = '';
+  for (const p of parts) {
+    if (cur && (cur + p).length > 30 && !(p.length < 10 && (cur + p).length <= 44)) {
+      out.push(cur);
+      cur = p;
+    } else cur += p;
+  }
+  if (cur) out.push(cur);
+  return out;
+};
+const msxTevSteps = (run, o, ctx) => {
+  const s = run.s;
+  const e = o.event;
+  const m = s.team[e.who];
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  const se = msxSuc && msxSuc.script;
+  const c = {
+    ...ctx,
+    cheer: name
+  };
+  const take = ev => ({
+    narr: (ev.lines || []).filter(r => r && r.t && r.who === 'narr'),
+    talk: [...(ev.lines || []), ...(ev.after || [])].filter(r => r && r.t && r.who !== 'narr')
+  });
+  let got = {
+    narr: [],
+    talk: []
+  };
+  try {
+    if (e.story && se && typeof se.event === 'function') {
+      got = take(se.event(`cheer.${msxCheerType(m)}.ep${e.story}`, c));
+      if (!got.narr.length) got = take(se.event(`cheer.base.ep${e.story}`, c));
+    } else if (se && typeof se.event === 'function') got = take(se.event(`cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, c));
+  } catch (er) {
+    got = {
+      narr: [],
+      talk: []
+    };
+  }
+  const narr = got.narr;
+  const talk = got.talk;
+  if (!narr.length) narr.push({
+    who: 'narr',
+    t: `${name}と、すこし特別な時間をすごした。`
+  });
+  const steps = e.story ? [{
+    b: 1
+  }, {
+    b: 2
+  }] : [{
+    b: 1
+  }];
+  narr.forEach(r => msxTevSplit(r.t).forEach(t => steps.push({
+    b: 3,
+    who: 'narr',
+    t
+  })));
+  talk.forEach(r => msxTevSplit(r.t).forEach(t => steps.push({
+    b: 4,
+    who: r.who,
+    e: r.e,
+    t
+  })));
+  const pops = msxTevPops(s, o);
+  const bFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : s.bond[e.who];
+  if (pops.length) steps.push({
+    b: 5
+  });
+  if (bFrom !== s.bond[e.who]) steps.push({
+    b: 5,
+    k: 'bond'
+  });
+  if (!pops.length && bFrom === s.bond[e.who]) steps.push({
+    b: 5
+  });
+  if (msxTevNextText(run, o)) steps.push({
+    b: 6
+  });
+  return steps;
+};
+const msxTevPops = (s, o) => {
+  const e = o.event;
+  const d = e.d && typeof e.d === 'object' ? e.d : null;
+  const out = [];
+  if (d && d.stat && Number(d.up) > 0) out.push({
+    k: 'st',
+    t: `${MSX_STAT_NAME[d.stat] || '能力'} +${d.up}`
+  });
+  const fromTo = (now, dv, max) => Number.isFinite(now) && Number.isFinite(dv) && dv ? `(${Math.max(0, Math.min(max, Math.round(now - dv)))}→${Math.round(now)})` : '';
+  msxTevChanges(s, o).filter(t => !/親密度/.test(t)).forEach(t => {
+    const tx = t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '');
+    const sub = d && /^体力/.test(tx) ? fromTo(s.hp, d.hp, s.hpMax) : d && /^ストレス/.test(tx) ? fromTo(s.stress, d.stress, 100) : '';
+    out.push({
+      k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up',
+      t: tx,
+      sub
+    });
+  });
+  return out;
+};
+const msxTevNextText = (run, o) => {
+  const s = run.s;
+  const e = o.event;
+  const m = s.team[e.who];
+  const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
+  if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
+};
+function MsxTevMini({
+  s,
+  v
+}) {
+  const cal = typeof msxCalendar === 'function' ? msxCalendar(s.turn) : null;
+  return React.createElement("div", {
+    className: "tev-mini",
+    "data-msx-tev-mini": true
+  }, React.createElement("b", null, v && v.period ? v.period.name : ''), cal ? React.createElement("span", null, cal.year, "年目 ", cal.month, "月") : null, React.createElement("span", null, "体力 ", Math.max(0, Math.round(s.hp)), "/", Math.max(1, Math.round(s.hpMax))));
+}
 function MsxTrainEvent({
   run,
   o,
   ctx,
+  at = 0,
+  go = null,
+  onNext = null,
   style = MSX_TEV_STYLE
 }) {
   msxTevEnsureCss();
@@ -164590,42 +164751,81 @@ function MsxTrainEvent({
   const e = o.event;
   const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  const line = e.story ? msxPickLine({
-    ...ctx,
-    cheer: name
-  }, `cheer.${msxCheerType(m)}.ep${e.story}`, {
-    who: 'narr'
-  }) || msxPickLine({
-    ...ctx,
-    cheer: name
-  }, `cheer.base.ep${e.story}`, {
-    who: 'narr'
-  }) : msxPickLine({
-    ...ctx,
-    cheer: name
-  }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, {
-    who: '*'
-  });
-  const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
-  const ch = msxTevChanges(s, o);
+  const title = e.story ? `${name}との出来事` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
+  const steps = React.useMemo(() => msxTevSteps(run, o, ctx), [s.turn, e.who, e.story, e.lottery]);
+  const firstNarr = steps.find(x => x.b === 3);
+  const surprise = !!(e.story && firstNarr && /[!！?？]|気づ|いつの間/.test(firstNarr.t));
+  const sum = at < 0;
+  const i = sum ? steps.length - 1 : Math.max(0, Math.min(steps.length - 1, at));
+  const st = steps[i];
+  const b = sum ? 7 : st.b;
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const pops = msxTevPops(s, o);
   const bondNow = s.bond[e.who];
   const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const bondUp = bondNow !== bondFrom || e.d && e.d.bond;
+  const bk = !sum && st.k === 'bond';
+  const bondAt = 500;
   const [bondOn, setBondOn] = useState(false);
+  const next = () => {
+    if (!go) return;
+    if (i < steps.length - 1 && !sum) go(i + 1);else if (onNext) onNext();
+  };
   useEffect(() => {
-    const t = setTimeout(() => setBondOn(true), 700);
-    return () => clearTimeout(t);
-  }, []);
-  const bondShow = bondOn || calm ? bondNow : bondFrom;
+    setBondOn(calm || sum || b > 5);
+    if (sum) return undefined;
+    const ids = [];
+    if (b === 1) ids.push(setTimeout(next, calm ? 300 : MSX_TEV_WAIT.in));
+    if (b === 2) ids.push(setTimeout(next, MSX_TEV_WAIT.scene));
+    if (b === 5) {
+      if (bk) ids.push(setTimeout(() => setBondOn(true), calm ? 0 : bondAt));
+      if (i < lastI) ids.push(setTimeout(next, bk ? 2400 : 600 + pops.length * 700 + 900));
+    }
+    return () => ids.forEach(clearTimeout);
+  }, [i, sum]);
+  msxUseTimedSe(sum ? [] : b === 1 ? [['actTag', 0]] : surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? [['actIdea', 80]] : b === 5 ? bk ? [['itemBond', bondAt]] : pops.map((p, k) => ['actTagSpark', 300 + k * 700]) : [], [i, sum]);
+  const bondShow = b >= 5 && bondOn || sum ? bondNow : bondFrom;
   const ups = e.d && e.d.up > 0 && e.d.stat ? {
     [e.d.stat]: e.d.up
   } : null;
+  const shown = b >= 5 ? s.stats : ups ? {
+    ...s.stats,
+    [e.d.stat]: s.stats[e.d.stat] - e.d.up
+  } : s.stats;
+  const palOn = b >= 3;
+  const pair = b >= 3;
+  const nx = msxTevNextText(run, o);
+  const lastI = steps.length - 1;
+  const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
+  const aidWho = talk && talk.who !== 'narr' && talk.who !== 'mon' ? talk.who : null;
+  const palImg = m ? m.colors && m.colors.some && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: m.species,
+    src: msxMonImg(m.species),
+    masuColors: m.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: msxMonImg(m.species),
+    alt: "",
+    style: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain'
+    }
+  }) : null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
-    className: `v-scene msx-tev s-${style}${calm ? ' calm' : ''}`,
+    className: `v-scene msx-tev s-${style} tb${b}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`,
     style: {
       flex: '1 1 0'
     },
-    "data-msx-tev": style
+    "data-msx-tev": style,
+    "data-msx-tev-beat": sum ? 'sum' : b,
+    onClick: sum ? undefined : next
   }, React.createElement("img", {
     className: "bg",
     src: msxSceneBg(s.turn).bg,
@@ -164633,57 +164833,106 @@ function MsxTrainEvent({
   }), React.createElement("div", {
     className: "sh"
   }), React.createElement("div", {
-    className: "gr",
-    style: {
-      left: '29%',
-      bottom: 'calc(40% - 5px)'
-    }
+    className: `tev-who me${pair ? ' pair' : ''}`
+  }, React.createElement("div", {
+    className: "gr"
   }), React.createElement(MsxMonArt, {
     run: run,
-    className: "mon",
-    style: {
-      left: '29%',
-      bottom: '40%',
-      height: '22%'
-    },
+    className: "tev-art",
+    style: {},
     live: true
+  }), surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? React.createElement("span", {
+    className: "tev-bang",
+    "aria-hidden": "true"
+  }, "!!") : null, b === 2 && surprise ? React.createElement("span", {
+    className: "tev-q",
+    "aria-hidden": "true"
+  }, "?") : null), m ? React.createElement("div", {
+    className: `tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`
+  }, React.createElement("div", {
+    className: "gr"
   }), React.createElement("div", {
-    className: "gr",
+    className: "tev-art"
+  }, palImg)) : null, b === 5 && !bk && !calm ? React.createElement("div", {
+    className: "tev-dust",
+    "aria-hidden": "true"
+  }, [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
+    key: k,
     style: {
-      left: '71%',
-      bottom: 'calc(40% - 5px)'
+      animationDelay: `${k * 0.07}s`,
+      top: `${44 + k % 3 * 6}%`
     }
-  }), m ? React.createElement("img", {
-    className: "mon tev-pal",
-    src: msxMonImg(m.species),
-    alt: "",
-    style: {
-      left: '71%',
-      bottom: '40%',
-      height: '25%'
-    }
-  }) : null, React.createElement("div", {
-    className: "v-talk tev-talk",
-    style: JA_LABEL_STYLE
-  }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
-    className: "who"
-  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement(MsxEvHead, {
+  }))) : null, b >= 2 ? React.createElement(MsxEvHead, {
     kind: "team",
     label: e.story ? `編成のモンスターのイベント その${e.story}` : undefined,
-    title: e.story ? `${name}との出来事` : title
-  }), React.createElement("div", {
-    className: "tev-bond"
+    title: title
+  }) : null, (b === 5 && bk || b === 6) && bondUp ? React.createElement("div", {
+    className: `tev-bond${bk ? ' big' : ''}${bondOn && bondNow >= 100 ? ' max' : ''}`,
+    "data-msx-tev-bond-row": true
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
-      width: `${Math.max(0, Math.min(100, bondShow))}%`,
-      transition: 'width .9s ease-out'
+      width: `${Math.max(0, Math.min(100, bondShow))}%`
     }
   })), React.createElement("em", {
     "data-msx-tev-bond": true
-  }, bondShow, e.d && e.d.bond ? React.createElement("small", null, " (", e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond, ")") : null)), style === 'a' ? React.createElement("span", {
-    className: "tev-in-a",
+  }, bondShow, React.createElement("small", null, "/100"), bondNow !== bondFrom ? React.createElement("small", {
+    className: "dl"
+  }, " (", bondNow > bondFrom ? '+' : '', bondNow - bondFrom, ")") : null), bondOn && bondNow >= 100 ? React.createElement("strong", {
+    className: "mx"
+  }, "MAX!") : null) : null, b === 5 && !bk ? React.createElement("div", {
+    className: "tev-pops",
+    "data-msx-tev-pops": true
+  }, pops.map((p, k) => React.createElement("b", {
+    key: k,
+    className: `tev-pop ${p.k}`,
+    style: {
+      animationDelay: `${0.3 + k * 0.7}s`
+    }
+  }, p.t, p.sub ? React.createElement("small", null, p.sub) : null))) : null, talk ? React.createElement("div", {
+    className: `v-talk tev-talk${aidWho ? ' say' : ' narr'}`,
+    style: JA_LABEL_STYLE,
+    key: i,
+    "data-msx-tev-talk": aidWho ? 'say' : 'narr'
+  }, aidWho ? React.createElement(React.Fragment, null, React.createElement("img", {
+    className: "fc",
+    src: msxFace(aidWho, talk.e || 'happy'),
+    alt: ""
+  }), React.createElement("span", {
+    className: "who"
+  }, msxAidName(aidWho))) : null, React.createElement("div", null, jaWrap(talk.t)), go ? React.createElement("span", {
+    className: "tev-tap",
     "aria-hidden": "true"
-  }) : null, style === 'b' ? React.createElement("div", {
+  }, "▼") : null) : null, b === 5 ? React.createElement("div", {
+    className: "v-talk tev-talk narr",
+    style: JA_LABEL_STYLE,
+    key: `res${i}`,
+    "data-msx-tev-talk": "res"
+  }, React.createElement("div", null, jaWrap(bk ? bondNow >= 100 ? `${name}と、すっかり なかよしになった!` : `${name}との距離が、ぐっと縮まった。` : (MSX_TEV_RES[e.story ? 'self' : e.lottery] || MSX_TEV_RES.self)(name)))) : null, b === 6 && nx ? React.createElement("div", {
+    className: "tev-next",
+    "data-msx-ev-next": true
+  }, React.createElement("b", null, "つづく"), React.createElement("span", {
+    style: JA_WRAP_STYLE
+  }, nx.split('\n').map((t, k) => React.createElement(React.Fragment, {
+    key: k
+  }, k ? React.createElement("br", null) : null, jaWrap(t))))) : null, sum ? React.createElement("div", {
+    className: "tev-sum",
+    "data-msx-tev-sum": true
+  }, bondUp ? React.createElement("div", {
+    className: "r bd"
+  }, "💗 ", name, "との親密度", bondNow >= 100 ? ' MAX!' : ` +${bondNow - bondFrom}`, React.createElement("small", {
+    style: {
+      display: 'block'
+    }
+  }, bondFrom, " → ", bondNow)) : null, pops.map((p, k) => React.createElement("div", {
+    key: k,
+    className: `r ${p.k}`
+  }, p.t, p.sub ? React.createElement("small", null, " ", p.sub) : null)), nx ? React.createElement("div", {
+    className: "nx"
+  }, React.createElement("b", null, "つづく"), React.createElement("span", {
+    style: JA_WRAP_STYLE
+  }, nx.split('\n').map((t, k) => React.createElement(React.Fragment, {
+    key: k
+  }, k ? React.createElement("br", null) : null, jaWrap(t))))) : null) : null, style === 'b' && b === 1 ? React.createElement("div", {
     className: "tev-in-b",
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -164694,66 +164943,102 @@ function MsxTrainEvent({
   }) : React.createElement("img", {
     src: msxMonThumb(s.species),
     alt: ""
-  }), React.createElement("b", null, name, "との出来事!"), m && typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
+  }), React.createElement("b", null, title, "!"), m && typeof MsxMonFace === 'function' ? React.createElement(MsxMonFace, {
     species: m.species,
     colors: m.colors
   }) : React.createElement("img", {
     src: m ? msxMonThumb(m.species) : '',
     alt: ""
-  }))) : null, style === 'c' ? React.createElement("div", {
-    className: "tev-in-c",
-    "aria-hidden": "true"
-  }, React.createElement("span", {
-    className: "fl"
-  }), React.createElement("div", {
-    className: "rb"
-  }, "EVENT")) : null), ups ? React.createElement(MsxStRow, {
+  }))) : null), ups ? React.createElement(MsxStRow, {
     who: s,
-    stats: s.stats,
-    ups: ups
-  }) : null, React.createElement("div", {
-    className: "v-log tev-ch",
-    "data-msx-tev-chips": true
-  }, ch.map((t, i) => React.createElement("span", {
-    key: i,
-    className: "v-chip ylw",
-    style: {
-      position: 'static',
-      animationDelay: `${0.9 + i * 0.15}s`
-    }
-  }, t))), e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? React.createElement(MsxEvNext, {
-    text: bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}といっしょにトレーニングしたとき` : `その${e.story + 1}は ${name}との親密度 ${msxSuc.SUC.STORY[e.story].need} から`
+    stats: shown,
+    ups: b >= 5 && !sum ? ups : null
   }) : null);
 }
 const MSX_TEV_CSS = `
-.msx .msx-tev .tev-pal{transform:translateX(-50%) scaleX(-1)}
-.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:48px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;color:#fbcfe8;background:#0f0d24cc;border-radius:999px;padding:3px 10px;z-index:3}
-.msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
-.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
-.msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.msx .msx-tev .sh{transition:background .5s}
+.msx .msx-tev.tb1 .sh{background:#000d}
+.msx .msx-tev.tb6 .sh{background:linear-gradient(180deg,#0006,#000a)}
+.msx .msx-tev .tev-who{position:absolute;bottom:24%;height:40%;aspect-ratio:1;transform:translateX(-50%);transition:left .6s cubic-bezier(.3,1,.4,1),height .6s,opacity .5s,filter .5s;z-index:2}
+.msx .msx-tev.tb1 .tev-who{opacity:0}
+.msx .msx-tev .tev-who.me{left:50%}
+.msx .msx-tev .tev-who.me.pair{left:29%;height:33%}
+.msx .msx-tev .tev-who.pal{left:31%;height:35%;opacity:0;filter:brightness(0);z-index:1}
+.msx .msx-tev .tev-who.pal.on{left:71%;opacity:1;filter:none}
+.msx .msx-tev .tev-who.pal.on.back{left:52%;z-index:1}
+.msx .msx-tev .tev-who.pal.bye{left:76%}
+.msx .msx-tev .tev-who .tev-art{position:absolute;inset:0;display:block;width:100%;height:100%;filter:drop-shadow(0 8px 5px #0009)}
+.msx .msx-tev .tev-who.pal .tev-art{transform:scaleX(-1)}
+.msx .msx-tev .tev-who.pal.bye .tev-art{transform:none}
+.msx .msx-tev .tev-who .gr{left:50%;bottom:-3%;width:70%;height:10%}
+.msx .msx-tev.tb2 .tev-who.me{animation:tevWob 1.1s ease-in-out infinite}
+@keyframes tevWob{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+.msx .msx-tev .tev-q{position:absolute;right:4%;top:-4%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-bang{position:absolute;right:0;top:-8%;font-size:36px;font-weight:900;font-style:italic;color:#fde047;-webkit-text-stroke:3px #7c2d12;paint-order:stroke fill;animation:tevBang .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes tevBang{from{opacity:0;scale:.3}to{opacity:1;scale:1}}
+.msx .msx-tev.wow.tb3{animation:tevShake .42s .1s ease-out both}
+@keyframes tevShake{0%,100%{translate:0}20%{translate:-6px 2px}40%{translate:5px -2px}60%{translate:-3px 1px}80%{translate:2px 0}}
+.msx .msx-tev.wow.tb3 .tev-who.me .tev-art{animation:tevHop .5s .1s ease-out both}
+@keyframes tevHop{0%,100%{translate:0}40%{translate:0 -18%}}
+.msx .msx-tev .tev-who.pal.wag{animation:tevWag .9s ease-in-out 2}
+@keyframes tevWag{0%,100%{rotate:0deg}25%{rotate:-5deg}75%{rotate:5deg}}
+.msx .msx-tev .tev-talk{bottom:8px;z-index:4;min-height:54px;animation:tevUp .3s ease-out both}
+.msx .msx-tev .tev-talk.narr{background:#0f0d24eb;color:#f8fafc;border:1px solid #a5b4fc66;padding:10px 26px 10px 14px;font-size:13.5px;line-height:1.65}
+.msx .msx-tev .tev-talk.say{padding:14px 26px 10px 64px;font-size:13.5px;line-height:1.65}
+.msx .msx-tev .tev-talk.say .who{left:64px}
+.msx .msx-tev .tev-talk .fc{position:absolute;left:8px;bottom:8px;width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;background:#fde68a;border:2px solid #fb923c}
+.msx .msx-tev .tev-tap{position:absolute;right:10px;bottom:6px;font-size:10px;color:#fb923c;animation:tevTap 1s ease-in-out infinite}
+.msx .msx-tev .tev-talk.narr .tev-tap{color:#a5b4fc}
+@keyframes tevTap{0%,100%{translate:0;opacity:.5}50%{translate:0 3px;opacity:1}}
+@keyframes tevUp{from{opacity:0;translate:0 10px}to{opacity:1;translate:0}}
+.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:50px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#fbcfe8;background:#0f0d24d9;border-radius:999px;padding:4px 10px;z-index:3;animation:tevUp .3s ease-out both}
+.msx .msx-tev .tev-bond i{flex:1;height:8px;border-radius:6px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185);transition:width .9s ease-out}
+.msx .msx-tev .tev-bond em{font-style:normal;color:#fff;font-size:12px}
 .msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
-.msx .msx-tev .tev-talk{bottom:8px;z-index:4}
-.msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
-.msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
-.msx .tev-in-a{position:absolute;inset:0;z-index:6;background:#000;pointer-events:none;animation:tevA 1.1s ease-out both}
-@keyframes tevA{0%{opacity:1}35%{opacity:1}100%{opacity:0}}
-.msx .msx-tev.s-a .v-ev-h{animation:tevTitle .5s .6s ease-out both}
-@keyframes tevTitle{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.msx .msx-tev .tev-bond.max{box-shadow:0 0 0 2px #fde047,0 0 16px #f472b6}
+.msx .msx-tev .tev-bond .mx{color:#fde047;font-size:12px;font-style:italic;animation:tevBang .45s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-pops{position:absolute;left:0;right:0;top:24%;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:none}
+.msx .msx-tev .tev-pop{max-width:92%;text-align:center;line-height:1.2;font-size:21px;font-weight:900;color:#fff;-webkit-text-stroke:3px #9d174d;paint-order:stroke fill;text-shadow:0 0 14px #f9a8d4;animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-pop small{display:block;font-size:14px;font-style:normal;-webkit-text-stroke-width:2px}
+.msx .msx-tev .tev-bond em small.dl{color:#fde047;font-size:11px}
+.msx .msx-tev .tev-bond.big em small.dl{font-size:17px}
+.msx .msx-tev .tev-sum .r small{font-size:12px;color:#cbd5e1}
+.msx .msx-tev .tev-sum .nx{display:flex;gap:8px;align-items:baseline}
+.msx .msx-tev .tev-pop.st{font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
+.msx .msx-tev .tev-pop.gd{-webkit-text-stroke-color:#0f766e;text-shadow:0 0 14px #5eead4}
+.msx .msx-tev .tev-who.pal.on.tsh{opacity:.45}
+.msx .msx-tev .tev-bond.big{top:58px;left:12%;right:12%;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:16px;font-size:13px;background:#1f0f2ee6;border:2px solid #f472b6}
+.msx .msx-tev .tev-bond.big i{flex:1 1 100%;height:12px}
+.msx .msx-tev .tev-bond.big em{font-size:18px}
+.msx .msx-tev .tev-bond.big .mx{font-size:22px}
+.msx .msx-tev .tev-sum .r.bd{color:#fbcfe8;font-size:19px}
+.msx .msx-tev .tev-pop.dn{-webkit-text-stroke-color:#1e3a8a;text-shadow:none}
+@keyframes tevPop{0%{opacity:0;scale:.2;translate:0 30px}60%{opacity:1;scale:1.15}100%{opacity:1;scale:1;translate:0}}
+.msx .msx-tev .tev-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
+.msx .msx-tev .tev-dust i{position:absolute;left:70%;width:9px;height:9px;border-radius:50%;background:#fef9c3;box-shadow:0 0 10px #fde047,0 0 4px #fff;animation:tevDust .75s ease-in both}
+@keyframes tevDust{0%{left:70%;opacity:0}20%{opacity:1}100%{left:30%;opacity:0;scale:.4}}
+.msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
+.msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
+.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
+.msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
+.msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
+.msx .msx-tev .tev-sum .r.st{color:#fef08a;font-size:22px}
+.msx .msx-tev .tev-sum .r.dn{color:#93c5fd}
+.msx .msx-tev .tev-sum .nx{margin-top:2px;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:left;line-height:1.5}
+.msx .msx-tev .tev-sum .nx b{color:#fdba74}
+.msx .tev-mini{flex:none;display:flex;gap:10px;align-items:center;margin-top:5px;padding:3px 12px;border-radius:999px;background:#1d1740;border:1px solid #3b3566;font-size:11px;font-weight:800;color:#cbd5e1}
+.msx .tev-mini b{color:#fff}
 .msx .tev-in-b{position:absolute;inset:0;z-index:6;pointer-events:none;display:flex;align-items:center;animation:tevBfade 1.4s ease-in both}
 .msx .tev-in-b .band{width:120%;margin-left:-10%;transform:skewY(-6deg);display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0;background:linear-gradient(90deg,#db2777,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#db2777);box-shadow:0 0 0 3px #fff,0 0 30px #f472b6;animation:tevBand 1.4s cubic-bezier(.2,.9,.3,1) both}
 .msx .tev-in-b .band img{width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid #fff;object-fit:contain}
 .msx .tev-in-b .band b{font-size:20px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #9d174d;paint-order:stroke fill;white-space:nowrap}
 @keyframes tevBand{0%{transform:skewY(-6deg) translateX(110%)}25%,75%{transform:skewY(-6deg) translateX(0)}100%{transform:skewY(-6deg) translateX(-110%)}}
 @keyframes tevBfade{0%,80%{opacity:1}100%{opacity:0}}
-.msx .tev-in-c{position:absolute;inset:0;z-index:6;pointer-events:none}
-.msx .tev-in-c .fl{position:absolute;inset:0;background:#fff;animation:tevCfl .7s ease-out both}
-.msx .tev-in-c .rb{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:44px;font-weight:900;font-style:italic;letter-spacing:.2em;color:#fff7cc;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 18px #fde047,0 4px 0 #78350f;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:6px 0;animation:tevCrb 1.5s ease-out both}
-@keyframes tevCfl{0%{opacity:.95}100%{opacity:0}}
-@keyframes tevCrb{0%{opacity:0;transform:scaleX(.2)}18%{opacity:1;transform:scaleX(1.05)}26%{transform:scaleX(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
-.msx .msx-tev.s-c .bg{animation:tevZoom 1.6s ease-out both}
-@keyframes tevZoom{from{transform:scale(1.12)}to{transform:scale(1)}}
-.msx .msx-tev.calm .tev-in-a,.msx .msx-tev.calm .tev-in-b,.msx .msx-tev.calm .tev-in-c{display:none}
-@media (prefers-reduced-motion: reduce){.msx .tev-in-a,.msx .tev-in-b,.msx .tev-in-c{display:none}.msx .msx-tev .bg,.msx .msx-tev .v-ev-h{animation:none}}
+.msx .msx-tev.calm,.msx .msx-tev.calm *{animation:none!important;transition:none!important}
+.msx .msx-tev.calm .tev-in-b{display:none}
+@media (prefers-reduced-motion: reduce){.msx .tev-in-b{display:none}.msx .msx-tev,.msx .msx-tev *{animation:none!important}}
 `;
 let msxTevCssDone = false;
 const msxTevEnsureCss = () => {
@@ -166752,8 +167037,8 @@ function MsxRunIntro({
     alt: ""
   }), React.createElement(MsxEvHead, {
     kind: "story",
-    label: "メインストーリー 序章",
-    title: `${msxAidName(s.aid)}編のはじまり`
+    label: `ストーリー 序章・${msxAidName(s.aid)}編`,
+    title: `${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`
   }), React.createElement("div", {
     className: "v-talk msx-intro-talk"
   }, who ? React.createElement(React.Fragment, null, React.createElement("span", {
@@ -170081,6 +170366,97 @@ function AssistantLifeFriendPage({
   const hideIfEmpty = alfEmpty ? {
     display: 'none'
   } : undefined;
+  const nowFirst = !!(st.back && !st.back.seen || st.came.some(c => !c.seen));
+  const housesBlock = React.createElement(React.Fragment, null, React.createElement("p", {
+    className: sec,
+    style: hideIfEmpty
+  }, "🏠 フレンドの家"), houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
+    style: JA_WRAP_STYLE,
+    "data-alf-bond-note": true
+  }, jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
+    "data-alf-houses": true,
+    style: hideIfEmpty
+  }, houses.length ? houses.map(f => {
+    const can = assistantLifeFriendCanLook(f.id);
+    const been = st.photos.some(p => p.host === f.id);
+    return React.createElement("div", {
+      key: f.id,
+      className: `${card} flex items-center gap-2`,
+      "data-alf-house": f.id
+    }, React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("p", {
+      className: "break-words text-[12px] font-black leading-snug text-slate-100"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "［プレイヤー］"), React.createElement("wbr", null), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, f.name, "さんの家"), been ? ' 📷' : '', typeof AlfBondChip === 'function' && React.createElement(AlfBondChip, {
+      id: f.id
+    })), React.createElement("p", {
+      className: "text-[10px] text-slate-300",
+      "data-alf-house-sum": true
+    }, (() => {
+      const hs = f.house;
+      const at = k => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length;
+      const fu = hs.ids.reduce((n, id) => n + Object.keys(hs.r[id] && hs.r[id].fu || {}).length, 0);
+      return React.createElement(React.Fragment, null, React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "🏠 家に", at('home'), "人"), at('out') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🚶 おでかけ", at('out'), "人")) : null, at('sleep') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・💤 ", at('sleep'), "人")) : null, fu ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
+        className: "whitespace-nowrap text-slate-400"
+      }, "・", alfAgoText(f.at)));
+    })()), f.house.ac1 && React.createElement("p", {
+      className: "truncate text-[10.5px] font-bold text-amber-200",
+      "data-alf-house-act": true
+    }, ALF_ACT_ICON[f.house.ac1.k] || '✨', " ", f.house.ac1.x), React.createElement("div", {
+      className: "mt-0.5 flex gap-0.5"
+    }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
+      key: id,
+      id: id,
+      size: 22
+    })))), React.createElement("button", {
+      type: "button",
+      disabled: can === 'off',
+      className: "min-h-[48px] min-w-[120px] shrink-0 rounded-xl bg-amber-300 px-4 py-2 text-[15px] font-black text-slate-950 shadow-lg disabled:opacity-40",
+      "data-alf-act": "look",
+      onClick: () => setVisit(f)
+    }, "🚪 訪ねる"), React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200",
+      "aria-label": "その他",
+      "data-alf-act": "menu",
+      onClick: () => setMenu(menu === f.id ? null : f.id)
+    }, "⋯"), menu === f.id && React.createElement("button", {
+      type: "button",
+      className: "shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100",
+      "data-alf-act": "mute",
+      onClick: () => {
+        assistantLifeFriendMute(f.id, true);
+        setMenu(null);
+      }
+    }, "来ないようにする"));
+  }) : !waiting.length && React.createElement("p", {
+    className: `${card} text-[11px] text-slate-400`
+  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
+    key: f.id,
+    className: `${card} flex items-center gap-2 border-dashed border-slate-500/60`,
+    "data-alf-house-waiting": f.id
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[12px] font-black text-slate-300"
+  }, "［プレイヤー］", f.name, "さんの家"), React.createElement("p", {
+    className: "text-[10px] leading-snug text-slate-300"
+  }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
+    className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
+  }, "🚪 まだ")))));
   return React.createElement("div", {
     className: "px-3 pb-3 pt-1",
     "data-alf-page": "on"
@@ -170093,7 +170469,7 @@ function AssistantLifeFriendPage({
     className: "mt-1 text-[12px] font-bold leading-relaxed text-slate-200"
   }, "・🚪 フレンドの家を訪ねて、助手や家具を見られます", React.createElement("br", null), "・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます"), React.createElement("p", {
     className: "mt-1 text-[11px] leading-snug text-slate-300"
-  }, "フレンドが助手ライフを開くと、その人の家がここに並びます。")), !s.intro && !alfEmpty && React.createElement("div", {
+  }, "フレンドが助手ライフを開くと、その人の家がここに並びます。")), !nowFirst && housesBlock, !s.intro && !alfEmpty && React.createElement("div", {
     className: card,
     "data-alf-intro": true
   }, React.createElement("p", {
@@ -170104,7 +170480,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, t))), React.createElement("button", {
     type: "button",
-    className: "mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950",
+    className: "mt-1 min-h-[44px] rounded-xl border border-slate-400/60 px-3 py-1 text-[12px] font-bold text-slate-200",
     "data-alf-intro-ok": true,
     onClick: () => {
       ALF_STORE.set({
@@ -170186,7 +170562,7 @@ function AssistantLifeFriendPage({
     className: "whitespace-nowrap"
   }, "置き手紙 ", st.look, "通"), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), !alfEmpty && typeof AlfGuestBook === 'function' && React.createElement(AlfGuestBook, {
+  }, "おみやげ ", st.beatP, "/", ALF_BEAT_P.dayMax, "P"))), nowFirst && housesBlock, !alfEmpty && typeof AlfGuestBook === 'function' && React.createElement(AlfGuestBook, {
     s: s,
     card: card,
     sec: sec,
@@ -170246,88 +170622,7 @@ function AssistantLifeFriendPage({
     className: "text-[10px] text-slate-400"
   }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
     className: "text-[11px] text-slate-400"
-  }, "まだ置き手紙はありません。")), React.createElement("p", {
-    className: sec,
-    style: hideIfEmpty
-  }, "🏠 フレンドの家"), React.createElement("div", {
-    "data-alf-houses": true,
-    style: hideIfEmpty
-  }, houses.length ? houses.map(f => {
-    const can = assistantLifeFriendCanLook(f.id);
-    const been = st.photos.some(p => p.host === f.id);
-    return React.createElement("div", {
-      key: f.id,
-      className: `${card} flex items-center gap-2`,
-      "data-alf-house": f.id
-    }, React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("p", {
-      className: "truncate text-[12px] font-black text-slate-100"
-    }, "［プレイヤー］", f.name, "さんの家", been ? ' 📷' : '', typeof AlfBondChip === 'function' && React.createElement(AlfBondChip, {
-      id: f.id
-    })), React.createElement("p", {
-      className: "text-[10px] text-slate-300",
-      "data-alf-house-sum": true
-    }, (() => {
-      const hs = f.house;
-      const at = k => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length;
-      const fu = hs.ids.reduce((n, id) => n + Object.keys(hs.r[id] && hs.r[id].fu || {}).length, 0);
-      return React.createElement(React.Fragment, null, React.createElement("span", {
-        className: "whitespace-nowrap"
-      }, "🏠 家に", at('home'), "人"), at('out') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
-        className: "whitespace-nowrap"
-      }, "・🚶 おでかけ", at('out'), "人")) : null, at('sleep') ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
-        className: "whitespace-nowrap"
-      }, "・💤 ", at('sleep'), "人")) : null, fu ? React.createElement(React.Fragment, null, React.createElement("wbr", null), React.createElement("span", {
-        className: "whitespace-nowrap"
-      }, "・🪑 家具", fu)) : null, React.createElement("wbr", null), React.createElement("span", {
-        className: "whitespace-nowrap text-slate-400"
-      }, "・", alfAgoText(f.at)));
-    })()), f.house.ac1 && React.createElement("p", {
-      className: "truncate text-[10.5px] font-bold text-amber-200",
-      "data-alf-house-act": true
-    }, ALF_ACT_ICON[f.house.ac1.k] || '✨', " ", f.house.ac1.x), React.createElement("div", {
-      className: "mt-0.5 flex gap-0.5"
-    }, alfHomeIds(f.house).slice(0, 6).map(id => React.createElement(AlfFace, {
-      key: id,
-      id: id,
-      size: 22
-    })))), React.createElement("button", {
-      type: "button",
-      disabled: can === 'off',
-      className: "shrink-0 rounded-xl bg-amber-300 px-2.5 py-1.5 text-[11px] font-black text-slate-950 disabled:opacity-40",
-      "data-alf-act": "look",
-      onClick: () => setVisit(f)
-    }, "🚪 訪ねる"), React.createElement("button", {
-      type: "button",
-      className: "shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200",
-      "aria-label": "その他",
-      "data-alf-act": "menu",
-      onClick: () => setMenu(menu === f.id ? null : f.id)
-    }, "⋯"), menu === f.id && React.createElement("button", {
-      type: "button",
-      className: "shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100",
-      "data-alf-act": "mute",
-      onClick: () => {
-        assistantLifeFriendMute(f.id, true);
-        setMenu(null);
-      }
-    }, "来ないようにする"));
-  }) : !waiting.length && React.createElement("p", {
-    className: `${card} text-[11px] text-slate-400`
-  }, "遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。"), waiting.map(f => React.createElement("div", {
-    key: f.id,
-    className: `${card} flex items-center gap-2 border-dashed border-slate-500/60`,
-    "data-alf-house-waiting": f.id
-  }, React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("p", {
-    className: "truncate text-[12px] font-black text-slate-300"
-  }, "［プレイヤー］", f.name, "さんの家"), React.createElement("p", {
-    className: "text-[10px] leading-snug text-slate-300"
-  }, f.name, "さんが助手ライフを開くと遊びに行けます")), React.createElement("span", {
-    className: "shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300"
-  }, "🚪 まだ")))), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
+  }, "まだ置き手紙はありません。")), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
     s: s,
     card: card,
     sec: sec,
@@ -170468,7 +170763,7 @@ const ALB_MAX = Object.freeze({
   friends: 100
 });
 const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
-const ALB_TITLES = Object.freeze(['はじめまして', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', 'なかよし', '大のなかよし', 'いつもの人', '親友', '大親友', '心の友', 'かけがえのない友']);
+const ALB_TITLES = Object.freeze(['ごあいさつ', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', '行きつけ', '通い合う仲', 'いつもの人', '気心の知れた仲', '家族ぐるみ', '心の友', '末長いご縁']);
 const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
 const ALB_SPOT_RE = /^(h|m:[a-z]{2,20}|f:[a-z]{2,20}:[cwf])$/;
 const ALB_SLOT_NAME = Object.freeze({
@@ -170946,7 +171241,7 @@ function AlfBondChip({
   return React.createElement("span", {
     className: "ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100",
     "data-alb-chip": id
-  }, "🤝 Lv", albLv(st), " ", albTitle(st));
+  }, "🌸 ご縁Lv", albLv(st), " ", albTitle(st));
 }
 function AlfFavShelf({
   fv
@@ -171008,7 +171303,7 @@ function AlfBondBar({
   }, React.createElement("b", {
     className: `block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`,
     "data-alb-bar-title": true
-  }, compact ? `🤝 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🤝 友情Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
+  }, compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
     className: `truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`,
     "data-alb-bar-sub": true
   }, x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`, fresh ? ` ・ ✨ 見どころ ${fresh}` : '')), React.createElement("span", {
@@ -171068,7 +171363,7 @@ function AlfBondSheet({
   }, React.createElement("p", {
     className: "text-[16px] font-black text-pink-100",
     "data-alb-sheet-title": true
-  }, "🤝 ", friend.name, "さんとの友情 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, "「", albTitle(x.st), "」 ・ スタンプ ", x.st, "個", nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''), React.createElement("div", {
     className: "mt-1 h-2 overflow-hidden rounded-full bg-white/15"
@@ -171157,7 +171452,7 @@ function AlfBondView({
     "data-alf-bond-view-friend": true
   }, React.createElement("p", {
     className: "text-[15px] font-black text-pink-100"
-  }, "🤝 ", friend.name, "さんとの友情 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, React.createElement("span", {
     className: "whitespace-nowrap"
@@ -171261,7 +171556,7 @@ function AlfGuestBook({
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
       className: "min-w-0 flex-1 truncate text-[11.5px] font-black text-slate-100"
-    }, names[id], "さん", React.createElement(AlfBondChip, {
+    }, names[id], "さん", !house && React.createElement(AlfBondChip, {
       id: id,
       always: true
     })), React.createElement("span", {
@@ -171278,13 +171573,13 @@ function AlfGuestBook({
       className: "whitespace-nowrap"
     }, i ? '・' : '', t)), x.in.includes(today) ? React.createElement("span", {
       className: "whitespace-nowrap font-black text-pink-200"
-    }, "・🤝 スタンプ +1") : null));
+    }, "・🌸 スタンプ +1") : null));
   }) : React.createElement("p", {
     className: "text-[11px] text-slate-400",
     "data-alb-guests-none": true
   }, "この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。"), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "フレンドか、フレンドの助手が来てくれた日は、その人との友情スタンプが1個たまります(1人につき1日1個)。")));
+  }, "フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。")));
 }
 function AlfFavEditor({
   s,
@@ -171380,7 +171675,7 @@ function AlfFavEditor({
     })
   })), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「友情」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
+  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
 const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
 const ALF_SENT_MAX = Object.freeze({
@@ -172761,6 +173056,13 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+.msx .v-sum .v-sumsub{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx .v-s6det{margin-top:2px}.msx .v-s6det>summary{display:flex;align-items:center;min-height:44px;cursor:pointer;color:#7dd3fc;font-size:12px;font-weight:900}.msx .v-s6det .v-s6row{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;padding:2px 0;border-top:1px solid #3b3566}.msx .v-s6det .v-s6row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
+.msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
+.msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
+.msx .v-s6team .v-s6hd .v-edhit{display:flex;align-items:center;justify-content:flex-end;min-height:44px;min-width:64px;margin:0 -4px 0 0;padding:0 4px;background:none;border:0;font:inherit} /* 押せる所は44px・見た目はほかの行の「変える」と同じ */
+.msx .v-s6team .mcd-grid.s{grid-template-columns:repeat(6,minmax(0,1fr))} /* 6体を1列に(札の作りは型のまま) */
 /* 開始の段の横の共通の型(r1119 ⑦ U-5・U-7): 絵の無い段(助手・持ちこみ)は1列にして左を空けない。
    絵のある段(名前と染色・確認)は左に絵、右は見出しの下を流す(決めるボタンが画面の外に出ない) */
 .msx .v-lmain{display:contents}
@@ -172839,8 +173141,8 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
-.msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
+.msx .v-sum .k{min-width:46px;font-size:12px;color:#fbcfe8;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
+.msx .v-sum .ed{margin-left:auto;font-size:12px;font-weight:900;color:#7dd3fc;flex:none;padding:6px 12px;border:1px solid #7dd3fc88;border-radius:99px;white-space:nowrap} /* 「変える」はどの行も同じ大きさのボタンの形(再点検 msx-S6: 編成の行だけ大きかった) */
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
 .msx .v-machine{position:absolute;right:6%;bottom:8%;width:38%;aspect-ratio:.8;border-radius:20px 20px 10px 10px;background:linear-gradient(180deg,#475569,#1e293b);border:3px solid #94a3b8;box-shadow:0 0 30px #22d3ee88,inset 0 0 20px #22d3ee55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;line-height:1.2}
@@ -173202,6 +173504,12 @@ const MSX_CSS = `
 .msx-md{padding:8px 10px}
 /* PC で詳細の窓が画面の幅いっぱい(1250px)に広がっていた。縦の画面と同じ大きさの窓にそろえる(2026-11-20 r1119-033 育-39) */
 .msx-sheet.msx-md,.msx-sheet.msx-asd{max-width:520px;margin:0 auto}
+/* 詳細の窓だけでなく、技を選ぶ・枠に入れるモンスター・集まり・編成の効果・確かめ・ボックスの窓も PC で横いっぱいだった。幕の上の窓はすべて本体の列と同じ幅にする(2026-11-20 r1119-033 窓-14・21・26・32・49〜51・54) */
+.msx-ov>.msx-sheet{max-width:520px;margin-left:auto;margin-right:auto}
+/* 詳細の窓は、下のタブを切り替えるたびに高さが変わって画面が跳ねていた。高さを画面いっぱいに決め、閉じるは常に下に置く(窓-23)。
+   後ろの一覧の「← 戻る」が透けて、戻り方が2つあるように見えていたので、詳細の幕は濃くする(窓-25・31) */
+.msx-ov:has(>.msx-sheet.msx-md){background:#0b0920f2}
+.msx-ov>.msx-sheet.msx-md{height:100%}
 .msx-md-art .nm .nmx{display:block;font-size:15px;line-height:1.2}
 .msx-md-ti{text-align:center}
 .msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
@@ -177071,7 +177379,7 @@ function MsxStart({
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "だれの物語で育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる")), React.createElement("div", {
+    }, "どの助手と育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる")), React.createElement("div", {
       className: "v-faces"
     }, MSX_SCENARIOS.filter(x => msxAidOpen(x.aid)).map(x => React.createElement("button", {
       type: "button",
@@ -177116,7 +177424,7 @@ function MsxStart({
       alt: ""
     })), React.createElement("div", {
       className: "tx"
-    }, React.createElement("h4", null, React.createElement("small", null, "シナリオ ", sc.no, "・", msxAidName(aid), "編"), sc.title), React.createElement("div", {
+    }, React.createElement("h4", null, React.createElement("small", null, msxAidName(aid), "編"), sc.title), React.createElement("div", {
       style: {
         marginTop: 4
       }
@@ -177173,7 +177481,7 @@ function MsxStart({
     }), React.createElement("div", {
       className: "bub f1"
     }, "「", aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!', "」"))));
-    go = `${msxAidName(aid)}編で始める ▶`;
+    go = `${msxAidName(aid)}編にする ▶`;
   } else if (step === 3) {
     const has = id => meta.items && meta.items[id] || 0;
     const toggle = id => setItems(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]);
@@ -177310,7 +177618,7 @@ function MsxStart({
         marginTop: 6
       }
     }, "まだ効き目が入っていない物があります(その物は持っていっても数は減りません)")));
-    go = 'これでいく ▶';
+    go = '次へ ▶';
   } else if (step === 4) {
     const onDye = (idx, colorId) => setColors(cur => {
       const n = cur.slice();
@@ -177380,11 +177688,12 @@ function MsxStart({
     }) : React.createElement("div", {
       className: "msx-note"
     }, "染色はこの端末では使えません"))));
-    go = 'これで決める ▶';
+    go = '次へ ▶';
   } else {
+    const startMul = items.some(id => SUC.ITEMS && SUC.ITEMS[id] && SUC.ITEMS[id].good === 'uketsugu') ? SUC.GOOD && SUC.GOOD.uketsugu && SUC.GOOD.uketsugu.start || 2 : 1;
     const startAdd = {};
     members.forEach(m => {
-      if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v;
+      if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v * startMul;
     });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
     const capUp = typeof SUC.capOfTeam === 'function' ? Object.entries(SUC.capOfTeam(members)).filter(([, v]) => v > 999) : [];
@@ -177440,7 +177749,7 @@ function MsxStart({
         left: '36%',
         bottom: 6
       }
-    }, name, React.createElement("small", null, msxMonName(species))), React.createElement("img", {
+    }, name, name !== msxMonName(species) ? React.createElement("small", null, msxMonName(species)) : null), React.createElement("img", {
       src: msxBody(aid, 'happy'),
       alt: "",
       style: {
@@ -177454,27 +177763,41 @@ function MsxStart({
       }
     })), React.createElement("div", {
       className: "v-lmain"
-    }, React.createElement("button", {
-      type: "button",
-      className: "v-sum",
-      onClick: () => setStep(1)
+    }, React.createElement("div", {
+      className: "v-sum v-s6team",
+      "data-msx-s6-team": true
+    }, React.createElement("div", {
+      className: "v-s6hd"
     }, React.createElement("span", {
       className: "k"
-    }, "編成"), members.map((m, i) => React.createElement("span", {
-      key: i,
-      className: `v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, React.createElement(MsxMonFace, {
-      species: m.species,
-      colors: m.colors
-    }))), React.createElement("span", {
+    }, "編成"), React.createElement("button", {
+      type: "button",
+      className: "v-edhit",
+      onClick: () => setStep(1)
+    }, React.createElement("span", {
       className: "ed"
-    }, "変える")), typeof msxScenarioOf === 'function' ? React.createElement("button", {
+    }, "変える"))), typeof MonsucMonCard === 'function' ? React.createElement(MonsucCardGrid, {
+      size: "s"
+    }, members.map((m, i) => React.createElement(MonsucMonCard, {
+      key: i,
+      size: "s",
+      m: {
+        species: m.species,
+        nick: m.name || null,
+        colors: m.colors || null,
+        grade: m.rank && m.rank !== 'base' ? m.rank : ''
+      },
+      tag: m.friend ? {
+        text: 'フレンド',
+        kind: 'friend'
+      } : null
+    }))) : null), typeof msxScenarioOf === 'function' ? React.createElement("button", {
       type: "button",
       className: "v-sum",
       onClick: () => setScn(null)
     }, React.createElement("span", {
       className: "k"
-    }, "シナリオ"), React.createElement("span", null, msxScenarioOf(scn).name), React.createElement("span", {
+    }, "ストーリー"), React.createElement("span", null, msxScenarioOf(scn).name), React.createElement("span", {
       className: "ed"
     }, "変える")) : null, React.createElement("button", {
       type: "button",
@@ -177482,7 +177805,7 @@ function MsxStart({
       onClick: () => setStep(2)
     }, React.createElement("span", {
       className: "k"
-    }, "助手"), React.createElement("span", null, msxAidName(aid), "編「", sc.title, "」"), React.createElement("span", {
+    }, "助手"), React.createElement("span", null, msxAidName(aid)), React.createElement("span", {
       className: "ed"
     }, "変える")), React.createElement("button", {
       type: "button",
@@ -177495,10 +177818,18 @@ function MsxStart({
     }, jaWrap(items.length ? items.map(id => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')), React.createElement("span", {
       className: "ed"
     }, "変える")), React.createElement("div", {
-      className: "v-sum"
+      className: "v-sum v-s6add",
+      "data-msx-s6-add": true
     }, React.createElement("span", {
       className: "k"
-    }, "初めの上乗せ"), React.createElement("span", null, Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし')), capUp.length ? React.createElement("div", {
+    }, "初めの能力に足す分"), React.createElement("span", null, Object.keys(startAdd).length ? React.createElement(React.Fragment, null, Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・'), React.createElement("small", {
+      className: "v-sumsub"
+    }, `編成の6体それぞれの、一番高い能力の 1/25 を、その能力に足します${startMul > 1 ? `(受け継ぎ草で ×${startMul})` : ""}`), React.createElement("details", {
+      className: "v-s6det"
+    }, React.createElement("summary", null, "内訳を見る"), members.map((m, i) => m.startAdd && m.startAdd.v > 0 ? React.createElement("span", {
+      key: i,
+      className: "v-s6row"
+    }, React.createElement("b", null, m.name || msxMonName(m.species)), `${MSX_STAT_NAME[m.startAdd.stat]} +${m.startAdd.v * startMul}`) : null))) : '編成のモンスターからの足し分はありません')), capUp.length ? React.createElement("div", {
       className: "v-sum",
       "data-msx-start-cap": true
     }, React.createElement("span", {
@@ -179951,6 +180282,10 @@ function MsxPlay({
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [tevAt, setTevAt] = useState({
+    k: '',
+    i: 0
+  });
   const [askLeave, setAskLeave] = useState(false);
   const [sel, setSel] = useState(null);
   const swipeRef = useRef(null);
@@ -180510,7 +180845,18 @@ function MsxPlay({
       }) : isTrain ? toReact(run) : afterAct(run)
     }, "次へ ▶"));
   } else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
-    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    const tk = `${s.turn}-${run.out.event.who}`;
+    const tAt = tevAt.k === tk ? tevAt.i : 0;
+    const tGo = n => setTevAt({
+      k: tk,
+      i: n
+    });
+    const tSteps = typeof msxTevSteps === 'function' ? msxTevSteps(run, run.out, ctx) : [];
+    const tLast = tAt < 0 || tAt >= tSteps.length - 1;
+    body = React.createElement(React.Fragment, null, typeof MsxTevMini === 'function' ? React.createElement(MsxTevMini, {
+      s: s,
+      v: v
+    }) : React.createElement(MsxBand, {
       s: s,
       v: v,
       ev: ev
@@ -180518,20 +180864,35 @@ function MsxPlay({
       key: `${s.turn}-tev`,
       run: run,
       o: run.out,
-      ctx: ctx
+      ctx: ctx,
+      at: tAt,
+      go: tGo,
+      onNext: () => toReact(run)
     }));
-    foot = React.createElement("div", {
+    foot = tAt < 0 ? React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => afterAct({
-        ...run,
-        phase: 'main'
-      })
+      className: "off",
+      disabled: true
     }, "飛ばす ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
-      onClick: () => toReact(run),
+      onClick: () => afterAct({
+        ...run,
+        phase: 'main'
+      }),
+      "data-msx-tev-next": true
+    }, "次へ ▶")) : React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => tGo(-1),
+      "data-msx-tev-skip": true
+    }, "飛ばす ⏭"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => tLast ? toReact(run) : tGo(tAt + 1),
       "data-msx-tev-next": true
     }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -188974,7 +189335,7 @@ function MsxR3Box({
       },
       "data-msx-mm-tab-bye": true,
       "data-msx-r3-mmbye": true
-    }, "お別れ")), tab === 'bye' ? React.createElement("div", {
+    }, "まとめてお別れ")), tab === 'bye' ? React.createElement("div", {
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
@@ -189148,17 +189509,20 @@ function MsxR3Box({
         }, lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
           type: "button",
           onClick: unlend
-        }, "🤝 貸し出しをやめる") : React.createElement("button", {
+        }, "貸し出しをやめる") : React.createElement("button", {
           type: "button",
           onClick: lend
-        }, "🤝 貸し出す") : null, React.createElement("button", {
+        }, "貸し出す") : null), React.createElement("div", {
+          className: "mm-bye-row"
+        }, React.createElement("button", {
           type: "button",
+          className: "mm-bye-sm",
           disabled: !!lock,
           onClick: () => setByeAsk({
             ids: [cur.id]
           }),
           "data-msx-r3-bye": true
-        }, lock ? `お別れ(${lock})` : 'お別れ'))),
+        }, lock ? `お別れできません(${lock})` : 'このモンスターとお別れする'))),
         onClose: () => {
           setSel(null);
           setPage('list');
@@ -189277,7 +189641,7 @@ function MsxR3Box({
     foot = null;
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: page === 'list' && tab === 'bye' || page === 'assist' && atab === 'rm' ? 'やめる' : '戻る',
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' && tab === 'bye' ? () => {
       setTab('list');
       setPick([]);
@@ -189380,7 +189744,11 @@ const MSX_MM_CSS = `
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
 /* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
-.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
+.msx .mm-acts:empty{display:none}
+.msx .mm-acts{grid-auto-columns:minmax(0,1fr)}
+.msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
+.msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
+.msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
 `;
 const MSX_BOX_HOST = {
   open: null,
@@ -274016,7 +274384,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
+      const backLabel = topic || cat ? '戻る' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -274062,15 +274430,12 @@ function MonsterHeroGame() {
           color: accent
         }
       }, headTitle)), React.createElement("button", {
+        type: "button",
         onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": "助手のひとことを開く",
-        className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
-      }, React.createElement(AssistantFace, {
-        who: activeAssistant,
-        size: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 32 : 48,
-        accent: accent,
-        expression: assistantExpression
-      }))), helpAssistantOpen && React.createElement("div", {
+        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
+        "data-help-bubble-toggle": true,
+        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
+      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
@@ -274084,8 +274449,7 @@ function MonsterHeroGame() {
         expression: assistantExpression,
         accent: accent,
         compact: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight,
-        collapseKey: helpShort ? null : "help",
-        collapseHidden: true,
+        collapseKey: null,
         maxLines: topic ? typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 1 : 2 : typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 2 : 0
       })), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
@@ -274215,12 +274579,9 @@ function MonsterHeroGame() {
         "data-battle-tutorial-launch-all": true,
         onClick: () => startBattleTutorial('HOME'),
         className: "w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95"
-      }, "🎓 れんしゅうを最初から全部通す")), React.createElement("div", {
-        className: "pt-1 flex gap-2"
+      }, "🎓 れんしゅうを最初から全部通す")), nextTopic && React.createElement("div", {
+        className: "pt-1 flex"
       }, React.createElement("button", {
-        onClick: () => setHelpTopicId(null),
-        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
-      }, "項目一覧へ"), nextTopic && React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
         className: "min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {

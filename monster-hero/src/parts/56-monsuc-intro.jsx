@@ -34,7 +34,8 @@ function MsxRunIntro({ run, ctx, onDone }) {
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
         <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
         <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
-        <MsxEvHead kind="story" label="メインストーリー 序章" title={`${msxAidName(s.aid)}編のはじまり`}/>
+        {/* 選んだストーリーの名前で始める(再点検 msx-IN: 「ヒーローへの道」を選んだのに「みゅあ編」とだけ出ていた)。上の帯の「〇〇編」は助手の呼び名 */}
+        <MsxEvHead kind="story" label={`ストーリー 序章・${msxAidName(s.aid)}編`} title={`${typeof msxScenarioOf === 'function' ? msxScenarioOf(run.scn).name : 'ヒーローへの道'}のはじまり`}/>
         <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
       </div>
     </div>
