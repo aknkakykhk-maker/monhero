@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 43ea9b4572718ce7
+// generated-sha256: eb5b60d8816c719d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84143,10 +84143,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           <div className="mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
             {/* 生まれる子は④の型の札(中)で大きく(窓-02: 約24pxのアイコンだけで、生まれる喜びが無かった) */}
             {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
-            <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseSpName(plan.child.species)}が生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
+            <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
             <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
+            <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
             {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span><b className="text-amber-200">{plan.child.st[k]}</b> <b className="ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100">+{plan.add[k]}</b></span></p>)}
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>

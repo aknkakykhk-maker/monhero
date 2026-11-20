@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3c2ef4c4eda676a
+// source-sha256: 52dd90d63662821f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161642,7 +161642,7 @@ function MonsucFuseSheet({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, monsucFuseSpName(plan.child.species), "が生まれます", React.createElement("small", {
+  }, "新しいマスモンが生まれます", React.createElement("small", {
     className: "block text-[12px] font-bold text-slate-200"
   }, plan.child.gen, "代目・まだ育てていないマスモン"), React.createElement("small", {
     className: "mt-1 block text-[12px] font-bold text-slate-200"
@@ -161655,7 +161655,9 @@ function MonsucFuseSheet({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, "初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), keys.map(k => React.createElement("p", {
+  }, "初めの能力に上乗せが付きます。2体ともに強いほど大きくなります"), React.createElement("p", {
+    className: "flex justify-between text-[10.5px] font-bold text-slate-400"
+  }, React.createElement("span", null, "能力"), React.createElement("span", null, "上乗せのあと・上乗せ分")), keys.map(k => React.createElement("p", {
     key: k,
     className: "flex justify-between text-[12px] font-black"
   }, React.createElement("span", null, names[k]), React.createElement("span", null, React.createElement("b", {
