@@ -250,7 +250,7 @@ function MsxR3Box({ onClose }) {
     title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxBody(aid, 'happy')} alt=""/>
-        {!bubOff ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
+        {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
           <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
@@ -276,7 +276,7 @@ function MsxR3Box({ onClose }) {
       {/* 升の見せ方はマスモンボックスの一覧と同じ(名前に札を重ねない。メモモンであることは見出しと下の数で分かる・r1119-006) */}
       <div className="mm-tabs"><button type="button" className={atab === 'list' ? 'on' : ''} onClick={() => { setAtab('list'); setApick([]); }} data-msx-assist-tab-list>一覧</button>
         <button type="button" className={atab === 'rm' ? 'on' : ''} onClick={() => { setAtab('rm'); setApick([]); setMsg(''); }} data-msx-assist-tab-rm>外す</button></div>
-      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}押すと、{'​'}アシスト効果と使い道が見られます</>}</div>
+      <div className="mm-hint msx-kp" data-msx-assist-why={atab === 'rm' ? undefined : ''}>{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}育成・合体・貸し出しには使えず、{'​'}育成を始めるときの編成に入れると{'​'}アシスト効果と得意な能力が効きます。{'​'}押すと詳細</>}</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
         {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length} hideFull/> : null}
@@ -291,7 +291,7 @@ function MsxR3Box({ onClose }) {
         const kAt = kp && Number.isFinite(kp.at) && kp.at > 0 ? new Date(kp.at) : null;
         return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
           info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
-          foot={<><div className="mm-hint msx-kp" data-msx-assist-why>メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。{'​'}育成を始めるときの編成に入れると、{'​'}アシスト効果と得意な能力が効きます</div>
+          foot={<>{/* 使い道の注意文は一覧の上の1か所だけ(詳細の窓と二重だった・2026-11-20 r1119-033 育-53) */}
             <div className="mm-acts"><button type="button" onClick={() => { setApick([acur.id]); setAAsk(true); }} data-msx-assist-detail-rm>外す</button></div></>}
           onClose={() => { setAsel(null); setMsg(''); }}/>);
       })() : null}
@@ -314,7 +314,7 @@ function MsxR3Box({ onClose }) {
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
     body = (<>
       <div className="mm-tabs"><button type="button" className={tab === 'list' ? 'on' : ''} onClick={() => { setTab('list'); setPick([]); }}>一覧</button>
-        <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
+        <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>まとめてお別れ</button></div>
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
@@ -358,13 +358,14 @@ function MsxR3Box({ onClose }) {
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏<small>名前・色</small></button></>}
           info={more}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
-            {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
-            <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}
+            {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>貸し出しをやめる</button> : <button type="button" onClick={lend}>貸し出す</button>) : null}</div>
+            {/* お別れは取り返しがつかないので、大きいボタンにせず下の隅の小さな文字にする(押すと確かめの窓が出る。r1119-033 窓-24・27) */}
+            <div className="mm-bye-row"><button type="button" className="mm-bye-sm" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れできません(${lock})` : 'このモンスターとお別れする'}</button></div></>}
           onClose={() => { setSel(null); setPage('list'); setMsg(''); }}/>);
       })() : null}
     </>);
     foot = tab === 'bye'
-      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← やめる」(B-9) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
+      ? <div className="v-ft">{/* お別れを選んでいる間は、やめるのは左上の「← 戻る」(B-9・窓-17) */}<button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
       : null; // 戻るは左上の1つ(B-3)
   }
   // ---- 名前と染色を変える ----
@@ -391,7 +392,7 @@ function MsxR3Box({ onClose }) {
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
     {/* 左上の戻るは、その画面の1つだけの出口(B-3・B-9)。メモモンは入口へ戻る(前は下の帯と行き先が違い、一覧へ戻っていた) */}
-    <MsxHd back={(page === 'list' && tab === 'bye') || (page === 'assist' && atab === 'rm') ? 'やめる' : '戻る'} onBack={page === 'gate' ? onClose
+    <MsxHd back="戻る" onBack={page === 'gate' ? onClose
       : page === 'list' && tab === 'bye' ? () => { setTab('list'); setPick([]); }
       : page === 'list' ? () => { setPage('gate'); setMsg(''); }
       : page === 'assist' && atab === 'rm' ? () => { setAtab('list'); setApick([]); }
@@ -481,7 +482,11 @@ const MSX_MM_CSS = `
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
 /* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
-.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
+.msx .mm-acts:empty{display:none}
+.msx .mm-acts{grid-auto-columns:minmax(0,1fr)}
+.msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
+.msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
+.msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----

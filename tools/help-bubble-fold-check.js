@@ -1,7 +1,8 @@
 require('./shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // ヘルプ(攻略情報局)の上の助手の吹き出しを「たためる」ことを、実際の画面で確かめる(2026-10-26 開発部 e01・e02)。
-//   ① はじめはひらいている ② 吹き出しの「▴」でたたむと何も出なくなり、mh_bubble_collapsed_v1 に 'help' が入る(上の助手の顔は薄くなる)
-//   ③ 読み込み直しても、ヘルプはたたんだまま ④ 上の助手の顔を押すとひらき、記録から消える
+//   ① はじめはひらいている ② 上の「たたむ ▲」でたたむと何も出なくなり、mh_bubble_collapsed_v1 に 'help' が入る
+//   ③ 読み込み直しても、ヘルプはたたんだまま ④ 上の「💬 ひとこと」を押すとひらき、記録から消える
+//   (2026-11-20 r1119-033 窓-06・20: 右上の顔と吹き出しの中の小さな「▴」をやめ、上の言葉のボタン1つで開く・たたむ)
 //   ⑤ 横向きの低い画面(844×390・667×375)では、はじめからたたんである(2026-10-27 社長の答え)。押せばひらき、ひらいた吹き出しは2行までに収まる。
 //      この向きでは保存(mh_bubble_collapsed_v1)を読み書きしない(縦向きの選びを変えない)
 //   ①〜④は縦向き(390×760)で確かめる
@@ -59,14 +60,15 @@ const seed = () => {
   await boot();
   await openHelp();
   check('① ヘルプの吹き出しは、はじめはひらいている', (await bubbleShown()) && (await raw()) === null);
-  check('「▴」を押せる', await click(/ひとことをたたむ/));
+  check('上の「たたむ ▲」を押せる', await click(/ひとことをたたむ/));
+  check('吹き出しの中に小さな「▴」は無い', await page.evaluate(() => !document.querySelector('[data-mh-help] [data-bubble-collapse]')));
   await page.waitForTimeout(600);
   check('② たたむと吹き出しが何も出なくなる', !(await bubbleShown()));
   check('② 記録に help が入る', (await raw()) === '{"help":true}', String(await raw()));
   await boot();
   await openHelp();
   check('③ 読み込み直しても、ヘルプはたたんだまま', !(await bubbleShown()));
-  check('④ 上の助手の顔を押す', await click(/助手のひとことを開く/));
+  check('④ 上の「💬 ひとこと」を押す', await click(/^ひとことを開く$/));
   await page.waitForTimeout(600);
   check('④ ひらくと吹き出しが戻り、記録から消える', (await bubbleShown()) && (await raw()) === '{}', String(await raw()));
   await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, '[1,2]']);
@@ -81,14 +83,13 @@ const seed = () => {
     await boot();
     await openHelp();
     check(`⑤ ${w}×${h}: ヘルプの吹き出しは、はじめからたたんである`, !(await bubbleShown()));
-    check(`⑤ ${w}×${h}: 上の助手の顔を押せる`, await click(/助手のひとことを開く/));
+    check(`⑤ ${w}×${h}: 上の「💬 ひとこと」を押せる`, await click(/^ひとことを開く$/));
     await page.waitForTimeout(600);
     const n = await lines();
     check(`⑤ ${w}×${h}: 押すとひらき、本文が2行までに収まる`, (await bubbleShown()) && n !== null && n <= 2, `${n}行`);
     check(`⑤ ${w}×${h}: 保存には何も書かない`, (await raw()) === null, String(await raw()));
-    // この向きでは吹き出しの中に「▴」を出さず、上の助手の顔でたたむ(「▴」は保存に書くため)
-    check(`⑤ ${w}×${h}: 吹き出しの中に「▴」は無い`, !(await click(/ひとことをたたむ/)));
-    check(`⑤ ${w}×${h}: 上の助手の顔でたため、保存には何も書かない`, (await click(/助手のひとことを開く/)) && (await page.waitForTimeout(600), !(await bubbleShown())) && (await raw()) === null);
+    check(`⑤ ${w}×${h}: 吹き出しの中に「▴」は無い`, await page.evaluate(() => !document.querySelector('[data-mh-help] [data-bubble-collapse]')));
+    check(`⑤ ${w}×${h}: 上の「たたむ ▲」でたため、保存には何も書かない`, (await click(/^ひとことをたたむ$/)) && (await page.waitForTimeout(600), !(await bubbleShown())) && (await raw()) === null);
   }
   check('画面でエラーが出ていない', fatal.length === 0, fatal.slice(0, 2).join(' | '));
 

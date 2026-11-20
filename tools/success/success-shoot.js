@@ -13,6 +13,11 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const ROOT = path.resolve(__dirname, '..', '..');
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(社長の指摘の較正。tools/browser/serve-rev.js)
+const serveRev = require('../browser/serve-rev');
+const FROM_REV = serveRev.make(ROOT);
+// 撮った止め絵ごとに大きさの釣り合いを測り、置き場の _measure.jsonl に残す(tools/browser/ui-measure.js。UI_MEASURE=0 で止める)
+const uiMeasure = require('../browser/ui-measure');
 const SHOT_DIR = process.env.SHOT_DIR || '';
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -66,6 +71,7 @@ const makeRun = async (kind) => {
 (async () => {
   const server = await new Promise((r) => { const s = http.createServer((req, res) => {
     const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    if (f.startsWith(ROOT) && serveRev.serve(FROM_REV, ROOT, f, res, TYPES[path.extname(f)])) return;
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -85,11 +91,11 @@ const makeRun = async (kind) => {
     ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
     ['DX4', null, ['seeall', 'dexopen', 'dexrow:0']], ['DX5', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0']], ['DX6', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback']], ['DX7', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback', 'dexback']], // 図鑑の読む画面: 押す前・押した後・戻った後・一覧へ(r1115-144)
     ['DX1', null, ['seeall', 'dexopen', 'dextab:daily']], ['DX2', null, ['seeall', 'dexopen', 'dextab:daily', 'dexrow:0']], ['DX3', null, ['seeall', 'dexopen', 'dextab:team', 'dexrow:0']], // イベント図鑑(r1115-144・145)
-    ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
+    ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'scrollend']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
-    ['S1', null, ['new', 'next']], ['S1U', null, ['unlockall', 'new', 'next']], ['S1UG', null, ['unlockall', 'new', 'next', 'pickmon:Golem']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
-    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], ['S2T', null, ['seedteam', 'new', 'next', 'next', 'teamauto']], ['S2TP', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0']], ['S2EA', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects']], ['S2EB', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efrow:0']], ['S2EC', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efmon']], ['S2TD', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail']], ['S2TD2', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail', 'asdcard']], // アシスト詳細(r1119-011) // 効果のある編成(④段2) // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
+    ['S1', null, ['new', 'next']], ['S1U', null, ['unlockall', 'new', 'next']], ['S1UG', null, ['unlockall', 'new', 'next', 'pickmon:Golem']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'scrollend']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
+    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], ['S2FL', null, ['new', 'next', 'next', 'slot:5', 'friendtab']], ['S2FD', null, ['new', 'next', 'next', 'slot:5', 'friendtab', 'fpdetail']], ['S2FT', null, ['new', 'next', 'next', 'slot:5', 'friendtab', 'fpdetail', 'tabtech']], ['S2FX', null, ['new', 'next', 'next', 'slot:5', 'friendtab', 'fpdetail2', 'tabassist']], ['S2T', null, ['seedteam', 'new', 'next', 'next', 'teamauto']], ['S2TP', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0']], ['S2EA', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects']], ['S2EB', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efrow:0']], ['S2EC', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'effects', 'efmon']], ['S2TD', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail']], ['S2TD2', null, ['seedteam', 'new', 'next', 'next', 'teamauto', 'slot:0', 'tpdetail', 'asdcard']], // アシスト詳細(r1119-011) // 効果のある編成(④段2) // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carryall', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['IN', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip']], ['IN2', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip', 'introNext', 'introNext']], // 育成の始まりの場面(2026-11-14)
@@ -105,7 +111,7 @@ const makeRun = async (kind) => {
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
     // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
     ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
-    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['TV1S', 'mid', ['tev', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next']], ['TV1K', 'mid', ['tev', 'wait:1200', 'tev:skip']], ['TV2S', 'mid', ['tevLot', 'wait:600', 'tev:next', 'tev:next', 'tev:next']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -120,6 +126,20 @@ const makeRun = async (kind) => {
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
       await page.addInitScript((tut) => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: tut ? { open: 1, firstend: 1, prep: 1, scn: 1 } : { open: 1, firstend: 1, prep: 1, team: 1, bring: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1, scn: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} }, !!process.env.SHOT_TUT); // SHOT_TUT=1: ターン・トレーニング・結果の説明を未読にして撮る(説明の窓の出る所を見る。測る値は窓が重なるので見ない)
+      // フレンドから借りる画面(S2FL・S2FD・S2FT)用の偽のフレンド1人と貸し出し1体。ページの中だけで返す(本番のサーバーへは送らない)
+      if (SHOTS.some(([n]) => /^S2F[LDTX]/.test(n))) {
+        await page.route(/\/rest\/v1\/(friend_links|friend_profiles|monsuc_lend)/, (r) => {
+          const url = r.request().url();
+          const self = (url.match(/(?:requester_id|target_id)\.eq\.([A-Za-z0-9_-]+)/) || [])[1] || 'self-0001';
+          // 2人目(ゆうと)は、能力に比べて大きすぎるアシストを送ってくる子。端末の確かめで外れ、詳細にアシストの一覧が出ない(社長の実機 M10 と同じ状態)
+          const link = (id) => ({ requester_id: self, target_id: id, status: 'accepted', blocked_by: null, created_at: '2026-11-01T00:00:00Z', updated_at: '2026-11-01T00:00:00Z' });
+          const body = /friend_links/.test(url) ? [link('aoi-0001'), link('yuto-0001')]
+            : /friend_profiles/.test(url) ? [{ breeder_id: 'aoi-0001', user_name: 'あおい', last_seen_at: new Date().toISOString() }, { breeder_id: 'yuto-0001', user_name: 'ゆうと', last_seen_at: new Date().toISOString() }]
+              : [{ owner_id: 'yuto-0001', version: 1, updated_at: '2026-11-19T00:00:00Z', mon: { species: 'Melody', name: 'メロディ', stats: { life: 60, pow: 60, wise: 60, hit: 60, eva: 60, tough: 60 }, assists: [{ id: 'sokoji', lv: 25, n: 25 }, { id: 'genki', lv: 25, n: 25 }, { id: 'shuugou', lv: 25, n: 25 }, { id: 'kaifuku', lv: 25, n: 25 }] } },
+                { owner_id: 'aoi-0001', version: 1, updated_at: '2026-11-19T00:00:00Z', mon: { species: 'Melody', name: 'メロちゃん', stats: { life: 520, pow: 610, wise: 380, hit: 470, eva: 430, tough: 450 }, assists: [{ id: 'sokoji', lv: 3, n: 8 }, { id: 'genki', lv: 3, n: 15 }, { id: 'shuugou', lv: 2, n: 4 }] } }];
+          return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        });
+      }
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
@@ -168,6 +188,10 @@ const makeRun = async (kind) => {
             if (st === 'teamauto') { const d = document.querySelector('[data-msx-team-auto]'); if (d && !d.disabled) d.click(); return !!d; }
             if (st.startsWith('efrow:')) { const d = document.querySelectorAll('[data-msx-effect]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
             if (st === 'tpdetail') { const d = document.querySelector('[data-msx-tp-detail]'); if (d) d.click(); return !!d; }
+            if (st === 'friendtab') { const b = [...document.querySelectorAll('button')].find((x) => /フレンド/.test(x.innerText || '') && /まで|体/.test(x.innerText || '')); if (b) b.click(); return !!b; } // 枠を選ぶ画面の「🤝 フレンド」のタブ
+            if (st === 'tabassist') { const b = document.querySelector('[data-msx-detail-btab="assist"]'); if (b) b.click(); return true; } // 詳細の「アシスト」のタブ(無ければそのまま)
+            if (st === 'tabtech') { const b = [...document.querySelectorAll('button,[role=tab]')].find((x) => (x.innerText || '').trim() === '技'); if (b) b.click(); return !!b; } // 詳細の「技」のタブ
+            if (st === 'fpdetail' || st === 'fpdetail2') { const d = document.querySelectorAll('[data-msx-fp-detail]')[st === 'fpdetail2' ? 1 : 0]; if (d) d.click(); return !!d; } // 2 = 2人目(アシストが外れる子) // フレンドから借りる札の「効果・詳細」
             if (st === 'asdcard') { const d = document.querySelector('[data-msx-assist-detail] [data-msx-assist-card][role=button]'); if (d) d.click(); return !!d; }
             if (st === 'cmtap') { const d = document.querySelector('[data-msx-cm]'); if (d) d.click(); return !!d; }
             if (st === 'efmon') { const d = document.querySelector('[data-msx-ef-view="mon"]'); if (d) d.click(); return !!d; }
@@ -178,6 +202,13 @@ const makeRun = async (kind) => {
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
             if (st === 'carryall') { const d = document.querySelector('[data-msx-carry-all]'); if (d) d.click(); return !!d; } // 持ちこみの段: 持っていない物も升目に出す(Q-3-6 で畳んだ)
+            // 編成の子のイベント(6つの拍): 押すたびに1拍進む。結果の拍(5)に入ったら、弾けとハートが満ちるまで待つ(SHOT_SEQ=TV1S で押すたびの止め絵)
+            if (st === 'tev:next' || st === 'tev:skip') {
+              const bt = document.querySelector(st === 'tev:skip' ? '[data-msx-tev-skip]' : '[data-msx-tev-next]'); if (!bt) return false; bt.click();
+              await new Promise((r) => setTimeout(r, 60)); const sc = document.querySelector('[data-msx-tev-beat]');
+              if (sc && sc.getAttribute('data-msx-tev-beat') === '5') await new Promise((r) => setTimeout(r, 1100));
+              return true;
+            }
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
@@ -484,7 +515,7 @@ const makeRun = async (kind) => {
           if (process.env.TAP_DUMP) console.log('TAP', name, tag, miss.length, miss.slice(0, 6).join(' / '));
           else check(`${L}: 札の端を押しても隣の札に当たらない`, miss.length === 0, miss.slice(0, 4).join(' / '));
         }
-        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
+        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); await uiMeasure.record(page, path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`)); }
       }
       await page.close();
     }
