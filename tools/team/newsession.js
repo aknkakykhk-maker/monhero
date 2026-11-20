@@ -17,7 +17,7 @@ const { pick } = require('./model-pick');
 const { latest } = require('./handoff');
 const { linesFor } = require('./requests');
 
-const HQ = 'session_014GTmSNS2ae9tRr57k3zFjC';
+const HQ = 'session_0113GBaCCe57vnmvsZ6f3TFr';
 
 // 会話の題(Claude アプリの一覧に出る)。2026-11-20 社長「API はセッション名わかりやすくして」:
 //   台帳の番号(r1119-024②)や丸数字が題を埋め、API を使う会話かどうかが28字で切れて見えなかった。
