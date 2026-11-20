@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b92d6d34f22a727b
+// source-sha256: 35da79aeef2bab0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114638,8 +114638,8 @@ function AssistantLifeBand({
   const nameOf = id => (assistantById(id) || {}).name || id;
   const g = life.groups[0];
   const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
-  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
-  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${assistantLifePlaceLabel(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${assistantLifePlaceLabel(lonely[1].place)}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
   const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
   return React.createElement("div", {
     "data-assistant-life-band": true,
@@ -115169,29 +115169,9 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
     furn: '⚔️🛡️'
   }
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
-  home: '🏡',
-  plaza: '⛲',
-  cafe: '🍰',
-  studio: '🎵',
-  ranch: '🥚',
-  cardroom: '🃏',
-  library: '📚',
-  market: '🛍️',
-  hill: '🌄',
-  garden: '🌷',
-  temple: '✨',
-  battle: '⚔️',
-  clinic: '🏥'
-});
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
-  studio: 'モンヒロビート',
-  cardroom: 'MFバトルカード',
-  ranch: 'M/B管理',
-  temple: '神殿',
-  battle: 'モンヒロバトル',
-  home: 'みんなの家'
-});
+const assistantLifeWordsPlaces = () => typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places || {};
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.icon])));
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.show])));
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
   studio: 'rhythm',
@@ -150065,7 +150045,7 @@ const assistantLifePlanRowInfo = id => {
   return {
     next,
     hour: h,
-    sub: `${h}時から: ${p ? ASSISTANT_LIFE_PLACES[p] : 'おまかせ'}`
+    sub: `${h}時から: ${p ? assistantLifePlaceLabel(p) : 'おまかせ'}`
   };
 };
 const assistantLifePlanFreeCount = ids => {
@@ -150173,14 +150153,14 @@ function AssistantLifePlanWho({
     let body;
     if (past || now) body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : React.createElement("span", {
+    }, p ? `📍 ${assistantLifePlaceLabel(p)}` : React.createElement("span", {
       className: "text-slate-400"
     }, "おまかせ"), (() => {
       const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
       if (bw && bw.why !== 'rest') return React.createElement("span", {
         className: "ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100",
         "data-assistant-life-plan-body-why": `${id}@${abs}`
-      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`);
+      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${assistantLifePlaceLabel(bw.place) || '家'}へ`);
       return React.createElement(React.Fragment, null, r === 'ok' && React.createElement("span", {
         className: "ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100"
       }, "✓ お願いどおり"), r === 'no' && React.createElement("span", {
@@ -150200,7 +150180,7 @@ function AssistantLifePlanWho({
       }, assistantLifePlanName(id), "「", ln.text, "」") : null;
     })());else body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", ASSISTANT_LIFE_PLACES[p], assistantLifePlanPerk(p) && React.createElement("span", {
+    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", assistantLifePlaceLabel(p), assistantLifePlanPerk(p) && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"
     }, assistantLifePlanPerk(p))) : React.createElement("span", {
       className: "text-slate-400"
@@ -150293,7 +150273,7 @@ function AssistantLifePlanTable({
       "data-assistant-life-plan-cell": `${id}@${a}`,
       onClick: () => onCell(id, a),
       className: `h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`
-    }, p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'));
+    }, p ? `📍${assistantLifePlaceLabel(p)}` : 'おまかせ'));
   }))))), left.length > 4 && React.createElement("div", {
     className: "mt-1 flex justify-end gap-1"
   }, React.createElement("button", {
@@ -150322,7 +150302,7 @@ function AssistantLifePlanPlace({
     "data-assistant-life-plan-for-place": place
   }, React.createElement("p", {
     className: "px-1 text-[12px] font-black text-sky-200"
-  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", ASSISTANT_LIFE_PLACES[place], "へ来てもらう助手"), React.createElement("div", {
+  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", assistantLifePlaceLabel(place), "へ来てもらう助手"), React.createElement("div", {
     className: "mt-1 flex flex-col gap-1"
   }, ids.map(id => {
     const on = assistantLifePlanOf(next, id) === place;
@@ -150554,11 +150534,10 @@ const ASSISTANT_LIFE_BODY_GAP = Object.freeze({
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']);
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
-const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
-  studio: ['モンヒロビート', '練習スタジオ'],
-  ranch: ['M/B管理', '育成場'],
-  cardroom: ['MFバトルカード', 'カード部屋']
-});
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze(Object.fromEntries(['studio', 'ranch', 'cardroom'].map(k => {
+  const w = typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places[k];
+  return [k, w ? [w.show, w.line] : [ASSISTANT_LIFE_PLACES[k], ASSISTANT_LIFE_PLACES[k]]];
+})));
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
   cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
   plaza: 'ほかの助手と会いやすい・なかよく',
@@ -151194,7 +151173,7 @@ function AssistantLifeBodyPanel({
       className: "w-[58px] shrink-0 text-sky-200"
     }, s.from, "〜", (s.from + 2) % 24, "時"), React.createElement("span", {
       className: "min-w-0 flex-1 truncate"
-    }, ASSISTANT_LIFE_PLACES[r.place], "のあと"), React.createElement("span", {
+    }, assistantLifePlaceLabel(r.place), "のあと"), React.createElement("span", {
       className: "shrink-0 whitespace-nowrap"
     }, "疲れ", r.fat, "・ストレス", r.st), r.risk > 0 && React.createElement("span", {
       className: "shrink-0 whitespace-nowrap text-rose-300"
@@ -163246,6 +163225,86 @@ function MsxIssa({
     onChoose: choose
   });
 }
+const MSX_ISSA_VID = Object.freeze({
+  alpha: 'images/success/issa-entrance-alpha.webm',
+  bg: 'images/success/issa-entrance-bg.mp4'
+});
+const msxIssaVidKind = () => {
+  try {
+    if (typeof document === 'undefined' || typeof navigator === 'undefined') return null;
+    if (typeof window !== 'undefined' && (window.__msxIssaVidForce === 'alpha' || window.__msxIssaVidForce === 'bg')) return window.__msxIssaVidForce;
+    const v = document.createElement('video');
+    if (!v || typeof v.canPlayType !== 'function') return null;
+    const ua = String(navigator.userAgent || '');
+    const ios = /iPad|iPhone|iPod/.test(ua) || navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1;
+    const appleWebkit = ios || /AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/.test(ua);
+    if (!appleWebkit && v.canPlayType('video/webm; codecs="vp9"')) return 'alpha';
+    if (v.canPlayType('video/mp4; codecs="avc1.64001F"') || v.canPlayType('video/mp4')) return 'bg';
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+function MsxIssaVid({
+  kind,
+  out = false,
+  onEnd
+}) {
+  const ref = useRef(null);
+  const on = useRef(false);
+  const done = useRef(false);
+  const end = () => {
+    if (!done.current) {
+      done.current = true;
+      onEnd();
+    }
+  };
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) {
+      end();
+      return undefined;
+    }
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    if (typeof window !== 'undefined' && Number(window.__msxIssaVidRate) > 0) v.playbackRate = Number(window.__msxIssaVidRate);
+    const t = setTimeout(() => {
+      if (!on.current) end();
+    }, 2500);
+    try {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(end);
+    } catch (e) {
+      end();
+    }
+    return () => clearTimeout(t);
+  }, []);
+  const props = {
+    ref,
+    src: MSX_ISSA_VID[kind],
+    muted: true,
+    playsInline: true,
+    'webkit-playsinline': 'true',
+    preload: 'auto',
+    disablePictureInPicture: true,
+    controls: false,
+    onPlaying: () => {
+      on.current = true;
+    },
+    onEnded: end,
+    onError: end,
+    'aria-hidden': 'true',
+    'data-msx-issa-vid': kind
+  };
+  return kind === 'alpha' ? React.createElement("div", {
+    className: "msx-is-vw"
+  }, React.createElement("video", _extends({
+    className: "msx-is-vid"
+  }, props))) : React.createElement("video", _extends({
+    className: `msx-is-vbg${out ? ' out' : ''}`
+  }, props));
+}
 function MsxIssaMeet({
   run,
   v,
@@ -163264,6 +163323,15 @@ function MsxIssaMeet({
   });
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(calm ? [] : [['issaIn', 120]], []);
   const sel = MSX_ISSA_KEYS.find(x => x.key === pick);
+  const [vid, setVid] = useState(() => calm ? null : msxIssaVidKind());
+  const [vOut, setVOut] = useState(false);
+  const usedVid = useRef(Boolean(vid));
+  const vidEnd = () => {
+    if (vid === 'bg') {
+      setVOut(true);
+      setTimeout(() => setVid(null), 300);
+    } else setVid(null);
+  };
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -163283,7 +163351,7 @@ function MsxIssaMeet({
     style: {
       background: '#0f0d2466'
     }
-  }), React.createElement("span", {
+  }), usedVid.current ? null : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "msx-is-ring",
     "aria-hidden": "true"
   }), React.createElement("span", {
@@ -163294,10 +163362,14 @@ function MsxIssaMeet({
     style: {
       '--i': i
     }
-  }))), React.createElement("img", {
-    className: "v-issa msx-is-in",
+  })))), vid === 'alpha' ? React.createElement(MsxIssaVid, {
+    kind: "alpha",
+    onEnd: vidEnd
+  }) : React.createElement("img", {
+    className: `v-issa${usedVid.current ? '' : ' msx-is-in'}`,
     src: MSX_ISSA_ART,
-    alt: "イッサ博士"
+    alt: "イッサ博士",
+    "data-msx-issa-still": true
   }), React.createElement("div", {
     className: "v-machine msx-is-mc"
   }, "⚙️💡", React.createElement("small", null, "のびのび装置"), React.createElement(MsxMonArt, {
@@ -163316,10 +163388,20 @@ function MsxIssaMeet({
       borderRadius: '0 99px 99px 0'
     },
     title: "イッサ博士があらわれた!"
-  }), React.createElement("div", {
+  }), vid ? null : React.createElement("div", {
     className: "v-ibub msx-is-bub",
     style: MSX_IS_WRAP
-  }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`))), React.createElement("div", {
+  }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`)), vid === 'bg' ? React.createElement(MsxIssaVid, {
+    kind: "bg",
+    out: vOut,
+    onEnd: vidEnd
+  }) : null, usedVid.current && typeof MsxFxSkip === 'function' ? React.createElement(MsxFxSkip, {
+    show: Boolean(vid) && !vOut,
+    onSkip: vidEnd,
+    attrs: {
+      'data-msx-issa-skip': 1
+    }
+  }) : null), React.createElement("div", {
     className: "v-six msx-is-six"
   }, MSX_ISSA_KEYS.map((x, i) => {
     const p = SUC.issaRate(s, x.key);
@@ -163558,6 +163640,10 @@ const MSX_IS_CSS = `
 .msx .msx-is .v-issa{transition:filter .4s,transform .4s}
 .msx .msx-is .v-issa.back{transform:translateX(-14%) scale(.92);filter:brightness(.8) drop-shadow(0 6px 6px #000a)}
 .msx .msx-is .v-issa.sad{filter:grayscale(.45) brightness(.82) drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vw{position:absolute;left:2%;bottom:-58%;height:150%;aspect-ratio:305/900;pointer-events:none}
+.msx .msx-is-vw video{position:absolute;left:-43.4%;top:-6.97%;width:187.3%;height:112.9%;max-width:none;max-height:none;object-fit:fill;filter:drop-shadow(0 6px 6px #000a)}
+.msx .msx-is-vbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 6%;z-index:7;background:#0b1030;transition:opacity .3s;pointer-events:none}
+.msx .msx-is-vbg.out{opacity:0}
 .msx .msx-is.meet .msx-is-in{animation:msxIsIn .62s cubic-bezier(.2,1.25,.4,1) both}
 .msx .msx-is.meet .msx-is-mc{animation:msxIsUp .45s ease-out .35s both}
 .msx .msx-is.meet .msx-is-band{animation:msxIsBand .4s cubic-bezier(.2,1.3,.4,1) .45s both}
@@ -178670,10 +178756,10 @@ function msxTpSupport(mem, SUC) {
     className: "msx-md-kv"
   }, React.createElement("b", null, "友情タッグの強さ"), React.createElement("span", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("div", {
     className: "msx-md-kv"
-  }, React.createElement("b", null, "得意率"), React.createElement("span", null, Math.round((Number(mem.fav) || 0) * 100), "%")), (Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map(k => React.createElement("div", {
+  }, React.createElement("b", null, "得意率"), React.createElement("span", null, "+", Math.round((Number(mem.fav) || 0) * 100), "%", Array.isArray(mem.top) && mem.top[0] ? `(${MSX_STAT_ICON[mem.top[0]] || ''}${MSX_STAT_NAME[mem.top[0]] || ''})` : '')), (Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map(k => React.createElement("div", {
     key: k,
     className: "msx-md-kv"
-  }, React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", null, ch[k] != null ? `集合率 ${Math.round(ch[k] * 100)}%・` : '', "伸び +", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), React.createElement("div", {
+  }, React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", null, ch[k] != null ? `来やすさ ${Math.round(ch[k] * 100)}%・` : '', "伸び +", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), React.createElement("div", {
     className: "msx-note"
   }, "基本値です。実際の効果は発動条件などで変わります"));
 }
@@ -189004,7 +189090,7 @@ function MsxR3Retire({
       className: "nw"
     }, "タッグ +", mem.tag, "%"), "・", React.createElement("span", {
       className: "nw"
-    }, "得意率 ", Math.round((mem.fav || 0) * 100), "%")) : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 初めの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
+    }, "得意率 +", Math.round((mem.fav || 0) * 100), "%")) : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 初めの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
       const band = msxR3Band(grade.rank);
       const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {
@@ -191038,7 +191124,7 @@ function MsxAssistDetail({
   }, sub && String(sub).includes(role) ? sub : [role, sub].filter(Boolean).join('・')), React.createElement("div", {
     className: "kv",
     "data-msx-asd-support": true
-  }, [['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'], ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'], ['fav', '得意率', `${Math.round((Number(mem.fav) || 0) * 100)}%`, '得意な能力のトレーニングに来やすい。'], kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => React.createElement("button", {
+  }, [['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'], ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'], ['fav', '得意率', `+${Math.round((Number(mem.fav) || 0) * 100)}%${top[0] ? `(${MSX_STAT_ICON[top[0]] || ''}${MSX_STAT_NAME[top[0]] || ''})` : ''}`, '来たとき、一番得意な能力のトレーニングに行く確率。'], kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => React.createElement("button", {
     type: "button",
     key: k,
     className: kvTip === k ? 'on' : '',
@@ -191051,7 +191137,7 @@ function MsxAssistDetail({
   }, {
     bond: '初めの親密度 … 育成を始めたときの親密度。',
     tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。',
-    fav: '得意率 … 得意な能力のトレーニングに来やすい。',
+    fav: '得意率 … 来たとき、一番得意な能力のトレーニングに行く確率。友情タッグと同じ強さの段で15〜35%(得意率アップで45%まで)。来ないこともあります。',
     pow: '総合力 … 6つの能力から出す強さ。'
   }[kvTip]) : React.createElement("small", {
     className: "asd-kvn"
@@ -191743,6 +191829,7 @@ const monsucLendMember = (row, SUC) => {
   if (okShape && list.length) {
     let budget = 0;
     try {
+      const allTechs = typeof SUC.techsOf === 'function' ? SUC.techsOf(m.species).filter(Boolean).map(t => t.id) : [];
       const best = SUC.memberOf({
         kind: 'raised',
         species: m.species,
@@ -191750,9 +191837,14 @@ const monsucLendMember = (row, SUC) => {
         lv: 999,
         loy: 100,
         pop: 100,
-        masteries: [100, 100, 100, 100, 100, 100, 100, 100]
+        techs: allTechs,
+        masteries: allTechs.map(() => 100),
+        mast: allTechs.map(() => 100),
+        pv: 2
       });
-      budget = SUC.assistPointsOf(best.power);
+      const pNow = SUC.assistPointsOf(best.power);
+      const pOld = Math.min(400, Math.max(20, Math.floor((Number(best.power) || 0) / 50)));
+      budget = Math.max(pNow, pOld);
     } catch (_) {
       budget = 0;
     }

@@ -97,8 +97,13 @@ const monsucLendMember = (row, SUC) => {
     // 6能力から出せる最大の総合力(Lv・技の熟練・忠誠度・人気を全部いちばん上にしたとき)
     let budget = 0;
     try {
-      const best = SUC.memberOf({ kind: 'raised', species: m.species, stats, lv: 999, loy: 100, pop: 100, masteries: [100, 100, 100, 100, 100, 100, 100, 100] });
-      budget = SUC.assistPointsOf(best.power);
+      // 引退のときのポイントは覚えた技も入れた総合力から出すので、上限も その種の技を全部・熟練最大で数える(技なしだと低く出て、正しく取った子が外れていた)
+      const allTechs = typeof SUC.techsOf === 'function' ? SUC.techsOf(m.species).filter(Boolean).map((t) => t.id) : [];
+      const best = SUC.memberOf({ kind: 'raised', species: m.species, stats, lv: 999, loy: 100, pop: 100, techs: allTechs, masteries: allTechs.map(() => 100), mast: allTechs.map(() => 100), pv: 2 });
+      // 2026-11-19 まではポイントが「総合力 ÷ 50(20〜400)」だった。その決まりで取ったアシスト効果も認めるため、前と今の数え方の大きい方を上限にする(2026-11-20 窓口)
+      const pNow = SUC.assistPointsOf(best.power);
+      const pOld = Math.min(400, Math.max(20, Math.floor((Number(best.power) || 0) / 50)));
+      budget = Math.max(pNow, pOld);
     } catch (_) { budget = 0; }
     const nOf = (a) => (v3 ? AT3.fromSaved(a) : a.lv);
     const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[nOf(a) - 1]) || 0), 0);
