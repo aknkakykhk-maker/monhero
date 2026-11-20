@@ -27,6 +27,12 @@ const MSX_MANUAL_CSS = `
 .msxm-row.cc.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .msxm-row.cc .msxm-btn{min-height:36px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
 .msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msxm-row.cc.r3{grid-template-columns:repeat(3,minmax(0,1fr))}.msxm-row.cc.r2{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:4px}
+.msxm-ops .msxm-row.cc .msxm-btn{min-height:40px;font-size:13px;line-height:1.15}
+.msxm-ops .msxm-btn:disabled{opacity:1;background:#1a1828;border-color:transparent;color:#64748b;box-shadow:none}.msxm-ops .msxm-btn:disabled small{color:#64748b}
+.msxm-ops .msxm-btn:not(:disabled){box-shadow:0 2px 0 #0006}
+.msxm-ops .msxm-row.cc.r2 .msxm-btn{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px}
+.msxm-ops .msxm-row.cc .msxm-btn small{font-size:11px}
 /* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
 .msc-wrap .msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
@@ -66,7 +72,7 @@ const msaTnWidest = (parts, icon) => Math.max(1, ...parts.map((p, i) => msaTnEm(
 function MsaTechName({ name, icon = '', className = '' }) {
   const parts = msaTechNameParts(name);
   return (
-    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2) }}>
+    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2), '--tnt': (parts.reduce((a, p) => a + msaTnEm(p), 0) + (icon ? 1.3 : 0) + 0.2).toFixed(2) }}>
       {icon ? <span className="msa-tn-s">{icon}</span> : null}
       {parts.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="msa-tn-s">{p}</span></React.Fragment>)}
     </span>
@@ -84,10 +90,12 @@ const msaFitTechNames = () => {
     document.querySelectorAll('[data-msa-tn]').forEach((el) => {
       el.style.fontSize = '';
       el.classList.remove('msa-tn-brk');
+      // 4列の札(1行で見せる。2026-11-20 再点検 バ-25)は 8.5px まで縮め、折らない
+      const one = !!(el.closest && el.closest('.msa-dc:not(.a)'));
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
-      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 10 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > (one ? 8.5 : 10) && n++ < 16) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
       // 最低の大きさでも1つの言葉が入りきらないときは、切って隠さず、その言葉の中で折って全文見せる
-      if (el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
+      if (!one && el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
     });
   } catch (_) {}
 };
@@ -127,11 +135,23 @@ const MSA_DC_CSS = `
 .msa-dc-c small{font-size:10.5px}
 .msa-dc-c .msa-dc-h{font-size:11px}
 .msa-dc-c.now.none{border-color:#475569;box-shadow:none;background:#1b1733;color:#94a3b8}
+/* 2026-11-20 再点検 バ-33・37: 札の字は 12px 以上・技名は 14px の太字で1行(長い名前だけ縮める) */
+.msa-dc:not(.a) .msa-dc-c{min-height:0;padding:3px 5px 4px;gap:0;line-height:1.25}
+.msa-dc:not(.a) .msa-dc-c small{font-size:12px;letter-spacing:-.02em}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h{font-size:12px}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv{font-size:11px;font-weight:900;color:#fff;background:#0284c7;border-radius:5px;padding:0 3px;margin-left:2px;white-space:nowrap}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv.kb{background:#ea580c}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h i{font-size:10.5px}
+.msa-dc:not(.a) .msa-dc-c .msa-tn{font-weight:900;color:#fff}
+.msa-dc:not(.a) .msa-dc-none{font-size:12px;color:#94a3b8}
 /* 自分の「いま」の札は水色のふち(黄色のふちは助手のおすすめだけに使う。2026-11-20 API の点検: 2つの意味で黄色が重なっていた) */
 .msa-dc-c.now{border-color:#7dd3fc;box-shadow:0 0 0 1px #7dd3fc88 inset}
 .msa-dc-c.now .msa-dc-h em{background:#7dd3fc;color:#0c2a3a}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
-@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10.5px,min(14px,calc(100cqw / var(--tnw,1))))}}
+/* 2026-11-20 再点検 バ-25・37: 4列の札の技名は途中で折らず1行にする(全体の長さ --tnt で縮める。下限 8.5px) */
+.msa-dc:not(.a) .msa-dc-c .msa-tn{white-space:nowrap;overflow:hidden}
+@supports (width:1cqw){.msa-dc:not(.a) .msa-dc-c .msa-tn{font-size:max(8.5px,min(14px,calc(100cqw / var(--tnt,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
@@ -239,14 +259,18 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             </button>
           );
         }
+        // 2026-11-20 再点検 バ-22・33・37・53・60: 字が 9〜10px で読めない・「いま」が何か所にも出る・技名が折り返す →
+        //   いまの間合いは枠の色だけ。技名は1行の太字(長い名前は縮める)、性能は 12px の短い行(命中・ガッツ・ダメージ)。相手の札(B)はガッツの行を出さない(押すと一覧で全部見られる)。
+        //   使ったあと動く技は見出しの行に「↪零」(自分が移る)/「💨遠」(相手を飛ばす)
+        const mvTo = t && Number.isInteger(t.moveTo) ? t.moveTo : null;
+        const kb = mvTo != null && Array.isArray(t.dist) && t.dist.length && mvTo > Math.min(...t.dist);
         return (
           <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
-            <span className="msa-dc-h">{MSA_DC_DIST[d]}{now ? <em>いま</em> : null}<i>{at.length ? `${at.length}技` : ''}</i></span>
+            <span className="msa-dc-h">{MSA_DC_DIST[d]}{mvTo != null ? <span className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo} title={typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}` : undefined}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</span> : null}<i>{at.length > 1 ? `ほか${at.length - 1}` : ''}</i></span>
             {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
-            {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
-            {t ? <small>ガッツ {t.guts}</small> : null}
+            {t ? <small className="p">{Number.isFinite(hp) ? `命中${Math.round(hp)}%` : '命中 —'}</small> : null}
+            {t && dataSide !== 'B' ? <small className="gu">ガッツ−{t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
-            {t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <small className="mv" data-msa-dc-move={t.moveTo} title={`使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`}>↪ {msxTechMoveTxt(t).replace(/\u200b/g, '')}</small> : null}
           </button>
         );
       })}
@@ -381,17 +405,22 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)} host="manual"/>
       ) : null}
       {look === 'c' ? (() => {
-        // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す
+        // 詰めた形(2026-11-20 再点検 バ-38): 移動は決めた横3つ「◀ 後退・💨 吹き飛ばし・前進 ▶」(r1115-195)の1段、ガード・ためるは別の段。
+        //   吹き飛ばしは零の間合いだけ押せる(ほかの間合いでは押せない形で並べる)。「ガ10」と略さず「ガッツ −10」と書く
         const back = opt.move.find((mv) => mv.step > 0); const fwd = opt.move.find((mv) => mv.step < 0);
         const near = !!(opt.blow && opt.blow.near);
-        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガ${mv.guts}` : ''}`);
+        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガッツ−${mv.guts}` : ''}`);
         return (
-          <div className={`msxm-row cc ${near ? 'n5' : ''}`} data-msxm-ops>
-            {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : null}
-            {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : null}
-            <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで</small></button>
-            <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
-            {near ? <button type="button" data-msxm-blow="" className={`msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`} disabled={!opt.blow.ok || busy} onClick={() => go({ type: 'blow' })}>💨 吹き飛ばし<small>{opt.blow.wait ? '相手の手のあと' : `遠へ・ガ${opt.blow.guts}`}</small></button> : null}
+          <div className="msxm-ops" data-msxm-ops>
+            <div className="msxm-row cc r3">
+              {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : <span/>}
+              <button type="button" data-msxm-blow={near ? '' : 'far'} className={`msxm-btn ${near && isHint(opt.blow) ? 'hint' : ''}`} disabled={!near || !opt.blow.ok || busy} onClick={() => { if (near) go({ type: 'blow' }); }}>💨 吹き飛ばし<small>{!near ? '零の間合いだけ' : opt.blow.wait ? '相手の手のあと' : `遠へ・ガッツ−${opt.blow.guts}`}</small></button>
+              {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : <span/>}
+            </div>
+            <div className="msxm-row cc r2">
+              <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで守る</small></button>
+              <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
+            </div>
           </div>
         );
       })() : (
