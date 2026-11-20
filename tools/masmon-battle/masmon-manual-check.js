@@ -176,5 +176,22 @@ const playRandom = (m, seed, stopAt = -1) => {
   check('⑧ masmon-pvp/core.js は createMatch・replay・control を使わない', !/createMatch|replay\(|control\s*:/.test(core));
 }
 
+// ⑨ モンサクの試合(antiStall:true)は、届く間合いが重ならない組でも技が出ないまま打ち切りにならない(2026-11-20 バ-08)
+//    渡さない試合は今までと同じ(①の控えで見ている)。おすすめの手(画面のオート)で動かす側と、AI 同士の両方で見る
+{
+  const dmg = (m) => { const v = m.view(); let d = 0; for (const sd of ['A', 'B']) for (const x of v.teams[sd].units) d += x.maxHp - x.hp; return d; };
+  let zeroOn = 0, zeroOff = 0; const N = 400;
+  for (let i = 0; i < N; i++) {
+    const rng = engine.makeRng(`h${i}`);
+    const team = (k) => ({ assistantId: STYLE_IDS[(i + k) % 8], tactics: 40, members: [{ ...makeUnit(engine, catalog, rng) }] });
+    const base = { seed: `h${i}`, catalog, teamA: team(0), teamB: team(3) };
+    for (const on of [true, false]) {
+      const m = engine.createMatch({ ...base, ...(on ? { antiStall: true } : {}), control: { A: 'human' } });
+      for (let g = 0; m.pending() && g < 600; g++) { const o = m.pending(); const c = o.kind === 'enter' ? o.enter.find((x) => x.ok) : o.hint; if (!c || !m.choose(c).ok) m.auto('A'); }
+      if (dmg(m) === 0) { if (on) zeroOn++; else zeroOff++; }
+    }
+  }
+  check(`⑨ antiStall の試合はダメージ0のまま終わらない(${N}戦・おすすめの手)`, zeroOn === 0, `ダメージ0: あり ${zeroOn} / なし ${zeroOff}`);
+}
 console.log(ng ? `\n${ng} 件 NG` : '\nすべて OK');
 process.exit(ng ? 1 : 0);
