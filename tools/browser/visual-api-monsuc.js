@@ -37,7 +37,9 @@ try { sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp')); } catc
 
 const PROMPT_FILE = path.join(__dirname, 'prompts', 'monsuc-ui-check.md');
 const MAX_SCENES_PER_REQ = 6; // 1つの頼みに 6場面 × 3つの大きさ = 18枚 + 参考 1枚(入り口の上限は20枚)
-const MAX_TOKENS = Number(opt('--max-tokens', '24000')); // 12000 だと考えに使って 35本中12本が途中で切れた(2026-11-19)
+// 入り口の上限: その場で返す(--message)は 16000、バッチは 32000(analysis-gateway/core.js)。超えると g001 から断られる(2026-11-20)
+const TOKEN_CAP = has('--message') ? 16000 : 32000;
+const MAX_TOKENS = Math.min(Number(opt('--max-tokens', has('--message') ? '16000' : '24000')) || TOKEN_CAP, TOKEN_CAP); // 12000 だと考えに使って 35本中12本が途中で切れた(2026-11-19)
 const EFFORT = opt('--effort', 'high');
 const MAX_USD = Number(opt('--max-usd', '15'));
 const SIZE_OF = { '': 'tate', land: 'yoko', s568: 'yoko-s' };
@@ -67,6 +69,13 @@ const LABELS = {
     [/^E3/, '引退 能力ポイントを使う'], [/^E0$/, '引退 最終の評価'], [/^E1$/, '引退 振り返り'], [/^E2$/, '引退 アシスト'], [/^E9$/, '引退のあと(保存枠・ボックスへ)'],
   ],
   arc: [[/./, 'みゅあ編のお話(ストーリー)']],
+  // 助手との対戦(tools/battle/msa-beta-shots.js の止め絵。名札は <auto|manual>.<止め絵の名前>)
+  asst: [
+    [/\.1-prep/, '助手との対戦 準備(上)'], [/\.2b?-compare/, '助手との対戦 くらべる'], [/\.3-settings/, '助手との対戦 設定'],
+    [/\.[4-6]-watch/, '助手との対戦 観戦(おまかせ)'], [/\.7[ab]-prep-rep/, '助手との対戦 準備 代わりの技'],
+    [/\.8-manual-cards/, '助手との対戦 手動 技の札'], [/\.9b?-manual/, '助手との対戦 手動 技の一覧'], [/\.10-manual-after/, '助手との対戦 手動 技のあと'],
+    [/\.11-manual-all/, '助手との対戦 手動 全部の技'], [/\.12-foe-list/, '助手との対戦 相手の技の一覧'], [/\.1[34]-blow/, '助手との対戦 吹き飛ばし'],
+  ],
 };
 const labelOf = (tool, code) => { for (const [re, l] of LABELS[tool] || []) if (re.test(code)) return l; return code; };
 
@@ -84,6 +93,7 @@ const AREAS = [
   { key: 'box', re: /^r3:(X|A|F|T|K9|G1)|^home:monsuc-box/, name: 'マスモンボックス・詳細・メモモン・合体・お別れ・編成', ref: `${REF}/monster-detail-basic-2026-11-14.png` },
   { key: 'retire', re: /^r3:E/, name: '引退', ref: null },
   { key: 'story', re: /^arc:/, name: 'お話(みゅあ編)', ref: null },
+  { key: 'asst', re: /^asst:/, name: '助手との対戦', ref: null },
 ];
 const areaOf = (key) => AREAS.find((a) => a.re.test(key)) || { key: 'etc', name: 'その他', ref: null };
 
@@ -109,7 +119,7 @@ const collect = () => {
   }
   const deep = opt('--deep');
   if (deep) {
-    for (const tool of ['msx', 'r3', 'arc']) {
+    for (const tool of ['msx', 'r3', 'arc', 'asst']) {
       const dir = path.join(deep, tool);
       if (!fs.existsSync(dir)) continue;
       const log = fs.existsSync(`${dir}.log`) ? fs.readFileSync(`${dir}.log`, 'utf8').split('\n').filter((l) => l.startsWith('NG')) : [];

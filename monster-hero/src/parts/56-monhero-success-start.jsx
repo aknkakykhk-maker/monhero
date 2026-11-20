@@ -92,7 +92,8 @@ function MsxSteps({ n }) {
 function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, right }) {
   return (
     <div className="v-hd">
-      <button type="button" className="bk" data-mh-back onClick={onBack}>← {back}</button>
+      {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
+      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
@@ -409,7 +410,16 @@ function MsxGatherTable({ members, SUC, onClose }) {
   );
 }
 
-function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
+// 育てる子を選ぶ段(r1119 ⑦): 伸びやすさ(素質 A〜E)の字の色の段。A=金 / B=緑 / C=白 / D・E=灰
+const msxAptCls = (g) => (g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo');
+// 「ピーク ミドル期」では伝わらない(社長)ので、育成のどのあたりでいちばん伸びるかを言葉で添える
+const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュニア期': '前半', 'ミドル期': '中ごろ', 'プロ期': '後半', '最後の期': '終わりごろ' });
+const msxPeakWords = (peak) => {
+  const ps = String(peak || '').split('〜');
+  const w = ps.map((p) => MSX_PERIOD_WHEN[p]).filter(Boolean);
+  return [peak, `(育成の${w.length > 1 && w[0] !== w[1] ? `${w[0]}〜${w[1]}` : w[0] || '中ごろ'})`, 'に', '一番', '伸びる']; // 言葉の途中で折れないよう、かたまりごとに折らない札にする
+};
+function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenShop }) {
   const { box, meta, unlocked } = data;
   const stock = (data.assist && Array.isArray(data.assist.mons)) ? data.assist.mons : []; // メモリアルモンスター(育成には使えない・編成にだけ入る)
   const unraised = box.mons.filter((m) => !m.raised);
@@ -420,6 +430,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const [pickQ, setPickQ] = useState(''); // 育てる子を選ぶ段の検索・並び替え(表示だけ。選んだ子は id で持つ)
   const [pickSort, setPickSort] = useState('std');
   const [pickRev, setPickRev] = useState(false);
+  const [showAll, setShowAll] = useState(false); // 持ちこみの段: 持っていない物も升目に出す(既定は畳む・Q-3-6)
   const [look, setLook] = useState(null); // 持ちこみの段: 押した升目(持っていない物も)。下の説明の欄に出す(2026-11-14 社長「オイルって何?」)
   // 小さい画面・横では説明の欄が升目の下に隠れるので、押したら欄が見える所まで送る
   //   scrollIntoView は使わない(横も動かしてしまう。viewport-height-check)。縦にスクロールする親を内側から順に、欄が見える所まで動かす
@@ -522,33 +533,48 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   );
 
   if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} ctx={betaCtx} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
-  let body = null; let go = null; let full = null; // full … 全画面で出す選ぶ画面(r1115-096。編成の画面の代わりに出す)
+  let p1few = false; // 1段目で一覧が少ない(下の選んだ子の欄を大きく)
+  let body = null; let go = null; let full = null; let ftPre = null; // ftPre … 下の帯で主のボタンの左に並べるボタン(縦に積まない。MONSUC_UI.md §8) // full … 全画面で出す選ぶ画面(r1115-096。編成の画面の代わりに出す)
   if (step === 0) {
     const listAll = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, nm: msxMonName(id), on: !pick.box && pick.base === id, pick: { base: id } }))
       : unraised.map((m) => ({ key: m.id, sp: m.species, nm: m.nick || msxMonName(m.species), on: pick.box === m.id, pick: { box: m.id } }));
     const listF = pickQ.trim() && typeof msxMatchQ === 'function' ? listAll.filter((x) => msxMatchQ(pickQ, x.nm, msxMonName(x.sp))) : listAll;
     const listS = pickSort === 'name' ? listF.slice().sort((a, b) => String(a.nm).localeCompare(String(b.nm), 'ja')) : pickSort === 'species' ? listF.slice().sort((a, b) => String(msxMonName(a.sp)).localeCompare(String(msxMonName(b.sp)), 'ja')) : listF;
-    const list = pickRev ? listS.slice().reverse() : listS; // 写しだけを並べ替える(元の並び・保存データは変えない)
-    const picked = meta.picked && meta.picked[species];
+    const list = pickRev ? listS.slice().reverse() : listS;
+    const few = listAll.length <= 12 && !pickQ; p1few = few; // 少ないうちは検索と並び替えを畳み、空いた分を選んだ子の絵に回す(Q-3-4) // 写しだけを並べ替える(元の並び・保存データは変えない)
     body = (<>
+      <div className="v-p1main">
       <div className="v-h">だれを育てる?<small>ベースモンか、合体で生まれた未育成のモンスターから1体</small></div>
+      <div className="v-p1bar">
       <div className="v-tabs">
         <button type="button" className={tab === 'base' ? 'on' : ''} onClick={() => { setTab('base'); if (pick.box && unlocked.length) setPick({ base: unlocked.includes(lastBase.current) ? lastBase.current : unlocked[0] }); }}>🌱 ベースモン {unlocked.length}</button>
-        <button type="button" className={tab === 'fuse' ? 'on' : ''} onClick={() => { setTab('fuse'); if (!pick.box && unraised.length) { lastBase.current = pick.base || lastBase.current; setPick({ box: unraised[0].id }); } }}>🧬 合体で生まれたモンスター {unraised.length}</button>
+        <button type="button" className={tab === 'fuse' ? 'on' : ''} data-msx-tab-fuse onClick={() => { setTab('fuse'); if (!pick.box && unraised.length) { lastBase.current = pick.base || lastBase.current; setPick({ box: unraised[0].id }); } }}>🧬 合体<i className="v-p1lg">で生まれたモンスター</i> {unraised.length}</button>
       </div>
-      {typeof MsxPickTools === 'function' ? <MsxPickTools q={pickQ} onQ={setPickQ} sorts={[['std', '標準'], ['name', '名前'], ['species', '種族']]} sort={pickSort} onSort={setPickSort} rev={pickRev} onRev={setPickRev} count={list.length} total={listAll.length}/> : null}
-      <div className="v-gridw">
-        <div className="v-grid6">
+      {typeof MsxPickTools === 'function' && !few ? <MsxPickTools q={pickQ} onQ={setPickQ} sorts={[['std', '標準'], ['name', '名前'], ['species', '種族']]} sort={pickSort} onSort={setPickSort} rev={pickRev} onRev={setPickRev} count={list.length} total={listAll.length}/> : null}
+      </div>
+      <div className="v-gridw" data-msx-pick-list>
+        <div className="v-grid6 pk1">
           {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><span className="v-g6f"><MsxMonFace species={x.sp} alt={msxMonName(x.sp)}/></span><span className="v-g6n">{x.nm}</span></button>)
             : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>{listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)'}</span>}
         </div>
       </div>
-      {scene({ mb: '10%', h: '88%' }, <div className="v-chips"><span className="v-chip ylw">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</span>{picked ? <span className="v-chip">選んだ回数 {picked}回</span> : null}</div>, true)}
-      <div className="v-card sel">
-        <div className="msx-dt-hd"><div className="h1">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 詳しく</button></div>
-        <div className="v-kv" data-msx-start-type><b>成長の型</b><span><span className="yel">{growName}</span>{peakText ? <span className="msx-dt-sm"> ピーク {peakText}</span> : null}</span></div>
-        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>初めの能力<span className="msx-dt-sm">(小さい字は素質)</span></div>
-        <div className="msx-st6 row6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>素質 {apt[i]}</i></div>)}</div>
+      </div>
+      {/* 選んだ子(r1119 ⑦ 社長「見た目悪い」): 草原の帯と詳細の箱で画面の半分を取っていたのをやめ、左に立ち絵・右に能力の棒と伸びやすさの字の1枚にまとめる。
+          参考 monster-detail-basic(左に立ち絵・右に能力の値と棒と段の字)。「選んだ回数」の札は何のためか分からないので出さない */}
+      <div className="v-card sel v-p1sel" data-msx-start-sel>
+        <div className="v-p1art">
+          <img className="bg" src={msxSceneBg(1).bg} alt=""/>
+          {colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+            ? <span className="mon"><DyedMonsterImage baseId={species} src={msxMonImg(species)} masuColors={colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/></span>
+            : <img className="mon" src={msxMonImg(species)} alt=""/>}
+        </div>
+        <div className="v-p1info">
+          <div className="v-p1hd"><b className="nm">{fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)}</b><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 詳しく</button></div>
+          <div className="v-p1grow" data-msx-start-type><span className="k">成長の型</span><b className="yel">{growName}</b>{peakText ? <span className="v">{msxPeakWords(peakText).map((w, i) => <span key={i} className="w">{w}</span>)}</span> : null}</div>
+          <div className="v-p1st" data-msx-start-stats>{MSX_STATS.map((k, i) => { const v = Number(startSt[k]) || 0; const top = Math.max(300, ...MSX_STATS.map((q) => Number(startSt[q]) || 0)); return (
+            <div key={k} className="r"><span className="n">{MSX_STAT_NAME[k]}</span><b>{v}</b><i className={`g g${msxAptCls(apt[i])}`} title="伸びやすさ">{apt[i]}</i><span className="bar"><span style={{ width: `${Math.max(4, Math.min(100, (v / top) * 100))}%`, background: MSX_STAT_COLOR && MSX_STAT_COLOR[k] ? MSX_STAT_COLOR[k] : '#94a3b8' }}/></span></div>); })}</div>
+          <div className="v-p1note">右の字は<b>伸びやすさ</b>(A が一番伸びる → E)</div>
+        </div>
       </div>
       {detail && <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
     </>);
@@ -572,29 +598,27 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     // r1115-096(社長): 編成の画面は6枠を大きく並べるだけ。枠を押すと選ぶ画面(全画面 MsxTeamPick)へ。フレンドのいる枠はフレンドの貸し出しの一覧(MsxFriendPick)へ
     //   r1115-115(社長): 6枠のどこにも自分のモンスター・フレンドは最大1体(どの枠にも。入れなくてもよい)。選ぶ画面の「🤝 フレンド」タブから一覧へ
     const openSlot = (i) => (friend && i === friendAt && lendOn ? setFriendOpen(i) : setSlotPick(i));
+    const sameBond = members.every((m) => m.bond0 === members[0].bond0 && m.tag === members[0].tag);
     body = (<>
       {/* 説明は短く・言葉の途中で折らない(2026-11-14 社長「文字のはみ出し」) */}
       <div className="v-h">編成の6体<small style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{(typeof jaWrap === 'function' ? jaWrap : (t) => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる')}</small></div>
-      <div className="v-slots msx-team6" data-msx-team6>
-        {members.map((m, i) => (
-          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`} data-msx-slot={i} {...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {})} {...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {})} role="button" tabIndex={0} onClick={() => openSlot(i)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSlot(i); }}>
-            {m.friend ? <i className="msx-sl-fr">🤝 フレンド</i> : null}
-            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <MsxMonFace species={m.species} colors={m.colors}/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
-            {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
-            {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
-            <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
-            <div className="bs"><span>親密度 {m.bond0}</span><span>タッグ +{m.tag}%</span></div>
-            <div className="ic">{m.friend ? `借: ${m.friend.name || 'フレンド'}` : m.kind === 'base' ? (m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える') : '✎変える'}</div>
-          </div>
-        ))}
-      </div>
-      <div className="msx-note msx-sl-legend" data-msx-slot-legend>枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び</div>
+      {/* ④段2(社長の実機の指摘): 点線の箱と同じ文の繰り返しをやめ、共通の型の札(中)を3列×2段。札ごとに違う物だけを札に出す
+          (左上=伸びが上がる能力・右上=評価・下の帯=役)。どの枠も同じ親密度・タッグは下に1か所だけ */}
+      <div className="msx-team6 msx-team6c" data-msx-team6><MonsucCardGrid size="m">
+        {members.map((m, i) => { const rec = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : m.assistId && data.assist && Array.isArray(data.assist.mons) ? data.assist.mons.find((x) => x.id === m.assistId) : null;
+          const role = m.friend ? { text: 'フレンド', kind: 'friend' } : m.kind === 'base' ? { text: 'ベースモン', kind: 'base' } : m.assistId ? { text: 'メモモン', kind: 'memo' } : { text: 'マスモン', kind: 'box' };
+          return (<div key={i} className="msx-t6w">
+            <MonsucMonCard m={msxTpCardM(rec, m, m.species)} size="m" tag={role} num={msxTpBonusText(m)} onClick={() => openSlot(i)} attrs={{ 'aria-label': `${i + 1}枠目 ${m.name}(押して変える)`, 'data-msx-slot': i, ...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {}), ...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {}) }}/>
+            {!sameBond ? <small className="msx-t6b">親密度 {m.bond0}・タッグ +{m.tag}%</small> : null}
+          </div>); })}
+      </MonsucCardGrid></div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
-      <div className="msx-team-acts" data-msx-team-acts>
-        <button type="button" disabled={!(raised.length || stock.length) || typeof msxTeamAuto !== 'function'} onClick={() => setTeamSlotsSt((cur) => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null))} data-msx-team-auto>おまかせ</button>
-        <button type="button" disabled={typeof MsxTeamEffects !== 'function'} onClick={() => setEffectsOpen(true)} data-msx-team-effects-open>効果一覧</button>
-      </div>
+    </>);
+    ftPre = (<>
+      <button type="button" disabled={!(raised.length || stock.length) || typeof msxTeamAuto !== 'function'} onClick={() => setTeamSlotsSt((cur) => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null))} data-msx-team-auto>おまかせ</button>
+      <button type="button" disabled={typeof MsxTeamEffects !== 'function'} onClick={() => setEffectsOpen(true)} data-msx-team-effects-open>効果一覧</button>
     </>);
     go = 'この編成でいく ▶';
     if (slotPick != null && typeof MsxTeamPick === 'function') full = (<MsxTeamPick idx={slotPick} slots={teamSlotsSt} members={members} own={species} unlocked={unlocked} raised={raised} stock={stock} SUC={SUC} box={box} assistData={data.assist}
@@ -612,7 +636,11 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる</small></div>
       <div className="v-faces">
         {MSX_SCENARIOS.filter((x) => msxAidOpen(x.aid)).map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
-        {[...MSX_SCENARIOS.filter((x) => !msxAidOpen(x.aid)).map((x) => x.aid), ...MSX_SOON_AIDS].map((a) => <span key={a} className="lk soon" role="button" tabIndex={0} aria-label={`${msxAidName(a)}(準備中)`} data-msx-soon={a} onClick={() => setLockTalk((n) => n + 1)}><img src={msxFace(a)} alt=""/><b>準備中</b></span>)}
+        {/* 準備中の助手は7人の黒い影を並べず、1枚にまとめる(Q-3-8)。押すとみゅあの一言(tut.lock) */}
+        {(() => { const soon = [...MSX_SCENARIOS.filter((x) => !msxAidOpen(x.aid)).map((x) => x.aid), ...MSX_SOON_AIDS]; return soon.length ? (
+          <span className="lk soon v-soon1" role="button" tabIndex={0} aria-label="ほかの助手は準備中" data-msx-soon={soon[0]} onClick={() => setLockTalk((n) => n + 1)}>
+            <span className="fs">{soon.slice(0, 3).map((a) => <img key={a} src={msxFace(a)} alt=""/>)}</span><b>ほかの助手 {soon.length}人は準備中</b>
+          </span>) : null; })()}
       </div>
       <div className="v-card sel" style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
         <div className="v-sc"><div className="pic"><img src={msxBody(aid, 'happy')} alt=""/></div><div className="tx">
@@ -631,16 +659,21 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     const has = (id) => (meta.items && meta.items[id]) || 0;
     const toggle = (id) => setItems((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]));
     const coreItems = (id) => !!(SUC.ITEMS && SUC.ITEMS[id]);
+    const ownN = MSX_ITEMS.filter((t) => has(t.id) > 0 || items.includes(t.id)).length;
     body = (<>
       <div className="v-h">持ちこみ(2つまで)<small>手に入れた物を、育成に持っていける。持っていかなくてもよい</small></div>
       <div className="v-bag">{[0, 1].map((i) => items[i] ? <div key={i} className="in"><span style={{ fontSize: 24 }}>{MSX_ITEM_BY_ID[items[i]].e}</span><small>{MSX_ITEM_BY_ID[items[i]].name}</small></div> : <div key={i}>＋<small style={{ color: '#94a3b8' }}>空き</small></div>)}</div>
+      {/* 持っていない物の灰色の札を並べない(Q-3-6)。持っている物・選んだ物だけを升目に出し、持っていない物は畳む。交換所へはその場で行ける(Muse id48) */}
+      {!ownN ? <div className="v-card v-nobring" data-msx-carry-none>まだ持ちこめる物がありません。<b>ビートP交換所</b>で手に入れると、ここで選べます(持っていかなくても始められます)</div> : null}
+      {onOpenShop ? <button type="button" className="v-shopgo" onClick={onOpenShop} data-msx-carry-shop-open>🛒 ビートP交換所で手に入れる</button> : null}
       <div className="v-igrid">
-        {MSX_ITEMS.map((t) => (
+        {MSX_ITEMS.filter((t) => showAll || has(t.id) > 0 || items.includes(t.id)).map((t) => (
           <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}${!has(t.id) && !items.includes(t.id) ? ' none' : ''}${look === t.id ? ' look' : ''}`} onClick={() => { setLook(t.id); toggle(t.id); }} data-msx-carry-item={t.id}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(t.name.replace('ガロエ印の', ''))}</small>{items.includes(t.id) ? <u>✔</u> : null}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(t.name)}</small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
+      {MSX_ITEMS.length > ownN ? <button type="button" className="v-allgo" onClick={() => setShowAll((v) => !v)} aria-pressed={showAll} data-msx-carry-all>{showAll ? '▲ 持っていない物を隠す' : `▼ 持っていない物も見る(${MSX_ITEMS.length - ownN}個)`}</button> : null}
       <div className="v-ileg"><span><b className="sw1"/>始める前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
       <div style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 6 }} data-msx-carry-list>
         {look && MSX_ITEM_BY_ID[look] ? (() => { const t = MSX_ITEM_BY_ID[look]; const n = has(look); return (
@@ -663,6 +696,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     body = (<>
       <div className="v-h">名前と染色<small>あとからいつでも変えられる</small></div>
       {scene({ mb: '14%', h: '72%' }, <div className="v-chips"><span className="v-chip">成長の型: {growName}</span></div>)}
+      <div className="v-lmain">
       <label className="v-inp" style={{ display: 'flex' }}>
         <input type="text" value={nick} maxLength={MSX_NAME_MAX} placeholder={msxMonName(species).slice(0, MSX_NAME_MAX)} onChange={(e) => { setNick(e.target.value.slice(0, MSX_NAME_MAX)); setNameErr(''); }}
           style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 'none', color: '#1e1b4b', font: 'inherit', fontSize: 16 }}/>
@@ -671,6 +705,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       {nameErr && <div className="msx-note" style={{ color: '#fca5a5' }}>{nameErr}</div>}
       <div className="v-card" style={{ maxHeight: '34%', overflowY: 'auto' }}>
         {typeof DyeRegionColorControls === 'function' ? <DyeRegionColorControls baseId={species} colors={colors} onChange={onDye} onCustom={onCustom} big tone="yellow" names={typeof ASSISTANT_MASMON_DYE_PARTS !== 'undefined' && ASSISTANT_MASMON_DYE_PARTS[species] ? ASSISTANT_MASMON_DYE_PARTS[species].map((x) => x[0]) : null}/> : <div className="msx-note">染色はこの端末では使えません</div>}
+      </div>
       </div>
     </>);
     go = 'これで決める ▶';
@@ -690,6 +725,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <span className="v-nm" style={{ left: '36%', bottom: 6 }}>{name}<small>{msxMonName(species)}</small></span>
         <img src={msxBody(aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, width: '50%', height: '78%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
       </div>
+      <div className="v-lmain">
       <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><MsxMonFace species={m.species} colors={m.colors}/></span>)}<span className="ed">変える</span></button>
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
@@ -697,6 +733,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-sum"><span className="k">初めの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
       {capUp.length ? <div className="v-sum" data-msx-start-cap><span className="k">能力の上限</span><span>{capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・')}</span></div> : null}
       <button type="button" className="v-big" onClick={start}>🌱 育成を始める</button>
+      </div>
     </>);
   }
   if (full) return full;
@@ -706,14 +743,14 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           戻るがあったのを廃止し、言葉も段によらず「戻る」に固定する(同じ back() なのに言葉だけ
           変わっていた)。step=0 の戻り先はシナリオ選択(無ければサクセスの入口)で、意味は一貫して「戻る」 */}
       <MsxHd back="戻る" onBack={back} right={`${step + 1} / 6`}/>
-      {/* 中身が画面より長い段(持ちこみ・確認・低い画面)は本体ごと縦に流す。指定が無いと中身が下の帯の後ろへはみ出し、
-          最後まで読めず触れなかった(r1119 社長の実機「スライドできない・裏と表になってる」) */}
-      <div className="v-body st">
+      {/* 中身が画面より長い段(持ちこみ・確認・低い画面)は本体ごと縦に流す(st)。指定が無いと中身が下の帯の後ろへはみ出し、
+          最後まで読めず触れなかった(r1119 社長の実機「スライドできない・裏と表になってる」)。p1/one/lg3 は段ごとの並べ方(r1119 ⑦) */}
+      <div className={`v-body st${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`}>
         <MsxSteps n={step}/>
         {body}
       </div>
-      {go && <div className="v-ft"><button type="button" className="go" onClick={next}>{go}</button></div>}
-      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>) : null}
+      {go && <div className={`v-ft${ftPre ? ' msx-ft3' : ''}`}>{ftPre}<button type="button" className="go" onClick={next}>{go}</button></div>}
+      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : (slotPick != null || gatherOpen || friendOpen !== false || effectsOpen ? null : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>)) : null /* 窓を開いている間は説明を出さない。前に出す窓は1枚だけ(API 点検 msx-S2E) */}
     </>
   );
 }
