@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 583663277f2c8915
+// source-sha256: 0e234b7940c4c346
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20337,6 +20337,31 @@ const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   if (typeof assistantCostumeSaleIn === 'function' && assistantCostumeSaleIn(costume, 'beatPoint')) lines.push('いまはビートP', '交換所で買えます');
   return lines;
 };
+const marketCostumeFullbodySrc = item => {
+  if (!item || item.type !== 'costume') return null;
+  const costume = typeof assistantCostumeById === 'function' ? assistantCostumeById(item.id) : null;
+  if (!costume || !costume.imageDir || typeof ASSISTANT_FULLBODY_ART === 'undefined') return null;
+  const assistantId = item.assistantId || costume.assistantId;
+  if (!assistantId) return null;
+  const name = ASSISTANT_FULLBODY_ART[`${assistantId}:${String(costume.imageDir).split('/').pop()}`];
+  if (!name) return null;
+  const exprs = typeof ASSISTANT_FULLBODY_EXPRESSIONS !== 'undefined' ? ASSISTANT_FULLBODY_EXPRESSIONS[name] : null;
+  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes('normal') ? '__normal' : ''}.png`;
+};
+const MarketCostumePreview = ({
+  item
+}) => {
+  const src = marketCostumeFullbodySrc(item);
+  if (!src) return null;
+  return React.createElement("div", {
+    "data-market-costume-preview": true,
+    className: "mt-3 flex justify-center rounded-2xl border border-white/10 bg-black/30 px-2 py-3"
+  }, React.createElement("img", {
+    src: src,
+    alt: `${item.name}の全身の絵`,
+    className: "max-h-[320px] w-auto max-w-full object-contain"
+  }));
+};
 const MarketProductCard = ({
   item,
   owned = false,
@@ -20651,6 +20676,8 @@ const MarketItemDetail = ({
   }, React.createElement(MarketModalHead, {
     item: item,
     accent: meta.text
+  }), React.createElement(MarketCostumePreview, {
+    item: item
   }), item.desc && React.createElement("p", {
     className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
   }, helpWrap(item.desc)), item.groupMembers && React.createElement("div", {
@@ -20811,6 +20838,8 @@ const MarketPurchaseSheet = ({
   }, React.createElement(MarketModalHead, {
     item: item,
     accent: meta.text
+  }), React.createElement(MarketCostumePreview, {
+    item: item
   }), React.createElement("div", {
     className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
   }, React.createElement("span", {
@@ -70286,7 +70315,10 @@ function BreederMarketScreen({
       }, "所持 ", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
         label: `${item.name}の効果を見る`,
         onClick: () => onOpenItemDetail(item)
-      })) : null
+      })) : item.type === 'costume' ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の詳細を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : null
     }), showHeroProofExchange && exchangeItem && React.createElement(MarketProductCard, {
       item: exchangeItem,
       owned: false,
