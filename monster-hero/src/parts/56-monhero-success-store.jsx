@@ -555,7 +555,8 @@ function MsxEvHead({ kind = 'ikusei', label, title, className = '', style }) {
 }
 // 連続物の「つづく」の1行(話の終わりに出す)
 function MsxEvNext({ text }) {
-  return text ? <div className="msx-ev-next" data-msx-ev-next>つづく ▶ {text}</div> : null;
+  // 2行になる文は左そろえ・言葉の途中で折らない(2026-11-20 社長「トレーニン/グ」「中央そろえはおかしい」)
+  return text ? <div className="msx-ev-next" data-msx-ev-next><b>つづく ▶</b><span style={JA_WRAP_STYLE}>{jaWrap(text)}</span></div> : null;
 }
 const msxPickLine = (ctx, scene, opt = {}) => {
   const se = msxSuc && msxSuc.script; if (!se || typeof se.say !== 'function') return null;
