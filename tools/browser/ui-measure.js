@@ -69,11 +69,12 @@ function measureInPage(TH, PRIMARY_SRC) {
     if (!onScreen(r)) continue;
     const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
     const media = ['IMG', 'SVG', 'CANVAS', 'VIDEO', 'svg'].includes(el.tagName);
-    const bgImg = !ownText && !media && r.width * r.height < W * H * 0.6 && getComputedStyle(el).backgroundImage !== 'none';
+    const bgImg = !ownText && !media && r.width * r.height < W * H * 0.6 && /url\(/.test(getComputedStyle(el).backgroundImage); // 絵の地だけ。グラデーションの地は中身に数えない
     const isBtn = el.matches('button,[role=button],a[href],input,select,textarea');
     if (!(ownText || media || bgImg || isBtn)) continue;
     if (r.width >= W * 0.9 && r.height >= H * 0.9) continue; // 画面いっぱいの背景は中身に数えない
     if (!vis(el)) continue;
+    if (!topAt(el, r)) continue; // 窓や幕の裏に隠れて見えない部品は数えない
     content.push({ el, r, ownText, media, isBtn });
     if (ownText) textLeaves.push({ el, r });
   }
@@ -229,6 +230,9 @@ function measureInPage(TH, PRIMARY_SRC) {
         for (let k = 1; k < cs2.length; k++) {
           const a = cs2[k - 1], b = cs2[k];
           if (Math.abs(a.top - b.top) < 4) continue;
+          // 記号の所で折れる: 「(零 =」「=」「(」の直後、「)」の前(社長の実機「(零 =」で折れた・r1119-039)
+          const head = s.slice(0, b.i).trimEnd(), tail = s.slice(b.i).trimStart();
+          if (/[=＝(（:：]$/.test(head) || /^[)）=＝]/.test(tail) || /[(（][^)）\s]{1,2}\s*[=＝]?$/.test(head)) { out.midword.push({ t: `${head.slice(-6)}/${tail.slice(0, 6)}`, sym: true }); continue; }
           if (b.i !== a.i + 1) continue; // 空白で折れた所は言葉の切れ目
           if (!bounds.has(b.i) && /[\p{L}]/u.test(a.ch) && /[\p{L}ー]/u.test(b.ch)) out.midword.push({ t: `${s.slice(Math.max(0, a.i - 6), a.i + 1)}/${s.slice(b.i, b.i + 6)}`.trim() });
         }
@@ -315,7 +319,7 @@ function judge(m) {
   }
   if (m.bottomGap > H * TH.bottomGapRatio) add('下が空いている', '高', `いちばん下の部品から画面の下まで ${m.bottomGap}px(画面の高さの ${Math.round((m.bottomGap / H) * 100)}%・基準 ${Math.round(TH.bottomGapRatio * 100)}%)`);
   for (const c of (m.colGaps || []).slice(0, 2)) add('下が空いている', '高', `列(左 ${c.x}px・幅 ${c.w}px「${c.t}」)の中身のいちばん下から列の下まで ${c.gap}px(列の高さの ${Math.round(c.ratio * 100)}%)`);
-  if (m.empty && m.empty.ratio > TH.emptyRatio) add('大きな空き', '中', `何も無い長方形 ${m.empty.w}×${m.empty.h}px(左上 ${m.empty.x},${m.empty.y})が画面の ${Math.round(m.empty.ratio * 100)}%(基準 ${Math.round(TH.emptyRatio * 100)}%)`);
+  if (m.empty && m.empty.ratio > TH.emptyRatio) add('大きな空き', m.empty.ratio > 0.35 ? '高' : '中', `何も無い長方形 ${m.empty.w}×${m.empty.h}px(左上 ${m.empty.x},${m.empty.y})が画面の ${Math.round(m.empty.ratio * 100)}%(基準 ${Math.round(TH.emptyRatio * 100)}%)`);
   if (m.fontMin && m.fontMin.px < TH.fontMin) add('字が小さい', m.fontMin.px < 8 ? '高' : '中', `「${m.fontMin.t}」が ${m.fontMin.px}px(基準 ${TH.fontMin}px)`);
   if (m.smallTaps.length) {
     const hard = m.smallTaps.filter((t) => Math.min(t.w, t.h) < TH.tapHard);
@@ -326,7 +330,8 @@ function judge(m) {
   if (dn.length) add('同じ数字が二重', '高', `${dn.length}種: ` + dn.slice(0, 6).map((d) => `${d.k.slice(2)} が ${d.n}回(${d.where.join(' / ')})`).join('・'));
   if (ds.length) add('同じ文が二重', '高', ds.slice(0, 3).map((d) => `「${d.k.slice(2, 22)}」が ${d.n}回`).join('・'));
   if (m.centered.length) add('2行以上の中央そろえ', '高', m.centered.slice(0, 3).map((c) => `「${c.t}」${c.lines}行`).join('・'));
-  if (m.midword.length) add('言葉の途中で折り返し', '高', [...new Set(m.midword.map((x) => x.t))].slice(0, 4).map((t) => `「${t}」`).join('・'));
+  if (m.midword.some((x) => !x.sym)) add('言葉の途中で折り返し', '高', [...new Set(m.midword.filter((x) => !x.sym).map((x) => x.t))].slice(0, 4).map((t) => `「${t}」`).join('・'));
+  if (m.midword.some((x) => x.sym)) add('記号や括弧の所で折り返し', '高', [...new Set(m.midword.filter((x) => x.sym).map((x) => x.t))].slice(0, 4).map((t) => `「${t}」`).join('・'));
   if (m.offcenter.length) add('字の中心がずれる', '高', m.offcenter.slice(0, 3).map((c) => `「${c.t}」${c.dx > 0 ? '右' : '左'}へ ${Math.abs(c.dx)}px(${c.why})`).join('・'));
   if ((m.topCut || []).length) add('上が切れている', '高', m.topCut.slice(0, 3).map((c) => `${c.t.startsWith('窓') ? c.t : `「${c.t}」`}の上が画面の外へ ${-c.y}px`).join('・'));
   if (m.overBackdrop.length) add('暗幕の上に窓の外の部品', '高', m.overBackdrop.slice(0, 4).map((o) => `「${o.t}」`).join('・') + ' が窓を開いた暗幕の上に出ていて押せる');
@@ -375,7 +380,7 @@ if (require.main === module) {
     }
     if (opt('--url')) {
       const { chromium } = require('playwright');
-      const b = await chromium.launch();
+      const b = await chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
       const p = await b.newPage({ viewport: { width: Number(opt('--w', '390')), height: Number(opt('--h', '844')) } });
       await p.goto(opt('--url'), { waitUntil: 'load' });
       await p.waitForTimeout(1500);
