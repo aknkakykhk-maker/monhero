@@ -244,7 +244,9 @@ const SCENES = [
   // ---- HOME まわり ----
   { id: 'home', area: 'HOME', name: 'HOME', go: async () => true },
   { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/]) },
-  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: via([/の説明を開く$/]) },
+  // HOME の助手は吹き出しを押すとメニュー(おしゃべりする・詳しく見る)が出る(r1119-050 窓-36)
+  { id: 'home-assistant-menu', area: 'HOME', name: '助手のメニュー(HOME)', go: via([/のメニューを開く$/]) },
+  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: async (s) => (await tapAny(s, /のメニューを開く$/)) && (await tapAny(s, /詳しく見る/)) }, // メニューを開いた直後に幕を払うと閉じるので、続けて押す
   { id: 'profile', area: 'HOME', name: 'プロフィール', go: via([/^プロフィールを開く$/]) },
   // イベント回想(社長の指摘の較正 president-eye: 回想の見出しの絵文字・お話の締めの「終わり」の中心)
   { id: 'replay-list', area: 'HOME', name: 'プロフィール → イベント回想(まとまりを開いた所)', go: (s) => openReplay(s, false) },
