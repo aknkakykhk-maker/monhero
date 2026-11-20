@@ -1,0 +1,92 @@
+// 社長の向き(r1119-035)での試算の集計: node agg2.js out > tables2.md
+'use strict';
+const fs = require('fs'); const path = require('path');
+const dir = process.argv[2] || 'out';
+const read = (prefix) => fs.readdirSync(dir).filter((f) => f.startsWith(prefix)).flatMap((f) => fs.readFileSync(path.join(dir, f), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))).filter((r) => !r.error);
+const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const r0 = (x) => (x === null || x === undefined || Number.isNaN(x) ? '-' : Math.round(x));
+const r1 = (x) => (x === null || x === undefined || Number.isNaN(x) ? '-' : Math.round(x * 10) / 10);
+const r2 = (x) => (x === null || x === undefined || Number.isNaN(x) ? '-' : Math.round(x * 100) / 100);
+const pc = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : '-');
+const L = []; const P = (...x) => L.push(...x);
+const table = (head, rows) => { P(`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`); rows.forEach((r) => P(`| ${r.join(' | ')} |`)); P(''); };
+const pdiff = (pairs, f) => { const d = pairs.map(([a, b]) => f(a) - f(b)); const m = mean(d); const sd = Math.sqrt(mean(d.map((x) => (x - m) ** 2))); return [m, 1.96 * sd / Math.sqrt(d.length || 1)]; };
+const win = (rs) => pc(rs.reduce((t, r) => t + r.wins, 0), rs.reduce((t, r) => t + r.matches, 0));
+const J = {};
+
+const main = read('main-');
+const byI = new Map(main.map((r) => [r.i, r]));
+
+// ---- 1. 甘え度・恐れ度の境 ----
+P('## 甘えの境(ターンの終わりに甘えか恐れかを分ける体力の割合)', '');
+P('- 同じ 8,000 の条件で、いま(境5割)と対にして比べた。総合力の差は対の平均 ±95%', '');
+const cf2 = read('cf2-');
+const variants = ['base', ...new Set(cf2.map((r) => r.variant))];
+const REACTS = [['praise', 'いつもほめる'], ['scold', 'いつもしかる'], ['smart', '良い結果はほめ・悪い結果はしかる'], ['none', 'なにもしない'], ['all', '全体']];
+const NAMES = { base: 'いま(境5割)', line6: '境6割', line7: '境7割', line8: '境8割', line7soft: '境7割+倍率を弱める', line8soft: '境8割+倍率を弱める' };
+J.loyal = {};
+for (const [rk, rn] of REACTS) {
+  P(`### ${rn}`, '');
+  const rows = variants.map((v) => {
+    const rs = v === 'base' ? main.filter((r) => r.i < 8000) : cf2.filter((r) => r.variant === v);
+    const sub = rk === 'all' ? rs : rs.filter((r) => r.react === rk);
+    const n = sub.length;
+    const pairs = sub.map((r) => [r, byI.get(r.i)]).filter((p) => p[1]);
+    const d = v === 'base' ? [0, 0] : pdiff(pairs, (r) => r.power);
+    const o = { n, sweet: pc(sub.filter((r) => r.pol < 0).length, n), normal: pc(sub.filter((r) => r.pol === 0).length, n), sparta: pc(sub.filter((r) => r.pol > 0).length, n), ssp: pc(sub.filter((r) => r.pol >= 2).length, n), sdl: pc(sub.filter((r) => r.pol <= -2).length, n), power: mean(sub.map((r) => r.power)), dp: d, sab: mean(sub.map((r) => r.log.sab || 0)), ama: mean(sub.map((r) => r.ama)), fear: mean(sub.map((r) => r.fear)), inj: mean(sub.map((r) => r.injuries)) };
+    (J.loyal[v] = J.loyal[v] || {})[rk] = o;
+    return [NAMES[v] || v, n, o.sweet, o.normal, o.sparta, o.sdl, o.ssp, `${r1(o.ama)}/${r1(o.fear)}`, r0(o.power), v === 'base' ? '—' : `${r0(d[0])}±${r0(d[1])}`, r2(o.sab), r2(o.inj)];
+  });
+  table(['案', '回数', '甘い側で終わる%', '普通%', '厳しい側%', '溺愛以上%', 'スパルタ以上%', '甘え/恐れ 平均', '総合力 平均', '総合力の差', 'サボり 回/育成', 'けが'], rows);
+}
+
+// ---- 2. 体力回復の最終の確かめ ----
+const fin = read('fin-');
+if (fin.length) {
+  P('## 体力回復の最終の確かめ(+20・+30 → +10、記念日 +50 → +30・20,000 の対)', '');
+  const pairs = fin.map((r) => [r, byI.get(r.i)]).filter((p) => p[1]);
+  const base = pairs.map((p) => p[1]);
+  const m = { power: (r) => r.power, rest: (r) => r.acts.rest || 0, inj: (r) => r.injuries, ill: (r) => r.ills, evhp: (r) => (r.hpSrc['event+'] ? r.hpSrc['event+'][0] : 0), restHp: (r) => (r.hpSrc['act:rest'] ? r.hpSrc['act:rest'][0] : 0), win: (r) => (r.matches ? r.wins / r.matches * 100 : 0), early: (r) => (r.endTurn < 41 ? 100 : 0) };
+  const o = {}; Object.entries(m).forEach(([k, f]) => { o[k] = [mean(base.map(f)), pdiff(pairs, f)]; }); J.fin = o;
+  table(['指標', 'いま', '決めた数値', '差(±95%)'], [
+    ['出来事の回復/育成', r1(o.evhp[0]), r1(o.evhp[0] + o.evhp[1][0]), `${r1(o.evhp[1][0])}±${r1(o.evhp[1][1])}`],
+    ['休みの回復/育成', r1(o.restHp[0]), r1(o.restHp[0] + o.restHp[1][0]), `${r1(o.restHp[1][0])}±${r1(o.restHp[1][1])}`],
+    ['休む回数', r2(o.rest[0]), r2(o.rest[0] + o.rest[1][0]), `${r2(o.rest[1][0])}±${r2(o.rest[1][1])}`],
+    ['けが 回/育成', r2(o.inj[0]), r2(o.inj[0] + o.inj[1][0]), `${r2(o.inj[1][0])}±${r2(o.inj[1][1])}`],
+    ['病気 回/育成', r2(o.ill[0]), r2(o.ill[0] + o.ill[1][0]), `${r2(o.ill[1][0])}±${r2(o.ill[1][1])}`],
+    ['総合力 平均', r0(o.power[0]), r0(o.power[0] + o.power[1][0]), `${r0(o.power[1][0])}±${r0(o.power[1][1])}(${r1(o.power[1][0] / o.power[0] * 100)}%)`],
+    ['勝率%', r1(o.win[0]), r1(o.win[0] + o.win[1][0]), `${r1(o.win[1][0])}±${r1(o.win[1][1])}pt`],
+    ['途中で終わった%', r1(o.early[0]), r1(o.early[0] + o.early[1][0]), `${r1(o.early[1][0])}±${r1(o.early[1][1])}pt`],
+  ]);
+}
+
+// ---- 3. アシスト ----
+const asBase = read('assist-'); const byTeam = {}; asBase.forEach((r) => { (byTeam[r.team] = byTeam[r.team] || new Map()).set(r.i, r); });
+const zero = read('zero'); zero.forEach((r) => { (byTeam[r.team] = byTeam[r.team] || new Map()).set(r.i, r); });
+const cmp = (A, B) => { const pairs = [...A.keys()].filter((i) => B.has(i)).map((i) => [A.get(i), B.get(i)]); return { d: pdiff(pairs, (r) => r.power), ds: pdiff(pairs, (r) => r.statSum), pa: mean(pairs.map((p) => p[0].power)), pb: mean(pairs.map((p) => p[1].power)), wa: win(pairs.map((p) => p[0])), wb: win(pairs.map((p) => p[1])) }; };
+if (zero.length) {
+  P('## 効き目が 0 だった3種を、場面を作って確かめる(400 の対)', '');
+  const Z = [['R:one-rivaldamashii', 'R:bare-S', 'ライバル魂を1体(+50%)', 'ライバルあり・大会重視'], ['R:probe-rivaldamashii', 'R:bare-S', 'ライバル魂を6体(+300%)', 'ライバルあり・大会重視'], ['X:one-chokyo', 'X:bare-S', '超修行アップを1体(+1回)', '超修行を使う'], ['X:probe-chokyo', 'X:bare-S', '超修行アップを6体(+6回)', '超修行を使う'], ['keisho-S', 'real-S', '助手・継承を1体に足す', 'おまかせのアシスト入りの6体S']];
+  J.zero = {};
+  table(['試し', '場面', '総合力(付けない→付ける)', '差(±95%)', '能力合計の差', '超修行の残り(終わり)'], Z.filter(([a, b]) => byTeam[a] && byTeam[b]).map(([a, b, n, sc]) => { const c = cmp(byTeam[a], byTeam[b]); J.zero[a] = c; return [n, sc, `${r0(c.pb)} → ${r0(c.pa)}`, `${r0(c.d[0])}±${r0(c.d[1])}(${r1(c.d[0] / c.pb * 100)}%)`, `${r0(c.ds[0])}±${r0(c.ds[1])}`, `${r2(mean([...byTeam[b].values()].map((r) => r.superLeftEnd)))} → ${r2(mean([...byTeam[a].values()].map((r) => r.superLeftEnd)))}`]; }));
+}
+const asv = read('asv-');
+if (asv.length) {
+  J.asv = {};
+  for (const v of [...new Set(asv.map((r) => r.variant))]) {
+    const TT = { asStrong: ['① 効かない物を強める', '忠誠度効果アップ 最大 +20%→+40%・しつけ上手 +25%→+50%・元気のお守り 最大 50%→100%(芯で80%まで)・失敗率ダウン 1目盛り 5%→8%(合計の上限 50%→80%)'], asWeak2: ['② 強すぎる物を弱める(案a: 値を半分)', '試合型5種の効き目を半分(芯の第1版の表。見立ては1体 −8%→−4%)・追加トレボーナス 最大 +20%→+10%・季節4種 最大 +20%→+10%'], battleOne: ['② 強すぎる物を弱める(案b: 試合型は編成で1体ぶんだけ)', '試合型の足し合わせをやめ、種類ごとにいちばん大きい1体だけ効く(値はいまのまま)'] };
+    P(`## アシストの仮の数値: ${TT[v][0]}(400 の対・同じ編成のいまの数値と比べる)`, '', `- ${TT[v][1]}`, '');
+    const vt = {}; asv.filter((r) => r.variant === v).forEach((r) => { (vt[r.team] = vt[r.team] || new Map()).set(r.i, r); });
+    const bareV = vt['bare-S'];
+    const rows = Object.keys(vt).map((t) => {
+      const c = cmp(vt[t], byTeam[t]);
+      const vsBare = t !== 'bare-S' && bareV ? cmp(vt[t], bareV) : null;
+      const vsBareOld = t !== 'bare-S' && byTeam['bare-S'] ? cmp(byTeam[t], byTeam['bare-S']) : null;
+      J.asv[`${v}:${t}`] = { c, vsBare, vsBareOld };
+      return [t, `${r0(c.pb)} → ${r0(c.pa)}`, `${r0(c.d[0])}±${r0(c.d[1])}(${r1(c.d[0] / c.pb * 100)}%)`, `${c.wb} → ${c.wa}`, vsBareOld ? `${r0(vsBareOld.d[0])} → ${r0(vsBare.d[0])}±${r0(vsBare.d[1])}` : '—'];
+    });
+    table(['編成', '総合力 平均(いま→案)', '差(±95%)', '勝率%(いま→案)', 'アシストなし6体Sとの差(いま→案)'], rows);
+  }
+}
+fs.writeFileSync(path.join(dir, '..', 'tables2.json'), JSON.stringify(J));
+process.stdout.write(L.join('\n'));

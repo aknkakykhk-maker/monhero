@@ -6,6 +6,7 @@
 //   ② 試合の入力がゲーム本体と同じ: MONSUC_MATCH_RULE・作戦の値(MSX_R3_GEAR)・試合型アシストの上乗せ(buffs.A)・aptUp・覚醒
 //   ③ 少ない回数でも、育て方7つ・助手8人・編成6つが全部まわる
 //   ④ 40回を2並列で回して、止まった回0・数でない値0・表に各節がある
+//   ⑥ おまかせのアシストが編成に本当に入る・選択肢の無い出来事(記念日)にも効き目がかかる(2026-11-20 の穴の見張り)
 //   ⑤ 偽物の Claude をつないだ入り口(本物の core.js)へ送って、報告書が書ける(費用0)
 'use strict';
 const fs = require('fs');
@@ -69,6 +70,17 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   check('④ 表に各節がある', ['## 気になる点', '### 全体', '### 育て方ごと', '### 編成ごと', '### 助手ごと', '### 育て方 × 編成', '### 子(種)ごと'].every((h) => table.includes(h)));
   check('④ 表に NaN・undefined が無い', !/NaN|undefined/.test(table));
   check('④ 1回1行の記録がある', fs.readdirSync(out).filter((f) => /^rows-\d+\.jsonl$/.test(f)).length === 2);
+
+  // ⑥ 2026-11-20 に見つかった穴の見張り: autoPick の入れ物ごと渡してアシストが空になる/見るだけの出来事を素通りする
+  {
+    const tm = lab.teamOf('real-S');
+    const st = SUC.newRun({ id: 'lab-check-6', species: lab.species[0], aid: lab.aids[0], team: tm });
+    const n = st.team.filter((m) => Array.isArray(m.assists) && m.assists.length > 0).length;
+    check('⑥ おまかせのアシストが芯の編成に入る(real-S の6体)', n === 6, `アシストのある子 ${n}/6`);
+    const seen = new Set();
+    for (let i = 0; i < 12; i++) lab.runOne(i, { onEvent: (id) => seen.add(id) });
+    check('⑥ 選択肢の無い出来事(記念日 ev.self.anniv)にも効き目がかかる', seen.has('ev.self.anniv'), `出た出来事 ${seen.size} 種`);
+  }
 
   // ⑤ 入り口(本物の core.js)+ 偽物の Claude を手元に立てて、報告書まで
   const core = await import(path.join(ROOT, 'supabase', 'functions', 'analysis-gateway', 'core.js'));
