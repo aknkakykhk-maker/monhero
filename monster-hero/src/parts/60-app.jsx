@@ -2938,15 +2938,21 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!friendsActive) return undefined;
     refreshFriendRequests();
-    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests(); }, 3 * 60 * 1000);
+    // 曲が鳴っているあいだは見に行かない(次の回に回す。r1119-057 演奏中の止まり)
+    const timer = setInterval(() => { if ((typeof document === 'undefined' || !document.hidden) && !friendsSongPlaying()) refreshFriendRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
   // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
+  // ★モンヒロビートの曲が鳴っているあいだは送らず、曲が終わってから1回送る(2026-11-21 r1119-057)。
+  //   送るときの自己ベストの読み直し・記録づくりが1コマを長くし、ノーツが止まって飛んでいた(演奏の始まりの数秒後と2分ごと)。
+  //   演奏画面に入ったときの「演奏中」の知らせは、曲が鳴る前(幕のあいだ)に送る(下の useEffect)
   const friendLatestRef = useRef({});
   const friendPublishRef = useRef(0);
+  const friendPublishDeferredRef = useRef(false);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
+    if (friendsSongPlaying()) { friendPublishDeferredRef.current = true; return; }
     const id = await ensureBreederId();
     if (!id) return;
     const latest = friendLatestRef.current;
@@ -2997,10 +3003,19 @@ function MonsterHeroGame() {
   }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
-    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    // 演奏画面に入ったら、曲が鳴り始める前(幕のあいだ)に送る。待つと曲の頭に重なる
+    const wait = gameState === 'RHYTHM_PLAY' ? FRIEND_PUBLISH_BEFORE_SONG_MS : Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
   }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
+  // 曲が鳴っていて送らなかった分は、曲が終わってから送る(結果の画面が出そろうまで少し待つ)
+  useEffect(() => {
+    if (!friendsActive || typeof window === 'undefined') return undefined;
+    let timer = null;
+    const onEnd = () => { if (!friendPublishDeferredRef.current) return; friendPublishDeferredRef.current = false; clearTimeout(timer); timer = setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS); };
+    window.addEventListener('mh:song-play-end', onEnd);
+    return () => { clearTimeout(timer); window.removeEventListener('mh:song-play-end', onEnd); };
+  }, [friendsActive, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);

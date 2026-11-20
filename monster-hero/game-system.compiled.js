@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc7587541479cb94
+// source-sha256: e01cdfa2eb9b97be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45053,7 +45053,7 @@ const RhythmTapTest = ({
         run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
       }
       if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart, perfTickStart - frameNowMs);
-      RHYTHM_FRAME_DIAG.tick(frameNowMs, perfTickStart ? performance.now() - perfTickStart : NaN);
+      RHYTHM_FRAME_DIAG.tick(frameNowMs, perfTickStart ? performance.now() - perfTickStart : NaN, songTimeMs);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -59560,6 +59560,15 @@ const friendsPlaceFromRow = (place, records) => {
 };
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
+const FRIEND_PUBLISH_BEFORE_SONG_MS = 300;
+const FRIEND_PUBLISH_AFTER_SONG_MS = 1500;
+const friendsSongPlaying = () => {
+  try {
+    return typeof window !== 'undefined' && !!window.__mhSongPlaying;
+  } catch (e) {
+    return false;
+  }
+};
 const friendsPlaceOfScreen = gameState => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (_friendsRoomPrivate && name !== 'RHYTHM_PLAY') return 'roomPrivate';
@@ -241058,14 +241067,19 @@ function MonsterHeroGame() {
     if (!friendsActive) return undefined;
     refreshFriendRequests();
     const timer = setInterval(() => {
-      if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests();
+      if ((typeof document === 'undefined' || !document.hidden) && !friendsSongPlaying()) refreshFriendRequests();
     }, 3 * 60 * 1000);
     return () => clearInterval(timer);
   }, [friendsActive, refreshFriendRequests]);
   const friendLatestRef = useRef({});
   const friendPublishRef = useRef(0);
+  const friendPublishDeferredRef = useRef(false);
   const publishFriendProfile = useCallback(async () => {
     if (!friendsActive) return;
+    if (friendsSongPlaying()) {
+      friendPublishDeferredRef.current = true;
+      return;
+    }
     const id = await ensureBreederId();
     if (!id) return;
     const latest = friendLatestRef.current;
@@ -241141,10 +241155,25 @@ function MonsterHeroGame() {
   }, []);
   useEffect(() => {
     if (!friendsActive) return undefined;
-    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    const wait = gameState === 'RHYTHM_PLAY' ? FRIEND_PUBLISH_BEFORE_SONG_MS : Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
     const timer = setTimeout(publishFriendProfile, wait);
     return () => clearTimeout(timer);
   }, [friendsActive, gameState, masuMons, favoriteMasuId, profileMessage, publishFriendProfile, friendSpotTick]);
+  useEffect(() => {
+    if (!friendsActive || typeof window === 'undefined') return undefined;
+    let timer = null;
+    const onEnd = () => {
+      if (!friendPublishDeferredRef.current) return;
+      friendPublishDeferredRef.current = false;
+      clearTimeout(timer);
+      timer = setTimeout(publishFriendProfile, FRIEND_PUBLISH_AFTER_SONG_MS);
+    };
+    window.addEventListener('mh:song-play-end', onEnd);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mh:song-play-end', onEnd);
+    };
+  }, [friendsActive, publishFriendProfile]);
   useEffect(() => {
     if (!friendsActive) return undefined;
     const timer = setInterval(() => {
