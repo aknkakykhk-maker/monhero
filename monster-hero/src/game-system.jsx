@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 50d5fcf260463106
+// generated-sha256: 36d0bc284aa82adb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81355,7 +81355,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 
 // モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
 //   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B', antiStall: true }); // antiStall: 間合いの取り合いで技が出ないまま打ち切りにしない(バ-08)
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -98005,7 +98005,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
-.msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.p{color:#fde68a;font-weight:900}.msa-dc-c small.p span.hd{display:inline;position:static;margin-left:2px;font-size:.85em}.msa-dc-c small.p span.hd.up{color:#4ade80}.msa-dc-c small.p span.hd.down{color:#f87171}
 .msa-dc-c small.mv{color:#7dd3fc;font-size:9.5px;letter-spacing:-.02em;white-space:normal;line-height:1.15}
 /* 2026-11-20 API の点検: 札の字が 9〜10px で読めない → 1段上げる。届く技が無い「いま」の札に黄色のふちを付けない(黄色のふちは助手のおすすめと読める) */
 .msa-dc-c small{font-size:10.5px}
@@ -98107,9 +98107,13 @@ const msaKindIcon = (t) => (t && t.kind === 'pow' ? '🏋️' : '📖');
 //   hitAt(t, d) … その間合いで撃つ前の命中%(無ければ t.hit)/lastMove … いま使った技(その札を光らせる)/hintId … 助手のおすすめの技
 //   onOpen(d) … 押したら一覧(無ければ見るだけの札)
 // look='a' … 案A(2列×2段・技の絵・性能の2行。モンサクの試合)。無ければ今までの4列の札
+const MSA_DC_HIT_MEMO = {};
 function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastMove = null, hintId = null, onOpen = null, busy = false, dataSide = '', look = '' }) {
   useEffect(() => { msaFitTechNames(); });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  // 2026-11-20 バ-48: 命中%が番ごとに変わる理由が分からない → 前に出した値より上がった/下がったを ▲▼ で出す(同じ技のあいだだけ・理由はガッツ)
+  //   手動の帯は番ごとに作り直されるので、覚えは札の外(MSA_DC_HIT_MEMO)に置く。1分より前の覚えは別の試合として使わない
+  const memoOf = (d) => { const m = MSA_DC_HIT_MEMO[`${dataSide}:${d}`]; return m && Date.now() - m.at < 60000 ? m : null; };
   return (
     <div className={`msa-dc ${look === 'a' ? 'a' : ''}`} data-msa-dc={dataSide || ''} data-msa-dc-look={look || ''}><style>{MSA_DC_CSS}</style>
       {[0, 1, 2, 3].map((d) => {
@@ -98144,7 +98148,12 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
           <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
             <span className="msa-dc-h">{MSA_DC_DIST[d]}{mvTo != null ? <span className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo} title={typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}` : undefined}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</span> : null}<i>{at.length > 1 ? `ほか${at.length - 1}` : ''}</i></span>
             {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
-            {t ? <small className="p">{Number.isFinite(hp) ? `命中${Math.round(hp)}%` : '命中 —'}</small> : null}
+            {t ? (() => {
+              const v = Number.isFinite(hp) ? Math.round(hp) : null; const m = memoOf(d);
+              const dir = v == null ? '' : m && m.id === t.id ? (v > m.v ? 'up' : v < m.v ? 'down' : m.dir) : '';
+              MSA_DC_HIT_MEMO[`${dataSide}:${d}`] = { id: t.id, v, dir, at: Date.now() };
+              return <small className="p" data-msa-dc-hit={dir || undefined} title={dir ? 'ガッツが多いほど命中が上がります' : undefined}>{v != null ? `命中${v}%` : '命中 —'}{dir ? <span className={`hd ${dir}`}>{dir === "up" ? "▲" : "▼"}</span> : null}</small>;
+            })() : null}
             {t && dataSide !== 'B' ? <small className="gu">ガッツ−{t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
           </button>
@@ -98269,7 +98278,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>{look === 'c' ? '自分の技' : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`}</span>
+          <span>{look === 'c' ? <>自分の技<small className="msxm-hn" style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, color: '#cbd5e1' }}>命中はガッツで上下(▲▼)</small></> : `⚔ 攻撃${reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}`}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
         <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual" look={look === 'c' ? '' : look}/>
@@ -100373,7 +100382,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : sayNow}</div>
       </div>
       <div className="msa-side" data-msa-side>
-      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><div className="msa-rowh">自分の技</div><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={lastTechOf('A')} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
+      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><div className="msa-rowh">自分の技<small>命中はガッツで上下(▲▼)</small></div><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={lastTechOf('A')} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="c"/> : null}</div>
       {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
       {(!manual || auto) && !ended ? (
