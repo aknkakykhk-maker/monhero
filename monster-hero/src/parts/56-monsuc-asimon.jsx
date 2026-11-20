@@ -26,7 +26,7 @@ function MsxAssistCard({ a, n }) {
       <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
       <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b>
         <span className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter><small>目盛り</small>{Array.from({ length: dots }, (_, i) => <s key={i} className={i < lit ? 'on' : ''}/>)}<i>{n}</i>/{a.max}</span></div>
-        <div className="tx">{short}{more ? <span className="mr">{open ? ' ▲' : ' ▼くわしく'}</span> : null}</div>
+        <div className="tx">{short}{more ? <span className="mr">{open ? ' ▲' : ' ▼詳しく'}</span> : null}</div>
         {open && note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
         {open && scene ? <div className="sc">効く場面: {scene}</div> : null}</div>
     </div>
@@ -54,7 +54,7 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
           <div className="inf">
             <b className="nm">{name}</b><small className="sub">{sub}</small>
             <div className="kv" data-msx-asd-support>
-              <span><i>はじめの親密度</i><b>{mem.bond0}</b></span>
+              <span><i>初めの親密度</i><b>{mem.bond0}</b></span>
               <span><i>友情タッグ</i><b>+{Math.round(Number(mem.tag) || 0)}%</b></span>
               <span><i>得意率</i><b>{Math.round((Number(mem.fav) || 0) * 100)}%</b></span>
               <span><i>総合力</i><b>{kind === 'base' ? '—' : msxFmt(pow || 0)}</b></span>

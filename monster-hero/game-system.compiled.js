@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1d5aa81c33a8b1b
+// source-sha256: d5694f0f31e74421
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -176400,7 +176400,7 @@ function MsxStart({
     }))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, sameBond ? `どの枠も はじめの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え"), React.createElement("button", {
+    }, sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : '', "左上は伸びが上がる能力、札の下の数字はその上がり幅(%)。札を押すと入れ替え"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -177747,7 +177747,7 @@ function MsxTeamEffects({
     className: "msx-ef-how"
   }, "数字は編成の合計(上限まで効く)。", React.createElement("b", {
     className: "one"
-  }, "1体だけ"), "の効果は、いちばん大きい子の分だけ効く。行を押すと説明"), list.map(e => {
+  }, "1体だけ"), "の効果は、一番大きいモンスターの分だけ効く。行を押すと説明"), list.map(e => {
     const c = capOf(e.id);
     const tot = c && c.group ? groupTotal(c.group) : e.total;
     const pct = c ? Math.min(100, tot / c.v * 100) : null;
@@ -177779,7 +177779,7 @@ function MsxTeamEffects({
       }
     })) : null, React.createElement("small", {
       className: "cap"
-    }, c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? 'いちばん大きい1体の分' : '何体ぶんでも足し合わせ')), React.createElement("span", {
+    }, c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? '一番大きい1体の分' : '何体ぶんでも足し合わせ')), React.createElement("span", {
       className: "val"
     }, msxEfText(AT, e.id, e.total)), React.createElement("span", {
       className: "fcs"
@@ -177796,7 +177796,7 @@ function MsxTeamEffects({
       className: "nm"
     }, r.name), React.createElement("span", {
       className: "v"
-    }, r.text, r.live ? '' : '(効かない: ほかの子の方が大きい)')))) : null);
+    }, r.text, r.live ? '' : '(効かない: ほかのモンスターの方が大きい)')))) : null);
   })) : React.createElement("div", {
     className: "msx-gt-none"
   }, "編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています") : members.map((m, mi) => {
@@ -188951,7 +188951,7 @@ function MsxAssistCard({
     className: "tx"
   }, short, more ? React.createElement("span", {
     className: "mr"
-  }, open ? ' ▲' : ' ▼くわしく') : null), open && note ? React.createElement("div", {
+  }, open ? ' ▲' : ' ▼詳しく') : null), open && note ? React.createElement("div", {
     className: "sc",
     "data-msx-assist-cap": true
   }, "上限: ", note.replace(/^[(（]|[)）]$/g, '')) : null, open && scene ? React.createElement("div", {
@@ -189009,7 +189009,7 @@ function MsxAssistDetail({
   }, sub), React.createElement("div", {
     className: "kv",
     "data-msx-asd-support": true
-  }, React.createElement("span", null, React.createElement("i", null, "はじめの親密度"), React.createElement("b", null, mem.bond0)), React.createElement("span", null, React.createElement("i", null, "友情タッグ"), React.createElement("b", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("span", null, React.createElement("i", null, "得意率"), React.createElement("b", null, Math.round((Number(mem.fav) || 0) * 100), "%")), React.createElement("span", null, React.createElement("i", null, "総合力"), React.createElement("b", null, kind === 'base' ? '—' : msxFmt(pow || 0)))), top.length ? React.createElement("div", {
+  }, React.createElement("span", null, React.createElement("i", null, "初めの親密度"), React.createElement("b", null, mem.bond0)), React.createElement("span", null, React.createElement("i", null, "友情タッグ"), React.createElement("b", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("span", null, React.createElement("i", null, "得意率"), React.createElement("b", null, Math.round((Number(mem.fav) || 0) * 100), "%")), React.createElement("span", null, React.createElement("i", null, "総合力"), React.createElement("b", null, kind === 'base' ? '—' : msxFmt(pow || 0)))), top.length ? React.createElement("div", {
     className: "asd-up",
     "data-msx-asd-up": true
   }, React.createElement("i", null, "伸びが上がる"), top.map(k => React.createElement("span", {
