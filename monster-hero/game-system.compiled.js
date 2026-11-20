@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b5d9258a98920dc
+// source-sha256: e249fda32105e152
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172477,10 +172477,11 @@ const MSX_CSS = `
 /* ---- 足したもの(ゲームの中で要った分) ---- */
 .msx-wrap{position:fixed;inset:0;z-index:9400;background:#0b0920;display:flex;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 /* スマホを横にしたときの案内(2026-11-20 r1119-026)。横長で高さが小さく、指で触る端末だけに出す(PC のマウスでは出さない)。
-   案内は上に重ねるだけで、下の画面はそのまま残る(回しても進み具合を失わない) */
+   案内は上に重ねるだけで、下の画面はそのまま残る(回しても進み具合を失わない)。
+   重なり順はバトルの演出(決着の大写し 9700・判定 9650)より上の 9800(ミハリの指摘: バトルの画面で案内が下にもぐっていた) */
 .msx-portrait-only{display:none}
 @media (orientation:landscape) and (max-height:540px) and (hover:none) and (pointer:coarse){
-.msx-portrait-only{position:absolute;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:radial-gradient(circle at 50% 40%,#2a1f55 0,#0b0920 70%);color:#fff;text-align:center;touch-action:none}
+.msx-portrait-only{position:absolute;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:radial-gradient(circle at 50% 40%,#2a1f55 0,#0b0920 70%);color:#fff;text-align:center;touch-action:none}
 .msx-portrait-only .in{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:420px;padding:0 20px}
 .msx-portrait-only .ph{width:72px;height:72px;display:flex;align-items:center;justify-content:center}
 .msx-portrait-only .ph span{display:block;font-size:48px;line-height:1;transform:rotate(-90deg);animation:msxRotatePhone 2.4s ease-in-out infinite}
