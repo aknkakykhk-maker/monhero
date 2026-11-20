@@ -188,13 +188,13 @@ const makeRun = async (kind) => {
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st === 'tabfuse') { const d = document.querySelector('[data-msx-tab-fuse]'); if (d) d.click(); return !!d; } // 横では「で生まれたモンスター」を隠すので印で押す
-            if (st === 'pickfirst') { const d = document.querySelector('.v-grid6 button'); if (d) d.click(); return !!d; }
+            if (st === 'pickfirst') { const d = document.querySelector('[data-msx-pick-mon]'); if (d) d.click(); return !!d; }
             if (st === 'detail') { const d = document.querySelector('[data-msx-detail-open]'); if (d) d.click(); return !!d; } // 選ぶ画面の「くわしく」(2026-11-14)
             if (st.startsWith('slot:')) { const d = document.querySelector(`[data-msx-slot="${st.slice(5)}"]`); if (d) d.click(); return !!d; } // 編成の枠を押す(2026-11-14)
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
             if (st === 'effects') { const d = document.querySelector('[data-msx-team-effects-open]'); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
-            if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
+            if (st.startsWith('pickmon:')) { const d = document.querySelector(`[data-msx-pick-mon="${st.slice(8)}"]`); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
             // 被った升を押す → 右の欄の「⇄ 覚える技を選ぶ」で窓を開く(r1115-152①。升の ⇄ は押せない印になった)
             if (st.startsWith('cell:')) { const c = document.querySelector(`[data-msx-cell="${st.slice(5)}"]`); if (c) c.click(); return !!c; }
             if (st === 'altopen') { const d = document.querySelector('[data-msx-alt-open]'); if (d) d.click(); return !!d; }

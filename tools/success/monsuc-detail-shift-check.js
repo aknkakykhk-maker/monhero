@@ -35,7 +35,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
       const go = async (fn, arg) => { const ok = await page.evaluate(fn, arg); await page.waitForTimeout(350); return ok; };
       await go(() => { const b = [...document.querySelectorAll('.msx button')].find((x) => /新しく育成を(?:始|はじ)める/.test(x.innerText)); if (b) b.click(); return !!b; });
       await go(() => { const b = [...document.querySelectorAll('.msx button')].find((x) => /▶$/.test(x.innerText)); if (b) b.click(); return !!b; });
-      await go(() => { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === msxMonName('Snegurochka'); }); if (d) d.click(); return !!d; });
+      await go(() => { const d = document.querySelector('[data-msx-pick-mon="Snegurochka"]'); if (d) d.click(); return !!d; });
       return go(() => { const d = document.querySelector('[data-msx-detail-open]'); if (d) d.click(); return !!d; });
     };
     check(`${W}: 育てる子の詳細が開く`, await open());
