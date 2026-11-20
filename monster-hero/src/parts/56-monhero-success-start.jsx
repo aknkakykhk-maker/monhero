@@ -532,7 +532,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
 
   if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} ctx={betaCtx} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
   let p1few = false; // 1段目で一覧が少ない(下の選んだ子の欄を大きく)
-  let body = null; let go = null; let full = null; // full … 全画面で出す選ぶ画面(r1115-096。編成の画面の代わりに出す)
+  let body = null; let go = null; let full = null; let ftPre = null; // ftPre … 下の帯で主のボタンの左に並べるボタン(縦に積まない。MONSUC_UI.md §8) // full … 全画面で出す選ぶ画面(r1115-096。編成の画面の代わりに出す)
   if (step === 0) {
     const listAll = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, nm: msxMonName(id), on: !pick.box && pick.base === id, pick: { base: id } }))
       : unraised.map((m) => ({ key: m.id, sp: m.species, nm: m.nick || msxMonName(m.species), on: pick.box === m.id, pick: { box: m.id } }));
@@ -596,29 +596,27 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
     // r1115-096(社長): 編成の画面は6枠を大きく並べるだけ。枠を押すと選ぶ画面(全画面 MsxTeamPick)へ。フレンドのいる枠はフレンドの貸し出しの一覧(MsxFriendPick)へ
     //   r1115-115(社長): 6枠のどこにも自分のモンスター・フレンドは最大1体(どの枠にも。入れなくてもよい)。選ぶ画面の「🤝 フレンド」タブから一覧へ
     const openSlot = (i) => (friend && i === friendAt && lendOn ? setFriendOpen(i) : setSlotPick(i));
+    const sameBond = members.every((m) => m.bond0 === members[0].bond0 && m.tag === members[0].tag);
     body = (<>
       {/* 説明は短く・言葉の途中で折らない(2026-11-14 社長「文字のはみ出し」) */}
       <div className="v-h">編成の6体<small style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{(typeof jaWrap === 'function' ? jaWrap : (t) => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる')}</small></div>
-      <div className="v-slots msx-team6" data-msx-team6>
-        {members.map((m, i) => (
-          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`} data-msx-slot={i} {...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {})} {...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {})} role="button" tabIndex={0} onClick={() => openSlot(i)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSlot(i); }}>
-            {m.friend ? <i className="msx-sl-fr">🤝 フレンド</i> : null}
-            <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <MsxMonFace species={m.species} colors={m.colors}/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
-            {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
-            {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
-            <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
-            <div className="bs"><span>親密度 {m.bond0}</span><span>タッグ +{m.tag}%</span></div>
-            <div className="ic">{m.friend ? `借: ${m.friend.name || 'フレンド'}` : m.kind === 'base' ? (m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える') : '✎変える'}</div>
-          </div>
-        ))}
-      </div>
-      <div className="msx-note msx-sl-legend" data-msx-slot-legend>枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び</div>
+      {/* ④段2(社長の実機の指摘): 点線の箱と同じ文の繰り返しをやめ、共通の型の札(中)を3列×2段。札ごとに違う物だけを札に出す
+          (左上=伸びが上がる能力・右上=評価・下の帯=役)。どの枠も同じ親密度・タッグは下に1か所だけ */}
+      <div className="msx-team6 msx-team6c" data-msx-team6><MonsucCardGrid size="m">
+        {members.map((m, i) => { const rec = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : m.assistId && data.assist && Array.isArray(data.assist.mons) ? data.assist.mons.find((x) => x.id === m.assistId) : null;
+          const role = m.friend ? { text: 'フレンド', kind: 'friend' } : m.kind === 'base' ? { text: 'ベースモン', kind: 'base' } : m.assistId ? { text: 'メモモン', kind: 'memo' } : { text: 'マスモン', kind: 'box' };
+          return (<div key={i} className="msx-t6w">
+            <MonsucMonCard m={msxTpCardM(rec, m, m.species)} size="m" tag={role} num={msxTpBonusText(m)} onClick={() => openSlot(i)} attrs={{ 'aria-label': `${i + 1}枠目 ${m.name}(押して変える)`, 'data-msx-slot': i, ...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {}), ...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {}) }}/>
+            {!sameBond ? <small className="msx-t6b">親密度 {m.bond0}・タッグ +{m.tag}%</small> : null}
+          </div>); })}
+      </MonsucCardGrid></div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}左上は伸びが上がる能力、カードの下の数字はその上がり幅(%)。カードを押すと入れ替え</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
-      <div className="msx-team-acts" data-msx-team-acts>
-        <button type="button" disabled={!(raised.length || stock.length) || typeof msxTeamAuto !== 'function'} onClick={() => setTeamSlotsSt((cur) => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null))} data-msx-team-auto>おまかせ</button>
-        <button type="button" disabled={typeof MsxTeamEffects !== 'function'} onClick={() => setEffectsOpen(true)} data-msx-team-effects-open>効果一覧</button>
-      </div>
+    </>);
+    ftPre = (<>
+      <button type="button" disabled={!(raised.length || stock.length) || typeof msxTeamAuto !== 'function'} onClick={() => setTeamSlotsSt((cur) => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null))} data-msx-team-auto>おまかせ</button>
+      <button type="button" disabled={typeof MsxTeamEffects !== 'function'} onClick={() => setEffectsOpen(true)} data-msx-team-effects-open>効果一覧</button>
     </>);
     go = 'この編成でいく ▶';
     if (slotPick != null && typeof MsxTeamPick === 'function') full = (<MsxTeamPick idx={slotPick} slots={teamSlotsSt} members={members} own={species} unlocked={unlocked} raised={raised} stock={stock} SUC={SUC} box={box} assistData={data.assist}
@@ -749,7 +747,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
         <MsxSteps n={step}/>
         {body}
       </div>
-      {go && <div className="v-ft"><button type="button" className="go" onClick={next}>{go}</button></div>}
+      {go && <div className={`v-ft${ftPre ? ' msx-ft3' : ''}`}>{ftPre}<button type="button" className="go" onClick={next}>{go}</button></div>}
       {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : (slotPick != null || gatherOpen || friendOpen !== false || effectsOpen ? null : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>)) : null /* 窓を開いている間は説明を出さない。前に出す窓は1枚だけ(API 点検 msx-S2E) */}
     </>
   );
