@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d2f6c0df26f1a1f
+// source-sha256: 13f14b7e3713049f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155703,7 +155703,7 @@ function MonsucBracket({
     className: "msc-sk",
     "data-msc-skip": true,
     onClick: () => setStage(3)
-  }, "SKIP ▸▸") : null), React.createElement("div", {
+  }, "スキップ ⏭") : null), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
@@ -161829,7 +161829,7 @@ function MonsucFuseShow({
     type: "button",
     onClick: () => setSt(3),
     "data-monsuc-fuse-skip": true
-  }, "飛ばす ⏭")) : null, React.createElement("div", {
+  }, "スキップ ⏭")) : null, React.createElement("div", {
     className: "mf-stage"
   }, React.createElement("img", {
     className: "mf-mon a",
@@ -162549,7 +162549,7 @@ function MsxAwakeShow({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-awake-skip": true
-  }, "飛ばす ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
+  }, "スキップ ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: fire.ups
@@ -162758,7 +162758,7 @@ function MsxBirth({
     type: "button",
     onClick: () => setSt(3),
     "data-msx-birth-skip": true
-  }, "飛ばす ⏭")) : null), React.createElement("div", {
+  }, "スキップ ⏭")) : null), React.createElement("div", {
     className: "v-log"
   }, st >= 3 ? React.createElement(React.Fragment, null, "円盤石から、", React.createElement("b", null, name), "が生まれた! ここから育成がはじまる。") : React.createElement(React.Fragment, null, "円盤石が、あたたかい光につつまれていく…")), React.createElement("div", {
     className: "v-ft"
@@ -163203,7 +163203,7 @@ function MsxIssaResult({
     type: "button",
     onClick: () => setSt(2),
     "data-msx-issa-skip": true
-  }, "飛ばす ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
+  }, "スキップ ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
     who: s,
     stats: s.stats,
     ups: ups
@@ -167285,7 +167285,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "飛ばす ⏭") : null, React.createElement("button", {
+  }, "スキップ ⏭") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -181126,7 +181126,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "飛ばす ⏭"), React.createElement("button", {
+    }, "スキップ ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -181179,7 +181179,7 @@ function MsxPlay({
       type: "button",
       onClick: () => tGo(-1),
       "data-msx-tev-skip": true
-    }, "イベントを飛ばす ⏭"), React.createElement("button", {
+    }, "スキップ ⏭"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tLast ? toReact(run) : tGo(tAt + 1),
@@ -181459,7 +181459,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "飛ばす ⏭"));
+    }, "スキップ ⏭"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -185376,7 +185376,7 @@ function MsxR3Bracket({
     className: "sk",
     onClick: () => setStage(3),
     "data-msx-r3-bsk": true
-  }, "飛ばす ⏭") : null));
+  }, "スキップ ⏭") : null));
   const foot = debug ? React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -186536,7 +186536,7 @@ function MsxR3Battle({
         className: "go",
         onClick: () => setIntroSeen(introKey),
         "data-msx-r3-cupintro-go": true
-      }, "飛ばす ⏭"))
+      }, "スキップ ⏭"))
     });
   }
   const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
