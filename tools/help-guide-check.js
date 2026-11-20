@@ -90,7 +90,7 @@ check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t==
   const bad = blocks.filter((b) => b.t === 'video' && !names.includes(b.video)).map((b) => String(b.video));
   check('動画のブロックの名前が RHYTHM_HELL_GUIDE_VIDEOS にある', bad.length === 0, bad.join(' / '));
 }
-check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
+check('助手ボタンと吹き出しがある', has('data-help-bubble-toggle') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
 check('助手は開いている階層に応じて話す', has("const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;") && has("const assistantScene = (!cat && !topic) ? 'helpTop' : null;"));
 check('項目を開いているときは本文を詳細として渡す', has('const assistantHelpRef = topic ? `${cat.id}/${topic.id}` : null;'));
 check('本文の描き方は助手の詳細と共通', has('{renderHelpBlocks(topic.blocks, cat.color)}') && has('const renderHelpBlocks = (blocks, accent)'));
