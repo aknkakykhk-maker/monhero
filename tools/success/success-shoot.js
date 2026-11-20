@@ -105,7 +105,7 @@ const makeRun = async (kind) => {
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
     // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
     ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
-    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['TV1S', 'mid', ['tev', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next']], ['TV1K', 'mid', ['tev', 'wait:1200', 'tev:skip']], ['TV2S', 'mid', ['tevLot', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['TV1S', 'mid', ['tev', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next']], ['TV1K', 'mid', ['tev', 'wait:1200', 'tev:skip']], ['TV2S', 'mid', ['tevLot', 'wait:600', 'tev:next', 'tev:next', 'tev:next']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);

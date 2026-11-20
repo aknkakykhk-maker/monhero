@@ -101,7 +101,7 @@ const AREAS = [
 const areaOf = (key) => AREAS.find((a) => a.re.test(key)) || { key: 'etc', name: 'その他', ref: null };
 
 // ---- 止め絵を集める ----
-const FLOW_NAME = { SQE: '育成イベント1つ(起きてから戻るまで)', SQT: 'トレーニングの1ターン(選ぶ→結果→次の月)', SQV: '編成の子のイベント(トレーニングのあと)', SQC: '大会の1試合(入りから結果まで・オート)', S6: 'みゅあ編のお話 特別な結末(最後まで)', G4: 'みゅあ編のお話 良い結末', N2: 'みゅあ編のお話 悪い結末' };
+const FLOW_NAME = { TV1S: '編成の子のイベント その1(6つの拍・押すたびに1拍)', TV2S: '編成の子の小さな出来事(6つの拍)', SQE: '育成イベント1つ(起きてから戻るまで)', SQT: 'トレーニングの1ターン(選ぶ→結果→次の月)', SQV: '編成の子のイベント(トレーニングのあと)', SQC: '大会の1試合(入りから結果まで・オート)', S6: 'みゅあ編のお話 特別な結末(最後まで)', G4: 'みゅあ編のお話 良い結末', N2: 'みゅあ編のお話 悪い結末' };
 const seqs = new Map(); // 続きの止め絵: 名前 → { key, label, frames }
 const collect = () => {
   const scenes = new Map(); // key → { key, label, shots: { tate, yoko, 'yoko-s' }, machine: [] }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c137a705f289ca80
+// source-sha256: aaf52b2c5db76b24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164577,6 +164577,14 @@ const msxCheerType = m => {
   for (let i = 0; i < k.length; i++) h = h * 31 + k.charCodeAt(i) >>> 0;
   return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
 };
+const MSX_TEV_RES = Object.freeze({
+  self: n => `${n}といっしょに、夢中で体を動かした。`,
+  rest: n => `${n}とゆっくり休んで、元気が出た。`,
+  talk: n => `${n}とたくさん話して、気持ちが軽くなった。`,
+  tip: n => `${n}に教わったコツが、体に入ってきた。`,
+  pal: n => `${n}と、ますます なかよくなった。`,
+  friend: n => `${n}と、ますます なかよくなった。`
+});
 const MSX_TEV_WAIT = Object.freeze({
   in: 1300,
   scene: 900
@@ -164588,7 +164596,7 @@ const msxTevSplit = t => {
   const out = [];
   let cur = '';
   for (const p of parts) {
-    if (cur && (cur + p).length > 30) {
+    if (cur && (cur + p).length > 30 && !(p.length < 10 && (cur + p).length <= 44)) {
       out.push(cur);
       cur = p;
     } else cur += p;
@@ -164631,10 +164639,12 @@ const msxTevSteps = (run, o, ctx) => {
     who: 'narr',
     t: `${name}と、すこし特別な時間をすごした。`
   });
-  const steps = [{
+  const steps = e.story ? [{
     b: 1
   }, {
     b: 2
+  }] : [{
+    b: 1
   }];
   narr.forEach(r => msxTevSplit(r.t).forEach(t => steps.push({
     b: 3,
@@ -164647,9 +164657,19 @@ const msxTevSteps = (run, o, ctx) => {
     e: r.e,
     t
   })));
-  steps.push({
+  const pops = msxTevPops(s, o);
+  const bFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : s.bond[e.who];
+  if (pops.length) steps.push({
     b: 5
-  }, {
+  });
+  if (bFrom !== s.bond[e.who]) steps.push({
+    b: 5,
+    k: 'bond'
+  });
+  if (!pops.length && bFrom === s.bond[e.who]) steps.push({
+    b: 5
+  });
+  if (msxTevNextText(run, o)) steps.push({
     b: 6
   });
   return steps;
@@ -164662,11 +164682,26 @@ const msxTevPops = (s, o) => {
     k: 'st',
     t: `${MSX_STAT_NAME[d.stat] || '能力'} +${d.up}`
   });
-  msxTevChanges(s, o).filter(t => !/親密度/.test(t)).forEach(t => out.push({
-    k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : 'up',
-    t: t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '')
-  }));
+  const fromTo = (now, dv, max) => Number.isFinite(now) && Number.isFinite(dv) && dv ? `(${Math.max(0, Math.min(max, Math.round(now - dv)))}→${Math.round(now)})` : '';
+  msxTevChanges(s, o).filter(t => !/親密度/.test(t)).forEach(t => {
+    const tx = t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '');
+    const sub = d && /^体力/.test(tx) ? fromTo(s.hp, d.hp, s.hpMax) : d && /^ストレス/.test(tx) ? fromTo(s.stress, d.stress, 100) : '';
+    out.push({
+      k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up',
+      t: tx,
+      sub
+    });
+  });
   return out;
+};
+const msxTevNextText = (run, o) => {
+  const s = run.s;
+  const e = o.event;
+  const m = s.team[e.who];
+  const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
+  if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
 };
 function MsxTevMini({
   s,
@@ -164705,7 +164740,8 @@ function MsxTrainEvent({
   const bondNow = s.bond[e.who];
   const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
   const bondUp = bondNow !== bondFrom || e.d && e.d.bond;
-  const bondAt = 500 + pops.length * 700;
+  const bk = !sum && st.k === 'bond';
+  const bondAt = 500;
   const [bondOn, setBondOn] = useState(false);
   const next = () => {
     if (!go) return;
@@ -164718,12 +164754,12 @@ function MsxTrainEvent({
     if (b === 1) ids.push(setTimeout(next, calm ? 300 : MSX_TEV_WAIT.in));
     if (b === 2) ids.push(setTimeout(next, MSX_TEV_WAIT.scene));
     if (b === 5) {
-      ids.push(setTimeout(() => setBondOn(true), calm ? 0 : bondAt));
-      ids.push(setTimeout(next, (calm ? 600 : bondAt) + (bondUp ? 1700 : 900)));
+      if (bk) ids.push(setTimeout(() => setBondOn(true), calm ? 0 : bondAt));
+      if (i < lastI) ids.push(setTimeout(next, bk ? 2400 : 600 + pops.length * 700 + 900));
     }
     return () => ids.forEach(clearTimeout);
   }, [i, sum]);
-  msxUseTimedSe(sum ? [] : b === 1 ? [['actTag', 0]] : surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? [['actIdea', 80]] : b === 5 ? [...pops.map((p, k) => ['actTagSpark', 300 + k * 700]), ...(bondUp ? [['itemBond', bondAt]] : [])] : [], [i, sum]);
+  msxUseTimedSe(sum ? [] : b === 1 ? [['actTag', 0]] : surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? [['actIdea', 80]] : b === 5 ? bk ? [['itemBond', bondAt]] : pops.map((p, k) => ['actTagSpark', 300 + k * 700]) : [], [i, sum]);
   const bondShow = b >= 5 && bondOn || sum ? bondNow : bondFrom;
   const ups = e.d && e.d.up > 0 && e.d.stat ? {
     [e.d.stat]: e.d.up
@@ -164734,7 +164770,8 @@ function MsxTrainEvent({
   } : s.stats;
   const palOn = b >= 3;
   const pair = b >= 3;
-  const nx = steps.length > 0 && e.story && e.story < 3 && msxSuc && msxSuc.SUC && msxSuc.SUC.STORY && msxSuc.SUC.STORY[e.story] ? bondNow >= msxSuc.SUC.STORY[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${msxSuc.SUC.STORY[e.story].need} になったら` : '';
+  const nx = msxTevNextText(run, o);
+  const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
   const aidWho = talk && talk.who !== 'narr' && talk.who !== 'mon' ? talk.who : null;
   const palImg = m ? m.colors && m.colors.some && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
@@ -164787,12 +164824,12 @@ function MsxTrainEvent({
     className: "tev-q",
     "aria-hidden": "true"
   }, "?") : null), m ? React.createElement("div", {
-    className: `tev-who pal${palOn ? ' on' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`
+    className: `tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`
   }, React.createElement("div", {
     className: "gr"
   }), React.createElement("div", {
     className: "tev-art"
-  }, palImg)) : null, b === 5 && !calm ? React.createElement("div", {
+  }, palImg)) : null, b === 5 && !bk && !calm ? React.createElement("div", {
     className: "tev-dust",
     "aria-hidden": "true"
   }, [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
@@ -164805,8 +164842,8 @@ function MsxTrainEvent({
     kind: "team",
     label: e.story ? `編成のモンスターのイベント その${e.story}` : undefined,
     title: title
-  }) : null, b >= 5 && b <= 6 && bondUp ? React.createElement("div", {
-    className: `tev-bond${bondOn && bondNow >= 100 ? ' max' : ''}`,
+  }) : null, (b === 5 && bk || b === 6) && bondUp ? React.createElement("div", {
+    className: `tev-bond${bk ? ' big' : ''}${bondOn && bondNow >= 100 ? ' max' : ''}`,
     "data-msx-tev-bond-row": true
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
@@ -164814,9 +164851,11 @@ function MsxTrainEvent({
     }
   })), React.createElement("em", {
     "data-msx-tev-bond": true
-  }, bondShow, React.createElement("small", null, "/100")), bondOn && bondNow >= 100 ? React.createElement("strong", {
+  }, bondShow, React.createElement("small", null, "/100"), bondNow !== bondFrom ? React.createElement("small", {
+    className: "dl"
+  }, " (", bondNow > bondFrom ? '+' : '', bondNow - bondFrom, ")") : null), bondOn && bondNow >= 100 ? React.createElement("strong", {
     className: "mx"
-  }, "MAX!") : null) : null, b === 5 ? React.createElement("div", {
+  }, "MAX!") : null) : null, b === 5 && !bk ? React.createElement("div", {
     className: "tev-pops",
     "data-msx-tev-pops": true
   }, pops.map((p, k) => React.createElement("b", {
@@ -164825,7 +164864,7 @@ function MsxTrainEvent({
     style: {
       animationDelay: `${0.3 + k * 0.7}s`
     }
-  }, p.t))) : null, talk ? React.createElement("div", {
+  }, p.t, p.sub ? React.createElement("small", null, p.sub) : null))) : null, talk ? React.createElement("div", {
     className: `v-talk tev-talk${aidWho ? ' say' : ' narr'}`,
     style: JA_LABEL_STYLE,
     key: i,
@@ -164839,26 +164878,37 @@ function MsxTrainEvent({
   }, msxAidName(aidWho))) : null, React.createElement("div", null, jaWrap(talk.t)), go ? React.createElement("span", {
     className: "tev-tap",
     "aria-hidden": "true"
-  }, "▼") : null) : null, b === 6 && nx ? React.createElement("div", {
+  }, "▼") : null) : null, b === 5 ? React.createElement("div", {
+    className: "v-talk tev-talk narr",
+    style: JA_LABEL_STYLE,
+    key: `res${i}`,
+    "data-msx-tev-talk": "res"
+  }, React.createElement("div", null, jaWrap(bk ? bondNow >= 100 ? `${name}と、すっかり なかよしになった!` : `${name}との距離が、ぐっと縮まった。` : (MSX_TEV_RES[e.story ? 'self' : e.lottery] || MSX_TEV_RES.self)(name)))) : null, b === 6 && nx ? React.createElement("div", {
     className: "tev-next",
     "data-msx-ev-next": true
-  }, React.createElement("b", null, "つづく ▶"), React.createElement("span", {
+  }, React.createElement("b", null, "つづく"), React.createElement("span", {
     style: JA_WRAP_STYLE
   }, nx.split('\n').map((t, k) => React.createElement(React.Fragment, {
     key: k
   }, k ? React.createElement("br", null) : null, jaWrap(t))))) : null, sum ? React.createElement("div", {
     className: "tev-sum",
     "data-msx-tev-sum": true
-  }, React.createElement("div", {
-    className: "h"
-  }, title), pops.map((p, k) => React.createElement("div", {
+  }, bondUp ? React.createElement("div", {
+    className: "r bd"
+  }, "💗 ", name, "との親密度", bondNow >= 100 ? ' MAX!' : ` +${bondNow - bondFrom}`, React.createElement("small", {
+    style: {
+      display: 'block'
+    }
+  }, bondFrom, " → ", bondNow)) : null, pops.map((p, k) => React.createElement("div", {
     key: k,
     className: `r ${p.k}`
-  }, p.t)), bondUp ? React.createElement("div", {
-    className: "r bd"
-  }, "🤝 親密度 ", bondFrom, " → ", bondNow, bondNow >= 100 ? ' MAX!' : '') : null, nx ? React.createElement("div", {
+  }, p.t, p.sub ? React.createElement("small", null, " ", p.sub) : null)), nx ? React.createElement("div", {
     className: "nx"
-  }, React.createElement("b", null, "つづく ▶"), " ", nx.replace('\n', '')) : null) : null, style === 'b' && b === 1 ? React.createElement("div", {
+  }, React.createElement("b", null, "つづく"), React.createElement("span", {
+    style: JA_WRAP_STYLE
+  }, nx.split('\n').map((t, k) => React.createElement(React.Fragment, {
+    key: k
+  }, k ? React.createElement("br", null) : null, jaWrap(t))))) : null) : null, style === 'b' && b === 1 ? React.createElement("div", {
     className: "tev-in-b",
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -164890,9 +164940,10 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.tb1 .tev-who{opacity:0}
 .msx .msx-tev .tev-who.me{left:50%}
 .msx .msx-tev .tev-who.me.pair{left:29%;height:33%}
-.msx .msx-tev .tev-who.pal{left:86%;height:35%;opacity:0;filter:brightness(0)}
+.msx .msx-tev .tev-who.pal{left:31%;height:35%;opacity:0;filter:brightness(0);z-index:1}
 .msx .msx-tev .tev-who.pal.on{left:71%;opacity:1;filter:none}
-.msx .msx-tev .tev-who.pal.bye{left:118%;opacity:0;transition-duration:1.1s}
+.msx .msx-tev .tev-who.pal.on.back{left:52%;z-index:1}
+.msx .msx-tev .tev-who.pal.bye{left:76%}
 .msx .msx-tev .tev-who .tev-art{position:absolute;inset:0;display:block;width:100%;height:100%;filter:drop-shadow(0 8px 5px #0009)}
 .msx .msx-tev .tev-who.pal .tev-art{transform:scaleX(-1)}
 .msx .msx-tev .tev-who.pal.bye .tev-art{transform:none}
@@ -164926,7 +164977,19 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond .mx{color:#fde047;font-size:12px;font-style:italic;animation:tevBang .45s cubic-bezier(.2,1.6,.4,1) both}
 .msx .msx-tev .tev-pops{position:absolute;left:0;right:0;top:24%;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:none}
 .msx .msx-tev .tev-pop{max-width:92%;text-align:center;line-height:1.2;font-size:21px;font-weight:900;color:#fff;-webkit-text-stroke:3px #9d174d;paint-order:stroke fill;text-shadow:0 0 14px #f9a8d4;animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-pop small{display:block;font-size:14px;font-style:normal;-webkit-text-stroke-width:2px}
+.msx .msx-tev .tev-bond em small.dl{color:#fde047;font-size:11px}
+.msx .msx-tev .tev-bond.big em small.dl{font-size:17px}
+.msx .msx-tev .tev-sum .r small{font-size:12px;color:#cbd5e1}
+.msx .msx-tev .tev-sum .nx{display:flex;gap:8px;align-items:baseline}
 .msx .msx-tev .tev-pop.st{font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
+.msx .msx-tev .tev-pop.gd{-webkit-text-stroke-color:#0f766e;text-shadow:0 0 14px #5eead4}
+.msx .msx-tev .tev-who.pal.on.tsh{opacity:.45}
+.msx .msx-tev .tev-bond.big{top:58px;left:12%;right:12%;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:16px;font-size:13px;background:#1f0f2ee6;border:2px solid #f472b6}
+.msx .msx-tev .tev-bond.big i{flex:1 1 100%;height:12px}
+.msx .msx-tev .tev-bond.big em{font-size:18px}
+.msx .msx-tev .tev-bond.big .mx{font-size:22px}
+.msx .msx-tev .tev-sum .r.bd{color:#fbcfe8;font-size:19px}
 .msx .msx-tev .tev-pop.dn{-webkit-text-stroke-color:#1e3a8a;text-shadow:none}
 @keyframes tevPop{0%{opacity:0;scale:.2;translate:0 30px}60%{opacity:1;scale:1.15}100%{opacity:1;scale:1;translate:0}}
 .msx .msx-tev .tev-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
@@ -164934,7 +164997,7 @@ const MSX_TEV_CSS = `
 @keyframes tevDust{0%{left:70%;opacity:0}20%{opacity:1}100%{left:30%;opacity:0;scale:.4}}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
 .msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
-.msx .msx-tev .tev-sum{position:absolute;left:10%;right:10%;top:22%;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
+.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
 .msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
 .msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
 .msx .msx-tev .tev-sum .r.st{color:#fef08a;font-size:22px}
@@ -180706,6 +180769,10 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
+      className: "off",
+      disabled: true
+    }, "飛ばす ⏭"), React.createElement("button", {
+      type: "button",
       className: "go",
       onClick: () => afterAct({
         ...run,
@@ -180723,7 +180790,7 @@ function MsxPlay({
       className: "go",
       onClick: () => tLast ? toReact(run) : tGo(tAt + 1),
       "data-msx-tev-next": true
-    }, tLast ? '次へ ▶' : '送る ▶'));
+    }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
     const then = run.out.then;
