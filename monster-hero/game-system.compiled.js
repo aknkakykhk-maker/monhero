@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4f598a631b15b29
+// source-sha256: d579a5f74bc6e93f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114638,8 +114638,8 @@ function AssistantLifeBand({
   const nameOf = id => (assistantById(id) || {}).name || id;
   const g = life.groups[0];
   const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
-  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
-  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${assistantLifePlaceLabel(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${assistantLifePlaceLabel(lonely[1].place)}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
   const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
   return React.createElement("div", {
     "data-assistant-life-band": true,
@@ -115169,29 +115169,9 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
     furn: '⚔️🛡️'
   }
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
-  home: '🏡',
-  plaza: '⛲',
-  cafe: '🍰',
-  studio: '🎵',
-  ranch: '🥚',
-  cardroom: '🃏',
-  library: '📚',
-  market: '🛍️',
-  hill: '🌄',
-  garden: '🌷',
-  temple: '✨',
-  battle: '⚔️',
-  clinic: '🏥'
-});
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
-  studio: 'モンヒロビート',
-  cardroom: 'MFバトルカード',
-  ranch: 'M/B管理',
-  temple: '神殿',
-  battle: 'モンヒロバトル',
-  home: 'みんなの家'
-});
+const assistantLifeWordsPlaces = () => typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places || {};
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.icon])));
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.show])));
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
   studio: 'rhythm',
@@ -150065,7 +150045,7 @@ const assistantLifePlanRowInfo = id => {
   return {
     next,
     hour: h,
-    sub: `${h}時から: ${p ? ASSISTANT_LIFE_PLACES[p] : 'おまかせ'}`
+    sub: `${h}時から: ${p ? assistantLifePlaceLabel(p) : 'おまかせ'}`
   };
 };
 const assistantLifePlanFreeCount = ids => {
@@ -150173,14 +150153,14 @@ function AssistantLifePlanWho({
     let body;
     if (past || now) body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : React.createElement("span", {
+    }, p ? `📍 ${assistantLifePlaceLabel(p)}` : React.createElement("span", {
       className: "text-slate-400"
     }, "おまかせ"), (() => {
       const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
       if (bw && bw.why !== 'rest') return React.createElement("span", {
         className: "ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100",
         "data-assistant-life-plan-body-why": `${id}@${abs}`
-      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`);
+      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${assistantLifePlaceLabel(bw.place) || '家'}へ`);
       return React.createElement(React.Fragment, null, r === 'ok' && React.createElement("span", {
         className: "ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100"
       }, "✓ お願いどおり"), r === 'no' && React.createElement("span", {
@@ -150200,7 +150180,7 @@ function AssistantLifePlanWho({
       }, assistantLifePlanName(id), "「", ln.text, "」") : null;
     })());else body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", ASSISTANT_LIFE_PLACES[p], assistantLifePlanPerk(p) && React.createElement("span", {
+    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", assistantLifePlaceLabel(p), assistantLifePlanPerk(p) && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"
     }, assistantLifePlanPerk(p))) : React.createElement("span", {
       className: "text-slate-400"
@@ -150293,7 +150273,7 @@ function AssistantLifePlanTable({
       "data-assistant-life-plan-cell": `${id}@${a}`,
       onClick: () => onCell(id, a),
       className: `h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`
-    }, p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'));
+    }, p ? `📍${assistantLifePlaceLabel(p)}` : 'おまかせ'));
   }))))), left.length > 4 && React.createElement("div", {
     className: "mt-1 flex justify-end gap-1"
   }, React.createElement("button", {
@@ -150322,7 +150302,7 @@ function AssistantLifePlanPlace({
     "data-assistant-life-plan-for-place": place
   }, React.createElement("p", {
     className: "px-1 text-[12px] font-black text-sky-200"
-  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", ASSISTANT_LIFE_PLACES[place], "へ来てもらう助手"), React.createElement("div", {
+  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", assistantLifePlaceLabel(place), "へ来てもらう助手"), React.createElement("div", {
     className: "mt-1 flex flex-col gap-1"
   }, ids.map(id => {
     const on = assistantLifePlanOf(next, id) === place;
@@ -150554,11 +150534,10 @@ const ASSISTANT_LIFE_BODY_GAP = Object.freeze({
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']);
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
-const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
-  studio: ['モンヒロビート', '練習スタジオ'],
-  ranch: ['M/B管理', '育成場'],
-  cardroom: ['MFバトルカード', 'カード部屋']
-});
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze(Object.fromEntries(['studio', 'ranch', 'cardroom'].map(k => {
+  const w = typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places[k];
+  return [k, w ? [w.show, w.line] : [ASSISTANT_LIFE_PLACES[k], ASSISTANT_LIFE_PLACES[k]]];
+})));
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
   cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
   plaza: 'ほかの助手と会いやすい・なかよく',
@@ -151194,7 +151173,7 @@ function AssistantLifeBodyPanel({
       className: "w-[58px] shrink-0 text-sky-200"
     }, s.from, "〜", (s.from + 2) % 24, "時"), React.createElement("span", {
       className: "min-w-0 flex-1 truncate"
-    }, ASSISTANT_LIFE_PLACES[r.place], "のあと"), React.createElement("span", {
+    }, assistantLifePlaceLabel(r.place), "のあと"), React.createElement("span", {
       className: "shrink-0 whitespace-nowrap"
     }, "疲れ", r.fat, "・ストレス", r.st), r.risk > 0 && React.createElement("span", {
       className: "shrink-0 whitespace-nowrap text-rose-300"

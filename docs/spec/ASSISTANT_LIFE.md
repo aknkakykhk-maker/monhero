@@ -153,7 +153,7 @@
 
 | 場所 id | 画面に出す名前 | 台詞だけ | していること(例) |
 | --- | --- | --- | --- |
-| home | 家 | — | 部屋で過ごす |
+| home | みんなの家(HOME の施設の名前) | 家 | 部屋で過ごす |
 | studio | モンヒロビート | 練習スタジオ | 練習 |
 | ranch | M/B管理 | 育成場 | 育成 |
 | cardroom | MFバトルカード | カード部屋 | カード研究 |
@@ -165,7 +165,7 @@
 | plaza・hill・garden・library | 広場・ひなたの丘・中庭・図書室 | — | 散歩・読書 |
 | (フレンドの家) | ◯◯さんの家 | — | 遊びに行く |
 
-(id は `ASSISTANT_LIFE_PLACES`(`56-assistant-life.jsx`)と町の表(`-house` の `temple`)。今は `ASSISTANT_LIFE_PLACES` が「練習スタジオ・育成場・カード部屋」を、`ASSISTANT_LIFE_BODY_LABEL` が正式名称を持っていて2つある。段2で1つの表にする)
+(段2で1つの表にした: `data/assistants.js` の `ASSISTANT_LIFE_WORDS`。画面の名前 show・絵文字 icon・台本の言葉 line。台本の言葉は `ASSISTANT_LIFE_PLACES` と同じで、`tools/assistant/assistant-life-words-check.js` が見張る)
 
 ## 4. 数の表(💗 の上がり方・S-7)
 
