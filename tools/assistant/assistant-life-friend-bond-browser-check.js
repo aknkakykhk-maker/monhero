@@ -167,7 +167,7 @@ const textProblems = (page, sel) => page.evaluate((s) => {
       // ④ シート: 見どころ・すてき・棚
       await page.locator('[data-alb-bar]').click(); await page.locator('[data-alb-sheet]').waitFor({ timeout: 4000 });
       { const t = await page.locator('[data-alb-sheet]').innerText();
-        check(`④ シートに友情・今日の3つ・見どころ・相手の棚(${v.id})`, /あおいさんとの友情 Lv1/.test(t) && /あと1個で「ごきんじょさん」/.test(t) && /ソファ|ランタン|ごろちゃん/.test(t) && /お気に入りの棚/.test(t) && /好きな曲/.test(t) && /風がそよぐ/.test(t) && /12種/.test(t), t.replace(/\n/g, ' ').slice(0, 260));
+        check(`④ シートに友情・今日の3つ・見どころ・相手の棚(${v.id})`, /あおいさんとのご縁 Lv1/.test(t) && /あと1個で「ごきんじょさん」/.test(t) && /ソファ|ランタン|ごろちゃん/.test(t) && /お気に入りの棚/.test(t) && /好きな曲/.test(t) && /風がそよぐ/.test(t) && /12種/.test(t), t.replace(/\n/g, ' ').slice(0, 260));
         check(`④ 棚に知らない項目・タグは出ない(${v.id})`, !/script/.test(t)); }
       { const ng = await textProblems(page, '[data-alb-sheet] .mhl-sheet'); check(`④ シートが画面に収まる・字が折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-4-sheet`);

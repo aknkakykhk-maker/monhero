@@ -1395,11 +1395,13 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
   const allyCard = (
     <div className="mhm-card" data-assistant-masmon-allies>
       <p className="text-[10px] font-black text-slate-400">道中で仲間にしやすい3体</p>
+      {/* まだ1体もいないときは、点線の空き枠3つを並べず1行に(2026-11-20 総点検 §10: いる子より空き枠が目立っていた) */}
+      {!allies.length ? <p className="mt-1 text-[11px] font-bold text-slate-400" data-assistant-masmon-allies-empty>まだいません(編成のマスモンが増えると、ここに並びます)</p> :
       <div className="mt-1 grid grid-cols-3 gap-1.5">
         {[0, 1, 2].map(i => { const t = allies[i]; return t
           ? <button key={t.monster} type="button" className="text-center" data-assistant-masmon-ally={t.monster} onClick={() => onOpen(t)}><div className="mhm-stage"><AssistantMasmonPic t={t} size={land ? cell : 84}/></div><p className="mt-0.5 truncate text-[10.5px] font-black text-white">{t.nick}</p><p className="truncate text-[9px] font-bold text-amber-200">Lv.{t.lv}</p></button>
           : <div key={`e${i}`} className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/20 text-[9.5px] font-bold text-slate-500" style={{ minHeight: cell + 30 }}>まだ</div>; })}
-      </div>
+      </div>}
     </div>);
   const formCard = (
     <div className="mhm-card" data-assistant-masmon-formation>
@@ -1413,7 +1415,7 @@ function AssistantMasmonFormation({ who, team, waiting, land = false, onOpen, on
             </button>
           : (() => { const m = t.unknown ? null : assistantMasmonMon(t.monster); return (
             <div key={t.monster} className="text-center" data-assistant-masmon-wait={t.monster}>
-              <div className="mhm-stage"><div className="mhm-pic grid place-items-center" style={{ width: cell, height: cell }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.5) }} data-assistant-masmon-unknown>？</span>}</div></div>
+              <div className="mhm-stage grid place-items-center" style={{ height: cell }}><div className="mhm-pic grid place-items-center opacity-60" style={{ width: Math.round(cell * 0.55), height: Math.round(cell * 0.55) }}>{m ? <img src={m.imgUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) opacity(.55)' }}/> : <span className="font-black text-slate-500" style={{ fontSize: Math.round(cell * 0.3) }} data-assistant-masmon-unknown>？</span>}</div></div>
               <p className="mt-0.5 truncate text-[9.5px] font-bold text-sky-200">🔒 Lv{t.welcome}</p>
             </div>); })())}
       </div>

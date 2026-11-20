@@ -1409,10 +1409,37 @@ function AssistantLifeFriendPage({ life }) {
           <p className="mt-1 text-[12px] font-bold leading-relaxed text-slate-200">・🚪 フレンドの家を訪ねて、助手や家具を見られます<br/>・助手どうしが行き来して、✉️ 置き手紙やおみやげが届きます</p>
           <p className="mt-1 text-[11px] leading-snug text-slate-300">フレンドが助手ライフを開くと、その人の家がここに並びます。</p>
         </div>)}
+      {/* フレンドの家と「🚪 訪ねる」をいちばん上に(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
+      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
+      <div data-alf-houses style={hideIfEmpty}>
+        {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
+          <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-[12px] font-black leading-snug text-slate-100"><span className="whitespace-nowrap">［プレイヤー］</span><wbr/><span className="whitespace-nowrap">{f.name}さんの家</span>{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
+              <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
+                return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
+              {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
+              <div className="mt-0.5 flex gap-0.5">{alfHomeIds(f.house).slice(0, 6).map(id => <AlfFace key={id} id={id} size={22}/>)}</div>
+            </div>
+            <button type="button" disabled={can === 'off'} className="min-h-[48px] min-w-[120px] shrink-0 rounded-xl bg-amber-300 px-4 py-2 text-[15px] font-black text-slate-950 shadow-lg disabled:opacity-40" data-alf-act="look" onClick={() => setVisit(f)}>🚪 訪ねる</button>
+            <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
+            {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
+          </div>); })
+          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
+        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
+        {waiting.map(f => (
+          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-black text-slate-300">［プレイヤー］{f.name}さんの家</p>
+              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
+            </div>
+            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
+          </div>))}
+      </div>
       {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>分かった</button>
+          <button type="button" className="mt-1 min-h-[44px] rounded-xl border border-slate-400/60 px-3 py-1 text-[12px] font-bold text-slate-200" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>分かった</button>
         </div>)}
       <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
       <div className={card} data-alf-now style={hideIfEmpty}>
@@ -1442,32 +1469,6 @@ function AssistantLifeFriendPage({ life }) {
               ? <div className="mt-1 flex flex-wrap gap-1">{ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => <button key={k} type="button" className="rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100" data-alf-thanks={k} onClick={() => assistantLifeFriendThanks(n.id, k)}>{t}</button>)}</div>
               : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
           </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
-      </div>
-      <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
-      <div data-alf-houses style={hideIfEmpty}>
-        {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
-          <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-100">［プレイヤー］{f.name}さんの家{been ? ' 📷' : ''}{typeof AlfBondChip === 'function' && <AlfBondChip id={f.id}/>}</p>
-              <p className="text-[10px] text-slate-300" data-alf-house-sum>{(() => { const hs = f.house; const at = (k) => hs.ids.filter(id => hs.r[id] && (k === 'sleep' ? hs.r[id].at === 'home' && hs.r[id].d === 'sleep' : k === 'home' ? hs.r[id].at === 'home' && hs.r[id].d !== 'sleep' : hs.r[id].at !== 'home')).length; const fu = hs.ids.reduce((n, id) => n + Object.keys((hs.r[id] && hs.r[id].fu) || {}).length, 0);
-                return <><span className="whitespace-nowrap">🏠 家に{at('home')}人</span>{at('out') ? <><wbr/><span className="whitespace-nowrap">・🚶 おでかけ{at('out')}人</span></> : null}{at('sleep') ? <><wbr/><span className="whitespace-nowrap">・💤 {at('sleep')}人</span></> : null}{fu ? <><wbr/><span className="whitespace-nowrap">・🪑 家具{fu}</span></> : null}<wbr/><span className="whitespace-nowrap text-slate-400">・{alfAgoText(f.at)}</span></>; })()}</p>
-              {f.house.ac1 && <p className="truncate text-[10.5px] font-bold text-amber-200" data-alf-house-act>{ALF_ACT_ICON[f.house.ac1.k] || '✨'} {f.house.ac1.x}</p>}
-              <div className="mt-0.5 flex gap-0.5">{alfHomeIds(f.house).slice(0, 6).map(id => <AlfFace key={id} id={id} size={22}/>)}</div>
-            </div>
-            <button type="button" disabled={can === 'off'} className="shrink-0 rounded-xl bg-amber-300 px-2.5 py-1.5 text-[11px] font-black text-slate-950 disabled:opacity-40" data-alf-act="look" onClick={() => setVisit(f)}>🚪 訪ねる</button>
-            <button type="button" className="shrink-0 rounded-xl border border-slate-500 px-2 py-1.5 text-[11px] text-slate-200" aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)}>⋯</button>
-            {menu === f.id && <button type="button" className="shrink-0 rounded-xl border border-rose-300/60 px-2 py-1.5 text-[10px] text-rose-100" data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</button>}
-          </div>); })
-          : !waiting.length && <p className={`${card} text-[11px] text-slate-400`}>遊びに行けるフレンドの家はまだありません(フレンドが助手ライフを開くと、ここに並びます)。</p>}
-        {/* まだ家が届いていないフレンドも薄く並べる(2026-11-08 社長)。押せない */}
-        {waiting.map(f => (
-          <div key={f.id} className={`${card} flex items-center gap-2 border-dashed border-slate-500/60`} data-alf-house-waiting={f.id}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-black text-slate-300">［プレイヤー］{f.name}さんの家</p>
-              <p className="text-[10px] leading-snug text-slate-300">{f.name}さんが助手ライフを開くと遊びに行けます</p>
-            </div>
-            <span className="shrink-0 rounded-xl border border-slate-500 bg-slate-800 px-2.5 py-1.5 text-[11px] font-black text-slate-300">🚪 まだ</span>
-          </div>))}
       </div>
       {!alfEmpty && typeof AlfSentNotes === 'function' && <AlfSentNotes s={s} card={card} sec={sec} onVisit={setVisit}/>}
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
