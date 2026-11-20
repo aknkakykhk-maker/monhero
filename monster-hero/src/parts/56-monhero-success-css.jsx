@@ -452,6 +452,8 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+.msx .v-sum .v-sumsub{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
 .msx .v-s6team .v-s6hd .ed{display:flex;align-items:center;justify-content:center;line-height:1;margin:0 -6px 0 0;min-height:44px;min-width:44px;padding:0 6px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}

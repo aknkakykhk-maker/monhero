@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fac28c233090d9c4
+// source-sha256: f0f421eb8507c77d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172528,6 +172528,8 @@ const MSX_CSS = `
 .msx .v-body.p1.few .v-p1art{flex:1 1 0;min-height:110px}
 .msx .v-body.p1.few .v-p1info{flex:none}
 .msx.land .v-body.p1.few .v-p1main{flex:1 1 0}
+.msx .v-sum .v-sumsub{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx button.v-sum{min-height:44px;width:100%;text-align:left;font:inherit}
 .msx .v-sum.v-s6team{display:block;padding:6px 8px 8px}
 .msx .v-s6team .v-s6hd{display:flex;align-items:center;justify-content:space-between;margin:-6px 0 0}
 .msx .v-s6team .v-s6hd .ed{display:flex;align-items:center;justify-content:center;line-height:1;margin:0 -6px 0 0;min-height:44px;min-width:44px;padding:0 6px;background:none;border:0;color:#7dd3fc;font:inherit;font-size:10px;font-weight:900}
@@ -176850,7 +176852,7 @@ function MsxStart({
       alt: ""
     })), React.createElement("div", {
       className: "tx"
-    }, React.createElement("h4", null, React.createElement("small", null, "シナリオ ", sc.no, "・", msxAidName(aid), "編"), sc.title), React.createElement("div", {
+    }, React.createElement("h4", null, React.createElement("small", null, "助手のお話 ", sc.no, "・", msxAidName(aid), "編"), sc.title), React.createElement("div", {
       style: {
         marginTop: 4
       }
@@ -176907,7 +176909,7 @@ function MsxStart({
     }), React.createElement("div", {
       className: "bub f1"
     }, "「", aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!', "」"))));
-    go = `${msxAidName(aid)}編で始める ▶`;
+    go = `${msxAidName(aid)}編にする ▶`;
   } else if (step === 3) {
     const has = id => meta.items && meta.items[id] || 0;
     const toggle = id => setItems(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]);
@@ -177044,7 +177046,7 @@ function MsxStart({
         marginTop: 6
       }
     }, "まだ効き目が入っていない物があります(その物は持っていっても数は減りません)")));
-    go = 'これでいく ▶';
+    go = '次へ ▶';
   } else if (step === 4) {
     const onDye = (idx, colorId) => setColors(cur => {
       const n = cur.slice();
@@ -177114,7 +177116,7 @@ function MsxStart({
     }) : React.createElement("div", {
       className: "msx-note"
     }, "染色はこの端末では使えません"))));
-    go = 'これで決める ▶';
+    go = '次へ ▶';
   } else {
     const startAdd = {};
     members.forEach(m => {
@@ -177174,7 +177176,7 @@ function MsxStart({
         left: '36%',
         bottom: 6
       }
-    }, name, React.createElement("small", null, msxMonName(species))), React.createElement("img", {
+    }, name, name !== msxMonName(species) ? React.createElement("small", null, msxMonName(species)) : null), React.createElement("img", {
       src: msxBody(aid, 'happy'),
       alt: "",
       style: {
@@ -177244,7 +177246,9 @@ function MsxStart({
       className: "v-sum"
     }, React.createElement("span", {
       className: "k"
-    }, "初めの上乗せ"), React.createElement("span", null, Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし')), capUp.length ? React.createElement("div", {
+    }, "初めの能力"), React.createElement("span", null, Object.keys(startAdd).length ? React.createElement(React.Fragment, null, Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・'), React.createElement("small", {
+      className: "v-sumsub"
+    }, "編成のモンスターの効果で、育成の初めに足されます")) : '編成のモンスターからの足し分はありません')), capUp.length ? React.createElement("div", {
       className: "v-sum",
       "data-msx-start-cap": true
     }, React.createElement("span", {
@@ -177258,8 +177262,7 @@ function MsxStart({
   if (full) return full;
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "戻る",
-    onBack: back,
-    right: `${step + 1} / 6`
+    onBack: back
   }), React.createElement("div", {
     className: `v-body st${step === 0 ? ` p1${p1few ? ' few' : ''}` : step === 2 || step === 3 ? ' one' : step >= 4 ? ' lg3' : ''}`
   }, React.createElement(MsxSteps, {
