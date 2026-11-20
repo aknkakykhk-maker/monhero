@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0f594c47969c0f83
+// source-sha256: 583663277f2c8915
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173205,7 +173205,14 @@ const MSX_CSS = `
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
-.msx-md-tw{display:grid;grid-template-columns:minmax(0,54%) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:10px;padding:5px;margin-top:3px}
+.msx-md-tw{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;background:#0f172a;border-radius:10px;padding:6px;margin-top:3px}
+/* 詳細の窓の技の升目(2026-11-20 M1D の点検: 技の名前が出ない・升が小さい・覚えた/まだの見分け・覚え方が切れる)。
+   升目を上の全幅に・技の説明はその下。升は 48px でそろえ、升の下に技の名前を2行まで(「・」と言葉の切れ目で折る)。まだの技は点線の枠と薄い名前 */
+.msx-md-tw .msx-md-tg{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;justify-content:stretch}
+.msx .msx-md-tw .msx-md-tg .tc,.msx-md-tw .msx-md-tg .no{width:48px;justify-self:center;margin-bottom:26px}
+.msx-md-tw .msx-md-tg .tc .tnm{position:absolute;top:calc(100% + 2px);left:50%;transform:translateX(-50%);width:78px;font-size:10.5px;font-weight:900;line-height:1.15;color:#fff;text-shadow:0 1px 2px #000;text-align:center;word-break:auto-phrase;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;pointer-events:none}
+.msx-md-tw .msx-md-tg .tc.tg-not .tnm{color:#cbd5e1;font-weight:800}
+.msx .msx-md-tw .msx-md-tg .tc.tg-not{border-style:dashed}
 /* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
 .msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,56px));gap:4px;align-content:start;justify-content:center}
 .msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
@@ -173277,8 +173284,9 @@ const MSX_CSS = `
 .msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 /* r1115-150: 覚えた技(熟練の行あり)と覚えていない技(覚え方の行)を押し分けても、右の欄の高さで窓がずれないように。
    2列のときは右の欄の高さを左の技の表に合わせ(contain:size で中身の高さを列の高さへ出さない)、はみ出す分は欄の中だけスクロール */
-.msx-md-tw>.msx-md-td{contain:size;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-@container (max-width: 359px){.msx-md-tw>.msx-md-td{contain:none;height:236px}.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
+/*   2026-11-20 M1D: 升目の下に並べた。押し分けても升目・閉じるが動かないよう欄の高さは決める(r1115-150)。ふつうの技は全部入る 280px、熟練と選び替えが両方ある技だけ欄の中で送る */
+.msx-md-tw>.msx-md-td{contain:none;height:280px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+@container (max-width: 359px){.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
 /* 育成中の「能力」(いじる物だけ・2026-11-14) */
 .msx-ab-row{display:flex;align-items:center;gap:6px;margin-top:5px}
 .msx-ab-row .n{flex:1;min-width:0;font-size:12px;font-weight:900}.msx-ab-row b{width:3em;text-align:right}
@@ -175997,7 +176005,20 @@ function MsxMonDetail({
         "data-msx-tech": t.id,
         "data-msx-cell": cellK,
         "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
-        onClick: () => setPickT(t.id)
+        onClick: e => {
+          setPickT(t.id);
+          const box = e.currentTarget.closest('[data-msx-detail-techs]');
+          setTimeout(() => {
+            const td = box && box.querySelector('.msx-md-td');
+            const sc = box && box.closest('.msx-md-scroll');
+            if (!td || !sc) return;
+            const a = td.getBoundingClientRect();
+            const c = sc.getBoundingClientRect();
+            if (a.bottom > c.bottom + 4) sc.scrollBy({
+              top: Math.round(a.bottom - c.bottom + 4)
+            });
+          }, 30);
+        }
       }, React.createElement("span", {
         className: "ti",
         "aria-hidden": "true"
@@ -176005,6 +176026,9 @@ function MsxMonDetail({
         t: t,
         uid: `${r}${d}`
       })), React.createElement("span", {
+        className: "tnm",
+        "aria-hidden": "true"
+      }, msxTechNm(t.name)), React.createElement("span", {
         className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
         "aria-hidden": "true"
       }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
@@ -189355,6 +189379,68 @@ function MonheroSuccessBoxHost({
     bondLvOf: bondLvOf
   });
 }
+const MONSUC_ART_BOX = Object.freeze({
+  "images/monsters/ark.png": [1024, 1024, 55, 212, 970, 813],
+  "images/monsters/dreamy.png": [640, 916, 0, 0, 640, 915],
+  "images/monsters/eiki.png": [1024, 1218, 0, 0, 1024, 1218],
+  "images/monsters/ghost.png": [615, 916, 0, 0, 615, 916],
+  "images/monsters/golem.png": [1066, 1066, 137, 57, 930, 961],
+  "images/monsters/ham.png": [1024, 1024, 248, 54, 776, 969],
+  "images/monsters/iblis.png": [570, 570, 31, 30, 515, 449],
+  "images/monsters/illumine.png": [792, 916, 0, 1, 792, 916],
+  "images/monsters/kenshi-mocchi.png": [1254, 1254, 152, 62, 1103, 1198],
+  "images/monsters/kuromy.png": [568, 916, 0, 0, 568, 916],
+  "images/monsters/kyubi.png": [789, 916, 1, 0, 789, 916],
+  "images/monsters/mel-whip.png": [634, 916, 0, 0, 634, 916],
+  "images/monsters/melody.png": [738, 916, 0, 0, 738, 916],
+  "images/monsters/mia.PNG": [1024, 1536, 5, 15, 1020, 1462],
+  "images/monsters/mitarashi.png": [1000, 1000, 95, 69, 905, 935],
+  "images/monsters/mocchi.png": [1024, 1024, 187, 52, 847, 955],
+  "images/monsters/monol.png": [1024, 1024, 210, 46, 814, 977],
+  "images/monsters/oboro.png": [1024, 1024, 46, 84, 978, 940],
+  "images/monsters/orihime.png": [795, 916, 0, 0, 795, 916],
+  "images/monsters/pandora.PNG": [1024, 1536, 26, 9, 971, 1476],
+  "images/monsters/pixie.png": [1174, 1174, 317, 160, 885, 1113],
+  "images/monsters/plant.PNG": [1024, 1024, 51, 142, 973, 882],
+  "images/monsters/snegurochka.png": [1024, 1024, 289, 55, 735, 969],
+  "images/monsters/spooky.png": [770, 916, 0, 0, 770, 916],
+  "images/monsters/suezo.png": [1159, 1159, 282, 261, 878, 1036],
+  "images/monsters/tiger.PNG": [1024, 1024, 254, 150, 993, 897],
+  "images/monsters/undine.PNG": [1024, 1536, 218, 15, 938, 1505],
+  "images/monsters/yaobikuni.PNG": [1024, 1536, 245, 3, 914, 1504],
+  "images/monsters/yggdrasil.png": [758, 915, 0, 1, 758, 915],
+  "images/monsters/zan.png": [1024, 1024, 77, 50, 947, 974]
+});
+const MONSUC_ART_ASPECT = Object.freeze({
+  s: (1 - 0.06 - 0.05) * (4 / 3) / 0.92,
+  m: (1 - 0.06 - 0.22) * (4 / 3) / 0.92,
+  l: (1 - 0.06 - 0.22) * (4 / 3) / 0.92
+});
+const monsucArtFit = (m, sz) => {
+  const url = typeof msxMonImg === 'function' && m ? String(msxMonImg(m.species) || '').split('?')[0] : '';
+  const b = url && typeof MONSUC_ART_BOX === 'object' ? MONSUC_ART_BOX[url] : null;
+  if (!Array.isArray(b) || b.length !== 6 || !b.every(Number.isFinite)) return {
+    position: 'absolute',
+    inset: 0
+  };
+  const [iw, ih, x0, y0, x1, y1] = b;
+  const cw = x1 - x0;
+  const ch = y1 - y0;
+  const A = MONSUC_ART_ASPECT[sz] || MONSUC_ART_ASPECT.s;
+  if (!(iw > 0 && ih > 0 && cw > 0 && ch > 0)) return {
+    position: 'absolute',
+    inset: 0
+  };
+  const k = Math.min(1 / cw, A / ch);
+  const pc = x => `${(x * 100).toFixed(2)}%`;
+  return {
+    position: 'absolute',
+    left: pc((1 - cw * k) / 2 - x0 * k),
+    top: pc((A - y1 * k) / A),
+    width: pc(iw * k),
+    height: pc(ih * k / A)
+  };
+};
 const MONSUC_CARD_FRAME = Object.freeze({
   S: '#fde047',
   A: '#f87171',
@@ -189424,11 +189510,14 @@ function MonsucMonCard({
     } : undefined
   }, m ? React.createElement("span", {
     className: "mcd-art"
-  }, typeof MsxMmArt === 'function' ? React.createElement(MsxMmArt, {
+  }, typeof MsxMmArt === 'function' ? React.createElement("span", {
+    className: "mcd-fit",
+    style: monsucArtFit(m, sz)
+  }, React.createElement(MsxMmArt, {
     m: m,
     size: "100%",
     thumb: sz === 's'
-  }) : null) : React.createElement("span", {
+  })) : null) : React.createElement("span", {
     className: "mcd-plus",
     "aria-hidden": "true"
   }, empty), fav.length ? React.createElement("span", {
@@ -189496,6 +189585,7 @@ span.mcd{cursor:default}
 /* 絵は下の帯の上に収める(全身・下合わせ)。帯と重ねないので名前が絵で読めなくならない */
 .mcd .mcd-art{position:absolute;left:4%;right:4%;top:6%;bottom:22%}
 .mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
+.mcd .mcd-fit{display:block}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}

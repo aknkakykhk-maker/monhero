@@ -10,6 +10,20 @@
 // 小は札の幅が狭い(縦の5列でおよそ 68px)ので、名前を札の外の下に1行・11px で出し、長い名前は横に詰めて収める(MonsucFitName)
 //   (2行にすると「スネグーラチ / カ」と言葉の途中で折れた。ミハリ #6914)。
 //   Lv は小では出さない: 一覧は総合力と評価で比べる物で、Lv は札を押した詳細で見る(参考は小にも Lv があるが、5列の札に名前・総合力・Lv の3行は入らない)
+// 絵の中身(透明でない所)を、札の絵の枠いっぱい・下合わせ・左右の真ん中に置く(2026-11-20 #6914 の残り: 種族ごとに絵の余白が違い、小さく見える子があった)。
+//   中身の範囲は MONSUC_ART_BOX(生成物 56-monsuc-artbox.jsx・tools/success/monsuc-art-box.js)。表に無い絵は今までどおり絵全体を枠に収める
+//   枠の縦横比は下の CSS(.mcd-art の上下左右・札 3:4)から: 小 = 1.29、中・大 = 1.04(高さ ÷ 幅)。CSS を変えたらここも直す
+const MONSUC_ART_ASPECT = Object.freeze({ s: (1 - 0.06 - 0.05) * (4 / 3) / 0.92, m: (1 - 0.06 - 0.22) * (4 / 3) / 0.92, l: (1 - 0.06 - 0.22) * (4 / 3) / 0.92 });
+const monsucArtFit = (m, sz) => {
+  const url = typeof msxMonImg === 'function' && m ? String(msxMonImg(m.species) || '').split('?')[0] : '';
+  const b = url && typeof MONSUC_ART_BOX === 'object' ? MONSUC_ART_BOX[url] : null;
+  if (!Array.isArray(b) || b.length !== 6 || !b.every(Number.isFinite)) return { position: 'absolute', inset: 0 };
+  const [iw, ih, x0, y0, x1, y1] = b; const cw = x1 - x0; const ch = y1 - y0; const A = MONSUC_ART_ASPECT[sz] || MONSUC_ART_ASPECT.s;
+  if (!(iw > 0 && ih > 0 && cw > 0 && ch > 0)) return { position: 'absolute', inset: 0 };
+  const k = Math.min(1 / cw, A / ch); // 枠の幅を1としたときの、絵の1pxの長さ
+  const pc = (x) => `${(x * 100).toFixed(2)}%`;
+  return { position: 'absolute', left: pc((1 - cw * k) / 2 - x0 * k), top: pc((A - y1 * k) / A), width: pc(iw * k), height: pc((ih * k) / A) };
+};
 const MONSUC_CARD_FRAME = Object.freeze({ S: '#fde047', A: '#f87171', B: '#f472b6', C: '#4ade80', D: '#67e8f9', E: '#60a5fa', F: '#a78bfa', G: '#9ca3af', M: '#c084fc' });
 const monsucCardFrame = (g) => MONSUC_CARD_FRAME[String(g || '').trim().charAt(0).toUpperCase()] || '#6b6597';
 // 小の札の名前: 字は 11px のまま1行に置き、札の幅からはみ出す分だけ横に詰める(言葉の途中で2行に折らない・字を小さくしない。ミハリ #6914)
@@ -32,7 +46,7 @@ function MonsucMonCard({ m, size = 's', tag = null, num = null, on = false, lock
   const lv = m && Number.isFinite(Number(m.lv)) && Number(m.lv) > 0 ? Math.round(Number(m.lv)) : null;
   const inner = (<>
     <span className={`mcd-f${m ? '' : ' empty'}`} style={m ? { '--mcd-c': monsucCardFrame(grade) } : undefined}>
-      {m ? <span className="mcd-art">{typeof MsxMmArt === 'function' ? <MsxMmArt m={m} size="100%" thumb={sz === 's'}/> : null}</span> : <span className="mcd-plus" aria-hidden="true">{empty}</span>}
+      {m ? <span className="mcd-art">{typeof MsxMmArt === 'function' ? <span className="mcd-fit" style={monsucArtFit(m, sz)}><MsxMmArt m={m} size="100%" thumb={sz === 's'}/></span> : null}</span> : <span className="mcd-plus" aria-hidden="true">{empty}</span>}
       {fav.length ? <span className="mcd-fav" aria-label={`得意な能力 ${fav.map((k) => MSX_STAT_NAME[k] || k).join('・')}`}>{fav.map((k) => <i key={k}>{MSX_STAT_ICON[k]}</i>)}</span> : null}
       {grade ? <i className="mcd-gd">{grade}</i> : null}
       {m && sz !== 's' ? <span className="mcd-strip"><b className="mcd-nm" style={{ fontSize: `max(9px, min(13cqw, 86cqw / ${Math.max(1, [...name].length)}))` }}>{name}</b></span> : null}
@@ -69,6 +83,7 @@ span.mcd{cursor:default}
 /* 絵は下の帯の上に収める(全身・下合わせ)。帯と重ねないので名前が絵で読めなくならない */
 .mcd .mcd-art{position:absolute;left:4%;right:4%;top:6%;bottom:22%}
 .mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
+.mcd .mcd-fit{display:block}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}

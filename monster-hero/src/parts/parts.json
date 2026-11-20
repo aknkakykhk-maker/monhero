@@ -669,6 +669,10 @@
       "role": "モンヒロサクセス: マスモン一覧(モンサク)の画面 MsxR3Box(入口・一覧・詳細・名前と染色・合体の入口・お別れ・貸し出し・ハート・並べ替えと表示の切り替え)。参考 mm-02〜04。新しいキーは mh_monsuc_fav_v1・mh_monsuc_box_view_v1"
     },
     {
+      "file": "56-monsuc-artbox.jsx",
+      "role": "生成物: モンサクのモンスターの札の絵の中身の範囲 MONSUC_ART_BOX(tools/success/monsuc-art-box.js が作る・手で直さない)。MonsucMonCard が絵を枠いっぱいに置くのに使う。何も保存しない"
+    },
+    {
       "file": "56-monsuc-moncard.jsx",
       "role": "モンヒロサクセス: モンスター表示の共通の型(r1119-017)。札 MonsucMonCard(大きさ s/m/l・縦長 3:4・得意な能力・評価・名前と Lv の帯・下の帯)と升目 MonsucCardGrid。決まりは docs/spec/MONSUC_UI.md の 8"
     },
