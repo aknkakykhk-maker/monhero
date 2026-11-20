@@ -375,7 +375,29 @@ const MSX_R3_RANK_CSS = `
 .msx-rk .rk-row.me .rk-bar{box-shadow:inset 0 0 0 2px #fff}
 .msx-rk .rk-tag{position:absolute;top:2px;bottom:2px;left:0;display:flex;align-items:center;justify-content:center;padding:0 9px 0 6px;border-radius:5px 0 0 5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%);font-size:9.5px;font-weight:900;letter-spacing:.04em;color:#fff;background:#4caf50}
 .msx-rk .rk-tag.up{background:#ef4444;color:#fff7d6}
+.msx-rk .rk-nm.dk,.msx-rk .rk-amt.dk{color:#1e1b4b;text-shadow:0 0 2px #fff,0 0 2px #fff}
+.msx-rk .rk-tot small{flex-basis:100%;text-align:center;font-size:11px;font-weight:800;color:#fde68a}
+.msx-rk .rk-row.me .rk-bar{animation:msx-rk-glow 1.2s ease-in-out .6s 2 alternate}
+.msx-rk .rk-tag{animation:msx-rk-tag .5s cubic-bezier(.3,1.6,.6,1) .9s both}
+@keyframes msx-rk-glow{to{box-shadow:inset 0 0 0 2px #fff,0 0 14px 3px #fde047}}
+@keyframes msx-rk-tag{from{opacity:0;transform:scale(2.2)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.msx-rk .rk-row.me .rk-bar,.msx-rk .rk-tag{animation:none}}
 `;
+// 段の色が明るいときは字を濃くする(バ-62: 期待の星の黄・ルーキーの水色の上の白い字が読めない)
+const msxR3Bright = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return false; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return 0.299 * r + 0.587 * g + 0.114 * b > 170; };
+// 賞金の数字を数え上げる(バ-05)。動きを減らす設定では、すぐ最後の値
+function MsxR3CountUp({ from, to, ms = 900 }) {
+  const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [v, setV] = useState(reduce || !(from < to) ? to : from);
+  useEffect(() => {
+    if (reduce || !(from < to)) { setV(to); return undefined; }
+    const t0 = Date.now(); let raf = 0;
+    const tick = () => { const k = Math.min(1, (Date.now() - t0) / ms); setV(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick); };
+    const st = setTimeout(() => { raf = requestAnimationFrame(tick); }, 350);
+    return () => { clearTimeout(st); cancelAnimationFrame(raf); };
+  }, [from, to]);
+  return <>{msxFmt(v)}</>;
+}
 function MsxR3RankPyramid({ step, up, total, gain }) {
   const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const R = S && S.FAME_RANK ? S.FAME_RANK : []; if (!R.length) return null;
   const N = R.length;
@@ -384,7 +406,8 @@ function MsxR3RankPyramid({ step, up, total, gain }) {
   const t = Number(total); const g = Number(gain);
   return (<div className="msx-rk" data-msx-r3-rank data-msx-r3-rank-step={step}>
     <style>{MSX_R3_RANK_CSS}</style>
-    {Number.isFinite(t) ? <div className="rk-tot" data-msx-r3-rank-total><b>{msxFmt(Math.max(0, t))}G</b>{Number.isFinite(g) && g > 0 ? <i>(+{msxFmt(g)}G)</i> : null}</div> : null}
+    {/* バ-04・30: 賞金は「前 → いま」の1か所。右上の所持の賞金と分けて、ランクを決める「累計」と書く。バ-05: 数え上げる */}
+    {Number.isFinite(t) ? <div className="rk-tot" data-msx-r3-rank-total><small>累計の賞金</small>{Number.isFinite(g) && g > 0 ? <><i>{msxFmt(Math.max(0, t - g))}G →</i><b><MsxR3CountUp from={Math.max(0, t - g)} to={Math.max(0, t)}/>G</b><i>(+{msxFmt(g)}G)</i></> : <b>{msxFmt(Math.max(0, t))}G</b>}</div> : null}
     <div className="rk-hd">賞金ランク</div>
     {R.map((x, i) => i).reverse().map((i) => {
       const x = R[i]; const me = i + 1 === step; const k = N - i; // 上から k 段目(1 が頂)
@@ -394,8 +417,8 @@ function MsxR3RankPyramid({ step, up, total, gain }) {
       return (<div key={i} className={`rk-row${i + 1 <= step ? '' : ' off'}${me ? ' me' : ''}`} data-msx-r3-rank-row={i + 1}>
         <span className="rk-bar" style={{ left: `${CX + hwT}%`, background: `linear-gradient(90deg, ${col[1]}, ${col[1]}dd)` }}/>
         <span className="rk-tri" style={{ left: `${triL}%`, width: `${triW}%`, background: `linear-gradient(180deg, #ffffff66, ${col[0]} 45%, ${col[0]})`, clipPath: `polygon(${cut}% 0, ${100 - cut}% 0, 100% 100%, 0 100%)` }}/>
-        <span className="rk-nm" style={{ left: `${CX}%` }}>{x.name}</span>
-        <span className="rk-amt">{cond(x)}</span>
+        <span className={`rk-nm${msxR3Bright(col[0]) ? ' dk' : ''}`} style={{ left: `${CX}%` }}>{x.name}</span>
+        <span className={`rk-amt${msxR3Bright(col[1]) ? ' dk' : ''}`}>{cond(x)}</span>
         {me ? <span className={`rk-tag${up ? ' up' : ''}`} style={{ left: `${Math.max(0, triL - 15)}%` }} data-msx-r3-rank-tag={up ? 'up' : 'keep'}>{up ? 'UP!' : 'KEEP'}</span> : null}
       </div>);
     })}
@@ -665,18 +688,29 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     if (st3.stage === 'rank') { // 賞金ランク UP!(参考のピラミッド)
       const body = (<>
         <MsxBand s={s} v={v} ev={ev}/>
-        <div className="v-scene" style={{ flex: '1 1 0', minHeight: 120 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
-          <div className="v-stamp msx-pop" style={{ top: '8%', fontSize: 34 }}>ランク UP!<small>{msxR3RankName(d.rankFrom || 0)} → {msxR3RankName(d.rankTo)}・🎫 修行チケット +{SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)}</small></div></div>
+        <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
+          {/* バ-29: ランクが上がる瞬間はモンスターを真ん中に大きく(喜んで跳ねる)。ランク名ともらえる物は無地の札に載せて順に出す */}
+          <div className="gr" style={{ bottom: 'calc(6% - 5px)' }}/><MsxMonArt run={run} noPeak className="mon msx-r3-hop" style={{ bottom: '6%', height: '54%' }}/>
+          <div className="v-stamp msx-pop" style={{ top: '5%', fontSize: 34 }}>ランク UP!</div>
+          <div className="msx-r3-upcards" data-msx-r3-upcards><b style={{ animationDelay: '.5s' }}>{msxR3RankName(d.rankFrom || 0)} → <em>{msxR3RankName(d.rankTo)}</em></b><b style={{ animationDelay: '.9s' }}>🎫 修行チケット +{SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)}</b></div></div>
+        <style>{`.msx .msx-r3-upcards{position:absolute;z-index:4;left:0;right:0;top:calc(5% + 46px);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
+.msx .msx-r3-upcards b{background:#0f172aee;border:1.5px solid #fde04799;border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:#fff;animation:msx-r3-card .45s cubic-bezier(.3,1.5,.6,1) both}
+.msx .msx-r3-upcards em{font-style:normal;color:#fde047}
+@keyframes msx-r3-card{from{opacity:0;transform:translateY(-10px) scale(.7)}to{opacity:1;transform:none}}
+.msx .v-scene .mon.msx-r3-hop{animation:msx-r3-hop 1.1s ease-in-out infinite}
+@keyframes msx-r3-hop{0%,100%{transform:translateX(-50%) translateY(0)}45%{transform:translateX(-50%) translateY(-12px)}}
+@media (prefers-reduced-motion:reduce){.msx .msx-r3-upcards b,.msx .v-scene .mon.msx-r3-hop{animation:none}}`}</style>
         <MsxR3RankPyramid step={d.rankTo || 0} up total={s.fameTotal} gain={d.fameGain}/>
       </>);
       return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-next>次へ ▶</button></div>}/>;
     }
     if (st3.stage === 'prize') {
-      const rows = msxR3PrizeRows(d, s, st3.rival);
+      const rows = msxR3PrizeRows(d, s, st3.rival).filter((r) => r[1] !== '賞金ランク' && r[1] !== '賞金'); // バ-04: 賞金とランクはピラミッドの1か所だけ
       const body = (<>
         <MsxBand s={s} v={v} ev={ev}/>
-        <div className="v-scene" style={{ flex: '1 1 0', minHeight: 150 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
-          <div className="gr" style={{ bottom: 'calc(30% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '30%', height: '40%' }}/>
+        <div className="v-scene" style={{ flex: '1 1 0', minHeight: 210 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
+          {/* バ-05: モンスターを場面の主役の大きさに(足もとの影が炎に見えないよう影は下へ) */}
+          <div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} noPeak className="mon" style={{ bottom: '8%', height: '62%' }}/>
           <div className={`v-stamp msx-pop${st3.won ? '' : ' ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }} data-msx-r3-prize-stamp={st3.won ? 'win' : 'second'}>{st3.won ? msxR3WinWord(st3.kind, st3.round) : '準優勝'}<small>{cardIconNode(st3.icon, 16)} {st3.name}{st3.won && st3.foe && st3.foe.name ? `・1戦: ${st3.foe.name} に勝った` : ''}</small></div>
           {st3.rival && st3.won ? <div className="v-rvw">{st3.foe ? <MsxRivalThumb rival={st3.foe} size={22}/> : null}ライバルの {st3.rivalName} に 勝った!<b>能力ポイント1.5倍</b></div> : null}
           <div className="v-trophy">{st3.won ? '🏆' : '🥈'}</div></div>
