@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f768750f35f7bdb7
+// source-sha256: 43a8dddcb1d21035
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155327,6 +155327,8 @@ const MSC_CSS = `
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
 .msc-foot>*{flex:1}
+/* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
+.msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
 .msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
 .msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
 .msc-bk{position:relative;padding:8px 6px 10px 8px}
@@ -163712,158 +163714,164 @@ function MsxDex({
     awake: '✨'
   };
   const aids = [...new Set(list.story.map(x => x.aid))];
-  return React.createElement(ModalSheet, {
-    title: React.createElement("span", {
-      className: "mdx-ttl"
-    }, "📖 イベント図鑑", React.createElement("b", null, got, React.createElement("small", null, " / ", all.length))),
-    label: "イベント図鑑",
-    onClose: onClose,
-    dataProps: {
-      'data-msx-dex': ''
-    },
-    bodyClassName: "mdx",
-    footer: open ? React.createElement(ModalSheetButton, {
-      back: true,
-      onClick: () => chosen ? setChosen(null) : setOpen(null),
-      "data-msx-dex-back": true
-    }, chosen ? '← 選ぶ前に戻る' : '← 一覧へ戻る') : null
-  }, open ? null : React.createElement("div", {
-    className: "mdx-bar"
-  }, React.createElement("i", {
-    style: {
-      width: `${all.length ? got / all.length * 100 : 0}%`
-    }
-  })), open ? null : React.createElement("div", {
-    className: "mdx-tabs",
-    role: "tablist"
-  }, MSX_DEX_TABS.map(tb => {
-    const L = list[tb.key] || [];
-    const n = L.filter(x => seen.ev[x.id]).length;
-    return React.createElement("button", {
-      type: "button",
-      role: "tab",
-      "aria-selected": tb.key === tab,
-      key: tb.key,
-      className: tb.key === tab ? 'on' : '',
-      "aria-label": tb.name,
-      onClick: () => {
-        setTab(tb.key);
-        setOpen(null);
+  return (React.createElement(ModalSheet, {
+      title: React.createElement("span", {
+        className: "mdx-ttl"
+      }, open ? React.createElement("button", {
+        type: "button",
+        className: "mdx-hbk",
+        "data-mh-back": true,
+        onClick: e => {
+          e.stopPropagation();
+          if (chosen) setChosen(null);else setOpen(null);
+        },
+        "data-msx-dex-back": true
+      }, "← 戻る") : null, "📖 イベント図鑑", React.createElement("b", null, got, React.createElement("small", null, " / ", all.length))),
+      label: "イベント図鑑",
+      onClose: onClose,
+      dataProps: {
+        'data-msx-dex': ''
       },
-      "data-msx-dex-tab": tb.key
+      bodyClassName: "mdx"
+    }, open ? null : React.createElement("div", {
+      className: "mdx-bar"
+    }, React.createElement("i", {
+      style: {
+        width: `${all.length ? got / all.length * 100 : 0}%`
+      }
+    })), open ? null : React.createElement("div", {
+      className: "mdx-tabs",
+      role: "tablist"
+    }, MSX_DEX_TABS.map(tb => {
+      const L = list[tb.key] || [];
+      const n = L.filter(x => seen.ev[x.id]).length;
+      return React.createElement("button", {
+        type: "button",
+        role: "tab",
+        "aria-selected": tb.key === tab,
+        key: tb.key,
+        className: tb.key === tab ? 'on' : '',
+        "aria-label": tb.name,
+        onClick: () => {
+          setTab(tb.key);
+          setOpen(null);
+        },
+        "data-msx-dex-tab": tb.key
+      }, React.createElement("span", {
+        className: "i"
+      }, TAB_ICON[tb.key] || '📄'), React.createElement("span", {
+        className: "n"
+      }, (tb.short || [tb.name]).map((w, i) => React.createElement(React.Fragment, {
+        key: i
+      }, i ? React.createElement("br", null) : null, w))), React.createElement("small", null, n, "/", L.length));
+    })), tab === 'story' && !open ? React.createElement("div", {
+      className: "mdx-aids",
+      style: {
+        gridTemplateColumns: `repeat(${Math.max(1, aids.length)},minmax(0,1fr))`
+      }
+    }, aids.map(a => {
+      const L = list.story.filter(x => x.aid === a);
+      const op = aidOpen(a);
+      return React.createElement("button", {
+        type: "button",
+        key: a,
+        className: `${a === pickAid ? 'on' : ''}${op ? '' : ' lock'}`,
+        onClick: () => {
+          setPickAid(a);
+          setOpen(null);
+        },
+        "data-msx-dex-aid": a
+      }, React.createElement("span", {
+        className: "f"
+      }, typeof msxFace === 'function' ? React.createElement("img", {
+        src: msxFace(a, 'normal'),
+        alt: ""
+      }) : null, op ? null : React.createElement("em", null, "🔒")), React.createElement("b", null, typeof msxAidName === 'function' ? msxAidName(a) : a), React.createElement("small", null, op ? `${L.filter(x => seen.ev[x.id]).length}/${L.length}` : '近日'));
+    })) : null, open ? React.createElement("div", {
+      className: "mdx-read msx-dex-read",
+      "data-msx-dex-read": open.id
+    }, React.createElement("div", {
+      className: "h"
+    }, React.createElement("b", null, open.title)), open.awake ? React.createElement("div", {
+      className: "ln"
+    }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
+      className: "ln"
     }, React.createElement("span", {
-      className: "i"
-    }, TAB_ICON[tb.key] || '📄'), React.createElement("span", {
-      className: "n"
-    }, (tb.short || [tb.name]).map((w, i) => React.createElement(React.Fragment, {
-      key: i
-    }, i ? React.createElement("br", null) : null, w))), React.createElement("small", null, n, "/", L.length));
-  })), tab === 'story' && !open ? React.createElement("div", {
-    className: "mdx-aids",
-    style: {
-      gridTemplateColumns: `repeat(${Math.max(1, aids.length)},minmax(0,1fr))`
-    }
-  }, aids.map(a => {
-    const L = list.story.filter(x => x.aid === a);
-    const op = aidOpen(a);
-    return React.createElement("button", {
-      type: "button",
-      key: a,
-      className: `${a === pickAid ? 'on' : ''}${op ? '' : ' lock'}`,
-      onClick: () => {
-        setPickAid(a);
-        setOpen(null);
-      },
-      "data-msx-dex-aid": a
-    }, React.createElement("span", {
-      className: "f"
-    }, typeof msxFace === 'function' ? React.createElement("img", {
-      src: msxFace(a, 'normal'),
-      alt: ""
-    }) : null, op ? null : React.createElement("em", null, "🔒")), React.createElement("b", null, typeof msxAidName === 'function' ? msxAidName(a) : a), React.createElement("small", null, op ? `${L.filter(x => seen.ev[x.id]).length}/${L.length}` : '近日'));
-  })) : null, open ? React.createElement("div", {
-    className: "mdx-read msx-dex-read",
-    "data-msx-dex-read": open.id
-  }, React.createElement("div", {
-    className: "h"
-  }, React.createElement("b", null, open.title)), open.awake ? React.createElement("div", {
-    className: "ln"
-  }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
-    className: "ln"
-  }, React.createElement("span", {
-    className: "who"
-  }, typeof msxAidName === 'function' ? msxAidName(readAid) : ''), "「", aw.t, "」") : null, open.id === 'issa' ? React.createElement("div", {
-    className: "ln"
-  }, "夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。") : null, chosen && cont ? React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "ln msx-dex-picked",
-    "data-msx-dex-picked": chosen
-  }, "▶ ", (ev0 && ev0.choices ? (ev0.choices.find(x => x.c === chosen) || {}).t : '') || '選んだ'), cont.lines.slice(0, 8).map((l, i) => React.createElement("div", {
-    key: `c${i}`,
-    className: "ln"
-  }, who(l) ? React.createElement("span", {
-    className: "who"
-  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)), ev0 && Array.isArray(ev0.after) ? ev0.after.slice(0, 4).map((l, i) => React.createElement("div", {
-    key: `a${i}`,
-    className: "ln"
-  }, who(l) ? React.createElement("span", {
-    className: "who"
-  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null) : null, chosen && cont ? null : ev0 ? ev0.lines.slice(0, 8).map((l, i) => React.createElement("div", {
-    key: i,
-    className: "ln"
-  }, who(l) ? React.createElement("span", {
-    className: "who"
-  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null, chosen && cont ? null : chOf(open).length ? React.createElement("div", {
-    className: "chs"
-  }, chOf(open).map(c => {
-    const t = ev0 && ev0.choices ? (ev0.choices.find(x => x.c === c) || {}).t : open.id === 'issa' ? (MSX_ISSA_KEYS.find(k => k.key === c) || {}).name || c : c;
-    const known = Boolean(seen.ch[`${open.id}.${c}`]);
-    return React.createElement("div", _extends({
-      key: c,
-      className: `ch${known && ev0 && ev0.choices && open.id !== 'issa' ? ' tap' : ''}`
-    }, known && ev0 && ev0.choices && open.id !== 'issa' ? {
-      role: 'button',
-      tabIndex: 0,
-      onClick: () => setChosen(c),
-      'data-msx-dex-ch': c
-    } : {}), React.createElement("b", null, known ? t : '？？？', known && ev0 && ev0.choices && open.id !== 'issa' ? React.createElement("small", {
-      className: "msx-dex-go"
-    }, " 続きを読む ▶") : null), React.createElement("span", null, known ? open.id === 'issa' ? (() => {
-      const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
-      return `⭕ ${k.ok} / ❌ ${k.ng}`;
-    })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
-  })) : null, chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? React.createElement("div", {
-    className: "msx-note",
-    style: {
-      fontSize: 10
-    }
-  }, MSX_FX_NOTE) : null) : React.createElement("div", {
-    className: "mdx-list"
-  }, rows.length ? rows.map(x => {
-    const known = Boolean(seen.ev[x.id]);
-    const lock = x.aid && !aidOpen(x.aid);
-    const st = known ? 'got' : lock ? 'lock' : 'no';
-    const sub = subOf(x);
-    return React.createElement("button", {
-      type: "button",
-      key: x.id,
-      className: `mdx-row ${st}`,
-      disabled: !known,
-      onClick: () => setOpen(x),
-      "data-msx-dex-row": x.id
-    }, React.createElement("span", {
-      className: "ic"
-    }, st === 'got' ? x.aid && typeof msxFace === 'function' ? React.createElement("img", {
-      src: msxFace(x.aid, 'happy'),
-      alt: ""
-    }) : TAB_ICON[tab] || '📄' : st === 'lock' ? '🔒' : '？'), React.createElement("span", {
-      className: "tx"
-    }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ›' : st === 'lock' ? '近日追加' : '未発見'));
-  }) : React.createElement("div", {
-    className: "mdx-none"
-  }, "まだありません")));
+      className: "who"
+    }, typeof msxAidName === 'function' ? msxAidName(readAid) : ''), "「", aw.t, "」") : null, open.id === 'issa' ? React.createElement("div", {
+      className: "ln"
+    }, "夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。") : null, chosen && cont ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "ln msx-dex-picked",
+      "data-msx-dex-picked": chosen
+    }, "▶ ", (ev0 && ev0.choices ? (ev0.choices.find(x => x.c === chosen) || {}).t : '') || '選んだ'), cont.lines.slice(0, 8).map((l, i) => React.createElement("div", {
+      key: `c${i}`,
+      className: "ln"
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)), ev0 && Array.isArray(ev0.after) ? ev0.after.slice(0, 4).map((l, i) => React.createElement("div", {
+      key: `a${i}`,
+      className: "ln"
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null) : null, chosen && cont ? null : ev0 ? ev0.lines.slice(0, 8).map((l, i) => React.createElement("div", {
+      key: i,
+      className: "ln"
+    }, who(l) ? React.createElement("span", {
+      className: "who"
+    }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null, chosen && cont ? null : chOf(open).length ? React.createElement("div", {
+      className: "chs"
+    }, chOf(open).map(c => {
+      const t = ev0 && ev0.choices ? (ev0.choices.find(x => x.c === c) || {}).t : open.id === 'issa' ? (MSX_ISSA_KEYS.find(k => k.key === c) || {}).name || c : c;
+      const known = Boolean(seen.ch[`${open.id}.${c}`]);
+      return React.createElement("div", _extends({
+        key: c,
+        className: `ch${known && ev0 && ev0.choices && open.id !== 'issa' ? ' tap' : ''}`
+      }, known && ev0 && ev0.choices && open.id !== 'issa' ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: () => setChosen(c),
+        'data-msx-dex-ch': c
+      } : {}), React.createElement("b", null, known ? t : '？？？', known && ev0 && ev0.choices && open.id !== 'issa' ? React.createElement("small", {
+        className: "msx-dex-go"
+      }, " 続きを読む ▶") : null), React.createElement("span", null, known ? open.id === 'issa' ? (() => {
+        const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
+        return `⭕ ${k.ok} / ❌ ${k.ng}`;
+      })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
+    })) : null, chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? React.createElement("div", {
+      className: "msx-note",
+      style: {
+        fontSize: 10
+      }
+    }, MSX_FX_NOTE) : null) : React.createElement("div", {
+      className: "mdx-list"
+    }, rows.length ? rows.map(x => {
+      const known = Boolean(seen.ev[x.id]);
+      const lock = x.aid && !aidOpen(x.aid);
+      const st = known ? 'got' : lock ? 'lock' : 'no';
+      const sub = subOf(x);
+      return React.createElement("button", {
+        type: "button",
+        key: x.id,
+        className: `mdx-row ${st}`,
+        disabled: !known,
+        onClick: () => setOpen(x),
+        "data-msx-dex-row": x.id
+      }, React.createElement("span", {
+        className: "ic"
+      }, st === 'got' ? x.aid && typeof msxFace === 'function' ? React.createElement("img", {
+        src: msxFace(x.aid, 'happy'),
+        alt: ""
+      }) : TAB_ICON[tab] || '📄' : st === 'lock' ? '🔒' : '？'), React.createElement("span", {
+        className: "tx"
+      }, React.createElement("b", null, known ? x.title : x.ep ? x.title : '？？？'), sub ? React.createElement("small", null, sub) : null), React.createElement("em", null, st === 'got' ? '読む ›' : st === 'lock' ? '近日追加' : '未発見'));
+    }) : React.createElement("div", {
+      className: "mdx-none"
+    }, "まだありません")))
+  );
 }
 const MSX_DEX_CSS = `
 .mdx-ttl{display:flex;align-items:baseline;gap:10px;width:100%}
+.mdx-hbk{flex:none;align-self:center;min-height:44px;padding:0 10px;border-radius:99px;background:#334155;border:1px solid #ffffff33;font-size:12px;font-weight:900;color:#e0f2fe;white-space:nowrap}
 .mdx-ttl b{margin-left:auto;font-size:17px;color:#fde047}.mdx-ttl b small{font-size:12px;color:#cbd5e1}
 .mdx{display:flex;flex-direction:column;gap:8px;color:#f1f5f9}
 .mdx-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;flex:none}
@@ -164417,7 +164425,7 @@ function MsxBetaTalk({
     }
   }, React.createElement("div", {
     className: "msx-beta-tag"
-  }, MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあの説明'), narr ? React.createElement("div", {
+  }, MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあ'), narr ? React.createElement("div", {
     className: "msx-beta-narr"
   }, l.t) : React.createElement("div", {
     className: "msx-beta-say"
@@ -164427,9 +164435,7 @@ function MsxBetaTalk({
     alt: ""
   }), React.createElement("div", {
     className: "bub"
-  }, React.createElement("span", {
-    className: "who"
-  }, "みゅあ"), l.t)), atChoice ? React.createElement("div", {
+  }, l.t)), atChoice ? React.createElement("div", {
     className: "msx-beta-opts"
   }, choices.map(ch => React.createElement("button", {
     type: "button",
@@ -164452,6 +164458,10 @@ function MsxBetaMark() {
 const MSX_BETA_CSS = `
 .msx .msx-beta-mk{display:inline-block;margin-left:5px;padding:0 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;font-weight:900;line-height:17px;vertical-align:2px;letter-spacing:0}
 .msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px;background:#0b092073}
+/* ストーリー選択の説明は「ストーリー詳細」のボタンを指すので、箱を上に出し、ボタンを光らせる(箱の下に隠れていた。r1119-033 窓-13) */
+.msx .msx-beta-ov[data-msx-beta="scn"]{align-items:flex-start;padding-top:calc(14px + var(--mh-sa-top,0px))}
+@keyframes msxBetaPoint{0%,100%{box-shadow:0 0 0 2px #fde047,0 0 10px #fde047aa}50%{box-shadow:0 0 0 4px #fde047,0 0 22px #fde047}}
+.msx:has([data-msx-beta="scn"]) [data-msx-scenario-detail]{position:relative;z-index:61;animation:msxBetaPoint 1.1s ease-in-out infinite}
 /* 下に決める・進むボタンの帯(.v-ft)がある画面では、その上に出す(帯のボタンに重ねない。r1120 ミハリ・Q-3-1) */
 .msx:has(>.v-ft) .msx-beta-ov,.msx:has(.v-ft) .msx-beta-ov{padding-bottom:calc(var(--msx-ft-h,64px) + 14px)}
 .msx .msx-beta-card{width:100%;max-width:420px;background:#1e1b3a;border:2px solid #f9a8d4;border-radius:14px;padding:10px 12px 8px;box-shadow:0 6px 24px #0008;cursor:pointer}
@@ -174088,7 +174098,9 @@ const MSX_CSS = `
 .msx .msx-tp-ov{padding:0;align-items:stretch;justify-content:stretch;background:#0b0920;z-index:45}
 .msx .msx-tp{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;height:100%;min-height:0;background:linear-gradient(180deg,#241d4a,#16122e)}
 .msx .msx-tp>*{flex:none;align-self:stretch;min-width:0}
-.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
+.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}
+/* 選ぶ画面の戻るは左上の丸いボタン(ほかの画面と同じ形・押せる高さ44px。r1119-033 窓-45・53) */
+.msx .msx-tp-hd{align-items:center;flex-wrap:wrap}.msx .msx-tp-hd .bk{flex:none;min-height:44px;padding:0 12px;border-radius:99px;background:#2b3348;font-size:11.5px;font-weight:900;white-space:nowrap}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
 .msx .msx-tp-tm .fc{flex:none;display:block;width:100%;height:auto;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
@@ -176722,7 +176734,7 @@ function MsxMonDetail({
       onClick: e => e.stopPropagation()
     }, React.createElement("h3", null, "覚える技を選ぶ"), React.createElement("div", {
       className: "msx-note msx-kp"
-    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)), React.createElement("div", {
+    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜押した技を｜修行で覚えます。｜あとで｜選び直せます。｜覚えた技と｜熟練は｜そのまま残ります`)), React.createElement("div", {
       className: "msx-dt-body"
     }, alts.map(t => {
       const on = cur && cur.id === t.id;
@@ -176764,9 +176776,10 @@ function MsxMonDetail({
     })), React.createElement("button", {
       type: "button",
       className: "msx-dt-close",
+      "data-mh-back": true,
       "data-msx-techpick-close": true,
       onClick: () => setPickCell(null)
-    }, "閉じる")));
+    }, "やめる")));
   })() : null, foot ? React.createElement("div", {
     className: "msx-md-foot"
   }, foot) : null, React.createElement("button", {
@@ -178462,7 +178475,13 @@ function MsxTeamPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`)), React.createElement("div", {
+  }, React.createElement("button", {
+    type: "button",
+    className: "bk",
+    onClick: onClose,
+    "data-mh-back": true,
+    "data-msx-tp-back": true
+  }, "← 戻る"), React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`)), React.createElement("div", {
     className: "msx-tp-team",
     "data-msx-tp-team": true
   }, view.map((s, i) => {
@@ -178561,10 +178580,6 @@ function MsxTeamPick({
     className: "v-ft msx-tp-ft"
   }, React.createElement("button", {
     type: "button",
-    onClick: onClose,
-    "data-msx-tp-back": true
-  }, "戻る"), React.createElement("button", {
-    type: "button",
     onClick: () => setCand(null),
     disabled: !cand,
     className: cand ? '' : 'off',
@@ -178642,7 +178657,13 @@ function MsxFriendPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, "🤝 フレンドから借りる(1体まで)"), React.createElement("small", null, idx + 1, "枠目に入ります")), friendAt != null && friendAt !== idx ? React.createElement("div", {
+  }, React.createElement("button", {
+    type: "button",
+    className: "bk",
+    onClick: onClose,
+    "data-mh-back": true,
+    "data-msx-fp-back": true
+  }, "← 戻る"), React.createElement("b", null, "🤝 フレンドから借りる(1体まで)"), React.createElement("small", null, idx + 1, "枠目に入ります")), friendAt != null && friendAt !== idx ? React.createElement("div", {
     className: "msx-tp-note",
     "data-msx-fp-move": true
   }, "フレンドは1体まで。選ぶと、", friendAt + 1, "枠目のフレンドがこの枠へ移ります") : null, React.createElement("div", {
@@ -178745,10 +178766,6 @@ function MsxFriendPick({
   }, "「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター"), React.createElement("div", {
     className: "v-ft msx-tp-ft"
   }, React.createElement("button", {
-    type: "button",
-    onClick: onClose,
-    "data-msx-fp-back": true
-  }, "戻る"), React.createElement("button", {
     type: "button",
     onClick: onOwn,
     "data-msx-fp-own": true
@@ -190298,7 +190315,7 @@ function MsxAssistCard({
   const full = AT.describe(a.id, n);
   const short = note && full.endsWith(note) ? full.slice(0, full.length - note.length) : full;
   const scene = msxAsScene(AT, a.scene);
-  const more = !!(note || scene);
+  const more = false;
   const dots = Math.min(10, a.max);
   const lit = Math.round(n / Math.max(1, a.max) * dots);
   return React.createElement("div", {
@@ -190331,10 +190348,10 @@ function MsxAssistCard({
     "data-msx-assist-lit": lit
   }, React.createElement("small", null, "強さの目盛り"), React.createElement("i", null, n), "/", a.max, React.createElement("small", {
     className: "nx"
-  }, n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)')), open && note ? React.createElement("div", {
+  }, n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)')), note ? React.createElement("div", {
     className: "sc",
     "data-msx-assist-cap": true
-  }, "上限: ", note.replace(/^[(（]|[)）]$/g, '')) : null, open && scene ? React.createElement("div", {
+  }, "上限: ", note.replace(/^[(（]|[)）]$/g, '')) : null, scene ? React.createElement("div", {
     className: "sc"
   }, "効く場面: ", scene) : null, open ? React.createElement("div", {
     className: "sc"
@@ -190356,7 +190373,7 @@ function MsxAssistDetail({
     a: AT.BY_ID[x.id],
     n: AT.fromSaved(x)
   })).filter(x => x.n > 0) : [];
-  const [tab, setTab] = useState(got.length || kind === 'base' ? 'assist' : 'stat');
+  const [tab, setTab] = useState(got.length && kind !== 'base' ? 'assist' : 'stat');
   const [kvTip, setKvTip] = useState(null);
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : {
@@ -190413,7 +190430,7 @@ function MsxAssistDetail({
   }, MSX_STAT_ICON[k], MSX_STAT_NAME[k], " ", React.createElement("b", null, "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%")))) : null)), React.createElement("div", {
     className: "msx-asd-tabs",
     role: "tablist"
-  }, [['assist', 'アシスト効果'], ['stat', '能力']].map(([k, t]) => React.createElement("button", {
+  }, (kind === 'base' ? [] : [['assist', 'アシスト効果'], ['stat', '能力']]).map(([k, t]) => React.createElement("button", {
     type: "button",
     key: k,
     role: "tab",
@@ -190474,7 +190491,8 @@ const MSX_ASD_CSS = `
 .msx .msx-asd-tabs{display:flex;gap:6px;margin:8px 0 4px}
 .msx .msx-asd-tabs button{position:relative;flex:1 1 0;height:36px;margin:4px 0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:10px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:900}
 .msx .msx-asd-tabs button::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
-.msx .msx-asd-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;border-color:transparent}
+/* 選んだ札は決めるボタン(橙)と見分けるよう、控えめな下線にする(窓-48) */
+.msx .msx-asd-tabs button.on{background:#2b2350;color:#fde047;border-color:#4a4380;box-shadow:inset 0 -3px 0 #fde047}
 .msx .msx-asd-tabs button.more{color:#f9a8d4}
 .msx .msx-asd-body{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .msx-asd-cnt{font-size:11px;font-weight:800;color:#cbd5e1;margin:2px 0}
