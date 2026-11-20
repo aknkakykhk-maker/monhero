@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3f1a08fd57261b01
+// generated-sha256: e6ee17fa5c4feca4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7023,6 +7023,8 @@ const Audio_ = (() => {
     crit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.1, sustain: 0.1, release: 0.15 }, volume: -8 }).connect(reverb); ['C5','E5','G5','C6','E6'].forEach((n, i) => s.triggerAttackRelease(n, '32n', t + i * 0.04)); const b = new Tone.MembraneSynth({ volume: -6 }).connect(seBus); b.triggerAttackRelease('C2', '8n', t); setTimeout(() => { try { s.dispose(); b.dispose(); } catch (e) {} }, 700); },
     zanSlash: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const swish = (st) => { const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: -18 }).connect(reverb); n.triggerAttackRelease('32n', st); const p = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.11, sustain: 0, release: 0.04 }, volume: -13 }).connect(reverb); p.triggerAttackRelease('C7', '32n', st); try { p.frequency.rampTo('G6', 0.1, st); } catch (e) {} setTimeout(() => { try { n.dispose(); p.dispose(); } catch (e) {} }, 350); }; swish(t); swish(t + 0.09); },
     heal: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 }, volume: -12 }).connect(reverb); ['G4','C5','E5','G5','C6'].forEach((n, i) => s.triggerAttackRelease(n, '16n', t + i * 0.07)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
+    // 経験値の数え上げの小さな音(2026-11-20 音の点検 F4)。ボタンの音(tap)と分けた、短く軽い粒。間を空けて鳴らすのは呼ぶ側(PlayerRankXpBar)
+    xpTick: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 }, volume: -20 }).connect(seBus); s.triggerAttackRelease('A6', '128n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); },
     tap: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(seBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); },
     enemyAttack: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 6, envelope: { attack: 0.001, decay: 0.3, sustain: 0 }, volume: -3 }).connect(seBus); s.triggerAttackRelease('A1', '4n', t); const g = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 }, volume: -12 }).connect(seBus); g.triggerAttackRelease('8n', t); setTimeout(() => { try { s.dispose(); g.dispose(); } catch (e) {} }, 700); },
     enemySpecial: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now();
@@ -26124,6 +26126,12 @@ const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Ob
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
 /* 称号(FULL COMBO!・ALL EXCELLENT!!・ALL MARVELOUS!!)の音をいつ鳴らすか。'celebrate'=お祝い画面に入ったとき / 'result'=お祝い画面が出ない設定で結果に入ったとき / null=鳴らさない(称号なし・失敗)。どの設定でも1回だけ */
 const rhythmCelebrateSeWhen=(title,failed,showCelebrate)=>!title||failed?null:showCelebrate?'celebrate':'result';
+// 演奏前・再開前の数え(READY・3・2・1)で音を鳴らすのは数字だけ(2026-11-20 音の点検 F6)
+const rhythmCountdownCueOf=step=>/^[1-9]$/.test(String(step));
+// 新記録の音(playNewRecord)を鳴らすか・いつ鳴らすか(2026-11-20 音の点検 F7)。「NEW RECORD」の札が出るときは、初めてのクリアでも
+// 演出が出ない設定でも1回鳴らす。フルコンボの音を結果へ進むところで鳴らしたとき(rhythmCelebrateSeWhen が 'result')は、重ならないよう少し遅らせる
+const RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS=800;
+const rhythmRecordSeDelayOf=(isNewRecord,failed,practice,celebrateSeWhen)=>!isNewRecord||failed||practice?null:celebrateSeWhen==='result'?RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS:0;
 /* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
    'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
    「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
@@ -27311,7 +27319,10 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const previousBestScore=Math.max(0,Math.floor(Number(run.startBestScore)||0));
     const recordFx=isNewRecord&&previousBestScore>0&&!failed&&!tutorial&&!calibrating&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
       ?{id:`${Date.now()}-${score}`,previous:previousBestScore,score}:null;
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    // 新記録の音(F7)。演出(recordFx)の有無と分けて、札が出るときに1回。id は結果へあとから項目が足されても鳴り直さないための印
+    const recordSeDelay=rhythmRecordSeDelayOf(isNewRecord,failed,tutorial||calibrating,rhythmCelebrateSeWhen(celebrateTitle,failed,showCelebrate));
+    const recordSe=recordSeDelay===null?null:{id:`${Date.now()}-${score}-se`,delayMs:recordSeDelay};
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,recordSe,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
     /* フルコンボ・ALL EXCELLENT・ALL MARVELOUS の音は、お祝い画面が出ない設定(軽量モード・演出量が最小・フルコン演出OFF)でも鳴らす(2026-11-20 社長
        「フルコンボのとき鳴っていた SE が気づいたら無くなっている」)。お祝い画面が出るときは、その画面に入ったところで鳴る(下の status==='celebrate')ので、ここでは鳴らさない(二重に鳴らさない)。
        ノーツの効果音がOFF・音量0・全体ミュートのときは playFullCombo の中で鳴らない */
@@ -27344,7 +27355,6 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   useEffect(()=>{
     if(!recordFxId)return undefined;
     const fx=view.result.recordFx,el=recordScoreRef.current;
-    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
     let raf=0;
     const reduce=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const put=value=>{if(el)el.textContent=Math.round(value).toLocaleString();};
@@ -27363,6 +27373,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const timer=setTimeout(()=>setRecordFxHiddenFor(recordFxId),RHYTHM_RECORD_FX_TOTAL_MS);
     return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);clearTimeout(timer);};
   },[recordFxId]);
+  /* 新記録の音は、結果の画面に出たところで1回(演出が出ない設定・初めてのクリアでも。2026-11-20 音の点検 F7)。依存は印(id)だけ */
+  const recordSeId=view.status==='result'&&view.result&&view.result.recordSe?view.result.recordSe.id:null;
+  useEffect(()=>{
+    if(!recordSeId)return undefined;
+    const delay=Math.max(0,Number(view.result.recordSe.delayMs)||0);
+    const timer=setTimeout(()=>{try{RHYTHM_NOTE_SE_RUNTIME.playNewRecord();}catch{}},delay);
+    return ()=>clearTimeout(timer);
+  },[recordSeId]);
   useEffect(()=>{
     if(view.status!=='celebrate')return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -27684,6 +27702,8 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
       if(!mountedRef.current||generation!==generationRef.current){countdownResolveRef.current=null;clearCountdown();done(false);return;}
       if(index>=steps.length){setCountdownStep(null);countdownTimerRef.current=null;done(true);return;}
       setCountdownStep(steps[index]);
+      /* 3・2・1 の数字ごとに短い音を1回(READY は鳴らさない。2026-11-20 音の点検 F6)。ノーツの効果音OFF・音量0・全体ミュートでは playCue の中で鳴らない */
+      if(rhythmCountdownCueOf(steps[index]))try{RHYTHM_NOTE_SE_RUNTIME.playCue('count');}catch{}
       index++;
       countdownTimerRef.current=setTimeout(step,RHYTHM_COUNTDOWN_STEP_MS);
     };
@@ -40646,6 +40666,11 @@ const ensurePlayerRankXpBarCss = () => {
 const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
 // 2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」: 棒が画面に入るまでは前の量で止めておき、
 // 見えたところで動き出す(onStart)。見えているかを調べられない端末では、すぐ動かす
+// 数え上げの音(2026-11-20 音の点検 F4): ボタンの音を0.03秒おきに連打していた → 専用の xpTick を、前の音から PLAYER_RANK_XP_TICK_GAP_MS 以上空けて鳴らす
+const PLAYER_RANK_XP_TICK_GAP_MS = 90;
+const playerRankXpTickDue = (run, now) => { if (!run || !Number.isFinite(now)) return false; if (Number.isFinite(run.lastTickAt) && now - run.lastTickAt < PLAYER_RANK_XP_TICK_GAP_MS) return false; run.lastTickAt = now; return true; };
+// 伸び終わりに trainingReward を鳴らすか(ランクが上がって演出を出す側 onFull があるときは、演出のごほうびの音に任せる)
+const playerRankXpFinalSe = (rankUp, hasFullFx) => !(rankUp && hasFullFx);
 function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, onStart = null }) {
   ensurePlayerRankXpBarCss();
   const k = playerRankKind(kind);
@@ -40723,7 +40748,7 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
       later(() => {
         // 数字を弾ませながら数え上げる(数が変わるたびに小さい音)
         const t0 = performance.now(); let last = -1;
-        const step = (now) => { if (!run.running) return; const kk = Math.min(1, (now - t0) / 320), val = Math.round(before + p.xp * kk); if (val !== last) { last = val; setView((v) => ({ ...v, shown: val })); bumpAdd('bump'); if (val % 3 === 0) se('tap'); } if (kk < 1) requestAnimationFrame(step); };
+        const step = (now) => { if (!run.running) return; const kk = Math.min(1, (now - t0) / 320), val = Math.round(before + p.xp * kk); if (val !== last) { last = val; setView((v) => ({ ...v, shown: val })); bumpAdd('bump'); if (playerRankXpTickDue(run, now)) se('xpTick'); } if (kk < 1) requestAnimationFrame(step); };
         requestAnimationFrame(step);
         boom();
         if (crossesHere) {
@@ -40746,7 +40771,8 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
       if (crossesHere) crossed = true;
       t += crossesHere ? 1150 : 480;
     });
-    later(() => { bumpAdd('final'); sparks(10); se('trainingReward'); }, t + 150);
+    // 伸び終わりのごほうびの音は、ランクが上がって画面いっぱいの演出が出るときは鳴らさない(演出の割れる音・ファンファーレ・ごほうびの音と重なるため。2026-11-20 音の点検 F5)
+    later(() => { bumpAdd('final'); sparks(10); if (playerRankXpFinalSe(rankUp, !!onFull)) se('trainingReward'); }, t + 150);
     later(() => { run.running = false; setView((v) => ({ ...v, done: true })); sendDone(); }, t + 250);
     return () => { run.running = false; clearInterval(moteTimer); run.timers.forEach(clearTimeout); };
   }, [seen]);
@@ -56761,6 +56787,24 @@ const rhythmMultiTeamResult = (members, round, participants, closed = false) => 
   return { rows, waiting, average, mvpId, rank: scores.length ? rhythmRankForScore(average) : null };
 };
 
+// ---- 部屋の音(2026-11-20 音の点検 F2・F3)。鳴らすのはノーツの音と同じ出口(RHYTHM_NOTE_SE_RUNTIME.playCue)。守りもノーツの音と同じ ----
+// F2 人・マスモンが加わった: 部屋ごとに一度でも見た人を覚え、初めて見た人(自分以外)が増えたら1回。部屋に入った直後・画面を開き直した直後は、
+// いる人を覚えるだけで鳴らさない(自分が入ったときに、先にいた人の数だけ鳴らさない)。抜けて戻った人・通信のゆらぎで消えて戻った人でも鳴らさない
+const rhythmMultiJoinCue = (memo, code, ids, selfId) => {
+  if (!memo || !code) return false;
+  const list = (Array.isArray(ids) ? ids : []).filter((id) => id && id !== selfId);
+  if (memo.code !== code) { memo.code = code; memo.seen = new Set(list); return false; }
+  let fresh = false;
+  list.forEach((id) => { if (!memo.seen.has(id)) { memo.seen.add(id); fresh = true; } });
+  return fresh;
+};
+// F3 みんなの結果で MVP を発表する音: 結果が出そろって MVP が決まったところで、ライブ(round)ごとに1回
+const rhythmMultiMvpCueRound = (memo, round, shown, waiting, mvpId) => {
+  if (!memo || !round || !shown || waiting || !mvpId || memo.round === round) return '';
+  memo.round = round;
+  return round;
+};
+
 // ---- 受け取った知らせを、安全な形へ作り直す。知らない形・壊れた値は捨てる ----
 const rhythmMultiCleanRoom = (raw) => {
   if (!raw || typeof raw !== 'object' || !RHYTHM_MULTI_PHASES.includes(raw.ph)) return null;
@@ -60970,6 +61014,26 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </div>
   );
 
+  const members = view ? view.members : [];
+  const phase = room ? room.phase : 'matching';
+  const participant = !!room && room.participants.includes(view.selfId);
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
+  // 結果を見せる: 自分が参加したライブで、だれかが終わっていて、まだ「次へ」を押していないとき
+  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || (me && me.res && me.res.startId === room.round));
+  // 部屋の音(F2 人・マスモンが加わった / F3 MVP の発表)。部屋の全員の画面で、それぞれ1回
+  const joinCueRef = React.useRef({ code: '', seen: new Set() });
+  const memberIdsKey = view ? view.members.map((m) => m.id).join(',') : '';
+  React.useEffect(() => {
+    if (!view) return;
+    if (rhythmMultiJoinCue(joinCueRef.current, view.code, view.members.map((m) => m.id), view.selfId)) { try { RHYTHM_NOTE_SE_RUNTIME.playCue('join'); } catch (_) { /* 音が出なくても続ける */ } }
+  }, [view && view.code, memberIdsKey]);
+  const mvpCueRef = React.useRef({ round: '' });
+  const mvpCueKey = rhythmMultiMvpCueRound({ round: mvpCueRef.current.round }, room && room.round, showResult, !!(team && team.waiting), team && team.mvpId);
+  React.useEffect(() => {
+    if (!mvpCueKey || mvpCueRef.current.round === mvpCueKey) return;
+    mvpCueRef.current.round = mvpCueKey;
+    try { RHYTHM_NOTE_SE_RUNTIME.playCue('mvp'); } catch (_) { /* 音が出なくても続ける */ }
+  }, [mvpCueKey]);
   // ①モードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」「ソロモード、マルチモード、
   // マスモン選択などいれられる場所を作る」「マルチのベテランはなくしていい」。参考はプロセカの SELECT ROOM)。
   // ここは RHYTHM_MODE_SELECT の画面として描く(modeSelect を受け取ったとき)。部屋に入ったら onRoomEntered で
@@ -61248,12 +61312,6 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   // RHYTHM_MULTI で部屋にいない(出た・閉じられた)ときは、すぐモードえらびへ戻す(下の useEffect が戻す。そのあいだは空の画面)
   if (!view && !searching) return <main data-rhythm-multi data-rhythm-multi-step="leaving" className={shell} />;
 
-  const members = view ? view.members : [];
-  const phase = room ? room.phase : 'matching';
-  const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
-  // 結果を見せる: 自分が参加したライブで、だれかが終わっていて、まだ「次へ」を押していないとき
-  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || (me && me.res && me.res.startId === room.round));
 
   // ②マッチング。上半分に5人のカード、下に部屋の情報とボタン(横画面では左右に並べる)
   if (!view || view.full || (phase === 'matching' && !countdown)) {
@@ -68198,8 +68256,8 @@ function AssistantLifeBand({ metIds }) {
   const nameOf = (id) => (assistantById(id) || {}).name || id;
   const g = life.groups[0];
   const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
-  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
-  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : (life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '');
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${assistantLifePlaceLabel(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${assistantLifePlaceLabel(lonely[1].place)}でさみしそう` : (life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '');
   const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
   return (
     <div data-assistant-life-band className="fixed inset-x-0 flex justify-center px-2 pointer-events-none" style={{ zIndex: 8400, bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
@@ -68478,11 +68536,13 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
   sorashido: { wall: ['#fff8d6', '#f6e59a'], furn: '🃏🧮' },
   erubin:    { wall: ['#e8edf3', '#c9d3df'], furn: '⚔️🛡️' },
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({ home: '🏡', plaza: '⛲', cafe: '🍰', studio: '🎵', ranch: '🥚', cardroom: '🃏', library: '📚', market: '🛍️', hill: '🌄', garden: '🌷', temple: '✨', battle: '⚔️', clinic: '🏥' });
+// 場所の絵文字と画面に出す名前は、言葉の表(data/assistants.js の ASSISTANT_LIFE_WORDS)から引く
+const assistantLifeWordsPlaces = () => (typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places) || {};
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.icon])));
 // 出かけている先を、HOME のどの施設に出すか(していること → 施設)。家と町は「🏡 助手ライフ」
 // 遊び場(段階2・LIFE-STAGE2-PLAN.md): 札・居場所・地図・場面の題では、ゲームの遊びの場所を施設の名前で出す(「🎵 モンヒロビートへ」)。
 //   台本の穴 {place} の言葉(ASSISTANT_LIFE_PLACES)は変えない。今日あったことも今の言葉のまま
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({ studio: 'モンヒロビート', cardroom: 'MFバトルカード', ranch: 'M/B管理', temple: '神殿', battle: 'モンヒロバトル', home: 'みんなの家' }); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.show]))); // 家は HOME の札「助手ライフ みんなの家」とそろえる(地図)
 const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 // 場所 → HOME の札(地図 56-assistant-life-map.jsx と同じ表。HOME の顔と地図の全身が同じ時刻に同じ場所に出る・2026-11-08 社長「矛盾のない作り」)。
 //   町だけの場所(図書室・おやつ屋さん・ひなたの丘・中庭・広場)と家は「🏡 助手ライフ」
@@ -78761,7 +78821,7 @@ const assistantLifePlanRowInfo = (id) => {
   const left = assistantLifePlanSlotsLeft(); if (!left.length) return null;
   const next = left[0]; const p = assistantLifePlanOf(next, id);
   const h = assistantLifeSlotOfAbs(next).from;
-  return { next, hour: h, sub: `${h}時から: ${p ? ASSISTANT_LIFE_PLACES[p] : 'おまかせ'}` };
+  return { next, hour: h, sub: `${h}時から: ${p ? assistantLifePlaceLabel(p) : 'おまかせ'}` };
 };
 const assistantLifePlanFreeCount = (ids) => {
   if (!assistantLifePlanOn()) return 0;
@@ -78817,10 +78877,10 @@ function AssistantLifePlanWho({ id, cur }) {
     const abs = day * 12 + j; const s = assistantLifeSlotOfAbs(abs); const p = assistantLifePlanOf(abs, id); const r = assistantLifePlanResultOf(abs, id);
     const past = abs < cur, now = abs === cur;
     let body;
-    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : <span className="text-slate-400">おまかせ</span>}{(() => { const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
-          if (bw && bw.why !== 'rest') return <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100" data-assistant-life-plan-body-why={`${id}@${abs}`}>{bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`}</span>;
+    if (past || now) body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? `📍 ${assistantLifePlaceLabel(p)}` : <span className="text-slate-400">おまかせ</span>}{(() => { const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
+          if (bw && bw.why !== 'rest') return <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100" data-assistant-life-plan-body-why={`${id}@${abs}`}>{bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${assistantLifePlaceLabel(bw.place) || '家'}へ`}</span>;
           return <>{r === 'ok' && <span className="ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100">✓ お願いどおり</span>}{r === 'no' && <span className="ml-1 rounded-full bg-violet-800 px-1.5 text-[10px] text-violet-100">🌀 気分で別の場所へ</span>}</>; })()}{now && <span className="block text-[10.5px] text-emerald-300">いまの時間</span>}{(() => { const bw = typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null; const ln = bw && bw.why !== 'rest' ? null : assistantLifePlanLineOf(abs, id); return ln ? <span className="block text-[11px] text-pink-100" data-assistant-life-plan-line={`${id}@${abs}`} style={{ wordBreak: 'auto-phrase' }}>{assistantLifePlanName(id)}「{ln.text}」</span> : null; })()}</span>;
-    else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {ASSISTANT_LIFE_PLACES[p]}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
+    else body = <span className="min-w-0 flex-1 text-[12.5px] font-bold">{p ? <>📍 {ASSISTANT_LIFE_PLAN_ICON[p]} {assistantLifePlaceLabel(p)}{assistantLifePlanPerk(p) && <span className="block text-[10.5px] text-emerald-300">{assistantLifePlanPerk(p)}</span>}</> : <span className="text-slate-400">おまかせ<span className="block text-[10.5px]">{assistantLifePlanName(id)}が自分で決める</span></span>}</span>;
     rows.push(
       <div key={abs} data-assistant-life-plan-row={abs} className={`rounded-xl border px-1.5 py-1 ${now ? 'border-amber-300 bg-amber-900/50' : 'border-white/15 bg-white/5'} ${past ? 'opacity-50' : ''}`}>
         <div className="flex min-h-[40px] items-center gap-1.5">
@@ -78849,7 +78909,7 @@ function AssistantLifePlanTable({ ids, cur, onCell, onWho = null }) {
             return onWho && typeof assistantLifeBodyOn === 'function' && assistantLifeBodyOn()
               ? <button type="button" data-assistant-life-plan-who-open={id} aria-label={`${assistantLifePlanName(id)}の疲れ・ストレスと予定`} onClick={() => onWho(id)} className="h-[40px] w-full truncate rounded-lg bg-white/10 px-1 text-left text-[11.5px] font-black text-white active:scale-95">{bd}{assistantLifePlanName(id)} <span className="text-[10px] text-sky-200">▶</span></button>
               : <span className="block truncate text-[11.5px] font-black text-white">{assistantLifePlanName(id)}</span>; })()}</td>
-          {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'}</button></td>; })}
+          {cols.map(a => { const p = assistantLifePlanOf(a, id); return <td key={a} className="p-0"><button type="button" data-assistant-life-plan-cell={`${id}@${a}`} onClick={() => onCell(id, a)} className={`h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`}>{p ? `📍${assistantLifePlaceLabel(p)}` : 'おまかせ'}</button></td>; })}
         </tr>)}</tbody>
       </table>
       {left.length > 4 && <div className="mt-1 flex justify-end gap-1">
@@ -78866,7 +78926,7 @@ function AssistantLifePlanPlace({ place, ids, cur }) {
   const h = assistantLifeSlotOfAbs(next).from;
   return (
     <div data-assistant-life-plan-for-place={place}>
-      <p className="px-1 text-[12px] font-black text-sky-200">{h}時からの回に、{ASSISTANT_LIFE_PLAN_ICON[place]} {ASSISTANT_LIFE_PLACES[place]}へ来てもらう助手</p>
+      <p className="px-1 text-[12px] font-black text-sky-200">{h}時からの回に、{ASSISTANT_LIFE_PLAN_ICON[place]} {assistantLifePlaceLabel(place)}へ来てもらう助手</p>
       <div className="mt-1 flex flex-col gap-1">{ids.map(id => { const on = assistantLifePlanOf(next, id) === place; return (
         <button key={id} type="button" data-assistant-life-plan-ask={id} onClick={() => assistantLifePlanSet(next, id, on ? null : place)}
           className={`flex min-h-[44px] items-center justify-between rounded-xl px-2 text-[12.5px] font-black ${on ? 'bg-sky-600 text-white' : 'bg-white/10 text-white'} active:scale-95`}>
@@ -78978,7 +79038,7 @@ const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden'
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
 // 予定表で出す名前(施設の名前を先に。台詞の {place} は今の ASSISTANT_LIFE_PLACES のまま)
-const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({ studio: ['モンヒロビート', '練習スタジオ'], ranch: ['M/B管理', '育成場'], cardroom: ['MFバトルカード', 'カード部屋'] });
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze(Object.fromEntries(['studio', 'ranch', 'cardroom'].map(k => { const w = typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places[k]; return [k, w ? [w.show, w.line] : [ASSISTANT_LIFE_PLACES[k], ASSISTANT_LIFE_PLACES[k]]]; }))); // [画面の名前, 台本の言葉](言葉の表から)
 // 得の1行(町の場所・家・病院)。ビート・カード・M/B管理の文は assistantLifePlacePerkTail(56-assistant-life-ux.jsx)のまま。
 //   そこの最後からここを呼ぶので、予定表・地図の場所の窓・家の帯の「いま行くと得」が同じ文になる
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
@@ -79342,7 +79402,7 @@ function AssistantLifeBodyPanel({ id, cur }) {
         {rows.map(r => { const s = assistantLifeSlotOfAbs(r.abs); return (
           <p key={r.abs} className="flex flex-wrap items-center gap-x-1 text-[10.5px] font-bold leading-tight text-slate-200" data-assistant-life-body-forecast-row={r.abs}>
             <span className="w-[58px] shrink-0 text-sky-200">{s.from}〜{(s.from + 2) % 24}時</span>
-            <span className="min-w-0 flex-1 truncate">{ASSISTANT_LIFE_PLACES[r.place]}のあと</span>
+            <span className="min-w-0 flex-1 truncate">{assistantLifePlaceLabel(r.place)}のあと</span>
             <span className="shrink-0 whitespace-nowrap">疲れ{r.fat}・ストレス{r.st}</span>
             {r.risk > 0 && <span className="shrink-0 whitespace-nowrap text-rose-300">⚠ {r.kind} {Math.round(r.risk * 100)}%</span>}
           </p>); })}

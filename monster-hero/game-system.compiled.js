@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c925e30012d8635
+// source-sha256: 3da8434182a6ead9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9829,6 +9829,30 @@ const Audio_ = (() => {
           s.dispose();
         } catch (e) {}
       }, 900);
+    },
+    xpTick: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.03,
+          sustain: 0,
+          release: 0.02
+        },
+        volume: -20
+      }).connect(seBus);
+      s.triggerAttackRelease('A6', '128n', t);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 200);
     },
     tap: async () => {
       if (!enabled) return;
@@ -42330,6 +42354,9 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
 const rhythmCelebrateSeWhen = (title, failed, showCelebrate) => !title || failed ? null : showCelebrate ? 'celebrate' : 'result';
+const rhythmCountdownCueOf = step => /^[1-9]$/.test(String(step));
+const RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS = 800;
+const rhythmRecordSeDelayOf = (isNewRecord, failed, practice, celebrateSeWhen) => !isNewRecord || failed || practice ? null : celebrateSeWhen === 'result' ? RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS : 0;
 const rhythmFullComboBandMode = settings => {
   const v = rhythmFxPick(settings, 'fullComboBig');
   if (v === 'OFF' || v === 'NONE') return 'off';
@@ -44305,6 +44332,11 @@ const RhythmTapTest = ({
       previous: previousBestScore,
       score
     } : null;
+    const recordSeDelay = rhythmRecordSeDelayOf(isNewRecord, failed, tutorial || calibrating, rhythmCelebrateSeWhen(celebrateTitle, failed, showCelebrate));
+    const recordSe = recordSeDelay === null ? null : {
+      id: `${Date.now()}-${score}-se`,
+      delayMs: recordSeDelay
+    };
     setView(v => ({
       ...v,
       status: showCelebrate ? 'celebrate' : 'result',
@@ -44322,6 +44354,7 @@ const RhythmTapTest = ({
         isNewRecord,
         previousBestScore,
         recordFx,
+        recordSe,
         bestScore: merged.bestScore,
         eventPointAward,
         liveLog,
@@ -44369,7 +44402,6 @@ const RhythmTapTest = ({
     if (!recordFxId) return undefined;
     const fx = view.result.recordFx,
       el = recordScoreRef.current;
-    RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
     let raf = 0;
     const reduce = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const put = value => {
@@ -44392,6 +44424,17 @@ const RhythmTapTest = ({
       clearTimeout(timer);
     };
   }, [recordFxId]);
+  const recordSeId = view.status === 'result' && view.result && view.result.recordSe ? view.result.recordSe.id : null;
+  useEffect(() => {
+    if (!recordSeId) return undefined;
+    const delay = Math.max(0, Number(view.result.recordSe.delayMs) || 0);
+    const timer = setTimeout(() => {
+      try {
+        RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
+      } catch {}
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [recordSeId]);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -45063,6 +45106,9 @@ const RhythmTapTest = ({
         return;
       }
       setCountdownStep(steps[index]);
+      if (rhythmCountdownCueOf(steps[index])) try {
+        RHYTHM_NOTE_SE_RUNTIME.playCue('count');
+      } catch {}
       index++;
       countdownTimerRef.current = setTimeout(step, RHYTHM_COUNTDOWN_STEP_MS);
     };
@@ -65639,6 +65685,14 @@ const ensurePlayerRankXpBarCss = () => {
   } catch (_) {}
 };
 const PLAYER_RANK_XP_COLORS = ['#fde047', '#f0abfc', '#22d3ee', '#fff', '#a3e635'];
+const PLAYER_RANK_XP_TICK_GAP_MS = 90;
+const playerRankXpTickDue = (run, now) => {
+  if (!run || !Number.isFinite(now)) return false;
+  if (Number.isFinite(run.lastTickAt) && now - run.lastTickAt < PLAYER_RANK_XP_TICK_GAP_MS) return false;
+  run.lastTickAt = now;
+  return true;
+};
+const playerRankXpFinalSe = (rankUp, hasFullFx) => !(rankUp && hasFullFx);
 function PlayerRankXpBar({
   kind = 'beat',
   award,
@@ -65914,7 +65968,7 @@ function PlayerRankXpBar({
               shown: val
             }));
             bumpAdd('bump');
-            if (val % 3 === 0) se('tap');
+            if (playerRankXpTickDue(run, now)) se('xpTick');
           }
           if (kk < 1) requestAnimationFrame(step);
         };
@@ -65980,7 +66034,7 @@ function PlayerRankXpBar({
     later(() => {
       bumpAdd('final');
       sparks(10);
-      se('trainingReward');
+      if (playerRankXpFinalSe(rankUp, !!onFull)) se('trainingReward');
     }, t + 150);
     later(() => {
       run.running = false;
@@ -95144,6 +95198,28 @@ const rhythmMultiTeamResult = (members, round, participants, closed = false) => 
     rank: scores.length ? rhythmRankForScore(average) : null
   };
 };
+const rhythmMultiJoinCue = (memo, code, ids, selfId) => {
+  if (!memo || !code) return false;
+  const list = (Array.isArray(ids) ? ids : []).filter(id => id && id !== selfId);
+  if (memo.code !== code) {
+    memo.code = code;
+    memo.seen = new Set(list);
+    return false;
+  }
+  let fresh = false;
+  list.forEach(id => {
+    if (!memo.seen.has(id)) {
+      memo.seen.add(id);
+      fresh = true;
+    }
+  });
+  return fresh;
+};
+const rhythmMultiMvpCueRound = (memo, round, shown, waiting, mvpId) => {
+  if (!memo || !round || !shown || waiting || !mvpId || memo.round === round) return '';
+  memo.round = round;
+  return round;
+};
 const rhythmMultiCleanRoom = raw => {
   if (!raw || typeof raw !== 'object' || !RHYTHM_MULTI_PHASES.includes(raw.ph)) return null;
   return {
@@ -102177,6 +102253,37 @@ function RhythmMultiScreenBody({
   }) : ''), React.createElement("b", {
     className: "text-8xl font-black text-white"
   }, Math.max(1, countdown.left)));
+  const members = view ? view.members : [];
+  const phase = room ? room.phase : 'matching';
+  const participant = !!room && room.participants.includes(view.selfId);
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
+  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || me && me.res && me.res.startId === room.round);
+  const joinCueRef = React.useRef({
+    code: '',
+    seen: new Set()
+  });
+  const memberIdsKey = view ? view.members.map(m => m.id).join(',') : '';
+  React.useEffect(() => {
+    if (!view) return;
+    if (rhythmMultiJoinCue(joinCueRef.current, view.code, view.members.map(m => m.id), view.selfId)) {
+      try {
+        RHYTHM_NOTE_SE_RUNTIME.playCue('join');
+      } catch (_) {}
+    }
+  }, [view && view.code, memberIdsKey]);
+  const mvpCueRef = React.useRef({
+    round: ''
+  });
+  const mvpCueKey = rhythmMultiMvpCueRound({
+    round: mvpCueRef.current.round
+  }, room && room.round, showResult, !!(team && team.waiting), team && team.mvpId);
+  React.useEffect(() => {
+    if (!mvpCueKey || mvpCueRef.current.round === mvpCueKey) return;
+    mvpCueRef.current.round = mvpCueKey;
+    try {
+      RHYTHM_NOTE_SE_RUNTIME.playCue('mvp');
+    } catch (_) {}
+  }, [mvpCueKey]);
   if (!view && !searching && modeSelect) {
     const ms = modeSelect;
     const tile = 'flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 leading-none';
@@ -102867,11 +102974,6 @@ function RhythmMultiScreenBody({
     "data-rhythm-multi-step": "leaving",
     className: shell
   });
-  const members = view ? view.members : [];
-  const phase = room ? room.phase : 'matching';
-  const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
-  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || me && me.res && me.res.startId === room.round);
   if (!view || view.full || phase === 'matching' && !countdown) {
     const publicRoom = !!view && view.mode !== 'private';
     return React.createElement("main", {
@@ -114536,8 +114638,8 @@ function AssistantLifeBand({
   const nameOf = id => (assistantById(id) || {}).name || id;
   const g = life.groups[0];
   const lonely = Object.entries(life.solo).find(([, s]) => s.reason === 'lonely');
-  const text = g ? `${g.ids.map(nameOf).join('・')}が${ASSISTANT_LIFE_PLACES[g.place]}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
-  const sub = lonely ? `${nameOf(lonely[0])}は${ASSISTANT_LIFE_PLACES[lonely[1].place]}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
+  const text = g ? `${g.ids.map(nameOf).join('・')}が${assistantLifePlaceLabel(g.place)}で${ASSISTANT_LIFE_DOINGS[g.doing].label}` : '';
+  const sub = lonely ? `${nameOf(lonely[0])}は${assistantLifePlaceLabel(lonely[1].place)}でさみしそう` : life.groups.length > 1 ? `ほかに${life.groups.length - 1}組` : '';
   const tier = assistantLifeTierOf(assistantLifePlayForDay(st.play, assistantLifeDayKey()).points);
   return React.createElement("div", {
     "data-assistant-life-band": true,
@@ -115067,29 +115169,9 @@ const ASSISTANT_LIFE_ROOM_LOOK = Object.freeze({
     furn: '⚔️🛡️'
   }
 });
-const ASSISTANT_LIFE_PLACE_ICON = Object.freeze({
-  home: '🏡',
-  plaza: '⛲',
-  cafe: '🍰',
-  studio: '🎵',
-  ranch: '🥚',
-  cardroom: '🃏',
-  library: '📚',
-  market: '🛍️',
-  hill: '🌄',
-  garden: '🌷',
-  temple: '✨',
-  battle: '⚔️',
-  clinic: '🏥'
-});
-const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze({
-  studio: 'モンヒロビート',
-  cardroom: 'MFバトルカード',
-  ranch: 'M/B管理',
-  temple: '神殿',
-  battle: 'モンヒロバトル',
-  home: 'みんなの家'
-});
+const assistantLifeWordsPlaces = () => typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places || {};
+const ASSISTANT_LIFE_PLACE_ICON = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.icon])));
+const ASSISTANT_LIFE_PLACE_SHOW = Object.freeze(Object.fromEntries(Object.entries(assistantLifeWordsPlaces()).map(([k, v]) => [k, v.show])));
 const assistantLifePlaceShow = place => ASSISTANT_LIFE_PLACE_SHOW[place] || ASSISTANT_LIFE_PLACES[place] || '';
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({
   studio: 'rhythm',
@@ -149963,7 +150045,7 @@ const assistantLifePlanRowInfo = id => {
   return {
     next,
     hour: h,
-    sub: `${h}時から: ${p ? ASSISTANT_LIFE_PLACES[p] : 'おまかせ'}`
+    sub: `${h}時から: ${p ? assistantLifePlaceLabel(p) : 'おまかせ'}`
   };
 };
 const assistantLifePlanFreeCount = ids => {
@@ -150071,14 +150153,14 @@ function AssistantLifePlanWho({
     let body;
     if (past || now) body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? `📍 ${ASSISTANT_LIFE_PLACES[p]}` : React.createElement("span", {
+    }, p ? `📍 ${assistantLifePlaceLabel(p)}` : React.createElement("span", {
       className: "text-slate-400"
     }, "おまかせ"), (() => {
       const bw = r && typeof assistantLifeBodyWhyOf === 'function' ? assistantLifeBodyWhyOf(abs, id) : null;
       if (bw && bw.why !== 'rest') return React.createElement("span", {
         className: "ml-1 inline-block whitespace-nowrap rounded-full bg-rose-800 px-1.5 text-[10px] text-rose-100",
         "data-assistant-life-plan-body-why": `${id}@${abs}`
-      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${ASSISTANT_LIFE_PLACES[bw.place] || '家'}へ`);
+      }, bw.why === 'skip' ? '😪 疲れてサボり、家へ' : `🤒 具合が悪くて${assistantLifePlaceLabel(bw.place) || '家'}へ`);
       return React.createElement(React.Fragment, null, r === 'ok' && React.createElement("span", {
         className: "ml-1 rounded-full bg-emerald-800 px-1.5 text-[10px] text-emerald-100"
       }, "✓ お願いどおり"), r === 'no' && React.createElement("span", {
@@ -150098,7 +150180,7 @@ function AssistantLifePlanWho({
       }, assistantLifePlanName(id), "「", ln.text, "」") : null;
     })());else body = React.createElement("span", {
       className: "min-w-0 flex-1 text-[12.5px] font-bold"
-    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", ASSISTANT_LIFE_PLACES[p], assistantLifePlanPerk(p) && React.createElement("span", {
+    }, p ? React.createElement(React.Fragment, null, "📍 ", ASSISTANT_LIFE_PLAN_ICON[p], " ", assistantLifePlaceLabel(p), assistantLifePlanPerk(p) && React.createElement("span", {
       className: "block text-[10.5px] text-emerald-300"
     }, assistantLifePlanPerk(p))) : React.createElement("span", {
       className: "text-slate-400"
@@ -150191,7 +150273,7 @@ function AssistantLifePlanTable({
       "data-assistant-life-plan-cell": `${id}@${a}`,
       onClick: () => onCell(id, a),
       className: `h-[40px] w-full truncate rounded-lg border text-[11px] font-black ${p ? 'border-sky-300 bg-blue-900 text-white' : 'border-white/15 bg-white/5 text-slate-400'}`
-    }, p ? `📍${ASSISTANT_LIFE_PLACES[p]}` : 'おまかせ'));
+    }, p ? `📍${assistantLifePlaceLabel(p)}` : 'おまかせ'));
   }))))), left.length > 4 && React.createElement("div", {
     className: "mt-1 flex justify-end gap-1"
   }, React.createElement("button", {
@@ -150220,7 +150302,7 @@ function AssistantLifePlanPlace({
     "data-assistant-life-plan-for-place": place
   }, React.createElement("p", {
     className: "px-1 text-[12px] font-black text-sky-200"
-  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", ASSISTANT_LIFE_PLACES[place], "へ来てもらう助手"), React.createElement("div", {
+  }, h, "時からの回に、", ASSISTANT_LIFE_PLAN_ICON[place], " ", assistantLifePlaceLabel(place), "へ来てもらう助手"), React.createElement("div", {
     className: "mt-1 flex flex-col gap-1"
   }, ids.map(id => {
     const on = assistantLifePlanOf(next, id) === place;
@@ -150452,11 +150534,10 @@ const ASSISTANT_LIFE_BODY_GAP = Object.freeze({
 const ASSISTANT_LIFE_BODY_REST = Object.freeze(['home', 'hill', 'cafe', 'garden', 'clinic']);
 const ASSISTANT_LIFE_BODY_LOG_MAX = 36;
 const ASSISTANT_LIFE_BODY_WHY = Object.freeze(['skip', 'cond', 'rest']);
-const ASSISTANT_LIFE_BODY_LABEL = Object.freeze({
-  studio: ['モンヒロビート', '練習スタジオ'],
-  ranch: ['M/B管理', '育成場'],
-  cardroom: ['MFバトルカード', 'カード部屋']
-});
+const ASSISTANT_LIFE_BODY_LABEL = Object.freeze(Object.fromEntries(['studio', 'ranch', 'cardroom'].map(k => {
+  const w = typeof ASSISTANT_LIFE_WORDS !== 'undefined' && ASSISTANT_LIFE_WORDS.places[k];
+  return [k, w ? [w.show, w.line] : [ASSISTANT_LIFE_PLACES[k], ASSISTANT_LIFE_PLACES[k]]];
+})));
 const ASSISTANT_LIFE_BODY_PERK = Object.freeze({
   cafe: 'ストレスが大きく下がる・一緒の助手となかよく',
   plaza: 'ほかの助手と会いやすい・なかよく',
@@ -151092,7 +151173,7 @@ function AssistantLifeBodyPanel({
       className: "w-[58px] shrink-0 text-sky-200"
     }, s.from, "〜", (s.from + 2) % 24, "時"), React.createElement("span", {
       className: "min-w-0 flex-1 truncate"
-    }, ASSISTANT_LIFE_PLACES[r.place], "のあと"), React.createElement("span", {
+    }, assistantLifePlaceLabel(r.place), "のあと"), React.createElement("span", {
       className: "shrink-0 whitespace-nowrap"
     }, "疲れ", r.fat, "・ストレス", r.st), r.risk > 0 && React.createElement("span", {
       className: "shrink-0 whitespace-nowrap text-rose-300"
