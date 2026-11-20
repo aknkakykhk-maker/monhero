@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d5c7e676625b9bf9
+// generated-sha256: adf5bb2af72b424a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85666,7 +85666,8 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
+/* 戻るはほかのモンサクの画面と同じ丸い形にそろえる(金色の四角だった。r1119-049 窓-33) */
+.msx .scn-hd .bk{flex:none;display:inline-flex;align-items:center;min-height:36px;background:#2b3348;color:#fff;border:0;border-radius:99px;font-weight:900;font-size:11px;padding:4px 10px;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -85702,7 +85703,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
-      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
+      <div className="scn-hd"><button type="button" className="bk" data-mh-back onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
       <div className="scn-sc">
         <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
         {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
@@ -93687,7 +93688,8 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   return (
     <>
       {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
-      <MsxHd back="HOMEへ戻る" onBack={onClose}/>
+      {/* モンサクの最初の画面の名前は「モンサクルーム」(ゲーム全体の HOME と言い分ける。r1119-049 窓-33) */}
+      <MsxHd back="HOMEへ戻る" onBack={onClose} sub="モンサクルーム"/>
       <div className="v-body v-hm">
         <div className="v-scene hm">
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
@@ -95927,7 +95929,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="v-prz">{rows.length ? rows.map(([e, n, t, c, nw], i) => <div key={i} className={c}><span className="e">{e}</span><b>{n}</b><span className="t">{t}</span>{nw ? <i>{nw}</i> : null}</div>) : <div><span className="e">🏆</span><b>{st3.won ? msxR3WinWord(st3.kind, st3.round).replace('!', '') : '準優勝'}</b><span className="t">よくがんばった!</span></div>}</div>
         {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`cupgfx-${s.turn}`} items={msxR3GainItems(d, s)}/> : null}
         {!st3.won ? <MsxSay aid={s.aid} ex="normal" text="「くやしいけど、準優勝のごほうびはもらえたよ。つぎは いちばん上をめざそ!」"/> : (() => { const l = msxR3Line('turn.cup.win', run, { cup: st3.name, rival: st3.rivalName || '' }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! ごほうびのごはんは、ファームに帰ってから あげよう!」' : '「やったね! ごほうびのごはんは、ファームに帰ってから あげよう!」'); return <MsxSay aid={s.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
-        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ</div> : null}
+        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファームで待っているよ</div> : null}
       </>);
       return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-next>次へ ▶</button></div>}/>;
     }
@@ -96644,7 +96646,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
       {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
-    return <MsxR3Frame run={run} back="" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>モンサクルームへ ▶</button></div>}/>;
   }
   const body = (<>
     <div className="v-pt"><div className="n">アシストポイント<b>{left}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {points}</small></b></div>

@@ -523,7 +523,8 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   return (
     <>
       {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
-      <MsxHd back="HOMEへ戻る" onBack={onClose}/>
+      {/* モンサクの最初の画面の名前は「モンサクルーム」(ゲーム全体の HOME と言い分ける。r1119-049 窓-33) */}
+      <MsxHd back="HOMEへ戻る" onBack={onClose} sub="モンサクルーム"/>
       <div className="v-body v-hm">
         <div className="v-scene hm">
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
