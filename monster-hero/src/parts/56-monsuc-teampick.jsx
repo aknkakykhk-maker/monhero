@@ -282,6 +282,18 @@ const msxEfText = (AT, id, x) => {
   const n = Math.round(x * 100) / 100; const t = AT.valueText(id, 1);
   return /[0-9]/.test(t) ? t.replace(/[0-9]+(\.[0-9]+)?/, String(n)) : `+${n}`;
 };
+// 行に常に出す1行の説明(何に・どれだけ。育-02)。足し合わせの効果は編成の合計の値で書く(開いた説明と行の数字が食い違わない・育-04)。上限の一言は下の行に出すので付けない
+const msxEfSentence = (AT, id, total, n, one) => {
+  const a = AT.BY_ID[id]; if (!a) return '';
+  const note = typeof AT.capNote === 'function' ? AT.capNote(id) : '';
+  const strip = (t) => (note && t.endsWith(note) ? t.slice(0, t.length - note.length) : t);
+  if (one || /\{start\}|\{mv\}/.test(String(a.text || ''))) return strip(AT.describe(id, n));
+  const f = (v) => String(Math.round(v * 100) / 100);
+  const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${f(total)}` : a.k === 'rate' || a.k === 'hard' ? `+${f(total)}%` : a.k === 'rateDown' ? `−${f(total)}%` : a.k ? msxEfText(AT, id, total) : f(total);
+  return String(a.text || '').replace('{v}', `\u0001${vt}\u0001`);
+};
+// 文の中の数字は折り返さない(「+13%」だけが次の行に落ちていた)。\u0001 で囲んだ所を1かたまりにする
+const msxEfSentenceNode = (t) => String(t).split('\u0001').map((x, i) => (i % 2 ? <b key={i} className="nw">{x}</b> : x));
 function MsxTeamEffects({ members, onClose }) {
   const AT = msxTpAT();
   const [view, setView] = useState('eff');
@@ -308,27 +320,28 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>
         <div className="msx-dt-body">
           {view === 'eff' ? (list.length ? <>
-            <div className="msx-ef-how">数字は編成の合計(上限まで効く)。<b className="one">1体だけ</b>の効果は、一番大きいモンスターの分だけ効く。行を押すと説明</div>
-            {list.map((e) => { const c = capOf(e.id); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
-              <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}`}>
+            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 一番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
+            {(() => { const seenGrp = {}; return list.map((e) => { const c = capOf(e.id); const grpFirst = !!(c && c.group && !seenGrp[c.group] && (seenGrp[c.group] = true)); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
+              <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}${c && c.group ? ' grp' : ''}`}>
                 <button type="button" className="msx-ef-hd" onClick={() => setOpen(on ? null : e.id)} aria-expanded={on} data-msx-effect={e.id} data-msx-assist-type={e.d.type || ''}>
                   <span className="ic">{cardIconNode(e.d.icon, 18)}</span>
                   <span className="tx"><b className="nm">{e.d.name}{e.one ? <i className="one">1体だけ</i> : null}</b>
-                    {c ? <span className="gg"><i style={{ width: `${pct}%` }}/></span> : null}
-                    <small className="cap">{c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? '一番大きい1体の分' : '何体ぶんでも足し合わせ'}</small></span>
-                  <span className="val">{msxEfText(AT, e.id, e.total)}</span>
+                    <small className="ds" data-msx-effect-desc>{msxEfSentenceNode(msxEfSentence(AT, e.id, e.total, e.rows[0].n, e.one))}</small>
+                    {/* 上限の行: 組(左の橙の線)は最初の行にだけ合計と上限を書き、ほかの行は分け合うことだけ書く(同じ行が2枚に出ていた) */}
+                    {c || !e.one ? <small className="cap">{c ? (c.group ? (grpFirst ? <><span>橙の線の5つを合わせて {Math.round(tot * 100) / 100}{u}</span><span>(上限{c.v}{u})</span></> : <span>上限は橙の線の行と分け合う</span>) : `上限 ${c.v}${u}`) : '何体ぶんでも足し合わせ'}</small> : null}</span>
                   <span className="fcs">{e.rows.slice(0, 4).map((r) => face(r.mi, !r.live))}{e.rows.length > 4 ? <small>+{e.rows.length - 4}</small> : null}</span>
                 </button>
                 {on ? <div className="msx-ef-ex" data-msx-effect-ex={e.id}>
-                  <p>{msxTpAssistDesc(AT, { id: e.id, n: e.rows[0].n })}</p>
+                  {(() => { const nt = typeof AT.capNote === 'function' ? AT.capNote(e.id) : ''; return nt ? <p className="capn">上限: {nt.replace(/^[(（]|[)）]$/g, '')}</p> : null; })()}
+                  {/体力/.test(msxEfSentence(AT, e.id, e.total, e.rows[0].n, e.one)) ? <p className="capn">体力 … トレーニングで減り、休むと戻る(6つの能力のライフとは別)</p> : null}
                   {e.rows.map((r, i) => <div key={i} className={`msx-ef-mon${r.live ? '' : ' dim'}`}>{face(r.mi, !r.live)}<span className="nm">{r.name}</span><span className="v">{r.text}{r.live ? '' : '(効かない: ほかのモンスターの方が大きい)'}</span></div>)}
                 </div> : null}
-              </div>); })}
+              </div>); }); })()}
           </> : <div className="msx-gt-none">編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています</div>)
           : members.map((m, mi) => { const own = list.filter((e) => e.rows.some((r) => r.mi === mi)); return (
             <div key={mi} className="msx-ef-mrow" data-msx-ef-mon={mi}>
               <div className="hd">{face(mi, false)}<b>{m.name}</b><small>{m.friend ? 'フレンド' : m.kind === 'base' ? 'ベースモン' : m.assistId ? 'メモモン' : 'マスモン'}・親密度 {m.bond0}・タッグ +{m.tag}%</small></div>
-              <div className="chips">{own.length ? own.map((e) => { const r = e.rows.find((x) => x.mi === mi); return <span key={e.id} className={r.live ? '' : 'dim'}>{cardIconNode(e.d.icon, 13)} {e.d.name} <b>{r.text}</b></span>; }) : <span className="none">アシスト効果なし(伸びが上がる能力: {msxTpBonusText(m)})</span>}</div>
+              <div className="chips">{own.length ? own.map((e) => { const r = e.rows.find((x) => x.mi === mi); const lv = r.live ? null : e.rows.find((x) => x.live); return <span key={e.id} className={r.live ? '' : 'dim'} data-msx-ef-chip-off={r.live ? undefined : e.id}>{cardIconNode(e.d.icon, 13)} {e.d.name} <b>{r.text}</b>{lv ? <small className="why">効かない(大きい方だけ効く)</small> : null}</span>; }) : <span className="none">アシスト効果なし(伸びが上がる能力: {(Array.isArray(m.top) ? m.top.slice(0, 2) : []).map((k) => `${MSX_STAT_NAME[k]} +${Math.round((m.bonus && m.bonus[k]) || 0)}%`).join('・')})</span>}</div>
             </div>); })}
         </div>
         <button type="button" className="msx-dt-close" data-msx-effects-close onClick={onClose}>閉じる</button>
