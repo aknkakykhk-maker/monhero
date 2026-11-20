@@ -14,7 +14,7 @@ const msxBuffDef = (k) => {
   const B = msxBuffTable()[k]; if (!B) return null;
   return { k, icon: B.icon, name: B.name, text: B.text, long: B.long || B.text, good: B.good !== false, dur: B.left > 0 ? `${B.left}ターン` : '次の修行まで' };
 };
-const msxBuffGrantText = (k) => { const d = msxBuffDef(k); return d ? `${d.icon} ${d.name}(${d.dur}): ${d.text}` : ''; };
+const msxBuffGrantText = (k, got = false) => { const d = msxBuffDef(k); return d ? `${d.icon} ${d.name}${got ? 'になった' : ''}(${d.dur}): ${d.text}` : ''; }; // got = 付いた結果の行(「やる気満々になった(3ターン): …」)
 const msxBuffNow = (s) => {
   const out = [];
   const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null;

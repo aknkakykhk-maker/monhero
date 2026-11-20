@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6c0d9c76323a0141
+// generated-sha256: 5ef60d2ff2ea5365
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85180,12 +85180,18 @@ const msxEvDeltaChips = (d) => {
 function MsxEvResult({ delta, hasStats }) {
   const chips = msxEvDeltaChips(delta);
   if (!chips.length && hasStats) return null;
+  // ひとときの状態は、名前と「何ターン・どう効くか」を1行で出す(名前だけの札と二重にしない・r1119-033 観点8)
+  const grant = typeof msxBuffGrantText === 'function';
+  const row = chips.filter((c) => !(c.buff && grant)); const bufs = chips.filter((c) => c.buff && grant);
   return (
     <div className="v-log" data-msx-ev-res={chips.length}>
       <span className="hd2">📋 結果</span><br/>
-      {chips.length ? chips.map((c, i) => <span key={c.k} data-msx-ev-chip={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>)
-        : <span data-msx-ev-none>変わったことはなかった</span>}
-      {chips.filter((c) => c.buff && typeof msxBuffGrantText === 'function').map((c) => <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-buff={c.buff} style={{ marginTop: 4, fontSize: 11.5, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c' }}>{msxBuffGrantText(c.buff)}</div>)}
+      {row.length ? row.map((c, i) => <span key={c.k} data-msx-ev-chip={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>)
+        : bufs.length ? null : <span data-msx-ev-none>変わったことはなかった</span>}
+      {bufs.map((c) => { const d = typeof msxBuffDef === 'function' ? msxBuffDef(c.buff) : null; return (
+        <div key={`bl-${c.buff}`} className="msx-ev-bfl" data-msx-ev-chip={c.k} data-msx-ev-buff={c.buff} style={{ marginTop: row.length ? 4 : 0, fontSize: 12, fontWeight: 800, color: c.good ? '#166534' : '#b91c1c', textAlign: 'left', lineHeight: 1.45 }}>
+          {d ? <><b style={{ fontWeight: 900 }}>{d.icon} {d.name}になった({d.dur})</b><br/>{String(d.text).split('・').map((t, i) => <span key={i} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>{i ? '・' : ''}{t}</span>)}</> : msxBuffGrantText(c.buff, true)}
+        </div>); })}
     </div>
   );
 }
@@ -85207,7 +85213,7 @@ const msxBuffDef = (k) => {
   const B = msxBuffTable()[k]; if (!B) return null;
   return { k, icon: B.icon, name: B.name, text: B.text, long: B.long || B.text, good: B.good !== false, dur: B.left > 0 ? `${B.left}ターン` : '次の修行まで' };
 };
-const msxBuffGrantText = (k) => { const d = msxBuffDef(k); return d ? `${d.icon} ${d.name}(${d.dur}): ${d.text}` : ''; };
+const msxBuffGrantText = (k, got = false) => { const d = msxBuffDef(k); return d ? `${d.icon} ${d.name}${got ? 'になった' : ''}(${d.dur}): ${d.text}` : ''; }; // got = 付いた結果の行(「やる気満々になった(3ターン): …」)
 const msxBuffNow = (s) => {
   const out = [];
   const E = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC ? msxSuc.SUC.events : null;

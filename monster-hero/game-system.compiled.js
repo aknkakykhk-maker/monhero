@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95380ec7081477df
+// source-sha256: eff469b248f10fbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163792,12 +163792,15 @@ function MsxEvResult({
 }) {
   const chips = msxEvDeltaChips(delta);
   if (!chips.length && hasStats) return null;
+  const grant = typeof msxBuffGrantText === 'function';
+  const row = chips.filter(c => !(c.buff && grant));
+  const bufs = chips.filter(c => c.buff && grant);
   return React.createElement("div", {
     className: "v-log",
     "data-msx-ev-res": chips.length
   }, React.createElement("span", {
     className: "hd2"
-  }, "📋 結果"), React.createElement("br", null), chips.length ? chips.map((c, i) => React.createElement("span", {
+  }, "📋 結果"), React.createElement("br", null), row.length ? row.map((c, i) => React.createElement("span", {
     key: c.k,
     "data-msx-ev-chip": c.k
   }, i ? '・' : '', c.name, c.val ? React.createElement(React.Fragment, null, " ", React.createElement("b", {
@@ -163805,19 +163808,35 @@ function MsxEvResult({
     style: c.good ? undefined : {
       color: '#dc2626'
     }
-  }, c.val)) : null)) : React.createElement("span", {
+  }, c.val)) : null)) : bufs.length ? null : React.createElement("span", {
     "data-msx-ev-none": true
-  }, "変わったことはなかった"), chips.filter(c => c.buff && typeof msxBuffGrantText === 'function').map(c => React.createElement("div", {
-    key: `bl-${c.buff}`,
-    className: "msx-ev-bfl",
-    "data-msx-ev-buff": c.buff,
-    style: {
-      marginTop: 4,
-      fontSize: 11.5,
-      fontWeight: 800,
-      color: c.good ? '#166534' : '#b91c1c'
-    }
-  }, msxBuffGrantText(c.buff))));
+  }, "変わったことはなかった"), bufs.map(c => {
+    const d = typeof msxBuffDef === 'function' ? msxBuffDef(c.buff) : null;
+    return React.createElement("div", {
+      key: `bl-${c.buff}`,
+      className: "msx-ev-bfl",
+      "data-msx-ev-chip": c.k,
+      "data-msx-ev-buff": c.buff,
+      style: {
+        marginTop: row.length ? 4 : 0,
+        fontSize: 12,
+        fontWeight: 800,
+        color: c.good ? '#166534' : '#b91c1c',
+        textAlign: 'left',
+        lineHeight: 1.45
+      }
+    }, d ? React.createElement(React.Fragment, null, React.createElement("b", {
+      style: {
+        fontWeight: 900
+      }
+    }, d.icon, " ", d.name, "になった(", d.dur, ")"), React.createElement("br", null), String(d.text).split('・').map((t, i) => React.createElement("span", {
+      key: i,
+      style: {
+        display: 'inline-block',
+        whiteSpace: 'nowrap'
+      }
+    }, i ? '・' : '', t))) : msxBuffGrantText(c.buff, true));
+  }));
 }
 const MSX_BUFF_KOTSU = Object.freeze({
   k: 'kotsu',
@@ -163846,9 +163865,9 @@ const msxBuffDef = k => {
     dur: B.left > 0 ? `${B.left}ターン` : '次の修行まで'
   };
 };
-const msxBuffGrantText = k => {
+const msxBuffGrantText = (k, got = false) => {
   const d = msxBuffDef(k);
-  return d ? `${d.icon} ${d.name}(${d.dur}): ${d.text}` : '';
+  return d ? `${d.icon} ${d.name}${got ? 'になった' : ''}(${d.dur}): ${d.text}` : '';
 };
 const msxBuffNow = s => {
   const out = [];
