@@ -106,6 +106,8 @@ const homeDockProblems = (page) => page.evaluate(() => {
     if (dockR && hit(p.r, dockR)) ng.push(`${p.c}×ドック`);
   }
   for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) if (hit(parts[i].r, parts[j].r)) ng.push(`${parts[i].c}×${parts[j].c}`);
+  // 吹き出しと、イベントのときだけ HOME に出る部品(ジャック・食事・案内の帯)も重ならない(2026-11-20 assistant-check の静的な位置の確かめを、ここで測る形にした)
+  if (vis(bubble)) for (const [sel, c] of [['.mh-home-raid-jack-img', 'ジャック'], ['.mh-home-meal', '食事'], ['.mh-home-tour-banner', '案内の帯']]) for (const e of document.querySelectorAll(sel)) if (vis(e) && hit(R(bubble), R(e))) ng.push(`吹き出し×${c}`);
   for (const box of document.querySelectorAll('[data-assistant-life-home-faces]')) {
     const k = box.getAttribute('data-assistant-life-home-faces'); const f = R(box);
     for (const p of parts) if (hit(f, p.r)) ng.push(`${k}のバッジ×${p.c}`);

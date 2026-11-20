@@ -28,7 +28,7 @@ const { MsxManualBar, msxManualOpen } = mod.exports;
 
 // 帯の HTML から、ボタンの「押せる/押せない」を取り出す
 const buttons = (html) => [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map(m => ({ disabled: /disabled=""/.test(m[1]), text: m[2].replace(/<[^>]+>/g, ''), tech: (/data-msxm-tech="([^"]+)"/.exec(m[1]) || [])[1], all: /data-msxm-all/.test(m[1]),
-  card: (/data-msa-dc-card="(\d)"/.exec(m[1]) || [])[1], cardRep: (/data-msa-dc-rep="([^"]*)"/.exec(m[1]) || [])[1], row: /msa-sh-use/.test(m[1]), repBtn: (/data-msa-rep="([^"]+)"/.exec(m[1]) || [])[1] }));
+  card: (/data-msa-dc-card="(\d)"/.exec(m[1]) || [])[1], now: /class="msa-dc-c now\b/.test(m[1]), cardRep: (/data-msa-dc-rep="([^"]*)"/.exec(m[1]) || [])[1], row: /msa-sh-use/.test(m[1]), repBtn: (/data-msa-rep="([^"]+)"/.exec(m[1]) || [])[1] }));
 const bar = (o, extra = {}) => RDS.renderToStaticMarkup(React.createElement(MsxManualBar, { opt: o, onPick: () => {}, onAuto: () => {}, busy: false, ...extra }));
 // 代表の決め方(決めていなければ 命中×威力 が最大・同じならガッツの軽いほう)を、検査の側でも計算する
 const repAuto = (o, d) => { const at = o.tech.filter(t => t.dist.includes(d)); if (!at.length) return null; let b = at[0]; for (const t of at) { const a = t.p * t.power, c = b.p * b.power; if (a > c || (a === c && t.guts < b.guts)) b = t; } return b.key; };
@@ -60,7 +60,8 @@ for (let i = 0; i < N; i++) {
     // 4枚の札: 間合いごとに1枚・代表は 命中×威力 が最大(決めていないとき)・いまの間合いの札に「いま」・ふだんは技のボタンを出さない
     const cards = bs.filter(b => b.card != null);
     if (cards.length === 4 && !bs.some(b => b.tech)) cardsOk++;
-    if ((cards.find(b => b.card === String(o.dist)) || { text: '' }).text.includes('いま')) nowOk++;
+    // 2026-11-20 再点検 バ-22: いまの間合いは「いま」の字をやめ、札の枠の色(now)だけで示す
+    if ((cards.find(b => b.card === String(o.dist)) || {}).now && cards.filter(b => b.now).length === 1) nowOk++;
     for (let d = 0; d < 4; d++) { autoRepN++; const c = cards.find(b => b.card === String(d)); if (c && (c.cardRep || null) === repAuto(o, d) && c.disabled === !repAuto(o, d)) autoRep++; }
     if (!o.tech.some(t => t.reach)) noTechs++;
     // 決めた代表(各間合いで届く技のうち、並びの最後の技)を渡すと、その札とその一覧のいちばん上がそれになる
@@ -94,7 +95,7 @@ for (let i = 0; i < N; i++) {
 const acts = autoBtn;
 check('① 帯に4つの見出しと「オートにする」が出る', heads === acts && acts > 0, `${heads}/${acts}`);
 check('① 3体なら交代の段、倒れたら次の子を選ぶ形', swapShown > 0 && enterShown > 0, `交代 ${swapShown}・次の子 ${enterShown}`);
-check('② 技の札は間合いごとの4枚(ふだんは技のボタンを出さない)・いまの間合いの札に「いま」', cardsOk === acts && nowOk === acts, `${cardsOk}・${nowOk}/${acts}`);
+check('② 技の札は間合いごとの4枚(ふだんは技のボタンを出さない)・いまの間合いの札だけ枠の色が変わる(now)', cardsOk === acts && nowOk === acts, `${cardsOk}・${nowOk}/${acts}`);
 check('② 代表を決めていなければ 命中×威力 が最大の技(届く技が無い間合いは押せない札)', autoRep === autoRepN && autoRepN > 0, `${autoRep}/${autoRepN}`);
 check('② 決めた代表がその札と一覧のいちばん上(★)に出る', chosenRep === chosenRepN && chosenRepN > 0, `${chosenRep}/${chosenRepN}`);
 check('② いまの間合いの一覧: 技の押せる/押せないが芯の ok と同じ', techMatch === techN && techN > 0, `${techMatch}/${techN}`);

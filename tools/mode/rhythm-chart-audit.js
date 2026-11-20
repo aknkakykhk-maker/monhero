@@ -49,7 +49,12 @@ const audit=()=>{
   for(const song of rt.RHYTHM_SONGS){if(demo.size&&!demo.has(song.songId))continue;
     const L=R.loadReleased(song.songId),by=R.reviewOf(L);
     for(const d of R.DIFFS){const m=by[d];if(!m)continue;
-      const lv=d==='HELL'?Number(L.charts.HELL&&m.level&&((rt.RHYTHM_PROTO_SONGS||[]).find(s=>String(s.songId).startsWith(`${song.songId}_hell`))||{difficulties:{}}).difficulties&&Object.values(((rt.RHYTHM_PROTO_SONGS||[]).find(s=>String(s.songId).startsWith(`${song.songId}_hell`))||{difficulties:{}}).difficulties)[0]?.level)||m.level:(shown[song.songId]||{})[d];
+      // HELL の表示 Lv. は、HELL の譜面そのものに書いてある値(曲の中の HELL か、試作の枠 `<曲>_hell…` の HELL の段)。
+      //   以前は試作の枠の「最初の段」(EASY=0)を読んでいて、79譜面中45で測った値(m.level)に落ちていた(2026-11-20 点検 E)
+      const hellLevel=()=>{const own=song.difficulties&&song.difficulties.HELL&&Number(song.difficulties.HELL.level);if(Number.isFinite(own)&&own>0)return own;
+        const proto=(rt.RHYTHM_PROTO_SONGS||[]).find(x=>String(x.songId).startsWith(`${song.songId}_hell`)),v=proto&&proto.difficulties&&proto.difficulties.HELL&&Number(proto.difficulties.HELL.level);
+        return Number.isFinite(v)&&v>0?v:null;};
+      const lv=d==='HELL'?hellLevel():(shown[song.songId]||{})[d];
       rows.push({songId:song.songId,old:grandfathered(song.songId),name:`${song.displayName||song.songId}${/_short$/.test(song.songId)&&!/short/i.test(song.displayName||'')?' short':''}`,difficulty:d,shown:Number.isFinite(lv)?lv:m.level,m,chart:L.charts[d],audio:L.audio,event:inEvent.has(song.songId)});}
     const lad=R.ladderOf(by);for(const l of lad){if(l.to==='HELL')continue;const r=rows.find(x=>x.songId===song.songId&&x.difficulty===l.to);if(r&&(l.peakRatio<1||l.notesRatio<1.03))r.inversion=`${l.from}→${l.to}: ノーツ数 ×${l.notesRatio}・最密4秒 ×${l.peakRatio}`;}
   }

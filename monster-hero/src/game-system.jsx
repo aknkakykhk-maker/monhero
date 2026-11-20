@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dd958ad14cd75a5b
+// generated-sha256: 7a1daab510a69e26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14022,8 +14022,8 @@ const marketCostumeFullbodySrc = (item) => {
   if (!assistantId) return null;
   const name = ASSISTANT_FULLBODY_ART[`${assistantId}:${String(costume.imageDir).split('/').pop()}`];
   if (!name) return null;
-  const exprs = typeof ASSISTANT_FULLBODY_EXPRESSIONS !== 'undefined' ? ASSISTANT_FULLBODY_EXPRESSIONS[name] : null;
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes('normal') ? '__normal' : ''}.png`;
+  // 画像のパスは data/assistants.js に集める(assistant-check「画像のパスをJSXへ直接書いていない」)。表情は通常(normal)
+  return typeof assistantFullBodyImageOf === 'function' ? assistantFullBodyImageOf(name, 'normal') : null;
 };
 // 詳細と購入確認の、頭(アイコンと名前)の下に出す全身絵。着替え以外・絵の無い服では何も出さない。
 // 全身絵は縦長なので、高さを決めて object-contain で全体を収める(引き伸ばし・切り抜きをしない)
@@ -26109,6 +26109,8 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
 const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
   x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+/* 称号(FULL COMBO!・ALL EXCELLENT!!・ALL MARVELOUS!!)の音をいつ鳴らすか。'celebrate'=お祝い画面に入ったとき / 'result'=お祝い画面が出ない設定で結果に入ったとき / null=鳴らさない(称号なし・失敗)。どの設定でも1回だけ */
+const rhythmCelebrateSeWhen=(title,failed,showCelebrate)=>!title||failed?null:showCelebrate?'celebrate':'result';
 /* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
    'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
    「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
@@ -27297,6 +27299,10 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const recordFx=isNewRecord&&previousBestScore>0&&!failed&&!tutorial&&!calibrating&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
       ?{id:`${Date.now()}-${score}`,previous:previousBestScore,score}:null;
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,previousBestScore,recordFx,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
+    /* フルコンボ・ALL EXCELLENT・ALL MARVELOUS の音は、お祝い画面が出ない設定(軽量モード・演出量が最小・フルコン演出OFF)でも鳴らす(2026-11-20 社長
+       「フルコンボのとき鳴っていた SE が気づいたら無くなっている」)。お祝い画面が出るときは、その画面に入ったところで鳴る(下の status==='celebrate')ので、ここでは鳴らさない(二重に鳴らさない)。
+       ノーツの効果音がOFF・音量0・全体ミュートのときは playFullCombo の中で鳴らない */
+    if(rhythmCelebrateSeWhen(celebrateTitle,failed,showCelebrate)==='result'){try{RHYTHM_NOTE_SE_RUNTIME.playFullCombo();}catch{}}
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
@@ -41018,16 +41024,19 @@ function PlayerRankUpFx({ kind = 'beat', from = 1, to = 1, gains = [], onClose =
 //   ・絵の背景(HOME・タイトル)は絵に色を重ねる。塗りだけの画面(メニュー・マーケット・神殿・モードえらび)は塗りをほんの少し寄せる
 //   ・お話・モンヒロビートの演奏中・リザルト・バトル中・カードの場は変えない。ボタン・文字・カード・ノーツには乗らない
 //   ・色の層は背景の要素の中にあるので、「🔄 横」で回しても絵と一緒に回る
-// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 5:00 から
+// ★時刻はいつも日本時間(端末の時間帯の設定に関係なく UTC+9 で数える)。1日の区切り(4:00)とは別に、朝は 6:00 から
 // 保存: キー mh_time_of_day_v1 に { mood:'on'|'off', clock:'on'|'off', format:'24h'|'12h' }(無い・壊れているときは従来どおり入・24時間)
 
 const TIME_OF_DAY_STORAGE_KEY = 'mh_time_of_day_v1';
 // 区切り(日本時間の時)。[始まりの時, 名前, 印, 表示名]。助手ライフの家も同じ表を使う
+// 2026-11-20 社長(r1119-043 ⑥・r1119-044): 朝6時から。深夜(0〜6時)は見た目は夜のまま(id 'night')で、呼び名だけ「深夜」。夕は「夕方」
+//   助手ライフの2時間の移動(0・2・4…時)と区切りがそろう(docs/spec/ASSISTANT_LIFE.md §3-2)
 const TIME_OF_DAY_SLOTS = Object.freeze([
-  Object.freeze({ id: 'morning', from: 5,  icon: '🌅', label: '朝' }),
+  Object.freeze({ id: 'night',   from: 0,  icon: '🌙', label: '深夜' }),
+  Object.freeze({ id: 'morning', from: 6,  icon: '🌅', label: '朝' }),
   Object.freeze({ id: 'day',     from: 10, icon: '☀️', label: '昼' }),
-  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕' }),
-  Object.freeze({ id: 'night',   from: 19, icon: '🌙', label: '夜' }),
+  Object.freeze({ id: 'evening', from: 16, icon: '🌇', label: '夕方' }),
+  Object.freeze({ id: 'night',   from: 18, icon: '🌙', label: '夜' }),
 ]);
 const TIME_OF_DAY_JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 // 日本時間の時・分
@@ -41035,7 +41044,7 @@ const timeOfDayJstParts = (now = Date.now()) => {
   const d = new Date((Number.isFinite(Number(now)) ? Number(now) : Date.now()) + TIME_OF_DAY_JST_OFFSET_MS);
   return { h: d.getUTCHours(), m: d.getUTCMinutes() };
 };
-// いまの時間帯(朝 5:00〜 / 昼 10:00〜 / 夕 16:00〜 / 夜 19:00〜4:59)
+// いまの時間帯(深夜 0:00〜 / 朝 6:00〜 / 昼 10:00〜 / 夕方 16:00〜 / 夜 18:00〜)
 const timeOfDayAt = (now = Date.now()) => {
   const { h } = timeOfDayJstParts(now);
   let slot = TIME_OF_DAY_SLOTS[TIME_OF_DAY_SLOTS.length - 1];
@@ -41076,7 +41085,7 @@ const timeOfDaySetSettings = (patch) => {
 // 20秒ごとに見直す(分が変わったら時刻を、時間帯が変わったら雰囲気を書き換える)。見るたびに今の時刻で決める
 const timeOfDayTick = () => {
   const slot = timeOfDayAt(), minute = timeOfDayClockText(Date.now(), TIME_OF_DAY_STORE.settings.format);
-  if (slot.id === TIME_OF_DAY_STORE.slot.id && minute === TIME_OF_DAY_STORE.minute) return;
+  if (slot === TIME_OF_DAY_STORE.slot && minute === TIME_OF_DAY_STORE.minute) return;
   TIME_OF_DAY_STORE.slot = slot; TIME_OF_DAY_STORE.minute = minute;
   timeOfDayEmit();
 };
@@ -45747,7 +45756,7 @@ function RhythmRankingScreen({
           <button type="button" data-rhythm-ranking-pending-send onClick={async()=>{if(onResendRhythmRankingPending)await onResendRhythmRankingPending();refresh();}}
             className="min-h-[44px] shrink-0 rounded-lg border border-amber-300/50 bg-amber-500/20 px-3 text-[10px] font-black text-amber-50 active:scale-[.98]">いま送る</button>
         </div>}
-        <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
+        <div data-rhythm-ranking-scroll className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
               「ランキングページに余計な説明が多くて見にくい／横画面対応、ページ説明みたいの、
               助手のコメント、これはなくしていいとおもう」)。
@@ -67324,6 +67333,18 @@ const assistantLifeEnabled = () => typeof RELEASE_FLAGS !== 'undefined' && RELEA
 const assistantLifePairKey = (a, b) => [String(a), String(b)].sort().join('-');
 const assistantLifeDayKey = (now = Date.now()) => (typeof jstDayKey4 === 'function') ? jstDayKey4(now) : new Date(Number(now) + 5 * 3600000).toISOString().slice(0, 10);
 
+// 画面に出す時間の呼び名(2026-11-20 社長 r1119-043 ⑥・r1119-044)。表はゲーム全体の TIME_OF_DAY_SLOTS(44-time-of-day.jsx)1つ:
+//   深夜 0〜6時・朝 6〜10時・昼 10〜16時・夕方 16〜18時・夜 18〜24時。上の ASSISTANT_LIFE_SLOTS の名前(午後など)は傾向を引くための内側の名前で、画面には出さない
+const ASSISTANT_LIFE_TIME_NAMES_FALLBACK = Object.freeze([[0, '深夜'], [6, '朝'], [10, '昼'], [16, '夕方'], [18, '夜']]);
+const assistantLifeTimeNameOf = (hour) => {
+  const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
+  const list = (typeof TIME_OF_DAY_SLOTS !== 'undefined' && Array.isArray(TIME_OF_DAY_SLOTS) && TIME_OF_DAY_SLOTS.length)
+    ? TIME_OF_DAY_SLOTS.map(s => [s.from, s.label]) : ASSISTANT_LIFE_TIME_NAMES_FALLBACK;
+  let name = list[0][1];
+  for (const [from, label] of list) if (Number.isFinite(h) && h >= from) name = label;
+  return name;
+};
+
 // ---------- 時間 ----------
 // abs … 通しの番号(日本時間の暦の日 × 6 + 時間の並び)。1つ進むと次の時間
 // 12区切り(2026-11-11 社長: 移動を1日6回→12回。2時間ずつ均等)。傾向を引く名前(id・label・i)は、区切りの真ん中の時刻が入る6つ(上の ASSISTANT_LIFE_SLOTS)のまま。
@@ -67335,7 +67356,7 @@ const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.find
 const assistantLifeSlotBuild = (day, j, hourForV1) => {
   const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
   const six = ASSISTANT_LIFE_SLOTS[i];
-  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(j * 2) : six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
 };
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
@@ -68454,13 +68475,13 @@ const assistantLifePlaceShow = (place) => ASSISTANT_LIFE_PLACE_SHOW[place] || AS
 const ASSISTANT_LIFE_SPOT_FAC = Object.freeze({ studio: 'rhythm', cardroom: 'card', ranch: 'management', market: 'market', temple: 'temple', battle: 'battle', home: 'life' });
 const assistantLifeFacilityOf = (entry) => (entry && ASSISTANT_LIFE_SPOT_FAC[entry.place]) || 'life';
 // 時間帯の見た目(朝・昼・夕・夜)。ゲーム全体の「時間帯で雰囲気を変える」(ハナビの 44-time-of-day.jsx)とそろえる(2026-11-07 統括の決定)
-//   区切りは社長の決定: 朝 5:00〜/昼 10:00〜/夕 16:00〜/夜 19:00〜4:59(日本時間)。助手の居場所が入れかわる6つの区切りとは別
+//   区切りは社長の決定: 朝 6:00〜/昼 10:00〜/夕方 16:00〜/夜 18:00〜5:59(日本時間・2026-11-20 r1119-044 で朝5時・夜19時から変えた)。助手の居場所が入れかわる6つの区切りとは別
 //   <html data-mh-tod="morning|day|evening|night"> の印があればそれに従い、無ければ同じ区切りでここで決める
 const ASSISTANT_LIFE_TOD_LOOK = Object.freeze({ morning: 'morning', day: 'noon', evening: 'evening', night: 'night' });
 const assistantLifeTimeLook = (now = Date.now()) => {
   try { const tod = typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-mh-tod'); if (tod && ASSISTANT_LIFE_TOD_LOOK[tod]) return ASSISTANT_LIFE_TOD_LOOK[tod]; } catch {}
   const h = new Date(Number(now) + 9 * 3600000).getUTCHours();
-  return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night';
+  return h >= 6 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 18 ? 'evening' : 'night';
 };
 // 窓の外・場面の背景(お話の背景の絵。広場と森は時間帯の絵がある)
 const ASSISTANT_LIFE_VIEW = Object.freeze({
@@ -68655,7 +68676,7 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 const assistantLifeTodLabel = (now = Date.now()) => {
   try { if (typeof assistantLifeSlotAt === 'function') { const l = assistantLifeSlotAt(now).label; if (l) return l; } } catch (_) {}
   try { if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now); } catch (_) {}
-  return { morning: '朝', noon: '昼', evening: '夕', night: '夜' }[assistantLifeTimeLook(now)];
+  return typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(new Date(Number(now) + 9 * 3600000).getUTCHours()) : '';
 };
 const assistantLifeDiaryOnSlot = (life, slot, now = Date.now()) => {
   const gs = (life.groups || []).slice(0, 3);
@@ -71601,6 +71622,8 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   // 時間帯の数・区切りは ASSISTANT_LIFE_SLOTS から取る(6でも12でも動く)。場面は区切りの開始時刻で決める
   const slotDef = slot && Array.isArray(ASSISTANT_LIFE_SLOTS) ? ASSISTANT_LIFE_SLOTS[slot.i] : null;
   const scene = slotDef ? ASSISTANT_LIFE_DAILY_SCENES[assistantLifeDailySceneOf(slotDef.from)] : null;
+  // 画面の呼び名はゲーム全体の表から(2時間の区切りの始まりの時刻で引く。15時は「昼」・r1119-044)
+  const slotName = slot && Number.isFinite(slot.from) && typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(slot.from) : (slotDef ? slotDef.label : '');
   const list = Array.isArray(ids) ? ids : [];
   if (!scene || !list.length) return null;
   const day = assistantLifePerkDay();
@@ -71627,7 +71650,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
-      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotDef.label}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
+      <p className="flex items-center gap-2 px-1 text-[13px] font-black text-amber-200">{cardIconNode(scene.icon, 14)} {slotName}の できごと <span className="text-[10.5px] font-bold text-slate-300">あと約{leftH}時間</span></p>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-1.5 py-1">
         <span className="w-[54px] shrink-0 text-center text-[11px] font-black leading-tight text-amber-200">{done ? '✓ 聞いた' : '🆕 いま'}</span>
         <span className={`min-w-0 flex-1 ${T} font-bold leading-snug`} style={JA_WRAP_STYLE}>
@@ -71638,7 +71661,7 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
           {got && <span className="block text-[11px] text-pink-200">🧺 おやつバスケットを1個もらいました！(持ち物へ)</span>}
         </span>
         {!done && (plan
-          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotDef.label })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
+          ? <button type="button" data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotName })} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95">見に行く ▶</button>
           : <button type="button" data-assistant-life-daily-listen onClick={listen} disabled={busy} className="shrink-0 min-h-[44px] rounded-xl bg-amber-400 px-2 text-[11.5px] font-black text-slate-900 active:scale-95 disabled:opacity-60">聞く ▶</button>)}
       </div>
       <div className="mt-1 flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-1.5 py-1" data-assistant-life-daily-stamps={n}>
@@ -81354,7 +81377,12 @@ const MSC_CSS = `
 .msc-btn.g{background:#334155;box-shadow:0 3px 0 #0f172a;color:#e2e8f0}
 .msc-btn.s{padding:8px 12px;font-size:13px;min-height:36px}
 .msc-foot{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+/* 2026-11-20 再点検 バ-02・58: PC(1280×800)で「結果だけ見る・試合へ」が画面の下で切れていた → ボタンの段は下に留め、低い画面では能力の行を詰める */
+.msc-wrap .msc-foot{position:sticky;bottom:0;z-index:5;background:linear-gradient(180deg,#0000,#140f2a 30%);padding-bottom:max(4px,env(safe-area-inset-bottom))}
+@media (max-height:860px) and (min-width:700px){.msc-st{height:25px}}
 .msc-foot>*{flex:1}
+/* 結果の中身が長いと「次へ」が送った先に隠れていた。下に貼り付けて、いつも同じ位置に見せる(r1119-033 窓-41) */
+.msc-foot{position:sticky;bottom:0;z-index:3;padding-bottom:max(6px,var(--mh-sa-bottom,0px));background:#0b0920;box-shadow:0 -10px 12px -4px #0b0920;margin-top:auto}
 .msc-panel{border-radius:16px;overflow:hidden;background:#f6ead0;color:#3b2a14;box-shadow:0 4px 0 rgba(0,0,0,.35)}
 .msc-head{background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;text-align:center;font-weight:900;padding:7px 8px;font-size:14px;letter-spacing:.04em}
 .msc-bk{position:relative;padding:8px 6px 10px 8px}
@@ -81370,6 +81398,9 @@ const MSC_CSS = `
 .msc-face{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #e5e7eb;overflow:hidden;display:grid;place-items:center;margin-left:auto}
 .msc-face.you,.msc-face.foe{border-color:#f43f5e;box-shadow:0 0 0 2px #fecdd3}
 .msc-face img{width:120%;height:120%;object-fit:contain}
+/* 2026-11-20 再点検 バ-56・66: 絵が右端に約28pxで押し込まれ、誰か分からない → 名前の左に大きく置く */
+.msc-row .msc-face{order:-1;width:38px;height:38px;max-height:calc(100% - 2px);margin-left:0}
+.msc-row .msc-no{order:-2}
 .msc-lines{position:absolute;top:8px;bottom:10px;right:6px;pointer-events:none}
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
@@ -81385,7 +81416,8 @@ const MSC_CSS = `
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
-.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
+.msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
@@ -81436,6 +81468,7 @@ const MSC_CSS = `
 .msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
+.msc-fcnote{margin:-2px 2px 0;font-size:11.5px;font-weight:800;color:#cbd5e1;text-align:center}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
 .msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
 .msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
@@ -81587,7 +81620,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
-    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}の{Z}1回戦は{Z} これからだよ」</>,
+    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう。{Z}{info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}が{Z} 戦うのは{Z} 決勝の1戦だよ。{Z}まずは{Z} 1回戦を{Z} 見ていこう」</>,
     upsets.length ? <>「<em>大穴!{Z} {nm(E[upsets[0]])}</em> が{Z} 勝ち上がったぞ!{Z} {info.meName}も{Z} 1回戦を{Z} 勝ち上がり!」</> : <>「1回戦が{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 順当に{Z} 勝ち上がり!」</>,
     foeNo >= 4 ? <>「<em>大穴!{Z} {nm(foe)}</em>{Z} 決勝まで{Z} きたぞ!{Z} {info.meName}は{Z} 準決勝も{Z} 勝って{Z} 決勝へ!」</> : <>「準決勝も{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 決勝へ!{Z} 反対の山からは{Z} <em>{nm(foe)}</em>」</>,
   ];
@@ -81599,7 +81632,8 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
   return (
     <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
-      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      {/* 2026-11-20 再点検 バ-06・16・19・41: 大会名が戻るの横と表の見出しで二重だった → 表の見出しだけにする */}
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
@@ -81621,12 +81655,14 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      {/* 2026-11-20 再点検 バ-07・20: 1回戦の途中で決勝の顔合わせを先に言っていた・「見せるだけの演出です」の裏話で冷めた → 決勝の顔合わせは表が決勝まで進んでから出し、裏話の文はやめる */}
+      <div className="msc-note">{st >= 3 ? <><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。</> : null}<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>飛ばす ⏭</button> : null}</div>
       <div className="msc-foot">
         {/* 「(優勝ずみ)」を後ろに付けると、半分の幅では単語の途中で折れて読めなかった(2026-11-17 社長)。押せないときの副題と同じ形で、優勝ずみも副題にする */}
-        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">優勝ずみ</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? <small className="msc-qsub">一度優勝したので使えます</small> : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
+        {/* 2026-11-20 再点検 バ-55: 進むボタンは「試合へ」にそろえる(表は「決勝へ」・試合の前は「準備完了」とばらばらだった) */}
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
@@ -81682,9 +81718,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
   const aptRow = (sp, me) => { const gs = aptOf(sp, me); const order = me ? [0, 1, 2, 3] : [3, 2, 1, 0]; return <div className="msc-apt">{order.map((d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(gs[d]) ? 'S' : gs[d]}>{AMBW_DIST[d]}</span>)}</div>; };
   return (
     <div className="msc-wrap" data-msc-card>
-      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
+      <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
-        <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
+        {/* 大会名は上の見出しの1か所だけ(絵の上の札は二重だった。r1119-033 窓-07) */}
         <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><MscMyMon sp={o.species} colors={o.colors}/></div>
         <div className="vs">VS</div>
@@ -81697,6 +81733,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
+      {/* 2026-11-20 再点検 バ-57: 「零」が何か初めての人に分からない → 間合いの言葉を1行で添える */}
+      <div className="msc-fcnote" data-msc-dist-note>間合いは 零(くっつく)・近・中・遠 の順に離れます</div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="msc-sheet grow" key={tab}>
         {tab === 'st' && <>
@@ -81727,7 +81765,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
-        <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
+        <button className="msc-btn" data-msc-ready onClick={onReady}>⚔ 試合へ ▶</button>
       </div>
     </div>
   );
@@ -84012,6 +84050,18 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
 };
 
 
+// 合体の窓の上の2枠(主の親・副の親)。札は④の型 MonsucMonCard の中(m)をそのまま使い、枠の見出しと一言だけをここで持つ
+const MONSUC_FUSE_SLOT_CSS = `
+[data-monsuc-fuse] .mfz-slots{display:flex;align-items:flex-start;justify-content:center;gap:6px;margin-top:6px;flex:none}
+[data-monsuc-fuse] .mfz-slot{width:min(34vw,128px);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;border-radius:12px;border:2px solid transparent}
+[data-monsuc-fuse] .mfz-slot.now{border-color:#f0abfc;background:#4a044e66}
+[data-monsuc-fuse] .mfz-slot .mcd{width:100%}
+[data-monsuc-fuse] .mfz-lb{font-size:13px;font-weight:900;color:#f5d0fe}
+[data-monsuc-fuse] .mfz-d{font-size:11px;font-weight:800;color:#cbd5e1;text-align:center;line-height:1.3}
+[data-monsuc-fuse] .mfz-x{align-self:center;font-size:22px;font-weight:900;color:#f0abfc;margin-top:18px}
+[data-monsuc-fuse] .mfz-sm .mfz-slot{width:min(24vw,92px)}[data-monsuc-fuse] .mfz-sm .mfz-x{margin-top:12px}
+@media (max-height:520px){[data-monsuc-fuse] .mfz-slot{width:88px}[data-monsuc-fuse] .mfz-d{display:none}}
+`;
 function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy = null, onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
@@ -84038,6 +84088,34 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
   const usableS = typeof msxMmSorted === 'function' ? msxMmSorted(usableF, fsort) : usableF; // 並び替えはボックス一覧と同じ処理(写しだけ。元の並び・保存データは変えない)
   const main = mons.find(m => m.id === mainId) || null; const mat = mons.find(m => m.id === matId) || null;
   const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
+  // ---- 選ぶ段の部品(r1120 ④の型にそろえる。保存の形は変えない) ----
+  const cardM = (m) => ({ species: m.species, nick: monsucFuseNick(m), colors: Array.isArray(m.colors) ? m.colors : [], awake: m.awake, lv: m.lv, grade: m.grade || m.rank || '', fav: Array.isArray(m.fav) ? m.fav : [] });
+  const other = main || null; // いま選んでいない側でもう決まっている親(候補から外す)
+  const cands = usableS.filter(m => !(other && m.id === other.id) && !(mat && m.id === mat.id));
+  const slot = (k, lb, m, d) => (
+    <div className={`mfz-slot${(k === 'main' ? !main : main && !mat) ? ' now' : ''}`} key={k}>
+      <b className="mfz-lb">{lb}</b>
+      {typeof MonsucMonCard === 'function' ? <MonsucMonCard size="m" m={m ? cardM(m) : null} empty="?" onClick={m ? () => { if (k === 'main') { setMain(null); setMat(null); } else setMat(null); setSure(0); setErr(''); } : null} attrs={{ 'data-monsuc-fuse-slot': k, 'aria-label': m ? `${lb}を選び直す` : `${lb}(まだ選んでいません)` }}/> : null}
+      <small className="mfz-d">{m ? '押すと選び直す' : d}</small>
+    </div>);
+  const slots = (
+    <div className="mfz-slots" data-monsuc-fuse-slots>
+      <style>{MONSUC_FUSE_SLOT_CSS}</style>
+      {slot('main', '主の親', main, '種類・主血統')}
+      <span className="mfz-x" aria-hidden="true">＋</span>
+      {slot('mat', '副の親', mat, '副血統')}
+    </div>);
+  // 0〜1体のとき: なぜ合体できないかと、合体のしかた(窓口の依頼: 0件の理由と合体のしかた)
+  const howTo = (
+    <div className="mt-2 rounded-xl border border-white/15 bg-slate-800/80 p-3 text-[12px] font-bold text-slate-200" data-monsuc-fuse-none style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+      <p className="text-[13px] font-black text-white">いま合体に使えるマスモン: {usable.length}体</p>
+      <p className="mt-1">合体には、育成を最後まで終えたマスモンが2体いります。{lockedRaised.length ? '育成中の編成に入っている・貸し出し中・育成中のモンスターは使えません(下の🔒)。' : ''}</p>
+      <p className="mt-2 text-[12.5px] font-black text-fuchsia-200">合体のしかた</p>
+      <p className="mt-0.5">① 主の親を選ぶ(生まれるモンスターの種類と主血統)</p>
+      <p>② 副の親を選ぶ(副血統)</p>
+      <p>③ 生まれるモンスターの見通しを見て「合体する」</p>
+      <p className="mt-1 text-slate-300">2体はマスモンボックスからいなくなり、まだ育てていない新しいマスモンが1体生まれます</p>
+    </div>);
   const names = SUC ? SUC.STAT_NAMES : {};
   const keys = SUC ? SUC.KEYS : [];
   const sum = (st) => keys.reduce((a, k) => a + (Number(st && st[k]) || 0), 0);
@@ -84083,36 +84161,33 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
                 }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">この名前にする</button></>)}
             </div>) : null}
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
-        </div>) : !main ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableF.length} total={usable.length}/> : null}
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+        </div>) : !(main && mat) ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto', overflowY: 'auto', overscrollBehavior: 'contain' }}>{/* 低い画面では2枠ごと縦に流す(候補の欄が0にならない) */}
+          {/* r1120 合体の窓の作り直し(④の型): 上に「主の親・副の親」の2枠、下に候補をカードの格子。いま選ぶ枠を光らせる */}
+          {slots}
+          {usable.length < 2 ? howTo : (<>
+          <p className="mt-1.5 text-[12px] font-bold text-slate-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{!main ? '主の親を選んでください。生まれるモンスターの主血統と種類は、主の親で決まります' : '副の親を選んでください。生まれるモンスターの副血統は、副の親で決まります'}</p>
+          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={cands.length} total={usable.length - (other ? 1 : 0)}/> : null}
+          <div style={{ flex: '1 0 auto' }} data-monsuc-fuse-cands>
+            {typeof MonsucMonCard === 'function'
+              ? <MonsucCardGrid size="s">{cands.map(m => <MonsucMonCard key={m.id} size="s" m={cardM(m)} onClick={() => (main ? setMat(m.id) : setMain(m.id))} attrs={{ 'data-monsuc-fuse-pick': m.id, 'aria-label': `${monsucFuseNick(m)}を${main ? '副の親' : '主の親'}にする` }}/>)}</MonsucCardGrid>
+              : cands.map(m => card(m, () => (main ? setMat(m.id) : setMain(m.id)), 'border-white/15 bg-slate-800'))}
+            {!cands.length ? <p className="mt-2 text-[12px] font-bold text-slate-300">{fq.trim() ? '検索に当てはまるモンスターがいません' : 'ほかに選べるモンスターがいません'}</p> : null}
           </div>
+          </>)}
           {lockedEl}
-          {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
-          {usable.length >= 2 && !usableF.length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
-          {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(育成中の編成・貸し出し中のモンスターは使えません)</p>}
-        </div>) : !mat ? (<div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
-          {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
-          {typeof MsxPickTools === 'function' ? <MsxPickTools q={fq} onQ={setFq} sorts={typeof MSX_MM_SORTS !== 'undefined' ? MSX_MM_SORTS : null} sort={fsort} onSort={setFsort} count={usableS.filter(m => m.id !== main.id).length} total={usable.length - 1}/> : null}
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usableS.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usableS.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
-          </div>
-          {usable.length >= 2 && !usableS.filter(m => m.id !== main.id).length ? <p className="mt-2 text-[11px] font-bold text-slate-400">検索に当てはまるモンスターがいません</p> : null}
         </div>) : plan && plan.ok ? (<div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
-          <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
-          <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
-            {typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
-            <p className="text-[13px] font-black">{monsucFuseSpName(plan.child.species)} <small className="text-[11px] text-amber-200">{plan.child.gen}代目 ・ 未育成</small>
-              <small className="block text-[10px] font-bold text-slate-300">型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}(生まれたモンスターの種類の型)</small></p>
+          <div className="mfz-sm">{slots}</div>
+          <p className="mt-1.5 text-[12px] font-black text-slate-200">生まれるモンスターの見通し</p>
+          <div className="mt-1 flex items-center gap-3 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
+            {/* 生まれる子は④の型の札(中)で大きく(窓-02: 約24pxのアイコンだけで、生まれる喜びが無かった) */}
+            {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
+            <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
-            <p className="mb-1 text-[10.5px] font-bold text-slate-300">{monsucFuseSpName(plan.child.species)}の初めの能力に、2体の強さに応じた上乗せが付きます</p>
-            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span>{plan.base[k]} → <b className="text-amber-200">{plan.child.st[k]}</b> <small className="text-fuchsia-200">(+{plan.add[k]})</small></span></p>)}
+            <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
+            <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
+            {keys.map(k => <p key={k} className="flex justify-between text-[12px] font-black"><span>{names[k]}</span><span><b className="text-amber-200">{plan.child.st[k]}</b> <b className="ml-1 inline-block min-w-[3.4em] rounded-md bg-fuchsia-500/30 px-1 text-right text-[13px] text-fuchsia-100">+{plan.add[k]}</b></span></p>)}
           </div>
-          <p className="mt-1 text-[10.5px] font-bold text-slate-300">2体ともに強いほど、上乗せが大きくなります(片方だけ強くても、あまり上がりません)</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
           <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
@@ -84122,9 +84197,9 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
-        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 grid-cols-2 gap-2" data-monsuc-fuse-foot>
-          <button type="button" data-mh-back onClick={() => { setMat(null); setSure(0); setErr(''); }} className="min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
-          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
+        {!done && SUC && main && mat && plan && plan.ok ? <div className="mt-2 grid shrink-0 gap-2" style={{ gridTemplateColumns: '1fr 2fr' }} data-monsuc-fuse-foot>{/* 選び直すのは上の2枠を押す。いちばん押す「合体する」を大きく(API 点検) */}
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="min-h-[48px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>
+          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`disabled:opacity-50 min-h-[56px] w-full text-center rounded-xl text-[16px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
         </div>
         : !done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">キャンセル</button>}
       </div>
@@ -84143,7 +84218,7 @@ const monsucFuseCalm = () => {
 const MONSUC_FUSE_CSS = `
 .mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
 .mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
-.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;white-space:nowrap;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
 .mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
 .mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
 .mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
@@ -84189,7 +84264,7 @@ function MonsucFuseShow({ a, b, child, childName, onDone }) {
   return (
     <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st}>
       <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
-      <div className="mf-head"><small>合体</small>{((t) => (typeof jaWrap === 'function' ? jaWrap(t) : t))(st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…')}</div>
+      <div className="mf-head"><small>合体</small><span style={{ display: 'block', whiteSpace: 'nowrap' }}>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が一つになっていく…'}</span></div>
       {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>飛ばす ⏭</button></div> : null}
       <div className="mf-stage">
         <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>
@@ -84372,6 +84447,14 @@ function MsxBest3({ b, run }) {
   const calm = msxB3Calm();
   const MSX_B3_ROW = msxB3Row();
   const [go, setGo] = React.useState(calm);
+  // 総合力を0から数え上げて見せる(2026-11-20 r1119-033 育-86)。動きを減らす設定では最初から終わりの値
+  const [cnt, setCnt] = React.useState(calm ? (Number(b && b.power) || 0) : 0);
+  React.useEffect(() => {
+    const to = Number(b && b.power) || 0; if (calm || !to) { setCnt(to); return undefined; }
+    const t0 = Date.now(); const D = 900;
+    const id = setInterval(() => { const p = Math.min(1, (Date.now() - t0) / D); setCnt(Math.round(to * (1 - Math.pow(1 - p, 3)))); if (p >= 1) clearInterval(id); }, 30);
+    return () => clearInterval(id);
+  }, []);
   React.useEffect(() => { if (calm) return undefined; const id = setTimeout(() => setGo(true), 250); return () => clearTimeout(id); }, []);
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(go && b.place >= 0 && !calm ? [['awKira', 250]] : [], [go]);
   const next = Array.isArray(b.next) ? b.next : []; const prev = Array.isArray(b.prev) ? b.prev : [];
@@ -84387,12 +84470,14 @@ function MsxBest3({ b, run }) {
   const fmt = (n) => (typeof msxFmt === 'function' ? msxFmt(n) : Number(n).toLocaleString());
   const name = (e) => e.nick || (typeof msxMonName === 'function' ? msxMonName(e.species) : e.species);
   const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : '');
-  const stamp = !inIt ? null : b.place === 0 ? '自己ベスト更新!' : 'ベスト3入り!';
+  // 「自己ベスト更新!」の札はやめ、助手の台詞で言う(二重だった・育-85)。はじめての育成は「はじめての記録」と言い分ける(育-86)
+  const first = inIt && !prev.length;
   return (<>
     {run && typeof MsxMonArt === 'function' ? <div className="v-scene" style={{ flex: '1 1 0', minHeight: 150 }} data-msx-best3-scene>
       <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>{inIt ? <div className="v-burst"/> : null}
       <div className="gr" style={{ bottom: 'calc(10% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '10%', height: '70%' }}/>
-      <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 22 }}>{run.nick || msxMonName(run.s.species)}<small>総合力 {fmt(b.power)}</small></div>
+      {/* 名前と総合力はここで大きく1回だけ。暗い帯を敷いて背景に埋もれないようにする(育-85・育-87) */}
+      <div className="v-stamp msx-pop msx-b3-hero" style={{ top: '6%' }} data-msx-best3-hero>{run.nick || msxMonName(run.s.species)}<small>総合力 <b data-msx-best3-count>{fmt(cnt)}</b></small></div>
     </div> : null}
     <div className="v-h">🏆 自分だけのベスト3<small>これまでに育てたモンスターの、総合力の上位3つ</small></div>
     <div className={`msx-b3${go ? ' go' : ''}${calm ? ' calm' : ''}`} data-msx-best3={inIt ? b.place + 1 : 0} style={{ height: MSX_B3_ROW * 3 + 16 }}>
@@ -84403,15 +84488,15 @@ function MsxBest3({ b, run }) {
           style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8, transform: go ? 'none' : me ? 'scale(.7)' : `translateY(${startOf(i, e)}px)`, opacity: go || !me ? 1 : 0 }}>
           <b className={`pl p${i + 1}`}>{i + 1}</b>
           {thumb(e.species) ? <MsxMonFace species={e.species} colors={e.colors}/> : null}
-          <span className="nm">{name(e)}{me ? <small>今回</small> : null}</span>
+          {me ? <span className="nm"><small>今回</small></span> : <span className="nm">{name(e)}</span>}
           <span className="rk">{e.rank}</span>
-          <b className="pw">{fmt(e.power)}</b>
+          {me ? null : <b className="pw">{fmt(e.power)}</b>}
         </div>);
       })}
     </div>
-    {stamp ? <div className={`msx-b3-stamp${go ? ' on' : ''}`} data-msx-best3-stamp>{stamp}</div>
+    {inIt ? null
       : <div className="v-card" data-msx-best3-miss><div className="v-kv"><b>今回</b><span>総合力 <b>{fmt(b.power)}</b></span></div>{third != null ? <div className="v-kv"><b>3位まで</b><span>あと <b className="yel">{fmt(Math.max(1, third - b.power + 1))}</b></span></div> : null}</div>}
-    {typeof MsxSay === 'function' && run ? <MsxSay aid={run.s.aid} ex={inIt ? 'excited' : 'happy'} text={inIt ? (b.place === 0 ? '「新記録! いちばん強いモンスターが生まれたね!」' : `「ベスト3に入ったよ! ${b.place + 1}番目!」`) : '「次はベスト3をめざそ!」'}/> : null}
+    {typeof MsxSay === 'function' && run ? <MsxSay aid={run.s.aid} ex={inIt ? 'excited' : 'happy'} text={inIt ? (first ? '「はじめての記録! ここから記録を伸ばしていこうね!」' : b.place === 0 ? '「自己ベスト更新! いちばん強いモンスターが生まれたね!」' : `「ベスト3に入ったよ! ${b.place + 1}番目!」`) : '「次はベスト3をめざそ!」'}/> : null}
   </>);
 }
 
@@ -84426,6 +84511,7 @@ const MSX_B3_CSS = `
 .msx-b3 .pl.p1{background:linear-gradient(#fde68a,#d97706);color:#422006}.msx-b3 .pl.p2{background:linear-gradient(#f1f5f9,#94a3b8);color:#1e293b}.msx-b3 .pl.p3{background:linear-gradient(#fdba74,#b45309);color:#431407}
 .msx-b3 .row img{width:40px;height:min(40px,100%);object-fit:contain;flex:0 0 auto}
 .msx-b3 .row .nm{flex:1;min-width:0;font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx .v-stamp.msx-b3-hero{font-size:28px;color:#fff;-webkit-text-stroke:0;background:#0f172acc;padding:6px 16px;border-radius:0;transform:none;text-shadow:0 2px 0 #000,0 0 6px #000}.msx .msx-b3-hero small{color:#fff}.msx .msx-b3-hero small b{color:#fde047;font-size:1.2em}
 .msx-b3 .row .nm small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#fde047;color:#422006;font-size:10px}
 .msx-b3 .row .rk{font-size:13px;font-weight:900;color:#a5f3fc;min-width:26px;text-align:center}
 .msx-b3 .row .pw{font-size:16px;font-weight:900;color:#fde047;min-width:62px;text-align:center}
@@ -85102,8 +85188,8 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   const TAB_ICON = { story: '📕', daily: '☀️', team: '🤝', self: '🌱', season: '🎐', cup: '🏆', issa: '🧪', awake: '✨' };
   const aids = [...new Set(list.story.map((x) => x.aid))];
   return (
-    <ModalSheet title={<span className="mdx-ttl">📖 イベント図鑑<b>{got}<small> / {all.length}</small></b></span>} label="イベント図鑑" onClose={onClose} dataProps={{ 'data-msx-dex': '' }} bodyClassName="mdx"
-      footer={open ? <ModalSheetButton back onClick={() => (chosen ? setChosen(null) : setOpen(null))} data-msx-dex-back>{chosen ? '← 選ぶ前に戻る' : '← 一覧へ戻る'}</ModalSheetButton> : null}>
+    // 1つ前へは見出しの左の「← 戻る」、下のボタンはいつも「閉じる」(図鑑ごと閉じる)にそろえる(下の働きが画面ごとに変わっていた。r1119-033 窓-15)
+    <ModalSheet title={<span className="mdx-ttl">{open ? <button type="button" className="mdx-hbk" data-mh-back onClick={(e) => { e.stopPropagation(); if (chosen) setChosen(null); else setOpen(null); }} data-msx-dex-back>← 戻る</button> : null}📖 イベント図鑑<b>{got}<small> / {all.length}</small></b></span>} label="イベント図鑑" onClose={onClose} dataProps={{ 'data-msx-dex': '' }} bodyClassName="mdx">
       {/* 出口は1つ(⑥ #6889・#6898): 読んでいる間は足のボタンが「戻る」、一覧では「閉じる」 */}
       {open ? null : <div className="mdx-bar"><i style={{ width: `${all.length ? (got / all.length) * 100 : 0}%` }}/></div>}
       {/* 分類の札は 4つ×2段の升目(2026-11-20 API 点検: 横に流すと右の札が「育成モン」で切れて読めない)。字は短い名前、正式な名前は読み上げの名札に */}
@@ -85141,6 +85227,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
 
 const MSX_DEX_CSS = `
 .mdx-ttl{display:flex;align-items:baseline;gap:10px;width:100%}
+.mdx-hbk{flex:none;align-self:center;min-height:44px;padding:0 10px;border-radius:99px;background:#334155;border:1px solid #ffffff33;font-size:12px;font-weight:900;color:#e0f2fe;white-space:nowrap}
 .mdx-ttl b{margin-left:auto;font-size:17px;color:#fde047}.mdx-ttl b small{font-size:12px;color:#cbd5e1}
 .mdx{display:flex;flex-direction:column;gap:8px;color:#f1f5f9}
 .mdx-bar{height:7px;border-radius:9px;background:#1e293b;overflow:hidden;flex:none}
@@ -85378,6 +85465,29 @@ function MsxBuffPop({ b, onClose }) {
   return typeof document !== 'undefined' && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(node, document.body) : node;
 }
 
+// 決まった時間で自動に次へ進める見えない部品(月替わりの画面・育-20・育-96)。一度だけ呼ぶ。止め絵を撮る道具(navigator.webdriver)では動かさない
+function MsxAutoNext({ ms = 1500, onGo }) {
+  const done = React.useRef(false);
+  React.useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.webdriver) return undefined;
+    const id = setTimeout(() => { if (done.current) return; done.current = true; onGo(); }, ms);
+    return () => { done.current = true; clearTimeout(id); };
+  }, []);
+  return null;
+}
+// 悪い「ようす」の札。押すと何にどれだけ効くか・治し方を1行で出す(2026-11-20 r1119-033 育-106: 通院すべきか決められなかった)
+//   数字は芯(data/monhero-success.js)の RATE.saboriGuse(失敗率 +5%)・CLINIC(通院 1回目70%・2回目は必ず)のまま
+const MSX_YOSU_TIP = {
+  sabori: ['😪', 'サボりグセ', 'トレーニングの失敗率が +5%。治るまで続く。通院で治る(1回目は70%・2回目は必ず)'],
+  utsu: ['😢', 'どんより', '忠誠度(甘え・恐れ)が動かなくなる。治るまで続く。遊ぶか通院で治る'],
+};
+function MsxYosuChips({ s }) {
+  const [tip, setTip] = useState(null);
+  const keys = ['sabori', 'utsu'].filter((k) => s && s.yosu && s.yosu[k]);
+  if (!keys.length) return null;
+  return (<>{keys.map((k) => { const [ic, nm] = MSX_YOSU_TIP[k]; return (
+    <button type="button" key={k} className={`v-chip bad msx-yosu-chip${tip === k ? ' on' : ''}`} aria-expanded={tip === k} data-msx-yosu={k} onClick={() => setTip(tip === k ? null : k)}>{ic} ようす: {nm}<small className="v-chip-sub">{tip === k ? MSX_YOSU_TIP[k][2] : '押すと効き目'}</small></button>); })}</>);
+}
 function MsxBuffChips({ s }) {
   msxBuffEnsureCss();
   const [open, setOpen] = useState(null);
@@ -85471,9 +85581,10 @@ function MsxBetaTalk({ keys, ctx = {}, always = false, onDone }) {
   return (
     <div className="msx-ov msx-fade msx-beta-ov" data-msx-beta={k} onClick={atChoice ? undefined : next}>
       <div className="msx-beta-card" onClick={(e) => { e.stopPropagation(); if (!atChoice) next(); }}>
-        <div className="msx-beta-tag">{MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあの説明'}</div>
+        {/* 話し手の名前は上の札の1つだけ(吹き出しの中の「みゅあ」と二重だった。r1119-033 窓-12) */}
+        <div className="msx-beta-tag">{MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあ'}</div>
         {narr ? <div className="msx-beta-narr">{l.t}</div> : (
-          <div className="msx-beta-say"><img className="fc" src={msxFace('mua', l.e || 'happy')} alt=""/><div className="bub"><span className="who">みゅあ</span>{l.t}</div></div>
+          <div className="msx-beta-say"><img className="fc" src={msxFace('mua', l.e || 'happy')} alt=""/><div className="bub">{l.t}</div></div>
         )}
         {atChoice ? (
           <div className="msx-beta-opts">{choices.map((ch) => <button type="button" key={ch.c} className="msx-btn go" onClick={(e) => { e.stopPropagation(); choose(ch.c); }}>{ch.t}</button>)}</div>
@@ -85489,6 +85600,10 @@ function MsxBetaMark() { return <span className="msx-beta-mk" data-msx-beta-mark
 const MSX_BETA_CSS = `
 .msx .msx-beta-mk{display:inline-block;margin-left:5px;padding:0 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;font-weight:900;line-height:17px;vertical-align:2px;letter-spacing:0}
 .msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px;background:#0b092073}
+/* ストーリー選択の説明は「ストーリー詳細」のボタンを指すので、箱を上に出し、ボタンを光らせる(箱の下に隠れていた。r1119-033 窓-13) */
+.msx .msx-beta-ov[data-msx-beta="scn"]{align-items:flex-start;padding-top:calc(14px + var(--mh-sa-top,0px))}
+@keyframes msxBetaPoint{0%,100%{box-shadow:0 0 0 2px #fde047,0 0 10px #fde047aa}50%{box-shadow:0 0 0 4px #fde047,0 0 22px #fde047}}
+.msx:has([data-msx-beta="scn"]) [data-msx-scenario-detail]{position:relative;z-index:61;animation:msxBetaPoint 1.1s ease-in-out infinite}
 /* 下に決める・進むボタンの帯(.v-ft)がある画面では、その上に出す(帯のボタンに重ねない。r1120 ミハリ・Q-3-1) */
 .msx:has(>.v-ft) .msx-beta-ov,.msx:has(.v-ft) .msx-beta-ov{padding-bottom:calc(var(--msx-ft-h,64px) + 14px)}
 .msx .msx-beta-card{width:100%;max-width:420px;background:#1e1b3a;border:2px solid #f9a8d4;border-radius:14px;padding:10px 12px 8px;box-shadow:0 6px 24px #0008;cursor:pointer}
@@ -85557,7 +85672,8 @@ const MSX_SCN_CSS = `
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
-.msx .scn-hd .bk{flex:none;background:#f59e0b;color:#fff;border:2px solid #fff;border-radius:9px;font-weight:900;font-size:13px;padding:6px 10px;box-shadow:0 2px 0 #0003;margin-right:10px}
+/* 戻るはほかのモンサクの画面と同じ丸い形にそろえる(金色の四角だった。r1119-049 窓-33) */
+.msx .scn-hd .bk{flex:none;display:inline-flex;align-items:center;min-height:36px;background:#2b3348;color:#fff;border:0;border-radius:99px;font-weight:900;font-size:11px;padding:4px 10px;margin-right:10px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
@@ -85593,7 +85709,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   return (
     <div className="scn" data-msx-scenario={sc.id}>
       <style>{MSX_SCN_CSS}</style>
-      <div className="scn-hd"><button type="button" className="bk" onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
+      <div className="scn-hd"><button type="button" className="bk" data-mh-back onClick={onBack}>← 戻る</button><span>📖 ストーリー選択</span>{many ? <small>ストーリー {idx + 1}/{n}</small> : null}</div>{/* 1本だけのときは「1/1」も点も出さず、下の「準備中」の1文だけで伝える(再点検 msx-S0: 同じことを3か所で言っていた) */}
       <div className="scn-sc">
         <img className="bg" src="images/story-bg/monsuc_farm.webp" alt=""/>
         {sc.cast.left ? <img className="who l" src={mon(sc.cast.left)} alt=""/> : null}
@@ -85737,7 +85853,9 @@ const msxTevPops = (s, o) => {
   msxTevChanges(s, o).filter((t) => !/親密度/.test(t)).forEach((t) => {
     const tx = t.replace(/^[^ぁ-んァ-ヶ一-龠A-Za-z0-9]+\s*/, '');
     const sub = d && /^体力/.test(tx) ? fromTo(s.hp, d.hp, s.hpMax) : d && /^ストレス/.test(tx) ? fromTo(s.stress, d.stress, 100) : '';
-    out.push({ k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up', t: tx, sub });
+    // 体力・ストレスは、親密度と同じ「棒つきの箱」で前から後へ動かす(上の帯は畳んでいるので、ここが持ち場)
+    const g = d && /^体力/.test(tx) && d.hp ? { lb: '体力', to: s.hp, from: s.hp - d.hp, max: s.hpMax } : d && /^ストレス/.test(tx) && d.stress ? { lb: 'ストレス', to: s.stress, from: s.stress - d.stress, max: 100 } : null;
+    out.push({ k: /−/.test(t) && !/ストレス/.test(t) ? 'dn' : /ストレス|体力/.test(tx) ? 'gd' : 'up', t: tx, sub, g });
   });
   return out;
 };
@@ -85748,8 +85866,17 @@ const msxTevNextText = (run, o) => {
   const ST = msxSuc && msxSuc.SUC && msxSuc.SUC.STORY;
   if (!e.story || e.story >= 3 || !ST || !ST[e.story]) return '';
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、また${name}と\nいっしょにトレーニングしたとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
+  return s.bond[e.who] >= ST[e.story].need ? `その${e.story + 1}は、${name}の顔が出ている\nトレーニングをまた選んだとき` : `その${e.story + 1}は、${name}との\n親密度が ${ST[e.story].need} になったら`;
 };
+
+// 体力・ストレスの棒つきの箱(前の値から後の値へ動く)
+function MsxTevGauge({ g, t, delay = 0, kind = '', children = null }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => { const id = setTimeout(() => setOn(true), delay * 1000 + 250); return () => clearTimeout(id); }, []);
+  const v = on ? g.to : g.from; const max = Math.max(1, g.max);
+  return <div className={`tev-gauge${kind ? ` ${kind}` : ''}`} style={{ animationDelay: `${delay}s` }} data-msx-tev-gauge={kind || g.lb}>
+    <span>{t}</span><i><b style={{ width: `${Math.max(0, Math.min(100, (v / max) * 100))}%` }}/></i><em><small>{Math.round(g.from)} → </small>{Math.round(v)}<small>/{Math.round(max)}</small></em>{on ? children : null}</div>;
+}
 
 function MsxTevMini({ s, v }) {
   const cal = typeof msxCalendar === 'function' ? msxCalendar(s.turn) : null;
@@ -85799,14 +85926,18 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
     ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
     : <img src={msxMonImg(m.species)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>) : null;
   return (<>
-    <div className={`v-scene msx-tev s-${style} tb${b}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style} data-msx-tev-beat={sum ? 'sum' : b} onClick={sum ? undefined : next}>
+    <div className={`v-scene msx-tev s-${style} tb${b}${bk ? ' bondb' : ''}${surprise ? ' wow' : ''}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style} data-msx-tev-beat={sum ? 'sum' : b} onClick={sum ? undefined : next}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className={`tev-who me${pair ? ' pair' : ''}`}><div className="gr"/><MsxMonArt run={run} className="tev-art" style={{}} live/>{surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? <span className="tev-bang" aria-hidden="true">!!</span> : null}{b === 2 && surprise ? <span className="tev-q" aria-hidden="true">?</span> : null}</div>
       {m ? <div className={`tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`}><div className="gr"/><div className="tev-art">{palImg}</div></div> : null}
+      {pair && b !== 6 ? <><span className="tev-nm me">{run.nick || ''}</span>{m ? <span className={`tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`}>{name}</span> : null}</> : null}
       {b === 5 && !bk && !calm ? <div className="tev-dust" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ animationDelay: `${k * 0.07}s`, top: `${44 + (k % 3) * 6}%` }}/>)}</div> : null}
       {b >= 2 ? <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={title}/> : null}
-      {((b === 5 && bk) || b === 6) && bondUp ? <div className={`tev-bond${bk ? ' big' : ''}${bondOn && bondNow >= 100 ? ' max' : ''}`} data-msx-tev-bond-row><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%` }}/></i><em data-msx-tev-bond>{bondShow}<small>/100</small>{bondNow !== bondFrom ? <small className="dl"> ({bondNow > bondFrom ? '+' : ''}{bondNow - bondFrom})</small> : null}</em>{bondOn && bondNow >= 100 ? <strong className="mx">MAX!</strong> : null}</div> : null}
-      {b === 5 && !bk ? <div className="tev-pops" data-msx-tev-pops>{pops.map((p, k) => <b key={k} className={`tev-pop ${p.k}`} style={{ animationDelay: `${0.3 + k * 0.7}s` }}>{p.t}{p.sub ? <small>{p.sub}</small> : null}</b>)}</div> : null}
+      {b === 5 && bk && bondUp ? <div className="tev-pops" data-msx-tev-bond-row><MsxTevGauge g={{ lb: '親密度', from: bondFrom, to: bondNow, max: 100 }} t={`💗 ${name}との親密度 ${bondNow - bondFrom > 0 ? '+' : ''}${bondNow - bondFrom}`} kind={`bd${bondNow >= 100 ? ' max' : ''}`} delay={0.2}>{bondNow >= 100 ? <><strong className="mx">MAX!</strong><small className="cap">これ以上は上がりません</small></> : null}</MsxTevGauge></div> : null}
+      {b === 5 && bk && !calm ? <div className="tev-hearts" aria-hidden="true">{[0, 1, 2, 3, 4].map((k) => <i key={k} style={{ left: `${36 + k * 7}%`, animationDelay: `${0.5 + k * 0.12}s` }}>♥</i>)}</div> : null}
+      {b === 5 && !bk ? <div className="tev-pops" data-msx-tev-pops>{pops.map((p, k) => (p.g
+        ? <MsxTevGauge key={k} g={p.g} t={p.t} kind={/ストレス/.test(p.g.lb) ? 'st' : 'hp'} delay={0.3 + k * 0.7}/>
+        : <b key={k} className={`tev-pop ${p.k}`} style={{ animationDelay: `${0.3 + k * 0.7}s` }}>{p.t}{p.sub ? <small>{p.sub}</small> : null}</b>))}</div> : null}
       {talk ? <div className={`v-talk tev-talk${aidWho ? ' say' : ' narr'}`} style={JA_LABEL_STYLE} key={i} data-msx-tev-talk={aidWho ? 'say' : 'narr'}>
         {aidWho ? <><img className="fc" src={msxFace(aidWho, talk.e || 'happy')} alt=""/><span className="who">{msxAidName(aidWho)}</span></> : null}
         <div>{jaWrap(talk.t)}</div>
@@ -85815,8 +85946,8 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
       {b === 5 ? <div className="v-talk tev-talk narr" style={JA_LABEL_STYLE} key={`res${i}`} data-msx-tev-talk="res"><div>{jaWrap(bk ? (bondNow >= 100 ? `${name}と、すっかり なかよしになった!` : `${name}との距離が、ぐっと縮まった。`) : (MSX_TEV_RES[e.story ? 'self' : e.lottery] || MSX_TEV_RES.self)(name))}</div></div> : null}
       {b === 6 && nx ? <div className="tev-next" data-msx-ev-next><b>つづく</b><span style={JA_WRAP_STYLE}>{nx.split('\n').map((t, k) => <React.Fragment key={k}>{k ? <br/> : null}{jaWrap(t)}</React.Fragment>)}</span></div> : null}
       {sum ? <div className="tev-sum" data-msx-tev-sum>
-        {bondUp ? <div className="r bd">💗 {name}との親密度{bondNow >= 100 ? ' MAX!' : ` +${bondNow - bondFrom}`}<small style={{ display: 'block' }}>{bondFrom} → {bondNow}</small></div> : null}
-        {pops.map((p, k) => <div key={k} className={`r ${p.k}`}>{p.t}{p.sub ? <small> {p.sub}</small> : null}</div>)}
+        {bondUp ? <div className="r bd">💗 {name}との親密度{bondNow >= 100 ? ' MAX!' : ` +${bondNow - bondFrom}`}<small style={{ display: 'block' }}>{bondFrom} → {bondNow}{bondNow >= 100 ? '(これ以上は上がりません)' : ''}</small></div> : null}
+        {pops.map((p, k) => <div key={k} className={`r ${p.k}`}>{p.t}{p.sub ? <small> {p.sub}</small> : p.k === 'st' && ups ? <small> ({s.stats[e.d.stat] - e.d.up} → {s.stats[e.d.stat]})</small> : null}</div>)}
         {nx ? <div className="nx"><b>つづく</b><span style={JA_WRAP_STYLE}>{nx.split('\n').map((t, k) => <React.Fragment key={k}>{k ? <br/> : null}{jaWrap(t)}</React.Fragment>)}</span></div> : null}</div> : null}
       {style === 'b' && b === 1 ? <div className="tev-in-b" aria-hidden="true"><div className="band">{typeof MsxMonFace === 'function' ? <MsxMonFace species={s.species} colors={run.colors}/> : <img src={msxMonThumb(s.species)} alt=""/>}<b>{title}!</b>{m && typeof MsxMonFace === 'function' ? <MsxMonFace species={m.species} colors={m.colors}/> : <img src={m ? msxMonThumb(m.species) : ''} alt=""/>}</div></div> : null}
     </div>
@@ -85843,7 +85974,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-who .gr{left:50%;bottom:-3%;width:70%;height:10%}
 .msx .msx-tev.tb2 .tev-who.me{animation:tevWob 1.1s ease-in-out infinite}
 @keyframes tevWob{0%,100%{rotate:-3deg}50%{rotate:3deg}}
-.msx .msx-tev .tev-q{position:absolute;right:4%;top:-4%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-q{position:absolute;right:20%;top:2%;font-size:26px;font-weight:900;color:#e0e7ff;-webkit-text-stroke:2px #312e81;paint-order:stroke fill;animation:tevBang .5s .3s cubic-bezier(.2,1.6,.4,1) both}
 .msx .msx-tev .tev-bang{position:absolute;right:0;top:-8%;font-size:36px;font-weight:900;font-style:italic;color:#fde047;-webkit-text-stroke:3px #7c2d12;paint-order:stroke fill;animation:tevBang .5s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes tevBang{from{opacity:0;scale:.3}to{opacity:1;scale:1}}
 .msx .msx-tev.wow.tb3{animation:tevShake .42s .1s ease-out both}
@@ -85875,22 +86006,45 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond.big em small.dl{font-size:17px}
 .msx .msx-tev .tev-sum .r small{font-size:12px;color:#cbd5e1}
 .msx .msx-tev .tev-sum .nx{display:flex;gap:8px;align-items:baseline}
-.msx .msx-tev .tev-pop.st{font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
+.msx .msx-tev .tev-pop.st{animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both,tevToRow .7s 1.5s ease-in forwards;font-size:38px;font-style:italic;color:#fef08a;-webkit-text-stroke-color:#a16207;text-shadow:0 0 18px #fde047}
 .msx .msx-tev .tev-pop.gd{-webkit-text-stroke-color:#0f766e;text-shadow:0 0 14px #5eead4}
 .msx .msx-tev .tev-who.pal.on.tsh{opacity:.45}
 .msx .msx-tev .tev-bond.big{top:58px;left:12%;right:12%;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:16px;font-size:13px;background:#1f0f2ee6;border:2px solid #f472b6}
 .msx .msx-tev .tev-bond.big i{flex:1 1 100%;height:12px}
 .msx .msx-tev .tev-bond.big em{font-size:18px}
+.msx .msx-tev .tev-bond.big .cap{flex:1 1 100%;text-align:center;font-size:11px;color:#e9d5ff;font-weight:800}
 .msx .msx-tev .tev-bond.big .mx{font-size:22px}
 .msx .msx-tev .tev-sum .r.bd{color:#fbcfe8;font-size:19px}
 .msx .msx-tev .tev-pop.dn{-webkit-text-stroke-color:#1e3a8a;text-shadow:none}
+@keyframes tevToRow{to{opacity:0;scale:.35;translate:0 260px}}
 @keyframes tevPop{0%{opacity:0;scale:.2;translate:0 30px}60%{opacity:1;scale:1.15}100%{opacity:1;scale:1;translate:0}}
 .msx .msx-tev .tev-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
 .msx .msx-tev .tev-dust i{position:absolute;left:70%;width:9px;height:9px;border-radius:50%;background:#fef9c3;box-shadow:0 0 10px #fde047,0 0 4px #fff;animation:tevDust .75s ease-in both}
 @keyframes tevDust{0%{left:70%;opacity:0}20%{opacity:1}100%{left:30%;opacity:0;scale:.4}}
+.msx .msx-tev .tev-pops:has(.tev-gauge){top:56px}
+.msx .msx-tev .tev-gauge{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:78%;padding:10px 14px;border-radius:16px;background:#0f0d24eb;border:2px solid #5eead4;color:#fff;font-weight:900;animation:tevPop .6s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-gauge>span{flex:1 1 100%;text-align:center;font-size:19px;color:#f1f5f9}
+.msx .msx-tev .tev-gauge i{flex:1;height:12px;border-radius:8px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-gauge i b{display:block;height:100%;background:linear-gradient(90deg,#2dd4bf,#5eead4);transition:width .9s ease-out}
+.msx .msx-tev .tev-gauge.st i b{background:linear-gradient(90deg,#a78bfa,#c084fc)}
+.msx .msx-tev .tev-gauge.bd{border-color:#f472b6}
+.msx .msx-tev .tev-gauge.bd i b{background:linear-gradient(90deg,#f472b6,#fb7185)}
+.msx .msx-tev .tev-gauge.bd.max{box-shadow:0 0 0 2px #fde047,0 0 18px #f472b6}
+.msx .msx-tev .tev-gauge em{font-style:normal;font-size:18px;white-space:nowrap}
+.msx .msx-tev .tev-gauge em small{font-size:12px;color:#cbd5e1}
+.msx .msx-tev .tev-gauge .mx{flex:1 1 100%;text-align:center;color:#fde047;font-size:22px;font-style:italic;animation:tevBang .45s cubic-bezier(.2,1.6,.4,1) both}
+.msx .msx-tev .tev-gauge .cap{flex:1 1 100%;text-align:center;font-size:11px;color:#e9d5ff;font-weight:800}
+.msx .msx-tev .tev-hearts{position:absolute;inset:0;z-index:3;pointer-events:none}
+.msx .msx-tev .tev-hearts i{position:absolute;bottom:52%;font-style:normal;font-size:22px;color:#f472b6;text-shadow:0 0 8px #fff;animation:tevHeart 1.4s ease-out both}
+@keyframes tevHeart{0%{opacity:0;translate:0 20px;scale:.5}30%{opacity:1;scale:1.1}100%{opacity:0;translate:0 -70px;scale:1}}
+.msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
+.msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
+.msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
+.msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
-.msx .msx-tev .tev-next b{color:#fdba74;white-space:nowrap;font-size:12px}
-.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
+.msx .msx-tev .tev-next b{color:#94a3b8;white-space:nowrap;font-size:12px}
+.msx .msx-tev .tev-sum{position:absolute;left:8px;right:8px;top:58px;z-index:5;background:#0f0d24eb;border:1px solid #f472b6;border-radius:14px;padding:12px 14px;color:#fff;display:flex;flex-direction:column;gap:6px;text-align:center;cursor:default}
 .msx .msx-tev .tev-sum .h{font-size:12.5px;color:#fbcfe8;font-weight:900}
 .msx .msx-tev .tev-sum .r{font-size:17px;font-weight:900}
 .msx .msx-tev .tev-sum .r.st{color:#fef08a;font-size:22px}
@@ -86029,10 +86183,10 @@ function MsxQfxRows({ run, o, keys }) {
         <span className="qg-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
         <span className="qg-bar"><i className="qg-base"/>{parts.map((x, n) => { const w = (x.v / maxG) * 42; const l = 52 + acc; acc += w;
           return <i key={n} className="qg-seg" style={{ left: `${l}%`, width: `${w}%`, background: x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length], '--d': `${0.35 + (d0 + n) * 0.3}s` }}/>; })}</span>
-        <span className="qg-v"><small>{msxFmt(before)}→</small><b style={{ '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s` }}>{msxFmt(after)}</b></span>
+        <span className="qg-v"><small>{msxFmt(before)}</small><b style={{ '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s` }}>→{msxFmt(after)}</b></span>
         <span className="qg-parts">{parts.map((x, n) => { const m = x.src === 'team' ? (s.team || [])[x.i] : null;
           return (<span key={n} className={`qg-p ${x.src}`} style={{ '--d': `${0.3 + (d0 + n) * 0.3}s`, '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length] }} data-msx-qg-part={x.src}>
-            {m ? <MsxMonFace species={m.species} colors={m.colors}/> : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{['得意1', '得意2', '得意3'][x.top] || '得意'}</small> : <small>行き先</small>}
+            {m ? <MsxMonFace species={m.species} colors={m.colors}/> : <em>⛰️</em>}<b>+{x.v}</b>{m ? <small>{typeof msxMemberName === 'function' ? msxMemberName(m) : '編成'}</small> : <small>行き先</small>}
             <i className="fly" aria-hidden="true">+{x.v}</i></span>); })}</span>
       </div>); })}
   </div>);
@@ -86234,7 +86388,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .qg-p{position:relative;display:inline-flex;align-items:center;gap:3px;padding:1px 6px 1px 2px;border-radius:99px;background:#1e293b;border:1.5px solid var(--c);animation:msxQgIn .3s ease-out var(--d) both}
 .msx .msx-qst .qg-p img{width:22px;height:22px;border-radius:50%;background:#fff;object-fit:contain}.msx .msx-qst .qg-p em{font-style:normal;font-size:15px;width:22px;text-align:center}
 .msx .msx-qst .qg-p b{font-size:12.5px;font-weight:900;color:var(--c)}.msx .msx-qst .qg-p small{font-size:9.5px;font-weight:800;color:#cbd5e1}
-.msx .msx-qst .qg-p .fly{position:absolute;left:8px;top:-4px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
+.msx .msx-qst .qg-p .fly{position:absolute;left:auto;right:-6px;top:-18px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
 .msx .msx-qst .qg-cap{position:absolute;left:8px;right:8px;bottom:8px;text-align:center;font-size:11.5px;font-weight:800;color:#f8fafc;text-shadow:0 1px 2px #000;z-index:4;background:#0b0920a6;border-radius:8px;padding:3px 6px}
 .msx .msx-qst .qlot{position:absolute;left:8px;right:8px;bottom:24px;display:grid;gap:6px;z-index:4}
 .msx .msx-qst .ql{display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"ti nm rs" "lb lb lb";column-gap:8px;row-gap:5px;align-items:center;background:#0f172ae6;border:2px solid #64748b;border-radius:12px;padding:6px 9px;animation:msxActBan .3s ease-out var(--d) both}
@@ -89685,6 +89839,7 @@ const MSX_CSS = `
 .msx.land{}
 .msx .v-hd{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:4px 10px 0}
 .msx .v-hd .bk{background:#2b3348;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-hd .bk.pause{background:#3b0d18;border:1.5px solid #f87171aa;color:#fecaca;border-radius:8px}
 .msx .v-hd .ti{flex:1;min-width:0;font-size:12.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-hd .ti small{color:#cbd5e1;font-size:10px;font-weight:700;margin-left:4px}
 .msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
@@ -89908,6 +90063,7 @@ const MSX_CSS = `
 .msx .v-fx .ch i{font-style:normal;color:#94a3b8}
 .msx .v-fx .t .mx{color:#fde047;font-size:15px}
 .msx .v-chip .v-chip-sub{display:block;font-size:9.5px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
+.msx button.v-chip.msx-yosu-chip{font-family:inherit;color:#fff;text-align:left;cursor:pointer;min-height:30px}.msx .msx-yosu-chip.on{white-space:normal;max-width:min(260px,70vw);border-radius:12px}
 .msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
 .msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
 .msx .v-stamp{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;line-height:1;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 26px #fb923c,0 0 50px #fde047;transform:rotate(-4deg);white-space:nowrap}
@@ -90310,10 +90466,11 @@ const MSX_CSS = `
 .msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
 .msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
 .msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff}
-.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0003;cursor:pointer;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
 .msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
 .msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
-.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}
+/* 賞品の説明は窓を重ねず、吹き出しにして押すと消える(閉じるが2つ並んでいた。r1119-033 窓-10) */
+.msx .v-cupwin .dbox{box-shadow:0 6px 16px #0006}.msx .v-cupwin .dbox .hint{display:block;font-size:10.5px;font-weight:800;color:#64748b}
 .msx .v-cupwin .dbox .own{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#1e1b4b;margin:0 0 8px;text-align:left}.msx .v-cupwin .dbox .own i{font-style:normal;background:#92400e;color:#fff;border-radius:99px;padding:2px 10px}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
@@ -90623,7 +90780,7 @@ const MSX_CSS = `
 /* r1115-150: 覚えた技(熟練の行あり)と覚えていない技(覚え方の行)を押し分けても、右の欄の高さで窓がずれないように。
    2列のときは右の欄の高さを左の技の表に合わせ(contain:size で中身の高さを列の高さへ出さない)、はみ出す分は欄の中だけスクロール */
 /*   2026-11-20 M1D: 升目の下に並べた。押し分けても升目・閉じるが動かないよう欄の高さは決める(r1115-150)。ふつうの技は全部入る 280px、熟練と選び替えが両方ある技だけ欄の中で送る */
-.msx-md-tw>.msx-md-td{contain:none;height:280px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.msx-md-tw>.msx-md-td{contain:none;height:auto;min-height:300px;overflow:visible} /* 欄の中で切れていた(育-42)。高さは中身に合わせ、升目より下なので升目・閉じるは動かない */
 @container (max-width: 359px){.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
 /* 育成中の「能力」(いじる物だけ・2026-11-14) */
 .msx-ab-row{display:flex;align-items:center;gap:6px;margin-top:5px}
@@ -90854,7 +91011,9 @@ const MSX_CSS = `
 .msx .msx-tp-ov{padding:0;align-items:stretch;justify-content:stretch;background:#0b0920;z-index:45}
 .msx .msx-tp{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;height:100%;min-height:0;background:linear-gradient(180deg,#241d4a,#16122e)}
 .msx .msx-tp>*{flex:none;align-self:stretch;min-width:0}
-.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
+.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}
+/* 選ぶ画面の戻るは左上の丸いボタン(ほかの画面と同じ形・押せる高さ44px。r1119-033 窓-45・53) */
+.msx .msx-tp-hd{align-items:center;flex-wrap:wrap}.msx .msx-tp-hd .bk{flex:none;min-height:44px;padding:0 12px;border-radius:99px;background:#2b3348;font-size:11.5px;font-weight:900;white-space:nowrap}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
 .msx .msx-tp-tm .fc{flex:none;display:block;width:100%;height:auto;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
@@ -90953,7 +91112,10 @@ const MSX_CSS = `
 .msx .v-gfx .r.st .tr i{background:linear-gradient(90deg,#c4b5fd,#8b5cf6)}
 .msx .v-gfx .r.bd .tr i{background:linear-gradient(90deg,#fca5a5,#ef4444)}
 .msx .v-gfx .v{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;min-width:3.4em;text-align:right}
-.msx .v-gfx .dl{position:absolute;right:0;top:-8px;font-style:normal;font-size:13px;font-weight:900;pointer-events:none;animation:msxGfxFloat 1.6s ease-out both;text-shadow:0 1px 0 #000}
+/* 増減の数字は値の左の決まった欄に出す(箱のふちからはみ出し、PC では値と重なっていた・2026-11-20 r1119-033 育-99) */
+.msx .v-gfx .r{grid-template-columns:minmax(64px,28%) 1fr auto auto}.msx .v-gfx .r .v{order:2}
+.msx .v-gfx .dl{order:1;position:static;min-width:2.8em;text-align:right;font-style:normal;font-size:13px;font-weight:900;pointer-events:none;animation:msxGfxPop .5s cubic-bezier(.3,1.6,.6,1) both;text-shadow:0 1px 0 #000}
+@keyframes msxGfxPop{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
 .msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
 @keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
 @media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
@@ -90995,7 +91157,13 @@ const MSX_CSS = `
 .msx .msx-ef-tabs button{position:relative;flex:1 1 0;display:flex;align-items:center;justify-content:center;padding:0;height:36px;margin:4px 0;border-radius:10px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:900}
 .msx .msx-ef-tabs button::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
 .msx .msx-ef-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;border-color:transparent}
-.msx .msx-ef-how{font-size:11px;color:#cbd5e1;line-height:1.5;margin:0 0 6px}
+.msx .msx-ef-how{font-size:11px;color:#cbd5e1;line-height:1.5;margin:0 0 6px}.msx .msx-ef-how>span{display:block}
+.msx .msx-md-legb{display:inline-flex;align-items:center;min-height:32px;padding:0 10px;margin:2px 0;border-radius:9px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11.5px;font-weight:900}
+.msx .msx-ef-hd .ds{font-size:11px;color:#e2e8f0;font-weight:700;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+.msx .msx-ef-row.grp{border-left:4px solid #fb923c}.msx .msx-ef-hd .cap span{display:inline-block}
+.msx .msx-ef-hd .ds b{color:#fde68a}.msx .msx-ef-hd .ds b.nw{white-space:nowrap}
+.msx .msx-ef-ex p.capn{font-size:10.5px;color:#f9a8d4;margin:4px 0}
+.msx .msx-ef-mrow .chips span .why{display:block;font-size:10px;color:#fca5a5;font-weight:800}
 .msx .msx-ef .one{display:inline-block;margin-left:5px;padding:0 6px;border-radius:7px;background:#7c3aed;color:#fff;font-size:10px;font-style:normal;font-weight:900;line-height:1.6;vertical-align:1px}
 .msx .msx-ef-row{border:1px solid #3b3566;border-radius:12px;background:#1e1a36;margin-bottom:6px;overflow:hidden}
 .msx .msx-ef-row.on{border-color:#f472b6}
@@ -91018,7 +91186,7 @@ const MSX_CSS = `
 .msx .msx-ef-mrow .hd{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.msx .msx-ef-mrow .hd b{font-size:13px;flex:1 1 auto;text-align:left}.msx .msx-ef-mrow .hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-ef-mrow .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .msx .msx-ef-mrow .chips span{font-size:11px;font-weight:800;background:#0f172a;border:1px solid #475569;border-radius:8px;padding:2px 7px}.msx .msx-ef-mrow .chips span b{color:#fde68a}
-.msx .msx-ef-mrow .chips span.dim{opacity:.5}.msx .msx-ef-mrow .chips .none{color:#94a3b8}
+.msx .msx-ef-mrow .chips span.dim{opacity:.75}.msx .msx-ef-mrow .chips .none{color:#94a3b8}
 /* Muse id51(④段3): 技詳細の項目名の列を中身の幅に合わせる。8.1em 固定だと、いちばん長い「クリティカル率」の行だけ値が右へずれていた。
    技詳細の欄(.msx-md-td)を2列の grid にし、各行は subgrid で同じ列に載せる(subgrid の無い端末は今までの 8.1em のまま) */
 @supports (grid-template-columns:subgrid){
@@ -91926,7 +92094,9 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       {/* 「中断」は1つ前へ戻るのではなく、育成をいったんやめる(続きから遊べる)ボタンなので、戻るの矢印を付けない(2026-11-20 r1119-013 ⑥ API 点検) */}
-      <button type="button" className="bk" data-mh-back onClick={onBack}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button>
+      {/* 中断は戻ると同じ場所・同じ形だと、戻るつもりで育成を中断しそうになる。赤い別の形にする(r1119-033 窓-22・31・34・46・47)。
+          back が空のとき(お話・結果の流れの中)は左上に何も出さず、下の「次へ」だけで進める(窓-29・30・43) */}
+      {back ? <button type="button" className={`bk${back === '中断' ? ' pause' : ''}`} data-mh-back onClick={onBack} data-msx-hd-pause={back === '中断' ? '' : undefined}>{back === '中断' ? '⏸ 中断' : `← ${back}`}</button> : null}
       {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
       {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
         : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
@@ -92048,6 +92218,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const [tab, setTab] = useState('base');
   const [btab, setBtab] = useState(() => (initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech')); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)。initialTab='assist' でアシストから開く(編成の効果確認)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
+  const [legOpen, setLegOpen] = useState(false); // 升目の見方(押して開く。表の上に小さな字で詰めていた・API 再点検 2026-11-20)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
@@ -92071,7 +92242,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 超えた矛盾した表示になる(2026-11-18 実機報告・ランキング詳細)。cap がある画面では値は上限以下なので変わらない
   const capBase = (k) => (SUC && typeof SUC.statCapOf === 'function' ? SUC.statCapOf({ cap }, k) : (cap && Number.isFinite(cap[k]) ? Math.max(999, cap[k]) : 999));
   const capK = (k) => Math.max(capBase(k), Number(st && st[k]) || 0);
-  const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
+  // 間合い適性は下の技の升目の列の見出しに出す(上の「適性」タブと二重だった・2026-11-20 r1119-033 育-31)。升目の見出しが無い(grades が無い)ときだけタブを残す
+  const TOP = grades ? [['base', '基礎'], ['feat', '特徴']] : [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
@@ -92125,7 +92297,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           <div className="msx-md-bot" data-msx-detail-techs style={btab !== 'tech' && (Array.isArray(assists) || (Array.isArray(info) && info.some(Boolean))) ? { display: 'none' } : undefined}>
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             {/* 升目の見方(2026-11-20 r1119-033 育-165・育-184: 列の「零」・升の数字・左下の丸に説明が無かった) */}
-            <div className="msx-md-leg" data-msx-detail-legend>列は技の届く間合い(零 = くっついた距離)・升の数字は技のランク・暗い升はまだ覚えていない技{mastery ? '・左下の丸は熟練' : ''}</div>
+            <button type="button" className="msx-md-legb" aria-expanded={legOpen} onClick={() => setLegOpen(!legOpen)} data-msx-detail-legend-open>{legOpen ? '▲ 見方を閉じる' : 'ⓘ 升目の見方'}</button>
+            {legOpen ? <div className="msx-md-leg" data-msx-detail-legend>{[`列は届く間合い(零はくっついた距離)${grades ? '・上の字は適性' : ''}`, '升の左上はランク', '暗い升はまだ覚えていない', '×は技が無い', pick ? '⇄は選べる技の数' : null, mastery ? '左下の丸は熟練' : null].filter(Boolean).map((t, i) => <span key={i} style={{ display: 'block' }}>・{t}</span>)}</div> : null}
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
                   // 升に出す技: 覚えた技(はじめからの技を含む)があればそれ → 選んだ技 → 並びの1つ目。
@@ -92162,14 +92335,14 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           return (<div className="msx-ov msx-fade msx-ov-deep" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
-              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜いま選んでいる技が｜修行で覚える｜候補になります。｜選ばなかった技は｜候補に出ませんが、｜あとから｜選び直して｜覚えることも｜できます。｜前に覚えた技と｜その熟練は｜そのまま残ります`)}</div>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜押した技を｜修行で覚えます。｜あとで｜選び直せます。｜覚えた技と｜熟練は｜そのまま残ります`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
                 <button type="button" key={t.id} className={`msx-tpk${on ? ' on' : ''}`} data-msx-techpick-opt={t.id} onClick={() => { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); }}>
                   <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`} data-msx-techpick-icon><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span></span>
                   <span className="tpb"><b>{msxTechNm(t.name)}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb" data-msx-techpick-grades><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>ガッツダウン {grade('gd', t.gd)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small>{msxTechMoveTxt(t) ? <small className="tp-nb"><i>使ったあと {msxTechMoveTxt(t)}</i></small> : null}<small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
                   <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
-              <button type="button" className="msx-dt-close" data-msx-techpick-close onClick={() => setPickCell(null)}>閉じる</button>
+              {/* 技を押すとその場で決まって窓が閉じる。下は取り消しだと分かる「やめる」(r1119-033 窓-52) */}<button type="button" className="msx-dt-close" data-mh-back data-msx-techpick-close onClick={() => setPickCell(null)}>やめる</button>
             </div></div>); })() : null}
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
         <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>
@@ -92771,7 +92944,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
+        {/* 戻るはほかの画面と同じ左上の「← 戻る」1つ(下の帯は「外す」「決定」だけ。r1119-033 窓-45・53) */}
+        <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-tp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
         <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const rec = s && !fr ? recOf(s) : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
             <MonsucMonCard m={mm ? msxTpCardM(rec, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{fr ? <b className="fr">🤝</b> : null}</div>); })}</div>
@@ -92793,7 +92967,6 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
         </div>
         <div className="v-ft msx-tp-ft">
-          <button type="button" onClick={onClose} data-msx-tp-back>戻る</button>
           <button type="button" onClick={() => setCand(null)} disabled={!cand} className={cand ? '' : 'off'} data-msx-tp-clear>外す</button>
           {candItem ? <button type="button" onClick={() => setLook(candItem)} data-msx-tp-detail={candItem.key}>効果・詳細</button> : null}
           <button type="button" className="go" onClick={() => onDone(cand)} data-msx-tp-ok>決定</button>
@@ -92829,7 +93002,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-friend-pick>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>🤝 フレンドから借りる(1体まで)</b><small>{idx + 1}枠目に入ります</small></div>
+        <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-fp-back>← 戻る</button><b>🤝 フレンドから借りる(1体まで)</b><small>{idx + 1}枠目に入ります</small></div>
         {friendAt != null && friendAt !== idx ? <div className="msx-tp-note" data-msx-fp-move>フレンドは1体まで。選ぶと、{friendAt + 1}枠目のフレンドがこの枠へ移ります</div> : null}
         <div className="msx-tp-chips" data-msx-fp-only>{[['all', '全て'], ...MSX_STATS.map((k) => [k, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`])].map(([k, n]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{n}</button>)}</div>
         {lendList && lendList !== 'loading' && lendList.ok ? <div className="msx-tp-bar"><MsxPickTools q={fq} onQ={setFq} sorts={[['power', '総合力'], ['lv', 'Lv'], ['name', '名前']]} sort={fsort} onSort={setFsort} rev={frev} onRev={setFrev} count={list.length} total={rows.length}/></div> : null}
@@ -92859,7 +93032,6 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
         </div>
         <div className="msx-tp-note">「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター</div>
         <div className="v-ft msx-tp-ft">
-          <button type="button" onClick={onClose} data-msx-fp-back>戻る</button>
           <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスターにする</button>
         </div>
       </div>
@@ -92886,6 +93058,18 @@ const msxEfText = (AT, id, x) => {
   const n = Math.round(x * 100) / 100; const t = AT.valueText(id, 1);
   return /[0-9]/.test(t) ? t.replace(/[0-9]+(\.[0-9]+)?/, String(n)) : `+${n}`;
 };
+// 行に常に出す1行の説明(何に・どれだけ。育-02)。足し合わせの効果は編成の合計の値で書く(開いた説明と行の数字が食い違わない・育-04)。上限の一言は下の行に出すので付けない
+const msxEfSentence = (AT, id, total, n, one) => {
+  const a = AT.BY_ID[id]; if (!a) return '';
+  const note = typeof AT.capNote === 'function' ? AT.capNote(id) : '';
+  const strip = (t) => (note && t.endsWith(note) ? t.slice(0, t.length - note.length) : t);
+  if (one || /\{start\}|\{mv\}/.test(String(a.text || ''))) return strip(AT.describe(id, n));
+  const f = (v) => String(Math.round(v * 100) / 100);
+  const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${f(total)}` : a.k === 'rate' || a.k === 'hard' ? `+${f(total)}%` : a.k === 'rateDown' ? `−${f(total)}%` : a.k ? msxEfText(AT, id, total) : f(total);
+  return String(a.text || '').replace('{v}', `\u0001${vt}\u0001`);
+};
+// 文の中の数字は折り返さない(「+13%」だけが次の行に落ちていた)。\u0001 で囲んだ所を1かたまりにする
+const msxEfSentenceNode = (t) => String(t).split('\u0001').map((x, i) => (i % 2 ? <b key={i} className="nw">{x}</b> : x));
 function MsxTeamEffects({ members, onClose }) {
   const AT = msxTpAT();
   const [view, setView] = useState('eff');
@@ -92912,27 +93096,28 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-ef-tabs" role="tablist">{[['eff', '効果ごと'], ['mon', 'モンスターごと']].map(([k, n]) => <button type="button" key={k} role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => setView(k)} data-msx-ef-view={k}>{n}</button>)}</div>
         <div className="msx-dt-body">
           {view === 'eff' ? (list.length ? <>
-            <div className="msx-ef-how">数字は編成の合計(上限まで効く)。<b className="one">1体だけ</b>の効果は、一番大きいモンスターの分だけ効く。行を押すと説明</div>
-            {list.map((e) => { const c = capOf(e.id); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
-              <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}`}>
+            <div className="msx-ef-how"><span>数字は編成の合計(上限まで効く)</span><span><b className="one">1体だけ</b> 一番大きい1体の分だけ効く</span><span>行を押すと1体ずつの値</span></div>
+            {(() => { const seenGrp = {}; return list.map((e) => { const c = capOf(e.id); const grpFirst = !!(c && c.group && !seenGrp[c.group] && (seenGrp[c.group] = true)); const tot = c && c.group ? groupTotal(c.group) : e.total; const pct = c ? Math.min(100, tot / c.v * 100) : null; const u = AT.BY_ID[e.id] && AT.BY_ID[e.id].u === '%' ? '%' : ''; const on = open === e.id; return (
+              <div key={e.id} className={`msx-ef-row${on ? ' on' : ''}${c && c.group ? ' grp' : ''}`}>
                 <button type="button" className="msx-ef-hd" onClick={() => setOpen(on ? null : e.id)} aria-expanded={on} data-msx-effect={e.id} data-msx-assist-type={e.d.type || ''}>
                   <span className="ic">{cardIconNode(e.d.icon, 18)}</span>
                   <span className="tx"><b className="nm">{e.d.name}{e.one ? <i className="one">1体だけ</i> : null}</b>
-                    {c ? <span className="gg"><i style={{ width: `${pct}%` }}/></span> : null}
-                    <small className="cap">{c ? `${c.group ? '組の合計' : '合計'} ${Math.round(tot * 100) / 100}${u} / 上限 ${c.v}${u}${c.group ? '(5つ合わせて)' : ''}` : e.one ? '一番大きい1体の分' : '何体ぶんでも足し合わせ'}</small></span>
-                  <span className="val">{msxEfText(AT, e.id, e.total)}</span>
+                    <small className="ds" data-msx-effect-desc>{msxEfSentenceNode(msxEfSentence(AT, e.id, e.total, e.rows[0].n, e.one))}</small>
+                    {/* 上限の行: 組(左の橙の線)は最初の行にだけ合計と上限を書き、ほかの行は分け合うことだけ書く(同じ行が2枚に出ていた) */}
+                    {c || !e.one ? <small className="cap">{c ? (c.group ? (grpFirst ? <><span>橙の線の5つを合わせて {Math.round(tot * 100) / 100}{u}</span><span>(上限{c.v}{u})</span></> : <span>上限は橙の線の行と分け合う</span>) : `上限 ${c.v}${u}`) : '何体ぶんでも足し合わせ'}</small> : null}</span>
                   <span className="fcs">{e.rows.slice(0, 4).map((r) => face(r.mi, !r.live))}{e.rows.length > 4 ? <small>+{e.rows.length - 4}</small> : null}</span>
                 </button>
                 {on ? <div className="msx-ef-ex" data-msx-effect-ex={e.id}>
-                  <p>{msxTpAssistDesc(AT, { id: e.id, n: e.rows[0].n })}</p>
+                  {(() => { const nt = typeof AT.capNote === 'function' ? AT.capNote(e.id) : ''; return nt ? <p className="capn">上限: {nt.replace(/^[(（]|[)）]$/g, '')}</p> : null; })()}
+                  {/体力/.test(msxEfSentence(AT, e.id, e.total, e.rows[0].n, e.one)) ? <p className="capn">体力 … トレーニングで減り、休むと戻る(6つの能力のライフとは別)</p> : null}
                   {e.rows.map((r, i) => <div key={i} className={`msx-ef-mon${r.live ? '' : ' dim'}`}>{face(r.mi, !r.live)}<span className="nm">{r.name}</span><span className="v">{r.text}{r.live ? '' : '(効かない: ほかのモンスターの方が大きい)'}</span></div>)}
                 </div> : null}
-              </div>); })}
+              </div>); }); })()}
           </> : <div className="msx-gt-none">編成にアシスト効果を持つモンスターがいません。育て終えたモンスターが持っています</div>)
           : members.map((m, mi) => { const own = list.filter((e) => e.rows.some((r) => r.mi === mi)); return (
             <div key={mi} className="msx-ef-mrow" data-msx-ef-mon={mi}>
               <div className="hd">{face(mi, false)}<b>{m.name}</b><small>{m.friend ? 'フレンド' : m.kind === 'base' ? 'ベースモン' : m.assistId ? 'メモモン' : 'マスモン'}・親密度 {m.bond0}・タッグ +{m.tag}%</small></div>
-              <div className="chips">{own.length ? own.map((e) => { const r = e.rows.find((x) => x.mi === mi); return <span key={e.id} className={r.live ? '' : 'dim'}>{cardIconNode(e.d.icon, 13)} {e.d.name} <b>{r.text}</b></span>; }) : <span className="none">アシスト効果なし(伸びが上がる能力: {msxTpBonusText(m)})</span>}</div>
+              <div className="chips">{own.length ? own.map((e) => { const r = e.rows.find((x) => x.mi === mi); const lv = r.live ? null : e.rows.find((x) => x.live); return <span key={e.id} className={r.live ? '' : 'dim'} data-msx-ef-chip-off={r.live ? undefined : e.id}>{cardIconNode(e.d.icon, 13)} {e.d.name} <b>{r.text}</b>{lv ? <small className="why">効かない(大きい方だけ効く)</small> : null}</span>; }) : <span className="none">アシスト効果なし(伸びが上がる能力: {(Array.isArray(m.top) ? m.top.slice(0, 2) : []).map((k) => `${MSX_STAT_NAME[k]} +${Math.round((m.bonus && m.bonus[k]) || 0)}%`).join('・')})</span>}</div>
             </div>); })}
         </div>
         <button type="button" className="msx-dt-close" data-msx-effects-close onClick={onClose}>閉じる</button>
@@ -93138,7 +93323,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
         {/* 最後の期は参考(taikai-entry 175)どおり「HF進出」の札と、ヒーローズファイナルの日なら「当日」・その前は「あと◯ターン」(3ターン目から1戦ずつ) */}
         {v.period.key === 'final' ? (
           <div className="v-turn hf" data-msx-hfband={v.period.at >= 3 ? 'day' : 3 - v.period.at}><span className="ph hf">HF進出<small>{cal.year}年目 {cal.month}月</small></span>
-            <div className="n">{v.period.at >= 3 && s.over ? <b className="hfday">終了</b> : v.period.at >= 3 ? <>このあと<b className="hfday" data-msx-hfround>{['1回戦', '準決勝', '決勝'][Math.min(2, v.period.at - 3)]}</b></> : <>あと<b>{3 - v.period.at}</b>ターン</>}</div></div>
+            <div className="n">{v.period.at >= 3 && s.over ? <b className="hfday">終了</b> : v.period.at >= 3 ? <b className="hfday" data-msx-hfround>大会の日</b> : <>あと<b>{3 - v.period.at}</b>ターン</>}</div></div>
         ) : (
           <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
             <div className="n">残り<b>{v.period.left}</b>ターン</div></div>
@@ -93509,7 +93694,8 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   return (
     <>
       {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
-      <MsxHd back="HOMEへ戻る" onBack={onClose}/>
+      {/* モンサクの最初の画面の名前は「モンサクルーム」(ゲーム全体の HOME と言い分ける。r1119-049 窓-33) */}
+      <MsxHd back="HOMEへ戻る" onBack={onClose} sub="モンサクルーム"/>
       <div className="v-body v-hm">
         <div className="v-scene hm">
           <img className="bg" src={msxSceneBg(s ? s.turn : 1).bg} alt=""/><div className="sh"/>
@@ -93716,7 +93902,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {!acting && typeof MsxBondChips === 'function' ? <MsxBondChips s={s} card={o.card} add={(SUC.BOND && SUC.BOND.train) || 8}/> : !acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
       {isTrain ? <MsxStRow who={s} stats={(!acting && typeof MsxTrainEvent === 'function' && o.event && o.event.d && o.event.d.stat && Number.isFinite(o.event.d.up) && o.event.d.up > 0) ? { ...s.stats, [o.event.d.stat]: s.stats[o.event.d.stat] - o.event.d.up } : s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
-      {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
+      {acting ? <div className="v-log" style={{ visibility: 'hidden' }} aria-hidden="true" data-msx-acting-log><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
@@ -93742,8 +93928,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const tLast = tAt < 0 || tAt >= tSteps.length - 1;
     body = <>{typeof MsxTevMini === 'function' ? <MsxTevMini s={s} v={v}/> : <MsxBand s={s} v={v} ev={ev}/>}<MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx} at={tAt} go={tGo} onNext={() => toReact(run)}/></>;
     foot = tAt < 0
-      ? <div className="v-ft"><button type="button" className="off" disabled>飛ばす ⏭</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
+      ? <div className="v-ft"><button type="button" onClick={() => tGo(0)} data-msx-tev-replay>もう一度見る</button><button type="button" className="go" onClick={() => afterAct({ ...run, phase: 'main' })} data-msx-tev-next>次へ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => tGo(-1)} data-msx-tev-skip>イベントを飛ばす ⏭</button><button type="button" className="go" onClick={() => (tLast ? toReact(run) : tGo(tAt + 1))} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -93803,7 +93989,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>次へ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>飛ばす ⏭</button><span className="v-wait">選んでね</span></div>;
+      : null; // 押せない「選んでね」と、上の「なにもしない」と同じ動きの「飛ばす」は外す(選ぶのは場面の3つだけ。r1119-033 窓-35)
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -93821,7 +94007,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const seasonChanged = cal.season !== prev.season;
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
-      <div className="v-scene msx-fade" style={{ flex: '1 1 0' }} data-msx-turn-scene><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%', opacity: .9 }} noPeak/><div className="v-clock">
+      <div className="v-scene msx-fade" style={{ flex: '1 1 0' }} data-msx-turn-scene><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/><div className="gr" style={{ bottom: 'calc(8% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '8%', height: '34%' }} noPeak/><div className="v-clock">
         {/* 期と年は上の帯に出ているので、暦は月だけ(育-26) */}
         <div className="v-cal msx-pop"><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
         {/* 残りのターンは上の帯の1か所だけ(2026-11-20 r1119-033 育-19・育-26・育-95: 帯・暦の下・大会の札に同じ数が3回出ていた) */}
@@ -93830,7 +94016,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
     </>);
-    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
+    // 月替わりは見せ場が無いので 1.5秒で自動で次へ(押せばすぐ進む・2026-11-20 r1119-033 育-20・育-96)。止め絵を撮る道具(webdriver)では止めておく
+    foot = <div className="v-ft">{/* 中断は左上の1つ(2026-11-19 r1119-013 ⑥ Q-4-5・M-7。下の帯にも同じ中断があった) */}<MsxAutoNext key={`an-${s.turn}`} ms={1500} onGo={() => toMain({ ...run, out: null })}/><button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>次へ ▶</button></div>;
   }
   // ---- 大会(中身は回3) ----
   // 大会の1戦(phase 'battle'。当日の準備 preOn のときを除く)と終わり(phase 'over')は、上の MsxR3 が受け持つ(回3)。ここへは来ない
@@ -93971,11 +94158,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
-          {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key === 'final' ? <span className="v-chip hot">🏆 ヒーローズファイナル</span> : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
+          {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
+          {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
           {/* ピークが何に効くかを札の中に書く(2026-11-20 r1119-033 育-108) */}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン<small className="v-chip-sub">トレーニングの伸びが一番大きい</small></span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき<small className="v-chip-sub">あと{pkI.in}ターンで ピーク</small></span> : null}
-          {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
-          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
+          <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
         <span className="v-nm">{run.nick}</span>
@@ -95070,12 +95257,12 @@ const msxR3Line = (scene, run, extra, fallback, opt) => {
 // ・負けたら砂時計(同じ相手)・虹の砂時計(相手を変える)でやり直せる(1回の育成で3回まで・settle の前に SUC.rematch)
 // ・勝ち負けを付けたあと(settle)は、run.phase を 'battle' のまま run.out.r3 に「賞品の段」を持つ(中断しても同じ所から)。
 //   優勝のごはんは ここでは出さない。権利(芯の mealReady / mealOpts)を育成に残し、ファーム(ホーム)で あげる(2026-11-17 社長)
-function MsxR3Frame({ back = '戻る', onBack, run, right, body, foot }) {
+function MsxR3Frame({ back = '戻る', onBack, run, right, body, foot, rankName = '' }) {
   const s = run.s;
   return (
     <>
       <style>{MSX_R3_CSS}</style>
-      <MsxHd back={back} onBack={onBack} sub={`${msxAidName(s.aid)}編`} right={right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G`}/>
+      <MsxHd back={back} onBack={onBack} sub={`${msxAidName(s.aid)}編`} right={right != null ? right : `💰 賞金 ${msxFmt(run.showPend && run.showPend.s ? run.showPend.s.fame : s.fame)}G${rankName ? `・${rankName}` : ''}`}/>
       <div className="v-body r3">{body}</div>
       {foot}
     </>
@@ -95209,7 +95396,6 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     const next = { ...run, s: r.state, out: null, r3skip: skip ? true : undefined, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(cur.sys, cur.name)}に出た` }].slice(-20) };
     onActed(next);
   };
-  const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
@@ -95231,10 +95417,10 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
       <img className="rcv-myua" src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%', width: 'auto', maxWidth: 'none' }}/>
-      <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
+      <div className="v-ev-h">🏆 大会の受付</div>
       <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
     </div>
-    <div className="v-cupbar" data-msx-r3-fame><span>いまの賞金</span><b>{msxFmt(s.fame)}<small>G</small></b>{rank ? <i>賞金の段 {rank.name}</i> : null}</div>
+    {/* 2026-11-20 再点検 バ-27: 賞金は右上の札と二重・年月と期は上の箱と二重だった → この帯と場面の年月をやめ、賞金の段は右上の札に添える */}
     <div className="v-cupmon">
       <button type="button" className="ar" disabled={vt <= s.turn} onClick={() => setVt((t) => Math.max(s.turn, t - 1))} aria-label="前の月">◀</button>
       <b>{calV.year}年目 {calV.month}月{now ? <small className="now">今月</small> : <small>予定</small>}</b>
@@ -95260,29 +95446,29 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           </button>);
       }) : <div className="msx-note">{P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
-    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
+    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span className="msx-kp" style={{ textAlign: 'left' }}>{msxPh('1戦だけ・｜1ターン使う・｜体力は減りません・｜勝つと賞金と賞品。')}{/* 期末までの残りは上の箱の「残り◯ターン」と同じなので出さない(2026-11-20 API) */}</span></div></div>
     {wc ? (
       <div className="v-cupwin" onClick={() => { setWin(null); setPrz(null); }} data-msx-r3-cupwin>
         <div className="in" onClick={(e) => e.stopPropagation()}>
-          <div className="h">大会参加確認</div>
+          <div className="h">{wcOk ? '大会参加確認' : '大会の詳細'}</div>
+          {wcOk ? null : <div className="q ng" style={{ marginTop: 0 }}>{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
           <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
           {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><MsxRivalThumb rival={wc.rival} size={22} imgStyle={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${msxBreederLabel(wc.rival.breeder, wc.rival.kind)})` : ''}</span></div> : null}
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
-          {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
+          {wcOk ? <div className="q">この大会に参加しますか?</div> : null}
           <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>閉じる</button>}</div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox"><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<small className="hint">押すと消えます</small></div></div> : null}
         </div>
       </div>) : null}
   </>);
   const foot = (
-    <div className="v-ft">
-      <button type="button" onClick={onBack}>← 戻る</button>
+    <div className="v-ft">{/* 戻るは左上の1つ(r1119-033 窓-11・18・44) */}
       <button type="button" className={cur && cur.done && cur.entry.ok ? 'on' : 'off'} disabled={!(cur && cur.done && cur.entry.ok)} onClick={() => go(true)} data-msx-r3-skip>⏩ スキップ</button>
       <button type="button" className="go" disabled={!(cur && cur.entry && cur.entry.ok)} onClick={() => { setVt(s.turn); setWin(cur.id); }} data-msx-r3-enter>{cur ? '出場 ▶' : '大会を選ぶ'}</button>
     </div>
   );
-  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
+  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot} rankName={rank ? rank.name : ''}/>;
 }
 
 // ---- 観戦(助手マスモン対戦の観戦の部品を使い回す) ----
@@ -95380,7 +95566,8 @@ function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settl
       })}</div>
       <div className="rt" style={{ height: RH * 8 }}><svg className="v-brl" width="64" height={RH * 8} viewBox={`0 0 64 ${RH * 8}`}><path className="bs" d={base}/>{wins.map((w) => <path key={w.key} className="wl" d={w.d} pathLength="1"/>)}</svg><div className="win"><span>🏆</span><b>優勝</b></div></div>
     </div>
-    <div className="v-bnt"><b>決勝は {run.nick} VS {foeName}</b>。<span>ほかの試合の結果は、見せるだけの演出です(戦うのは決勝の1戦だけ)</span></div>
+    {/* 2026-11-20 再点検 バ-07・20: 決勝の顔合わせは表が決勝まで進んでから。裏話の文はやめる */}
+    {stage >= 3 ? <div className="v-bnt"><b>決勝は {run.nick} VS {foeName}</b></div> : null}
     <div className="v-ann"><div className="pic"><img src={msxFace(s.aid, 'excited')} alt=""/><span>解説</span></div>
       <div className="tx">{stage >= 3 ? finalLine : lines[stage]}</div>
       {stage < 3 ? <button type="button" className="sk" onClick={() => setStage(3)} data-msx-r3-bsk>飛ばす ⏭</button> : null}</div>
@@ -95389,12 +95576,12 @@ function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settl
     <div className="v-ft">
       <button type="button" onClick={() => settle(false)}>負けたことにする</button>
       <button type="button" className="on" onClick={() => settle(true)} data-msx-r3-dbgwin>勝ったことにする(デバッグ)</button>
-      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ ▶</button>
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 試合へ ▶</button>
     </div>
   ) : (
     <div className="v-ft">
       {skip ? <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bskip>⏩ スキップ(結果だけ)</button> : <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bresult>⏩ 結果だけ見る</button>}
-      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ ▶</button>
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 試合へ ▶</button>
     </div>
   );
   return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
@@ -95512,6 +95699,9 @@ const MSX_R3_INTRO_CSS = `
 .msx-cupin .logo{position:relative;text-align:center;padding:0 12px;animation:msxCupinLogo .5s ease-out .45s both}
 .msx-cupin .logo small{display:inline-block;font-size:12px;font-weight:900;color:#1e1b4b;background:#fde68a;border-radius:99px;padding:2px 12px;margin-bottom:4px;letter-spacing:.06em}
 .msx-cupin .logo b{display:block;font-size:min(9vw,34px);font-weight:900;color:#fff;line-height:1.15;-webkit-text-stroke:2px #1e293b;paint-order:stroke fill;text-shadow:0 3px 0 #1e293b,0 0 18px rgba(255,255,255,.55);word-break:keep-all;overflow-wrap:anywhere}
+.msx-cupin .pzl{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:94%;animation:msxCupinLogo .5s ease-out .7s both}
+.msx-cupin .pzl span{font-size:13px;font-weight:900;color:#fff;background:#0f0b22cc;border:1px solid #fde68a88;border-radius:99px;padding:3px 10px;white-space:nowrap}
+.msx-cupin .pzl span.g{font-size:15px;color:#fde047;border-color:#fde047}
 @keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
 @keyframes msxCupinCrest{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
 @keyframes msxCupinLogo{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
@@ -95524,6 +95714,7 @@ function MsxR3CupIntro({ b, title, onGo }) {
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => { const id = setTimeout(go, MSX_R3_INTRO_MS); return () => clearTimeout(id); }, []);
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? (MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup) : '';
+  const pz = (() => { try { const S = msxSuc.SUC; if (b.kind === 'cup') return []; return msxR3ForcedPrizes(S, b).filter((x) => x.id !== 'tk').slice(0, 4); } catch (_) { return []; } })();
   const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return (<>
     <style>{MSX_R3_INTRO_CSS}</style>
@@ -95531,6 +95722,8 @@ function MsxR3CupIntro({ b, title, onGo }) {
       {venue ? <img className="bg" src={venue} alt=""/> : null}<span className="sh"/>
       <div className={`crest t-${msxR3CrestTier(b)}`}><span className="e">{msxR3BattleIcon(b)}</span></div>
       <div className="logo"><small>{label}</small><b>{title}</b></div>
+      {/* 2026-11-20 再点検 バ-40・54: 大会名だけで何を懸けた大会か分からない → 賞金ともらえる物を紋章の下に並べる */}
+      {pz.length ? <div className="pzl" data-msx-r3-cupintro-prize>{pz.map((x) => <span key={x.id} className={x.id === 'g' ? 'g' : ''}>{x.e} {String(x.name).replace(/｜/g, '').replace(/\u00a0/g, ' ')}</span>)}</div> : null}
     </div>
   </>);
 }
@@ -95576,10 +95769,10 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }} data-msx-r3-pre-scene><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
       <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-4%', bottom: 0, height: '96%', maxWidth: '62%', objectFit: 'contain', objectPosition: 'bottom' }}/>
-      <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
+      <div className="v-ev-h">🏆 大会の受付</div>
       <div className="v-ibub msx-kp" style={{ left: '44%', right: 10, top: 'auto', bottom: 12, fontSize: 13 }}>{openLine.t}</div>
     </div>
-    <div className="v-cupbar" data-msx-r3-fame><span>いまの賞金</span><b>{msxFmt(s.fame)}<small>G</small></b>{rank ? <i>賞金の段 {rank.name}</i> : null}</div>
+    {/* 2026-11-20 再点検 バ-27: 賞金は右上の札と二重・年月と期は上の箱と二重だった → この帯と場面の年月をやめ、賞金の段は右上の札に添える */}
     <div className="v-cupmon"><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/><b>{cal.year}年目 {cal.month}月<small className="now">当日</small></b><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/></div>
     <div className="v-cups one">
       <button type="button" className={`v-cup v-cup2 sel ex g-${star >= 4 ? 'gold' : 'n'}`} style={{ minHeight: 84 }} onClick={() => setWin(true)} data-msx-r3-pre-card={b.kind}>
@@ -95601,17 +95794,16 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
           <MsxR3PrizeBox prizes={prizes} onPick={setPrz}/>
           <div className="q">この大会に参加しますか?</div>
           <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox"><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p>{SUC.ITEMS && SUC.ITEMS[prz.id] ? <div className="own" data-msx-r3-prize-own={prz.id}><i>所持数</i><span>{(s.bag && s.bag[prz.id]) || 0}</span></div> : null}<small className="hint">押すと消えます</small></div></div> : null}
         </div>
       </div>) : null}
   </>);
   const foot = (
-    <div className="v-ft">
-      <button type="button" onClick={onBack}>← 戻る</button>
+    <div className="v-ft">{/* 戻るは左上の1つ(r1119-033 窓-11・18・44) */}
       <button type="button" className="go" onClick={() => setWin(true)} data-msx-r3-enter>出場 ▶</button>
     </div>
   );
-  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
+  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot} rankName={rank ? rank.name : ""}/>;
 }
 function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
@@ -95743,7 +95935,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="v-prz">{rows.length ? rows.map(([e, n, t, c, nw], i) => <div key={i} className={c}><span className="e">{e}</span><b>{n}</b><span className="t">{t}</span>{nw ? <i>{nw}</i> : null}</div>) : <div><span className="e">🏆</span><b>{st3.won ? msxR3WinWord(st3.kind, st3.round).replace('!', '') : '準優勝'}</b><span className="t">よくがんばった!</span></div>}</div>
         {typeof MsxGaugeFx === 'function' ? <MsxGaugeFx key={`cupgfx-${s.turn}`} items={msxR3GainItems(d, s)}/> : null}
         {!st3.won ? <MsxSay aid={s.aid} ex="normal" text="「くやしいけど、準優勝のごほうびはもらえたよ。つぎは いちばん上をめざそ!」"/> : (() => { const l = msxR3Line('turn.cup.win', run, { cup: st3.name, rival: st3.rivalName || '' }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! ごほうびのごはんは、ファームに帰ってから あげよう!」' : '「やったね! ごほうびのごはんは、ファームに帰ってから あげよう!」'); return <MsxSay aid={s.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
-        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファーム（ホーム）で待っているよ</div> : null}
+        {st3.won && s.mealReady && !s.over ? <div className="msx-note" data-msx-r3-mealwait style={{ textAlign: 'center' }}>🍽 ごほうびのごはんは、ファームで待っているよ</div> : null}
       </>);
       return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-next>次へ ▶</button></div>}/>;
     }
@@ -96334,7 +96526,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     const mTechs = (Array.isArray(s.techs) ? s.techs : []).map((id) => ownT.find((t) => t && t.id === id)).filter(Boolean);
     const body = (<>
       <div className="v-pt"><div className="n">能力ポイント<b>{ws.pts}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {s.pts}</small></b></div>
-        <div className="r">総合力 {msxFmt(ev0.power)} → <span className="yel">{msxFmt(ev.power)}</span> <i className={msxRankCls(ev.rank)}>{ev.rank}</i></div></div>
+        <div className="r">総合力 {msxFmt(ev0.power)} → <span className="yel">{msxFmt(ev.power)}</span> <i className={msxRankCls(ev.rank)}>{ev.rank}</i>
+        {/* 注意書きはここに1行(一覧の下だと下のボタンの帯に隠れていた・2026-11-20 r1119-033 育-84) */}
+        <span data-msx-pt-cap style={{ display: 'block', fontSize: 10.5, color: '#fbbf24' }}>上限はふつう999・その期の目安を超えた能力は2ポイントで+1</span></div></div>
       <div className="v-scene r3-mscene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(Math.min(s.turn, msxSuc.core.TOTAL_TURNS)).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '74%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
@@ -96352,10 +96546,10 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
           <span className="st"><MsxPtBtn className="chip sym minus pt44" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/>{/* 上げた量は値の横の「+6」の1か所だけ(育-82) */}<b aria-hidden="true"/><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="chip on sym plus pt44" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
       </>}
-      <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
+      <div aria-hidden="true" style={{ height: 56, flex: 'none' }}/>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>元に戻す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>決定 ▶</button></div>;
+    const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>振り直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>決定 ▶</button></div>;
     return <MsxR3Frame run={run} back="初めの画面へ" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
@@ -96443,7 +96637,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
-    return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
   }
   if (step === 'done') {
     const rankRes = rankFix || (res && res.rank) || null;
@@ -96458,7 +96652,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
       {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
-    return <MsxR3Frame run={run} back="初めの画面へ" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>モンサクルームへ ▶</button></div>}/>;
   }
   const body = (<>
     <div className="v-pt"><div className="n">アシストポイント<b>{left}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {points}</small></b></div>
@@ -96761,7 +96955,7 @@ function MsxR3Box({ onClose }) {
     title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxBody(aid, 'happy')} alt=""/>
-        {!bubOff ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
+        {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
           <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
@@ -96787,7 +96981,7 @@ function MsxR3Box({ onClose }) {
       {/* 升の見せ方はマスモンボックスの一覧と同じ(名前に札を重ねない。メモモンであることは見出しと下の数で分かる・r1119-006) */}
       <div className="mm-tabs"><button type="button" className={atab === 'list' ? 'on' : ''} onClick={() => { setAtab('list'); setApick([]); }} data-msx-assist-tab-list>一覧</button>
         <button type="button" className={atab === 'rm' ? 'on' : ''} onClick={() => { setAtab('rm'); setApick([]); setMsg(''); }} data-msx-assist-tab-rm>外す</button></div>
-      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}押すと、{'​'}アシスト効果と使い道が見られます</>}</div>
+      <div className="mm-hint msx-kp" data-msx-assist-why={atab === 'rm' ? undefined : ''}>{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}育成・合体・貸し出しには使えず、{'​'}育成を始めるときの編成に入れると{'​'}アシスト効果と得意な能力が効きます。{'​'}押すと詳細</>}</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
         {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length} hideFull/> : null}
@@ -96802,7 +96996,7 @@ function MsxR3Box({ onClose }) {
         const kAt = kp && Number.isFinite(kp.at) && kp.at > 0 ? new Date(kp.at) : null;
         return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
           info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
-          foot={<><div className="mm-hint msx-kp" data-msx-assist-why>メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。{'​'}育成を始めるときの編成に入れると、{'​'}アシスト効果と得意な能力が効きます</div>
+          foot={<>{/* 使い道の注意文は一覧の上の1か所だけ(詳細の窓と二重だった・2026-11-20 r1119-033 育-53) */}
             <div className="mm-acts"><button type="button" onClick={() => { setApick([acur.id]); setAAsk(true); }} data-msx-assist-detail-rm>外す</button></div></>}
           onClose={() => { setAsel(null); setMsg(''); }}/>);
       })() : null}
@@ -97181,7 +97375,8 @@ function MsxAssistCard({ a, n }) {
   const full = AT.describe(a.id, n);
   const short = note && full.endsWith(note) ? full.slice(0, full.length - note.length) : full;
   const scene = msxAsScene(AT, a.scene);
-  const more = !!(note || scene);
+  // 上限・効く場面は短いので、たたまずに最初から出す(開く印の「▲」と窓の「閉じる」が並んで、どちらで閉じるか分からなかった。r1119-033 窓-01)
+  const more = false;
   const dots = Math.min(10, a.max); const lit = Math.round(n / Math.max(1, a.max) * dots); // 目盛りを丸で(10より多い目盛りは10個の丸に縮める。数と丸がずれないよう10まではそのまま)
   return (
     <div className={`msx-md-ac${a.type === 'battle' || a.scene === 'cup' ? ' gold' : ''}${open ? ' open' : ''}`} data-msx-assist-card={a.id} data-msx-assist-type={a.type || ''}
@@ -97190,12 +97385,16 @@ function MsxAssistCard({ a, n }) {
       <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
       {/* 数字は説明の文の1か所だけ(見出しの「+10%」と文の「+10%」が二重だった)。目盛りは数だけ(丸と数の二重をやめた)。
           上限・効く場面は全幅のボタンをやめ、見出しの右の小さな印で開く(2026-11-20 r1119-033 育-43・育-46・育-47・育-150・育-155) */}
+      {/* 見出しは効果名だけ。数字は説明の文の1か所(目盛りの数が見出しの横にあると「+3」と二重に見えた)。
+          目盛りは文の下に、次の目盛りで何が増えるかと一緒に出す(2026-11-20 r1119-033 育-07) */}
       <div className="bd"><div className="hd"><b>{a.name}</b>
-        <span className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>目盛り</small><i>{n}</i>/{a.max}</span>
         {more ? <span className="mr" aria-hidden="true">{open ? '▲' : 'ⓘ'}</span> : null}</div>
         <div className="tx">{short}</div>
-        {open && note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
-        {open && scene ? <div className="sc">効く場面: {scene}</div> : null}</div>
+        <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
+          <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
+        {note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
+        {scene ? <div className="sc">効く場面: {scene}</div> : null}
+        {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>
   );
 }
@@ -97206,7 +97405,9 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
   const AT = msxAsAT();
   const assists = mem && Array.isArray(mem.assists) && mem.assists.length ? mem.assists : rec && Array.isArray(rec.assists) ? rec.assists : [];
   const got = AT ? assists.filter((x) => x && AT.BY_ID[x.id]).map((x) => ({ a: AT.BY_ID[x.id], n: AT.fromSaved(x) })).filter((x) => x.n > 0) : [];
-  const [tab, setTab] = useState(got.length || kind === 'base' ? 'assist' : 'stat');
+  // ベースモンはアシスト効果を持たないので、札の切り替えを出さず能力だけ見せる(「持ちません」の1文だけの札だった。r1119-033 窓-48)
+  const [tab, setTab] = useState(got.length && kind !== 'base' ? 'assist' : 'stat');
+  const [kvTip, setKvTip] = useState(null); // 4つの数字の札を押すと、その言葉の説明を1行で出す(長い説明の段落をやめた・育-08)
   if (!mem) return null;
   const cm = typeof msxTpCardM === 'function' ? msxTpCardM(rec, mem, mem.species) : { species: mem.species };
   const pow = rec && Number.isFinite(rec.score) ? rec.score : mem.power;
@@ -97217,24 +97418,27 @@ function MsxAssistDetail({ rec = null, mem, name, sub, kind = 'box', onMore = nu
       <div className="msx-sheet msx-asd" onClick={(e) => e.stopPropagation()}>
         <h3>アシスト詳細</h3>
         <div className="msx-asd-top">
-          <div className="art"><MonsucMonCard m={cm} size="l" tag={{ text: role, kind: kind === 'friend' ? 'friend' : kind === 'memo' ? 'memo' : kind === 'base' ? 'base' : 'box' }}/></div>
+          {/* 名前と種類は右の見出しだけ(絵の札の名前帯・種類の札と二重だった・2026-11-20 r1119-033 育-102)。空いた分は絵を大きく */}
+          <div className="art nostrip"><MonsucMonCard m={cm} size="l"/></div>
           <div className="inf">
-            <b className="nm">{name}</b><small className="sub">{sub}</small>
+            <b className="nm">{name}</b><small className="sub">{sub && String(sub).includes(role) ? sub : [role, sub].filter(Boolean).join('・')}</small>
             <div className="kv" data-msx-asd-support>
-              <span><i>初めの親密度</i><b>{mem.bond0}</b></span>
-              <span><i>友情タッグ</i><b>+{Math.round(Number(mem.tag) || 0)}%</b></span>
-              <span><i>得意率</i><b>{Math.round((Number(mem.fav) || 0) * 100)}%</b></span>
-              <span><i>総合力</i><b>{kind === 'base' ? '—' : msxFmt(pow || 0)}</b></span>
+              {[['bond', '初めの親密度', mem.bond0, '育成を始めたときの親密度。'],
+                ['tag', '友情タッグ', `+${Math.round(Number(mem.tag) || 0)}%`, '親密度80から、いっしょのトレーニングの伸びが上がる。'],
+                ['fav', '得意率', `${Math.round((Number(mem.fav) || 0) * 100)}%`, '得意な能力のトレーニングに来やすい。'],
+                kind === 'base' ? null : ['pow', '総合力', msxFmt(pow || 0), '6つの能力から出す強さ。']].filter(Boolean).map(([k, t, v]) => (
+                <button type="button" key={k} className={kvTip === k ? 'on' : ''} aria-expanded={kvTip === k} onClick={() => setKvTip(kvTip === k ? null : k)} data-msx-asd-kv={k}><i>{t}</i><b>{v}</b></button>))}
             </div>
-            <small className="asd-kvn">初めの親密度=育成を始めたときの親密度。友情タッグ=親密度80からの伸び。得意率=得意な能力のトレーニングに来やすさ</small>
+            {kvTip ? <small className="asd-kvn" data-msx-asd-kv-tip>{({ bond: '初めの親密度 … 育成を始めたときの親密度。', tag: '友情タッグ … 親密度80から、いっしょのトレーニングの伸びが上がる。', fav: '得意率 … 得意な能力のトレーニングに来やすい。', pow: '総合力 … 6つの能力から出す強さ。' })[kvTip]}</small>
+              : <small className="asd-kvn">数字を押すと説明</small>}
             {top.length ? <div className="asd-up" data-msx-asd-up><i>伸びが上がる</i>{top.map((k) => <span key={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]} <b>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</b></span>)}</div> : null}
           </div>
         </div>
-        <div className="msx-asd-tabs" role="tablist">{[['assist', 'アシスト効果'], ['stat', '能力']].map(([k, t]) => <button type="button" key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-asd-tab={k}>{t}</button>)}
+        <div className="msx-asd-tabs" role="tablist">{(kind === 'base' ? [] : [['assist', 'アシスト効果'], ['stat', '能力']]).map(([k, t]) => <button type="button" key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-asd-tab={k}>{t}</button>)}
           {onMore ? <button type="button" className="more" onClick={onMore} data-msx-asd-more>技・素質</button> : null}</div>
         <div className="msx-dt-body msx-asd-body">
           {tab === 'assist' ? (got.length ? <>
-            <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類){kind === 'memo' ? '(メモモンは育成に使えず、アシスト効果と伸びが上がる能力だけ効く)' : ''}</div>
+            <div className="msx-asd-cnt" data-msx-assist-count>持っているアシスト効果 {got.length}つ(最大{AT ? AT.MAX_KINDS : 8}種類)</div>
             {got.map(({ a, n }) => <MsxAssistCard key={a.id} a={a} n={n}/>)}</>
             : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>{kind === 'base' ? 'ベースモンはアシスト効果を持ちません。伸びが上がる能力だけ効きます' : 'アシスト効果はまだありません'}</div>)
             : <div className="msx-asd-st" data-msx-asd-stats>{MSX_STATS.map((k) => <span key={k}><i>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</i><b>{Math.round((mem.stats && mem.stats[k]) || 0)}</b></span>)}</div>}
@@ -97250,12 +97454,12 @@ const MSX_ASD_CSS = `
 .msx .msx-asd{display:flex;flex-direction:column;max-height:calc(100% - 24px)}
 .msx .msx-asd h3{text-align:center}
 .msx .msx-asd-top{display:flex;gap:10px;align-items:flex-start;margin-top:4px}
-.msx .msx-asd-top .art{flex:0 0 34%;max-width:150px}
+.msx .msx-asd-top .art{flex:0 0 38%;max-width:170px}.msx .msx-asd-top .art.nostrip .mcd-strip,.msx .msx-asd-top .art.nostrip .mcd-lv,.msx .msx-asd-top .art.nostrip .mcd-fav{display:none}
 .msx .msx-asd-top .inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .msx .msx-asd-top .nm{font-size:16px;font-weight:900;line-height:1.2;overflow-wrap:anywhere}
 .msx .msx-asd-top .sub{font-size:11px;color:#cbd5e1;font-weight:800}
 .msx .msx-asd-top .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.msx .msx-asd-top .kv span{display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #4a4380;border-radius:9px;padding:3px 2px}
+.msx .msx-asd-top .kv button{display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #4a4380;border-radius:9px;padding:3px 2px;color:#fff;font:inherit;min-height:40px}.msx .msx-asd-top .kv button.on{border-color:#f472b6}
 .msx .msx-asd-top .kv i{font-style:normal;font-size:11px;color:#cbd5e1;font-weight:800;white-space:nowrap}
 .msx .msx-asd-top .kv b{font-size:15px;color:#fde68a;font-weight:900;line-height:1.2}
 .msx .msx-asd-top .asd-up{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:12px;font-weight:800;align-items:center}
@@ -97263,7 +97467,8 @@ const MSX_ASD_CSS = `
 .msx .msx-asd-tabs{display:flex;gap:6px;margin:8px 0 4px}
 .msx .msx-asd-tabs button{position:relative;flex:1 1 0;height:36px;margin:4px 0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:10px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:900}
 .msx .msx-asd-tabs button::after{content:'';position:absolute;left:0;right:0;top:-4px;bottom:-4px}
-.msx .msx-asd-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;border-color:transparent}
+/* 選んだ札は決めるボタン(橙)と見分けるよう、控えめな下線にする(窓-48) */
+.msx .msx-asd-tabs button.on{background:#2b2350;color:#fde047;border-color:#4a4380;box-shadow:inset 0 -3px 0 #fde047}
 .msx .msx-asd-tabs button.more{color:#f9a8d4}
 .msx .msx-asd-body{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .msx-asd-cnt{font-size:11px;font-weight:800;color:#cbd5e1;margin:2px 0}
@@ -97281,7 +97486,8 @@ const MSX_ASD_CSS = `
 .msx .msx-md-ac{position:relative}
 .msx .msx-md-ac>.bd>.hd>.mr{position:absolute;right:7px;top:7px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;border-radius:50%;background:#0f172a;border:1px solid #4a4380;color:#f9a8d4;font-size:12px;font-weight:900}
 .msx .msx-md-ac>.bd>.hd>b{padding-right:26px}
-.msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#94a3b8;line-height:1.4}
+.msx .msx-asd-top .asd-kvn{font-size:10.5px;color:#cbd5e1;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .pips .nx{font-size:10px;color:#94a3b8;font-weight:800;margin-left:4px}
 `;
 let msxAsdCssDone = false;
 const msxAsdEnsureCss = () => {
@@ -97370,7 +97576,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   const next = () => (page + 1 < pages ? setPage(page + 1) : onDone());
   const s = run.s;
   return (
-    <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
+    <MsxR3Frame run={run} back="" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
       {/* U-9: お話・エンディングの場面は数字の帯を出さない(参考 v4 128〜154秒) */}
       <div className={`v-scene ${dark ? 'dk' : ''}`} style={{ flex: '1 1 0', minHeight: 300 }} data-msx-arc-talk>
@@ -97424,7 +97630,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
   const who = (l) => (l.who === 'narr' ? null : msxAidName(l.who));
   const next = () => (page + 1 < pages ? setPage(page + 1) : onDone());
   return (
-    <MsxR3Frame run={run} back="中断" onBack={onPause} right="" body={(<>
+    <MsxR3Frame run={run} back="" onBack={onPause} right="" body={(<>
       <style>{MSX_ARC_CSS}</style>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 420 }} data-msx-arc-special>
         <img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="v-burst"/>
@@ -97687,6 +97893,12 @@ const MSX_MANUAL_CSS = `
 .msxm-row.cc.n5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .msxm-row.cc .msxm-btn{min-height:36px;padding:3px 2px;text-align:center;font-size:12px;border-radius:9px}
 .msxm-row.cc .msxm-btn small{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msxm-row.cc.r3{grid-template-columns:repeat(3,minmax(0,1fr))}.msxm-row.cc.r2{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:4px}
+.msxm-ops .msxm-row.cc .msxm-btn{min-height:40px;font-size:13px;line-height:1.15}
+.msxm-ops .msxm-btn:disabled{opacity:1;background:#1a1828;border-color:transparent;color:#64748b;box-shadow:none}.msxm-ops .msxm-btn:disabled small{color:#64748b}
+.msxm-ops .msxm-btn:not(:disabled){box-shadow:0 2px 0 #0006}
+.msxm-ops .msxm-row.cc.r2 .msxm-btn{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px}
+.msxm-ops .msxm-row.cc .msxm-btn small{font-size:11px}
 /* 「オートにする」は試合の画面の道具の段(🎮 手動⇄オート)と同じなので、詰めた形では出さない(ミハリ #6883: 縦の手動で場を 420 のまま1画面に) */
 .msc-wrap .msxm.c .msxm-foot{display:none}
 .msxm-nm{margin-bottom:1px}
@@ -97726,7 +97938,7 @@ const msaTnWidest = (parts, icon) => Math.max(1, ...parts.map((p, i) => msaTnEm(
 function MsaTechName({ name, icon = '', className = '' }) {
   const parts = msaTechNameParts(name);
   return (
-    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2) }}>
+    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2), '--tnt': (parts.reduce((a, p) => a + msaTnEm(p), 0) + (icon ? 1.3 : 0) + 0.2).toFixed(2) }}>
       {icon ? <span className="msa-tn-s">{icon}</span> : null}
       {parts.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="msa-tn-s">{p}</span></React.Fragment>)}
     </span>
@@ -97744,10 +97956,12 @@ const msaFitTechNames = () => {
     document.querySelectorAll('[data-msa-tn]').forEach((el) => {
       el.style.fontSize = '';
       el.classList.remove('msa-tn-brk');
+      // 4列の札(1行で見せる。2026-11-20 再点検 バ-25)は 8.5px まで縮め、折らない
+      const one = !!(el.closest && el.closest('.msa-dc:not(.a)'));
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
-      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 10 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > (one ? 8.5 : 10) && n++ < 16) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
       // 最低の大きさでも1つの言葉が入りきらないときは、切って隠さず、その言葉の中で折って全文見せる
-      if (el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
+      if (!one && el.scrollWidth > el.clientWidth + 0.5) el.classList.add('msa-tn-brk');
     });
   } catch (_) {}
 };
@@ -97787,11 +98001,23 @@ const MSA_DC_CSS = `
 .msa-dc-c small{font-size:10.5px}
 .msa-dc-c .msa-dc-h{font-size:11px}
 .msa-dc-c.now.none{border-color:#475569;box-shadow:none;background:#1b1733;color:#94a3b8}
+/* 2026-11-20 再点検 バ-33・37: 札の字は 12px 以上・技名は 14px の太字で1行(長い名前だけ縮める) */
+.msa-dc:not(.a) .msa-dc-c{min-height:0;padding:3px 5px 4px;gap:0;line-height:1.25}
+.msa-dc:not(.a) .msa-dc-c small{font-size:12px;letter-spacing:-.02em}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h{font-size:12px}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv{font-size:11px;font-weight:900;color:#fff;background:#0284c7;border-radius:5px;padding:0 3px;margin-left:2px;white-space:nowrap}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv.kb{background:#ea580c}
+.msa-dc:not(.a) .msa-dc-c .msa-dc-h i{font-size:10.5px}
+.msa-dc:not(.a) .msa-dc-c .msa-tn{font-weight:900;color:#fff}
+.msa-dc:not(.a) .msa-dc-none{font-size:12px;color:#94a3b8}
 /* 自分の「いま」の札は水色のふち(黄色のふちは助手のおすすめだけに使う。2026-11-20 API の点検: 2つの意味で黄色が重なっていた) */
 .msa-dc-c.now{border-color:#7dd3fc;box-shadow:0 0 0 1px #7dd3fc88 inset}
 .msa-dc-c.now .msa-dc-h em{background:#7dd3fc;color:#0c2a3a}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
-@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(10.5px,min(14px,calc(100cqw / var(--tnw,1))))}}
+/* 2026-11-20 再点検 バ-25・37: 4列の札の技名は途中で折らず1行にする(全体の長さ --tnt で縮める。下限 8.5px) */
+.msa-dc:not(.a) .msa-dc-c .msa-tn{white-space:nowrap;overflow:hidden}
+@supports (width:1cqw){.msa-dc:not(.a) .msa-dc-c .msa-tn{font-size:max(8.5px,min(14px,calc(100cqw / var(--tnt,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
@@ -97899,14 +98125,18 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             </button>
           );
         }
+        // 2026-11-20 再点検 バ-22・33・37・53・60: 字が 9〜10px で読めない・「いま」が何か所にも出る・技名が折り返す →
+        //   いまの間合いは枠の色だけ。技名は1行の太字(長い名前は縮める)、性能は 12px の短い行(命中・ガッツ・ダメージ)。相手の札(B)はガッツの行を出さない(押すと一覧で全部見られる)。
+        //   使ったあと動く技は見出しの行に「↪零」(自分が移る)/「💨遠」(相手を飛ばす)
+        const mvTo = t && Number.isInteger(t.moveTo) ? t.moveTo : null;
+        const kb = mvTo != null && Array.isArray(t.dist) && t.dist.length && mvTo > Math.min(...t.dist);
         return (
           <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
-            <span className="msa-dc-h">{MSA_DC_DIST[d]}{now ? <em>いま</em> : null}<i>{at.length ? `${at.length}技` : ''}</i></span>
+            <span className="msa-dc-h">{MSA_DC_DIST[d]}{mvTo != null ? <span className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo} title={typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}` : undefined}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</span> : null}<i>{at.length > 1 ? `ほか${at.length - 1}` : ''}</i></span>
             {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
-            {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
-            {t ? <small>ガッツ {t.guts}</small> : null}
+            {t ? <small className="p">{Number.isFinite(hp) ? `命中${Math.round(hp)}%` : '命中 —'}</small> : null}
+            {t && dataSide !== 'B' ? <small className="gu">ガッツ−{t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
-            {t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <small className="mv" data-msa-dc-move={t.moveTo} title={`使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`}>↪ {msxTechMoveTxt(t).replace(/\u200b/g, '')}</small> : null}
           </button>
         );
       })}
@@ -98041,17 +98271,22 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)} host="manual"/>
       ) : null}
       {look === 'c' ? (() => {
-        // 詰めた形(2026-11-19 段2): 「◀ 後ろへ・前へ ▶・🛡 ガード・💪 ためる」を1段。吹き飛ばしは零の間合いのときだけ同じ段に足す
+        // 詰めた形(2026-11-20 再点検 バ-38): 移動は決めた横3つ「◀ 後退・💨 吹き飛ばし・前進 ▶」(r1115-195)の1段、ガード・ためるは別の段。
+        //   吹き飛ばしは零の間合いだけ押せる(ほかの間合いでは押せない形で並べる)。「ガ10」と略さず「ガッツ −10」と書く
         const back = opt.move.find((mv) => mv.step > 0); const fwd = opt.move.find((mv) => mv.step < 0);
         const near = !!(opt.blow && opt.blow.near);
-        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガ${mv.guts}` : ''}`);
+        const mvSub = (mv) => (mv.to < 0 || mv.to > 3 ? '行けない' : `${MSX_MANUAL_DIST[mv.to]}へ${Number.isFinite(mv.guts) ? `・ガッツ−${mv.guts}` : ''}`);
         return (
-          <div className={`msxm-row cc ${near ? 'n5' : ''}`} data-msxm-ops>
-            {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : null}
-            {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : null}
-            <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで</small></button>
-            <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
-            {near ? <button type="button" data-msxm-blow="" className={`msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`} disabled={!opt.blow.ok || busy} onClick={() => go({ type: 'blow' })}>💨 吹き飛ばし<small>{opt.blow.wait ? '相手の手のあと' : `遠へ・ガ${opt.blow.guts}`}</small></button> : null}
+          <div className="msxm-ops" data-msxm-ops>
+            <div className="msxm-row cc r3">
+              {back ? <button type="button" data-msxm-move={back.step} className={`msxm-btn ${isHint(back) ? 'hint' : ''}`} disabled={!back.ok || busy} onClick={() => go({ type: 'move', step: back.step })}>◀ 後退<small>{mvSub(back)}</small></button> : <span/>}
+              <button type="button" data-msxm-blow={near ? '' : 'far'} className={`msxm-btn ${near && isHint(opt.blow) ? 'hint' : ''}`} disabled={!near || !opt.blow.ok || busy} onClick={() => { if (near) go({ type: 'blow' }); }}>💨 吹き飛ばし<small>{!near ? '零の間合いだけ' : opt.blow.wait ? '相手の手のあと' : `遠へ・ガッツ−${opt.blow.guts}`}</small></button>
+              {fwd ? <button type="button" data-msxm-move={fwd.step} className={`msxm-btn ${isHint(fwd) ? 'hint' : ''}`} disabled={!fwd.ok || busy} onClick={() => go({ type: 'move', step: fwd.step })}>前進 ▶<small>{mvSub(fwd)}</small></button> : <span/>}
+            </div>
+            <div className="msxm-row cc r2">
+              <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>次の番まで守る</small></button>
+              <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok && Number.isFinite(opt.charge.add) ? `ガッツ +${opt.charge.add}` : opt.charge.ok ? 'ガッツ回復' : 'ためられない'}</small></button>
+            </div>
           </div>
         );
       })() : (
@@ -98152,7 +98387,8 @@ const MSA_BG_LABEL = Object.freeze({ arena: '🏛️ 闘技場', stadium: '🏟�
 // 背景の切り替え(試合の下の帯に置く)。押すたびに闘技場 ⇄ スタジアム
 function MsaBgToggle({ bg, onChange }) {
   const next = msaBgNorm(bg) === 'arena' ? 'stadium' : 'arena';
-  return <button type="button" className="msa-bgsw" data-msa-bg={msaBgNorm(bg)} aria-label={`背景を${MSA_BG_LABEL[next].slice(3)}にする`} onClick={() => { msaBgWrite(next); onChange(next); }}>背景 {MSA_BG_LABEL[msaBgNorm(bg)]}</button>;
+  const cur = next === 'arena' ? 'stadium' : 'arena'; // いまの背景(2026-11-20 再点検 バ-50: 「背景を替える」と、いまの背景を小さく)
+  return <button type="button" className="msa-bgsw" data-msa-bg={cur} aria-label={`背景を${MSA_BG_LABEL[next].slice(3)}にする`} onClick={() => { msaBgWrite(next); onChange(next); }}>背景を替える<small>{MSA_BG_LABEL[cur]}</small></button>;
 }
 // 試合の操作(2026-11-14 社長「バトルがオートだった。基本マニュアルで、オートにもできるようにして」)
 //   モンサクの大会と助手マスモン対戦の試合で共通の新しいキー。'manual'(既定)/'auto'。無い・知らない値は手動として読み、消さない
@@ -98174,7 +98410,8 @@ const msaAutoChoice = (opt) => {
 // 手動 ⇄ オートの切り替え(試合の下の帯に置く)。保存はここ(save=false なら保存しない)
 function MsaCtlToggle({ ctl, onChange, save = true }) {
   const now = msaCtlNorm(ctl); const next = now === 'auto' ? 'manual' : 'auto';
-  return <button type="button" className="msa-ctlsw" data-msa-ctl={now} aria-label={next === 'auto' ? 'オートにする' : '手動にする'} onClick={() => { if (save) msaCtlWrite(next); onChange(next); }}>{now === 'auto' ? '🤖 オート中' : '🎮 手動'}<small>{next === 'auto' ? 'オートへ' : '手動へ'}</small></button>;
+  // 2026-11-20 再点検 バ-50・61: いまの状態と押したあとが1つに書かれていて分かりにくい → いまの状態だけを出す切り替え(オート 入/切)
+  return <button type="button" role="switch" aria-checked={now === 'auto'} className="msa-ctlsw" data-msa-ctl={now} aria-label={next === 'auto' ? 'オートにする' : '手動にする'} onClick={() => { if (save) msaCtlWrite(next); onChange(next); }}><span className="msa-sw-em" aria-hidden="true">🤖</span>オート<i className="msa-sw" aria-hidden="true"><u/></i><b>{now === 'auto' ? '入' : '切'}</b></button>;
 }
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
@@ -98185,7 +98422,7 @@ const MSA_CSS = `
 .msa-stage.big .msa-bg{transform-origin:50% 75%;transition:transform .64s cubic-bezier(.45,.05,.35,1)}
 .msa-stage.fill.big .msa-f{transition:left .64s cubic-bezier(.45,.05,.35,1),width .64s cubic-bezier(.45,.05,.35,1),height .64s cubic-bezier(.45,.05,.35,1),margin-left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-stage.fill.big .msa-f img.msa-img{transition:max-width .64s cubic-bezier(.45,.05,.35,1),max-height .64s cubic-bezier(.45,.05,.35,1)}
-.msa-spot.on.lb::after{content:attr(data-n);position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:900;font-style:normal;color:#fde047;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:nowrap}
+.msa-spot.on.lb::after{content:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:900;font-style:normal;color:#fde047;text-shadow:0 1px 2px #000,0 0 3px #000;white-space:nowrap}
 .msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
@@ -98205,7 +98442,9 @@ const MSA_CSS = `
 /* 横に送っても背景の端が見えないよう、絵は左右に広げて描く(広げるのは ::before だけ。要素の枠は場の中のまま) */
 .msa-pan .msa-bg{background-size:0 0}
 .msa-pan .msa-bg::before{content:'';position:absolute;top:0;bottom:0;left:-24%;right:-24%;background-color:#2a2147;background-image:inherit;background-size:cover;background-position:center;background-repeat:no-repeat}
-.msa-in{animation:msaIn .45s ease-out both}
+/* 2026-11-20 再点検 バ-23: 登場のときに透けて「影」のように見えた(試合の前の画面で相手が誰か分からない)→ 透けさせず、下から弾んで出るだけにする */
+.msa-in{animation:msaInSolid .45s ease-out both}
+@keyframes msaInSolid{0%{transform:translateY(16px) scale(.8)}100%{transform:none}}
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
 .msa-dist span.cur{background:#fde047;color:#422006}
@@ -98223,7 +98462,11 @@ const MSA_CSS = `
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
 .msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
-.msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
+.msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8;line-height:1.1}.msa-tools button.msa-bgsw small{display:block;font-size:10px;color:#cbd5e1}
+.msa-tools button.msa-ctlsw{display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px}
+@media (max-width:379.98px){.msa-tools button.msa-ctlsw .msa-sw-em{display:none}.msa-tools button.msa-ctlsw{gap:3px;font-size:11px}.msa-sw{width:24px}.msa-ctlsw[data-msa-ctl=auto] .msa-sw u{left:10px}}.msa-tools button.msa-ctlsw b{font-size:12px}
+.msa-sw{position:relative;display:inline-block;width:28px;height:16px;border-radius:99px;background:#475569;flex:none}.msa-sw u{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .2s}
+.msa-ctlsw[data-msa-ctl=auto] .msa-sw{background:#22c55e}.msa-ctlsw[data-msa-ctl=auto] .msa-sw u{left:14px}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-tools button.msa-pause{flex:.55;min-width:44px}
 /* 手動の道具行は1行に集約(2026-11-18 社長: 極力1画面に)。速さは短い札、切替に幅を回す */
@@ -98392,6 +98635,18 @@ const MSA_CSS = `
 .msa-hud.A .msa-g b{text-align:left}.msa-hud.B .msa-g b{text-align:right}
 .msa-g.low b{color:#fca5a5}
 .msa-g.gt b{font-size:10px;color:#fde68a}
+.msa-g b .msa-gl{font-size:9.5px;margin-right:2px;color:#fde68a}.msa-g b .msa-gl.hp{color:#bbf7d0}
+.msa-g.hp b{min-width:58px}
+.msa-rnd b .mx{font-size:12px;color:#cbd5e1;-webkit-text-stroke:0;margin-left:1px}
+/* 2026-11-20 API: 名前が 11px で観客席に埋もれる → 13px・暗い下地 */
+.msa-hud .nm{font-size:13px;background:#0f0b22b3;border-radius:6px;padding:0 6px;width:max-content}
+.msa-g.gt b{min-width:52px;font-size:11px}
+/* 2026-11-20 再点検 バ-10: 決着の字が2体の上に重なって絵を隠していた → 字は場の上の方へ。負けの姿も見えるように暗くするのは上だけ */
+.msa-end{justify-content:flex-start;padding-top:18%;background:linear-gradient(180deg,#000b,#0004 45%,#0000 70%)}
+.msa-end .msa-endgo{pointer-events:auto;position:absolute;left:50%;bottom:12px;transform:translateX(-50%);min-width:160px;min-height:44px;border-radius:12px;border:2px solid #fde047;background:#422006e6;color:#fde047;font-size:15px;font-weight:900;font-family:inherit;animation:msaIn .4s .9s ease-out both}
+.msa-sulkstamp small.why{display:block;width:max-content;max-width:100%;margin:3px auto 0;background:#1e1b4bdd;color:#e0e7ff;font-size:11px}
+/* 2026-11-20 再点検 バ-51: ラウンドの数字に背景の赤い飾りが重なって読みにくい → 数字に暗い下地を敷く */
+.msa-rnd b{background:#0f0b22cc;border-radius:10px;padding:2px 8px 3px;min-width:34px;text-align:center}
 .msa-gbar.hurt{animation:msaBarHit .35s ease-out}
 .msa-gbar.hurt.big{animation:msaBarShake .45s ease-out}
 .msa-gbar.gain{animation:msaBarGlow .7s ease-out}
@@ -98441,6 +98696,7 @@ const MSA_CSS = `
 .msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
 /* 縦は部品どうしのすき間を 8→5px に詰め、手動でも下の道具の段まで1画面に入れる(2026-11-20 API の点検 r3-MA1: 札の字を上げた分) */
 @media (orientation:portrait){.msc-wrap.msa{gap:5px}}
+/* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -99412,7 +99668,7 @@ const msaSay = (e, nm, log = null) => {
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
   if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
-  if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
+  if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! ${nm(e.side === 'A' ? 'B' : 'A')}は 次の手のあと 遠へ飛ばされる`; // 誰が飛ばされるか分かるように(2026-11-20 API)
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
   if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
   if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
@@ -99515,7 +99771,7 @@ function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow,
   // 息切れ: ガッツが尽きかけ(ためている行は出さない)
   const tired = !down && Number.isFinite(gutsNow) && gutsNow < MSA_GUTS_TIRED && !(me && e.ev === 'charge');
   // 息切れの札は絵の右上に出る決まりだが、右側(B)の子ではそのまま場の外へ出てしまうので、B は内側(左)へ反転する(2026-11-17 仕上げ)
-  if (tired) extra.push(<span key="pant" className="msa-pant" data-msa-tired={side} style={side === 'B' ? { right: 'auto', left: -6 } : undefined}>💦 息切れ</span>);
+  // 2026-11-20 再点検 バ-13: 頭の上の吹き出しは絵に重なり、効き目も分からない → 絵の上には出さず、上の帯に「息切れ(ガッツ残りわずか)」と出す(MsaStage の bands)。絵の揺れ(tired)は残す
   // ガッツの増減(ためた・撃った・削られた)。削られたのは当たる瞬間に出す
   if (Number.isFinite(gd) && Math.round(gd) !== 0 && !down) {
     const n = Math.round(gd);
@@ -99592,7 +99848,7 @@ function MsaGauge({ value, max, kind, delay = 0, sf = 1, reduce = false }) {
   return (
     <div className={`msa-g ${kind} ${low ? 'low' : ''}`} data-msa-gauge={kind} data-msa-gauge-v={v}>
       <div key={fk} className={`msa-gbar ${fx}`}><i className="lag" style={{ width: w(Math.max(lag, shown)) }}/><i className="cur" style={{ width: w(shown) }}/></div>
-      <b>{num}</b>
+      <b>{kind === 'gt' ? <small className="msa-gl">ガッツ</small> : <small className="msa-gl hp">ライフ</small>}{num}</b>
     </div>
   );
 }
@@ -99620,14 +99876,15 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   if (!f || !pf || pos < 1 || f.act[side] !== pf.act[side] || !((f.hp[side] || [])[f.act[side]] > 0)) return [];
   const out = [];
   const R = f.r > pf.r ? (regen[`${side}${f.act[side]}`] || 0) : 0;
-  if (R > 0) out.push({ t: `自動ガッツ回復 +${R}`, cls: 'up', delay: 0 });
+  if (R > 0) out.push({ t: `ガッツ +${R}(回復)`, cls: 'up', delay: 0 });
   const d = f.g[side] - pf.g[side];
   if (r.side === side) {
     const x = d - R;
-    if (r.ev === 'tech') { const t = msaTechOf(log, r); if (t && t.guts) out.push({ t: `技 −${t.guts}`, cls: 'down', delay: 0 }); }
-    else if ((r.ev === 'move' || r.ev === 'blow') && r.why !== 'blown' && (Number(r.cost) || 0) > 0) out.push({ t: `${r.ev === 'blow' ? '吹き飛ばし' : '移動'} −${Math.round(Number(r.cost))}`, cls: 'down', delay: 0 });
-    else if (x > 0) out.push({ t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`, cls: 'up', delay: 0 });
-  } else if (r.ev === 'tech' && r.hit && (Number(r.gd) || 0) > 0) out.push({ t: `削られた −${Math.round(Number(r.gd))}`, cls: 'down', delay: hitMs });
+    // 2026-11-20 再点検 バ-47・64・65: 「+9」「移動 −5」だけでは何の数か分からない → どれも「ガッツ」と書く
+    if (r.ev === 'tech') { const t = msaTechOf(log, r); if (t && t.guts) out.push({ t: `ガッツ −${t.guts}(技)`, cls: 'down', delay: 0 }); }
+    else if ((r.ev === 'move' || r.ev === 'blow') && r.why !== 'blown' && (Number(r.cost) || 0) > 0) out.push({ t: `ガッツ −${Math.round(Number(r.cost))}(${r.ev === 'blow' ? '吹き飛ばし' : '移動'})`, cls: 'down', delay: 0 });
+    else if (x > 0) out.push({ t: `ガッツ +${x}(${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'})`, cls: 'up', delay: 0 });
+  } else if (r.ev === 'tech' && r.hit && (Number(r.gd) || 0) > 0) out.push({ t: `ガッツ −${Math.round(Number(r.gd))}(削られた)`, cls: 'down', delay: hitMs });
   return out;
 };
 
@@ -99648,16 +99905,11 @@ const msaBandsOf = (log, frames, k) => {
   const r = log[k]; const f = frames[k]; const pf = frames[k - 1];
   if (!r || !f || !pf || k < 1) return [];
   const out = [];
-  if (r.ev === 'guard') out.push({ side: r.side, t: '🛡 守りの構え' });
-  else if (r.ev === 'charge') out.push({ side: r.side, t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた' });
-  else if (r.ev === 'move' && r.why === 'blown') out.push({ side: r.side, t: '💨 遠へ飛ばされた' });
-  else if (r.ev === 'move' && r.why === 'techMove') { const tn = msaTechMoveName(log, r); out.push({ side: r.side, t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ` }); }
-  else if (r.ev === 'move') out.push({ side: r.side, t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}` });
-  else if (r.ev === 'blow') out.push({ side: r.side, t: '💨 吹き飛ばし' });
-  else if (r.ev === 'swap') out.push({ side: r.side, t: `🔁 ${r.name || ''} に交代` });
-  else if (r.ev === 'tech' && r.hit && r.guarded) out.push({ side: r.side === 'A' ? 'B' : 'A', t: '🛡 ガードで軽減' });
+  // 2026-11-20 再点検 バ-14・15・36: ためた・間合い・吹き飛ばし・交代は下の実況の文と同じ中身で二重・三重だった → 帯は「続く状態」だけにする
+  //   (ガードで軽減・息切れ)。間合いは場の下の零/近/中/遠の札1つで見せる
+  if (r.ev === 'tech' && r.hit && r.guarded) out.push({ side: r.side === 'A' ? 'B' : 'A', t: '🛡 ガードで軽減' });
   ['A', 'B'].forEach((sd) => {
-    if (Number(f.g[sd]) < MSA_GUTS_TIRED && Number(pf.g[sd]) >= MSA_GUTS_TIRED && (f.hp[sd] || [])[f.act[sd]] > 0) out.push({ side: sd, t: '💦 息切れ' });
+    if (Number(f.g[sd]) < MSA_GUTS_TIRED && Number(pf.g[sd]) >= MSA_GUTS_TIRED && (f.hp[sd] || [])[f.act[sd]] > 0) out.push({ side: sd, t: '💦 息切れ(ガッツ残りわずか)' });
   });
   return out.map((b, j) => ({ ...b, k, j }));
 };
@@ -99696,7 +99948,7 @@ const msaCamFrames = (pts, total) => {
 //   sound … 効果音を鳴らすか(止めて見返しているときなどは false)
 //   introTitle … 試合の入りの題字(無ければ「試合開始」) / speedF … 見せる速さ(1行の長さに掛ける。×2 は 0.55)
 // fill … 親の高さいっぱいに広げる(助手マスモン対戦 β の観戦・2026-11-13 段2「場を画面いっぱいに」)/ lite … 演出を少なめ(端末の動きを減らす設定と同じ扱い)
-function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false, wide = false, liveGuts = null, motionKindOf = msaMotionKind }) {
+function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false, wide = false, liveGuts = null, motionKindOf = msaMotionKind, onEndGo = null, roundMax = 0 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
   const [stageH, setStageH] = useState(300);
@@ -99878,7 +100130,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     const m = memberOf(sd); const foe = e.ev === 'tech' && e.side && e.side !== sd;
     const tags0 = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
     const lv = liveOf(sd); const lvUp = lv != null && f.g && Number.isFinite(Number(f.g[sd])) ? Math.round(lv - Number(f.g[sd])) : 0;
-    const tags = lvUp > 0 ? [...tags0, { t: `+${lvUp}`, cls: 'up', delay: 0 }] : tags0; // 自動回復の分
+    const tags = lvUp > 0 ? [...tags0, { t: `ガッツ +${lvUp}(回復)`, cls: 'up', delay: 0 }] : tags0; // 自動回復の分
     return (
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
@@ -99913,9 +100165,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
      </div>
       {/* ここから上の層(カメラ・揺れの外。字が読めるように動かさない) */}
       {!intro && !ended && ['A', 'B'].map(hud)}
-      {!intro && (() => { const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : (f.r || 0); return <div className="msa-rnd" data-msa-round={rn}><small>ラウンド</small><b>{rn || 1}</b></div>; })()}
+      {!intro && (() => { const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : (f.r || 0); return <div className="msa-rnd" data-msa-round={rn}><small>ラウンド</small><b>{rn || 1}{roundMax ? <small className="mx">/{roundMax}</small> : null}</b></div>; })()}
       {['A', 'B'].map((sd) => (bands[sd].length ? <div key={sd} className={`msa-bands ${sd}`}>{bands[sd].map((b, j) => <span key={`${b.k}-${b.j}`} className={`msa-band ${j ? 'old' : ''}`} data-msa-band={sd}>{b.t}</span>)}</div> : null))}
-      {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small></div>}
+      {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small><small className="why">忠誠度が100より低いと、<wbr/>ときどき命令を聞きません</small></div>}
       <div className={`msa-dist ${e.ev === 'tech' && (e.side === 'A' || e.side === 'B') ? `s${e.side}` : ''}`} data-msa-dist>{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
       {e.ev === 'tech' && fx.cut > 0 && <MsaCutin key={`ci-${pos}`} e={e} rank={fx.rank} member={memberOf(e.side, e.i)} ms={fx.cut}/>}
       {e.ev === 'tech' && <div key={`c-${pos}`} className={`msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`} data-msa-cut={p == null ? '' : p} data-msa-rank={fx.rank || 1} style={fx.cut ? { animationDelay: `${fx.cut}ms` } : undefined}>
@@ -99936,7 +100188,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
           <div className="msa-word go">FIGHT!</div>
         </div>
       )}
-      {ended && <div className={`msa-end ${win === 'A' ? 'w' : 'l'}`} data-msc-end={win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'}>{!reduce && <i className="msa-rays" aria-hidden="true"/>}<b>{win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'}</b><span className="msa-ribbon">{win === 'A' ? 'WIN' : win === 'draw' ? 'DRAW' : 'LOSE'}</span>{endSub ? <small>{endSub}</small> : null}</div>}
+      {ended && <div className={`msa-end ${win === 'A' ? 'w' : 'l'}`} data-msc-end={win === 'A' ? 'win' : win === 'draw' ? 'draw' : 'lose'}>{!reduce && <i className="msa-rays" aria-hidden="true"/>}<b>{win === 'A' ? '勝ち!' : win === 'draw' ? '引き分け' : '負け…'}</b>{endSub ? <small>{endSub}</small> : null}{onEndGo ? <button type="button" className="msa-endgo" data-msa-endgo onClick={onEndGo}>次へ ▶</button> : null}</div>}
     </div>
   );
 }
@@ -99968,6 +100220,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const [ctl, setCtl] = useState(() => msaCtlRunRead(s && s.id));   // 手動が基本。オートを選んだら保存して次の試合でも使う
   const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
+  const [endTap, setEndTap] = useState(0); // 決着の「次へ」を押した(待たずに進む。2026-11-20 再点検 バ-46)
   const [judgeOk, setJudgeOk] = useState(false);   // 判定の画面(MsaJudge)を見終えた
   const judgeIdx = useMemo(() => log.findIndex(x => x && x.ev === 'judge' && x.mode === 'three'), [log.length]);
   const [paused, setPaused] = useState(false);   // ⏸ 試合を止める(段C 2026-11-14: 助手マスモン対戦と同じ操作)
@@ -99988,7 +100241,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
       // 見せ場だけ: 次の見せ場(技・たおれる)まで飛ばす
       const nextPos = (p) => { let n = Math.min(last, p + 1); if (speed === 'hl' && typeof ambwIsHighlight === 'function') { const st0 = log[0] || {}; const mx = { A: st0.aHp || [], B: st0.bHp || [] }; while (n < last && !ambwIsHighlight(log[n], mx)) n++; } return n; };
-      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f, monsucMotionKind) * sp.f));
+      // 2026-11-20 再点検 バ-11: オートで何も起きない行(ためる・守る・歩く)が続くと待ちが長い → 見るだけの番(オート・記録)はその行を短く見せる。技・ダウン・交代はふつうの速さ
+      const quiet = auto && (cur.ev === 'charge' || cur.ev === 'guard' || cur.ev === 'move') && cur.why !== 'sulk' && cur.why !== 'blown';
+      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f, monsucMotionKind) * sp.f * (quiet ? 0.55 : 1)));
       return () => clearTimeout(t);
     }
     if (done && (judgeIdx < 0 || judgeOk)) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
@@ -100017,9 +100272,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   }, [autoWait, pos, mm.tick]);
   useEffect(() => {
     if (!ended || endRef.current) return undefined;
-    const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
+    const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, endTap ? 0 : 1700);
     return () => clearTimeout(t);
-  }, [ended]);
+  }, [ended, endTap]);
   // 場に出す両チーム: 育てるモンスターと、相手(ライバルなら その子の染めた色)を足す。芯の入力(input)は変えない
   const stageTeams = useMemo(() => {
     const cA = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
@@ -100029,6 +100284,23 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       ...(cA ? { A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: cA } : m)) } } : {}),
       ...(cB && teams.B && Array.isArray(teams.B.members) ? { B: { ...teams.B, members: teams.B.members.map((m, i) => (i === 0 && m ? { ...m, colors: cB } : m)) } } : {}) };
   }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
+  // 場の高さを、下のボタン列まで1画面に収まる高さにする(2026-11-20 再点検 バ-24・32・35・44)。上限は決めた 420px(r1119-007)・下限 260px。
+  //   入れ物の下端(スクロールする箱か画面の下)からはみ出た分だけ場を縮め、余れば 420px まで戻す。横向きの低い画面(2列)は今までどおり CSS
+  const wrapRef = useRef(null);
+  const [stagePx, setStagePx] = useState(null);
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 0));
+  useEffect(() => { const on = () => setVh(window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  React.useLayoutEffect(() => {
+    const wrap = wrapRef.current; if (!wrap || typeof window === 'undefined') return;
+    if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) { if (stagePx != null) setStagePx(null); return; }
+    const box = wrap.querySelector('[data-msa-stagebox]'); if (!box) return;
+    const root = wrap.closest('[data-msc-root]');
+    const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
+    const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
+    const cur = box.getBoundingClientRect().height;
+    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
+    if (Math.abs(next - cur) > 2) setStagePx(next);
+  });
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f, false, monsucMotionKind);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
@@ -100069,21 +100341,26 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(catalog, mbB, mvB) : null;
   const hitAtB = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
   const lastTechOf = (side) => msaLastTechOf(log, pos, side);
+  // 実況の欄を空にしない(2026-11-20 再点検 バ-17・59): いまの行に言うことが無いときは、直前の文を残す。始まる前は大会名で「開始!」
+  //   始まりの1行で、決着がつかないときの決まり(何ラウンドで判定か)も知らせる(2026-11-20 再点検 バ-09)
+  const rLimit = (input && Number(input.roundLimit)) || 30 * Math.max(1, ((teams.A && teams.A.members) || []).length, ((teams.B && teams.B.members) || []).length);
+  const opening = `${info.title ? `${info.title}、` : ''}試合開始!(${rLimit}ラウンドで判定)`;
+  const sayNow = (() => { for (let k = pos; k >= Math.max(0, pos - 4); k--) { const t = msaSay(log[k], nm, log); if (t) return k <= 2 && (log[k] || {}).ev !== 'tech' ? opening : t; } return opening; })();
   const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
   const foeDanger = foeOn ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0;
   return (
-    <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
+    <div ref={wrapRef} className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
       <div className="msa-main" data-msa-main>
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
-        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{msxBreederLabel(info.opp.breeder, info.opp.rivalKind)}</small> : null}</div>
+        {/* 2026-11-20 再点検 バ-34: 相手の名前は体力の帯の上と二重だった → 見出しは大会名だけ */}</div>
       {foeOn ? <div className="msa-foe" data-msa-foe data-msa-danger={foeDanger}><div className="msa-rowh">相手の技<small>押すと、その間合いの技が見られます</small></div><MsaDistCards list={itemsB} rep={msaRepIds(itemsB, null)} dist={f.d} guts={f.g.B} lastMove={lastTechOf('B')} dataSide="B" hitAt={hitAtB} onOpen={(d) => setFoeSheet(d)}/></div> : null}
-      <div className="msa-stagebox" data-msa-stagebox>
-        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind}/>
+      <div className="msa-stagebox" data-msa-stagebox data-msa-fit={stagePx || ''} style={stagePx ? { height: `${stagePx}px`, minHeight: 0, flex: 'none' } : undefined}>
+        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind} onEndGo={ended ? () => setEndTap(1) : null} roundMax={rLimit} endSub={judgeIdx >= 0 ? `${(log[judgeIdx] || {}).limit || rLimit}ラウンドで決着つかず・判定${won ? '勝ち' : '負け'}` : ''}/>
       </div>
-      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : sayNow}</div>
       </div>
       <div className="msa-side" data-msa-side>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><div className="msa-rowh">自分の技</div><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={lastTechOf('A')} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
@@ -100093,7 +100370,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         <div className="msa-tools">
           <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>
           {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { setSpeed(x.id); }}>{x.label}</button>)}
-          <button type="button" data-msc-hl className={speed === 'hl' ? 'on' : ''} onClick={() => { setSpeed(v => (v === 'hl' ? 'x1' : 'hl')); }}>★見せ場</button>
+          <button type="button" data-msc-hl className={speed === 'hl' ? 'on' : ''} aria-label="見せ場(技・ダウン)だけを見る" onClick={() => { setSpeed(v => (v === 'hl' ? 'x1' : 'hl')); }}>★見せ場だけ</button>
           <button type="button" data-msc-skip onClick={skip}>⏭ 飛ばす</button>
           {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
         </div>
@@ -100248,7 +100525,7 @@ function MsaJudge({ row, names, onGo }) {
     <div className="msa-judge" data-msa-judge={win ? 'win' : 'lose'} onClick={go} role="button" aria-label="結果へ">
       <style>{MSA_JUDGE_CSS}</style>
       <div className="msa-judge-big">判定!</div>
-      <div className="msa-judge-sub">{row.limit || 30}ターンで決着がつかなかったので、3つの比べで決めます</div>
+      <div className="msa-judge-sub">{row.limit || 30}ラウンドで決着がつかなかったので、3つの比べで決めます</div>
       <div className="msa-judge-head"><span>比べる物</span><span><b>{(names && names.A) || '自分'}</b></span><span><b>{(names && names.B) || '相手'}</b></span><span>勝ち</span></div>
       {rows.map((r) => {
         const lb = MSA_JUDGE_LABEL[r.key] || ['', r.key];
