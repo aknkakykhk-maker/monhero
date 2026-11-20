@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 77b25eb723b79d1d
+// source-sha256: 42e5d031136bc93b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113177,7 +113177,7 @@ const assistantLifeSlotBuild = (day, j, hourForV1) => {
     j,
     i,
     id: six.id,
-    label: assistantLifeTimeNameOf(j * 2),
+    label: typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(j * 2) : six.label,
     from: j * 2,
     to: j * 2 + 2,
     absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1)

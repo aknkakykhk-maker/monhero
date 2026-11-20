@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18eaab2f819dd278
+// generated-sha256: d4dd7e8777269e8e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67350,7 +67350,7 @@ const assistantLifeSixIndexOfHour = (h) => Math.max(0, ASSISTANT_LIFE_SLOTS.find
 const assistantLifeSlotBuild = (day, j, hourForV1) => {
   const i = assistantLifeSixIndexOfHour(j * 2 + 1); // 区切りの真ん中(1時・3時・5時…)がどの6つに入るか
   const six = ASSISTANT_LIFE_SLOTS[i];
-  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: assistantLifeTimeNameOf(j * 2), from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
+  return { abs: day * ASSISTANT_LIFE_PER_DAY + j, j, i, id: six.id, label: typeof assistantLifeTimeNameOf === 'function' ? assistantLifeTimeNameOf(j * 2) : six.label, from: j * 2, to: j * 2 + 2, absV1: day * 6 + assistantLifeSixIndexOfHour(hourForV1) };
 };
 const assistantLifeSlotAt = (now = Date.now()) => {
   const t = Number(now) + 9 * 3600000;
