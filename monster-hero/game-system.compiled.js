@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fcff5f073b79187
+// source-sha256: 280b102891be490e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173202,6 +173202,12 @@ const MSX_CSS = `
 .msx-md{padding:8px 10px}
 /* PC で詳細の窓が画面の幅いっぱい(1250px)に広がっていた。縦の画面と同じ大きさの窓にそろえる(2026-11-20 r1119-033 育-39) */
 .msx-sheet.msx-md,.msx-sheet.msx-asd{max-width:520px;margin:0 auto}
+/* 詳細の窓だけでなく、技を選ぶ・枠に入れるモンスター・集まり・編成の効果・確かめ・ボックスの窓も PC で横いっぱいだった。幕の上の窓はすべて本体の列と同じ幅にする(2026-11-20 r1119-033 窓-14・21・26・32・49〜51・54) */
+.msx-ov>.msx-sheet{max-width:520px;margin-left:auto;margin-right:auto}
+/* 詳細の窓は、下のタブを切り替えるたびに高さが変わって画面が跳ねていた。高さを画面いっぱいに決め、閉じるは常に下に置く(窓-23)。
+   後ろの一覧の「← 戻る」が透けて、戻り方が2つあるように見えていたので、詳細の幕は濃くする(窓-25・31) */
+.msx-ov:has(>.msx-sheet.msx-md){background:#0b0920f2}
+.msx-ov>.msx-sheet.msx-md{height:100%}
 .msx-md-art .nm .nmx{display:block;font-size:15px;line-height:1.2}
 .msx-md-ti{text-align:center}
 .msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
@@ -188974,7 +188980,7 @@ function MsxR3Box({
       },
       "data-msx-mm-tab-bye": true,
       "data-msx-r3-mmbye": true
-    }, "お別れ")), tab === 'bye' ? React.createElement("div", {
+    }, "まとめてお別れ")), tab === 'bye' ? React.createElement("div", {
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
@@ -189148,17 +189154,20 @@ function MsxR3Box({
         }, lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
           type: "button",
           onClick: unlend
-        }, "🤝 貸し出しをやめる") : React.createElement("button", {
+        }, "貸し出しをやめる") : React.createElement("button", {
           type: "button",
           onClick: lend
-        }, "🤝 貸し出す") : null, React.createElement("button", {
+        }, "貸し出す") : null), React.createElement("div", {
+          className: "mm-bye-row"
+        }, React.createElement("button", {
           type: "button",
+          className: "mm-bye-sm",
           disabled: !!lock,
           onClick: () => setByeAsk({
             ids: [cur.id]
           }),
           "data-msx-r3-bye": true
-        }, lock ? `お別れ(${lock})` : 'お別れ'))),
+        }, lock ? `お別れできません(${lock})` : 'このモンスターとお別れする'))),
         onClose: () => {
           setSel(null);
           setPage('list');
@@ -189277,7 +189286,7 @@ function MsxR3Box({
     foot = null;
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: page === 'list' && tab === 'bye' || page === 'assist' && atab === 'rm' ? 'やめる' : '戻る',
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' && tab === 'bye' ? () => {
       setTab('list');
       setPick([]);
@@ -189380,7 +189389,11 @@ const MSX_MM_CSS = `
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
 .msx .mm-acts button:disabled{opacity:.5}
 /* お別れは取り返しがつかないので、貸し出すと同じ見た目にしない(2026-11-20 r1119-013 ⑥ API 点検) */
-.msx .mm-acts button[data-msx-r3-bye]:not(:disabled){background:#3b0d18;border:1.5px solid #f87171;color:#fecaca}
+.msx .mm-acts:empty{display:none}
+.msx .mm-acts{grid-auto-columns:minmax(0,1fr)}
+.msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
+.msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
+.msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
 `;
 const MSX_BOX_HOST = {
   open: null,
@@ -273934,7 +273947,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? '項目一覧へ戻る' : cat ? 'ヘルプへ戻る' : '閉じる';
+      const backLabel = topic || cat ? '戻る' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -273980,15 +273993,12 @@ function MonsterHeroGame() {
           color: accent
         }
       }, headTitle)), React.createElement("button", {
+        type: "button",
         onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": "助手のひとことを開く",
-        className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
-      }, React.createElement(AssistantFace, {
-        who: activeAssistant,
-        size: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 32 : 48,
-        accent: accent,
-        expression: assistantExpression
-      }))), helpAssistantOpen && React.createElement("div", {
+        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
+        "data-help-bubble-toggle": true,
+        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
+      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
@@ -274002,8 +274012,7 @@ function MonsterHeroGame() {
         expression: assistantExpression,
         accent: accent,
         compact: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight,
-        collapseKey: helpShort ? null : "help",
-        collapseHidden: true,
+        collapseKey: null,
         maxLines: topic ? typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 1 : 2 : typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 2 : 0
       })), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
@@ -274133,12 +274142,9 @@ function MonsterHeroGame() {
         "data-battle-tutorial-launch-all": true,
         onClick: () => startBattleTutorial('HOME'),
         className: "w-full rounded-2xl border border-white/15 bg-slate-900 py-3 text-[12px] font-black text-slate-100 active:scale-95"
-      }, "🎓 れんしゅうを最初から全部通す")), React.createElement("div", {
-        className: "pt-1 flex gap-2"
+      }, "🎓 れんしゅうを最初から全部通す")), nextTopic && React.createElement("div", {
+        className: "pt-1 flex"
       }, React.createElement("button", {
-        onClick: () => setHelpTopicId(null),
-        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
-      }, "項目一覧へ"), nextTopic && React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
         className: "min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {

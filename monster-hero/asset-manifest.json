@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "afc21b7e466a",
-  "packs": {"beat":{"bytes":250041136,"count":147},"battle":{"bytes":312967295,"count":1560},"card":{"bytes":38155544,"count":1048},"all":{"bytes":601163975,"count":2755},"core":{"bytes":24454200,"count":24}},
+  "id": "97e9a6336af3",
+  "packs": {"beat":{"bytes":250041136,"count":147},"battle":{"bytes":312967295,"count":1560},"card":{"bytes":38155544,"count":1048},"all":{"bytes":601163975,"count":2755},"core":{"bytes":24454934,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2760,7 +2760,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"db4d7e5b9b37","size":307725,"pack":"core"},
+    "tailwind.css": {"v":"f01010686772","size":307725,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2774,13 +2774,13 @@
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"e297d2fa07bf","size":96997,"pack":"core"},
     "data/changelog.js": {"v":"964d3fbe5674","size":1934628,"pack":"core"},
-    "data/help.js": {"v":"177b7f0e76e4","size":897809,"pack":"core"},
+    "data/help.js": {"v":"27489e0d3408","size":897809,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"6ee1545741f4","size":2180354,"pack":"core"},
     "data/card-battle-cards.js": {"v":"a1453d49f17e","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"2d930802c99a","size":12369985,"pack":"core"}
+    "game-system.compiled.js": {"v":"62264c337416","size":12370719,"pack":"core"}
   }
 }
