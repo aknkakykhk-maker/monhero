@@ -386,6 +386,11 @@
   "erfolg_piano/hard": "88a9b6891e13e530",
   "erfolg_piano/expert": "27f5f35124c1aeef",
   "erfolg_piano/master": "031cc81580b212e3",
+  "amakakeru_tsubasa/easy": "153f0f77521cc4c4",
+  "amakakeru_tsubasa/normal": "bb1c1aa5cc335adf",
+  "amakakeru_tsubasa/hard": "f4923a42b1c9b0d8",
+  "amakakeru_tsubasa/expert": "1038a23ed5da01f2",
+  "amakakeru_tsubasa/master": "5613f661a7834887",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -473,6 +478,7 @@
   "dr_wily_stage_1_okkussenman/hell": "3ac9515e935debaa",
   "erfolg/hell": "38991ec2bf0b2a01",
   "erfolg_piano/hell": "af6f6690583fc26c",
+  "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -983,6 +989,44 @@
    "reason": "新曲 Erfolg を公開",
    "changed": [
     "erfolg/hell"
+   ]
+  },
+  {
+   "at": "2026-11-20 08:37",
+   "reason": "新曲 天翔る翼 を公開",
+   "changed": [
+    "amakakeru_tsubasa/easy",
+    "amakakeru_tsubasa/normal",
+    "amakakeru_tsubasa/hard",
+    "amakakeru_tsubasa/expert",
+    "amakakeru_tsubasa/master",
+    "amakakeru_tsubasa/hell"
+   ]
+  },
+  {
+   "at": "2026-11-20 08:38",
+   "reason": "新曲 天翔る翼 の MASTER の帯の中ノーツを fixHeldBand で外へ出した",
+   "changed": [
+    "amakakeru_tsubasa/master"
+   ]
+  },
+  {
+   "at": "2026-11-20 09:43",
+   "reason": "天翔る翼の譜面を激しさ調整(曲全体strong・EXPERT mild・MASTER extreme・MASTER sustainScale 0.2)で作り直し",
+   "changed": [
+    "amakakeru_tsubasa/easy",
+    "amakakeru_tsubasa/normal",
+    "amakakeru_tsubasa/hard",
+    "amakakeru_tsubasa/expert",
+    "amakakeru_tsubasa/master",
+    "amakakeru_tsubasa/hell"
+   ]
+  },
+  {
+   "at": "2026-11-20 09:55",
+   "reason": "天翔る翼の HELL を作り直し(2026-11-20 あっくん「MASTER に対して HELL が低すぎる」。hellDensity 1.2 で再生成し Lv.52→67・417→522ノーツ。他の譜面は不変)",
+   "changed": [
+    "amakakeru_tsubasa/hell"
    ]
   }
  ]
