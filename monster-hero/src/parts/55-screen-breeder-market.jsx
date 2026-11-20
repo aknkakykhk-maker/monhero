@@ -257,6 +257,7 @@ function BreederMarketScreen({
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
+    // 着替えは middle の「詳細」から詳細窓を開ける(2026-11-20 社長。詳細窓に全身絵プレビューが出る。所持済み・近日追加でも同じ)
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
@@ -266,7 +267,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='icon'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='icon'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:item.type==='costume'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}

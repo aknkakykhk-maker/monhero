@@ -18,7 +18,7 @@ const msxTevChanges = (s, o) => {
     if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
     const SUC = msxSuc && msxSuc.SUC;
     if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
-    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    if (e.lottery === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');
     return out;
   }
   const SUC = msxSuc && msxSuc.SUC; const m = s.team[e.who]; const fk = m && Array.isArray(m.top) ? m.top[0] : null;
@@ -35,7 +35,7 @@ const msxTevChanges = (s, o) => {
     if (k === 'self') { out.push(`${stat} 小アップ`); out.push('🤝 親密度 +5'); }
     else if (k === 'rest') out.push('❤️ 体力 +10');
     else if (k === 'talk') { out.push('💢 ストレス −10'); out.push('🤝 親密度 +5'); }
-    else if (k === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    else if (k === 'tip') out.push('💡 コツをつかんだ(次のトレーニングの大成功 +10%)');
     else out.push('🤝 親密度 +10');
   }
   return out;

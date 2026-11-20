@@ -75,7 +75,22 @@
       "mcp__github__merge_pull_request",
       "mcp__github__pull_request_read",
       "mcp__github__list_pull_requests",
-      "mcp__github__update_pull_request"
+      "mcp__github__update_pull_request",
+      "Bash(cd:*)",
+      "Bash(git:*)",
+      "Bash(node:*)",
+      "Bash(timeout:*)",
+      "Bash(printf:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(sed -n:*)",
+      "Bash(grep:*)",
+      "Bash(curl -sS -m 30 -X POST https://zrzevudkbgtxlbvmuziy.supabase.co/functions/v1/analysis-gateway:*)",
+      "Edit",
+      "Write",
+      "Read",
+      "mcp__claude-code-remote__list_environments",
+      "mcp__claude-code-remote__read_documentation"
     ]
   }
 }

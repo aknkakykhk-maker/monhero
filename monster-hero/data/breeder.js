@@ -19,7 +19,7 @@ const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
-const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=d99ade5e6de8";
+const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=63697ba8a884";
 // えるびん(2026-11-05)。顔アイコンをそのまま使う(きゅうこ・ソラシドと同じ形)
 const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=cff970be9e3f";
 // お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。
@@ -1260,7 +1260,7 @@ const erubinSekiyuouCostume = Object.freeze({
 // ソラシドの服『補正』(2026-11-15 社長「新しい絵をデフォルト=馬骨、今の物を補正」)。いままでのソラシドの絵。はじめから全員が持っている(starter)。
 //   保存は増やさない: 持っている服(owned)には書かない(starter は読み込みのたびに足される)・着ている服(worn)は選んだ人だけ { sorashido: 'sorashido_hosei_v1' }。
 //   既定の服(worn に何も無い)は新しい絵『馬骨』。移行の処理は無い(いままでソラシドの服を持っていた人はいない)
-const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=27d67b71522c";
+const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=582960b1b0a7";
 const sorashidoHoseiCostume = Object.freeze({
   id: 'sorashido_hosei_v1', assistantId: 'sorashido',
   name: '補正', desc: 'いままでのソラシドの服。着物の姿です。',
