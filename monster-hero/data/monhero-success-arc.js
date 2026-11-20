@@ -20,7 +20,7 @@
         // ジュニア期(6〜17ターン): 写真とろ！
         { id: 'scn.mua.uq.photo', title: '写真とろ！', from: 7, to: 12, rate: 0.35, ch: { a: { fx: [['pop', 3], ['bond', 'aid', 5]] }, b: { fx: [['st', 'eva', M]] } } },
         // ジュニア期の後半〜ミドル期の前半: おやつ作戦会議
-        { id: 'scn.mua.uq.snack', title: 'おやつ作戦会議', from: 14, to: 21, rate: 0.35, ch: { a: { fx: [['hp', 20], ['str', -20]] }, b: { fx: [['buff', 'yaruki']] } } },
+        { id: 'scn.mua.uq.snack', title: 'おやつ作戦会議', from: 14, to: 21, rate: 0.35, ch: { a: { fx: [['hp', 10], ['str', -20]] }, b: { fx: [['buff', 'yaruki']] } } },
         // ミドル期(18〜29ターン): 夜の電話
         { id: 'scn.mua.uq.call', title: '夜の電話', from: 22, to: 28, rate: 0.35, ch: { a: { fx: [['bond', 'aid', 10], ['str', -10]] }, b: { fx: [['hp', 10], ['loy', 3]] } } },
         // プロ期(30〜41ターン): 応援うちわ作り
