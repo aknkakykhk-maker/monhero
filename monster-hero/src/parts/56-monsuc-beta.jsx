@@ -77,9 +77,10 @@ function MsxBetaTalk({ keys, ctx = {}, always = false, onDone }) {
   return (
     <div className="msx-ov msx-fade msx-beta-ov" data-msx-beta={k} onClick={atChoice ? undefined : next}>
       <div className="msx-beta-card" onClick={(e) => { e.stopPropagation(); if (!atChoice) next(); }}>
-        <div className="msx-beta-tag">{MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあの説明'}</div>
+        {/* 話し手の名前は上の札の1つだけ(吹き出しの中の「みゅあ」と二重だった。r1119-033 窓-12) */}
+        <div className="msx-beta-tag">{MSX_BETA_STORY.includes(k) ? 'β版のお話' : 'みゅあ'}</div>
         {narr ? <div className="msx-beta-narr">{l.t}</div> : (
-          <div className="msx-beta-say"><img className="fc" src={msxFace('mua', l.e || 'happy')} alt=""/><div className="bub"><span className="who">みゅあ</span>{l.t}</div></div>
+          <div className="msx-beta-say"><img className="fc" src={msxFace('mua', l.e || 'happy')} alt=""/><div className="bub">{l.t}</div></div>
         )}
         {atChoice ? (
           <div className="msx-beta-opts">{choices.map((ch) => <button type="button" key={ch.c} className="msx-btn go" onClick={(e) => { e.stopPropagation(); choose(ch.c); }}>{ch.t}</button>)}</div>
@@ -95,6 +96,10 @@ function MsxBetaMark() { return <span className="msx-beta-mk" data-msx-beta-mark
 const MSX_BETA_CSS = `
 .msx .msx-beta-mk{display:inline-block;margin-left:5px;padding:0 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;font-weight:900;line-height:17px;vertical-align:2px;letter-spacing:0}
 .msx .msx-beta-ov{z-index:60;align-items:flex-end;padding:14px 12px 22px;background:#0b092073}
+/* ストーリー選択の説明は「ストーリー詳細」のボタンを指すので、箱を上に出し、ボタンを光らせる(箱の下に隠れていた。r1119-033 窓-13) */
+.msx .msx-beta-ov[data-msx-beta="scn"]{align-items:flex-start;padding-top:calc(14px + var(--mh-sa-top,0px))}
+@keyframes msxBetaPoint{0%,100%{box-shadow:0 0 0 2px #fde047,0 0 10px #fde047aa}50%{box-shadow:0 0 0 4px #fde047,0 0 22px #fde047}}
+.msx:has([data-msx-beta="scn"]) [data-msx-scenario-detail]{position:relative;z-index:61;animation:msxBetaPoint 1.1s ease-in-out infinite}
 /* 下に決める・進むボタンの帯(.v-ft)がある画面では、その上に出す(帯のボタンに重ねない。r1120 ミハリ・Q-3-1) */
 .msx:has(>.v-ft) .msx-beta-ov,.msx:has(.v-ft) .msx-beta-ov{padding-bottom:calc(var(--msx-ft-h,64px) + 14px)}
 .msx .msx-beta-card{width:100%;max-width:420px;background:#1e1b3a;border:2px solid #f9a8d4;border-radius:14px;padding:10px 12px 8px;box-shadow:0 6px 24px #0008;cursor:pointer}

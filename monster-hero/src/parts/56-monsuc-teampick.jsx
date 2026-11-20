@@ -183,7 +183,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
+        {/* 戻るはほかの画面と同じ左上の「← 戻る」1つ(下の帯は「外す」「決定」だけ。r1119-033 窓-45・53) */}
+        <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-tp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
         <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const rec = s && !fr ? recOf(s) : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
             <MonsucMonCard m={mm ? msxTpCardM(rec, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{fr ? <b className="fr">🤝</b> : null}</div>); })}</div>
@@ -205,7 +206,6 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
         </div>
         <div className="v-ft msx-tp-ft">
-          <button type="button" onClick={onClose} data-msx-tp-back>戻る</button>
           <button type="button" onClick={() => setCand(null)} disabled={!cand} className={cand ? '' : 'off'} data-msx-tp-clear>外す</button>
           {candItem ? <button type="button" onClick={() => setLook(candItem)} data-msx-tp-detail={candItem.key}>効果・詳細</button> : null}
           <button type="button" className="go" onClick={() => onDone(cand)} data-msx-tp-ok>決定</button>
@@ -255,7 +255,7 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-friend-pick>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>{rows.length ? `貸し出し中のフレンド ${rows.length}人` : 'フレンドのモンスター'}</small></div>
+        <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-fp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{rows.length ? `貸し出し中のフレンド ${rows.length}人` : 'フレンドのモンスター'}</small></div>
         <div className="msx-tp-team" data-msx-tp-team>{members.map((mm, i) => (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`}><MonsucMonCard m={mm ? msxTpCardM(null, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{mm && mm.friend ? <b className="fr">🤝</b> : null}</div>))}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>
@@ -278,7 +278,6 @@ function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, mem
         </div>
         {candX ? <div className="msx-tp-note" data-msx-fp-who>{candX.row.name || 'フレンド'}さんの{(candX.row.lend && candX.row.lend.name) || ''}{seenOf(candX.row) ? `・${seenOf(candX.row)}` : ''}</div> : null}
         <div className="v-ft msx-tp-ft">
-          <button type="button" onClick={onClose} data-msx-fp-back>戻る</button>
           <button type="button" onClick={() => setCand(null)} disabled={!cand} className={cand ? '' : 'off'} data-msx-fp-clear>外す</button>
           {candX && candX.m && candX.mem ? <button type="button" onClick={() => setLook(candX)} data-msx-fp-detail={candX.row.friendId}>効果・詳細</button> : null}
           <button type="button" className="go" onClick={() => { if (!cand) { if (curId) onPick(null); else onClose(); return; } if (cand === curId) { onClose(); return; } if (candX && candX.m) onPick(candX.m); }} data-msx-fp-ok>決定</button>

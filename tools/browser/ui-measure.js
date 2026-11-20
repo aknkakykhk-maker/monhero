@@ -286,6 +286,74 @@ function measureInPage(TH, PRIMARY_SRC) {
     const r = el.getBoundingClientRect();
     if (r.top < -6 && r.bottom > H * 0.3 && r.height > H * 0.4 && r.width > W * 0.5 && textOf(el) && vis(el)) out.topCut.push({ t: `窓「${textOf(el).slice(0, 12)}」`, y: Math.round(r.top) });
   }
+  // 11. 上が実機の安全な領域にかかる: 窓(画面の大半を占める・全画面ではない)の頭が画面の上 47px 以内にあるのに、
+  //     窓とその親のどこにも env(safe-area-inset-top) が無い。ブラウザでは安全な領域が 0 なので切れて見えないが、
+  //     iPhone の切り欠き・時計の帯の下に入って上が切れる(社長の実機「イベント図鑑の上が切れている」#6893 の前・M4)
+  out.safeTop = [];
+  {
+    const SAFE_TOP = 47;
+    const safeRules = [];
+    for (const sh of document.styleSheets) { let rs; try { rs = sh.cssRules; } catch (e) { continue; } for (const r of rs || []) if (r.selectorText && /safe-area-inset-top/.test(r.cssText)) safeRules.push(r.selectorText); }
+    // 窓の位置を決めるのは、いちばん近い absolute・fixed の箱まで。その外の箱が上を空けていても、inset:0 の箱はその空きに重なる
+    const usesSafe = (e) => { for (let x = e; x && x.nodeType === 1; x = x.parentElement) { if (/safe-area-inset-top/.test(x.getAttribute('style') || '')) return true; for (const sel of safeRules) { try { if (x.matches(sel)) return true; } catch (er) {} } if (/^(fixed|absolute)$/.test(getComputedStyle(x).position)) break; } return false; };
+    const inFixed = (e) => { for (let x = e; x && x.nodeType === 1; x = x.parentElement) if (getComputedStyle(x).position === 'fixed') return true; return false; };
+    for (const el of all) {
+      const r = el.getBoundingClientRect();
+      if (r.top < 3 || r.top >= SAFE_TOP || // 頭が 0px の画面は、中で上を空ける作り(全画面)なので数えない
+        r.width < W * 0.5 || r.height < H * 0.4 || r.height >= H * 0.97) continue;
+      const cs = getComputedStyle(el);
+      const painted = (/rgba?\(/.test(cs.backgroundColor) && !/rgba\(\d+,\s*\d+,\s*\d+,\s*0\)/.test(cs.backgroundColor)) || cs.backgroundImage !== 'none' || parseFloat(cs.borderTopWidth) > 0;
+      if (TH.debug) (out.safeDbg = out.safeDbg || []).push(`${el.tagName}.${String(el.className).slice(0, 30)} top${Math.round(r.top)} p${+painted} t${+!!textOf(el)} f${+inFixed(el)} s${+usesSafe(el)}`);
+      if (!painted || !textOf(el) || !vis(el) || !inFixed(el) || usesSafe(el)) continue;
+      if (out.safeTop.some((o) => o.el.contains(el) || el.contains(o.el))) continue;
+      out.safeTop.push({ el, t: textOf(el).slice(0, 12), y: Math.round(r.top) });
+    }
+    out.safeTop = out.safeTop.map(({ t, y }) => ({ t, y }));
+  }
+  // 12. 絵の端が切れている: 大きい絵(立ち絵・全身の絵。画面の高さの 25% 以上)が、包む箱(overflow で切る箱)か画面の左右の端で切られている。
+  //     背景のように箱いっぱいの絵(箱の幅の 90% 以上)は数えない(社長の実機「部屋の立ち絵が左右で切れている」r1115-018・L4)
+  out.imgCut = [];
+  for (const el of all) {
+    if (TH.debug && (el.tagName === 'IMG' || /url\(/.test(getComputedStyle(el).backgroundImage))) { const rr = el.getBoundingClientRect(); if (rr.height > 120) (out.imgDbg = out.imgDbg || []).push(`${el.tagName} ${(el.getAttribute('src') || '').split('/').pop()} ${Math.round(rr.left)},${Math.round(rr.top)} ${Math.round(rr.width)}x${Math.round(rr.height)}`); }
+    const isImg = el.tagName === 'IMG' || (/url\(/.test(getComputedStyle(el).backgroundImage) && !textOf(el));
+    if (!isImg) continue;
+    const r = el.getBoundingClientRect();
+    if (r.height < H * 0.25 || r.width < 40 || !vis(el)) continue;
+    let box = { left: 0, right: W, n: '画面' };
+    for (let x = el.parentElement; x && x !== document.body; x = x.parentElement) {
+      const c = getComputedStyle(x);
+      if (/(hidden|clip)/.test(c.overflowX) || /(hidden|clip)/.test(c.overflow)) { const b = x.getBoundingClientRect(); box = { left: Math.max(0, b.left), right: Math.min(W, b.right), n: '箱' }; break; }
+    }
+    const bw = box.right - box.left;
+    if (bw <= 0 || r.width >= bw * 0.9) continue;
+    const cutL = Math.round(box.left - r.left), cutR = Math.round(r.right - box.right);
+    const cut = Math.max(cutL, cutR);
+    if (cut >= 8 && cut >= r.width * 0.05) out.imgCut.push({ t: (el.getAttribute('alt') || (el.getAttribute('src') || '').split('/').pop() || el.className || 'img').toString().slice(0, 24), side: cutL >= cutR ? '左' : '右', px: cut, w: Math.round(r.width), by: box.n });
+  }
+  // 12b. 絵そのものの端で切れている: 透過の絵(四隅が透明)なのに、絵の左右の端の列に色のある点が縦に長く続く
+  //      (胸から上だけの絵の肩が、絵の端でまっすぐ切れている。社長の実機「部屋の立ち絵が左右で切れている」r1115-018・L4)
+  for (const el of all) {
+    if (el.tagName !== 'IMG' || !el.complete || !el.naturalWidth) continue;
+    const r = el.getBoundingClientRect();
+    if (r.height < H * 0.25 || r.width < 60 || !onScreen(r) || !vis(el)) continue;
+    try {
+      const cw = 120, ch = Math.max(24, Math.round(120 * el.naturalHeight / el.naturalWidth));
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const cx = cv.getContext('2d'); cx.drawImage(el, 0, 0, cw, ch);
+      const px = cx.getImageData(0, 0, cw, ch).data;
+      const a = (x, y) => px[(y * cw + x) * 4 + 3];
+      if ([a(0, 0), a(cw - 1, 0), a(0, ch - 1), a(cw - 1, ch - 1)].filter((v) => v < 20).length < 2) continue; // 背景の絵(隅が塗られている)は数えない
+      // 左右の端の帯(幅の10%)で、縦に長く色のある列(20%以上)のすぐ外(3列先)が急に透明(4分の1未満)になる所 = 絵がまっすぐ切れている
+      const run = (x) => { let n = 0; for (let y = 0; y < ch; y++) if (a(x, y) > 128) n++; return n / ch; };
+      const RN = Array.from({ length: cw }, (_, x) => run(x));
+      const band = Math.round(cw * 0.1);
+      let L = 0, R = 0;
+      for (let x = cw - band; x < cw; x++) { const nx = Math.min(cw - 1, x + 3); if (RN[x] >= 0.2 && RN[nx] < RN[x] * 0.25) R = Math.max(R, RN[x]); }
+      for (let x = band - 1; x >= 0; x--) { const nx = Math.max(0, x - 3); if (RN[x] >= 0.2 && RN[nx] < RN[x] * 0.25) L = Math.max(L, RN[x]); }
+      const side = L && R ? '左右' : L ? '左' : R ? '右' : '';
+      if (side) out.imgCut.push({ t: (el.getAttribute('src') || '').split('/').pop().slice(0, 24) || 'img', side, px: Math.round(Math.max(L, R) * 100), w: Math.round(r.width), by: '絵そのもの', kind: 'edge' });
+    } catch (e) { /* 別の所の絵は読めない */ }
+  }
   // 9. 暗幕の上: 画面の大半を覆う、暗い半透明の地の部品(暗幕)があるとき、その範囲で、暗幕でも窓でもない部品がいちばん上にある所
   const dark = all.filter((e) => {
     const cs = getComputedStyle(e);
@@ -347,6 +415,8 @@ function judge(m) {
   if (m.midword.some((x) => !x.sym)) add('言葉の途中で折り返し', '高', [...new Set(m.midword.filter((x) => !x.sym).map((x) => x.t))].slice(0, 4).map((t) => `「${t}」`).join('・'));
   if (m.midword.some((x) => x.sym)) add('記号や括弧の所で折り返し', '高', [...new Set(m.midword.filter((x) => x.sym).map((x) => x.t))].slice(0, 4).map((t) => `「${t}」`).join('・'));
   if (m.offcenter.length) add('字の中心がずれる', '高', m.offcenter.slice(0, 3).map((c) => `「${c.t}」${c.dx > 0 ? '右' : '左'}へ ${Math.abs(c.dx)}px(${c.why})`).join('・'));
+  if ((m.safeTop || []).length) add('上が実機の安全な領域にかかる', '高', m.safeTop.slice(0, 2).map((c) => `窓「${c.t}」の頭が画面の上 ${c.y}px(iPhone の切り欠き・時計の帯は約 47px)で、安全な領域の分を空けていない`).join('・'));
+  if ((m.imgCut || []).length) add('絵の端が切れている', '高', m.imgCut.slice(0, 3).map((c) => (c.kind === 'edge' ? `「${c.t}」(幅 ${c.w}px)の${c.side}が絵の中でまっすぐ切れる(縦の ${c.px}% にわたって急に透明になる)` : `「${c.t}」(幅 ${c.w}px)の${c.side}が${c.by}の端で ${c.px}px 切れる`)).join('・'));
   if ((m.topCut || []).length) add('上が切れている', '高', m.topCut.slice(0, 3).map((c) => `${c.t.startsWith('窓') ? c.t : `「${c.t}」`}の上が画面の外へ ${-c.y}px`).join('・'));
   if (m.overBackdrop.length) add('暗幕の上に窓の外の部品', '高', m.overBackdrop.slice(0, 4).map((o) => `「${o.t}」`).join('・') + ' が窓を開いた暗幕の上に出ていて押せる');
   void W;
@@ -364,7 +434,7 @@ const record = async (page, file, extra = {}) => {
   const m = await run(page);
   if (!m || m.error) return [];
   const findings = judge(m);
-  try { fs.appendFileSync(path.join(path.dirname(file), '_measure.jsonl'), JSON.stringify({ file: path.basename(file), ...extra, findings, m: { view: m.view, frame: m.frame, primary: m.primary, bottomGap: m.bottomGap, colGaps: m.colGaps, empty: m.empty, fontMin: m.fontMin, parts: m.parts, ...(process.env.UI_MEASURE_DEBUG ? { dups: m.dups, seenNums: m.seenNums, buttons: m.buttons, texts: m.texts } : {}) } }) + '\n'); } catch (e) { /* 測れなくても撮影は止めない */ }
+  try { fs.appendFileSync(path.join(path.dirname(file), '_measure.jsonl'), JSON.stringify({ file: path.basename(file), ...extra, findings, m: { view: m.view, frame: m.frame, primary: m.primary, bottomGap: m.bottomGap, colGaps: m.colGaps, empty: m.empty, fontMin: m.fontMin, parts: m.parts, ...(process.env.UI_MEASURE_DEBUG ? { dups: m.dups, seenNums: m.seenNums, buttons: m.buttons, texts: m.texts, safeDbg: m.safeDbg, imgDbg: m.imgDbg } : {}) } }) + '\n'); } catch (e) { /* 測れなくても撮影は止めない */ }
   return findings;
 };
 

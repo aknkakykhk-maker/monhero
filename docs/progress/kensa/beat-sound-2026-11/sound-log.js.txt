@@ -1,0 +1,113 @@
+'use strict';
+// モンビーの音の記録(ページの中だけ・偽の通信)。node sound.js <name> <settingsJSON> <mode:solo|multi> [perfect|human] [ROOT]
+const fs=require('fs'),path=require('path'),http=require('http');
+const {chromium}=require('playwright');
+const [name,setJson,mode,play,rootArg]=process.argv.slice(2);
+const ROOT=rootArg||'/home/user/monhero';
+const {installPlayer,installArgs}=require('/home/user/monhero/tools/playbot/scenarios/rhythm');
+const OUT=path.join(__dirname,'sound');fs.mkdirSync(OUT,{recursive:true});
+const PORT=9100+Math.floor(Math.random()*800);
+const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.PNG':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.m4a':'audio/mp4','.woff2':'font/woff2','.wav':'audio/wav','.ogg':'audio/ogg'};
+const serve=()=>new Promise(r=>{const sv=http.createServer((q,s)=>{const f=path.join(ROOT,decodeURIComponent(q.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){s.writeHead(404);s.end();return;}s.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(s);});sv.listen(PORT,()=>r(sv));});
+const FAKE_WS=()=>{class FakeWS{constructor(){this.readyState=0;this.topic=null;this.ch=null;setTimeout(()=>{this.readyState=1;if(this.onopen)this.onopen({});},0);}deliver(o){const data=JSON.stringify(o);setTimeout(()=>{if(this.readyState===1&&this.onmessage)this.onmessage({data});},0);}send(data){const m=JSON.parse(data);if(m.event==='phx_join'){this.topic=m.topic;this.ch=new BroadcastChannel(`fake-ws:${m.topic}`);this.ch.onmessage=(e)=>this.deliver({topic:this.topic,event:'broadcast',payload:{type:'broadcast',event:'msg',payload:e.data}});this.deliver({topic:m.topic,event:'phx_reply',ref:m.ref,payload:{status:'ok',response:{}}});return;}if(m.event!=='broadcast')return;const p=m.payload&&m.payload.payload;if(this.ch)this.ch.postMessage(p);this.deliver({topic:this.topic,event:'broadcast',payload:{type:'broadcast',event:'msg',payload:p}});}close(){this.readyState=3;if(this.ch)this.ch.close();if(this.onclose)this.onclose({});}}window.WebSocket=FakeWS;};
+// 低い所(実際に音を出した回数)を数える。addInitScript で読み込み前に仕込む
+const LOW=()=>{window.__snd={log:[],depth:[],scene:'起動',last:''};const S=window.__snd;
+ const mark=(kind,extra)=>{const top=S.depth[S.depth.length-1];if(top)top.low[kind]=(top.low[kind]||0)+1;else S.log.push({t:Math.round(performance.now()),id:'(低)'+kind,scene:S.scene,last:S.last,extra});};
+ const bs=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...a){mark('buffer');return bs.apply(this,a);};
+ const os=OscillatorNode.prototype.start;OscillatorNode.prototype.start=function(...a){mark('osc');return os.apply(this,a);};
+ const mp=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(...a){mark('media',String(this.currentSrc||this.src).split('/').pop().slice(0,40));return mp.apply(this,a);};
+ document.addEventListener('pointerdown',(e)=>{const b=e.target&&e.target.closest&&e.target.closest('button,[role=button]');if(b)S.last=(b.getAttribute('aria-label')||b.innerText||'').replace(/\s+/g,' ').trim().slice(0,30);},true);
+};
+const HOOK=()=>{const S=window.__snd;if(S.hooked)return;S.hooked=true;
+ const QUIET=/^(currentBgmKey|isBackgroundSeQuiet|isEnabled|isContextRunning|diagnose|videoGain|resumeIfNeeded|ensurePlaying|unlock|setPageHidden|recentNoteSe|_readSettings|_holdVoiceCount|beginInputGroup|markInputGroupHandled|endInputGroup|warm|wake|prepare|prepareSE|prepareBGM|preloadSE|preloadBGM)$/;
+ const wrap=(obj,prefix)=>{for(const k of Object.keys(obj)){const v=obj[k];if(typeof v!=='function'||QUIET.test(k))continue;obj[k]=function(...a){const rec={t:Math.round(performance.now()),id:prefix+k,scene:S.scene,last:S.last,arg:a.slice(0,2).map(x=>typeof x==='object'?JSON.stringify(x||null).slice(0,50):String(x).slice(0,30)).join(','),low:{}};try{rec.q=Audio_.isBackgroundSeQuiet()?1:0;rec.en=Audio_.isEnabled()?1:0;}catch(e){}S.depth.push(rec);try{return v.apply(this,a);}finally{S.depth.pop();if(k==='holdSync'){S.hold=(S.hold||0)+1;}else S.log.push(rec);}};}};
+ wrap(Audio_,'');wrap(Audio_.se,'se.');wrap(Audio_.fgSe,'fgSe.');try{wrap(RHYTHM_NOTE_SE_RUNTIME,'note.');}catch(e){}
+};
+const log=(x)=>console.log(x);
+(async()=>{
+const sv=await serve();
+const browser=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});
+const ctx=await browser.newContext({viewport:{width:390,height:844}});
+await ctx.addInitScript(FAKE_WS);await ctx.addInitScript(LOW);
+await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/tone\//,(r)=>r.fulfill({status:200,contentType:'text/javascript',body:fs.readFileSync('/tmp/claude-0/-home-user-monhero/2c04a01b-1c23-5fa9-9c40-0489a32a97f1/scratchpad/sharpdir/node_modules/tone/build/Tone.js','utf8')}));
+await ctx.route(/supabase\.co/,(r)=>{const u=r.request().url();if(/rest\/v1/.test(u))return r.fulfill({status:200,contentType:'application/json',body:'[]'});return r.abort();});
+const settings=JSON.parse(setJson||'{}');
+const openPage=async(nm,masu)=>{const page=await ctx.newPage();
+ await page.addInitScript(([n,m,st])=>{window.__mhSupabaseStubbed=true;const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));put('mh_breeder_name',n);put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);put('mh_rhythm_tutorial_seen_v1',true);put('mh_rhythm_hell_story_seen_v1',true);put('mh_inherited_unique_level_compensation_v1',true);put('mh_masu_level_cap_compensation_notice_seen_v1',true);if(m)put('mh_masu_mons',[{id:'m1',baseId:'Mocchi',name:'もちまる',bondXp:5000,createdAt:1}]);if(Object.keys(st).length&&!localStorage.getItem('__set_done')){put('mh_rhythm_settings_v1',st);localStorage.setItem('__set_done','1');}},[nm,!!masu,settings]);
+ await page.addInitScript(require(ROOT+'/tools/boot/quiet-boot-seed').eventStorySeed());
+ await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
+ await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),null,{timeout:40000});
+ await page.evaluate(()=>window.__snd.scene='タイトル');
+ await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
+ await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
+ await page.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),null,{timeout:40000});
+ await page.evaluate(HOOK);await page.evaluate(()=>window.__snd.scene='HOME');
+ await page.waitForTimeout(1500);
+ for(let i=0;i<10;i++){const ok=await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText||'').trim())&&x.getClientRects().length);if(b)b.click();return !!b;});if(!ok)break;await page.waitForTimeout(500);}
+ return page;};
+const scene=(p,s)=>p.evaluate((x)=>{window.__snd.scene=x;},s);
+// 人と同じくマウスで押す(pointerdown を拾うため)
+const tapRe=async(p,src,o={})=>{const r=await p.evaluate(([s,o])=>{const rx=new RegExp(s);const els=[...document.querySelectorAll(o.sel||'button,[role=button]')].filter(e=>e.getClientRects().length&&!e.disabled);const b=(o.last?els.reverse():els).find(x=>[x.getAttribute('aria-label')||'',x.innerText||'',(x.getAttribute('aria-label')||'')+' '+(x.innerText||'')].some(t=>rx.test(t.replace(/\s+/g,' ').trim())));if(!b)return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2];},[src,o]);if(!r)return false;await p.mouse.click(r[0],r[1]);await p.waitForTimeout(o.wait||900);return true;};
+const closeTips=(p)=>p.evaluate(()=>{const d=document.querySelector('[role=dialog]');if(d&&/ワンポイントアドバイス/.test(d.getAttribute('aria-label')||'')){const b=[...d.querySelectorAll('button')].find(x=>/閉じる/.test(x.innerText||''));if(b)b.click();}});
+const toBeat=async(p)=>{await scene(p,'HOME→モンヒロビート');await tapRe(p,'^モンヒロビート$',{wait:2500});await p.waitForSelector('[data-rhythm-mode-select]',{timeout:20000});await closeTips(p);};
+const dump=async(p,tag)=>{const d=await p.evaluate(()=>({log:window.__snd.log,hold:window.__snd.hold||0}));fs.writeFileSync(path.join(OUT,`${name}${tag||''}.json`),JSON.stringify(d,null,0));log(`${name}${tag||''}: ${d.log.length}件 hold ${d.hold}`);};
+try{
+if(mode==='solo'){
+ const p=await openPage('モンヒロくん',true);
+ await scene(p,'HOME');await tapRe(p,'^モンヒロバトル$',{wait:1500});await scene(p,'HOME(戻る)');await p.keyboard.press('Escape');await tapRe(p,'^(戻る|←|HOME|ホーム)',{wait:1200});
+ await p.goto(p.url());await p.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),null,{timeout:40000});await p.getByRole('button',{name:'TAP TO START'}).click({force:true});await p.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});await p.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),null,{timeout:40000});await p.evaluate(HOOK);await p.waitForTimeout(1500);for(let i=0;i<8;i++){if(!(await tapRe(p,'^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$',{wait:400})))break;}
+ await toBeat(p);
+ await scene(p,'モード選び:縦横の切り替え');await tapRe(p,'^横画面にする',{wait:1800});await tapRe(p,'^(縦画面にする|横画面にする)',{wait:1800});
+ await scene(p,'マスモン設定');await tapRe(p,'^マスモン設定',{wait:1200});await tapRe(p,'マスモンを選ぶ',{wait:1200});await tapRe(p,'もちまる',{wait:1200});await tapRe(p,'^(決定|選ぶ|この子にする|OK)$',{wait:1000});await tapRe(p,'^(戻る|モード選びへ戻る|閉じる)$',{wait:1200});
+ await p.evaluate(()=>{const d=document.querySelector('[data-rhythm-mode-select]');if(!d){const b=[...document.querySelectorAll('button')].find(x=>/^(戻る|モード選びへ戻る)$/.test((x.getAttribute('aria-label')||x.innerText||'').trim()));b&&b.click();}});await p.waitForTimeout(1000);
+ await scene(p,'モード選び→ソロライブ');await tapRe(p,'ソロライブ',{wait:2500});await closeTips(p);
+ await scene(p,'曲えらび');await tapRe(p,'^トリコ Lv',{wait:1500});await tapRe(p,'^\\d+ HARD\\b',{wait:1200});await tapRe(p,'^\\d+ NORMAL\\b',{wait:1200});await tapRe(p,'^\\d+ HARD\\b',{wait:1500});
+ await scene(p,'曲えらび:縦横');await tapRe(p,'^横画面にする',{wait:1500});await tapRe(p,'^(縦画面にする|横画面にする)',{wait:1500});
+ await scene(p,'曲えらび→決定');await tapRe(p,'^決定$',{wait:300});
+ await p.waitForFunction(()=>!!document.querySelector('[data-rhythm-play-area]')&&window.__mhTestHooks&&typeof window.__mhTestHooks.rhythmNotes==='function'&&(window.__mhTestHooks.rhythmNotes()||[]).length>0,{timeout:30000});
+ await scene(p,'演奏中');
+ const args=installArgs({rand:Math.random});
+ const perfect=play!=='human'&&play!=='twice';
+ const ins=await p.evaluate(installPlayer,perfect?{...args,sigma:4,missRate:0,dropRate:0,lateRate:0}:args);log('player '+JSON.stringify(ins).slice(0,120));
+ const t0=Date.now();while(Date.now()-t0<200000){await p.waitForTimeout(2000);const on=await p.evaluate(()=>!!document.querySelector('[data-rhythm-play-area]'));if(!on)break;}
+ await scene(p,'結果');await p.waitForTimeout(9000);
+ await scene(p,'結果:押して進む');for(let i=0;i<4;i++){await p.mouse.click(195,420);await p.waitForTimeout(1500);}
+ const notes=await p.evaluate(()=>{try{const r=window.__mhTestHooks.rhythmNoteResults&&window.__mhTestHooks.rhythmNoteResults();return Array.isArray(r)?r.reduce((a,x)=>{const j=x&&(x.judgment||x.j||x.result);a[j]=(a[j]||0)+1;return a;},{}):null;}catch(e){return String(e);}});log('judge '+JSON.stringify(notes));
+ const txt=await p.evaluate(()=>document.body.innerText.replace(/\s+/g,' ').slice(0,400));log('screen '+txt.slice(0,300));
+ await scene(p,'結果→曲選びへ戻る');await tapRe(p,'^曲選びへ戻る$',{wait:2500});
+
+ if(play==='twice'){await scene(p,'2回目:曲えらび');await tapRe(p,'^トリコ Lv',{wait:1200});await tapRe(p,'^\\d+ HARD\\b',{wait:1200});await tapRe(p,'^決定$',{wait:300});
+  await p.waitForFunction(()=>!!document.querySelector('[data-rhythm-play-area]')&&(window.__mhTestHooks.rhythmNotes()||[]).length>0,{timeout:30000});await scene(p,'2回目:演奏中');
+  await p.evaluate(installPlayer,{...installArgs({rand:Math.random}),sigma:4,missRate:0,dropRate:0,lateRate:0});
+  const t1=Date.now();while(Date.now()-t1<200000){await p.waitForTimeout(2000);if(!(await p.evaluate(()=>!!document.querySelector('[data-rhythm-play-area]'))))break;}
+  await scene(p,'2回目:結果');await p.waitForTimeout(9000);log('screen2 '+(await p.evaluate(()=>document.body.innerText.replace(/\s+/g,' ').slice(0,300))));}
+ await scene(p,'曲えらび→モード選びへ戻る');await tapRe(p,'^モード選びへ戻る$',{wait:2000});
+ await dump(p);
+}
+if(mode==='multi'){
+ const A=await openPage('モンヒロくん',true),B=await openPage('いちか',false);
+ await toBeat(A);await toBeat(B);
+ for(const [p,t] of [[A,'部屋主'],[B,'入った側']]) await p.evaluate((t)=>{window.__snd.who=t;},t);
+ await scene(A,'プライベート→部屋を作る');await A.locator('[data-rhythm-mode-private-open]').click();await A.waitForTimeout(800);await A.locator('[data-rhythm-multi-create]').click();await A.waitForSelector('[data-rhythm-multi-room-code]',{timeout:15000});await A.waitForTimeout(1500);
+ const code=(await A.locator('[data-rhythm-multi-room-code]').innerText()).trim();
+ await scene(A,'部屋(相手が入る)');await scene(B,'合言葉で入る');await B.locator('[data-rhythm-mode-private-open]').click();await B.locator('[data-rhythm-multi-code-input]').fill(code);await B.locator('[data-rhythm-multi-join]').click();
+ await A.waitForFunction(()=>RHYTHM_MULTI.view()&&RHYTHM_MULTI.view().members.length===2,null,{timeout:20000});await A.waitForTimeout(1500);
+ await scene(A,'部屋:マスモンを呼ぶ');if(await A.evaluate(()=>{const b=[...document.querySelectorAll('[data-rhythm-buddy-open]')].find(x=>x.getClientRects().length);if(b)b.click();return !!b;})){await A.waitForTimeout(1000);await tapRe(A,'もちまる',{wait:600});await tapRe(A,'^呼ぶ$',{wait:2000});}
+ await A.evaluate(()=>{const s=document.querySelector('[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]');const b=s&&[...s.querySelectorAll('button')].find(x=>/閉じる|もどる|戻る|✕/.test(x.innerText||x.getAttribute('aria-label')||''));if(b)b.click();});await A.waitForTimeout(1500);console.log('step confirm');
+ await scene(A,'メンバー確定');await scene(B,'部屋(確定された)');await A.locator('[data-rhythm-multi-confirm]').click();await A.waitForFunction(()=>document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step')==='select',null,{timeout:15000});await A.waitForTimeout(1500);
+ await scene(A,'マルチの曲えらび');await scene(B,'マルチの曲えらび');await tapRe(A,'^トリコ Lv',{wait:1200});
+ await A.locator('[data-rhythm-demo-start]').click();await B.waitForSelector('[data-rhythm-multi-omakase]',{timeout:15000});await B.locator('[data-rhythm-multi-omakase]').click();
+ await A.waitForSelector('[data-rhythm-multi-ready]',{timeout:20000});await B.waitForSelector('[data-rhythm-multi-ready]',{timeout:20000});
+ await scene(A,'準備');await scene(B,'準備');await A.waitForTimeout(1500);await A.locator('[data-rhythm-multi-ready]').click();await B.locator('[data-rhythm-multi-ready]').click();
+ await scene(A,'カウントダウン→演奏');await scene(B,'カウントダウン→演奏');await A.waitForSelector('[data-rhythm-play-area]',{timeout:30000});await A.waitForTimeout(8000);
+ const round=await A.evaluate(()=>RHYTHM_MULTI.view().room.round);
+ await A.evaluate((id)=>RHYTHM_MULTI.reportResult(id,{score:912345,cleared:true,fullCombo:true,maxCombo:231,judgments:{MARVELOUS:180,EXCELLENT:40,GREAT:11,GOOD:0,BAD:0,MISS:0},fast:12,slow:7},false,{diffId:'MASTER'}),round);
+ await B.evaluate((id)=>RHYTHM_MULTI.reportResult(id,{score:640000,cleared:true,maxCombo:120,judgments:{MARVELOUS:90,EXCELLENT:80,GREAT:30,GOOD:10,BAD:5,MISS:16},fast:30,slow:25},false,{diffId:'EXPERT'}),round);
+ await scene(A,'ポーズ→抜ける');await scene(B,'ポーズ→抜ける');
+ for(const p of [A,B])for(let i=0;i<6;i++){if(!(await p.evaluate(()=>!!document.querySelector('[data-rhythm-play-area]'))))break;await p.evaluate(()=>document.querySelector('[data-rhythm-pause]')?.click());await p.waitForTimeout(700);await p.locator('[data-rhythm-pause-exit]').click({force:true,timeout:3000}).catch(()=>{});await p.waitForTimeout(1200);}
+ await scene(A,'マルチの結果');await scene(B,'マルチの結果');await A.waitForFunction(()=>document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step')==='result',null,{timeout:40000});await A.waitForTimeout(8000);
+ await scene(A,'結果:スタンプ');await tapRe(A,'^ナイス!$',{wait:1500});await scene(A,'結果:次へ');await tapRe(A,'^次へ$',{wait:2500});
+ await dump(A,'-host');await dump(B,'-guest');
+}
+}catch(e){log('FATAL '+e.message.split('\n')[0].slice(0,200));}
+await browser.close();sv.close();process.exit(0);})();
