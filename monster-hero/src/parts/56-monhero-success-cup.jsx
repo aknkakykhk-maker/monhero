@@ -173,7 +173,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 
 // モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
 //   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B', antiStall: true }); // antiStall: 間合いの取り合いで技が出ないまま打ち切りにしない(バ-08)
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -329,18 +329,22 @@ const MSC_CSS = `
 .msc-hero{position:relative;flex:1 1 auto;min-height:330px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-rays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.38) 0 9deg,rgba(253,186,116,.08) 9deg 18deg);animation:msc-spin 14s linear infinite}
 .msc-hero.lose .msc-rays{display:none}
-.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.55),rgba(15,23,42,.8))}
+.msc-hero.lose::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(15,23,42,.78),rgba(15,23,42,.9));-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)} /* バ-03: 観客席の点に字が埋もれる → 暗く・ぼかす */
 @keyframes msc-spin{to{transform:rotate(360deg)}}
 .msc-hero .big{position:absolute;z-index:3;left:0;right:0;top:14px;text-align:center;font-size:54px;font-weight:900;letter-spacing:.06em;animation:msc-fade .5s ease-out both}
 .msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
-.msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
+.msc-hero.lose .big{left:50%;right:auto;width:max-content;max-width:92%;color:#fff;-webkit-text-stroke:2px #0f172a;paint-order:stroke fill;text-shadow:0 4px 0 #0f172a,0 0 14px rgba(0,0,0,.9);font-size:46px;background:rgba(2,6,23,.72);border-radius:14px;padding:0 16px 4px;animation:msc-lose-drop .7s cubic-bezier(.3,1.5,.6,1) both}
+@keyframes msc-lose-drop{from{opacity:0;transform:translate(-50%,-60px) rotate(0)}to{opacity:1;transform:translate(-50%,0) rotate(-4deg)}}
+.msc-hero.lose .sub{top:92px}
 .msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
 .msc-hero .sub .nw{display:inline-block;white-space:nowrap}
 .msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
 .msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 .msc-hero.win .who{height:46%}
 .msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
-.msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.msc-hero.lose .who img{filter:grayscale(.75) brightness(.72) drop-shadow(0 8px 8px rgba(0,0,0,.5));transform-origin:50% 100%;animation:msc-droop 1.1s ease-out .2s both} /* バ-03: しょんぼり(うなだれて沈む) */
+@keyframes msc-droop{from{transform:none}to{transform:translateY(7%) rotate(-7deg) scaleY(.93)}}
+@media (prefers-reduced-motion:reduce){.msc-hero.lose .who img,.msc-hero.lose .big{animation:none}.msc-hero.lose .who img{transform:translateY(7%) rotate(-7deg) scaleY(.93)}.msc-hero.lose .big{transform:translate(-50%,0) rotate(-4deg)}}
 @keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
 /* 優勝の画面(2026-11-14 社長): 勝ったモンスターを大きく・明るく、字と帯に隠れない所へ。上から 優勝! → モンスター → 大会の帯 → ライバルの帯 と縦に並べて重ねない */
 .msc-hero.hi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 10px}
@@ -360,17 +364,26 @@ const MSC_CSS = `
 .msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。一番長い「修行チケット」「能力ポイント」が入る幅) */
 .msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
 .msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
+.msc-rw.band{padding:12px 12px;font-size:15px;box-shadow:0 0 16px rgba(253,224,71,.35)}.msc-rw.band .v{font-size:15px;color:#fef9c3;font-weight:900}.msc-rw.band .k em{font-style:normal;margin-left:4px;color:#fde047}
+.msc-rws{display:flex;flex-direction:column;gap:4px}.msc-rw.sm{padding:5px 10px;font-size:12px;font-weight:700;border-radius:10px}.msc-rw.sm .i{font-size:15px}.msc-rw.sm .v{font-size:12px}
+.msc-pops{position:absolute;z-index:4;right:6px;top:22%;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.msc-pops b{font-size:22px;font-weight:900;color:#fff;-webkit-text-stroke:1.5px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 12px rgba(251,191,36,.9);background:rgba(15,12,34,.55);border-radius:10px;padding:1px 8px;white-space:nowrap;animation:msc-pop-in .5s cubic-bezier(.3,1.6,.6,1) both}
+@keyframes msc-pop-in{from{opacity:0;transform:translateX(-30px) scale(.4)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.msc-pops b{animation:none}}
 .msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
 .msc-again h3{margin:0;text-align:center;font-size:15px;font-weight:900}
 .msc-again p{margin:0;text-align:center;font-size:11.5px;color:#cbd5e1}
 .msc-again p em{font-style:normal;color:#fde047;font-weight:900}
 .msc-pick{display:flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 10px;color:#fff;font-weight:900;font-size:14px;text-align:left;cursor:pointer;min-height:48px}
 .msc-pick img{width:30px;height:30px;object-fit:contain;flex:0 0 auto}
-.msc-pick small{display:block;font-size:11px;font-weight:700;opacity:.9}
+.msc-pick small{display:block;font-size:12px;font-weight:700;opacity:.95}
+.msc-pick>span{flex:1;min-width:0}
+.msc-pick .n{flex:0 0 auto;font-size:20px;font-weight:900;line-height:1;padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.28)} /* バ-43: 持っている数は右端に大きく */
+.msc-pick .n small{display:inline;font-size:11px;margin-right:1px}
 .msc-pick.sand{background:linear-gradient(90deg,#ea580c,#f59e0b)}
 .msc-pick.rain{background:linear-gradient(90deg,#be185d,#6d28d9,#2563eb)}
 .msc-pick.quit{background:#334155;justify-content:center;font-size:13px}
-.msc-pick:disabled{opacity:.4;cursor:default}
+.msc-pick:disabled{background:#475569;color:#fff;cursor:default;opacity:1}.msc-pick:disabled img{filter:grayscale(1);opacity:.7}.msc-pick:disabled small{color:#e2e8f0} /* バ-44: 押せない札も字は読めるまま・理由を1行 */
 .msc-cut{position:relative;flex:1 1 auto;min-height:380px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-cut .word{position:absolute;z-index:3;left:0;right:0;top:20px;text-align:center;font-size:56px;font-weight:900;color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.9);animation:msc-fade .45s ease-out both}
 .msc-cut .sub{position:absolute;z-index:3;left:8px;right:8px;top:94px;text-align:center;font-size:13px;font-weight:900;text-shadow:0 2px 3px rgba(0,0,0,.85)}
@@ -663,6 +676,12 @@ function MonsucCupWin({ suc, s, info, match, out, onNext }) {
   const mid = info.kind === 'summit' && Number.isInteger(info.round) && info.round < SUM.length - 1;
   const winWord = mid ? '勝ち抜け!' : '優勝!';
   const nextName = mid && SUM[info.round + 1] ? String(SUM[info.round + 1].name || '').replace(/^ヒーローズファイナル\s*/, '') : '';
+  // バ-39: 能力・忠誠度・人気の上がり幅は、モンスターの横に大きな数字で順に飛び出させる。賞金ランクの昇格は帯で、ほかの細かい物は最後に小さく
+  const POP_K = ['能力', '忠誠度', '人気'];
+  const pops = rows.filter((r) => POP_K.includes(r.k)).flatMap((r) => (r.k === '能力' ? String(r.v).split('・') : [`${r.k} ${r.v}`])).filter(Boolean);
+  const isBand = (r) => r.big && /ランク|称号/.test(r.k);
+  const band = rows.filter((r) => !POP_K.includes(r.k) && isBand(r));
+  const small = rows.filter((r) => !POP_K.includes(r.k) && !isBand(r));
   return (
     <div className="msc-wrap" data-msc-win>
       <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
@@ -671,9 +690,11 @@ function MonsucCupWin({ suc, s, info, match, out, onNext }) {
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
         <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
+        {pops.length ? <div className="msc-pops" data-msc-win-pops>{pops.map((t, k) => <b key={k} style={{ animationDelay: `${0.6 + k * 0.32}s` }}>{t}</b>)}</div> : null}
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>能力ポイント1.5倍</em></div>}
       </div>
-      {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
+      {band.map((r, k) => <div key={`b${k}`} className="msc-rw big band" data-msc-win-band style={{ animationDelay: `${0.6 + pops.length * 0.32 + k * 0.2}s` }}><span className="i">{r.i}</span><span className="k">{r.k}{/ランク/.test(r.k) ? <em>UP!</em> : null}</span><span className="v">{r.v}</span></div>)}
+      {small.length ? <div className="msc-rws" data-msc-win-small>{small.map((r, k) => <div key={k} className="msc-rw sm" style={{ animationDelay: `${0.9 + pops.length * 0.32 + k * 0.08}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}</div> : null}
       <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : mid ? `「${info.meName}、勝ち抜けだよ! つぎは${nextName || '次の戦'}!」` : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
       <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
     </div>
@@ -707,8 +728,8 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
         <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>残り {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
-        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>同じ相手と もう一度(持っている ×{has('sand')})</small></span></button>
-        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}(持っている ×{has('rainbow')})</small></span></button>
+        <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>{can('sand') ? '同じ相手と もう一度' : mscRematchNg(left, has('sand'))}</small></span><b className="n" aria-label={`持っている数 ${has('sand')}`}><small>×</small>{has('sand')}</b></button>
+        <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{!can('rainbow') ? mscRematchNg(left, has('rainbow')) : info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}</small></span><b className="n" aria-label={`持っている数 ${has('rainbow')}`}><small>×</small>{has('rainbow')}</b></button>
         <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(ヒーローズファイナルは ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
       </div>
       <div className="msc-talk"><img src={mscFace(s.aid, 'sad')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}「おしかった! {why} もう1回 いく?」</p></div>
@@ -716,6 +737,8 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
   );
 }
 
+// 砂時計が押せないわけ(バ-44): やり直しの回数を使い切った/持っていない
+const mscRematchNg = (left, n) => (left <= 0 ? '今回の育成では もう使えない(やり直しは使い切った)' : n <= 0 ? '持っていないので 使えない' : '今は 使えない');
 // ---- 入れ物: 組み合わせ表 → バトルカード → (カットイン) → 試合 → 優勝 / 負け ----
 function MonsucCupShow(props) {
   const { s } = props;

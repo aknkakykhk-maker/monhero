@@ -1,0 +1,39 @@
+'use strict';
+// node perf.js <songId> <diff> <cpuRate> [ROOT]  … 本物の画面で叩き、長いフレームを数える(偽の通信)
+const fs=require('fs'),path=require('path'),http=require('http');const {chromium}=require('playwright');
+const [songId,diff,rate]=process.argv.slice(2);const ROOT='/home/user/monhero';
+const {installPlayer,installArgs}=require(ROOT+'/tools/playbot/scenarios/rhythm');
+const PORT=9100+Math.floor(Math.random()*800);
+const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.PNG':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.m4a':'audio/mp4','.woff2':'font/woff2'};
+const serve=()=>new Promise(r=>{const sv=http.createServer((q,s)=>{const f=path.join(ROOT,decodeURIComponent(q.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){s.writeHead(404);s.end();return;}s.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(s);});sv.listen(PORT,()=>r(sv));});
+(async()=>{const sv=await serve();const b=await chromium.launch({args:['--autoplay-policy=no-user-gesture-required']});const ctx=await b.newContext({viewport:{width:844,height:390}});
+await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/tone\//,(r)=>r.fulfill({status:200,contentType:'text/javascript',body:fs.readFileSync(__dirname+'/../sharpdir/node_modules/tone/build/Tone.js','utf8')}));
+await ctx.route(/supabase\.co/,(r)=>/rest\/v1/.test(r.request().url())?r.fulfill({status:200,contentType:'application/json',body:'[]'}):r.abort());
+const p=await ctx.newPage();
+await p.addInitScript((ids)=>{window.__mhSupabaseStubbed=true;const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));put('mh_breeder_name','モンヒロくん');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);put('mh_rhythm_tutorial_seen_v1',true);put('mh_rhythm_hell_story_seen_v1',true);put('mh_inherited_unique_level_compensation_v1',true);put('mh_masu_level_cap_compensation_notice_seen_v1',true);put('mh_rhythm_owned_songs_v1',ids);
+ window.__pf={frames:[],long:[]};let last=0;const loop=(t)=>{if(last){const dt=t-last;if(window.__pf.on){window.__pf.frames.push(dt);if(dt>50){let sm=null;try{sm=window.__mhTestHooks.rhythmSongMs();}catch(e){}window.__pf.long.push([Math.round(dt),sm==null?null:Math.round(sm)]);}}}last=t;requestAnimationFrame(loop);};requestAnimationFrame(loop);
+ try{new PerformanceObserver((l)=>{for(const e of l.getEntries()){if(window.__pf.on){let sm=null;try{sm=window.__mhTestHooks.rhythmSongMs();}catch(x){}(window.__pf.lt=window.__pf.lt||[]).push([Math.round(e.duration),sm==null?null:Math.round(sm)]);}}}).observe({entryTypes:['longtask']});}catch(e){}
+},['amakakeru_tsubasa','dr_wily_stage_1','dr_wily_stage_1_okkussenman','gourmet_race_64','gourmet_race_dx','eiyuu_no_akashi','eiyuu_no_akashi_milktea','departure','rpg','midnight_studio','hopes_and_dreams','sparkling_pink_overture']);
+await p.addInitScript(require(ROOT+'/tools/boot/quiet-boot-seed').eventStorySeed());
+await p.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
+await p.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),null,{timeout:40000});
+await p.getByRole('button',{name:'TAP TO START'}).click({force:true});await p.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
+await p.waitForFunction(()=>!!document.querySelector('main.mh-home-scene'),null,{timeout:40000});await p.waitForTimeout(1500);
+for(let i=0;i<10;i++){const ok=await p.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText||'').trim())&&x.getClientRects().length);if(b)b.click();return !!b;});if(!ok)break;await p.waitForTimeout(500);}
+await p.evaluate(()=>document.querySelector('[data-home-fac="rhythm"]')?.click());await p.waitForSelector('[data-rhythm-mode-select]',{timeout:20000});await p.waitForTimeout(800);
+await p.evaluate(()=>[...document.querySelectorAll('button')].find(b=>/ソロライブ/.test(b.innerText||''))?.click());await p.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});await p.waitForTimeout(800);
+const base=songId.replace(/_(short|full|okkussenman|milktea|64|dx)$/,'');
+const row=p.locator(`[data-rhythm-song-row^="${base}"]`).first();await row.scrollIntoViewIfNeeded();await row.click();await p.waitForTimeout(600);
+const ver=p.locator(`[data-rhythm-song-version="${songId}"]`).first();if(await ver.count()){await ver.click();await p.waitForTimeout(600);}
+await p.evaluate((d)=>{const b=[...document.querySelectorAll('button')].find(x=>new RegExp('^\\d+ '+d+'\\b').test((x.innerText||'').replace(/\s+/g,' ').trim()));b&&b.click();},diff);await p.waitForTimeout(800);
+const picked=await p.evaluate(()=>document.body.innerText.match(/HIGH SCORE|Lv\.\d+ \/ \d+ノーツ[^\n]*/)?.[0]||'');
+const cdp=await ctx.newCDPSession(p);await cdp.send('Emulation.setCPUThrottlingRate',{rate:Number(rate)||1});
+await p.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
+await p.waitForFunction(()=>!!document.querySelector('[data-rhythm-play-area]')&&(window.__mhTestHooks.rhythmNotes()||[]).length>0,{timeout:60000});
+const meta=await p.evaluate(()=>({n:(window.__mhTestHooks.rhythmNotes()||[]).length,title:(document.querySelector('[data-rhythm-play-area]')?.closest('body')?.innerText||'').slice(0,60).replace(/\s+/g,' ')}));
+await p.evaluate(()=>{window.__pf.on=true;});await p.evaluate(installPlayer,{...installArgs({rand:Math.random}),sigma:4,missRate:0,dropRate:0,lateRate:0});
+const t0=Date.now();while(Date.now()-t0<420000){await p.waitForTimeout(3000);if(!(await p.evaluate(()=>!!document.querySelector('[data-rhythm-play-area]'))))break;}
+const r=await p.evaluate(()=>{const f=window.__pf.frames;const s=[...f].sort((a,b)=>a-b);const q=(x)=>s[Math.floor(s.length*x)]||0;const res=window.__mhTestHooks.rhythmNoteResults?window.__mhTestHooks.rhythmNoteResults():[];const j={};(res||[]).forEach(x=>{const k=x&&(x.judgment||x.j);j[k]=(j[k]||0)+1;});return {frames:f.length,p50:+q(.5).toFixed(1),p95:+q(.95).toFixed(1),p99:+q(.99).toFixed(1),max:Math.round(s[s.length-1]||0),over50:f.filter(x=>x>50).length,over100:f.filter(x=>x>100).length,long:window.__pf.long.slice(0,40),lt:(window.__pf.lt||[]).length,ltTop:(window.__pf.lt||[]).sort((a,b)=>b[0]-a[0]).slice(0,8),judge:j};});
+const out={songId,diff,rate,picked,meta,...r};fs.mkdirSync(__dirname+'/perf',{recursive:true});fs.writeFileSync(`${__dirname}/perf/${songId}-${diff}-x${rate}.json`,JSON.stringify(out));
+console.log(JSON.stringify({songId,diff,rate,n:meta.n,frames:r.frames,p50:r.p50,p95:r.p95,max:r.max,over50:r.over50,over100:r.over100,lt:r.lt,judge:r.judge}));
+await b.close();sv.close();process.exit(0);})().catch(e=>{console.log('FATAL',e.message.split('\n')[0]);process.exit(1);});

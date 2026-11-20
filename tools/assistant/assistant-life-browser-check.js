@@ -508,11 +508,17 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // 掛け合いが流れているあいだは案内を出さない(重ねない)。流れていたら最後まで進めてから見る
     for (let i = 0; i < 40 && !(await I.page.locator('[data-assistant-life-item-intro]').count()); i++) { await finishTalk(I.page); await I.page.waitForTimeout(500); }
     check('⑧ 案内は掛け合いと重ならない', !((await I.page.locator('[data-assistant-life-item-intro]').count()) && (await I.page.locator('[data-assistant-peer-talk]').count())));
-    check('⑧ はじめて道具を持っていると、HOME で案内が出る', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 1);
+    // 2026-11-20 総点検 F-1: HOME では出さない。助手ライフで初めて「🎁 贈る」を押したときに1回だけ出す
+    check('⑧ はじめて道具を持っていても、HOME では案内が出ない', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 0);
+    await I.page.locator('[data-home-assistant-life]').click().catch(() => {}); await I.page.waitForTimeout(800);
+    for (let i = 0; i < 20 && (await I.page.locator('[data-assistant-peer-talk]').count()); i++) { await finishTalk(I.page); await I.page.waitForTimeout(300); }
+    check('⑧ 助手ライフを開いただけでは案内が出ない', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 0);
+    await I.page.locator('[data-assistant-life-today-act="give"]').dispatchEvent('click').catch(() => {}); await I.page.waitForTimeout(500);
+    check('⑧ 初めて「贈る」を押すと案内が出る', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 1);
     if (SHOTS) await I.page.screenshot({ path: path.join(shotDir, 'life-9-intro.png') });
-    await I.page.locator('[data-assistant-life-item-intro-open]').click().catch(() => {});
+    await I.page.locator('[data-assistant-life-item-intro-close]').click().catch(() => {});
     await I.page.waitForTimeout(400);
-    check('⑧ 案内から「助手ライフ」が開き、案内は2度出ない', (await I.page.locator('[data-assistant-life-screen]').count()) === 1 && (await ls(I.page, 'mh_assistant_life_item_intro_v1')) === true);
+    check('⑧ 「分かった」で閉じ、2度出ない印が残る', (await I.page.locator('[data-assistant-life-item-intro]').count()) === 0 && (await ls(I.page, 'mh_assistant_life_item_intro_v1')) === true);
     await I.page.close();
 
     // ⑥ 印が偽

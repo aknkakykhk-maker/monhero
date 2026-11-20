@@ -421,7 +421,7 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null })'));
 // 1行の形(oneLine・2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほど)。名前とセリフを1行・高さ36px以内・折らない(index.html の text-wrap: balance に負けない)
 check('吹き出しの1行の形(oneLine)は高さ36px以内で、セリフを折らない', has("max-h-[36px]") && has("style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}") && has("data-bubble-one-line"));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
@@ -458,7 +458,8 @@ check('場面キーだけでも、直接指定でも呼べる',
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
-check('詳細が無いときはボタンにしない', has("const Wrapper = hasDetail ? 'button' : 'div';"));
+// 押せるのは詳細かメニュー(HOME のおしゃべり・r1119-050)があるときだけ
+check('詳細もメニューも無いときはボタンにしない', has("const Wrapper = hasDetail || useMenu ? 'button' : 'div';"));
 check('チュートリアル用に最初から開いた状態にもできる', has('defaultOpen=false') && has('useState(defaultOpen)'));
 check('画面のテーマ色に合わせられる', has('const color = accent || who.accent || ASSISTANT_FALLBACK.accent;'));
 check('ヘルプ画面で実際に使っている', has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
@@ -480,8 +481,9 @@ check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
     && has('@media(max-width:350px){.mh-home-assistant{width:68%}}')
     // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下の行(左の空き)へ重ねる。
     // 吹き出しの下へ1段足すと高くなり、横持ちの「M/B管理」・小さい画面のジャックの吹き出しにかぶった(2026-10-16。raid-jack-home-say-tap-check)
-    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')
-    && has('data-home-assistant-chat onClick={onOpenAssistantChat} className="absolute bottom-[6px] z-10'));
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact menu=')
+    // 「💬 おしゃべり」は吹き出しに重ねず、吹き出しを押して出るメニューの中へ(r1119-050 窓-36)
+    && has("menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}"));
 // 上のプロフィールカード・下のドック・右端のボタン・画面の端に重ならないことは、ブラウザで実際の位置を測って確かめる
 // (前は CSS の top の数値から計算していたが、流れで置く形になって数値が無くなった)。
 // 測る道具 homeDockProblems(tools/assistant/life-browser-shared.js)が吹き出しを測る物に入れていて、

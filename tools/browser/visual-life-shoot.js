@@ -131,7 +131,7 @@ const measurePage = (rule) => {
     const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(hour, 0, 0, 0);
     await page.clock.setFixedTime(new Date(jst.getTime() - 9 * 3600000));
     page.on('pageerror', e => log.errors.push(`${sizeId}${tag}: ${String(e.message || e).slice(0, 160)}`));
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); });
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); window.__mhKeepRoomFold = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: first, bondAll: null });
     await page.addInitScript(() => { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLifeFriend = true; RELEASE_FLAGS.assistantLifeFriendApi = true; clearInterval(t); } } catch {} }, 2); });
@@ -158,8 +158,8 @@ const measurePage = (rule) => {
     const esc = async (n = 3) => { for (let i = 0; i < n; i++) { await page.keyboard.press('Escape').catch(() => {}); await page.waitForTimeout(150); } };
     const closeSheets = async () => { for (let i = 0; i < 4; i++) { const b = page.locator('[data-mhl-sheet-close]:visible, [data-assistant-peer-album-close]:visible, [data-assistant-masmon-close]:visible, [data-assistant-masmon-detail-close]:visible, [data-assistant-life-profile-close]:visible, [data-assistant-life-call-picker] button:visible:has-text("閉じる"), button:visible:text-is("閉じる")').last(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(300); } };
     const closeRoom = async () => { for (let i = 0; i < 3 && await page.locator('[data-assistant-life-roomview-close]:visible').count(); i++) { await click('[data-assistant-life-roomview-close]:visible').catch(() => {}); await page.waitForTimeout(350); } };
-    const backHouse = async () => { for (let i = 0; i < 3; i++) { await finishTalk(page); const b = page.locator('button:visible').filter({ hasText: /家へ戻る|← 家へ/ }).last(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); } };
-    const back = async () => { for (let i = 0; i < 3; i++) { const b = page.locator('button:visible').filter({ hasText: /^\s*(←\s*)?戻る\s*$/ }).first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(350); } };
+    const backHouse = async () => { for (let i = 0; i < 3; i++) { await finishTalk(page); const b = page.locator('button:visible').filter({ hasText: /家へ戻る|← 家へ|← 戻る/ }).last(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); } };
+    const back = async () => { for (let i = 0; i < 3; i++) { const b = page.locator('button:visible:not([data-assistant-life-close])').filter({ hasText: /^\s*(←\s*)?戻る\s*$/ }).first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(350); } };
     const reset = async () => {
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await toHome(page); await waitFaces(page); await finishTalk(page);
@@ -212,7 +212,8 @@ const measurePage = (rule) => {
         await step('10-give-items', () => click('[data-assistant-life-gift-items-toggle]'));
       });
       const room = (id) => click(`[data-assistant-life-room="${id}"]`);
-      const roomBtn = (re) => page.locator('button:visible').filter({ hasText: re }).last().click({ timeout: 4000 });
+      // 部屋の「できること」は 話す・贈る・誘う のほかを「もっと見る」に畳んだ(2026-11-20 総点検 F-5)。見つからなければ開いてから押す
+      const roomBtn = async (re) => { const b = () => page.locator('button:visible').filter({ hasText: re }).last(); if (!(await b().count())) { await page.locator('[data-assistant-life-room-more][aria-expanded="false"]:visible').first().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300); } return b().click({ timeout: 4000 }); };
       await group(async () => {
         await step('11-room-alone', () => room('atsu'));
         await step('12-room-alone-scroll', () => scrollIn('[data-assistant-life-roomview-scroll]', 1).then(ok => { if (!ok) return scrollTopmost(1); }));
