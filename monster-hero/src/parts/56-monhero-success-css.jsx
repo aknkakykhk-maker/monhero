@@ -104,6 +104,7 @@ const MSX_CSS = `
 .msx.land{}
 .msx .v-hd{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:4px 10px 0}
 .msx .v-hd .bk{background:#2b3348;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.msx .v-hd .bk.pause{background:#3b0d18;border:1.5px solid #f87171aa;color:#fecaca;border-radius:8px}
 .msx .v-hd .ti{flex:1;min-width:0;font-size:12.5px;font-weight:900;color:#f9a8d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-hd .ti small{color:#cbd5e1;font-size:10px;font-weight:700;margin-left:4px}
 .msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
@@ -731,10 +732,11 @@ const MSX_CSS = `
 .msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
 .msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
 .msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff}
-.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0003;cursor:pointer;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
 .msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
 .msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
-.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}
+/* 賞品の説明は窓を重ねず、吹き出しにして押すと消える(閉じるが2つ並んでいた。r1119-033 窓-10) */
+.msx .v-cupwin .dbox{box-shadow:0 6px 16px #0006}.msx .v-cupwin .dbox .hint{display:block;font-size:10.5px;font-weight:800;color:#64748b}
 .msx .v-cupwin .dbox .own{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#1e1b4b;margin:0 0 8px;text-align:left}.msx .v-cupwin .dbox .own i{font-style:normal;background:#92400e;color:#fff;border-radius:99px;padding:2px 10px}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
@@ -1275,7 +1277,9 @@ const MSX_CSS = `
 .msx .msx-tp-ov{padding:0;align-items:stretch;justify-content:stretch;background:#0b0920;z-index:45}
 .msx .msx-tp{display:flex;flex-direction:column;width:100%;min-width:0;max-width:100%;height:100%;min-height:0;background:linear-gradient(180deg,#241d4a,#16122e)}
 .msx .msx-tp>*{flex:none;align-self:stretch;min-width:0}
-.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
+.msx .msx-tp-hd{display:flex;align-items:baseline;gap:8px;padding:8px 12px 4px}
+/* 選ぶ画面の戻るは左上の丸いボタン(ほかの画面と同じ形・押せる高さ44px。r1119-033 窓-45・53) */
+.msx .msx-tp-hd{align-items:center;flex-wrap:wrap}.msx .msx-tp-hd .bk{flex:none;min-height:44px;padding:0 12px;border-radius:99px;background:#2b3348;font-size:11.5px;font-weight:900;white-space:nowrap}.msx .msx-tp-hd b{font-size:15px;color:#f9a8d4}.msx .msx-tp-hd small{font-size:10.5px;color:#cbd5e1}
 .msx .msx-tp-team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px 8px;margin:0 8px;background:#0f172a;border:1px solid #f472b688;border-radius:12px}
 .msx .msx-tp-tm{display:flex;flex-direction:column;align-items:center;min-width:0}
 .msx .msx-tp-tm .fc{flex:none;display:block;width:100%;height:auto;border-radius:10px;background:#1e1a36;border:2px solid #475569;overflow:hidden}
