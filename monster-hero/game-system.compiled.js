@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 210ac02c3ee36ed4
+// source-sha256: 4a8ee279b09f90c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -188916,12 +188916,12 @@ span.mcd{cursor:default}
 @media (orientation:landscape){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
 `;
 const MSX_ARC_CSS = `
-/* 特別演出の待ち(2026-11-20 点検 arc-S5): 押せない間は紺地に灰の字だと止まったように見えるので、オレンジが左から満ちて、満ちたら押せると分かるようにする */
-.msx .v-ft button.go.arc-wait:disabled{position:relative;overflow:hidden;opacity:1}
-.msx .v-ft button.go.arc-wait>i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#f97316,#fb923c);opacity:.75;animation:arcWaitFill 5.5s linear forwards}
-.msx .v-ft button.go.arc-wait>span{position:relative;color:#fff;font-size:14px}
-@keyframes arcWaitFill{to{width:100%}}
-@media (prefers-reduced-motion: reduce){.msx .v-ft button.go.arc-wait>i{animation:none;width:50%}}
+/* 特別演出の待ち(2026-11-20 点検 arc-S5): 押せない間はボタンの形をやめ、理由の字と細い棒だけを出す。棒が満ちたら「次へ」のボタンに替わる */
+.msx .v-ft .arc-wait{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:48px;color:#e2e8f0;font-size:14px;font-weight:900}
+.msx .v-ft .arc-wait>i{display:block;width:60%;height:4px;border-radius:2px;background:linear-gradient(90deg,#f97316 0 0) no-repeat #33415599;background-size:0 100%;animation:arcWaitFill 5.5s linear forwards}
+.msx .v-ft .arc-wait>span{flex:none;background:none;border-radius:0;padding:0;font-size:14px;color:#e2e8f0}
+@keyframes arcWaitFill{to{background-size:100% 100%}}
+@media (prefers-reduced-motion: reduce){.msx .v-ft .arc-wait>i{animation:none;background-size:50% 100%}}
 .msx .r3 .arc-foe{position:absolute;right:8px;top:40px;width:44%;background:#1e1a36ee;border:2px solid #f472b6;border-radius:14px;padding:6px 8px;text-align:center;box-shadow:0 0 16px #f472b666}
 .msx .r3 .arc-foe img{height:64px;width:64px;object-fit:contain;display:block;margin:0 auto}
 /* 相手の名前は「…」で切らず2行まで出す。組み合わせの理由は見出しと分けて1行に収める(2026-11-20 点検 arc-P2) */
@@ -189298,14 +189298,13 @@ function MsxArcSpecial({
       className: "go",
       onClick: next,
       "data-msx-arc-next": true
-    }, page + 1 < pages ? '次へ ▶' : '引退へ ▶') : React.createElement("button", {
-      type: "button",
-      className: "go arc-wait",
-      disabled: true,
+    }, page + 1 < pages ? '次へ ▶' : '引退へ ▶') : React.createElement("div", {
+      className: "arc-wait",
+      role: "status",
       "data-msx-arc-wait": true
-    }, React.createElement("i", {
+    }, React.createElement("span", null, "📸 記念写真を撮っているよ… 少し待ってね"), React.createElement("i", {
       "aria-hidden": "true"
-    }), React.createElement("span", null, "📸 記念写真を撮っているよ…")))
+    })))
   });
 }
 function MsxArcEnding({
