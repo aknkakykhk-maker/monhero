@@ -1,0 +1,480 @@
+曲	songId	難易度	表示Lv	見込みLv	Lvの印	ノーツ	毎秒	最密4秒	最短間隔ms	押せない	交差/100	届きにくい/100	跳び	帯の中	モンスター数	段の逆転	同時で重なる	同じ所70ms未満	同じ所の最短ms	音の打点から60ms超の割合	打点との差の中央ms	ずれの集まり	最後のノーツ後の空きms	仮想ミス%	仮想ばらつきms	つまずく区間	既知
+MF × ICHIKA MIX	mf_ichika_mix	EASY	7	7		202	1.44	12	177	0	0	0	0	0	4		0	0		0	19		1523	0.39	20.4		
+MF × ICHIKA MIX	mf_ichika_mix	NORMAL	9	9.4		230	1.63	14	177	0	0	0	0	0	4		0	0		0	18		1523	0.39	20.5		
+MF × ICHIKA MIX	mf_ichika_mix	HARD	13	13.7		316	2.24	16	88	0	0	1	3	0	4		0	0		0	17		1523	0.45	21.3		
+MF × ICHIKA MIX	mf_ichika_mix	EXPERT	20	19.9		385	2.72	22	88	0	0	9	2	1	4		0	0		0	17		1346	0.45	21.8		
+MF × ICHIKA MIX	mf_ichika_mix	MASTER	25	24.6		400	2.83	25	88	0	3	11	3	0	4		0	0		0	17		1346	0.51	22		既知
+MF × ICHIKA MIX	mf_ichika_mix	HELL	35			373	2.64	25	88	0	15	38	7	0	4		0	0		0	17			0.63	21.5		
+Monster Hero	monster_hero	EASY	8	8.9		250	1.7	14	173	0	0	0	0	0	4		0	0		0	10		3034	0.41	18.7		
+Monster Hero	monster_hero	NORMAL	9	10.5		286	1.94	15	173	0	0	0	0	0	4		0	0		0	10		2860	0.42	18.8		
+Monster Hero	monster_hero	HARD	15	18.6		391	2.63	23	86	0	0	4	7	0	4		0	0		0	10		1214	0.4	19.8		
+Monster Hero	monster_hero	EXPERT	22	23.5		477	3.21	26	86	0	3	4	5	0	4		0	0		0	9		1214	0.59	20.4	2:16〜(ミス見込み0.6/44個)	既知
+Monster Hero	monster_hero	MASTER	27	29.7		561	3.76	30	86	0	9	19	23	0	4		0	0		0	9		1214	0.76	21.4	2:16〜(ミス見込み1.0/50個) 2:00〜(ミス見込み0.5/41個)	既知
+Monster Hero	monster_hero	HELL	51			652	4.37	35	86	0	22	37	32	0	4		0	0		0	9			1.55	22.4	2:16〜(ミス見込み2.1/50個) 2:00〜(ミス見込み1.8/48個)	既知
+Monster Hero -Another-	monster_hero_another	EASY	8	7		242	1.6	11	175	0	0	0	0	0	4		0	0		0	14		1257	0.38	19.1		
+Monster Hero -Another-	monster_hero_another	NORMAL	9	9.8		274	1.81	14	175	0	0	0	1	0	4		0	0		0	13		1257	0.41	19.2		
+Monster Hero -Another-	monster_hero_another	HARD	14	16.7		375	2.48	20	87	0	0	2	3	0	4		0	0		0	14		1257	0.4	20.6		
+Monster Hero -Another-	monster_hero_another	EXPERT	19	21.3		460	3.04	21	87	0	4	8	8	0	4		0	0		0	15		1257	0.45	21		既知
+Monster Hero -Another-	monster_hero_another	MASTER	24	26.9		514	3.4	25	87	0	5	20	13	0	4		0	0		0	15		1257	0.6	21.9		
+Monster Hero -Another-	monster_hero_another	HELL	41			586	3.88	29	87	0	33	51	29	0	4		0	0		0	15			1.14	22.2	2:08〜(ミス見込み1.0/48個) 2:00〜(ミス見込み0.5/33個)	既知
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	EASY	10	11.6		359	2.33	16	108	0	0	0	0	0	4		0	0		0	9		1750	0.39	18.2		
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	NORMAL	14	16.4		435	2.83	20	108	0	0	0	1	0	4		0	0		0	9		1750	0.45	19		
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	HARD	22	23.1		569	3.69	27	54	0	0	4	8	0	4		0	1	55	0	10		1750	0.86	21.2	2:16〜(ミス見込み0.7/41個) 2:24〜(ミス見込み0.6/44個)	
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	EXPERT	32	31.1		704	4.55	31	54	0	8	19	5	1	4		0	25	54	0	10		1315	1.73	22.8	2:16〜(ミス見込み1.3/48個) 1:20〜(ミス見込み1.2/40個)	
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	MASTER	39	34.8		789	5.1	31	54	0	3	17	10	1	4		0	17	54	0	10		1315	2.35	23.9	1:12〜(ミス見込み2.0/46個) 2:16〜(ミス見込み1.7/53個)	既知
+SIX ÉTERNEL(six_eternel_beat)	six_eternel_beat	HELL	63			804	5.2	32	54	0	24	62	15	0	4		0	48	54	0	11			2.97	23.3	0:48〜(ミス見込み2.0/47個) 2:16〜(ミス見込み1.9/50個)	
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	EASY	7	6.2		213	1.46	10	184	0	0	0	0	0	4		0	0		0	9		1724	0.39	17.7		
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	NORMAL	8	8.9		244	1.66	12	184	0	0	0	1	0	4		0	0		0	10		1355	0.43	18.1		
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	HARD	13	16.1		333	2.26	20	92	0	0	2	4	0	4		0	0		0	11		1355	0.41	18.9		
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	EXPERT	20	20.5		401	2.73	22	92	0	0	10	7	0	4		0	0		0	10		1263	0.44	19.3		
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	MASTER	23	25.8		456	3.1	24	92	0	5	10	11	0	4		0	0		0	10		1263	0.48	20		既知
+SIX ÉTERNEL(six_eternel_remix)	six_eternel_remix	HELL	44			524	3.56	25	92	0	51	58	23	0	4		0	0		0	11			1.17	20.8	0:16〜(ミス見込み0.9/32個) 2:08〜(ミス見込み0.7/34個)	
+Stay With Me(stay_with_me)	stay_with_me	EASY	6	4.2		324	1.2	10	176	0	0	0	0	0	4		0	0		0	15		2532	0.39	19.4		
+Stay With Me(stay_with_me)	stay_with_me	NORMAL	7	5.4		371	1.37	10	176	0	0	0	1	0	4		0	0		0	15		2532	0.4	19.7		
+Stay With Me(stay_with_me)	stay_with_me	HARD	12	12		503	1.86	16	88	0	0	3	10	0	4		0	0		0	17		2532	0.41	21		
+Stay With Me(stay_with_me)	stay_with_me	EXPERT	17	16.5		613	2.26	18	88	0	5	19	7	0	4		0	0		0	18		1385	0.45	21.3		
+Stay With Me(stay_with_me)	stay_with_me	MASTER	19	20.3		676	2.49	19	88	0	12	23	3	0	4		0	0		0	18		1385	0.5	21.7		既知
+Stay With Me(stay_with_me)	stay_with_me	HELL	48			829	3.06	24	88	0	84	124	41	0	4		0	0		0	19			0.98	22.7	1:20〜(ミス見込み0.8/34個) 3:28〜(ミス見込み0.7/35個)	既知
+綺季一閃(kiki_issen)	kiki_issen	EASY	8	6.7		397	1.54	12	193	0	0	0	0	0	4		0	0		0	16		1542	0.38	19.5		
+綺季一閃(kiki_issen)	kiki_issen	NORMAL	10	11.1		451	1.75	17	193	0	0	0	2	0	4		0	0		0	16		1542	0.39	19.8		
+綺季一閃(kiki_issen)	kiki_issen	HARD	16	18		623	2.41	22	96	0	0	8	5	0	4		0	0		0	15		1445	0.43	21.2		
+綺季一閃(kiki_issen)	kiki_issen	EXPERT	24	24.6		757	2.93	26	96	0	11	22	11	1	4		0	0		0	15		1445	0.72	21.9	3:12〜(ミス見込み0.7/38個) 3:20〜(ミス見込み0.6/38個)	既知
+綺季一閃(kiki_issen)	kiki_issen	MASTER	30	32.7		873	3.38	34	96	0	23	41	14	0	4		0	0		0	15		1445	1	22.9	3:12〜(ミス見込み1.3/42個) 2:24〜(ミス見込み0.7/37個)	
+綺季一閃(kiki_issen)	kiki_issen	HELL	48			979	3.78	33	96	0	92	126	32	0	4		0	0		0	16			1.71	23	3:36〜(ミス見込み1.5/46個) 4:00〜(ミス見込み1.5/40個)	
+風がそよぐ場所	kaze_ga_soyogu	EASY	4	0.8		81	0.87	6	253	0	0	0	0	0	4		0	0		0	10		3617	0.41	17.6		
+風がそよぐ場所	kaze_ga_soyogu	NORMAL	5	1.8		94	1	7	252	0	0	0	0	0	4		0	0		0	10		2103	0.38	17.7		
+風がそよぐ場所	kaze_ga_soyogu	HARD	7	3.8		126	1.34	9	252	0	0	1	0	0	4		0	0		0	10		2103	0.42	17.9		
+風がそよぐ場所	kaze_ga_soyogu	EXPERT	11	7.2		167	1.8	11	252	0	0	2	0	0	4		0	0		0	10		3617	0.45	18.1		
+風がそよぐ場所	kaze_ga_soyogu	MASTER	18	11.8	表示が高い	193	2.04	16	252	0	0	2	4	0	4		0	0		0	10		2103	0.51	18.3		
+風がそよぐ場所	kaze_ga_soyogu	HELL	21			193	2.04	16	252	0	0	2	4	0	4		0	0		0	10			0.46	18.3		
+Close To Your Heart	close_to_your_heart	EASY	6	5.9		161	1.39	10	230	0	0	0	0	0	4		0	0		0	5		1450	0.38	17.2		
+Close To Your Heart	close_to_your_heart	NORMAL	8	7.1		187	1.61	11	230	0	0	0	0	0	4		0	0		0	5		1450	0.44	17.4		
+Close To Your Heart	close_to_your_heart	HARD	11	13		260	2.24	15	115	0	0	2	4	0	4		0	0		0	5		1450	0.36	17.9		
+Close To Your Heart	close_to_your_heart	EXPERT	21	19.1		311	2.68	21	115	0	2	5	4	4	4		0	0		0	5		1450	0.5	18.5		
+Close To Your Heart	close_to_your_heart	MASTER	23	23.1		356	3.07	25	115	0	0	2	8	2	4		0	0		0	5		1334	0.7	19.3	0:40〜(ミス見込み0.7/39個)	既知
+Close To Your Heart	close_to_your_heart	HELL	38			425	3.66	29	115	0	3	5	13	0	4		0	0		0	5			1.22	20.4	0:24〜(ミス見込み1.0/44個) 0:56〜(ミス見込み0.8/40個)	
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	EASY	7	6.6		323	1.51	11	194	0	0	0	0	0	4		0	0		0	14		1638	0.4	18.5		
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	NORMAL	8	8.9		368	1.72	13	194	0	0	0	0	0	4		0	0		0	14		1638	0.41	18.6		
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	HARD	16	18.8		510	2.38	24	97	0	0	7	5	0	4		0	0		0	14		1638	0.48	19.9		
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	EXPERT	24	22.9		609	2.85	25	97	0	2	11	8	0	4		0	0		0	14		1638	0.67	20.5	3:28〜(ミス見込み0.6/33個) 3:20〜(ミス見込み0.5/35個)	
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	MASTER	30	28.6		705	3.3	29	97	0	15	16	13	1	4		0	0		0	14		1638	0.97	21.4	3:04〜(ミス見込み1.1/41個) 3:20〜(ミス見込み1.0/45個)	既知
+綺季一閃(eiki_boss_remix)	eiki_boss_remix	HELL	48			812	3.8	30	97	0	64	78	41	0	4		0	0		0	14			1.84	22.3	3:04〜(ミス見込み1.8/46個) 3:20〜(ミス見込み1.5/50個)	
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	EASY	6	5.7		245	1.27	12	185	0	0	0	0	0	4		0	0		0	15		3130	0.37	19.4		
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	NORMAL	8	7.7		278	1.44	13	185	0	0	0	0	0	4		0	0		0	15		3501	0.4	19.7		
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	HARD	11	12.9		383	1.97	16	92	0	0	6	2	0	4		0	0		0	15		3130	0.4	20.1		
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	EXPERT	19	17.8		465	2.4	19	92	0	1	10	2	0	4		0	0		0	15		3130	0.47	20.6		既知
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	MASTER	26	23.8		541	2.79	24	92	0	5	13	11	0	4		0	0		0	15		3130	0.59	21.2		既知
+Stay With Me(pandora_boss_remix)	pandora_boss_remix	HELL	37			633	3.26	26	92	0	28	52	25	0	4		0	0		0	15			1.23	21.9	2:24〜(ミス見込み0.8/40個) 1:36〜(ミス見込み0.8/16個)	
+デュラハンテーマ	dullahan	EASY	7	6.6		210	1.68	11	200	0	0	0	0	0	4		0	0		0	5		1400	0.39	16.8		
+デュラハンテーマ	dullahan	NORMAL	9	9.7		245	1.96	14	200	0	0	0	0	0	4		0	0		0	5		1400	0.41	17		
+デュラハンテーマ	dullahan	HARD	13	14.6		334	2.67	18	100	0	0	2	1	0	4		0	0		0	5		1400	0.39	18		
+デュラハンテーマ	dullahan	EXPERT	17	19.9		407	3.25	21	100	0	2	9	7	5	4		0	0		0	3		1400	0.44	18.6		
+デュラハンテーマ	dullahan	MASTER	25	26.1		480	3.83	26	100	0	6	22	10	4	4		0	0		0	5		1400	0.78	20	0:32〜(ミス見込み0.8/42個)	
+デュラハンテーマ	dullahan	HELL	59			543	4.33	36	100	0	51	64	18	0	4		0	0		0	5			2.21	22.2	1:04〜(ミス見込み3.1/62個) 1:44〜(ミス見込み2.0/56個)	
+呪われた騎士の時計仕掛け	dullahan_clockwork	EASY	7	5		160	1.36	10	197	0	0	0	0	0	4		0	0		0	9		1577	0.37	17.3		
+呪われた騎士の時計仕掛け	dullahan_clockwork	NORMAL	8	6.6		184	1.56	12	197	0	0	0	0	0	4		0	0		0	9		1577	0.35	17.6		
+呪われた騎士の時計仕掛け	dullahan_clockwork	HARD	11	11.9		253	2.14	17	98	0	0	3	1	0	4		0	0		0	8		1478	0.39	18.4		
+呪われた騎士の時計仕掛け	dullahan_clockwork	EXPERT	17	15.7		309	2.61	18	98	0	2	6	5	6	4		0	0		0	8		1379	0.43	18.9		
+呪われた騎士の時計仕掛け	dullahan_clockwork	MASTER	25	21.5		352	2.97	24	98	0	7	11	12	4	4		0	0		0	9		1379	0.56	19.8		
+呪われた騎士の時計仕掛け	dullahan_clockwork	HELL	40			421	3.56	28	98	1	12	25	19	0	4		0	0		0	8			1.24	21.1	1:36〜(ミス見込み1.0/40個) 0:40〜(ミス見込み0.9/44個)	既知
+トリコ	toriko	EASY	5	3.9		74	0.98	8	222	0	0	0	0	0	4		0	0		0	11		1565	0.44	17.8		
+トリコ	toriko	NORMAL	6	3.9		83	1.1	8	222	0	0	0	0	0	4		0	0		0	10		1565	0.42	17.9		既知
+トリコ	toriko	HARD	8	9.5		116	1.54	11	111	0	0	0	0	0	4		0	0		0	10		1565	0.36	17.9		既知
+トリコ	toriko	EXPERT	15	13.7		136	1.81	14	111	0	0	6	1	0	4		0	0		0	11		1565	0.41	18.6		
+トリコ	toriko	MASTER	20	18.1		156	2.07	16	111	0	0	5	0	0	4		0	0		0	11		1565	0.66	18.9		既知
+トリコ	toriko	HELL	32			187	2.48	21	111	0	3	7	4	0	4		0	0		0	10			0.94	19.7	0:56〜(ミス見込み0.7/31個)	
+4U ～ひたすら～	4u_hitasura	EASY	6	5.1		136	1.18	9	207	0	0	0	0	0	4		0	0		0	9		3180	0.41	17.7		
+4U ～ひたすら～	4u_hitasura	NORMAL	8	6.3		160	1.39	11	206	0	0	0	0	0	4		0	0		0	9		3180	0.44	17.9		既知
+4U ～ひたすら～	4u_hitasura	HARD	10	9.2		216	1.86	15	103	0	0	1	1	0	4		0	0		0	9		2352	0.4	18.1		
+4U ～ひたすら～	4u_hitasura	EXPERT	15	16.8		259	2.23	18	103	0	2	3	4	0	4		0	0		0	10		2352	0.41	18.7		
+4U ～ひたすら～	4u_hitasura	MASTER	24	22.1		297	2.56	25	103	0	1	9	6	0	4		0	0		0	10		2352	0.56	19.6		
+4U ～ひたすら～	4u_hitasura	HELL	33			356	3.07	25	103	0	4	10	7	0	4		0	0		0	10			0.94	20.7	1:20〜(ミス見込み1.0/40個) 1:44〜(ミス見込み0.6/40個)	
+禁断のレジスタンス	kindan_no_resistance	EASY	8	7.6		290	1.83	13	166	0	0	0	0	0	4		0	0		0	8		2361	0.42	17.9		
+禁断のレジスタンス	kindan_no_resistance	NORMAL	10	10.6		336	2.12	14	166	0	0	0	2	0	4		0	0		0	9		2361	0.42	18.2		
+禁断のレジスタンス	kindan_no_resistance	HARD	16	16.7		466	2.92	20	83	0	0	7	3	0	4		0	0		0	9		1778	0.42	19.7		
+禁断のレジスタンス	kindan_no_resistance	EXPERT	22	22.5		568	3.56	23	83	0	4	18	13	1	4		0	0		0	10		1778	0.55	20.8		
+禁断のレジスタンス	kindan_no_resistance	MASTER	28	27.2		650	4.07	26	83	0	6	19	23	1	4		0	0		0	10		1778	0.89	21.9	2:16〜(ミス見込み0.8/44個) 2:24〜(ミス見込み0.7/43個)	
+禁断のレジスタンス	kindan_no_resistance	HELL	56			762	4.76	33	83	0	36	80	42	0	4		0	0		0	11			2.06	23.8	1:04〜(ミス見込み2.5/56個) 2:16〜(ミス見込み1.9/49個)	
+crossing field	crossing_field	EASY	8	8		161	1.92	12	167	0	0	0	0	0	4		0	0		0	8		2759	0.39	17.6		
+crossing field	crossing_field	NORMAL	10	11		183	2.19	14	167	0	0	0	0	0	4		0	0		0	8		2759	0.43	18.1		
+crossing field	crossing_field	HARD	16	17.2		249	2.95	20	84	0	0	0	1	0	4		0	0		0	9		2759	0.39	19.4		
+crossing field	crossing_field	EXPERT	24	25.4		308	3.65	22	83	0	7	15	3	0	4		0	0		0	9		2759	0.58	20.5		既知
+crossing field	crossing_field	MASTER	32	31.4		349	4.14	26	83	0	12	13	6	0	4		0	0		0	10		2759	0.8	22.2	0:56〜(ミス見込み0.6/41個) 0:48〜(ミス見込み0.5/45個)	
+crossing field	crossing_field	HELL	55			385	4.57	29	83	0	24	45	17	0	4		0	0		0	10			1.69	22.5	0:40〜(ミス見込み1.5/43個) 0:24〜(ミス見込み0.9/38個)	
+Nothing Without You	nothing_without_you	EASY	7	4.6		291	1.57	11	155	0	0	0	0	0	4		0	0		0	4		1693	0.41	16.9		
+Nothing Without You	nothing_without_you	NORMAL	8	6.5		338	1.82	12	154	0	0	0	0	0	4		0	0		0	4		1384	0.43	17		
+Nothing Without You	nothing_without_you	HARD	12	12.3		471	2.54	16	77	0	1	4	2	0	4		0	0		0	4		1693	0.42	18.2		
+Nothing Without You	nothing_without_you	EXPERT	18	16.4		568	3.06	19	77	0	1	8	4	10	4		0	0		0	5		1384	0.41	18.9		
+Nothing Without You	nothing_without_you	MASTER	24	21.9		641	3.45	24	77	0	3	14	5	8	4		0	0		0	5		1384	0.47	19.9		
+Nothing Without You	nothing_without_you	HELL	44			729	3.92	26	77	0	31	81	19	0	4		0	0		0	6			1.18	21.8	2:32〜(ミス見込み0.9/45個) 0:56〜(ミス見込み0.8/41個)	
+もう一つの世界へ	mou_hitotsu_no_sekai_e	EASY	8	7.6		338	1.53	13	160	0	0	0	0	0	4		0	0		0	16		2916	0.4	19.3		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	NORMAL	10	10.2		383	1.73	16	160	0	0	0	0	0	4		0	0		0	16		2916	0.41	19.7		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	HARD	14	13.3		548	2.47	17	80	0	0	2	4	0	4		0	0		0	16		2916	0.4	20.9		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	EXPERT	21	20.2		654	2.95	22	80	0	2	13	4	0	4		0	0		0	16		2916	0.52	21.4		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	MASTER	26	25.7		751	3.39	27	80	0	3	13	15	0	4		0	0		0	16		2916	0.61	22.2	3:04〜(ミス見込み0.9/46個)	既知
+もう一つの世界へ	mou_hitotsu_no_sekai_e	HELL	43			887	4	32	80	0	30	50	40	0	4		0	0		0	16			1.42	22.9	2:16〜(ミス見込み1.7/46個) 3:04〜(ミス見込み1.4/48個)	既知
+戦場の疾風	senjou_no_shippuu	EASY	8	7.9		309	1.63	12	214	0	0	0	0	0	4		0	0		0	14		1868	0.38	19.4		
+戦場の疾風	senjou_no_shippuu	NORMAL	9	10.2		357	1.88	14	214	0	0	0	2	0	4		0	0		0	14		1868	0.41	19.8		
+戦場の疾風	senjou_no_shippuu	HARD	14	15.8		490	2.59	20	107	0	0	0	8	0	4		0	0		0	15		2082	0.45	20.5		
+戦場の疾風	senjou_no_shippuu	EXPERT	25	24.4		584	3.07	26	107	0	3	5	12	0	4		0	0		0	15		1546	1.24	21.5	2:32〜(ミス見込み1.0/34個) 2:56〜(ミス見込み1.0/31個)	既知
+戦場の疾風	senjou_no_shippuu	MASTER	29	28.4		633	3.33	29	107	1	7	8	12	1	4		0	0		0	15		1546	1.59	21.9	2:32〜(ミス見込み1.9/40個) 2:00〜(ミス見込み1.8/38個)	
+戦場の疾風	senjou_no_shippuu	HELL	46			644	3.39	30	107	0	8	10	22	0	4		0	0		0	15			1.97	22.3	2:32〜(ミス見込み1.9/38個) 2:00〜(ミス見込み1.8/39個)	
+魔窟の旋律	makutsu_no_senritsu	EASY	8	9.3		273	1.88	13	208	0	0	0	0	0	4		0	0		0	16		1363	0.42	19.5		
+魔窟の旋律	makutsu_no_senritsu	NORMAL	10	12.3		316	2.18	15	208	0	0	0	4	0	4		0	0		0	15		1363	0.4	19.7		
+魔窟の旋律	makutsu_no_senritsu	HARD	19	19.3		432	2.97	21	104	0	0	1	9	0	4		0	0		0	15		1363	0.52	21.2		
+魔窟の旋律	makutsu_no_senritsu	EXPERT	23	24		473	3.26	25	104	0	2	6	9	0	4		0	0		0	15		1363	0.52	21.5		
+魔窟の旋律	makutsu_no_senritsu	MASTER	27	23.9		536	3.69	25	104	0	3	5	13	0	4		0	0		0	15		1363	0.77	22.5	1:44〜(ミス見込み0.5/40個) 0:32〜(ミス見込み0.5/37個)	既知
+魔窟の旋律	makutsu_no_senritsu	HELL	39			477	3.28	28	104	0	13	30	27	0	4		0	0		0	15			0.95	22	1:44〜(ミス見込み0.7/42個) 2:16〜(ミス見込み0.6/34個)	
+The City Beneath the Comets	the_city_beneath_the_comets	EASY	9	10.3		325	2.1	14	175	0	0	0	0	0	4		0	0		0	12		2689	0.4	18.7		
+The City Beneath the Comets	the_city_beneath_the_comets	NORMAL	12	14.5		376	2.44	18	175	0	0	0	0	0	4		0	0		0	12		2865	0.41	19.2		
+The City Beneath the Comets	the_city_beneath_the_comets	HARD	22	23.6		522	3.33	26	87	0	0	1	19	0	4		0	0		0	12		1281	0.63	21.8	1:04〜(ミス見込み0.6/42個)	
+The City Beneath the Comets	the_city_beneath_the_comets	EXPERT	30	32.3		628	4.01	33	87	0	9	16	20	0	4		0	0		0	12		1281	1.2	22.4	2:24〜(ミス見込み1.4/50個) 1:04〜(ミス見込み0.9/46個)	既知
+The City Beneath the Comets	the_city_beneath_the_comets	MASTER	41	39.2		726	4.63	37	87	0	22	28	21	0	4		0	0		0	12		1369	1.89	24.7	2:24〜(ミス見込み1.9/50個) 1:04〜(ミス見込み1.8/56個)	既知
+The City Beneath the Comets	the_city_beneath_the_comets	HELL	61			655	4.18	37	87	0	60	93	35	0	4		0	0		0	12			2.08	22.9	0:56〜(ミス見込み1.9/55個) 2:24〜(ミス見込み1.7/46個)	既知
+FREEDOM DiVE↓	freedom_dive	EASY	16	13.4		375	2.66	19	67	0	0	0	0	0	4		0	2	67	0	14		2456	0.47	21.3		既知
+FREEDOM DiVE↓	freedom_dive	NORMAL	24	20.2		474	3.37	25	67	0	0	0	1	0	4		0	3	67	0	14		2726	0.87	22.8	1:36〜(ミス見込み0.7/44個)	既知
+FREEDOM DiVE↓	freedom_dive	HARD	28	25.9		556	3.94	27	67	0	0	1	2	0	4		0	0		0	14		2456	1.31	23.9	1:52〜(ミス見込み0.8/41個) 0:56〜(ミス見込み0.8/35個)	既知
+FREEDOM DiVE↓	freedom_dive	EXPERT	39	34.9		732	5.17	31	67	0	0	5	9	0	4		0	11	67	0	13		1916	2.64	25.5	1:04〜(ミス見込み2.8/54個) 0:56〜(ミス見込み1.8/43個)	既知
+FREEDOM DiVE↓	freedom_dive	MASTER	41	40		804	5.66	35	67	0	1	9	19	0	4		0	8	67	0	13		1578	4.18	25.8	1:04〜(ミス見込み4.4/62個) 1:36〜(ミス見込み2.9/51個)	既知
+FREEDOM DiVE↓	freedom_dive	HELL	73			782	5.51	36	67	0	25	49	38	0	4		0	36	67	0	14			4.31	24.4	1:04〜(ミス見込み4.5/60個) 2:16〜(ミス見込み3.4/59個)	
+only my railgun	only_my_railgun	EASY	7	6.9		146	1.68	11	209	0	0	0	0	0	4		0	0		0	4		1316	0.37	18.2		
+only my railgun	only_my_railgun	NORMAL	9	9.7		169	1.95	14	209	0	0	0	0	0	4		0	0		0	4		1316	0.41	18.3		
+only my railgun	only_my_railgun	HARD	14	13.4		227	2.61	17	104	0	0	0	1	0	4		0	0		0	5		1316	0.37	19		
+only my railgun	only_my_railgun	EXPERT	21	19.5		282	3.25	22	104	0	0	0	6	0	4		0	0		0	5		1316	0.43	19.9		
+only my railgun	only_my_railgun	MASTER	23	23.1		325	3.74	24	104	0	0	4	13	1	4		0	0		0	6		1316	0.63	21.1		既知
+only my railgun	only_my_railgun	HELL	39			282	3.25	26	104	0	5	12	13	0	4		0	0		0	7			0.82	21.1	0:00〜(ミス見込み0.7/32個) 0:48〜(ミス見込み0.6/36個)	
+ビッグブリッヂの死闘	big_bridge_no_shitou	EASY	9	10.5		345	2.43	15	167	0	0	0	0	0	4		0	0		0	8		790	0.37	17.6		
+ビッグブリッヂの死闘	big_bridge_no_shitou	NORMAL	12	14.1		400	2.82	16	167	0	0	0	0	0	4		0	0		0	8		790	0.39	18		
+ビッグブリッヂの死闘	big_bridge_no_shitou	HARD	19	22.1		538	3.8	24	83	0	0	4	3	0	4		0	0		0	8		790	0.45	19.5		
+ビッグブリッヂの死闘	big_bridge_no_shitou	EXPERT	27	30		651	4.59	29	83	0	7	7	10	1	4		0	0		0	8		790	0.77	21	0:08〜(ミス見込み0.6/46個) 1:36〜(ミス見込み0.5/46個)	
+ビッグブリッヂの死闘	big_bridge_no_shitou	MASTER	34	37.7		768	5.42	32	83	0	25	30	28	0	4		0	0		0	8		790	1.35	22.6	0:08〜(ミス見込み1.2/54個) 0:16〜(ミス見込み1.1/56個)	
+ビッグブリッヂの死闘	big_bridge_no_shitou	HELL	64			714	5.04	34	83	0	56	72	32	0	4		0	0		0	9			2.26	22.8	0:16〜(ミス見込み3.0/59個) 0:08〜(ミス見込み2.8/60個)	
+Rising Hope	rising_hope	EASY	9	8.9		176	2.03	12	157	0	0	0	0	0	4		0	0		0	9		1595	0.4	18		
+Rising Hope	rising_hope	NORMAL	11	12.4		208	2.4	14	157	0	0	0	1	0	4		0	0		0	10		1595	0.37	18.5		
+Rising Hope	rising_hope	HARD	17	18.5		281	3.22	20	78	0	0	3	4	0	4		0	0		0	10		1200	0.46	19.8		
+Rising Hope	rising_hope	EXPERT	25	26.3		343	3.93	24	78	0	2	15	8	10	4		0	0		0	10		1200	0.59	20.8		
+Rising Hope	rising_hope	MASTER	32	34		393	4.5	28	78	0	13	21	23	5	4		0	0		0	9		1200	1.02	22	0:56〜(ミス見込み0.7/45個) 0:32〜(ミス見込み0.7/47個)	
+Rising Hope	rising_hope	HELL	58			439	5.03	31	78	0	30	58	34	0	4		0	0		0	10			2.17	23	0:56〜(ミス見込み1.9/49個) 1:04〜(ミス見込み1.5/52個)	
+ハルカ	haruka	EASY	9	9.7		206	2.2	13	150	0	0	0	0	0	4		0	0		0	15		1509	0.41	19		
+ハルカ	haruka	NORMAL	10	12.9		231	2.47	15	150	0	0	0	0	0	4		0	0		0	15		1509	0.42	19.5		
+ハルカ	haruka	HARD	19	19.1		322	3.44	20	75	0	0	0	6	0	4		0	0		0	15		1509	0.43	21.7		
+ハルカ	haruka	EXPERT	30	29		389	4.13	27	75	0	11	19	2	0	4		0	0		0	14		1509	0.84	22.5	1:12〜(ミス見込み0.7/44個) 0:48〜(ミス見込み0.6/44個)	
+ハルカ	haruka	MASTER	37	33.5		454	4.82	28	75	0	11	21	6	0	4		0	0		0	14		1509	1.23	24.3	0:40〜(ミス見込み1.0/46個) 0:48〜(ミス見込み1.0/50個)	既知
+ハルカ	haruka	HELL	62			492	5.22	29	75	0	33	51	21	0	4		0	0		0	14			2.12	24	0:40〜(ミス見込み1.6/48個) 0:32〜(ミス見込み1.3/43個)	
+Stay With Me short	stay_with_me_short	EASY	7	6.3		243	1.4	11	176	0	0	0	0	0	4		0	0		0	16		1669	0.44	19.5		既知
+Stay With Me short	stay_with_me_short	NORMAL	10	8.8		292	1.69	13	176	0	0	0	4	0	4		0	0		0	15		1669	0.43	19.6		
+Stay With Me short	stay_with_me_short	HARD	16	15.6		395	2.28	20	88	0	0	1	8	0	4		0	0		0	17		1669	0.39	22		既知
+Stay With Me short	stay_with_me_short	EXPERT	20	21.8		491	2.84	23	88	0	9	13	5	0	4		0	0		0	16		1669	0.51	21.9		既知
+Stay With Me short	stay_with_me_short	MASTER	31	28.6		564	3.26	28	88	0	10	23	10	0	4		0	0		0	16		1669	0.77	22.9	2:32〜(ミス見込み0.9/40個)	既知
+Stay With Me short	stay_with_me_short	HELL	44			470	2.72	19	88	0	33	54	11	0	4		0	0		0	16			0.9	21.2		
+綺季一閃 short	kiki_issen_short	EASY	9	8.8		318	1.67	14	193	0	0	0	0	0	4		0	0		0	16		2004	0.44	19.5		
+綺季一閃 short	kiki_issen_short	NORMAL	10	10.5		368	1.93	15	193	0	0	0	2	0	4		0	0		0	15		2004	0.4	19.7		
+綺季一閃 short	kiki_issen_short	HARD	17	19.7		497	2.61	24	96	0	0	7	6	0	4		0	0		0	15		2295	0.58	21		
+綺季一閃 short	kiki_issen_short	EXPERT	25	27		592	3.1	30	96	0	4	15	10	0	4		0	0		0	15		1617	0.7	21.5	2:08〜(ミス見込み1.1/47個)	既知
+綺季一閃 short	kiki_issen_short	MASTER	27	27.3		628	3.29	26	96	0	3	13	12	1	4	EXPERT→MASTER: ノーツ数 ×1.06・最密4秒 ×0.87	0	0		0	15		1617	0.73	21.8	2:08〜(ミス見込み0.6/37個)	既知
+綺季一閃 short	kiki_issen_short	HELL	44			589	3.08	27	96	0	22	34	13	0	4		0	0		0	15			1	21.5	1:44〜(ミス見込み0.7/39個) 2:00〜(ミス見込み0.7/41個)	
+Crazy Party Night(crazy_party_night)	crazy_party_night	EASY	7	5.4		138	1.54	10	234	0	0	0	0	0	4		0	0		0	4		1718	0.41	18.2		
+Crazy Party Night(crazy_party_night)	crazy_party_night	NORMAL	8	8.6		163	1.82	12	234	0	0	0	0	0	4		0	0		0	4		1718	0.43	18.4		
+Crazy Party Night(crazy_party_night)	crazy_party_night	HARD	11	13.9		220	2.46	17	117	0	0	1	0	0	4		0	0		0	4		1718	0.36	19.4		
+Crazy Party Night(crazy_party_night)	crazy_party_night	EXPERT	20	20.3		273	3.03	21	117	0	0	1	4	0	4		0	0		0	4		1249	0.49	20.1		既知
+Crazy Party Night(crazy_party_night)	crazy_party_night	MASTER	29	25.6		307	3.41	27	117	0	2	6	9	0	4		0	0		0	4		1249	0.77	21.3		
+Crazy Party Night(crazy_party_night)	crazy_party_night	HELL	43			363	4.03	31	117	0	0	1	19	0	4		0	0		0	4			1.52	22.1	1:12〜(ミス見込み1.6/46個) 0:32〜(ミス見込み0.9/34個)	
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	EASY	7	6.6		359	1.5	11	234	0	0	0	0	0	4		0	0		0	8		3283	0.42	18.2		
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	NORMAL	8	8.6		412	1.72	12	234	0	0	0	0	0	4		0	0		0	8		3283	0.41	18.4		
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	HARD	13	14.2		585	2.44	17	117	0	0	3	9	0	4		0	0		0	9		3166	0.41	19.5		
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	EXPERT	20	21.3		705	2.95	23	117	0	3	9	13	0	4		0	0		0	9		3166	0.61	20.2		
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	MASTER	28	25.4		796	3.32	27	117	0	2	15	21	0	4		0	0		0	9		3166	0.87	20.9	1:52〜(ミス見込み0.7/45個) 3:36〜(ミス見込み0.7/32個)	既知
+Crazy Party Night(crazy_party_night_full)	crazy_party_night_full	HELL	41			936	3.9	29	117	0	7	11	47	0	4		0	0		0	9			1.41	21.9	3:44〜(ミス見込み1.4/49個) 1:04〜(ミス見込み1.1/35個)	
+Emerald Rush	emerald_rush	EASY	6	7		193	1.35	10	392	0	0	0	0	0	4		0	0		0	10		1273	0.39	18		
+Emerald Rush	emerald_rush	NORMAL	8	8.3		217	1.52	12	198	0	0	0	0	0	4		0	0		0	11		1273	0.37	18.1		
+Emerald Rush	emerald_rush	HARD	13	13.9		301	2.12	17	98	0	0	3	1	0	4		0	0		0	14		1174	0.41	19.9		既知
+Emerald Rush	emerald_rush	EXPERT	20	19.9		368	2.58	20	98	0	3	18	4	0	4		0	0		0	14		1174	0.44	20.5		既知
+Emerald Rush	emerald_rush	MASTER	27	24.5		424	2.98	24	98	0	7	26	6	0	4		0	0		0	16		1273	0.74	22.3	0:40〜(ミス見込み0.9/41個) 0:48〜(ミス見込み0.6/34個)	
+Emerald Rush	emerald_rush	HELL	41			482	3.38	33	98	0	23	50	16	0	4		0	0		0	18			1.02	23.1	0:40〜(ミス見込み1.5/49個) 0:48〜(ミス見込み0.6/34個)	
+Wrath of the Thorn King	wrath_of_the_thorn_king	EASY	5	4.5		106	1.15	8	212	0	0	0	0	0	4		0	0		0	12		1608	0.46	18.1		
+Wrath of the Thorn King	wrath_of_the_thorn_king	NORMAL	7	3.2		124	1.35	10	212	0	0	0	0	0	4		0	0		0	11		1608	0.44	18		
+Wrath of the Thorn King	wrath_of_the_thorn_king	HARD	9	10.6		166	1.8	13	105	0	0	3	0	0	4		0	0		0	11		1608	0.36	18.7		
+Wrath of the Thorn King	wrath_of_the_thorn_king	EXPERT	16	16.3		201	2.18	16	105	0	1	10	1	9	4		0	0		0	12		1608	0.62	19.3		
+Wrath of the Thorn King	wrath_of_the_thorn_king	MASTER	22	21.2		229	2.47	20	104	0	0	4	4	5	4		0	0		0	14		1608	0.96	20.3	0:32〜(ミス見込み0.6/25個)	
+Wrath of the Thorn King	wrath_of_the_thorn_king	HELL	35			253	2.72	21	104	0	1	8	3	0	4		0	0		0	14			1.05	20.6	0:32〜(ミス見込み0.7/25個)	
+Monster	monster	EASY	6	4.1		313	1.2	9	222	0	0	0	0	0	4		0	0		0	5		1482	0.4	17.2		
+Monster	monster	NORMAL	7	6.2		366	1.4	11	222	0	0	0	1	0	4		0	0		0	5		1482	0.4	17.4		既知
+Monster	monster	HARD	10	10.6		487	1.86	15	111	0	0	1	6	0	4		0	0		0	6		1482	0.41	17.8		
+Monster	monster	EXPERT	19	18.5		594	2.27	21	111	0	1	11	5	0	4		0	0		0	6		1482	0.53	18.5		
+Monster	monster	MASTER	25	23.6		694	2.65	26	111	0	1	16	13	0	4		0	0		0	6		1482	0.82	19.4	2:32〜(ミス見込み0.6/40個) 1:20〜(ミス見込み0.5/29個)	
+Monster	monster	HELL	34			806	3.08	27	111	1	3	7	16	0	4		0	0		0	6			1.33	20.1	3:36〜(ミス見込み1.0/39個) 3:44〜(ミス見込み0.9/39個)	既知
+Monster short	monster_short	EASY	6	4.9		126	1.18	9	222	0	0	0	0	0	4		0	0		0	6		1655	0.37	17.1		
+Monster short	monster_short	NORMAL	7	6.2		144	1.35	10	222	0	0	0	0	0	4		0	0		0	5		1655	0.42	17.1		
+Monster short	monster_short	HARD	9	11.4		194	1.82	14	222	0	0	1	2	0	4		0	0		0	5		1655	0.42	17.5		
+Monster short	monster_short	EXPERT	16	15.9		235	2.19	17	111	0	1	2	3	2	4		0	0		0	5		1211	0.37	18.1		
+Monster short	monster_short	MASTER	22	20.3		276	2.57	20	111	0	0	4	7	3	4		0	0		0	5		1211	0.5	19		
+Monster short	monster_short	HELL	35			317	2.95	25	111	1	2	2	6	0	4		0	0		0	5			1.09	19.9	1:20〜(ミス見込み0.9/35個) 1:36〜(ミス見込み0.6/38個)	既知
+ANiMA	anima	EASY	9	9		211	1.92	13	163	0	0	0	0	0	4		0	0		0	6		2664	0.39	17.4		
+ANiMA	anima	NORMAL	10	12		254	2.31	15	163	0	0	0	0	0	4		0	0		0	6		2664	0.43	17.9		
+ANiMA	anima	HARD	18	19.4		353	3.21	20	81	0	0	3	4	0	4		0	0		0	6		2664	0.47	20.3		
+ANiMA	anima	EXPERT	27	27		441	4.01	25	81	0	2	4	12	0	4		0	0		0	7		2664	0.8	22.1	0:48〜(ミス見込み0.6/44個)	既知
+ANiMA	anima	MASTER	40	39.5		569	5.18	34	81	0	6	4	17	0	4		0	0		0	8		2664	2.03	24.9	0:24〜(ミス見込み2.0/55個) 0:32〜(ミス見込み1.7/54個)	既知
+ANiMA	anima	HELL	58			522	4.75	31	81	0	20	42	30	0	4		0	0		0	7			2.15	23	0:40〜(ミス見込み2.0/49個) 0:48〜(ミス見込み1.9/50個)	
+Journey	journey	EASY	7	5.9		233	1.45	10	234	0	0	0	0	0	4		0	0		0	3		1736	0.39	17.1		
+Journey	journey	NORMAL	10	10.4		287	1.79	14	234	0	0	0	4	0	4		0	0		0	3		1736	0.41	17.7		
+Journey	journey	HARD	15	17.9		398	2.48	20	117	0	0	4	10	0	4		0	0		0	4		1268	0.41	18.6		
+Journey	journey	EXPERT	30	29.6		627	3.9	28	117	0	4	15	20	15	4		0	0		0	4		1268	1.1	20.1	2:08〜(ミス見込み1.3/38個) 2:16〜(ミス見込み0.6/42個)	既知
+Journey	journey	MASTER	36	39.8		731	4.55	37	117	0	13	15	29	25	4		0	0		0	4		1268	2.96	21.6	1:36〜(ミス見込み3.9/54個) 0:56〜(ミス見込み2.3/37個)	
+Journey	journey	HELL	51			706	4.38	35	117	0	6	21	30	0	4		0	0		0	4			3.27	21.5	1:36〜(ミス見込み2.4/46個) 2:08〜(ミス見込み1.7/36個)	
+Sheriruth	sheriruth	EASY	9	10.8		259	2	13	324	0	0	0	0	0	4		0	0		0.023	6	2:08.5(小節99)から4秒に6個	2606	0.44	17.9		
+Sheriruth	sheriruth	NORMAL	14	14.8		312	2.41	17	324	0	0	0	0	0	4		0	0		0.051	6	2:08.2(小節99)から4秒に11個	2606	0.43	18.5		
+Sheriruth	sheriruth	HARD	22	20.8		384	2.96	23	81	0	0	0	18	1	4		0	0		0.031	7		2525	0.69	20.7	0:16〜(ミス見込み0.6/37個)	既知
+Sheriruth	sheriruth	EXPERT	33	30.4		535	4.12	29	81	0	0	0	39	0	4		0	0		0.077	9		2444	1.26	23.4	0:16〜(ミス見込み1.2/48個) 1:36〜(ミス見込み0.9/48個)	既知
+Sheriruth	sheriruth	MASTER	39	38.9		642	4.95	36	81	4	3	2	57	0	4		0	0		0.118	10	1:27.9(小節68)から4秒に8個	2444	2.06	26.2	1:36〜(ミス見込み1.9/57個) 0:16〜(ミス見込み1.9/56個)	既知
+Sheriruth	sheriruth	HELL	50			624	4.81	36	81	11	10	6	56	0	4		0	0		0.12	10	1:27.9(小節68)から4秒に8個		2.06	26.3	1:36〜(ミス見込み1.9/57個) 0:16〜(ミス見込み1.8/54個)	既知
+Grievous Lady	grievous_lady	EASY	12	10.5		294	2.15	17	143	0	0	0	0	0	4		0	0		0.442	35	0:38.5(小節32)から4秒に12個	2815	0.49	21.3		
+Grievous Lady	grievous_lady	NORMAL	16	16.9		355	2.6	21	142	0	0	0	3	0	4		0	0		0.392	26	1:50.0(小節95)から4秒に13個	2815	1.12	22	2:08〜(ミス見込み0.8/27個) 0:56〜(ミス見込み0.6/30個)	
+Grievous Lady	grievous_lady	HARD	22	27.1		422	3.09	27	71	0	0	0	8	2	4		0	0		0.171	13	0:22.7(小節18)から4秒に9個	2815	2.22	22.7	0:56〜(ミス見込み1.5/47個) 2:00〜(ミス見込み1.4/31個)	
+Grievous Lady	grievous_lady	EXPERT	35	35.4		536	3.92	34	71	0	0	0	17	6	4		0	0		0.183	13	0:25.4(小節21)から4秒に10個	2815	5.16	26.2	0:56〜(ミス見込み5.1/64個) 2:00〜(ミス見込み3.5/42個)	
+Grievous Lady	grievous_lady	MASTER	43	42.7		636	4.65	41	71	0	0	0	19	7	4		0	0		0.184	13	2:09.6(小節112)から4秒に13個	2815	7.85	27.7	0:56〜(ミス見込み8.2/72個) 1:36〜(ミス見込み7.3/54個)	既知
+Against My Own Shadow	against_my_own_shadow	EASY	7	4.9		130	1.14	10	209	0	0	0	0	0	4		0	0		0	13		1585	0.45	18.7		
+Against My Own Shadow	against_my_own_shadow	NORMAL	9	6.6		158	1.39	11	209	0	0	0	0	0	4		0	0		0	12		1585	0.43	18.6		
+Against My Own Shadow	against_my_own_shadow	HARD	12	12.4		210	1.84	16	104	0	0	2	1	0	4		0	0		0	13		1480	0.43	19.9		
+Against My Own Shadow	against_my_own_shadow	EXPERT	22	23.2		337	2.95	23	104	0	9	15	11	0	4		0	0		0	14		1376	0.58	21		
+Against My Own Shadow	against_my_own_shadow	MASTER	29	29.5		397	3.48	26	104	0	17	24	23	0	4		0	0		0	13		1376	0.97	22	1:20〜(ミス見込み0.8/41個) 0:08〜(ミス見込み0.6/31個)	
+Against My Own Shadow	against_my_own_shadow	HELL	49			437	3.83	34	104	0	11	20	20	0	4		0	0		0	14			1.32	22.3	0:08〜(ミス見込み1.6/50個) 1:20〜(ミス見込み0.8/40個)	
+ROSE	rose	EASY	5	3.4		159	0.99	8	240	0	0	0	0	0	4		0	0		0	12		2288	0.39	18.5		
+ROSE	rose	NORMAL	7	5.3		196	1.21	10	240	0	0	0	0	0	4		0	0		0	12		1328	0.41	18.4		
+ROSE	rose	HARD	10	11.5		268	1.66	14	120	0	0	5	2	0	4		0	0		0	12		1328	0.44	19		
+ROSE	rose	EXPERT	20	21.2		424	2.62	24	120	0	1	8	11	0	4		0	0		0	12		1328	0.62	19.9		
+ROSE	rose	MASTER	32	29		521	3.22	31	120	0	0	7	9	0	4		0	0		0	12		1328	1.72	21.3	2:24〜(ミス見込み1.7/42個) 2:32〜(ミス見込み1.5/45個)	既知
+ROSE	rose	HELL	51			638	3.94	37	120	1	4	17	27	0	4		0	0		0	12			3.29	22.3	2:24〜(ミス見込み3.0/50個) 2:32〜(ミス見込み2.1/49個)	既知
+ROSE short	rose_short	EASY	5	3.3		113	1.01	8	240	0	0	0	0	0	4		0	0		0	12		1496	0.4	18.3		
+ROSE short	rose_short	NORMAL	6	5.4		131	1.17	9	240	0	0	0	0	0	4		0	0		0	12		1256	0.37	18.6		
+ROSE short	rose_short	HARD	10	11.2		183	1.63	14	120	0	0	3	1	0	4		0	0		0	12		1256	0.38	19		
+ROSE short	rose_short	EXPERT	17	18.2		286	2.55	19	120	0	0	5	1	0	4		0	0		0	12		1256	0.49	19.8		
+ROSE short	rose_short	MASTER	28	27.7		356	3.18	29	120	0	1	7	6	0	4		0	0		0	12		1256	1.72	21.2	1:44〜(ミス見込み1.6/44個) 1:28〜(ミス見込み1.2/47個)	既知
+ROSE short	rose_short	HELL	49			434	3.87	30	120	0	2	7	10	0	4		0	0		0	12			2.96	22	1:28〜(ミス見込み2.1/51個) 0:48〜(ミス見込み2.0/42個)	
+SAD SONG	sad_song	EASY	8	7.2		351	1.64	12	174	0	0	0	0	0	4		0	0		0	4		1317	0.41	17.4		
+SAD SONG	sad_song	NORMAL	9	9.2		402	1.88	13	174	0	0	0	0	0	4		0	0		0	4		1317	0.38	17.6		
+SAD SONG	sad_song	HARD	15	16.2		551	2.56	19	87	0	0	5	5	0	4		0	0		0	4		1317	0.41	18.9		
+SAD SONG	sad_song	EXPERT	24	22.7		652	3.03	23	87	0	5	22	5	0	4		0	0		0	5		1317	0.55	19.7		既知
+SAD SONG	sad_song	MASTER	28	27.9		746	3.47	26	87	0	8	28	19	0	4		0	0		0	5		1317	0.65	21.1	2:56〜(ミス見込み0.6/41個)	既知
+SAD SONG	sad_song	HELL	43			774	3.6	26	87	0	60	95	29	0	4		0	0		0	5			1.19	20.6	2:24〜(ミス見込み1.0/37個) 2:16〜(ミス見込み0.6/32個)	
+SAD SONG short	sad_song_short	EASY	9	7.7		143	1.83	12	174	0	0	0	0	0	4		0	0		0	5		1240	0.41	17.6		
+SAD SONG short	sad_song_short	NORMAL	10	10.6		162	2.05	15	174	0	0	0	0	0	4		0	0		0	5		1240	0.44	18		
+SAD SONG short	sad_song_short	HARD	18	18.2		219	2.78	20	87	0	0	1	4	0	4		0	0		0	6		1240	0.42	20.2		既知
+SAD SONG short	sad_song_short	EXPERT	27	25.4		269	3.41	26	87	0	1	7	3	0	4		0	0		0	7		1240	0.63	21	1:04〜(ミス見込み0.5/43個)	既知
+SAD SONG short	sad_song_short	MASTER	29	29.3		299	3.79	25	87	0	6	16	12	0	4	EXPERT→MASTER: ノーツ数 ×1.11・最密4秒 ×0.96	0	0		0	8		1240	0.74	22.1		既知
+SAD SONG short	sad_song_short	HELL	43			296	3.75	23	87	0	26	34	10	0	4		0	0		0	8			1.21	21.5	0:08〜(ミス見込み0.6/32個) 0:40〜(ミス見込み0.6/34個)	
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	EASY	7	6		179	1.38	11	209	0	0	0	0	0	4		0	0		0	11		4326	0.4	18.8		
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	NORMAL	8	9.2		200	1.54	14	209	0	0	0	0	0	4		0	0		0	11		4326	0.4	19.1		
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	HARD	14	15.5		281	2.17	19	104	0	0	2	4	0	4		0	0		0	11		4326	0.42	19.9		
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	EXPERT	21	23.1		334	2.57	26	104	0	2	8	4	0	4		0	0		0	11		4117	0.56	20.1		既知
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	MASTER	37	33.4		484	3.73	33	104	0	5	13	7	0	4		0	0		0	11		4117	0.92	21.9	1:12〜(ミス見込み0.9/48個) 0:56〜(ミス見込み0.6/37個)	既知
+Toward the Stars, Paradise or Truth short	toward_the_stars_short	HELL	50			548	4.2	26	104	0	27	53	28	0	4		0	0		0	12			1.82	23.1	0:56〜(ミス見込み1.2/43個) 1:04〜(ミス見込み1.0/32個)	
+BLACK SHOUT	black_shout	EASY	9	9.6		207	2	13	162	0	0	0	0	0	4		0	0		0	9		2509	0.43	17.9		
+BLACK SHOUT	black_shout	NORMAL	13	14.6		245	2.33	19	162	0	0	0	2	0	4		0	0		0	9		1212	0.42	18.8		
+BLACK SHOUT	black_shout	HARD	17	18.9		328	3.12	22	81	0	0	0	3	0	4		0	0		0	9		1212	0.52	20.1		
+BLACK SHOUT	black_shout	EXPERT	27	26.9		401	3.79	26	81	0	2	8	5	0	4		0	0		0	10		1212	0.89	22	1:28〜(ミス見込み0.8/47個) 1:12〜(ミス見込み0.6/41個)	
+BLACK SHOUT	black_shout	MASTER	33	33.3		455	4.31	30	81	0	7	18	12	0	4		0	0		0	10		1212	1.26	23.3	0:56〜(ミス見込み1.1/51個) 1:36〜(ミス見込み0.9/43個)	既知
+BLACK SHOUT	black_shout	HELL	61			508	4.81	32	81	0	38	49	22	0	4		0	0		0	10			2.37	23.3	0:56〜(ミス見込み2.1/56個) 1:04〜(ミス見込み1.6/43個)	既知
+light player	light_player	EASY	8	7.9		476	1.81	12	159	0	0	0	0	0	4		0	0		0	7		2435	0.41	17.8		
+light player	light_player	NORMAL	9	10.2		557	2.11	14	158	0	0	0	0	0	4		0	0		0	8		2435	0.41	18.1		
+light player	light_player	HARD	14	14.9		762	2.89	19	79	0	0	0	3	0	4		0	0		0	8		2115	0.4	19.2		
+light player	light_player	EXPERT	22	22.3		904	3.43	24	79	0	0	7	10	0	4		0	0		0	8		2275	0.54	20.4	3:36〜(ミス見込み0.5/40個)	
+light player	light_player	MASTER	32	28.5		1072	4.06	28	79	0	3	17	31	0	4		0	0		0	9		2115	0.98	22.2	3:36〜(ミス見込み0.9/46個) 1:52〜(ミス見込み0.7/41個)	既知
+light player	light_player	HELL	54			1249	4.73	34	79	0	43	77	68	0	4		0	0		0	9			1.96	23.2	0:56〜(ミス見込み2.2/55個) 0:48〜(ミス見込み2.1/56個)	
+light player short	light_player_short	EASY	8	7.3		267	1.82	12	159	0	0	0	0	0	4		0	0		0	9		1346	0.39	18.1		
+light player short	light_player_short	NORMAL	10	9.8		308	2.1	14	159	0	0	0	0	0	4		0	0		0	9		1346	0.43	18.3		
+light player short	light_player_short	HARD	14	14.6		417	2.85	20	79	0	0	0	4	0	4		0	0		0	9		1346	0.44	19.4		
+light player short	light_player_short	EXPERT	21	23.2		499	3.41	23	79	0	0	1	9	0	4		0	0		0	9		1346	0.48	20.6		既知
+light player short	light_player_short	MASTER	27	28.2		570	3.89	26	79	0	2	4	15	0	4		0	0		0	9		1346	0.78	21.9	0:48〜(ミス見込み0.6/42個)	既知
+light player short	light_player_short	HELL	52			678	4.63	33	79	0	22	47	23	0	4		0	0		0	9			1.9	22.9	0:56〜(ミス見込み1.5/44個) 1:04〜(ミス見込み1.5/48個)	
+月が満ちる前に	tsuki_ga_michiru_mae_ni	EASY	9	9.6		549	2.02	14	159	0	0	0	0	0	4		0	0		0	10		2350	0.39	18.2		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	NORMAL	11	13.4		648	2.39	17	159	0	0	0	2	0	4		0	0		0	10		2350	0.4	18.6		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	HARD	16	18.7		861	3.17	21	79	0	0	4	17	0	4		0	0		0	10		2350	0.43	20		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	EXPERT	25	27.1		1037	3.82	27	79	0	6	12	11	0	4		0	0		0	10		2350	0.67	20.9	0:24〜(ミス見込み0.6/44個) 0:32〜(ミス見込み0.6/40個)	既知
+月が満ちる前に	tsuki_ga_michiru_mae_ni	MASTER	31	33.7		1206	4.44	32	79	0	16	40	45	0	4		0	0		0	10		2350	1.29	22.4	2:32〜(ミス見込み1.3/51個) 0:32〜(ミス見込み1.1/46個)	既知
+月が満ちる前に	tsuki_ga_michiru_mae_ni	HELL	65			1419	5.23	38	79	0	73	117	78	0	4		0	0		0	11			2.51	23.9	4:16〜(ミス見込み3.1/62個) 0:32〜(ミス見込み2.4/56個)	既知
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	EASY	10	10.5		233	2.17	14	158	0	0	0	0	0	4		0	0		0	8		1647	0.4	18		
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	NORMAL	12	13.8		268	2.5	16	158	0	0	0	2	0	4		0	0		0	8		1647	0.38	18.5		
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	HARD	17	19.6		354	3.29	21	80	0	0	1	8	0	4		0	0		0	9		1488	0.45	20.2		
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	EXPERT	24	27.6		431	4.01	26	79	0	1	9	10	0	4		0	0		0	8		1488	0.78	21.2	0:32〜(ミス見込み0.6/40個) 1:28〜(ミス見込み0.5/44個)	
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	MASTER	35	35.9		504	4.69	32	79	0	8	25	20	0	4		0	0		0	9		1488	1.44	23	0:24〜(ミス見込み1.2/50個) 0:32〜(ミス見込み1.0/49個)	既知
+月が満ちる前に short	tsuki_ga_michiru_mae_ni_short	HELL	65			562	5.23	36	79	0	41	53	35	0	4		0	0		0	10			2.6	23.8	0:32〜(ミス見込み2.5/59個) 1:36〜(ミス見込み2.2/55個)	既知
+Rebellion	rebellion	EASY	9	7.6		427	1.71	13	154	0	0	0	0	0	4		0	0		0	10		1879	0.4	18.6		既知
+Rebellion	rebellion	NORMAL	10	10.9		493	1.98	15	154	0	0	0	1	0	4		0	0		0	10		1879	0.38	19		
+Rebellion	rebellion	HARD	16	18.1		672	2.69	22	77	0	0	4	11	0	4		0	0		0	11		1879	0.44	20.6		既知
+Rebellion	rebellion	EXPERT	24	22.7		812	3.25	23	77	0	5	16	10	0	4		0	0		0	11		1879	0.54	21.2		既知
+Rebellion	rebellion	MASTER	45	40.8		1297	5.18	36	77	0	28	43	32	0	4		0	0		0	14		1801	1.54	25.6	3:52〜(ミス見込み2.1/59個) 2:32〜(ミス見込み1.8/56個)	既知
+Rebellion	rebellion	HELL	48			1168	4.67	37	77	0	4	5	162	0	4		0	0		0	13			1.7	25.2	2:32〜(ミス見込み2.2/57個) 0:08〜(ミス見込み1.4/52個)	既知
+Rebellion short	rebellion_short	EASY	8	10.1		281	1.9	15	154	0	0	0	0	0	4		0	0		0	10		1440	0.4	18.6		
+Rebellion short	rebellion_short	NORMAL	11	13.4		323	2.18	18	154	0	0	0	2	0	4		0	0		0	10		1440	0.4	19.1		
+Rebellion short	rebellion_short	HARD	17	20.6		440	2.97	25	77	0	0	1	7	0	4		0	0		0	11		1440	0.6	21.1	2:00〜(ミス見込み0.6/36個)	
+Rebellion short	rebellion_short	EXPERT	26	26.8		534	3.61	25	77	0	17	28	9	0	4		0	0		0	11		1440	0.74	21.9	2:00〜(ミス見込み1.0/45個) 2:24〜(ミス見込み0.5/36個)	既知
+Rebellion short	rebellion_short	MASTER	42	39.2		780	5.25	31	77	0	29	28	22	0	4		0	0		0	13		1208	1.37	25.4	2:00〜(ミス見込み1.4/49個) 0:08〜(ミス見込み1.1/49個)	既知
+Rebellion short	rebellion_short	HELL	49			720	4.84	29	77	0	0	3	102	0	4		1	0		0	14			1.6	25.1	2:24〜(ミス見込み1.2/45個) 1:20〜(ミス見込み1.2/42個)	既知
+Altar of the World Tree, Beneath the White Night	altar_world_tree	EASY	7	6.8		592	1.55	12	182	0	0	0	0	0	4		0	0		0	6		1678	0.4	17.8		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	NORMAL	9	9.6		689	1.81	14	182	0	0	0	4	0	4		0	0		0	6		1678	0.4	18.1		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	HARD	13	14.8		930	2.44	18	91	0	0	10	10	0	4		0	0		0	6		1312	0.41	18.8		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	EXPERT	21	22		1135	2.97	23	91	0	1	10	21	0	4		0	0		0	6		1312	0.5	19.8		既知
+Altar of the World Tree, Beneath the White Night	altar_world_tree	MASTER	25	26.5		1303	3.41	25	91	0	4	16	31	0	4		0	0		0	7		1312	0.6	20.6		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	HELL	46			1551	4.06	31	91	1	82	151	52	0	4		0	0		0	7			1.29	21.6	5:44〜(ミス見込み1.6/52個) 2:48〜(ミス見込み1.6/52個)	既知
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	EASY	8	8.7		230	1.71	13	182	0	0	0	0	0	4		0	0		0	10		1202	0.45	18.4		
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	NORMAL	10	10.3		263	1.95	14	182	0	0	0	1	0	4		0	0		0	10		1202	0.43	18.5		
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	HARD	15	17.6		363	2.7	20	91	0	0	3	4	0	4		0	0		0	10		1202	0.41	19.7		
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	EXPERT	24	24.7		431	3.2	25	91	0	6	8	4	0	4		0	0		0	10		1202	0.64	20.5		
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	MASTER	28	27.7		499	3.71	24	91	0	5	14	11	0	4	EXPERT→MASTER: ノーツ数 ×1.16・最密4秒 ×0.96	0	0		0	10		1202	0.73	21.7		既知
+Altar of the World Tree, Beneath the White Night short	altar_world_tree_short	HELL	53			570	4.23	31	91	0	67	79	27	0	4		0	0		0	11			1.9	22.3	0:56〜(ミス見込み1.9/44個) 1:20〜(ミス見込み1.3/48個)	既知
+Evans	evans	EASY	10	10.5		218	2.11	15	162	0	0	0	0	0	4		0	0		0	12		1341	0.4	18.5		
+Evans	evans	NORMAL	12	13.3		247	2.39	16	162	0	0	0	2	0	4		0	0		0	12		1341	0.38	19		
+Evans	evans	HARD	21	21.4		343	3.31	25	81	0	0	0	4	0	4		0	0		0	13		1341	0.57	21.2	1:04〜(ミス見込み0.5/42個)	
+Evans	evans	EXPERT	27	28.8		408	3.94	27	81	0	5	18	10	0	4		0	0		0	13		1341	0.9	21.8	1:04〜(ミス見込み0.6/44個) 1:36〜(ミス見込み0.6/45個)	
+Evans	evans	MASTER	43	43.4		561	5.42	37	81	0	23	37	23	0	4		0	0		0	14		1341	2.22	25.2	1:04〜(ミス見込み2.6/61個) 0:56〜(ミス見込み2.1/56個)	既知
+Evans	evans	HELL	51			462	4.44	30	81	0	24	54	17	0	4		0	0		0	13			1.66	22.5	0:16〜(ミス見込み1.4/49個) 1:36〜(ミス見込み1.1/45個)	
+ヒューマノイド	humanoid	EASY	12	13.2		247	2.62	17	94	0	0	0	0	0	4		0	0		0	7		1734	0.48	18.5		既知
+ヒューマノイド	humanoid	NORMAL	19	20.3		317	3.35	22	94	0	1	0	4	0	4		0	0		0	8		1545	0.48	20.1		既知
+ヒューマノイド	humanoid	HARD	25	25.9		358	3.78	25	94	0	0	3	7	0	4		0	0		0	9		1357	0.64	21.7		既知
+ヒューマノイド	humanoid	EXPERT	31	36.3		444	4.7	28	94	0	34	37	21	0	4		0	0		0	8		1545	1.23	22.4	0:56〜(ミス見込み0.8/42個) 0:40〜(ミス見込み0.7/45個)	既知
+ヒューマノイド	humanoid	MASTER	50	47.9		606	6.4	34	94	0	53	71	17	0	4		0	0		0	9		1357	2.69	24.9	0:40〜(ミス見込み2.5/62個) 0:48〜(ミス見込み1.8/54個)	既知
+ヒューマノイド	humanoid	HELL	77			615	6.49	35	94	0	99	97	39	0	4		0	0		0	9			3.99	25.3	0:40〜(ミス見込み3.5/63個) 0:24〜(ミス見込み2.8/58個)	既知
+LAMIA	lamia	EASY	13	11.5		362	2.64	18	75	0	0	2	0	0	4		0	0		0	9		4135	0.42	20.3		
+LAMIA	lamia	NORMAL	19	19.2		442	3.22	23	75	0	1	12	1	0	4		0	0		0	9		4135	0.51	21.6		
+LAMIA	lamia	HARD	25	25.7		495	3.61	28	75	0	2	18	4	0	4		0	0		0	9		4135	0.7	22.2	0:16〜(ミス見込み0.8/40個) 0:24〜(ミス見込み0.7/47個)	
+LAMIA	lamia	EXPERT	34	34.8		617	4.5	35	75	0	5	15	11	0	4		0	0		0	9		4135	1.22	24.9	0:24〜(ミス見込み2.0/57個) 0:16〜(ミス見込み1.0/45個)	
+LAMIA	lamia	MASTER	51	42.8	表示が高い	797	5.8	41	75	1	6	11	19	0	4		0	0		0	9		4135	2.36	26.8	0:24〜(ミス見込み3.2/66個) 0:16〜(ミス見込み2.2/55個)	
+LAMIA	lamia	HELL	78			728	5.3	43	75	0	54	76	22	0	4		0	0		0	10			2.88	25.4	0:24〜(ミス見込み4.3/67個) 0:16〜(ミス見込み3.0/61個)	
+サウダージ	saudade	EASY	6	6.2		329	1.3	10	249	0	0	0	0	0	4		0	0		0	16		8809	0.41	19		
+サウダージ	saudade	NORMAL	7	7.4		376	1.49	11	249	0	0	0	0	0	4		0	0		0	16		8809	0.39	19.2		
+サウダージ	saudade	HARD	12	12.9		515	2.04	15	124	0	0	3	14	0	4		0	0		0	16		8809	0.41	19.6		
+サウダージ	saudade	EXPERT	18	18.9		618	2.45	18	124	0	2	9	11	0	4		0	0		0	15		8809	0.63	20.1		
+サウダージ	saudade	MASTER	29	28.4		866	3.43	28	124	0	3	11	24	0	4		0	0		0	14		8809	1.46	21.7	3:04〜(ミス見込み1.5/35個) 1:04〜(ミス見込み1.1/42個)	
+サウダージ	saudade	HELL	37			853	3.38	28	124	1	8	20	33	0	4		0	0		0	14			2.02	21.7	3:04〜(ミス見込み1.6/36個) 3:52〜(ミス見込み1.5/44個)	
+サウダージ short	saudade_short	EASY	7	6.4		121	1.32	10	250	0	0	0	0	0	4		0	0		0	19		1478	0.37	19.4		
+サウダージ short	saudade_short	NORMAL	8	7.9		139	1.51	11	250	0	0	0	0	0	4		0	0		0	19		1478	0.43	19.6		
+サウダージ short	saudade_short	HARD	10	12.3		190	2.07	15	125	0	0	1	3	0	4		0	0		0	19		1478	0.43	20		
+サウダージ short	saudade_short	EXPERT	19	20.7		228	2.48	24	124	0	0	4	2	0	4		0	0		0	19		1478	0.58	20.3	1:04〜(ミス見込み0.5/35個)	
+サウダージ short	saudade_short	MASTER	29	26.8		319	3.46	27	124	0	0	6	7	0	4		0	0		0	19		1228	1.44	22.4	1:04〜(ミス見込み1.1/48個) 1:28〜(ミス見込み0.9/26個)	
+サウダージ short	saudade_short	HELL	37			310	3.37	29	124	0	2	6	14	0	4		0	0		0	19			1.95	22.3	1:04〜(ミス見込み1.7/48個) 0:32〜(ミス見込み0.9/38個)	
+メガロバニア	megalovania_sans	EASY	12	13		425	2.75	17	125	0	0	0	0	0	4		0	0		0.007	17		1290	0.39	19.6		
+メガロバニア	megalovania_sans	NORMAL	15	17.6		487	3.14	20	125	0	0	0	4	0	4		0	0		0.012	17		1290	0.39	20.5		
+メガロバニア	megalovania_sans	HARD	21	21.6		610	3.93	25	62	0	0	1	2	0	4		0	6	62	0.011	17		1290	0.81	21.7	0:40〜(ミス見込み0.7/43個) 1:04〜(ミス見込み0.6/41個)	
+メガロバニア	megalovania_sans	EXPERT	29	30.3		732	4.72	30	62	0	1	2	6	0	4		0	10	62	0.01	17		1290	1.93	23.4	0:56〜(ミス見込み1.6/53個) 0:48〜(ミス見込み1.6/52個)	
+メガロバニア	megalovania_sans	MASTER	43	38.1		846	5.45	36	62	0	4	15	26	0	4		0	17	62	0.012	17		1290	3.3	25.6	0:56〜(ミス見込み3.8/65個) 0:16〜(ミス見込み3.6/54個)	
+メガロバニア	megalovania_sans	HELL	77			971	6.26	38	62	0	19	39	28	0	4		0	54	62	0.014	17			5.02	26.6	0:48〜(ミス見込み5.3/66個) 1:12〜(ミス見込み4.6/64個)	
+MEGALOVANIA	megalovania_smash	EASY	7	5		224	1.57	10	250	0	0	0	0	0	4		0	0		0	13		2320	0.42	18.2		
+MEGALOVANIA	megalovania_smash	NORMAL	8	7.4		261	1.83	12	250	0	0	0	0	0	4		0	0		0	13		2070	0.41	18.5		
+MEGALOVANIA	megalovania_smash	HARD	14	12.4		361	2.51	17	125	0	0	1	3	0	4		0	0		0	13		1445	0.38	19.3		
+MEGALOVANIA	megalovania_smash	EXPERT	21	19.5		427	2.97	21	125	0	0	4	3	0	4		0	0		0	13		1445	0.83	20.4	1:04〜(ミス見込み0.5/31個)	
+MEGALOVANIA	megalovania_smash	MASTER	27	25.7		497	3.46	28	125	0	0	2	9	0	4		0	0		0	13		1445	1.41	21.3	1:52〜(ミス見込み1.5/46個) 0:48〜(ミス見込み1.0/32個)	
+MEGALOVANIA	megalovania_smash	HELL	42			587	4.09	31	125	0	7	9	9	0	4		0	0		0	13			2.18	22.3	1:52〜(ミス見込み2.4/54個) 2:00〜(ミス見込み1.6/49個)	
+departure!	departure	EASY	5	3.8		333	1.14	8	192	0	0	0	0	0	4		0	0		0	19		2971	0.4	19.9		
+departure!	departure	NORMAL	6	5.3		380	1.3	9	192	0	0	0	2	0	4		0	0		0	19		2971	0.4	20		
+departure!	departure	HARD	9	7.8		502	1.72	12	96	0	0	7	4	0	4		0	0		0	19		2971	0.41	20.3		
+departure!	departure	EXPERT	17	14.8		621	2.13	18	96	0	0	6	7	0	4		0	0		0	19		2971	0.4	20.8		
+departure!	departure	MASTER	22	17.8		708	2.42	20	96	0	0	9	13	0	4		0	0		0	19		2971	0.47	21.4		
+departure!	departure	HELL	32			840	2.87	22	96	0	15	35	12	0	4		0	0		0	19			0.77	21.6	2:24〜(ミス見込み0.5/30個)	
+departure! short	departure_short	EASY	6	4.5		117	1.15	10	192	0	0	0	0	0	4		0	0		0	23		1633	0.4	20.2		
+departure! short	departure_short	NORMAL	7	5.4		133	1.31	9	192	0	0	0	3	0	4	EASY→NORMAL: ノーツ数 ×1.14・最密4秒 ×0.9	0	0		0	17		1633	0.39	20.3		
+departure! short	departure_short	HARD	11	10.1		182	1.79	14	96	0	0	5	0	0	4		0	0		0	17		1633	0.42	20.6		
+departure! short	departure_short	EXPERT	16	15.7		222	2.19	18	96	0	1	3	0	0	4		0	0		0	17		1633	0.36	20.8		
+departure! short	departure_short	MASTER	23	19.4		250	2.46	20	96	0	2	9	4	0	4		0	0		0	17		1633	0.43	21.1		
+departure! short	departure_short	HELL	29			289	2.85	21	96	0	4	14	6	0	4		0	0		0	17			0.65	21.5		
+RPG	rpg	EASY	8	5.8		415	1.73	11	171	0	0	0	0	0	4		0	0		0	6		2919	0.38	17.5		
+RPG	rpg	NORMAL	9	8.7		475	1.97	13	171	0	0	0	0	0	4		0	0		0	7		2062	0.39	17.8		
+RPG	rpg	HARD	13	13.7		649	2.69	18	86	0	0	3	0	0	4		0	0		0	7		2062	0.39	18.2		
+RPG	rpg	EXPERT	22	24.4		797	3.31	25	85	0	6	15	6	0	4		0	0		0	6		2062	0.46	19.5		
+RPG	rpg	MASTER	27	29.7		911	3.78	27	85	0	14	40	29	0	4		0	0		0	7		2062	0.7	20.7	3:04〜(ミス見込み0.6/42個)	
+RPG	rpg	HELL	47			1044	4.33	31	85	0	50	82	61	0	4		0	0		0	7			1.49	21.7	3:20〜(ミス見込み1.5/49個) 2:16〜(ミス見込み1.0/35個)	
+RPG short	rpg_short	EASY	7	5.8		152	1.81	11	171	0	0	0	0	0	4		0	0		0	7		1324	0.35	17.3		
+RPG short	rpg_short	NORMAL	10	8.5		178	2.12	13	171	0	0	0	0	0	4		0	0		0	7		1324	0.42	17.7		
+RPG short	rpg_short	HARD	14	13.2		244	2.9	16	85	0	0	0	3	0	4		0	0		0	7		1324	0.38	18.3		
+RPG short	rpg_short	EXPERT	21	24		292	3.48	22	85	0	6	7	0	0	4		0	0		0	8		1324	0.52	19.1		
+RPG short	rpg_short	MASTER	31	29.3		338	4.02	24	85	0	7	11	8	0	4		0	0		0	8		1324	0.63	20.6		
+RPG short	rpg_short	HELL	46			399	4.75	29	85	0	17	34	17	0	4		0	0		0	7			1.44	21.9	0:08〜(ミス見込み1.5/48個) 0:16〜(ミス見込み1.3/50個)	
+Midnight Studio	midnight_studio	EASY	7	5.5		300	1.41	11	202	0	0	0	0	0	4		0	0		0	6		1452	0.37	17		
+Midnight Studio	midnight_studio	NORMAL	8	6.9		340	1.6	12	202	0	0	0	0	0	4		0	0		0	6		2668	0.41	17.1		
+Midnight Studio	midnight_studio	HARD	12	15.6		463	2.18	19	101	0	0	8	3	0	4		0	0		0	6		2263	0.4	17.7		
+Midnight Studio	midnight_studio	EXPERT	22	22.2		557	2.61	25	101	0	4	17	3	0	4		0	0		0	6		1452	0.53	18.4		
+Midnight Studio	midnight_studio	MASTER	27	27		636	2.98	27	101	0	8	26	11	0	4		0	0		0	6		1452	0.57	19.2	3:12〜(ミス見込み0.5/37個)	
+Midnight Studio	midnight_studio	HELL	45			760	3.56	32	101	0	35	84	24	0	4		0	0		0	6			1.05	20.4	3:12〜(ミス見込み1.1/41個) 3:20〜(ミス見込み0.9/47個)	
+Midnight Studio short	midnight_studio_short	EASY	7	4.4		97	1.37	9	202	0	0	0	0	0	4		0	0		0	6		1379	0.45	17.2		
+Midnight Studio short	midnight_studio_short	NORMAL	8	6.4		110	1.56	10	202	0	0	0	0	0	4		0	0		0	5		1379	0.39	17.3		
+Midnight Studio short	midnight_studio_short	HARD	10	12.7		146	2.07	14	102	0	0	2	2	0	4		0	0		0	5		1379	0.37	17.8		
+Midnight Studio short	midnight_studio_short	EXPERT	21	19		177	2.51	20	101	0	1	2	0	0	4		0	0		0	6		1379	0.42	18.4		
+Midnight Studio short	midnight_studio_short	MASTER	25	25		207	2.93	22	101	0	6	7	5	0	4		0	0		0	7		1379	0.46	19.2		
+Midnight Studio short	midnight_studio_short	HELL	35			234	3.3	23	101	0	14	22	7	0	4		0	0		0	8			0.72	20.4		
+Hopes and Dreams	hopes_and_dreams	EASY	8	7.3		323	1.8	13	175	0	0	0	0	0	4		0	0		0	4		1336	0.43	17.1		
+Hopes and Dreams	hopes_and_dreams	NORMAL	9	10.3		374	2.08	15	175	0	0	0	0	0	4		0	0		0	4		1336	0.39	17.4		
+Hopes and Dreams	hopes_and_dreams	HARD	14	15.5		515	2.86	20	88	0	0	1	5	0	4		0	0		0	4		1336	0.41	18.3		
+Hopes and Dreams	hopes_and_dreams	EXPERT	22	23.2		608	3.38	26	87	0	1	4	8	0	4		0	0		0	4		1336	0.5	19.3		
+Hopes and Dreams	hopes_and_dreams	MASTER	26	26.7		700	3.89	27	87	0	3	6	25	0	4		0	0		0	4		1336	0.68	20.4	1:20〜(ミス見込み0.7/46個)	
+Hopes and Dreams	hopes_and_dreams	HELL	42			840	4.67	32	87	0	16	35	25	0	4		1	0		0	4			1.44	21.7	1:20〜(ミス見込み1.9/56個) 2:00〜(ミス見込み1.4/50個)	
+Hopes and Dreams short	hopes_and_dreams_short	EASY	7	6.7		197	1.45	12	174	0	0	0	0	0	4		0	0		0	12		1351	0.39	19.1		
+Hopes and Dreams short	hopes_and_dreams_short	NORMAL	9	9.9		222	1.64	16	174	0	0	0	0	0	4		0	0		0	13		1263	0.37	19.3		
+Hopes and Dreams short	hopes_and_dreams_short	HARD	13	12		316	2.33	17	87	0	0	5	3	0	4		0	0		0	14		1263	0.36	20.1		
+Hopes and Dreams short	hopes_and_dreams_short	EXPERT	22	21.7		393	2.9	24	87	0	4	11	3	0	4		0	0		0	15		1263	0.5	21.4		
+Hopes and Dreams short	hopes_and_dreams_short	MASTER	27	24.9		435	3.21	25	87	0	3	8	5	0	4		0	0		0	14		1263	0.59	21.9		
+Hopes and Dreams short	hopes_and_dreams_short	HELL	42			523	3.85	29	87	0	15	28	8	0	4		0	0		0	14			1.39	22.9	1:12〜(ミス見込み1.3/51個) 1:20〜(ミス見込み1.1/39個)	
+Sparkling Pink Overture	sparkling_pink_overture	EASY	13	12.2		281	2.34	16	94	0	1	11	0	0	4		0	0		0	11		1600	0.42	19.1		
+Sparkling Pink Overture	sparkling_pink_overture	NORMAL	17	18		330	2.74	23	94	0	1	16	2	0	4		0	0		0	11		1600	0.44	19.8		
+Sparkling Pink Overture	sparkling_pink_overture	HARD	24	22.9		459	3.8	25	47	0	7	26	4	0	4		0	18	47	0	11		1317	0.99	21.2	0:40〜(ミス見込み0.8/40個) 0:08〜(ミス見込み0.8/43個)	
+Sparkling Pink Overture	sparkling_pink_overture	EXPERT	31	29.1		577	4.76	27	47	0	6	11	10	0	4		0	9	47	0	11		1317	1.72	23	0:08〜(ミス見込み1.6/48個) 0:40〜(ミス見込み0.9/45個)	
+Sparkling Pink Overture	sparkling_pink_overture	MASTER	39	33.2	表示が高い	621	5.13	29	47	0	5	18	16	0	4		0	4	47	0	11		1317	2.43	23.4	0:08〜(ミス見込み2.2/48個) 0:48〜(ミス見込み1.6/46個)	
+Sparkling Pink Overture	sparkling_pink_overture	HELL	52			593	4.89	28	47	0	26	51	15	0	4		0	14	47	0	11			2.55	22.6	0:24〜(ミス見込み1.6/41個) 1:52〜(ミス見込み1.4/34個)	
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	EASY	9	8.8		256	1.76	14	177	0	0	0	0	0	4		0	0		0	18		1280	0.38	20.5		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	NORMAL	11	11.5		298	2.05	16	177	0	0	0	1	0	4		0	0		0	17		1280	0.4	20.6		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	HARD	14	15.6		416	2.86	18	88	0	0	8	5	0	4		0	0		0	17		1369	0.42	20.9		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	EXPERT	25	25.4		496	3.4	27	88	0	2	5	12	0	4		0	0		0	18		1280	0.56	22.3	2:08〜(ミス見込み0.6/43個) 2:00〜(ミス見込み0.5/43個)	
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	MASTER	29	28.8		559	3.83	28	88	0	1	7	6	0	4		0	0		0	17		1280	0.7	23.1	2:00〜(ミス見込み0.8/49個) 2:08〜(ミス見込み0.6/47個)	
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	HELL	44			707	4.84	30	88	0	20	62	24	0	4		0	0		0	19			1.51	24	2:00〜(ミス見込み1.7/53個) 2:08〜(ミス見込み1.2/50個)	
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	EASY	6	1.9		133	1.13	8	185	0	0	0	0	0	4		0	0		0	17		1780	0.42	19.1		
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	NORMAL	7	4.4		151	1.28	10	185	0	0	0	0	0	4		0	0		0	16		1780	0.44	19.3		
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	HARD	9	7.1		205	1.72	13	92	0	0	2	0	0	4		0	0		0	16		1780	0.42	19.4		
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	EXPERT	17	14.4		250	2.1	18	92	0	0	3	3	0	4		0	0		0	16		1780	0.4	20		
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	MASTER	20	16.6		283	2.37	18	92	0	0	5	2	0	4		0	0		0	16		1594	0.38	20.5		
+英雄の証(eiyuu_no_akashi)	eiyuu_no_akashi	HELL	30			309	2.59	20	92	0	4	12	6	0	4		0	0		0	16			0.52	20.7		
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	EASY	9	9.8		290	2.04	14	156	0	0	0	0	0	4		0	0		0	14		1606	0.44	19.3		
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	NORMAL	10	11.7		328	2.31	15	156	0	0	0	2	0	4		0	0		0	14		1606	0.41	19.5		
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	HARD	19	19.7		451	3.17	22	78	0	0	13	8	0	4		0	0		0	14		1606	0.48	21.2		
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	EXPERT	30	27.2		548	3.86	28	78	0	0	4	4	0	4		0	0		0	14		1606	0.86	24	1:28〜(ミス見込み0.7/41個)	
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	MASTER	34	31.8		612	4.3	31	78	0	2	6	8	0	4		0	0		0	15		1293	1.08	25.1	1:28〜(ミス見込み1.0/47個) 1:52〜(ミス見込み0.8/42個)	
+英雄の証(eiyuu_no_akashi_milktea)	eiyuu_no_akashi_milktea	HELL	52			645	4.53	31	78	0	38	63	24	0	4		0	0		0	15			1.84	23.6	2:08〜(ミス見込み1.4/44個) 1:04〜(ミス見込み1.4/48個)	
+グルメレース(gourmet_race_64)	gourmet_race_64	EASY	10	11.7		385	2.75	14	160	0	0	0	0	0	4		0	0		0	5		1374	0.42	17.3		
+グルメレース(gourmet_race_64)	gourmet_race_64	NORMAL	14	16.9		449	3.21	18	160	0	0	0	0	0	4		0	0		0	5		1374	0.42	18.3		
+グルメレース(gourmet_race_64)	gourmet_race_64	HARD	18	21.7		559	3.99	22	80	0	1	1	13	0	4		0	0		0	5		1374	0.49	19.5		
+グルメレース(gourmet_race_64)	gourmet_race_64	EXPERT	27	30.6		658	4.7	27	80	0	4	4	11	0	4		0	0		0	5		1374	1.17	21	0:16〜(ミス見込み0.9/46個) 0:32〜(ミス見込み0.8/46個)	
+グルメレース(gourmet_race_64)	gourmet_race_64	MASTER	33	37.5		761	5.43	31	80	0	11	20	16	0	4		0	0		0	5		1374	1.76	22.5	0:56〜(ミス見込み1.5/51個) 2:00〜(ミス見込み1.4/50個)	
+グルメレース(gourmet_race_64)	gourmet_race_64	HELL	69			875	6.25	37	80	0	32	78	33	0	4		0	0		0	5			2.95	23.9	0:56〜(ミス見込み2.9/62個) 2:00〜(ミス見込み2.6/59個)	
+グルメレース(gourmet_race_dx)	gourmet_race_dx	EASY	7	6.3		166	1.48	11	187	0	0	0	0	0	4		0	0		0	16		1228	0.4	19.7		
+グルメレース(gourmet_race_dx)	gourmet_race_dx	NORMAL	9	8.7		194	1.73	13	187	0	0	0	0	0	4		0	0		0	15		1228	0.42	19.7		
+グルメレース(gourmet_race_dx)	gourmet_race_dx	HARD	14	12		266	2.37	16	93	0	0	9	1	0	4		0	0		0	16		1228	0.39	20.5		
+グルメレース(gourmet_race_dx)	gourmet_race_dx	EXPERT	22	20		318	2.83	20	93	0	0	9	2	0	4		1	0		0	15		1228	0.45	21.4		
+グルメレース(gourmet_race_dx)	gourmet_race_dx	MASTER	29	25.7		355	3.16	24	93	0	2	9	11	0	4		0	0		0	15		1228	0.65	22.1		
+グルメレース(gourmet_race_dx)	gourmet_race_dx	HELL	38			369	3.29	23	93	0	18	35	8	0	4		0	0		0	15			0.97	22.1	1:20〜(ミス見込み0.6/42個)	
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	EASY	11	14.4		423	2.71	17	166	0	0	0	0	0	4		0	0		0	17		7338	0.41	20		
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	NORMAL	14	17.9		486	3.12	19	166	0	0	0	0	0	4		0	0		0	17		7338	0.41	20.8		
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	HARD	22	26.4		620	3.97	27	83	0	2	39	12	0	4		0	0		0	17		7338	0.86	23	0:32〜(ミス見込み0.7/38個)	
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	EXPERT	32	33.8		755	4.84	30	83	0	15	24	27	0	4		0	0		0	18		7338	1.38	24.7	1:52〜(ミス見込み1.2/43個) 0:32〜(ミス見込み1.0/45個)	
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	MASTER	43	41.2		863	5.53	36	83	0	18	24	8	0	4		0	0		0	18		7338	2.17	26.9	1:04〜(ミス見込み2.0/55個) 1:44〜(ミス見込み1.9/52個)	
+Dr.WILY STAGE 1(dr_wily_stage_1)	dr_wily_stage_1	HELL	78			915	5.86	37	83	0	114	135	19	0	4		0	0		0	18			3.56	25.8	1:44〜(ミス見込み2.8/53個) 1:04〜(ミス見込み2.8/58個)	
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	EASY	10	9.6		370	2.15	15	84	0	0	0	1	0	4		0	0		0	25		2915	0.38	20.9		
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	NORMAL	14	14.5		453	2.64	19	83	0	1	1	2	0	4		0	0		0	24		2915	0.42	21.4		
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	HARD	21	23.8		621	3.61	24	83	0	1	36	3	0	4		0	0		0	23		2915	0.55	22.6		
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	EXPERT	34	33.5		769	4.47	32	83	0	3	16	5	0	4		0	0		0	22		2915	1.17	25.8	1:12〜(ミス見込み1.3/52個) 2:32〜(ミス見込み1.1/49個)	
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	MASTER	48	43.1		935	5.43	39	83	0	4	16	18	0	4		0	0		0	25		2915	2.13	27.5	1:12〜(ミス見込み2.3/59個) 2:40〜(ミス見込み1.8/58個)	
+Dr.WILY STAGE 1(dr_wily_stage_1_okkussenman)	dr_wily_stage_1_okkussenman	HELL	67			864	5.02	35	83	0	72	111	22	0	4		0	0		0	25			2.8	25.6	2:32〜(ミス見込み2.1/52個) 1:20〜(ミス見込み2.1/53個)	
+Erfolg(erfolg)	erfolg	EASY	9	10.6		407	2.14	14	140	0	0	0	0	0	4		0	0		0	9		9506	0.41	18.8		
+Erfolg(erfolg)	erfolg	NORMAL	10	12.1		446	2.35	15	140	0	0	0	2	0	4		0	0		0	9		9506	0.35	19.1		
+Erfolg(erfolg)	erfolg	HARD	19	21.3		669	3.52	22	70	0	0	12	5	0	4		0	0		0	15		9506	0.49	21.2		
+Erfolg(erfolg)	erfolg	EXPERT	33	29.9		812	4.27	29	70	0	4	6	11	0	4		0	0		0	15		9506	2.31	23.8	0:32〜(ミス見込み1.8/46個) 1:52〜(ミス見込み1.6/42個)	
+Erfolg(erfolg)	erfolg	MASTER	40	37.9		924	4.86	35	70	0	18	18	17	0	4		0	0		0	15		9506	3.52	25	1:04〜(ミス見込み4.2/57個) 0:32〜(ミス見込み3.4/49個)	
+Erfolg(erfolg)	erfolg	HELL	58			906	4.76	36	70	0	64	88	20	0	4		0	0		0	15			3.69	23.8	2:24〜(ミス見込み3.9/58個) 1:36〜(ミス見込み2.9/48個)	
+Erfolg(erfolg_piano)	erfolg_piano	EASY	7	5.1		196	1.31	10	182	0	0	0	0	0	4		0	0		0	19		2442	0.42	20.5		
+Erfolg(erfolg_piano)	erfolg_piano	NORMAL	8	7.3		227	1.51	12	182	0	0	0	0	0	4		0	0		0	18		2442	0.42	20.6		
+Erfolg(erfolg_piano)	erfolg_piano	HARD	12	14		309	2.06	17	91	0	1	10	5	0	4		0	0		0	17		2442	0.41	20.7		
+Erfolg(erfolg_piano)	erfolg_piano	EXPERT	21	18.7		377	2.51	20	91	0	2	6	3	0	4		0	0		0	17		2442	0.42	21.5		
+Erfolg(erfolg_piano)	erfolg_piano	MASTER	25	24.2		441	2.93	23	91	0	7	17	6	0	4		0	0		0	19		2442	0.54	22.3		
+Erfolg(erfolg_piano)	erfolg_piano	HELL	36			444	2.95	24	91	0	21	43	5	0	4		0	0		0	19			0.83	22.2		
+天翔る翼	amakakeru_tsubasa	EASY	10	11.6		242	2.3	15	144	0	0	0	0	0	4		0	0		0	17		1576	0.4	19.9		
+天翔る翼	amakakeru_tsubasa	NORMAL	13	15.2		273	2.59	18	144	0	0	0	0	0	4		0	0		0	17		1576	0.39	20.4		
+天翔る翼	amakakeru_tsubasa	HARD	22	24		372	3.52	25	72	0	4	22	6	0	4		0	0		0	18		1360	0.8	22.7		
+天翔る翼	amakakeru_tsubasa	EXPERT	33	30.1		427	4.04	29	72	1	10	11	8	0	4		0	0		0	18		1360	3.08	24.6	0:16〜(ミス見込み2.3/50個) 1:04〜(ミス見込み2.1/38個)	
+天翔る翼	amakakeru_tsubasa	MASTER	48	35.9	表示が高い	556	5.26	34	72	0	7	12	12	0	4		0	0		0	18		1360	4.45	26.4	0:16〜(ミス見込み4.3/59個) 1:04〜(ミス見込み4.1/57個)	
+天翔る翼	amakakeru_tsubasa	HELL	67			522	4.94	36	72	0	47	53	21	0	4		0	0		0	18			5.16	25	0:16〜(ミス見込み5.1/63個) 0:08〜(ミス見込み3.4/49個)	
