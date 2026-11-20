@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cab62445d780aabe
+// source-sha256: d843e327fc8dafe5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172943,7 +172943,7 @@ const MSX_CSS = `
 .msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
 .msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
 .msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
-.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.06em;margin:0 -4px;display:flex;align-items:flex-start;justify-content:center}
+.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.08em;margin:0 -3px;display:flex;align-items:flex-start;justify-content:center;min-height:1.2em;overflow:visible}
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
@@ -180877,7 +180877,8 @@ function MsxPlay({
       className: "v-chips",
       style: {
         right: 'auto',
-        left: 7
+        left: 7,
+        alignItems: 'flex-start'
       }
     }, React.createElement("span", {
       className: "v-chip ylw",
@@ -180897,7 +180898,9 @@ function MsxPlay({
         fontWeight: 800,
         opacity: .85
       }
-    }, MSX_STAT_NAME[stat], "のトレーニング", trainLv ? ` Lv${trainLv}` : ''))), React.createElement("div", {
+    }, MSX_STAT_NAME[stat], "のトレーニング", trainLv ? ` Lv${trainLv}` : '')), typeof MsxBuffChips === 'function' ? React.createElement(MsxBuffChips, {
+      s: s
+    }) : null), React.createElement("div", {
       className: "v-come"
     }, members.map(i => {
       const m = s.team[i];
@@ -181002,16 +181005,9 @@ function MsxPlay({
       }, "Lv.", lv) : null), React.createElement("b", {
         className: "nm"
       }, MSX_STAT_NAME[k]), React.createElement("small", {
-        className: `tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`
-      }, msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => React.createElement(React.Fragment, {
-        key: i
-      }, i ? React.createElement("wbr", null) : null, x))));
-    })), card ? React.createElement("div", {
-      className: "v-trsum",
-      "data-msx-train-sum": true
-    }, React.createElement("span", {
-      className: "g"
-    }, pv && pv.gain ? MSX_STATS.filter(k => (pv.gain[k] || 0) > 0).map(k => `${MSX_STAT_NAME[k]} +${pv.gain[k]}`).join('・') : `${MSX_STAT_NAME[stat]}が上がる`), React.createElement("span", null, "失敗率 ", React.createElement("b", null, Math.round(card.fail * 100), "%")), React.createElement("span", null, "体力 ", React.createElement("b", null, "−", pv ? Math.round(pv.hp || 0) : 0))) : null);
+        className: "tn one"
+      }, msxTrainName(k, lv)));
+    })));
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {

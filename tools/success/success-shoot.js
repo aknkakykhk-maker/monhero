@@ -75,7 +75,8 @@ const makeRun = async (kind) => {
   // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
   const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
   // s568 = 小さい横 568×320(見た目の点検 visual-shoot.js --monsuc-deep が名指しするときだけ撮る。r1119-014 PR3 の続き)
-  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
+  // pc = PC 1280×800(名指ししたときだけ。モンサクは縦と PC を見る r1119-026)
+  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568'], [1280, 800, 'pc']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -102,7 +103,7 @@ const makeRun = async (kind) => {
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
-    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
