@@ -26,7 +26,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const hasSheet = /className="mhl-sheet"|rounded-t-3xl|className=\{`mhm-panel/.test(body);
       if (!hasSheet) continue;
       sheets++;
-      const close = /<button [^<]*?data-mhl-sheet-close[^<]*?>\s*(閉じる|とじる|やめる|もどる)\s*<\/button>/.test(body.replace(/\n\s*/g, ' '));
+      const close = /<button [^<]*?data-mhl-sheet-close[^<]*?>\s*(閉じる|とじる|やめる|もどる|✕)\s*<\/button>/ /* 窓は右上の ✕(読み上げ名「閉じる」)にそろえた(2026-11-20 総点検 V-2) */.test(body.replace(/\n\s*/g, ' '));
       if (!close) ng.push(`${f} ${m[1]}`);
     }
   }

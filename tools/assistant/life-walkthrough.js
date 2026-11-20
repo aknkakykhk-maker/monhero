@@ -158,7 +158,7 @@ const problemsOf = (key, label, m, view, who) => {
     const page = await ctx.newPage();
     await page.clock.setFixedTime(fixed);
     page.on('pageerror', e => errors.push(`${who.name}/${v.name}: ${e.message}`));
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); });
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); window.__mhKeepRoomFold = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: who.id === 'first', bondAll: null });
     // 初めての人: 友情も道具もにぎわいも、まだ何もない所から
