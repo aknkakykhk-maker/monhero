@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b884a7bc21e1e646
+// generated-sha256: 3b7a7802aedeedec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14022,8 +14022,8 @@ const marketCostumeFullbodySrc = (item) => {
   if (!assistantId) return null;
   const name = ASSISTANT_FULLBODY_ART[`${assistantId}:${String(costume.imageDir).split('/').pop()}`];
   if (!name) return null;
-  const exprs = typeof ASSISTANT_FULLBODY_EXPRESSIONS !== 'undefined' ? ASSISTANT_FULLBODY_EXPRESSIONS[name] : null;
-  return `images/assistant/fullbody/${name}${Array.isArray(exprs) && exprs.includes('normal') ? '__normal' : ''}.png`;
+  // 画像のパスは data/assistants.js に集める(assistant-check「画像のパスをJSXへ直接書いていない」)。表情は通常(normal)
+  return typeof assistantFullBodyImageOf === 'function' ? assistantFullBodyImageOf(name, 'normal') : null;
 };
 // 詳細と購入確認の、頭(アイコンと名前)の下に出す全身絵。着替え以外・絵の無い服では何も出さない。
 // 全身絵は縦長なので、高さを決めて object-contain で全体を収める(引き伸ばし・切り抜きをしない)
