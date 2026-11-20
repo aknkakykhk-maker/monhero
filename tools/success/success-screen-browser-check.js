@@ -91,7 +91,7 @@ const openEntry = async (page) => {
   await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
   await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-  await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
+  await page.locator('[data-mh-help]').waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
   const btn = page.locator('[data-debug-monhero-success]');
@@ -268,7 +268,7 @@ const sameState = (a, b) => {
         check(`${tag}: トレーニングを通った`, p1.includes('train'), p1.join(',').slice(0, 80));
         // 中断(2026-11-19 r1119-013 ⑥: 中断は左上の1つになった。下の帯には置かない)
         const paused = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx .v-hd .bk')].find((x) => /中断/.test(x.innerText)); if (b) b.click(); return !!b; });
-        check(`${tag}: 「← 中断」が押せる`, paused);
+        check(`${tag}: 「⏸ 中断」が押せる`, paused);
         await page.waitForTimeout(600);
         m = await see('paused');
         saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_monsuc_run_v1')); } catch (e) { return null; } });
