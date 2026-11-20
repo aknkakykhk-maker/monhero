@@ -751,6 +751,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {soloOn && <AssistantLifeDoRow k="give-solo" icon="🎁" label={w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`} sub="好きなものは 1.5倍・苦手なものは半分" gain="💗 +" on={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])} disabled={!canGiveSolo} why="今日はもう贈れません"/>}
       {w && w.group && <AssistantLifeDoRow k="give" icon="🎁" label={soloOn ? `${w.group.ids.length}人に贈る` : '贈る'} sub="一緒にいる組に贈る" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onGive(w.group)} disabled={!canGive} why="今日はもう贈れません"/>}
       {!hotBeat && beatRow}
+      {!hotCard && cardRow}{/* MFバトルカードにいる助手の行(使い切った知らせも)は、その場所ならではの行なので畳まない */}
       {/* 主の3つ(話す・贈る・誘う)のほかは「もっと見る」に畳む(2026-11-20 総点検 F-5: 前は12行が縦に2画面並び、見守る・ようすを見る・声をかける・おしゃべりの違いが分からなかった)。
           その場所ならではの得(カード・ビート・施設の得・修行)は上のまま */}
       <button type="button" className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl border border-white/20 bg-white/5 text-[13px] font-black text-slate-200 active:scale-[.98]" data-assistant-life-room-more aria-expanded={moreOpen} onClick={() => { ASSISTANT_LIFE_ROOM_MORE.open = !moreOpen; setMoreOpen(!moreOpen); }}>{moreOpen ? '閉じる ▲' : 'もっと見る ▼'}</button>
@@ -769,7 +770,6 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         ? <AssistantLifeDoRow k="watch" icon="👀" label={home ? '見守る' : '見守りに行く'} sub="組のおしゃべりを見る(同じ組は時間帯に1回)" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onWatch(w.group)} disabled={!canWatch} why="この時間帯はもう見守りました"/>
         : <AssistantLifeDoRow k="peek" icon="👀" label="ようすを見る" sub="ひとりごとや、あなたへのひとこと(時間帯に1回)" on={() => onPeek(id)} disabled={!canWatch} why="この時間帯はもう見ました"/>}
       {(!w || !w.group || soloOn) && <AssistantLifeDoRow k="invite" icon="📣" label={asleep ? 'そっと声をかける' : '声をかける'} sub="さみしそうなときは、次の時間にだれかのところへ行く" on={() => onInvite(id)} disabled={!!(w && w.reason === 'distance')} why="いまは遠くにいて声が届きません"/>}
-      {!hotCard && cardRow}
       <AssistantLifeDoRow k="masmon" icon="🐾" label={`${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`} sub="育ち方・編成を見る" on={onMasmon ? () => onMasmon(id) : null} why="まだ見られません"/>
       {(() => { // 行き先の予定(入口②。印 assistantLifePlan が偽なら null)
         let pi = null; try { pi = typeof assistantLifePlanRowInfo === 'function' ? assistantLifePlanRowInfo(id) : null; } catch (_) { pi = null; }
@@ -783,7 +783,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
       {/* 家具・模様替えを開いている間は出さない(2026-11-19 r1119-013 ⑥ A-2)。シートの上に残って、押すと部屋ごと閉じていた。閉じるのはシート自身の「閉じる」 */}
-      {!furnOpen && !layoutOpen && <button type="button" aria-label="戻る" data-assistant-life-roomview-close onClick={onClose} className="absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
+      {!furnOpen && !layoutOpen && <button type="button" aria-label="戻る" data-assistant-life-roomview-close data-assistant-life-room-close={uiV2 ? '' : undefined} onClick={onClose} className="absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
         style={{ left: 'calc(10px + env(safe-area-inset-left))', top: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>← 戻る</button>}
       {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
       <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
@@ -841,7 +841,8 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
             : <button type="button" className="mhl-btn mhl-card col-span-2" data-assistant-life-room-act="card" onClick={() => onCard(id)}>🃏 MFバトルカードで対戦する <span className="mhl-card-up">ごほうびアップ</span></button>)}
           </>)}
           {/* はっきり分かる閉じるボタン(家具のシートと同じ形。2026-11-08 窓口)。横はボタンの段ごと下に止まるので、いつも見える */}
-          <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
+          {/* 新しい画面は上の「← 戻る」だけ(下の「閉じる」と2つにしない・2026-11-20 総点検 V-2) */}
+          {!uiV2 && <button type="button" data-assistant-life-room-close data-mhl-sheet-close onClick={onClose} className="col-span-2 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>}
         </div>
       </div>
       </div>
@@ -1578,9 +1579,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {uiV2 && tab === 'where' && note && !roomId && <p data-assistant-life-note className="absolute inset-x-3 z-[9] rounded-xl border border-sky-300/40 bg-slate-950/95 px-2 py-1.5 text-[11.5px] font-bold text-sky-100" style={{ bottom: 'calc(44px + env(safe-area-inset-bottom))' }}>{note}</p>}
         {giftOpen && uiV2 && !roomId && !give && (
           <div className="absolute inset-0" style={{ zIndex: 21 }} data-assistant-life-gift-sheet>
-            <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setGiftOpen(false)}/>
+            <button type="button" aria-label="閉じる" className="absolute inset-0 bg-[#0b1020]/85" onClick={() => setGiftOpen(false)}/>{/* 裏の字が読めるほど透けていた(2026-11-20 API の点検・総点検 F-10 と同じ) */}
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '56%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
-              <div className="flex items-center justify-between gap-2"><p className="text-[18px] font-black">🎁 贈る</p><button type="button" data-assistant-life-gift-sheet-close data-mhl-sheet-close onClick={() => setGiftOpen(false)} className="min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]">閉じる</button></div>
+              <div className="flex items-center justify-between gap-2"><p className="text-[18px] font-black">🎁 贈る</p><button type="button" data-assistant-life-gift-sheet-close data-mhl-sheet-close aria-label="閉じる" onClick={() => setGiftOpen(false)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-800 text-[18px] font-black leading-none text-white active:scale-95">✕</button></div>
               {typeof AssistantLifeGiveWho === 'function' && <AssistantLifeGiveWho groups={(life.groups || []).map(g => ({ ...g, ids: (g.ids || []).filter(id => metSet.has(id)) })).filter(g => g.ids.length >= 2 && g.ids.every(partnerOk))} soloIds={ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id) && !awayFriend(id) && partnerOk(id))} pairLeft={typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0} soloLeft={soloLeft} canPair={canGive} soloOn={soloOn}
                 onPair={(g) => { setGiftOpen(false); openGive(g.ids); }} onSolo={(id) => { setGiftOpen(false); const g = (life.groups || []).find(x => (x.ids || []).includes(id)); openGiveSolo(id, g ? g.ids : [id]); }}/>}
               <button type="button" data-assistant-life-gift-items-toggle aria-expanded={giftItemsOpen} onClick={() => setGiftItemsOpen(v => !v)} className="mt-3 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/20 bg-white/5 px-3 text-left text-[13px] font-black text-white active:scale-[.98]"><span>📦 道具の一覧 <span className="text-[11px] font-bold text-slate-300">持っている {itemsHave}個・手に入れ方</span></span><span className="text-[11px] font-bold text-amber-200">{giftItemsOpen ? '閉じる ▲' : '見る ▼'}</span></button>

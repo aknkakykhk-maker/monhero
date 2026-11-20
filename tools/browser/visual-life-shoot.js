@@ -212,7 +212,8 @@ const measurePage = (rule) => {
         await step('10-give-items', () => click('[data-assistant-life-gift-items-toggle]'));
       });
       const room = (id) => click(`[data-assistant-life-room="${id}"]`);
-      const roomBtn = (re) => page.locator('button:visible').filter({ hasText: re }).last().click({ timeout: 4000 });
+      // 部屋の「できること」は 話す・贈る・誘う のほかを「もっと見る」に畳んだ(2026-11-20 総点検 F-5)。見つからなければ開いてから押す
+      const roomBtn = async (re) => { const b = () => page.locator('button:visible').filter({ hasText: re }).last(); if (!(await b().count())) { await page.locator('[data-assistant-life-room-more][aria-expanded="false"]:visible').first().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300); } return b().click({ timeout: 4000 }); };
       await group(async () => {
         await step('11-room-alone', () => room('atsu'));
         await step('12-room-alone-scroll', () => scrollIn('[data-assistant-life-roomview-scroll]', 1).then(ok => { if (!ok) return scrollTopmost(1); }));

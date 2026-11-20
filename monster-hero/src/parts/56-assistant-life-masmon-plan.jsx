@@ -340,7 +340,7 @@ const AMGP_OPTIONS = Object.freeze(['A', ...AMG_KEYS.map(k => `L:${k}`), ...AMG_
 const amgpOptionLabel = (c) => (c === 'A' ? '🍃 助手にまかせる' : c === 'R' ? '😴 休み' : c === 'P' ? '🎈 遊び' : c === 'S' ? '⚔ 修行(いなければ軽い訓練)' : `${c[0] === 'H' ? '🏋 重' : '💪 軽'} ${amgpCodeName(c)}(${amgpStatName(c.slice(2))})`);
 function AmgpShell({ title, sub, tabs, tab, setTab, onClose, land, children, ro = false }) {
   return (
-    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/60" data-amgp-note={ro ? 'readonly' : 'mine'}>
+    <div className="fixed inset-0 z-[85] flex items-end justify-center bg-[#0b1020]/90" data-amgp-note={ro ? 'readonly' : 'mine'}>
       <div className="flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white" style={{ height: land ? '96dvh' : '92dvh' }}>
         {/* 横向きは頭と切り替えを1行にまとめ、予定の見える高さを広げる(fable の指摘 11-12・568×320 で約190px だった) */}
         <div className={`flex items-center gap-2 px-3 ${land ? 'pt-1.5' : 'pt-3'}`}>

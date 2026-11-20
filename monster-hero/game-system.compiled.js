@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e674ece0ad509008
+// source-sha256: 46628aaa9954ab63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117300,7 +117300,7 @@ function AssistantLifeRoomSheet({
     on: () => onGive(w.group),
     disabled: !canGive,
     why: "今日はもう贈れません"
-  }), !hotBeat && beatRow, React.createElement("button", {
+  }), !hotBeat && beatRow, !hotCard && cardRow, React.createElement("button", {
     type: "button",
     className: "mt-2 flex min-h-[44px] w-full items-center justify-center gap-1 rounded-2xl border border-white/20 bg-white/5 text-[13px] font-black text-slate-200 active:scale-[.98]",
     "data-assistant-life-room-more": true,
@@ -117382,7 +117382,7 @@ function AssistantLifeRoomSheet({
     on: () => onInvite(id),
     disabled: !!(w && w.reason === 'distance'),
     why: "いまは遠くにいて声が届きません"
-  }), !hotCard && cardRow, React.createElement(AssistantLifeDoRow, {
+  }), React.createElement(AssistantLifeDoRow, {
     k: "masmon",
     icon: "🐾",
     label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
@@ -117424,6 +117424,7 @@ function AssistantLifeRoomSheet({
     type: "button",
     "aria-label": "戻る",
     "data-assistant-life-roomview-close": true,
+    "data-assistant-life-room-close": uiV2 ? '' : undefined,
     onClick: onClose,
     className: "absolute z-[40] min-h-[44px] rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95",
     style: {
@@ -117624,7 +117625,7 @@ function AssistantLifeRoomSheet({
     onClick: () => onCard(id)
   }, "🃏 MFバトルカードで対戦する ", React.createElement("span", {
     className: "mhl-card-up"
-  }, "ごほうびアップ")))), React.createElement("button", {
+  }, "ごほうびアップ")))), !uiV2 && React.createElement("button", {
     type: "button",
     "data-assistant-life-room-close": true,
     "data-mhl-sheet-close": true,
@@ -119581,7 +119582,7 @@ function AssistantLifeHouse({
   }, React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
-    className: "absolute inset-0 bg-black/60",
+    className: "absolute inset-0 bg-[#0b1020]/85",
     onClick: () => setGiftOpen(false)
   }), React.createElement("div", {
     className: "mhl-sheet",
@@ -119600,9 +119601,10 @@ function AssistantLifeHouse({
     type: "button",
     "data-assistant-life-gift-sheet-close": true,
     "data-mhl-sheet-close": true,
+    "aria-label": "閉じる",
     onClick: () => setGiftOpen(false),
-    className: "min-h-[44px] rounded-xl border border-slate-500 px-3 text-[12px] font-black text-slate-200 active:scale-[.98]"
-  }, "閉じる")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-800 text-[18px] font-black leading-none text-white active:scale-95"
+  }, "✕")), typeof AssistantLifeGiveWho === 'function' && React.createElement(AssistantLifeGiveWho, {
     groups: (life.groups || []).map(g => ({
       ...g,
       ids: (g.ids || []).filter(id => metSet.has(id))
@@ -158859,7 +158861,7 @@ function AmgpShell({
   ro = false
 }) {
   return React.createElement("div", {
-    className: "fixed inset-0 z-[85] flex items-end justify-center bg-black/60",
+    className: "fixed inset-0 z-[85] flex items-end justify-center bg-[#0b1020]/90",
     "data-amgp-note": ro ? 'readonly' : 'mine'
   }, React.createElement("div", {
     className: "flex w-full max-w-md flex-col rounded-t-3xl border-t-2 border-emerald-300/70 bg-slate-900 text-white",

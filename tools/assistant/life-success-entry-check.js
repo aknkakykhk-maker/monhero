@@ -29,7 +29,7 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
   const errors = []; if (SHOTS) fs.mkdirSync(shotDir, { recursive: true });
   const rowText = (page) => page.evaluate(() => { const b = document.querySelector('[data-assistant-life-room-do="monhero-success"]'); return b ? b.innerText.replace(/\s+/g, ' ') : null; });
   const openRoom = async (page, who) => {
-    await page.locator('[data-assistant-life-room-sheet] button:has-text("閉じる"), [data-assistant-life-room-sheet] [aria-label="閉じる"]').first().click({ timeout: 1500 }).catch(() => {});
+    await page.locator('[data-assistant-life-roomview-close], [data-assistant-life-room-sheet] button:has-text("閉じる"), [data-assistant-life-room-sheet] [aria-label="閉じる"]').first().click({ timeout: 1500 }).catch(() => {});
     await page.waitForTimeout(400);
     await page.locator(`[data-assistant-life-room="${who}"]`).first().click({ timeout: 5000 }); await page.waitForTimeout(900);
   };
