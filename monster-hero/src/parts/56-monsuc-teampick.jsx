@@ -11,13 +11,14 @@ const MSX_TP_SORTS = Object.freeze([['power', '総合力'], ['lv', 'Lv'], ['name
 const msxNormQ = (s) => String(s == null ? '' : s).normalize('NFKC').toLowerCase();
 const msxMatchQ = (q, ...texts) => { const n = msxNormQ(q).trim(); if (!n) return true; return texts.some((t) => msxNormQ(t).includes(n)); };
 // 選ぶ画面の共通の道具(検索・並び替え・逆順・候補の件数)。並び替え・逆順は渡したときだけ出す。件数は「候補 / 全体」で、所持総数と混同しない
-function MsxPickTools({ q, onQ, sorts = null, sort, onSort, rev, onRev, count, total }) {
+// hideFull … 下に「所持数」が出ている画面では、絞り込んでいないときの件数を出さない(同じ数の二重・2026-11-20 r1119-033 育-09・育-11・育-52)
+function MsxPickTools({ q, onQ, sorts = null, sort, onSort, rev, onRev, count, total, hideFull = false }) {
   return (
     <div className="msx-pt" data-msx-pick-tools>
       <input type="search" className="msx-pt-q" value={q} onChange={(e) => onQ(e.target.value)} placeholder="名前・種族で検索" aria-label="名前・種族で検索" data-msx-pt-q/>
-      {sorts ? <label className="msx-pt-s"><select value={sort} onChange={(e) => onSort(e.target.value)} aria-label="並べ替え" data-msx-pt-sort>{sorts.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label> : null}
+      {sorts ? <label className="msx-pt-s"><select value={sort} onChange={(e) => onSort(e.target.value)} aria-label="並べ替え" data-msx-pt-sort>{sorts.map(([k, n]) => <option key={k} value={k}>並べ替え: {n}</option>)}</select></label> : null}
       {onRev ? <button type="button" className={`msx-pt-r${rev ? ' on' : ''}`} onClick={() => onRev(!rev)} aria-pressed={!!rev} data-msx-pt-rev>逆順</button> : null}
-      <span className="msx-pt-c" data-msx-pt-count>{count}{total != null && total !== count ? ` / ${total}` : ''}件</span>
+      {hideFull && (total == null || total === count) ? null : <span className="msx-pt-c" data-msx-pt-count>{count}{total != null && total !== count ? ` / ${total}` : ''}件</span>}
     </div>
   );
 }
@@ -58,7 +59,7 @@ const msxTpCardM = (rec, mem, species) => ({
 });
 const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null);
 // 伸びが上がる能力の短い字(札の下の数字の欄)。例「📖+4 🎯+3」
-const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}`).join(' ') : '');
+const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}%`).join(' ') : ''); // 単位の%を付ける(育-93・育-113)
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
@@ -176,6 +177,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
           <MsxPickTools q={q} onQ={setQ} sorts={MSX_TP_SORTS} sort={sort} onSort={setSort} rev={rev} onRev={setRev} count={items.length} total={lists[tab].length}/>
           <label className="msx-tp-sel"><select value={only} onChange={(e) => setOnly(e.target.value)} aria-label="得意な能力で絞る" data-msx-tp-only><option value="all">得意: 全て</option>{MSX_STATS.map((k) => <option key={k} value={k}>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</option>)}</select></label>
         </div>
+        {/* 札の帯「同じ種類」「育てる種」の意味(選べないのか分からなかった・育-89) */}
+        {items.some((x) => { const mk = markOf(x); return mk && mk.c !== 'in'; }) ? <div className="msx-tp-note msx-kp" data-msx-tp-marknote>「同じ種類」は編成にもういる種類、{'\u200b'}「育てる種」は育てるモンスターと同じ種類の印です。{'\u200b'}どちらも入れられます</div> : null}
         {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (

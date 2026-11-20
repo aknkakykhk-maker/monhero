@@ -56,7 +56,9 @@ const AREAS = [
 ];
 const areaOf = (k) => AREAS.find((a) => a.re.test(k)) || { key: 'etc', name: 'その他' };
 
+let METRICS = {};
 const collect = (dir) => {
+  try { METRICS = JSON.parse(fs.readFileSync(path.join(dir, 'shots.json'), 'utf8')).metrics || {}; } catch (e) { METRICS = {}; }
   const scenes = new Map();
   const meas = uiMeasure.load(dir); // 撮るときに測った大きさの釣り合い(visual-life-shoot.js が残す)
   for (const f of fs.readdirSync(dir).sort()) {
@@ -68,6 +70,7 @@ const collect = (dir) => {
     const sc = scenes.get(key) || scenes.set(key, { key, label: `${m[2] === 'first' ? '初めての人 ' : ''}${labelOf(m[2] === 'night' ? `night-${code}` : code)}〔${m[3]}〕`, shots: {} }).get(key);
     sc.shots[m[1]] = path.join(dir, f);
     (sc.machine = sc.machine || {})[m[1]] = uiMeasure.lines(meas.get(f));
+    sc.metrics = sc.metrics || {}; sc.metrics[m[1]] = METRICS[f] || null;
   }
   return [...scenes.values()];
 };
@@ -82,9 +85,15 @@ const buildRequests = (scenes) => {
     for (let i = 0; i < list.length; i += MAX_SCENES) {
       const part = list.slice(i, i + MAX_SCENES);
       const content = [{ type: 'text', text: `まとまり: ${a.name}(${part.length}場面)。止め絵の前に名札を置きます。` }];
-      for (const sc of part) for (const z of SIZES) if (sc.shots[z]) { const mm = (sc.machine || {})[z] || []; content.push({ type: 'text', text: `【${sc.label}@${z}】${SIZE_NAME[z]}${mm.length ? ` / 機械の見つけ物(machine): ${mm.join(' ・ ')}` : ''}` }); content.push(img(sc.shots[z])); }
+      for (const sc of part) for (const z of SIZES) if (sc.shots[z]) {
+        const mt = sc.metrics && sc.metrics[z];
+        const ng = mt && Array.isArray(mt.ng) && mt.ng.length ? ` / 機械の測った数字(machine): ${mt.ng.join(' ・ ')}` : '';
+        const mm = (sc.machine || {})[z] || []; // ui-measure.js の測った指摘(高・中)
+        content.push({ type: 'text', text: `【${sc.label}@${z}】${SIZE_NAME[z]}${ng}${mm.length ? ` / 機械の見つけ物(machine): ${mm.join(' ・ ')}` : ''}` }); content.push(img(sc.shots[z]));
+      }
       content.push({ type: 'text', text: '上の止め絵を点検し、決めた形の JSON の配列だけを返してください。' });
       reqs.push({ custom_id: `l${String(reqs.length + 1).padStart(3, '0')}`, area: a.name, scenes: part.map((s) => s.label),
+        machine: part.flatMap((sc) => SIZES.flatMap((z) => ((sc.metrics && sc.metrics[z] && sc.metrics[z].ng) || []).map((t) => ({ scene: sc.label, size: z, text: t })))),
         request: { system, cache_system: true, messages: [{ role: 'user', content }], max_tokens: MAX_TOKENS, effort: 'high' } });
     }
   }
@@ -116,8 +125,14 @@ const writeFindings = (results, usd) => {
   const cell = (s) => String(s ?? '').replace(/\|/g, '／').replace(/\n/g, ' ');
   const md = [`# 助手ライフの見た目 API 点検の結果(${new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')} JST)`, '',
     `- 件数 ${all.length}(高 ${cnt('高')}・中 ${cnt('中')}・低 ${cnt('低')})/ 使った額 $${usd}${bad.length ? ` / 読めなかった返事 ${bad.join('、')}` : ''}`, '',
-    '| 優先度 | まとまり | 場面 | 大きさ | 何が悪いか | 直し方 | 観点 | 受け持ちの手がかり |', '|---|---|---|---|---|---|---|---|',
-    ...all.map((f) => `| ${cell(f.priority)} | ${cell(f.area)} | ${cell(f.scene)} | ${cell((f.sizes || []).join('・'))} | ${cell(f.what)} | ${cell(f.fix)} | ${cell(f.viewpoint)} | ${cell(f.owner_hint)} |`)];
+    '| 優先度 | まとまり | 場面 | 大きさ | 何が悪いか | 直し方 | 観点 | 受け持ちの手がかり | 機械 |', '|---|---|---|---|---|---|---|---|---|',
+    ...all.map((f) => `| ${cell(f.priority)} | ${cell(f.area)} | ${cell(f.scene)} | ${cell((f.sizes || []).join('・'))} | ${cell(f.what)} | ${cell(f.fix)} | ${cell(f.viewpoint)} | ${cell(f.owner_hint)} | ${cell(f.machine_verdict || '')} |`)];
+  // 基準を外れた測った数字は必ず指摘にする: API が「本物」「空振り」のどちらとも書かなかった場面の物は、機械の指摘として足す
+  const judged = new Set(all.filter((f) => f.machine_verdict).map((f) => `${f.group}|${String(f.scene).replace(/〔.*〕/, '').trim()}`));
+  const left = [];
+  for (const g of manifest.requests) for (const m of g.machine || []) { const sc = m.scene.replace(/〔.*〕/, '').trim(); if (![...judged].some((k) => k.startsWith(`${g.custom_id}|`) && (k.endsWith(sc) || sc.endsWith(k.split('|')[1])))) left.push({ ...m, area: g.area }); }
+  md.push('', `## 機械の測った数字で基準を外れ、API が判定を書かなかった物(${left.length}件。機械の指摘としてそのまま数える)`, '', '| 場面 | 大きさ | 基準を外れた物 |', '|---|---|---|', ...left.map((m) => `| ${cell(m.scene)} | ${m.size} | ${cell(m.text)} |`));
+  fs.writeFileSync(path.join(OUT, 'machine-left.json'), JSON.stringify(left, null, 1));
   fs.writeFileSync(path.join(OUT, 'api-findings.md'), md.join('\n') + '\n');
   console.log(`API の見つけ物 ${all.length}件(高 ${cnt('高')}・中 ${cnt('中')}・低 ${cnt('低')})/ 使った額 $${usd}${bad.length ? ` / 読めず ${bad.join(',')}` : ''}`);
 };
@@ -141,6 +156,18 @@ const writeFindings = (results, usd) => {
   const dir = opt('--shots');
   if (!dir || !fs.existsSync(dir)) { console.log('--shots <撮った置き場> が要る'); process.exit(1); }
   let scenes = collect(dir);
+  { // 測った数字の表(全部の止め絵。基準を外れた物に ✗)
+    const R = (() => { try { return JSON.parse(fs.readFileSync(path.join(dir, 'shots.json'), 'utf8')).rule || {}; } catch (e) { return {}; } })();
+    const rows = scenes.flatMap((sc) => SIZES.filter((z) => sc.metrics && sc.metrics[z]).map((z) => ({ sc, z, m: sc.metrics[z] })));
+    const mark = (bad) => (bad ? ' ✗' : '');
+    const lines = [`# 助手ライフの画面を数字で測った表(${rows.length}枚)`, '',
+      `基準: いちばん大事に見えるボタン ${R.mainW}×${R.mainH}px 以上・字 ${R.mainFont}px 以上 / 下の空き 画面の ${R.bottomGap * 100}% 以下・途中の空き ${R.midGap * 100}% 以下 / 字 ${R.minFont}px 以上・大きさの段 ${R.fontSteps}段まで / 同じ数字・文は1回`, '',
+      `基準を外れた止め絵: **${rows.filter((r) => r.m.ng && r.m.ng.length).length}枚 / ${rows.length}枚**(外れた数 ${rows.reduce((a, r) => a + ((r.m.ng || []).length), 0)})`, '',
+      '| 場面 | 大きさ | 主ボタン(字) | 下の空き | 途中の空き | 最小の字 | 10px未満 | 字の段 | 同じ数字・文 |', '|---|---|---|---|---|---|---|---|---|',
+      ...rows.map(({ sc, z, m }) => { const H = z === 'tate' ? 844 : 800; const mb = m.main; return `| ${sc.label.replace(/\|/g, '／')} | ${z} | ${mb ? `「${mb.label.replace(/\|/g, '／').slice(0, 12)}」${mb.w}×${mb.h}(${mb.font}px)${mark(mb.w < R.mainW || mb.h < R.mainH || mb.font < R.mainFont)}` : '—'} | ${m.bottomGap}px${mark(m.bottomGap > H * R.bottomGap)} | ${m.midGap}px${mark(m.midGap > H * R.midGap)} | ${m.minFont}px | ${m.tinyChars}字${mark(m.tinyChars > 0)} | ${m.fontSteps}${mark(m.fontSteps > R.fontSteps)} | ${(m.repeats || []).join(' / ').replace(/\|/g, '／')}${mark((m.repeats || []).length)} |`; })];
+    fs.writeFileSync(path.join(OUT, 'metrics.md'), lines.join('\n') + '\n');
+    console.log(`測った表: ${path.join(OUT, 'metrics.md')}(基準を外れた止め絵 ${rows.filter((r) => r.m.ng && r.m.ng.length).length}/${rows.length}枚)`);
+  }
   const only = opt('--only').split(',').filter(Boolean);
   if (only.length) scenes = scenes.filter((s) => only.some((o) => s.key.includes(o) || s.label.includes(o)));
   const reqs = buildRequests(scenes);

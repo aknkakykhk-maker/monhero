@@ -111,7 +111,7 @@ const makeRun = async (kind) => {
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
     // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
     ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
-    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['TV1S', 'mid', ['tev', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next']], ['TV1K', 'mid', ['tev', 'wait:1200', 'tev:skip']], ['TV2S', 'mid', ['tevLot', 'wait:600', 'tev:next', 'tev:next', 'tev:next']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -184,6 +184,13 @@ const makeRun = async (kind) => {
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
             if (st === 'carryall') { const d = document.querySelector('[data-msx-carry-all]'); if (d) d.click(); return !!d; } // 持ちこみの段: 持っていない物も升目に出す(Q-3-6 で畳んだ)
+            // 編成の子のイベント(6つの拍): 押すたびに1拍進む。結果の拍(5)に入ったら、弾けとハートが満ちるまで待つ(SHOT_SEQ=TV1S で押すたびの止め絵)
+            if (st === 'tev:next' || st === 'tev:skip') {
+              const bt = document.querySelector(st === 'tev:skip' ? '[data-msx-tev-skip]' : '[data-msx-tev-next]'); if (!bt) return false; bt.click();
+              await new Promise((r) => setTimeout(r, 60)); const sc = document.querySelector('[data-msx-tev-beat]');
+              if (sc && sc.getAttribute('data-msx-tev-beat') === '5') await new Promise((r) => setTimeout(r, 1100));
+              return true;
+            }
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};

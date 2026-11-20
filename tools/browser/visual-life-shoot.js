@@ -49,6 +49,64 @@ const route = async (r) => {
   return json([]);
 };
 
+
+// ---- 画面の部品を数字で測る(2026-11-20 窓口「社長が気付くことに気付けないなら意味がない」)。上に見えている物だけ ----
+//   主ボタン(いちばん大事に見えるボタン)の大きさ・下の空きと途中の空き・字の大きさ・同じ数字/文の繰り返し
+const MEASURE_RULE = { mainH: 44, mainW: 120, mainFont: 13, bottomGap: 0.2, midGap: 0.18, minFont: 10, fontSteps: 6, repeat: 2 };
+const measurePage = (rule) => {
+  const W = innerWidth, H = innerHeight;
+  const onTop = (el, r) => { const x = Math.min(W - 1, Math.max(0, (r.left + r.right) / 2)), y = Math.min(H - 1, Math.max(0, (r.top + r.bottom) / 2)); const t = document.elementFromPoint(x, y); return !!t && (t === el || el.contains(t) || t.contains(el)); };
+  const inView = (r) => r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < H && r.right > 0 && r.left < W;
+  const texts = [];
+  const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+    const raw = n.nodeValue.replace(/\s+/g, ' ').trim(); if (!raw) continue;
+    const p = n.parentElement; if (!p || p.closest('script,style,[aria-hidden="true"]')) continue;
+    const cs = getComputedStyle(p); if (cs.visibility === 'hidden' || Number(cs.opacity) === 0) continue;
+    const rg = document.createRange(); rg.selectNodeContents(n); const r = rg.getBoundingClientRect();
+    if (!inView(r) || !onTop(p, r)) continue;
+    texts.push({ s: raw, px: parseFloat(cs.fontSize) || 0, r, el: p });
+  }
+  const sat = (c) => { const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?/.exec(c || ''); if (!m || (m[4] !== undefined && Number(m[4]) < 0.3)) return 0; const v = [m[1], m[2], m[3]].map(Number), mx = Math.max(...v), mn = Math.min(...v); return mx ? (mx - mn) / mx : 0; };
+  const btns = [];
+  for (const b of document.querySelectorAll('button,[role=button],a[href]')) {
+    const r = b.getBoundingClientRect(); if (!inView(r) || !onTop(b, r) || b.disabled) continue;
+    const cs = getComputedStyle(b); const grad = /gradient/.test(cs.backgroundImage);
+    const color = Math.max(sat(cs.backgroundColor), grad ? 0.6 : 0);
+    const label = (b.innerText || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 24);
+    if (!label) continue;
+    btns.push({ label, w: Math.round(r.width), h: Math.round(r.height), font: parseFloat(cs.fontSize) || 0, score: r.width * r.height * (1 + 3 * color) * (/閉じる|戻る|←|✕|キャンセル/.test(label) ? 0.2 : 1), r });
+  }
+  btns.sort((a, b) => b.score - a.score);
+  const main = btns[0] || null;
+  // 空き: 字・ボタン・絵(img/svg/canvas・背景の絵)の縦の帯を重ね、帯の無い所を測る
+  const bands = [...texts.map(t => t.r), ...btns.map(b => b.r)];
+  for (const e of document.querySelectorAll('img,svg,canvas,[style*="background-image"]')) { const r = e.getBoundingClientRect(); if (inView(r) && r.width * r.height > 1600 && r.width * r.height < W * H * 0.85 && onTop(e, r)) bands.push(r); }
+  const ys = bands.map(r => [Math.max(0, r.top), Math.min(H, r.bottom)]).sort((a, b) => a[0] - b[0]);
+  let end = 0, midGap = 0, midAt = 0;
+  for (const [a, b] of ys) { if (a - end > midGap && end > 0) { midGap = a - end; midAt = end; } end = Math.max(end, b); }
+  const bottomGap = Math.max(0, H - end);
+  // 字
+  const chars = (t) => [...t.s.replace(/\s/g, '')].length;
+  const tiny = texts.filter(t => t.px < rule.minFont), sizes = [...new Set(texts.map(t => Math.round(t.px * 2) / 2))].sort((a, b) => a - b);
+  // 繰り返し: 同じ文(6字以上)と、同じ数字の入った言葉(「あと22」「×1.5」「16:00」など)
+  const cnt = {};
+  for (const t of texts) {
+    if ([...t.s].length >= 6) cnt[t.s] = (cnt[t.s] || 0) + 1;
+    for (const m of t.s.match(/(?:あと|×|x)?\s?\d+(?:[.:,]\d+)*\s?(?:回|個|件|人|体|日|時|P|pt|ポイント|倍|%)?/g) || []) { const k = m.replace(/\s/g, ''); if (/^\d$/.test(k)) continue; cnt[`#${k}`] = (cnt[`#${k}`] || 0) + 1; }
+  }
+  const rep = Object.entries(cnt).filter(([, n]) => n >= rule.repeat).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => `${k.replace(/^#/, '数字「') + (k.startsWith('#') ? '」' : '')}×${n}`);
+  const ng = [];
+  if (main && (main.h < rule.mainH || main.w < rule.mainW)) ng.push(`いちばん大事に見えるボタン「${main.label}」が ${main.w}×${main.h}px(基準 ${rule.mainW}×${rule.mainH} 以上)`);
+  if (main && main.font < rule.mainFont) ng.push(`いちばん大事に見えるボタン「${main.label}」の字が ${main.font}px(基準 ${rule.mainFont}px 以上)`);
+  if (bottomGap > H * rule.bottomGap) ng.push(`下の空きが ${Math.round(bottomGap)}px(画面の ${Math.round(bottomGap / H * 100)}%・基準 ${rule.bottomGap * 100}% 以下)`);
+  if (midGap > H * rule.midGap) ng.push(`途中の空きが ${Math.round(midGap)}px(${Math.round(midAt)}px の下・基準 画面の ${rule.midGap * 100}% 以下)`);
+  if (tiny.length) ng.push(`${rule.minFont}px 未満の字が ${tiny.reduce((a, t) => a + chars(t), 0)}字(いちばん小さい ${Math.min(...tiny.map(t => t.px))}px。例「${tiny.slice(0, 2).map(t => t.s.slice(0, 10)).join('」「')}」)`);
+  if (sizes.length > rule.fontSteps) ng.push(`字の大きさが ${sizes.length}段(${sizes.join('・')}px・基準 ${rule.fontSteps}段まで)`);
+  if (rep.length) ng.push(`同じ数字・文が何度も出る: ${rep.join(' / ')}`);
+  return { main: main ? { label: main.label, w: main.w, h: main.h, font: main.font } : null, bottomGap: Math.round(bottomGap), midGap: Math.round(midGap), minFont: texts.length ? Math.min(...texts.map(t => t.px)) : 0, tinyChars: tiny.reduce((a, t) => a + chars(t), 0), fontSteps: sizes.length, repeats: rep, ng };
+};
+
 (async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が無い'); process.exit(0); }
@@ -62,7 +120,7 @@ const route = async (r) => {
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
-  const log = { shots: [], miss: [], errors: [] };
+  const log = { shots: [], miss: [], errors: [], rule: MEASURE_RULE, metrics: {} };
   const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'sorashido', 'erubin'], doing: 'cards', place: 'cardroom' }],
     solo: { momosuke: { doing: 'battle', place: 'battle' }, atsu: { doing: 'idle', place: 'home' }, kyuko: { doing: 'read', place: 'library' } } };
 
@@ -87,6 +145,7 @@ const route = async (r) => {
       await page.screenshot({ path: path.join(OUT, file) });
       await uiMeasure.record(page, path.join(OUT, file));
       log.shots.push(file);
+      try { (log.metrics = log.metrics || {})[file] = await page.evaluate(measurePage, MEASURE_RULE); } catch (e) { (log.metrics = log.metrics || {})[file] = { error: String(e.message || e).slice(0, 80) }; }
     };
     const click = (s, o = {}) => page.locator(s).first().click({ timeout: 4000, ...o });
     const clickText = (re, scope = 'body') => page.locator(`${scope} button:visible, ${scope} [role=button]:visible`).filter({ hasText: re }).first().click({ timeout: 4000 });

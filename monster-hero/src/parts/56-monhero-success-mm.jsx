@@ -197,7 +197,7 @@ function MsxR3Box({ onClose }) {
   const SUC = msxSuc && msxSuc.SUC;
   // ---- 詳細の中身(マスモンボックスとメモモンで同じ部品・同じ並び。r1119-006: メモモンでもアシスト効果・得意な能力を見られるように) ----
   const detailInfo = (m, extra = []) => {
-    const endAt = Number.isFinite(m.endAt) ? new Date(m.endAt) : null;
+    const endAt = Number.isFinite(m.endAt) && m.endAt > 0 ? new Date(m.endAt) : null; // 日付の無い子に 1970/1/1 を出さない(育-172)
     return [
       ['忠誠 / 人気', `${Math.round(m.loy || 0)} / ${Math.round(m.pop || 0)}`],
       Array.isArray(m.fav) && m.fav.length ? ['得意な能力', m.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
@@ -276,10 +276,10 @@ function MsxR3Box({ onClose }) {
       {/* 升の見せ方はマスモンボックスの一覧と同じ(名前に札を重ねない。メモモンであることは見出しと下の数で分かる・r1119-006) */}
       <div className="mm-tabs"><button type="button" className={atab === 'list' ? 'on' : ''} onClick={() => { setAtab('list'); setApick([]); }} data-msx-assist-tab-list>一覧</button>
         <button type="button" className={atab === 'rm' ? 'on' : ''} onClick={() => { setAtab('rm'); setApick([]); setMsg(''); }} data-msx-assist-tab-rm>外す</button></div>
-      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}育成には使えず、{'​'}編成にだけ入れられます。{'​'}押すと、{'​'}アシスト効果と得意な能力が見られます</>}</div>
+      <div className="mm-hint msx-kp">{atab === 'rm' ? '外すモンスターを選んでね。外したモンスターは元に戻せません' : <>合体の親・お別れしたモンスターです。{'​'}押すと、{'​'}アシスト効果と使い道が見られます</>}</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
-        {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length}/> : null}
+        {typeof MsxPickTools === 'function' ? <MsxPickTools q={aq} onQ={setAq} sorts={MSX_MM_SORTS} sort={asort} onSort={setAsort} rev={arev} onRev={setArev} count={stockList.length} total={stock.length} hideFull/> : null}
       </div>
       <div className="mm-gridw">{stockList.length ? <MsxMmGrid mons={stockList} label={view.label} isOn={(m) => atab === 'rm' && apick.includes(m.id)}
         attrs={(m) => ({ 'data-msx-assist-mon': m.id })}
@@ -288,7 +288,7 @@ function MsxR3Box({ onClose }) {
       <div className="mm-bar"><span className="cnt">メモモン <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span></div>
       {acur && atab === 'list' && typeof MsxMonDetail === 'function' ? (() => {
         const kp = acur.keep && typeof acur.keep === 'object' ? acur.keep : null;
-        const kAt = kp && Number.isFinite(kp.at) ? new Date(kp.at) : null;
+        const kAt = kp && Number.isFinite(kp.at) && kp.at > 0 ? new Date(kp.at) : null;
         return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
           info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
           foot={<><div className="mm-hint msx-kp" data-msx-assist-why>メモモンは育成・合体・貸し出し・名前と染色の変更には使えません。{'​'}育成を始めるときの編成に入れると、{'​'}アシスト効果と得意な能力が効きます</div>
@@ -296,9 +296,11 @@ function MsxR3Box({ onClose }) {
           onClose={() => { setAsel(null); setMsg(''); }}/>);
       })() : null}
       {aAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
-        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{aName(apick)}をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません</div>
+        <div className="msx-kp" style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{aName(apick)}を{'\u200b'}メモリアルモンスターから{'\u200b'}外しますか?{'\u200b'}外したモンスターは{'\u200b'}元に戻せません</div>
+        {/* 何体かまとめて外すときも、どの子かを名前で出す(お別れの確認と同じ形・育-170) */}
+        {apick.length > 1 ? <div className="mm-byelist">{apick.map((id) => { const m = stock.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div> : null}
         <button type="button" className="msx-btn go" data-msx-assist-remove-yes onClick={async () => { const nm = aName(apick); try { const a = await msxAssistRemove(apick); setAssist(a); setMsg(`${nm}を外しました`); } catch (e) { setMsg('外せませんでした'); } setApick([]); setAAsk(false); setAsel(null); setAtab('list'); }}>外す</button>
-        <button type="button" className="msx-btn sub" onClick={() => { setAAsk(false); if (atab !== 'rm') setApick([]); }}>やめておく</button></div></div> : null}
+        <button type="button" className="msx-btn sub" onClick={() => { setAAsk(false); if (atab !== 'rm') setApick([]); }}>やめる</button></div></div> : null}
     </>);
     // 戻るは左上の1つ(B-3)。外すのタブで選んでいるときだけ、下の帯にその画面の主な操作「外す(n体)」を出す(お別れのタブと同じ形・B-9・B-10)
     foot = atab === 'rm' ? <div className="v-ft"><button type="button" className="go" disabled={!apick.length} onClick={() => setAAsk(true)} data-msx-assist-remove>外す({apick.length}体)</button></div> : null;
@@ -316,7 +318,7 @@ function MsxR3Box({ onClose }) {
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-ops">
-        {typeof MsxPickTools === 'function' ? <MsxPickTools q={bq} onQ={setBq} rev={brev} onRev={setBrev} count={list.length} total={box.mons.length}/> : null}
+        {typeof MsxPickTools === 'function' ? <MsxPickTools q={bq} onQ={setBq} rev={brev} onRev={setBrev} count={list.length} total={box.mons.length} hideFull/> : null}
         <button type="button" className="mm-sel" onClick={() => setMenu('sort')} data-msx-mm-sort>並べ替え: {sortName}▼</button>
         <button type="button" className="mm-sel" onClick={() => setMenu('label')} data-msx-mm-label data-msx-r3-mmlabel>表示: {labelName}▼</button>
       </div>
@@ -339,7 +341,8 @@ function MsxR3Box({ onClose }) {
           if (room >= n) return `マスモンボックスからはいなくなり、\u200bメモリアルモンスターとして残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
           if (room <= 0) return `マスモンボックスからはいなくなります。\u200bメモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
           return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200bメモリアルモンスターがいっぱいなので、\u200b残りは残りません(思い出に名前とランクだけ残ります)`; })()}</div>
-        <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div>
+        {/* 1体のときは上の問いに名前が出ているので、下の名前の札は出さない(育-10) */}
+        {byeAsk.ids.length > 1 ? <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div> : null}
         <button type="button" className="msx-btn go" onClick={() => farewell(byeAsk.ids)} data-msx-mm-bye-yes>お別れする</button>
         <button type="button" className="msx-btn sub" onClick={() => setByeAsk(null)}>やめておく</button></div></div> : null}
       {page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
@@ -351,8 +354,8 @@ function MsxR3Box({ onClose }) {
         ]);
         return (<MsxMonDetail {...detailBase(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null}
-          head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
-            <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
+          head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}<small>お気に入り</small></button>
+            <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏<small>名前・色</small></button></>}
           info={more}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
             {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
@@ -468,7 +471,11 @@ const MSX_MM_CSS = `
 .msx .mm-td b{font-size:12.5px;font-weight:900;color:#fde047;line-height:1.3}
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
-.msx .msx-md-head{display:flex;gap:4px;margin-bottom:3px}
+.msx .msx-md-head{display:flex;gap:4px;margin-bottom:4px}
+/* 押す所を 44px にし、何のボタンかを字で添える(2026-11-20 r1119-033 育-151・育-156) */
+.msx .msx-md-head button{flex:1 1 0;min-width:44px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:10px;background:#0f0d24;border:1px solid #4a4380;font-size:17px;line-height:1}
+.msx .msx-md-head button small{font-size:9.5px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.msx .msx-md-head .mm-ed{color:#e2e8f0}
 .msx .msx-md-grade{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 5px;margin-left:3px}
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}

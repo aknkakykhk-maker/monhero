@@ -9,6 +9,7 @@ const ROOT = '/home/user/monhero';
 const CORE = path.join(ROOT, 'monster-hero/data/monhero-success.js');
 const EVF = path.join(ROOT, 'monster-hero/data/monhero-success-events.js');
 const ARC = path.join(ROOT, 'monster-hero/data/monhero-success-arc.js');
+const ASF = path.join(ROOT, 'monster-hero/data/monhero-success-assist.js');
 const PATCH_DIR = path.join(__dirname, 'patched');
 
 // ---- 仮の数値 ----
@@ -22,6 +23,20 @@ const VARIANTS = {
   polFlat: { core: [[/POL_AMA = Object\.freeze\(\[[^\]]+\]\)/, 'POL_AMA = Object.freeze([1, 1, 1, 1, 1, 1, 1])'], [/POL_FEAR = Object\.freeze\(\[[^\]]+\]\)/, 'POL_FEAR = Object.freeze([1, 1, 1, 1, 1, 1, 1])']] },
   turnNoAma: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.5, turnAma: 0, turnFear: 1,']] },
   polFlatTurn: { core: [[/POL_AMA = Object\.freeze\(\[[^\]]+\]\)/, 'POL_AMA = Object.freeze([1, 1, 1, 1, 1, 1, 1])'], [/POL_FEAR = Object\.freeze\(\[[^\]]+\]\)/, 'POL_FEAR = Object.freeze([1, 1, 1, 1, 1, 1, 1])'], [/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.5, turnAma: 0, turnFear: 1,']] },
+  line6: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.6, turnAma: 1, turnFear: 1,']] },
+  line7: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.7, turnAma: 1, turnFear: 1,']] },
+  line8: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.8, turnAma: 1, turnFear: 1,']] },
+  line7soft: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.7, turnAma: 1, turnFear: 1,'], [/POL_AMA = Object\.freeze\(\[[^\]]+\]\)/, 'POL_AMA = Object.freeze([1.25, 1.17, 1.1, 1, 0.9, 0.83, 0.75])'], [/POL_FEAR = Object\.freeze\(\[[^\]]+\]\)/, 'POL_FEAR = Object.freeze([0.75, 0.83, 0.9, 1, 1.1, 1.17, 1.25])']] },
+  line8soft: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.8, turnAma: 1, turnFear: 1,'], [/POL_AMA = Object\.freeze\(\[[^\]]+\]\)/, 'POL_AMA = Object.freeze([1.25, 1.17, 1.1, 1, 0.9, 0.83, 0.75])'], [/POL_FEAR = Object\.freeze\(\[[^\]]+\]\)/, 'POL_FEAR = Object.freeze([0.75, 0.83, 0.9, 1, 1.1, 1.17, 1.25])']] },
+  // アシスト① 効かない物を強める: 忠誠度効果アップ +20→+40%・しつけ上手 +25→+50%・元気のお守り 50→100%(芯で80%まで)・失敗率ダウン 1目盛り5→8%(上限 50→80%)
+  asStrong: { as: [[/(id: 'kizuna'[^\n]*?)unit: 1,/, '$1unit: 2,'], [/(id: 'shitsuke'[^\n]*?)unit: 1,/, '$1unit: 2,'], [/(id: 'genki'[^\n]*?)unit: 2,/, '$1unit: 4,'], [/(id: 'ochitsuki'[^\n]*?)unit: 5,/, '$1unit: 8,'], [/ochitsuki: \{ v: 50 \}/, 'ochitsuki: { v: 80 }']] },
+  // アシスト② 強すぎる物を弱める: 試合型5種の効き目を半分・追加トレボーナス 最大+20→+10%・季節4種 最大+20→+10%
+  asWeak: { as: [[/Object\.keys\(top\)\.forEach\(id => put\(BY_ID\[id\]\.buff\[top\[id\] - 1\]\)\);/, "Object.keys(top).forEach(id => { const b = BY_ID[id].buff[top[id] - 1]; put(Object.fromEntries(Object.entries(b).map(([k, x]) => [k, typeof x === 'number' ? x / 2 : x]))); });"], [/(id: 'tsuika'[^\n]*?)unit: 2,/, '$1unit: 1,'], [/name: `トレ効果アップ・\$\{n\}`, type: 'with', scene: 'train', unit: 2,/, "name: `トレ効果アップ・${n}`, type: 'with', scene: 'train', unit: 1,"]] },
+  // ② の作り直し: 芯は試合型を6体ぶん足し合わせる(CAP sum)。目盛りごとの buff を半分にする
+  asWeak2: { core: [[/(    (?:gatsu|miseba|mitate|kensho|mimamori): \{ name: [^\n]*?buff: \[)([^\n]*)\] \},/g, (m0, a, b) => `${a}${b.replace(/(guts|crit|eva|missCut|hit1): ([0-9.]+)/g, (q, k, x) => `${k}: ${k === 'guts' ? Math.round(Number(x) / 2) : Number(x) / 2}`)}] },`]], as: [[/(id: 'tsuika'[^\n]*?)unit: 2,/, '$1unit: 1,'], [/name: `トレ効果アップ・\$\{n\}`, type: 'with', scene: 'train', unit: 2,/, "name: `トレ効果アップ・${n}`, type: 'with', scene: 'train', unit: 1,"]] },
+  // 試合型は、編成で1体ぶんだけ(足し合わせをやめる・種類ごとにいちばん大きい1体)
+  battleOne: { as: [[/    gatsu: \{ sum: true \},\n    kensho: \{ sum: true \},\n    mimamori: \{ sum: true \},\n    miseba: \{ sum: true \},\n    mitate: \{ sum: true \},\n/, '']] },
+  line7hp: { core: [[/turnHpLine: 0\.5, turnAma: 1, turnFear: 1,/, 'turnHpLine: 0.7, turnAma: 1, turnFear: 1,']], ev: [[/\['hp', (20|30)\]/g, "['hp', 10]"], [/\['hp', 50\]/g, "['hp', 30]"]], arc: [[/\['hp', 20\]/g, "['hp', 10]"]] },
 };
 const patchTo = (src, reps, name) => {
   let t = fs.readFileSync(src, 'utf8');
@@ -35,6 +50,7 @@ const useVariant = (v) => {
   if (V.core) map[CORE] = patchTo(CORE, V.core, v);
   if (V.ev) map[EVF] = patchTo(EVF, V.ev, v);
   if (V.arc) map[ARC] = patchTo(ARC, V.arc, v);
+  if (V.as) map[ASF] = patchTo(ASF, V.as, v);
   const orig = Module._resolveFilename;
   Module._resolveFilename = function (req, parent, ...rest) { const r = orig.call(this, req, parent, ...rest); return map[r] || r; };
 };
@@ -75,6 +91,9 @@ const makeLab = (variant = 'base') => {
     if ((m = kind.match(/^memo(\d)-([BAS])$/))) return raisedTeam(m[2], AT.autoPick(AT.pointsOf(REAL[m[2]].power)).picks, Number(m[1])); // 残りはベースモン
     if ((m = kind.match(/^bare-([BAS])$/))) return raisedTeam(m[1], []);                                                      // 能力は同じ・アシストなし
     if ((m = kind.match(/^probe-(\w+)$/))) return raisedTeam('S', [{ id: m[1], n: AT.LIST.find((a) => a.id === m[1]).max }]);  // 1種だけ最大
+    if ((m = kind.match(/^one-(\w+)$/))) { const tm = raisedTeam('S', []); tm[0].assists = [{ id: m[1], n: AT.LIST.find((a) => a.id === m[1]).max }]; return tm; }
+    if (kind === 'battle1-S') { const tm = raisedTeam('S', AT.autoPick(AT.pointsOf(REAL.S.power)).picks); tm[0].assists = AT.LIST.filter((a) => a.type === 'battle').map((a) => ({ id: a.id, n: a.max })).concat(tm[0].assists.slice(0, 3)); return tm; }
+    if (kind === 'keisho-S') { const tm = raisedTeam('S', AT.autoPick(AT.pointsOf(REAL.S.power)).picks); tm[0].assists = tm[0].assists.concat([{ id: 'aidkeisho', n: 1 }]); return tm; }
     if ((m = kind.match(/^half-(\w+)$/))) { const a = AT.LIST.find((x) => x.id === m[1]); return raisedTeam('S', [{ id: m[1], n: Math.max(1, Math.round(a.max / 2)) }]); }
     throw new Error(`知らない編成 ${kind}`);
   };
@@ -93,6 +112,7 @@ const makeLab = (variant = 'base') => {
     return { species: sp, strategy: st, team: teams === MAIN_TEAMS ? tm : null, aid, react };
   };
 
+  let curSup = false;
   const chooseAct = (s, vw, strategy, rnd, focus) => {
     if (vw.can.includes('cond')) return { kind: 'cond' };
     if (vw.can.includes('retry')) return { kind: 'retry' };
@@ -103,8 +123,8 @@ const makeLab = (variant = 'base') => {
     const best = (score) => cards.slice().sort((a, b) => score(b) - score(a) || K.indexOf(a.stat) - K.indexOf(b.stat))[0];
     const train = (score = ev) => { const b = best(score); return b ? { kind: 'train', stat: b.stat } : { kind: 'rest' }; };
     const shugyoOk = vw.can.includes('shugyo') && vw.shugyo && vw.shugyo.techs && vw.shugyo.techs.length && !vw.shugyo.short;
-    const shugyo = () => { const t = vw.shugyo.techs.slice().sort((x, y) => (x.rank || 0) - (y.rank || 0)).pop(); return { kind: 'shugyo', course: 'fire', techs: [t.id] }; };
-    const cup = (vw.cups || []).find((c) => c.entry && c.entry.ok);
+    const shugyo = () => { const ts = vw.shugyo.techs.slice().sort((x, y) => (x.rank || 0) - (y.rank || 0)); if (curSup && ts.length >= 2 && (vw.shugyo.superLeft || 0) > 0 && (s.tickets || 0) >= 2) return { kind: 'shugyo', course: 'fire', techs: ts.slice(-2).map((x) => x.id) }; return { kind: 'shugyo', course: 'fire', techs: [ts.pop().id] }; };
+    const cup = (vw.cups || []).filter((c) => c.entry && c.entry.ok).sort((a, b) => (b.rival ? 1 : 0) - (a.rival ? 1 : 0))[0];
     switch (strategy) {
       case 'train': return hp < 0.3 ? { kind: 'rest' } : train((x) => (focus.includes(x.stat) ? 2 : 1) * (x.c.mult || 1));
       case 'shugyo': if (hp < 0.3) return { kind: 'rest' }; return shugyoOk ? shugyo() : train();
@@ -138,7 +158,11 @@ const makeLab = (variant = 'base') => {
   const runOne = (i, { team = null, cond: cond0 = null } = {}) => {
     const cond = cond0 || condOf(i);
     if (team) cond.team = team;
-    let s = SUC.newRun({ id: `lab-${i}`, species: cond.species, aid: cond.aid, team: teamOf(cond.team), aidBondLv: 1 });
+    const opt = { rivals: false, sup: false }; let tk = cond.team;
+    while (/^[RX]:/.test(tk)) { if (tk[0] === 'R') opt.rivals = true; else opt.sup = true; tk = tk.slice(2); }
+    const rivals = opt.rivals ? ['Tiger', 'Golem', 'Pixie'].map((sp, k) => ({ name: `相手${k + 1}`, breeder: '試し', kind: 'aid', species: sp, id: `aid:lab:${k}:${sp}`, stats: Object.fromEntries(K.map((x) => [x, 430])), rawSum: 2580 })) : undefined;
+    let s = SUC.newRun({ id: `lab-${i}`, species: cond.species, aid: cond.aid, team: teamOf(tk), aidBondLv: 1, ...(rivals ? { rivals } : {}) });
+    curSup = opt.sup; if (opt.rivals) cond.strategy = 'cup';
     let r = ((i + 1) * 2654435761 + 7) >>> 0;
     const rnd = () => { r = (r * 1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
     const focus = K.slice().sort((a, b) => (s.stats[b] - s.stats[a]) || K.indexOf(a) - K.indexOf(b)).slice(0, 3);
@@ -207,10 +231,11 @@ const makeLab = (variant = 'base') => {
       statSum, stats: K.map((k) => Math.round(s.stats[k] || 0)), techs: Array.isArray(s.techs) ? s.techs.length : 0, ...out,
       ama: s.ama, fear: s.fear, pol: s.pol, polTurns, ama40, fear40, amaHiTurns, fearHiTurns, amaAt, loy,
       hpSrc, evHp, injuries, ills, hpMax: s.hpMax,
+      superLeftEnd: Number(s.superLeft), rivalMet: s.rivalMet ? 1 : 0,
       log: { train: L.train, great: L.great, fail: L.fail, sab: L.sab, rest: L.rest, shugyo: L.shugyo, learned: L.learned, tag: (L.tagTurns || []).slice(1).reduce((a, b) => a + b, 0), issa: (L.issa || []).join(',') },
       bondAvg: bonds.length ? Math.round(bonds.reduce((a, b) => a + b, 0) / bonds.length) : null,
     };
   };
-  return { SUC, AT, condOf, runOne, MAIN_TEAMS };
+  return { SUC, AT, condOf, runOne, teamOf, MAIN_TEAMS };
 };
 module.exports = { makeLab, VARIANTS, REACTS, STRATS };
