@@ -1,0 +1,108 @@
+// 集計: node agg.js out > tables.md (と tables.json)
+'use strict';
+const fs = require('fs'); const path = require('path');
+const AT = require('/home/user/monhero/monster-hero/data/monhero-success-assist.js');
+const dir = process.argv[2] || 'out';
+const read = (prefix) => fs.readdirSync(dir).filter((f) => f.startsWith(prefix)).flatMap((f) => fs.readFileSync(path.join(dir, f), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)));
+const q = (a, p) => { if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(p * b.length))]; };
+const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const r1 = (x) => (x === null || x === undefined ? '-' : Math.round(x * 10) / 10);
+const r0 = (x) => (x === null || x === undefined ? '-' : Math.round(x));
+const pc = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : '-');
+const L = [];
+const P = (...x) => L.push(...x);
+const table = (head, rows) => { P(`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`); rows.forEach((r) => P(`| ${r.join(' | ')} |`)); P(''); };
+const J = {};
+
+const main = read('main-').filter((r) => !r.error);
+const errs = read('main-').length - main.length;
+P(`# 集計(main ${main.length} 回・止まった回 ${errs})`, '');
+// ---- 全体 ----
+const pw = main.map((r) => r.power);
+const winR = (rs) => pc(rs.reduce((t, r) => t + r.wins, 0), rs.reduce((t, r) => t + r.matches, 0));
+P('## 全体', '');
+table(['回数', '総合力 中央値', '下10%', '上10%', '勝率%', '休む回数 平均', 'けが 平均', '病気 平均'], [[main.length, q(pw, 0.5), q(pw, 0.1), q(pw, 0.9), winR(main), r1(mean(main.map((r) => r.acts.rest || 0))), r1(mean(main.map((r) => r.injuries))), r1(mean(main.map((r) => r.ills)))]]);
+
+// ---- 甘え度・恐れ度 ----
+P('## 甘え度・恐れ度', '');
+const loyRow = (name, rs) => {
+  const n = rs.length; const pt = [0, 0, 0, 0, 0, 0, 0]; rs.forEach((r) => r.polTurns.forEach((v, i) => { pt[i] += v; })); const tt = pt.reduce((a, b) => a + b, 0);
+  return [name, n, q(rs.map((r) => r.ama), 0.5), q(rs.map((r) => r.fear), 0.5), pc(rs.filter((r) => r.pol < 0).length, n), pc(rs.filter((r) => r.pol === 0).length, n), pc(rs.filter((r) => r.pol > 0).length, n), pc(rs.filter((r) => r.pol <= -3).length, n), pc(rs.filter((r) => r.pol >= 3).length, n),
+    pc(pt[0] + pt[1] + pt[2], tt), pc(pt[4] + pt[5] + pt[6], tt), pc(rs.filter((r) => r.ama40 !== null).length, n), pc(rs.filter((r) => r.fear40 !== null).length, n), q(main.length ? rs.map((r) => r.power) : [], 0.5)];
+};
+const loyHead = ['条件', '回数', '甘え 中央', '恐れ 中央', '終わり甘い側%', '普通%', '厳しい側%', '超溺愛%', '超スパルタ%', '甘い側のターン%', '厳しい側のターン%', '甘え40到達%', '恐れ40到達%', '総合力 中央'];
+P('### ほめ方・しかり方ごと(毎回のトレーニング・修行のあと)', '');
+P('- praise=いつもほめる / scold=いつもしかる / smart=良い結果はほめ・悪い結果はしかる / none=なにもしない', '');
+table(loyHead, ['praise', 'scold', 'smart', 'none'].map((k) => loyRow(k, main.filter((r) => r.react === k))));
+P('### 育て方ごと', '');
+table(loyHead, [...new Set(main.map((r) => r.strategy))].map((k) => loyRow(k, main.filter((r) => r.strategy === k))));
+P('### 育て方 × しかるだけ(厳しい側へ寄せられるか)', '');
+table(loyHead, [...new Set(main.map((r) => r.strategy))].map((k) => loyRow(`${k}×scold`, main.filter((r) => r.strategy === k && r.react === 'scold'))));
+// 理由ごと
+const reasons = {};
+const reasonOf = (rs) => { const o = {}; rs.forEach((r) => Object.entries(r.loy || {}).forEach(([k, v]) => { const x = (o[k] = o[k] || [0, 0, 0]); x[0] += v[0]; x[1] += v[1]; x[2] += v[2]; })); return o; };
+P('### 1回の育成で、何で動いたか(平均・方針の段の倍率をかけたあとの実際の増え)', '');
+for (const k of ['all', 'praise', 'scold', 'smart', 'none']) {
+  const rs = k === 'all' ? main : main.filter((r) => r.react === k); const o = reasonOf(rs); reasons[k] = o;
+  const tot = Object.values(o).reduce((t, v) => [t[0] + v[0], t[1] + v[1]], [0, 0]);
+  P(`**${k}**(甘え 合計 ${r1(tot[0] / rs.length)}・恐れ 合計 ${r1(tot[1] / rs.length)}。上限は各50なので、合計は上限で止まった分を含まない)`, '');
+  table(['理由', '甘え +', '恐れ +', '回数', '甘えの割合%', '恐れの割合%'], Object.entries(o).sort((a, b) => (b[1][0] + b[1][1]) - (a[1][0] + a[1][1])).map(([w, v]) => [w, r1(v[0] / rs.length), r1(v[1] / rs.length), r1(v[2] / rs.length), pc(v[0], tot[0]), pc(v[1], tot[1])]));
+}
+J.reasons = reasons;
+// 期ごと
+P('### ターン 12・24・36 の甘え/恐れ(中央値)', '');
+table(['条件', 'T12 甘え/恐れ', 'T24', 'T36', '終わり'], ['praise', 'scold', 'smart', 'none'].map((k) => { const rs = main.filter((r) => r.react === k); const at = (t, j) => q(rs.filter((r) => r.amaAt && r.amaAt[t]).map((r) => r.amaAt[t][j]), 0.5); return [k, ...[12, 24, 36].map((t) => `${at(t, 0)}/${at(t, 1)}`), `${q(rs.map((r) => r.ama), 0.5)}/${q(rs.map((r) => r.fear), 0.5)}`]; }));
+
+// ---- 体力 ----
+P('## 体力の回復', '');
+const hpOf = (rs, k) => mean(rs.map((r) => (r.hpSrc[k] ? r.hpSrc[k][0] : 0)));
+const hpN = (rs, k) => mean(rs.map((r) => (r.hpSrc[k] ? r.hpSrc[k][1] : 0)));
+const hpKeys = [...new Set(main.flatMap((r) => Object.keys(r.hpSrc)))];
+P('### 1回の育成の体力の出入り(平均。体力の目盛りは上限100前後)', '');
+table(['出どころ', '合計(平均)', '回数(平均)', '1回あたり'], hpKeys.map((k) => [k, r1(hpOf(main, k)), r1(hpN(main, k)), r1(hpOf(main, k) / (hpN(main, k) || 1))]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])));
+P('### 体力が増える出来事ごと(1回の育成あたり)', '');
+const evIds = {}; main.forEach((r) => Object.entries(r.evHp || {}).forEach(([k, v]) => { const x = (evIds[k] = evIds[k] || [0, 0]); x[0] += v[0]; x[1] += v[1]; }));
+table(['出来事', '回復 合計/育成', '出た回数/育成', '1回あたり', '出た育成の割合%'], Object.entries(evIds).sort((a, b) => b[1][0] - a[1][0]).slice(0, 25).map(([k, v]) => [k, r1(v[0] / main.length), r1(v[1] / main.length), r1(v[0] / v[1]), pc(main.filter((r) => r.evHp && r.evHp[k]).length, main.length)]));
+P('### 育て方ごとの 出来事の回復 と 休みの回復', '');
+table(['育て方', '出来事の回復', '休みの回復', '休む回数', '出来事÷休み%', 'けが', '総合力'], [...new Set(main.map((r) => r.strategy))].map((k) => { const rs = main.filter((r) => r.strategy === k); const e = hpOf(rs, 'event+'); const rr = hpOf(rs, 'act:rest'); return [k, r1(e), r1(rr), r1(mean(rs.map((r) => r.acts.rest || 0))), pc(e, rr), r1(mean(rs.map((r) => r.injuries))), q(rs.map((r) => r.power), 0.5)]; }));
+
+// ---- 編成(主の10万回) ----
+P('## 編成ごと(主の10万回。real-B/A/S はおまかせのアシスト入り)', '');
+table(['編成', '回数', '総合力 中央', '下10%', '上10%', '勝率%', 'タッグ回数', '親密度 平均'], [...new Set(main.map((r) => r.team))].map((k) => { const rs = main.filter((r) => r.team === k); const p = rs.map((r) => r.power); return [k, rs.length, q(p, 0.5), q(p, 0.1), q(p, 0.9), winR(rs), r1(mean(rs.map((r) => r.log.tag))), r1(mean(rs.filter((r) => r.bondAvg !== null).map((r) => r.bondAvg)))]; }).sort((a, b) => b[2] - a[2]));
+
+// ---- 仮の数値(対) ----
+const byI = new Map(main.filter((r) => r.i < 8000).map((r) => [r.i, r]));
+const cf = read('cf-').filter((r) => !r.error);
+P('## 仮の数値(同じ条件 8,000 回ずつの対で比べる)', '');
+const metric = { power: (r) => r.power, statSum: (r) => r.statSum, rest: (r) => r.acts.rest || 0, inj: (r) => r.injuries, ill: (r) => r.ills, evhp: (r) => (r.hpSrc['event+'] ? r.hpSrc['event+'][0] : 0), win: (r) => (r.matches ? r.wins / r.matches : 0), ama: (r) => r.ama, fear: (r) => r.fear, sweet: (r) => (r.pol < 0 ? 1 : 0), sparta: (r) => (r.pol > 0 ? 1 : 0), techs: (r) => r.techs, sab: (r) => r.log.sab || 0, fail: (r) => r.log.fail || 0, early: (r) => (r.endTurn < 41 ? 1 : 0) };
+const diff = (rs, f) => { const d = rs.map((r) => f(r) - f(byI.get(r.i))); const m = mean(d); const sd = Math.sqrt(mean(d.map((x) => (x - m) ** 2))); return [m, 1.96 * sd / Math.sqrt(d.length)]; };
+const cfRows = []; J.cf = {};
+for (const v of [...new Set(cf.map((r) => r.variant))]) {
+  const rs = cf.filter((r) => r.variant === v && byI.has(r.i)); const base = rs.map((r) => byI.get(r.i));
+  const o = { n: rs.length }; Object.entries(metric).forEach(([k, f]) => { o[k] = diff(rs, f); o[`${k}_base`] = mean(base.map(f)); }); J.cf[v] = o;
+  cfRows.push([v, rs.length, `${r0(o.power[0])}±${r0(o.power[1])}(${r1(o.power[0] / o.power_base * 100)}%)`, `${r1(o.rest[0])}`, `${r1(o.inj[0] * 100) / 100}`, `${r1(o.ill[0] * 100) / 100}`, r1(o.evhp[0]), `${r1(o.win[0] * 100)}pt`, r1(o.ama[0]), r1(o.fear[0]), `${r1(o.sweet[0] * 100)}pt`, `${r1(o.sparta[0] * 100)}pt`, r1(o.techs[0] * 100) / 100, r1(o.sab[0] * 100) / 100, r1(o.fail[0] * 100) / 100]);
+}
+P(`基準(main の i<8000): 総合力 平均 ${r0(mean([...byI.values()].map((r) => r.power)))}・休む ${r1(mean([...byI.values()].map((r) => r.acts.rest || 0)))}回・けが ${r1(mean([...byI.values()].map((r) => r.injuries)) * 100) / 100}・出来事の回復 ${r1(mean([...byI.values()].map(metric.evhp)))}・甘い側で終わる ${pc([...byI.values()].filter((r) => r.pol < 0).length, byI.size)}%`, '');
+table(['仮の数値', '対の数', '総合力の差(平均±95%)', '休む回数の差', 'けがの差', '病気の差', '出来事の回復の差', '勝率の差', '甘えの差', '恐れの差', '甘い側で終わる差', '厳しい側で終わる差', '技の数の差', 'サボりの差', '失敗の差'], cfRows);
+
+// ---- アシスト ----
+const as = read('assist-').filter((r) => !r.error);
+if (as.length) {
+  P('## アシスト(同じ条件 400 回ずつ・対で比べる)', '');
+  const by = {}; as.forEach((r) => { (by[r.team] = by[r.team] || new Map()).set(r.i, r); });
+  const pdiff = (t, b) => { const A = by[t], B = by[b]; if (!A || !B) return [null, null]; const d = [...A.keys()].filter((i) => B.has(i)).map((i) => A.get(i).power - B.get(i).power); const m = mean(d); const sd = Math.sqrt(mean(d.map((x) => (x - m) ** 2))); return [m, 1.96 * sd / Math.sqrt(d.length)]; };
+  const pm = (t) => mean([...by[t].values()].map((r) => r.power));
+  P('### 編成の強さ(ベースモンだけ・メモモン1体・3体・6体、能力だけでアシストなし)', '');
+  const G = ['base', 'memo1-B', 'memo1-A', 'memo1-S', 'memo3-S', 'bare-B', 'real-B', 'bare-A', 'real-A', 'bare-S', 'real-S', 'battle-S'];
+  table(['編成', '総合力 平均', '中央', 'ベースモンだけとの差', '勝率%', 'タッグ回数', '休む', 'けが'], G.filter((t) => by[t]).map((t) => { const rs = [...by[t].values()]; const d = pdiff(t, 'base'); return [t, r0(pm(t)), q(rs.map((r) => r.power), 0.5), `${r0(d[0])}±${r0(d[1])}(${r1(d[0] / pm('base') * 100)}%)`, winR(rs), r1(mean(rs.map((r) => r.log.tag))), r1(mean(rs.map((r) => r.acts.rest || 0))), r1(mean(rs.map((r) => r.injuries)))]; }));
+  P('- アシストの効き目だけ = real-X − bare-X(能力・技は同じでアシストの有無だけ違う)', '');
+  table(['ランク', 'アシストだけの差', '割合'], ['B', 'A', 'S'].filter((k) => by[`real-${k}`]).map((k) => { const d = pdiff(`real-${k}`, `bare-${k}`); return [k, `${r0(d[0])}±${r0(d[1])}`, `${r1(d[0] / pm(`bare-${k}`) * 100)}%`]; }));
+  P('### 1種類だけを6体全員に最大で付けたとき(bare-S との差・多い順)', '');
+  const probes = Object.keys(by).filter((t) => t.startsWith('probe-')).map((t) => { const id = t.slice(6); const a = AT.LIST.find((x) => x.id === id); const d = pdiff(t, 'bare-S'); const cost = AT.costOf(id, a.max); return { id, name: a.name, type: a.type, max: a.max, v: AT.valueText ? AT.valueText(id, a.max) : '', cost, d: d[0], ci: d[1], per: d[0] / cost }; });
+  J.probes = probes;
+  const bareS = pm('bare-S');
+  table(['id', '名前', '型', '最大の効き目', '1体の値段', '総合力の差', '±95%', '割合%', '1ポイントあたり'], probes.sort((a, b) => b.d - a.d).map((p) => [p.id, p.name, p.type, p.v, p.cost, r0(p.d), r0(p.ci), r1(p.d / bareS * 100), r1(p.per)]));
+  P(`- 差が ±95% の幅に収まる(=効いているか分からない)物: ${probes.filter((p) => Math.abs(p.d) <= p.ci).length} 種`, '');
+}
+fs.writeFileSync(path.join(dir, '..', 'tables.json'), JSON.stringify(J));
+process.stdout.write(L.join('\n'));
