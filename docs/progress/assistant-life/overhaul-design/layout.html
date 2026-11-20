@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>助手ライフ 配置図</title>
+<!-- 助手ライフの作り直しの配置図(案)。前 = 総点検の本番の止め絵 / 後 = 手で描いた枠の図。
+     撮り直し: node docs/progress/assistant-life/overhaul-design/shoot.js -->
+<style>
+  :root { --ink:#1f2937; --line:#94a3b8; --soft:#f1f5f9; --main1:#ec4899; --main2:#f97316; --acc:#fde68a; }
+  * { box-sizing:border-box; }
+  body { word-break:auto-phrase; margin:0; background:#fff; color:var(--ink); font-family:"Noto Sans CJK JP","Hiragino Sans",sans-serif; }
+  .row { display:flex; gap:28px; align-items:flex-start; padding:24px 28px 28px; width:max-content; }
+  .col h3 { margin:0 0 8px; font-size:17px; }
+  .col h3 small { font-weight:normal; color:#64748b; font-size:13px; margin-left:6px; }
+  .title { padding:20px 28px 0; font-size:24px; font-weight:bold; }
+  .title small { display:block; font-size:14px; font-weight:normal; color:#475569; margin-top:4px; }
+  .before img { width:390px; height:844px; border:2px solid #cbd5e1; border-radius:14px; display:block; }
+  .phone { width:390px; height:844px; border:2px solid var(--ink); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; background:#fff; }
+  .pc { width:1280px; height:800px; border:3px solid var(--ink); border-radius:10px; display:flex; flex-direction:column; background:#fff; }
+  .pcwrap { width:1280px; height:800px; }
+  .beforepc img { width:640px; height:400px; border:2px solid #cbd5e1; border-radius:10px; display:block; }
+  .pc .box, .pc .fold, .pc .rowi { font-size:15px; } .pc .box b { font-size:16px; }
+  .pcbody { flex:1; display:flex; gap:20px; padding:16px 20px; min-height:0; }
+  .pcl { flex:1.25; display:flex; flex-direction:column; gap:12px; min-height:0; }
+  .pcr { flex:1; display:flex; flex-direction:column; gap:12px; min-height:0; }
+  .tbody { flex:1; display:flex; flex-direction:column; gap:10px; padding:10px 14px; min-height:0; }
+  .bar { height:48px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 14px; border-bottom:2px solid var(--ink); font-size:14px; font-weight:bold; }
+  .bar .t { font-size:16px; }
+  .bar .r { font-size:12px; font-weight:normal; color:#334155; }
+  .tabs { height:56px; flex:none; display:flex; border-top:2px solid var(--ink); }
+  .tabs div { flex:1; display:flex; align-items:center; justify-content:center; font-size:12px; border-left:1px dashed var(--line); }
+  .tabs div:first-child { border-left:none; }
+  .tabs .on { background:linear-gradient(90deg,var(--main1),var(--main2)); color:#fff; font-weight:bold; }
+  .box { border:2px solid var(--line); border-radius:12px; padding:8px 12px; font-size:13px; background:var(--soft); }
+  .box b { font-size:14px; }
+  .goal { background:var(--acc); border-color:#d97706; }
+  .scene { border:2px solid var(--ink); border-radius:12px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:14px; color:#475569;
+           background:repeating-linear-gradient(45deg,#f8fafc 0 10px,#eef2f7 10px 20px); flex:none; }
+  .main { min-height:56px; border-radius:14px; background:linear-gradient(90deg,var(--main1),var(--main2)); color:#fff; font-size:17px; font-weight:bold;
+          display:flex; align-items:center; justify-content:center; position:relative; flex:none; box-shadow:0 0 0 4px #fbcfe8; }
+  .main .star { position:absolute; right:-6px; top:-14px; background:#111; color:#fde047; font-size:11px; padding:2px 8px; border-radius:10px; }
+  .btns { display:flex; gap:10px; flex:none; }
+  .btn { flex:1; min-height:48px; border:2px solid var(--ink); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; background:#fff; }
+  .rowi { display:flex; align-items:center; gap:10px; border:2px solid var(--line); border-radius:12px; padding:8px 10px; font-size:13px; flex:none; }
+  .rowi .face { width:40px; height:40px; border-radius:50%; border:2px solid var(--ink); flex:none; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .rowi .tx { flex:1; }
+  .rowi .sb { border:2px solid var(--ink); border-radius:10px; padding:6px 10px; font-weight:bold; font-size:13px; flex:none; }
+  .rowi .sb.go { background:linear-gradient(90deg,var(--main1),var(--main2)); color:#fff; border-color:transparent; }
+  .fold { border:2px dashed var(--line); border-radius:12px; padding:8px 12px; font-size:13px; color:#475569; flex:none; }
+  .card { width:170px; height:227px; border:3px solid #dc2626; border-radius:12px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:6px; font-size:12px; flex:none;
+          background:linear-gradient(#fff,#fee2e2); position:relative; }
+  .card .g { position:absolute; right:6px; top:4px; font-weight:bold; color:#dc2626; }
+  .card .ic { position:absolute; left:6px; top:4px; }
+  .card .nm { background:#1f2937; color:#fff; width:100%; text-align:center; border-radius:6px; padding:2px 0; }
+  .pc .cardwrap { align-items:flex-start !important; }
+  .pc .card { width:330px; height:440px; font-size:16px; }
+  .note { font-size:12px; color:#64748b; }
+  .legend { padding:0 28px 18px; font-size:13px; color:#334155; }
+  .legend span { display:inline-block; margin-right:16px; }
+  .sw { display:inline-block; width:22px; height:12px; border-radius:4px; vertical-align:middle; margin-right:4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// 画面ごとの部品。kind: bar / goal / box / scene(h) / main / btns / rowi / fold / card / tabs(on)
+const TABS = ['🏡 家', '🗺 町', '🤝 友情', '🏠 フレンド', '🐾 マスモン'];
+const SCREENS = [
+  {
+    id: 'house', name: '家', before: 'tate-01-house-open.jpg', beforePc: 'pc-01-house-open.jpg', beforeNote: 'いちばん目立つのは「📒 育成ノート」の帯。押せる所 19個・字の段 13',
+    want: '👀 見る', tab: 0,
+    bar: ['← 戻る', '家', '15:00 昼 · 次に動くのは 16:00'],
+    top: [
+      { k: 'goal', html: '<b>💗 次のごほうび</b> あと <b>120</b><br>みゅあ Lv5 で「みゅあちん」と呼べる' },
+    ],
+    scene: { h: 330, text: '家の絵(8部屋の札)<br>家にいる子だけ明るく・留守の部屋は「モンヒロバトル中」の1行' },
+    rest: [
+      { k: 'main', text: '👀 見る — みゅあ と あつ の話' },
+      { k: 'box', html: '<b>今日の目標</b> ✅ 見る ☐ 話す ☐ 贈る<br><span class="note">3つで 🎉 にぎやか(🤝 の上がり方 ×1.5)· 7日で おやつバスケット</span>' },
+      { k: 'fold', text: '今日あったこと ▼(喧嘩・仲直り・拾い物)', pc: '<b>今日あったこと</b><br>💢 ドラ・きゅうこ が喧嘩(読む)<br>🤝 みゅあ・あつ が仲直り(読む)<br>🧺 みゅあ が拾い物「星のかけら」' },
+    ],
+  },
+  {
+    id: 'room', name: '部屋', before: 'tate-12-room-alone-scroll.jpg', beforePc: 'pc-11-room-alone.jpg', beforeNote: '「できること」12行+「詳しく」に同じ物がもう一度',
+    want: '💬 話す', tab: 0,
+    bar: ['← 戻る', 'みゅあの部屋', '15:00 昼'],
+    top: [
+      { k: 'box', html: '<b>💗 Lv4 相棒</b> あと 120 で Lv5 &nbsp;·&nbsp; <b>🌡 元気</b>' },
+    ],
+    scene: { h: 440, text: '部屋の絵(全身画・家具)<br>全身が左右で切れない幅' },
+    rest: [
+      { k: 'main', text: '💬 話す' },
+      { k: 'btns', items: ['🎁 贈る', '🎉 誘う'] },
+      { k: 'fold', text: 'もっと ▼ 予定 · マスモン · 家具 · みゅあのこと' },
+    ],
+  },
+  {
+    id: 'town', name: '町', before: 'tate-30-town.jpg', beforePc: 'pc-30-town.jpg', beforeNote: '町だけタブが上・得が場所ごとに6種類',
+    want: '得のいちばん大きい場所へ「行く」', tab: 1,
+    bar: ['← 戻る', '町', '15:00 昼 · 次に動くのは 16:00'],
+    top: [],
+    scene: { h: 460, text: '町の地図<br>場所の上に顔(大きさをそろえる)<br>得の札は 💗多め / 🎟 券・割引 の2種類だけ' },
+    rest: [
+      { k: 'main', text: '🃏 MFバトルカードへ行く(💗 多め)' },
+      { k: 'rowi', face: 'ドラ', tx: 'ドラ · MFバトルカード · カード研究', sb: '部屋へ' },
+      { k: 'rowi', face: 'あつ', tx: 'あつ · モンヒロバトル · 修行', sb: '部屋へ' },
+    ],
+  },
+  {
+    id: 'yujo', name: '友情(助手どうし)', before: 'tate-41-kizuna-mid.jpg', beforeNote: 'タブ「きずな」の中に 💗 と 🤝 が混ざる',
+    want: '上がりそうなペアを「見る」', tab: 2,
+    bar: ['← 戻る', '友情', '15:00 昼'],
+    top: [],
+    scene: { h: 400, text: '関係図(線の上に友情Lv)<br>線を押すと そのペアの話' },
+    rest: [
+      { k: 'main', text: '👀 あつ × みゅあ を見る(あと 8 で Lv4)' },
+      { k: 'rowi', face: '2人', tx: 'ドラ × きゅうこ · 友情Lv3 · 上がると特別なお話', sb: '見る' },
+      { k: 'rowi', face: '2人', tx: 'もも × ソラシド · 💢 喧嘩中 · 仲直りを見る', sb: '見る' },
+      { k: 'fold', text: '2人のできごと ▼(喧嘩・仲直り)· 思い出アルバム ▼' },
+    ],
+  },
+  {
+    id: 'friend', name: 'フレンド', before: 'tate-60-friend-tab.jpg', beforeNote: '目立つのは説明を閉じる「分かった」。「訪ねる」は下で半分切れ',
+    want: '🚪 訪ねる', tab: 3,
+    bar: ['← 戻る', 'フレンド', '15:00 昼'],
+    top: [],
+    scene: { h: 260, text: 'ゆうとさんの家の絵<br>玄関・いま来ている助手の顔' },
+    rest: [
+      { k: 'rowi', face: '顔', tx: '<b>ゆうとさんの家</b><br>🏠 おなじみ度 Lv3 常連さん · スタンプ 2/3', sb: '' },
+      { k: 'main', text: '🚪 ゆうとさんの家を訪ねる' },
+      { k: 'rowi', face: '顔', tx: 'はるさんの家 · Lv1 はじめまして', sb: '訪ねる' },
+      { k: 'rowi', face: '顔', tx: 'きゅうこ が遊びに来た(💗 +5)', sb: '迎える' },
+      { k: 'fold', text: '置き手紙 ▼ · マスモンを見せる ▼' },
+    ],
+  },
+  {
+    id: 'masmon', name: 'マスモン', before: 'tate-18-masmon-tab-team.jpg', beforeNote: '7つの「?」の枠・点線の「まだ」がいる1体より目立つ',
+    want: 'いる子の札と「応援する」', tab: 4,
+    bar: ['← 戻る', 'みゅあのマスモン', '15:00 昼'],
+    top: [],
+    scene: null,
+    card: true,
+    rest: [
+      { k: 'main', text: '📣 応援する' },
+      { k: 'box', html: '<b>予定(育成ノート)</b><br>朝 ちから修行 ✅ · 昼 休む ✅ · 夜 かしこさ修行' },
+      { k: 'box', html: 'あと 💗 Lv3 で 2体目を迎えられる' },
+      { k: 'box', html: '<b>今日の様子</b><br>🌅 朝 ちから修行で「頭突き」の熟練 +2<br>☀️ 昼 休んで マスモンの疲れ −10' },
+      { k: 'fold', text: 'くわしく ▼(能力・修行・忠誠度・寿命)· 対戦β · 提案と相談' },
+    ],
+  },
+];
+
+const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
+let inPc = false;
+const part = (p) => {
+  if (p.k === 'goal') return `<div class="box goal">${p.html}</div>`;
+  if (p.k === 'box') return `<div class="box">${p.html}</div>`;
+  if (p.k === 'main') return `<div class="main">${p.text}<span class="star">★ いちばん押してほしい</span></div>`;
+  if (p.k === 'btns') return `<div class="btns">${p.items.map(t => `<div class="btn">${t}</div>`).join('')}</div>`;
+  if (p.k === 'rowi') return `<div class="rowi"><div class="face">${p.face}</div><div class="tx">${p.tx}</div>${p.sb ? `<div class="sb">${p.sb}</div>` : ''}</div>`;
+  if (p.k === 'fold') return (inPc && p.pc) ? `<div class="box">${p.pc}</div>` : `<div class="fold">${p.text}</div>`;
+  return '';
+};
+const cardHtml = `<div class="cardwrap" style="display:flex;gap:14px;align-items:flex-end;flex:none">
+  <div class="card"><span class="ic">🏋️<br>❤️</span><span class="g">A2</span><div style="flex:1;display:flex;align-items:center;color:#94a3b8">全身の絵</div><div class="nm">ぷにまる Lv12</div></div>
+  <div class="box" style="flex:1"><b>総合力 2,967</b> · ランク <b>F</b><br>今日の伸び 31/45<br><span class="note">MonsucMonCard 大(モンサクと同じ形)</span></div></div>`;
+const barHtml = (b) => `<div class="bar"><span>${b[0]}</span><span class="t">${b[1]}</span><span class="r">${b[2]}</span></div>`;
+const tabsHtml = (on) => `<div class="tabs">${TABS.map((t, i) => `<div class="${i === on ? 'on' : ''}">${t}</div>`).join('')}</div>`;
+
+const tate = (s) => `<div class="phone">${barHtml(s.bar)}<div class="tbody">
+  ${s.top.map(part).join('')}
+  ${s.card ? cardHtml : ''}
+  ${s.scene ? `<div class="scene" style="height:${s.scene.h}px">${s.scene.text}</div>` : ''}
+  ${s.rest.map(part).join('')}
+</div>${tabsHtml(s.tab)}</div>`;
+
+const pc = (s) => { inPc = true; const h = pcInner(s); inPc = false; return h; };
+const pcInner = (s) => `<div class="pcwrap"><div class="pc">${barHtml(s.bar)}<div class="pcbody">
+  <div class="pcl">${s.card ? cardHtml.replace('width:150px;height:200px', 'width:300px;height:400px') : ''}${s.scene ? `<div class="scene" style="flex:1">${s.scene.text}</div>` : (s.card ? '' : s.rest.filter(p => p.k === 'rowi').slice(0, 1).map(part).join(''))}</div>
+  <div class="pcr">${s.top.map(part).join('')}${s.rest.filter(p => s.scene || s.card || p.k !== 'rowi' || s.rest.filter(q => q.k === 'rowi').indexOf(p) > 0).map(part).join('')}</div>
+</div>${tabsHtml(s.tab)}</div></div>`;
+
+const root = document.getElementById('root');
+for (const s of SCREENS) {
+  const sec = el(`<section id="s-${s.id}" style="width:max-content">
+    <div class="title">${s.name}<small>いちばん押してほしい物: <b>${s.want}</b> · 前の止め絵: ${s.beforeNote}</small></div>
+    <div class="row">
+      <div class="col before"><h3>前・縦 <small>本番の止め絵(390×844・総点検)</small></h3><img src="../../kensa/assistant-life-overhaul-2026-11/shots/${s.before}"></div>
+      <div class="col"><h3>後・縦 <small>390×844</small></h3>${tate(s)}</div>
+      <div class="col" style="width:420px"><h3>見方</h3><div class="legend" style="padding:0">
+          <p><i class="sw" style="background:linear-gradient(90deg,#ec4899,#f97316)"></i>主なボタン(1画面に1つ・120×44px 以上・字13px 以上)</p>
+          <p><i class="sw" style="background:#fde68a;border:1px solid #d97706"></i>次のごほうび(家だけ)</p>
+          <p><i class="sw" style="border:2px dashed #94a3b8"></i>畳んである物(押すと開く)</p>
+          <p>斜めの縞 = 絵の場所(家・部屋・地図・関係図)</p>
+          <p>字は 見出し16・本文13・注11・数字20 の4段だけ</p>
+          <p>上の帯: 左「← 戻る」・右に時刻(時刻の話はここだけ)</p>
+          <p>下のタブ: 家・町・友情・フレンド・マスモンの5つ<br>(どの画面も同じ位置)</p></div></div>
+    </div>
+    <div class="row">
+      ${s.beforePc ? `<div class="col beforepc"><h3>前・PC <small>1280×800 を半分で表示</small></h3><img src="../../kensa/assistant-life-overhaul-2026-11/shots/${s.beforePc}"></div>` : ''}
+      <div class="col"><h3>後・PC <small>1280×800 · 左に場面・右に中身の2段組</small></h3>${pc(s)}</div>
+    </div>
+  </section>`);
+  root.appendChild(sec);
+}
+</script>
+</body>
+</html>
