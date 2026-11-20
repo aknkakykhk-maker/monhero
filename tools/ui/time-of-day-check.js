@@ -1,6 +1,6 @@
 // 時間帯で変わる雰囲気・いまの時刻(monster-hero/src/parts/44-time-of-day.jsx)の見張り。2026-11-07 演出担当ハナビ
 // 守ること(社長・統括):
-//  ・区切りは日本時間で 朝5:00〜 / 昼10:00〜 / 夕16:00〜 / 夜19:00〜4:59。端末の時間帯の設定に左右されない
+//  ・区切りは日本時間で 深夜0:00〜 / 朝6:00〜 / 昼10:00〜 / 夕方16:00〜 / 夜18:00〜(2026-11-20 r1119-044)。深夜の見た目は夜。端末の時間帯の設定に左右されない
 //  ・お話・モンヒロビートの演奏中とリザルト・バトル中・カードの場には色を重ねない(遊ぶ表示の見やすさ・演奏中の重さ)
 //  ・色は CSS の層だけ(混ぜ方 mix-blend-mode・ぼかし backdrop-filter を使わない。古い端末でも軽い)
 //  ・保存は新しいキー mh_time_of_day_v1 だけ。画面を切り替えない
@@ -20,8 +20,8 @@ const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(`${head}\nthis.at=timeOfDayAt;this.clock=timeOfDayClockText;this.norm=normalizeTimeOfDaySettings;this.KEY=TIME_OF_DAY_STORAGE_KEY;`, ctx);
 const jst = (h, m) => Date.UTC(2026, 10, 7, h - 9, m); // 日本時間 h:m の時刻
-const cases = [[4, 59, 'night'], [5, 0, 'morning'], [9, 59, 'morning'], [10, 0, 'day'], [15, 59, 'day'], [16, 0, 'evening'], [18, 59, 'evening'], [19, 0, 'night'], [23, 59, 'night'], [0, 0, 'night']];
-for (const [h, m, want] of cases) { const got = ctx.at(jst(h, m)).id; if (got !== want) ng(`日本時間 ${h}:${String(m).padStart(2, '0')} は ${want} のはずが ${got}`); }
+const cases = [[5, 59, 'night', '深夜'], [6, 0, 'morning', '朝'], [9, 59, 'morning', '朝'], [10, 0, 'day', '昼'], [15, 59, 'day', '昼'], [16, 0, 'evening', '夕方'], [17, 59, 'evening', '夕方'], [18, 0, 'night', '夜'], [23, 59, 'night', '夜'], [0, 0, 'night', '深夜']];
+for (const [h, m, want, name] of cases) { const s = ctx.at(jst(h, m)); if (s.id !== want || s.label !== name) ng(`日本時間 ${h}:${String(m).padStart(2, '0')} は ${want}・${name} のはずが ${s.id}・${s.label}`); }
 if (ctx.clock(jst(21, 4)) !== '21:04') ng(`24時間表示が日本時間になっていない(${ctx.clock(jst(21, 4))})`);
 for (const [h, m, want] of [[0, 4, 'AM 12:04'], [9, 5, 'AM 9:05'], [12, 6, 'PM 12:06'], [13, 7, 'PM 1:07'], [23, 8, 'PM 11:08']]) {
   const got = ctx.clock(jst(h, m), '12h'); if (got !== want) ng(`AM・PM表示 ${h}:${m} が ${want} でない(${got})`);
