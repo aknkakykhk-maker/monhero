@@ -81,7 +81,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
           // ランクアップの大きな演出(押すと閉じる)を閉じる
           for (let k = 0; k < 4; k++) { await page.mouse.click(Math.round(W / 2), Math.round(H / 3)); await page.waitForTimeout(500); }
           await page.evaluate(() => { const b = document.querySelector('[data-rhythm-result-scroll]'); if (b) b.scrollTop = 0; });
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(2500);
           if (process.env.SHOT) await page.screenshot({ path: `${process.env.SHOT}-${W}x${H}.png` });
           const m = await page.evaluate(() => {
             const box = document.querySelector('[data-rhythm-result-scroll]'); if (!box) return { none: true };
