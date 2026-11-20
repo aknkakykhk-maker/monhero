@@ -74,7 +74,7 @@ const makeRun = async (kind) => {
   // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
   const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
   // s568 = 小さい横 568×320(見た目の点検 visual-shoot.js --monsuc-deep が名指しするときだけ撮る。r1119-014 PR3 の続き)
-  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
+  const sizes = onlySizes.length ? [...sizesAll, [568, 320, 's568'], [1280, 800, 'pc']].filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -101,13 +101,15 @@ const makeRun = async (kind) => {
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
+    // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
+    ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
     ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
   // 名指ししたときだけ撮る場面(全サイズで回すと success-layout-check が 600秒を超えるため。2026-11-14)
   //   M3A = 持ち物に育成中の物を全部並べた所 / S4L = 持ちこみで升目を押した所。名前の折れは S4・M3 で全サイズ見張っている
-  const OPT_IN = ['M3A', 'S4L', 'S4E'];
+  const OPT_IN = ['M3A', 'S4L', 'S4E', 'SQE', 'SQT', 'SQV'];
   const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL.filter(([n]) => !OPT_IN.includes(n));
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -132,6 +134,11 @@ const makeRun = async (kind) => {
           window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4, debug: false }));
         }, { kind, mk: makeRun.toString() });
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
+        // SHOT_SEQ=E2,K5 … その場面は操作のたびに1枚撮る(続きの止め絵。見せ場と流れの点検 r1119-033)
+        const seq = SHOT_DIR && (process.env.SHOT_SEQ || '').split(',').includes(name);
+        let seqN = 0;
+        const seqShot = async () => { if (seq) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}~${String(seqN++).padStart(2, '0')}${tag ? `-${tag}` : ''}.png`) }); } };
+        await seqShot();
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             const btn = (re) => [...document.querySelectorAll('.msx button')].find((b) => re.test(b.innerText || '') && !b.disabled);
@@ -320,7 +327,8 @@ const makeRun = async (kind) => {
             return false;
           }, st);
           if (!done) check(`${name}${tag ? `(${tag})` : ''}: 「${st}」のボタンが押せる`, false, JSON.stringify(await page.evaluate(() => window.__scrubInfo || null)));
-          await page.waitForTimeout(350);
+          await page.waitForTimeout(seq ? 900 : 350);
+          await seqShot();
         }
         await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
         if (process.env.SHOT_TINY) { // SHOT_TINY=10: この大きさ(px)より小さい字を、字と className で書き出す(添え字の 8px 探し・④ 2026-11-20)
