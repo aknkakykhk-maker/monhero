@@ -48,7 +48,7 @@ const makeRun = async (kind) => {
   const sizes = SHOT_DIR ? [[390, 844, ''], [320, 568, 's320']] : [[390, 844, '']];
   // SHOT_SIZES=base,land,s568 で大きさを選ぶ(見た目の点検 visual-shoot.js --monsuc-deep が使う。land = 横844×390・s568 = 小さい横568×320)
   const pickSizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568']].filter(([, , t]) => pickSizes.includes(t || 'base')));
+  if (SHOT_DIR && pickSizes.length) sizes.splice(0, sizes.length, ...[[390, 844, ''], [844, 390, 'land'], [320, 568, 's320'], [568, 320, 's568'], [1280, 800, 'pc']].filter(([, , t]) => pickSizes.includes(t || 'base')));
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; // 撮る場面を絞る(例 ONLY=S6)
   const SHOTS0 = [
@@ -93,6 +93,11 @@ const makeRun = async (kind) => {
           window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4, debug: false }));
         }, { kind, mk: makeRun.toString() });
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
+        // SHOT_SEQ=S6,G4 … その場面は操作のたびに1枚撮る(続きの止め絵。見せ場と流れの点検 r1119-033)
+        const seq = SHOT_DIR && (process.env.SHOT_SEQ || '').split(',').includes(name);
+        let seqN = 0;
+        const seqShot = async () => { if (seq) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `arc-${name}~${String(seqN++).padStart(2, '0')}${tag ? `-${tag}` : ''}.png`) }); } };
+        await seqShot();
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -110,6 +115,7 @@ const makeRun = async (kind) => {
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === 'wait' ? 5600 : st === '%quick' ? 1500 : 700);
+          await seqShot();
         }
         await page.waitForTimeout(500);
         const m = await page.evaluate(() => {
