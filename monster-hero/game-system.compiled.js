@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc1883db8eea70f6
+// source-sha256: ace1a8e853d0a6fc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116145,6 +116145,12 @@ const assistantLifeGroupNames = (ids, max = 4) => {
 };
 const assistantLifeTodLabel = (now = Date.now()) => {
   try {
+    if (typeof assistantLifeSlotAt === 'function') {
+      const l = assistantLifeSlotAt(now).label;
+      if (l) return l;
+    }
+  } catch (_) {}
+  try {
     if (typeof timeOfDayLabelAt === 'function') return timeOfDayLabelAt(now);
   } catch (_) {}
   return {
@@ -116305,6 +116311,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
 .mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:normal}.mhl-tile b>span,.mhl-tile small>span{white-space:nowrap}
+.mhl-tile.mhl-main{flex:1.8 1 0%;min-height:66px}.mhl-tile.mhl-main i{font-size:22px}.mhl-tile.mhl-main b{font-size:17px}.mhl-tile.mhl-main small{font-size:11px}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
 .mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
@@ -117182,7 +117189,7 @@ function AssistantLifeRoomSheet({
     k: cardSpent ? 'card-spent' : 'card',
     icon: "🃏",
     label: "MFバトルカードで対戦する",
-    sub: "カード部屋にいる助手と対戦すると、ごほうびアップ",
+    sub: "MFバトルカードにいる助手と対戦すると、ごほうびアップ",
     gain: `ごほうび ${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`,
     on: () => onCard(id),
     disabled: !!cardSpent,
@@ -117583,7 +117590,7 @@ function AssistantLifeRoomSheet({
     className: "mhl-btn mhl-card col-span-2",
     "data-assistant-life-room-act": "card",
     onClick: () => onCard(id)
-  }, "🃏 カード部屋で対戦する ", React.createElement("span", {
+  }, "🃏 MFバトルカードで対戦する ", React.createElement("span", {
     className: "mhl-card-up"
   }, "ごほうびアップ")))), React.createElement("button", {
     type: "button",
@@ -117784,10 +117791,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1386,
-      eye: 0.3072,
-      chin: 0.4187,
-      m: 0.829
+      top: 0.1498,
+      eye: 0.3408,
+      chin: 0.4295,
+      m: 0.66
     },
     momosuke: {
       top: 0.0636,
@@ -117845,10 +117852,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1502,
-      eye: 0.3379,
-      chin: 0.4334,
-      m: 0.711,
+      top: 0.1757,
+      eye: 0.316,
+      chin: 0.4299,
+      m: 0.847,
       above: 0.85
     },
     momosuke: {
@@ -117868,10 +117875,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1166,
-      eye: 0.2283,
-      chin: 0.2953,
-      m: 0.499,
+      top: 0.1327,
+      eye: 0.3124,
+      chin: 0.43,
+      m: 0.875,
       above: 0.75
     }
   },
@@ -118908,7 +118915,7 @@ function AssistantLifeHouse({
     "data-assistant-life-today": true
   }, React.createElement("button", {
     type: "button",
-    className: `mhl-tile mhl-watch flex-1${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`,
+    className: `mhl-tile mhl-watch mhl-main${land ? ' col-span-2' : ''}${uiV2 && guideSeen === false && unwatched.length ? ' mhl-glow' : ''}`,
     "data-assistant-life-today-act": "watch",
     disabled: watchLeft <= 0 || !unwatched.length,
     onClick: () => {
@@ -119039,7 +119046,7 @@ function AssistantLifeHouse({
   }, assistantLifeTodLabel(), " ・ ", React.createElement("span", {
     "data-assistant-life-next-slot": true,
     className: "whitespace-nowrap"
-  }, assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), React.createElement("div", {
+  }, assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), (!uiV2 || tab === 'house') && React.createElement("div", {
     className: "mt-1 flex items-center gap-1.5",
     "data-assistant-life-tier": tier.id,
     title: ASSISTANT_LIFE_TIER_NOTES[tier.id]
@@ -119136,8 +119143,6 @@ function AssistantLifeHouse({
       markGuideSeen();
       if (unwatched[0]) watch(unwatched[0]);
     }
-  }), topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
-    land: land
   }), topOn && React.createElement("div", {
     className: "mb-1 flex justify-center",
     "data-assistant-life-top-house": true
@@ -119207,7 +119212,7 @@ function AssistantLifeHouse({
   }), uiV2 && typeof AssistantLifePlanBand === 'function' && React.createElement(AssistantLifePlanBand, {
     ids: ids,
     land: land
-  }), !topOn && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+  }), typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
     land: land
   }), React.createElement("div", {
     className: land ? 'mb-1 flex justify-start' : 'mb-1 flex justify-end',
