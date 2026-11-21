@@ -106,7 +106,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
 
-function MsxR3Box({ onClose }) {
+function MsxR3Box({ onClose, fromMb = false }) {
+  // 見出しの「(モンサク)」は本編の M/B管理 から入った時だけ。モンサクの中では「マスモンボックス」だけ(r1119-069 育-160・206)
+  const boxTitle = fromMb ? 'マスモンボックス(モンサク)' : 'マスモンボックス';
   const [box, setBox] = useState(null);
   const [meta, setMeta] = useState(null);
   const [fav, setFav] = useState([]);
@@ -243,11 +245,11 @@ function MsxR3Box({ onClose }) {
     </>);
   }
 
-  let body = null; let foot = null; let title = 'マスモンボックス(モンサク)';
+  let body = null; let foot = null; let title = boxTitle;
   if (!box) body = <div className="msx-note" style={{ margin: 'auto' }}>読み込んでいます…</div>;
   // ---- 入口(mm-02 型) ----
   else if (page === 'gate' || (page === 'fuse' && fuseEl)) {
-    title = 'マスモンボックス(モンサク)';
+    title = boxTitle;
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxBody(aid, 'happy')} alt=""/>
         {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
@@ -285,11 +287,11 @@ function MsxR3Box({ onClose }) {
         attrs={(m) => ({ 'data-msx-assist-mon': m.id })}
         onPick={(m) => { if (atab === 'rm') setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id]); else { setAsel(m.id); setMsg(''); } }}/>
         : <div className="msx-note" style={{ padding: 8 }}>{stock.length ? '検索に当てはまるモンスターがいません' : 'まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります'}</div>}</div>
-      <div className="mm-bar"><span className="cnt">メモモン <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span></div>
+      <div className="mm-bar"><span className="cnt">メモリアルモンスター <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span></div>
       {acur && atab === 'list' && typeof MsxMonDetail === 'function' ? (() => {
         const kp = acur.keep && typeof acur.keep === 'object' ? acur.keep : null;
         const kAt = kp && Number.isFinite(kp.at) && kp.at > 0 ? new Date(kp.at) : null;
-        return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモモン`}
+        return (<MsxMonDetail {...detailBase(acur)} sub={`Lv.${Math.round(Number(acur.lv) || 1)}・${msxMonName(acur.species)}・メモリアルモンスター`}
           info={detailInfo(acur, [kp ? ['残ったわけ', kp.from === 'fuse' ? '合体の親' : 'お別れ'] : null, kAt ? ['残った日', `${kAt.getFullYear()}/${kAt.getMonth() + 1}/${kAt.getDate()}`] : null])}
           foot={<>{/* 使い道の注意文は一覧の上の1か所だけ(詳細の窓と二重だった・2026-11-20 r1119-033 育-53) */}
             <div className="mm-acts"><button type="button" onClick={() => { setApick([acur.id]); setAAsk(true); }} data-msx-assist-detail-rm>外す</button></div></>}
