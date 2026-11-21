@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d2103a96b862f53
+// source-sha256: 5d2d3f38d5e54a9f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13939,6 +13939,72 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_C
   },
   className: `rounded-full ${monsterArtUrlNeedsContain(icon) ? 'object-contain' : 'object-cover'} inline-block shrink-0`
 }) : icon;
+const MONSTER_STAGE_SIZE = Object.freeze({
+  Mocchi: 0.72,
+  Suezo: 0.72,
+  Ghost: 0.75,
+  Plant: 0.8,
+  Ham: 0.82,
+  KenshiMocchi: 0.82,
+  Spooky: 0.82,
+  Ark: 0.85,
+  Tiger: 0.9,
+  Mitarashi: 0.9,
+  Pixie: 0.92,
+  Mia: 0.95,
+  Pandora: 0.95,
+  Snegurochka: 0.98,
+  Dreamy: 0.98,
+  Oboro: 1,
+  Undine: 1,
+  Yaobikuni: 1,
+  Illumine: 1,
+  Kyubi: 1,
+  Orihime: 1,
+  Iblis: 1.05,
+  MelWhip: 1.05,
+  Yggdrasil: 1.1,
+  Eiki: 1.15,
+  Zan: 1.25,
+  Melody: 1.3,
+  Kuromy: 1.3,
+  Monol: 1.4,
+  Golem: 1.45
+});
+const MONSTER_STAGE_REF = 0.8;
+const MONSTER_STAGE_MAX_W = 1.5;
+const monsterStageSizeOf = id => {
+  const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+};
+const monsterStageFit = (id, boxW, boxH) => {
+  const W = Number(boxW),
+    H = Number(boxH);
+  if (!(W > 0) || !(H > 0)) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[id] : null;
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const key = mon && typeof mon.imgUrl === 'string' ? mon.imgUrl.split('?')[0].replace(/^images\//, '') : '';
+  const b = boxes && key ? boxes[key] : null;
+  if (!Array.isArray(b) || b.length < 5) return null;
+  const [x0, y0, x1, y1, a] = b.map(Number);
+  const ch = y1 - y0,
+    cw = x1 - x0;
+  if (!(ch > 0) || !(cw > 0) || !(a > 0)) return null;
+  let h = H * MONSTER_STAGE_REF * monsterStageSizeOf(id) / ch;
+  let w = h * a;
+  const wMax = W * MONSTER_STAGE_MAX_W;
+  if (cw * w > wMax) {
+    const k = wMax / (cw * w);
+    h *= k;
+    w *= k;
+  }
+  return {
+    w: Math.round(w),
+    h: Math.round(h),
+    mb: -Math.round((1 - y1) * h),
+    dx: -Math.round(((x0 + x1) / 2 - 0.5) * w)
+  };
+};
 const rankingPartyColors = (baseId, colors) => {
   const raw = Array.isArray(colors) ? colors : [];
   return Array.from({
@@ -118023,10 +118089,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1498,
-      eye: 0.3408,
-      chin: 0.4295,
-      m: 0.66
+      top: 0.1489,
+      eye: 0.336,
+      chin: 0.4296,
+      m: 0.696
     },
     momosuke: {
       top: 0.0636,
@@ -118084,11 +118150,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1757,
-      eye: 0.316,
+      top: 0.2342,
+      eye: 0.3496,
       chin: 0.4299,
-      m: 0.847,
-      above: 0.85
+      m: 0.598,
+      above: 1.2
     },
     momosuke: {
       top: 0.0614,
@@ -118107,10 +118173,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1327,
-      eye: 0.3124,
-      chin: 0.43,
-      m: 0.875,
+      top: 0.129,
+      eye: 0.3271,
+      chin: 0.4282,
+      m: 0.752,
       above: 0.75
     }
   },
@@ -153188,11 +153254,11 @@ function AmbbOpening({
   const go = () => {
     if (done.current) return;
     done.current = true;
-    ambbSe('card');
+    ambbSe('matchReady');
     onGo();
   };
   useEffect(() => {
-    ambbSe('join');
+    ambbSe('swap');
     const t = setTimeout(go, quick ? 1800 : 4600);
     return () => clearTimeout(t);
   }, []);
@@ -153703,7 +153769,7 @@ function AssistantMasmonBattleBeta({
     if (!m) return;
     const busy = pos < battle.r.log.length - 1;
     if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c);
     if (r && r.ok) {
       syncManual(m);
@@ -174640,6 +174706,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -177435,7 +177504,7 @@ function MsxMonDetail({
           width: `${Math.min(100, over / cp * 100)}%`
         }
       }) : null)), React.createElement("span", {
-        className: `a${apt[i] > 'B' ? ' lo' : ''}`
+        className: `a msx-ap${apt[i]}`
       }, apt[i]));
     })) : null, tab === 'feat' ? React.createElement("div", {
       className: "msx-md-box"
@@ -177925,7 +177994,7 @@ function MsxGatherTable({
     onClick: onClose
   }, "閉じる")));
 }
-const msxAptCls = g => g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo';
+const msxAptCls = g => ['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC';
 const MSX_PERIOD_WHEN = Object.freeze({
   'デビュー期': 'はじめ',
   'ジュニア期': '前半',
@@ -179511,7 +179580,7 @@ function MsxTeamPick({
   const curName = (s, i) => {
     if (frOf(i)) return members[i].name;
     const m = s ? memOf(s) : null;
-    return m ? m.name : 'おまかせ';
+    return m ? m.name : Array.isArray(members) && members[i] ? members[i].name : 'おまかせ';
   };
   return React.createElement("div", {
     className: "msx-ov msx-fade msx-tp-ov",
@@ -179531,20 +179600,21 @@ function MsxTeamPick({
     "data-msx-tp-team": true
   }, view.map((s, i) => {
     const fr = frOf(i);
-    const mm = fr ? members[i] : s ? memOf(s) : null;
+    const mm = fr ? members[i] : s ? memOf(s) : Array.isArray(members) && members[i] || null;
     const rec = s && !fr ? recOf(s) : null;
-    return React.createElement("div", {
-      key: i,
-      className: `msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`,
-      "aria-label": fr ? 'フレンド' : curName(s, i)
-    }, React.createElement(MonsucMonCard, {
-      m: mm ? msxTpCardM(rec, mm) : null,
-      size: "s",
-      empty: String(i + 1),
-      on: i === idx && !!mm
-    }), fr ? React.createElement("b", {
-      className: "fr"
-    }, "🤝") : null);
+    return (React.createElement("div", {
+        key: i,
+        className: `msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`,
+        "aria-label": fr ? 'フレンド' : curName(s, i)
+      }, React.createElement(MonsucMonCard, {
+        m: mm ? msxTpCardM(rec, mm) : null,
+        size: "s",
+        empty: String(i + 1),
+        on: i === idx && !!mm
+      }), fr ? React.createElement("b", {
+        className: "fr"
+      }, "🤝") : null)
+    );
   })), React.createElement("div", {
     className: "msx-tp-tabs",
     "data-msx-tp-tabs": true
@@ -179613,7 +179683,13 @@ function MsxTeamPick({
       note: mk && mk.c !== 'in' || msxTpAssistIcons(msxTpAT(), m) ? React.createElement(React.Fragment, null, mk && mk.c !== 'in' ? React.createElement("b", {
         className: "msx-fp-dup"
       }, mk.n) : null, msxTpAssistIcons(msxTpAT(), m)) : null,
-      num: x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : '',
+      num: (() => {
+        const bn = msxTpBonusText(m);
+        const pwEl = x.kind !== 'base' && pw != null ? React.createElement("span", {
+          className: "msx-tp-pw"
+        }, "総合力 ", msxFmt(pw)) : null;
+        return bn || pwEl ? React.createElement(React.Fragment, null, bn, pwEl) : '';
+      })(),
       attrs: {
         'data-msx-tp-item': x.key,
         ...(x.kind === 'base' ? {
@@ -190243,7 +190319,10 @@ function MsxMmGrid({
   return React.createElement("div", {
     className: "mmg",
     "data-msx-mm-grid": true
-  }, React.createElement("style", null, MSX_MM_GRID_CSS), mons.map(m => {
+  }, React.createElement("style", null, MSX_MM_GRID_CSS), lb === 'namepw' && mons.length ? React.createElement("p", {
+    className: "mmg-lg",
+    "data-msx-mm-legend": true
+  }, "右上はランク・下は Lv と総合力") : null, mons.map(m => {
     const lock = lockOf ? lockOf(m) : null;
     const on = isOn ? isOn(m) : false;
     return React.createElement("button", _extends({
@@ -190271,17 +190350,22 @@ function MsxMmGrid({
     }, lock) : null, mark && mark(m) ? React.createElement("i", {
       className: "mmg-as"
     }, mark(m)) : null, lb === 'namepw' || lb === 'name' ? React.createElement(React.Fragment, null, React.createElement("span", {
-      className: "mmg-nm2"
-    }, msxMmLabelOf(m, lb)), lb === 'namepw' ? React.createElement("span", {
+      className: "mmg-nm2",
+      style: {
+        fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))`
+      }
+    }, msxMmLabelOf(m, lb)), m.nick && m.nick !== msxMonName(m.species) ? React.createElement("span", {
+      className: "mmg-sp"
+    }, msxMonName(m.species)) : null, lb === 'namepw' ? React.createElement("span", {
       className: "mmg-pw"
-    }, m.raised === false ? '未育成' : msxFmt(msxMmPow(m))) : null) : React.createElement("span", {
+    }, m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`) : null) : React.createElement("span", {
       className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -190296,7 +190380,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
@@ -191367,6 +191453,7 @@ function MonsucFitName({
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
     const ro = new ResizeObserver(fit);
     ro.observe(box.current);
+    if (txt.current) ro.observe(txt.current);
     return () => ro.disconnect();
   }, [name]);
   return React.createElement("span", {
@@ -191502,6 +191589,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
@@ -193735,6 +193823,8 @@ const MSA_CSS = `
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+/* 並んで立つ場面の大きさ(r1119-074): 1体ずつの見た目の大きさで描く(MsaFighter が --msa-iw/ih/ib/ix を決める・16-monster-stage-size.jsx) */
+.msa-stage.big .msa-f[data-msa-sz] img.msa-img{width:var(--msa-iw);height:var(--msa-ih);max-width:none;max-height:none;margin-bottom:var(--msa-ib);position:relative;left:var(--msa-ix);object-fit:fill;flex:none}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
 .msa-stage.big .msa-floor{bottom:25%}
 .msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
@@ -193911,9 +194001,9 @@ const msaReduce = () => {
     return false;
   }
 };
-const msaSe = k => {
+const msaSe = meaning => {
   try {
-    if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k]();
+    if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning);
   } catch (_) {}
 };
 const MH_BATTLE_BGM = {
@@ -195513,6 +195603,7 @@ function MsaFighter({
   }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
+  const fitSz = typeof monsterStageFit === 'function' && fwPx > 0 ? monsterStageFit(sp, fwPx, Math.round(fwPx / 0.82) - 10) : null;
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
     baseId: sp,
     src: src,
@@ -195694,11 +195785,19 @@ function MsaFighter({
     ...style,
     transition: 'none'
   };
+  if (fitSz) style = {
+    ...style,
+    '--msa-iw': `${fitSz.w}px`,
+    '--msa-ih': `${fitSz.h}px`,
+    '--msa-ib': `${fitSz.mb}px`,
+    '--msa-ix': `${side === 'A' ? -fitSz.dx : fitSz.dx}px`
+  };
   return React.createElement("div", {
     ref: rootRef,
     className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
-    "data-msa-fighter": side
+    "data-msa-fighter": side,
+    "data-msa-sz": fitSz ? monsterStageSizeOf(sp) : undefined
   }, React.createElement("span", {
     className: "msa-shadow",
     "aria-hidden": "true"
@@ -195727,12 +195826,12 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
-    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
-      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
-        msaSe('card');
-        later(1750, 'trainingDecide');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');else if (e.ev === 'move') msaSe('move');else if (e.ev === 'swap') msaSe('swap');else if (e.ev === 'ko') msaSe('ko');else if (e.ev === 'start') {
+      if (reduce || sf <= MSA_FAST_F) msaSe('matchGo');else {
+        msaSe('matchReady');
+        later(1750, 'matchGo');
       }
     }
   }, [pos, on]);
@@ -195995,7 +196094,7 @@ function MsaStage({
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   const [preAt, setPreAt] = useState(-1);
   const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
@@ -197225,7 +197324,7 @@ function MsaJudge({
     onGo();
   };
   useEffect(() => {
-    msaSe('tap');
+    msaSe('decide');
     const t = setTimeout(go, 9000);
     return () => clearTimeout(t);
   }, []);
@@ -197287,8 +197386,8 @@ function MsaFinish({
     onGo();
   };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => {
       clearTimeout(t);

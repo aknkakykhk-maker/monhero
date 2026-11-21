@@ -34,7 +34,8 @@ function MonsucFitName({ name }) {
     const fit = () => { const b = box.current; const t = txt.current; if (!b || !t) return; const w = t.scrollWidth; const W = b.clientWidth; setK(w > W && W > 0 ? Math.max(0.6, W / w) : 1); };
     fit();
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
-    const ro = new ResizeObserver(fit); ro.observe(box.current); return () => ro.disconnect();
+    // 字の幅が後から変わる(字体の読み込みなど)ときも測り直す。縮めるのは transform なので、字の要素を見張っても繰り返さない
+    const ro = new ResizeObserver(fit); ro.observe(box.current); if (txt.current) ro.observe(txt.current); return () => ro.disconnect();
   }, [name]);
   return <span className="mcd-nms" ref={box}><span className="mcd-nmt" ref={txt} style={k < 1 ? { transform: `scaleX(${k.toFixed(3)})` } : undefined}>{name}</span></span>;
 }
@@ -105,6 +106,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}

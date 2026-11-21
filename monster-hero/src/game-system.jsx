@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3ca27e153127386
+// generated-sha256: 22efeabafe459b50
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9530,6 +9530,53 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
     ? <AssistCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
     : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className={`rounded-full ${monsterArtUrlNeedsContain(icon)?'object-contain':'object-cover'} inline-block shrink-0`}/>)
   : icon;
+
+// ---- part: 16-monster-stage-size.jsx ----
+// ---- 並んで立つ場面のモンスターの大きさ(2026-11-21 社長 r1119-074「バトル中の画面でモンスターのサイズ感が合っていない」・開発部) ----
+//   渡された絵はサイズ別に描いていない(どの子も絵の枠いっぱい)。そこで、1体ずつの「見た目の大きさ」を絵の姿から決めた表をここに置く。
+//   使うのは「2体以上が同じ場に並ぶ場面」だけ(いまは試合の場 MsaStage)。立ち絵・アイコン・図鑑・試合の始まりの対面(.msa-intro)・技の窓(.msa-cut)は使わない。
+//   あとで助手ライフの家など、並んで立つ場面でも同じ表を引けるように、場面に依らない形(monsterStageSizeOf・monsterStageFit)にしている。
+//   計算(SPECIES_TRAITS の z・避ける・受けるダメージ)とは関係しない。見た目だけ。
+//
+//   値の決め方: ふつう(人の背丈くらいの子)= 1。小さな生き物(モッチー・ゴーストなど)は 0.7〜0.85、大きな巨体(ゴーレム・モノリス)は 1.4 前後。
+//   絵の余白の差は、絵の中身の範囲の表 ART_CONTENT_BOXES(tools/image/make-art-content-boxes.js が測る)で消す。表に無い子は 1(ふつう)。
+const MONSTER_STAGE_SIZE = Object.freeze({
+  // 小さな生き物
+  Mocchi: 0.72, Suezo: 0.72, Ghost: 0.75, Plant: 0.8, Ham: 0.82, KenshiMocchi: 0.82, Spooky: 0.82, Ark: 0.85,
+  // ふつうより少し小さい・ふつう(人の背丈くらい)
+  Tiger: 0.9, Mitarashi: 0.9, Pixie: 0.92, Mia: 0.95, Pandora: 0.95, Snegurochka: 0.98, Dreamy: 0.98,
+  Oboro: 1, Undine: 1, Yaobikuni: 1, Illumine: 1, Kyubi: 1, Orihime: 1,
+  // 大きめ
+  Iblis: 1.05, MelWhip: 1.05, Yggdrasil: 1.1, Eiki: 1.15, Zan: 1.25, Melody: 1.3, Kuromy: 1.3,
+  // 巨体
+  Monol: 1.4, Golem: 1.45,
+});
+// 大きさ1の子の中身の高さ = 絵の枠の高さ × これ(大きい子が枠の上へ少し出る余地を残す)。中身の幅は枠の幅 × MONSTER_STAGE_MAX_W まで
+const MONSTER_STAGE_REF = 0.8;
+const MONSTER_STAGE_MAX_W = 1.5;
+const monsterStageSizeOf = (id) => {
+  const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+};
+// 枠(boxW × boxH px)の中で、その子の絵を描く大きさ。{ w, h … 絵の要素の幅・高さ / mb … 足元の余白を詰める下のずらし / dx … 中身のまんなかを枠のまんなかへ寄せる横のずらし }。
+//   絵の中身の範囲が分からない子は null(今までどおり枠に収める)
+const monsterStageFit = (id, boxW, boxH) => {
+  const W = Number(boxW), H = Number(boxH);
+  if (!(W > 0) || !(H > 0)) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[id] : null;
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const key = mon && typeof mon.imgUrl === 'string' ? mon.imgUrl.split('?')[0].replace(/^images\//, '') : '';
+  const b = boxes && key ? boxes[key] : null;
+  if (!Array.isArray(b) || b.length < 5) return null;
+  const [x0, y0, x1, y1, a] = b.map(Number);
+  const ch = y1 - y0, cw = x1 - x0;
+  if (!(ch > 0) || !(cw > 0) || !(a > 0)) return null;
+  let h = (H * MONSTER_STAGE_REF * monsterStageSizeOf(id)) / ch;
+  let w = h * a;
+  const wMax = W * MONSTER_STAGE_MAX_W;
+  if (cw * w > wMax) { const k = wMax / (cw * w); h *= k; w *= k; }
+  return { w: Math.round(w), h: Math.round(h), mb: -Math.round((1 - y1) * h), dx: -Math.round(((x0 + x1) / 2 - 0.5) * w) };
+};
 
 // ---- part: 16-ranking-detail-and-widgets.jsx ----
 // ランキングの記録に載せる部位別の色を作る。
@@ -69479,11 +69526,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1498, eye: 0.3408, chin: 0.4295, m: 0.66 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1757, eye: 0.316, chin: 0.4299, m: 0.847, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1327, eye: 0.3124, chin: 0.43, m: 0.875, above: 0.75 } },
+  'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.129, eye: 0.3271, chin: 0.4282, m: 0.752, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
@@ -80531,8 +80578,8 @@ const ambbMvpOf = (stars) => { let b = -1, bs = -1; stars.forEach((s, i) => { co
 // 入場: 題字・両方の助手と3体の並び・VS。タップか時間で試合へ
 function AmbbOpening({ teams, title, sub, plan, nameA, nameB, quick, onGo }) {
   const done = useRef(false);
-  const go = () => { if (done.current) return; done.current = true; ambbSe('card'); onGo(); };
-  useEffect(() => { ambbSe('join'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
+  const go = () => { if (done.current) return; done.current = true; ambbSe('matchReady'); onGo(); };
+  useEffect(() => { ambbSe('swap'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
   const side = (sd) => {
     const t = teams[sd], aid = t.assistantId;
     return (
@@ -80771,7 +80818,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
   const manualPick = (c) => {
     const m = battle && battle.match; if (!m) return;
     const busy = pos < battle.r.log.length - 1; if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; putCtl('auto'); m.auto('A'); syncManual(m); setPaused(false); };
@@ -91134,6 +91181,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -92757,7 +92807,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {MSX_STATS.map((k, i) => { const v = Number(st[k]) || 0; const cp = capK(k); const over = Math.max(0, v - cp); return (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
                     <span className="v"><b>{st[k]}<small data-msx-stat-cap={k} style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginLeft: 2 }}>/{cp}</small></b><span className={`g${over ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, v / cp * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{over ? <b className="ov" data-msx-stat-over={over} style={{ width: `${Math.min(100, over / cp * 100)}%` }}/> : null}</span></span>
-                    <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+                    <span className={`a msx-ap${apt[i]}`}>{apt[i]}</span></div>
                 ); })}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
@@ -92913,7 +92963,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
 }
 
 // 育てる子を選ぶ段(r1119 ⑦): 伸びやすさ(素質 A〜E)の字の色の段。A=金 / B=緑 / C=白 / D・E=灰
-const msxAptCls = (g) => (g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo');
+// 素質の字の色は文字ごとに固定(A=黄・B=緑・C=白・D=橙・E=赤。毎ターンの能力の札・詳細の窓と同じ・育-148)
+const msxAptCls = (g) => (['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC');
 // 「ピーク ミドル期」では伝わらない(社長)ので、育成のどのあたりでいちばん伸びるかを言葉で添える
 const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュニア期': '前半', 'ミドル期': '中ごろ', 'プロ期': '後半', '最後の期': '終わりごろ' });
 const msxPeakWords = (peak) => {
@@ -93461,14 +93512,15 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   const recOf = (slot) => (slot && slot.box ? raised.find((m) => m.id === slot.box) : slot && slot.assist ? stock.find((m) => m.id === slot.assist) : null) || null;
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモモン', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k, , n]) => k !== 'memo' || n);
   const frOf = (i) => i === friendAt && i !== idx && members[i] && members[i].friend; // その枠にフレンドがいる(押した枠は選び直すので数えない)
-  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : 'おまかせ'; };
+  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : (Array.isArray(members) && members[i] ? members[i].name : 'おまかせ'); };
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         {/* 戻るはほかの画面と同じ左上の「← 戻る」1つ(下の帯は「外す」「決定」だけ。r1119-033 窓-45・53) */}
         <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-tp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const rec = s && !fr ? recOf(s) : null; return (
-          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : (Array.isArray(members) && members[i]) || null; const rec = s && !fr ? recOf(s) : null; return (
+          // 枠が空のときは、実際に編成に入る既定のモンスター(members)を写す(数字だけで今の編成が見えなかった・育-235)
+          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
             <MonsucMonCard m={mm ? msxTpCardM(rec, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{fr ? <b className="fr">🤝</b> : null}</div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
@@ -93482,7 +93534,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
             <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={(mk && mk.c !== 'in') || msxTpAssistIcons(msxTpAT(), m) ? <>{mk && mk.c !== 'in' ? <b className="msx-fp-dup">{mk.n}</b> : null}{msxTpAssistIcons(msxTpAT(), m)}</> : null}
-              num={x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : ''}
+              num={(() => { const bn = msxTpBonusText(m); const pwEl = x.kind !== 'base' && pw != null ? <span className="msx-tp-pw">総合力 {msxFmt(pw)}</span> : null; return bn || pwEl ? <>{bn}{pwEl}</> : ''; })()} /* どのタブも 1段目=伸びが上がる能力・2段目=総合力(育-238) */
               attrs={{ 'data-msx-tp-item': x.key, ...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {}) }}
               onClick={() => setCand(on ? null : x.slot)}/>); })}</MonsucCardGrid>
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
@@ -97325,6 +97377,8 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
   const lb = label || saved || 'namepw'; const fv = Array.isArray(fav) ? fav : favs;
   return (<div className="mmg" data-msx-mm-grid>
     <style>{MSX_MM_GRID_CSS}</style>
+    {/* 右上の札と下の数が何かを一覧の上に書く(育-158・168) */}
+    {lb === 'namepw' && mons.length ? <p className="mmg-lg" data-msx-mm-legend>右上はランク・下は Lv と総合力</p> : null}
     {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
       return (
         <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>
@@ -97334,14 +97388,14 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
           {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
           {lock ? <i className="mmg-lk">{lock}</i> : null}
           {mark && mark(m) ? <i className="mmg-as">{mark(m)}</i> : null}
-          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : msxFmt(msxMmPow(m))}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
+          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2" style={{ fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))` }}>{msxMmLabelOf(m, lb)}</span>{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
         </button>);
     })}
   </div>);
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -97356,7 +97410,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
@@ -97835,7 +97891,8 @@ function MonsucFitName({ name }) {
     const fit = () => { const b = box.current; const t = txt.current; if (!b || !t) return; const w = t.scrollWidth; const W = b.clientWidth; setK(w > W && W > 0 ? Math.max(0.6, W / w) : 1); };
     fit();
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
-    const ro = new ResizeObserver(fit); ro.observe(box.current); return () => ro.disconnect();
+    // 字の幅が後から変わる(字体の読み込みなど)ときも測り直す。縮めるのは transform なので、字の要素を見張っても繰り返さない
+    const ro = new ResizeObserver(fit); ro.observe(box.current); if (txt.current) ro.observe(txt.current); return () => ro.disconnect();
   }, [name]);
   return <span className="mcd-nms" ref={box}><span className="mcd-nmt" ref={txt} style={k < 1 ? { transform: `scaleX(${k.toFixed(3)})` } : undefined}>{name}</span></span>;
 }
@@ -97906,6 +97963,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
@@ -99285,6 +99343,8 @@ const MSA_CSS = `
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+/* 並んで立つ場面の大きさ(r1119-074): 1体ずつの見た目の大きさで描く(MsaFighter が --msa-iw/ih/ib/ix を決める・16-monster-stage-size.jsx) */
+.msa-stage.big .msa-f[data-msa-sz] img.msa-img{width:var(--msa-iw);height:var(--msa-ih);max-width:none;max-height:none;margin-bottom:var(--msa-ib);position:relative;left:var(--msa-ix);object-fit:fill;flex:none}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
 .msa-stage.big .msa-floor{bottom:25%}
 .msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
@@ -99460,8 +99520,8 @@ const msaReduce = () => {
 };
 
 // ---- 音(2026-11-12 社長「音もないし音楽もホームの音楽だし味気なさすぎる」) ----
-// 効果音は今あるバトルの音(Audio_.fgSe。カードバトルと同じ、裏の周回の音止めに巻き込まれない口)をそのまま使う。消音の設定はそのまま効く
-const msaSe = (k) => { try { if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k](); } catch (_) {} };
+// 効果音は意味で鳴らす(意味の表 data/success-sounds.js の SUCCESS_SFX → SuccessSound.sfx。段3d 2026-11-21)。鳴る音はカードバトルと同じ口(裏の周回の音止めに巻き込まれない)。消音の設定はそのまま効く
+const msaSe = (meaning) => { try { if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning); } catch (_) {} };
 // 試合の画面が開いている間は、BGMアレンジの「バトル」の曲にする(60-app の bgmKeyForState が見る口)。閉じたら元の曲へ戻る
 const MH_BATTLE_BGM = { n: 0, on: false, val: false, stack: [], subs: new Set() };
 // 保持が曲名(track)つきなら、アレンジの「バトル」ではなくその曲にする(助手マスモン対戦βの試合を、モンサクの試合の曲 cupMatch にそろえる。2026-11-14 社長)
@@ -100297,6 +100357,8 @@ function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow,
   }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
+  // 並んで立つ場面の大きさ(r1119-074): その子の見た目の大きさ(16-monster-stage-size.jsx の表)と絵の余白から、絵を描く大きさを決める。枠は場の --msa-fw × --msa-fh(高さは fw ÷ 0.82)
+  const fitSz = typeof monsterStageFit === 'function' && fwPx > 0 ? monsterStageFit(sp, fwPx, Math.round(fwPx / 0.82) - 10) : null;
   // 染めた色(member.colors。モンサクの育てるモンスターだけ。芯へは渡さない見せる用の値)があれば染めた絵
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
     ? <DyedMonsterImage baseId={sp} src={src} masuColors={member.colors} alt={member.name || ''} draggable={false} className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`}/>
@@ -100375,8 +100437,9 @@ function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow,
   }
   // 吹き飛ばしの行は left の transition を止める(飛ぶ動きは WAAPI が受け持つ。二重に動くと行き過ぎて戻る形になる)
   if (blownRow && !reduce) style = { ...style, transition: 'none' };
+  if (fitSz) style = { ...style, '--msa-iw': `${fitSz.w}px`, '--msa-ih': `${fitSz.h}px`, '--msa-ib': `${fitSz.mb}px`, '--msa-ix': `${side === 'A' ? -fitSz.dx : fitSz.dx}px` };
   return (
-    <div ref={rootRef} className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side}>
+    <div ref={rootRef} className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side} data-msa-sz={fitSz ? monsterStageSizeOf(sp) : undefined}>
       <span className="msa-shadow" aria-hidden="true"/>
       {body}
       {extra}
@@ -100397,14 +100460,14 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = (teams[e.side] && teams[e.side].members && teams[e.side].members[e.i]) || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');      // 大技は出だしに溜めの音
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');      // 大技は出だしに溜めの音
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
     } else if (e.ev === 'guard') msaSe('guard');
-    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');
-    else if (e.ev === 'move') msaSe('trainingMove');
-    else if (e.ev === 'swap') msaSe('join');
-    else if (e.ev === 'ko') msaSe('enemyCharge');
-    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide'); else { msaSe('card'); later(1750, 'trainingDecide'); } }
+    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');
+    else if (e.ev === 'move') msaSe('move');
+    else if (e.ev === 'swap') msaSe('swap');
+    else if (e.ev === 'ko') msaSe('ko');
+    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('matchGo'); else { msaSe('matchReady'); later(1750, 'matchGo'); } }
   }, [pos, on]);
 }
 
@@ -100561,7 +100624,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   // 大技のため: ため終わるまで技の動きを出さない(pos ごとに数え直す)
   const [preAt, setPreAt] = useState(-1);
@@ -101138,7 +101201,7 @@ const MSA_JUDGE_CSS = `
 function MsaJudge({ row, names, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
-  useEffect(() => { msaSe('tap'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
+  useEffect(() => { msaSe('decide'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
   const fmt = (k, v) => (k === 'pct' ? `${v}%` : String(v));
   const rows = Array.isArray(row.rows) ? row.rows : [];
   const win = row.winner === 'A';
@@ -101174,8 +101237,8 @@ function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => { clearTimeout(t); if (f) clearTimeout(f); };
   }, []);

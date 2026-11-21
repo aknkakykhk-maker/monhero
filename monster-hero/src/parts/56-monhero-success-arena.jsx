@@ -368,6 +368,8 @@ const MSA_CSS = `
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+/* 並んで立つ場面の大きさ(r1119-074): 1体ずつの見た目の大きさで描く(MsaFighter が --msa-iw/ih/ib/ix を決める・16-monster-stage-size.jsx) */
+.msa-stage.big .msa-f[data-msa-sz] img.msa-img{width:var(--msa-iw);height:var(--msa-ih);max-width:none;max-height:none;margin-bottom:var(--msa-ib);position:relative;left:var(--msa-ix);object-fit:fill;flex:none}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
 .msa-stage.big .msa-floor{bottom:25%}
 .msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
@@ -543,8 +545,8 @@ const msaReduce = () => {
 };
 
 // ---- 音(2026-11-12 社長「音もないし音楽もホームの音楽だし味気なさすぎる」) ----
-// 効果音は今あるバトルの音(Audio_.fgSe。カードバトルと同じ、裏の周回の音止めに巻き込まれない口)をそのまま使う。消音の設定はそのまま効く
-const msaSe = (k) => { try { if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k](); } catch (_) {} };
+// 効果音は意味で鳴らす(意味の表 data/success-sounds.js の SUCCESS_SFX → SuccessSound.sfx。段3d 2026-11-21)。鳴る音はカードバトルと同じ口(裏の周回の音止めに巻き込まれない)。消音の設定はそのまま効く
+const msaSe = (meaning) => { try { if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning); } catch (_) {} };
 // 試合の画面が開いている間は、BGMアレンジの「バトル」の曲にする(60-app の bgmKeyForState が見る口)。閉じたら元の曲へ戻る
 const MH_BATTLE_BGM = { n: 0, on: false, val: false, stack: [], subs: new Set() };
 // 保持が曲名(track)つきなら、アレンジの「バトル」ではなくその曲にする(助手マスモン対戦βの試合を、モンサクの試合の曲 cupMatch にそろえる。2026-11-14 社長)
@@ -1380,6 +1382,8 @@ function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow,
   }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
+  // 並んで立つ場面の大きさ(r1119-074): その子の見た目の大きさ(16-monster-stage-size.jsx の表)と絵の余白から、絵を描く大きさを決める。枠は場の --msa-fw × --msa-fh(高さは fw ÷ 0.82)
+  const fitSz = typeof monsterStageFit === 'function' && fwPx > 0 ? monsterStageFit(sp, fwPx, Math.round(fwPx / 0.82) - 10) : null;
   // 染めた色(member.colors。モンサクの育てるモンスターだけ。芯へは渡さない見せる用の値)があれば染めた絵
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
     ? <DyedMonsterImage baseId={sp} src={src} masuColors={member.colors} alt={member.name || ''} draggable={false} className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`}/>
@@ -1458,8 +1462,9 @@ function MsaFighter({ side, member, x, prevX, sf = 1, e, foeX, fwPx = 96, hpNow,
   }
   // 吹き飛ばしの行は left の transition を止める(飛ぶ動きは WAAPI が受け持つ。二重に動くと行き過ぎて戻る形になる)
   if (blownRow && !reduce) style = { ...style, transition: 'none' };
+  if (fitSz) style = { ...style, '--msa-iw': `${fitSz.w}px`, '--msa-ih': `${fitSz.h}px`, '--msa-ib': `${fitSz.mb}px`, '--msa-ix': `${side === 'A' ? -fitSz.dx : fitSz.dx}px` };
   return (
-    <div ref={rootRef} className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side}>
+    <div ref={rootRef} className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side} data-msa-sz={fitSz ? monsterStageSizeOf(sp) : undefined}>
       <span className="msa-shadow" aria-hidden="true"/>
       {body}
       {extra}
@@ -1480,14 +1485,14 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = (teams[e.side] && teams[e.side].members && teams[e.side].members[e.i]) || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');      // 大技は出だしに溜めの音
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');      // 大技は出だしに溜めの音
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
     } else if (e.ev === 'guard') msaSe('guard');
-    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');
-    else if (e.ev === 'move') msaSe('trainingMove');
-    else if (e.ev === 'swap') msaSe('join');
-    else if (e.ev === 'ko') msaSe('enemyCharge');
-    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide'); else { msaSe('card'); later(1750, 'trainingDecide'); } }
+    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');
+    else if (e.ev === 'move') msaSe('move');
+    else if (e.ev === 'swap') msaSe('swap');
+    else if (e.ev === 'ko') msaSe('ko');
+    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('matchGo'); else { msaSe('matchReady'); later(1750, 'matchGo'); } }
   }, [pos, on]);
 }
 
@@ -1644,7 +1649,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   // 大技のため: ため終わるまで技の動きを出さない(pos ごとに数え直す)
   const [preAt, setPreAt] = useState(-1);
@@ -2221,7 +2226,7 @@ const MSA_JUDGE_CSS = `
 function MsaJudge({ row, names, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
-  useEffect(() => { msaSe('tap'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
+  useEffect(() => { msaSe('decide'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
   const fmt = (k, v) => (k === 'pct' ? `${v}%` : String(v));
   const rows = Array.isArray(row.rows) ? row.rows : [];
   const win = row.winner === 'A';
@@ -2257,8 +2262,8 @@ function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => { clearTimeout(t); if (f) clearTimeout(f); };
   }, []);
