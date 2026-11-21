@@ -236,58 +236,6 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   );
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot} rankName={rank ? rank.name : ''}/>;
 }
-
-// ---- 観戦(助手マスモン対戦の観戦の部品を使い回す) ----
-function MsxR3Watch({ fight, onDone }) {
-  const [pos, setPos] = useState(0);
-  const [speed, setSpeed] = useState('hl');
-  const log = fight.r.log; const len = log.length;
-  useEffect(() => {
-    if (pos >= len - 1) { const t = setTimeout(() => onDone(), 900); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find((x) => x.id === speed) || AMBW_SPEEDS[0];
-    const msxR3Step = () => {
-      let n = pos + 1;
-      if (speed === 'hl') while (n < len - 1 && !ambwIsHighlight(log[n], fight.maxHp)) n++;
-      setPos(n);
-    };
-    const t = setTimeout(msxR3Step, sp.ms);
-    return () => clearTimeout(t);
-  }, [pos, speed]);
-  const e = log[pos] || {}; const f = fight.frames[pos] || fight.frames[0]; const foeSide = e.side === 'A' ? 'B' : 'A';
-  const fighter = (side) => {
-    const team = side === 'A' ? fight.teamA : fight.teamB; const m = team.members[f.act[side]] || team.members[0];
-    return (
-      <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
-        <img className={side === 'A' ? 'ambw-flip' : ''} src={msxMonImg(m.species)} alt=""/><em>{m.name}</em>
-        {e.ev === 'tech' && foeSide === side && (e.hit ? <div className="ambw-dmg">−{e.dmg}</div> : <div className="ambw-dmg miss">はずれ</div>)}
-      </div>);
-  };
-  return (
-    <div className="r3-watch" data-msx-r3-watch>
-      <style>{AMBW_CSS}</style>
-      {/* 横画面では左に対戦の場を残し、右の HP・技・操作だけがスクロールする(2026-11-16 UI改修)。
-          縦画面では並び順(相手の札→場→自分の札→操作)を CSS の order で今までどおりに戻す */}
-      <div className="r3-watch-side">
-        <AmbwPanel side="B" team={fight.teamB} frame={f} maxHp={fight.maxHp} moves={fight.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
-        <AmbwPanel side="A" team={fight.teamA} frame={f} maxHp={fight.maxHp} moves={fight.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-        <div className="ambw-ctl">
-          {AMBW_SPEEDS.filter((x) => x.id === 'hl' || x.id === 'x2').map((x) => <button type="button" key={x.id} className={speed === x.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
-          <button type="button" className="ambw-btn2" data-msx-r3-towatch-end onClick={() => onDone()}>⏭ 結果へ</button>
-        </div>
-      </div>
-      <div className="ambw-ring">
-        <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
-        <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}</small><b>{e.name}</b></div>}
-      </div>
-    </div>
-  );
-}
-
-// 組み合わせ表(2026-11-14 社長「トーナメントの表示がおかしい。最初に1回戦が動く演出がない。バトルは決勝の一戦だけ」・参考 taikai-bracket.png・v2 84〜90秒・v4 48〜52秒)
-//   8体・自分はいちばん上(橙)・番号は人気順(1〜8)・1番人気の王者は反対の山。開いたら 1回戦→準決勝 が自動で進む:
-//   勝った側へ線が赤く伸び、負けた側は暗くなる(自分も演出で勝ち上がる)。解説のひとこと。SKIP で飛ばせる。戦うのは決勝の1戦だけ
-//   線は行の高さ RH から px で引く(行と線がずれない)。芯の bracketOf: entrants・rounds[1回戦の勝ち4・準決勝の勝ち2]・final[自分, 相手]・pop
 function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settle, result, toCard, onPause }) {
   const br = msxSuc.SUC.bracketOf(s) || { entrants: [], rounds: [[], []], final: [0, 4], pop: [] };
   const E = br.entrants; const r1 = br.rounds[0] || []; const r2 = br.rounds[1] || []; const fi = (br.final && br.final[1]) || 4;
@@ -811,15 +759,6 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['rematch']} ctx={{ ...actx, bond: bondLv || 1 }}/> : null}
     </>);
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><span className="v-wait">えらんでね</span></div>}/>;
-  }
-
-  // ---- 観戦 ----
-  if (step === 'watch') {
-    const body = (<>
-      <div className="v-ev-h" style={{ position: 'relative', marginTop: 6 }}><small>{name}</small>⚔ {run.nick} VS {foeName}</div>
-      <MsxR3Watch fight={fight} onDone={result}/>
-    </>);
-    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={null}/>;
   }
 
   // ---- バトルカード(C2): 能力の比べ ----

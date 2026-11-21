@@ -98,7 +98,7 @@ const seed = () => {
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `cheer-end-${width}.png`) });
       // 操作の段(⏸・×2・見せ場だけ・結果へ)が、ほかの札・実況の帯に重ならない(幅320でも)。結果欄の見出しは言葉の途中で折れない
       const ov = await page.evaluate(() => {
-        const ctl = document.querySelector('.amgc-root .ambw-ctl'); if (!ctl) return null; const C = ctl.getBoundingClientRect();
+        const ctl = document.querySelector('.amgc-root .msa-tools') || document.querySelector('.amgc-root .ambw-ctl'); if (!ctl) return null; const C = ctl.getBoundingClientRect();
         const others = [...document.querySelectorAll('.amgc-root [data-amgc-side], .amgc-root [data-msa-say]')].map((e) => e.getBoundingClientRect());
         const hit = others.filter((r) => r.height > 0 && !(r.bottom <= C.top + 1 || r.top >= C.bottom - 1)).length;
         const bs = [...ctl.querySelectorAll('button')].map((b) => b.getBoundingClientRect()); const bov = bs.some((a, i) => bs.some((b, j) => j > i && !(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)));
