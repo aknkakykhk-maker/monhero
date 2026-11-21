@@ -1,0 +1,4536 @@
+{
+ "usd": 1.5502,
+ "unreadable": [],
+ "findings": [
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "窓の右上に小さな「閉じる」(53×33px・44px未満)があり、下にも大きなピンクの「閉じる」があります。同じ働きのボタンが1つの窓に2つあり、上のほうは押しにくいです。",
+   "fix": "右上の「閉じる」を消し、下の大きな「閉じる」1つにします。空いた右上は、助手のセリフ欄を横いっぱいに広げるのに使います。",
+   "priority": "高",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": "本物",
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "HOMEの札に付いている助手の顔の束(「+4」「+2」「+1」・顔アイコン)が、暗幕と説明の窓より手前に出ています。そのせいで「カードの種類」「耐久重視」「初回のカード」などの本文の上に重なり、字が読めません。",
+   "fix": "顔の束の重なり順を暗幕より下にします。窓が開いているあいだは、顔の束を隠してください。",
+   "priority": "高",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール → イベント回想(まとまりを開いた所)〔replay-list〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "左上に「← 戻る」、下に「イベントの一覧へ戻る」があり、戻るボタンが2つあります。どちらもイベントの一覧へ戻るだけで、プロフィールまで一気に閉じる方法は見当たりません。",
+   "fix": "戻るは左上の「← 戻る」1つにまとめます。下のボタンは消すか、「閉じる(プロフィールへ)」としてはっきり別の働きにします。",
+   "priority": "高",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "replay-list"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール → イベント回想(まとまりを開いた所)〔replay-list〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しが「鍵の向こう側へ」なのに、8行すべての頭にも「鍵の向こう側へ」があり、全行に「タップして見返す」も付いています。同じ字が8回ずつ並ぶため、肝心の話の名前(〜鍵の箱〜 など)が目立ちません。第8話は2行に折り返しています。",
+   "fix": "各行は「第1話 鍵の箱」のように、話の番号と題だけを大きく出します。「タップして見返す」は消し、▶の印だけで押せると分かるようにします。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "replay-list"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "縦では画面のまん中、320×380px(38%)が背景の町だけです。助手は左上の小さな丸い顔だけで、モードの札は下に押し込まれています。PCでも町の絵が大半を占め、札が小さく下に並ぶだけです。",
+   "fix": "まん中の空きに助手の立ち絵を大きく立たせ、吹き出しをそこから出します。いちばん遊ぶモードの札をひと回り大きくして、空きの下側まで上げます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "8つのモードの札が全部同じ大きさです。初めての人には、どれを最初に押すかが分かりません。下の行は「M/B管理」「神殿」のように副題が無く、上の行は「挑戦」「音ゲー」など2行で、名前の形もそろっていません。横では8枚が1列に並び、名前が9px前後に縮んで読みにくいです。",
+   "fix": "よく遊ぶ物(サクセス・バトル・カード対戦)を大きな札に、管理系(M/B管理・神殿・マーケット)を小さな札の段に分けます。副題は全部に付けるか、全部消すかにそろえます。横では2段にして字を11px以上にします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手のメニュー(HOME)〔home-assistant-menu〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "助手と話すには、吹き出しを押してから「おしゃべりする」を選ぶので2回押す必要があります。吹き出しの「タップでメニュー」も、何のメニューかが分かりません。",
+   "fix": "吹き出しを押したら、すぐ説明の窓を開きます。窓の下に「💬 おしゃべりする」を置き、押し所を1つにします。",
+   "priority": "高",
+   "viewpoint": 11,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "home-assistant-menu"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "更新履歴〔home-changelog〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「更新履歴」を開いた場面のはずなのに、止め絵はふつうのHOMEとまったく同じで、更新履歴の窓が出ていません。押しても開かない恐れがあります(機械の見つけ物もHOMEと同じ内容です)。",
+   "fix": "「更新履歴」のボタンを押すと窓が開くかを直し、開いた窓の止め絵を撮り直して確かめます。",
+   "priority": "高",
+   "viewpoint": 3,
+   "owner_hint": "ヘルプ・更新履歴",
+   "machine_verdict": null,
+   "sid": "home-changelog"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では左の列が見出しと吹き出しだけで、その下の360×240px(27%)が何も無い空きです。右の列は詰まっていて、「ひとこと」が下で切れています。",
+   "fix": "左の列に顔のアイコン・名前・LV・XPの棒を移し、右の列は性別・アイコンなどの設定と見せる欄にします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では窓の上の助手の顔とセリフの欄、下の大きな「閉じる」で高さの大半を取られています。本文はわずか3行ほどしか見えず、窓の下の端も画面で切れています。",
+   "fix": "横では助手の顔を小さくしてセリフを1行にし、「閉じる」を細くします。本文の見える高さを倍以上にして、窓の下には余白を空けます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "HOMEで「詳しく見る」を押したのに、M/B管理のAUTO方針や∞周回の細かい決まりが、長い文の塊で出てきます。HOMEで何をすればよいかが書かれていません。",
+   "fix": "HOMEの説明は「まずバトルで遊ぶ→マスモンを登録→M/B管理で育てる」の3行ほどにします。AUTOや∞周回の話はM/B管理の説明へ移し、箇条書きにします。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「OFF → AUTO → ∞ / → OFF」が矢印の手前で折り返しています。縦では「その∞ / 周回」と言葉の途中で切れていて、切り替わる順番が読み取れません。",
+   "fix": "切り替わる順番は折り返さない1つの塊にします(折り返し禁止にするか、別の行に「OFF → AUTO → ∞ → OFF」と出す)。「∞周回」も1語として折り返さないようにします。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "ヘルプ・更新履歴",
+   "machine_verdict": null,
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "性別の欄で、左に小さく「非公開」と出ていて、右でも「答えない」が選ばれています。同じことを2か所で言っています。",
+   "fix": "左の「非公開」は消し、「性別」の見出しだけにします。空いた幅は3つの選ぶボタンを広げるのに回します。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは助手の吹き出しが横幅660px近くあり、1行の短いセリフのあとが大きく空いています。「タップでメニュー」は遠い右下にあります。",
+   "fix": "吹き出しの幅は最大420px前後にし、文の長さに合わせます。「タップでメニュー」は文のすぐ下に置きます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「AUTO方針」「WAVE10」「∞周回」「ガッツ」「供モン加入」「固有技強化」「ベースモン」「マスモン」が説明なしで出てきます。初めての人には通じません。",
+   "fix": "初めて出る言葉には、ひと言の説明を付けるか、言葉を押すと説明が出るようにします(例: ∞周回=止めるまで同じバトルを繰り返す)。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札の角に重ねた助手の顔の束(「+4」85×26・「きゅうこがいます。助手ラ」30×26 など)が、高さ26pxしかなく押しにくいです。押すと何が起きるのか、何の印なのかの説明も無く、場所によって付いたり付かなかったりします。",
+   "fix": "「ここに助手がいる」という意味を札の中に「👥3」のように小さく出し、札を押せば済むようにします。別に押させるなら44px以上にします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "上の帯の「0 / 4 XP」が8pxで、細い等幅の字のため読めません。帯の幅いっぱいに伸びた空の棒の右端に、ぽつんと付いています。",
+   "fix": "XPの字は10px以上の通常の字にし、「Lv.1」のすぐ右に「次まで 4XP」のように並べます。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横だけ、右の「更新履歴」「ミッション」「ギフト」が、字を左に置いた横長の札(高さ34px)になっています。縦・PCでは丸いボタンの下に字がある形で、そろっていません。赤い印も絵とぶつかり、丸い絵は画面の右端に寄って切れかかっています。",
+   "fix": "横も縦・PCと同じ丸いボタン(44px以上)と下の字にそろえ、右端から8px以上離します。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "右上の「設定」が43×42pxで、44pxに足りません。「🌅 9:26」の時刻の札(63×22)は押せる形をしているのに、押せるのかどうか見分けがつきません。",
+   "fix": "「設定」は44×44px以上にします。時刻の札は、押せないなら枠を消してただの表示にし、押せるなら44pxにして押した先(時間帯の説明など)を作ります。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「モンヒロビート 本オープン記念」の札の場所が、縦とPCでは左上、横では吹き出しのすぐ右に詰めて置かれていて、大きさごとに違います。横では吹き出しとくっついて、1つの物に見えます。",
+   "fix": "催しの札はどの大きさでも右側のボタン列のいちばん上(時刻の下)に置き、助手の吹き出しから離します。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "HOME〔home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「MFバトルカード」「M/B管理」の「MF」「M/B」が何の略か、どこにも説明がありません。プロフィールでは「バトルカードのデッキ」と呼んでいて、名前もそろっていません。",
+   "fix": "札の名前は「バトルカード」「モンスター管理」のように略さない形にし、ほかの画面の呼び方も同じにそろえます。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "home"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手のメニュー(HOME)〔home-assistant-menu〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "メニューが開いても暗幕も「×」も無いため、閉じ方が分かりません。項目の頭が絵文字(💬📖)で、ほかの画面の線の印と形が違います。",
+   "fix": "(上の件のとおりメニューをやめない場合は)外を押すと閉じることが分かるよう、薄い暗幕を敷きます。印はほかの画面と同じ線の印にそろえます。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "home-assistant-menu"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "プロフィールの吹き出しは「タップで詳しく」、HOMEでは「タップでメニュー」と、同じ助手の吹き出しなのに書き方と働きが違います。助手の名前「みゅあ」も9pxで小さいです。",
+   "fix": "どの画面の吹き出しも同じ言葉・同じ働き(押すと説明の窓)にそろえます。名前は11px以上にします。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "アイコンを変える押し所が2つあります(丸い顔の鉛筆と「アイコン 選びなおす」)。4つの札も「選びなおす」(する事)と「フレームなし」「元の服」(今の状態)が混ざっていて、何を押すと何が起きるのか読みにくいです。",
+   "fix": "顔の鉛筆は消して札に一本化します。4つの札はすべて「見出し=項目名/下=今の状態」にそろえ、右に「›」を付けて押せることを示します。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "見せる欄の2枚の札の並べ方が違います(左は見出し・大きな💗・字が上から下へ、右は字が中ほど)。右には「押すとデッキ登録へ」があるのに、左の「好きなモンスター」は押せるのかどうかが書かれていません。",
+   "fix": "2枚とも同じ並べ方(見出し→絵→状態→「押して選ぶ」)にそろえ、左にも「押して選ぶ」と書きます。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール〔profile〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCではプロフィールが幅600px足らずの細い列で、左右が黒い帯になっています。HOMEは幅1024pxで出ていて、画面ごとに幅がそろっていません。",
+   "fix": "PCの中身の幅はHOMEと同じ幅にそろえ、2列(左に顔・名前・LV、右に設定と記録)で並べます。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "profile"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール → イベント回想(まとまりを開いた所)〔replay-list〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "下の「イベントの一覧へ戻る」が灰色の地に灰色の字で、押せないボタンのように見えます。見出しの下の「お話の順に並んでいます。」は9pxで読めず、並べ方の説明も要りません。",
+   "fix": "「お話の順に並んでいます。」は消します。下のボタンを残すなら、ふつうの濃さの字と枠にします(上の件で1つにまとめるのが先)。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "replay-list"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "プロフィール → イベント回想(まとまりを開いた所)〔replay-list〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "各行の「2026/11/02」が、話が配られた日なのか自分が見た日なのか分かりません。",
+   "fix": "「11/02 公開」「11/02 に見た」のように、何の日かを一言付けます。",
+   "priority": "低",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "replay-list"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手のメニュー(HOME)〔home-assistant-menu〕",
+   "sizes": [
+    "yoko",
+    "pc"
+   ],
+   "what": "「下が空いている 115px/145px」「大きな空き」は空振りです。絵では画面の下の端までモードの札が並んでいて、上の空きも背景の町の絵なので、空いてはいません(まん中の空きの件はHOMEの件で挙げました)。",
+   "fix": "直す物はありません。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "空振り",
+   "sid": "home-assistant-menu"
+  },
+  {
+   "group": "a001",
+   "area": "HOME",
+   "scene": "助手の説明(HOME)〔home-assistant-help〕/イベント回想〔replay-list〕",
+   "sizes": [
+    "yoko",
+    "pc"
+   ],
+   "what": "説明の窓の「大きな空き」(右の暗幕の部分)と、横の「上が安全な領域にかかる」は空振りです。空きは暗くした背景です。横では切り欠きは左右に来るので上の端は問題なく、説明の窓はもともと上を47px空けています。",
+   "fix": "直す物はありません。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": "空振り",
+   "sid": "home-assistant-help"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "pc",
+    "yoko"
+   ],
+   "what": "4枚の札の下が何も無い。縦は下に421px(画面の50%)、PCは392px(49%)空いている。横は左の列の吹き出しの下に360×240px(27%)の空きがあり、画面の下も103px空いている。入口が4つあるだけの画面が寂しく、どこが目玉か伝わらない。",
+   "fix": "縦とPCは札を1列にして縦長にし、各店の今日のおすすめ品の絵を1〜2個と値段を札に載せて画面の下まで使う。横は左の列の空きに、みゅあの立ち絵か所持している通貨4種の一覧を置く。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "マーケット",
+   "machine_verdict": "本物",
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札に出ている「0」「1」「🌈0」が何の数か書いていない(所持数なのか値段なのか)。アイテム交換所だけ数字の前に🌈が付いていて、ほかの3枚とそろっていない。🌈が何の通貨かも分からない。",
+   "fix": "どの札も「所持 💎0」「所持 🪙1」のように、通貨の印と「所持」をそろえて付ける。アイテム交換所は払う物(プシュケー/勇者の証)の名前と数を並べて出す。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「ブリーダーP」「ビートP」の「P」が説明なしの略語になっている。手に入れ方はブリーダーPにだけ「(Pはレベルアップで獲得)」とあり、ビートPには無い。「プシュケー」「円盤石」も初めての人には分からない。",
+   "fix": "「ブリーダーポイント」「ビートポイント」と略さずに書き、どの札にも「〇〇で貯まる」を1行でそろえて入れる。プシュケーと円盤石は、札を長押ししたときか ⓘ で一言説明を出す。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札の中でいちばん大きいのは所持数の「0」で、行き先の説明は9〜10pxの灰色の字なので読みにくい。店の顔は💎🪙🔄🎟の絵文字だけで、見出しの線画アイコンともゲームの絵とも合っていない。",
+   "fix": "説明の字は12px以上の明るい色にする。店の印は絵文字をやめ、ダイヤ・コイン・アイテム・チケットのゲーム内の絵(40px以上)にそろえる。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "助手の吹き出しに、右上の「▴」(24×24px)と「タップで詳しく」の2つの押し所がある。▴は指で押しにくく、「詳しく」で何が見られるのかも分からない。",
+   "fix": "吹き出し全体を1つの押し所にして、押すと会話が開くようにする。たたむ操作は吹き出しを下へなでる動きにし、▴は無くすか44px角にする。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは助手と吹き出しの行だけが中央に寄っている。戻る・見出し・札は左端から全幅で並んでいるので、左の端がそろわずずれて見える。",
+   "fix": "吹き出しの行も左端(356px)から全幅に広げ、縦の画面と同じ並べ方にそろえる。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "マーケット〔market〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの話し手の名前「みゅあ」が9pxで、ピンクの細い字のため読みにくい。",
+   "fix": "話し手の名前は11px以上の太字にし、本文との差は色で付ける。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "market"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札に出ているのは名前と値段だけ。どの属性のモンスターか、どんな技・効き目か、すでに持っているかが分からないので、1枚ずつ「詳細」を開かないと比べられない。",
+   "fix": "札に属性の印、レア度、主な技1つ、「所持済み」の印を出す。詳細には説明の全文と能力の表だけを残す。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "売り物の円盤石の絵が約44pxと小さい。約185pxの高さの札の中で、名前と「詳細」の間に約30pxの何も無い帯がある。いちばん見せたい商品が札の飾りのように見える。",
+   "fix": "円盤石の絵を80px前後に大きくし、名前の下の空きをなくして札の高さを詰める。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「詳細」のボタンが50×20pxしかなく、縦とPCで10個、横で7個並んでいる。指で押すのが難しい。",
+   "fix": "「詳細」の小さなボタンをなくし、札の絵と名前のところを押せば詳細が開くようにする。札全体が44px以上の押し所になる。",
+   "priority": "高",
+   "viewpoint": 3,
+   "owner_hint": "マーケット",
+   "machine_verdict": "本物",
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "「スネグーラチカの/円盤石」「ウンディーネの/円盤石」が2行の中央そろえになり、ほかの1行の名前と高さがそろわない。上のタブで「円盤石」を選んでいるのに、全部の札に「の円盤石」が付いていて重複している。",
+   "fix": "札の名前は「スネグーラチカ」のようにモンスター名だけにして1行で出す。「円盤石」はタブにまかせる。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "マーケット",
+   "machine_verdict": "本物",
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では左の列がタブの下(約y245〜390)で約145px空いている。一方で右の商品の札は1段半しか見えず、2段目の値段が切れている。",
+   "fix": "所持ダイヤを見出しの右に移し、吹き出しを1行に縮めてタブを縦に並べる。右の商品は4列にして札の高さを詰め、2段がまるごと見えるようにする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "値段のボタンがすべて灰色で、押せるのか、ダイヤが足りないから押せないのかが分からない。灰色の字は暗い背景に埋もれて読みにくい。",
+   "fix": "値段の字は白か水色にする。足りないときは値段を赤くし、「ダイヤ不足」の一言を添える。押したときは「入手する」への案内を出す。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「所持ダイヤ 💎0」の帯が全幅で約38pxの高さを取っているのに、中身は数字1つだけで空きが多い。",
+   "fix": "所持ダイヤは見出しの右端に小さくまとめ、空いた高さを商品の札に回す。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko"
+   ],
+   "what": "みゅあの「寄付でもダイヤになるよ」という台詞があるが、どこで・どうやって寄付するのか分からない。",
+   "fix": "吹き出しを押したときに寄付の案内の画面へ進めるようにする。または、台詞に「設定の〇〇から」のように行き先を書く。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの「▴」(24×24px)と「タップで詳しく」で、同じ助手への押し所が2つある。▴は押しにくい。",
+   "fix": "マーケットの画面と同じく、吹き出し全体を1つの押し所にまとめ、▴は無くすか44px角にする。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは吹き出しの行だけが中央に寄っていて、見出し・所持ダイヤ・タブ・札の左端とずれている。",
+   "fix": "吹き出しの行を左端から全幅にし、ほかの部品と端をそろえる。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの印が、ダイヤショップは💎の絵文字、マーケットはバッグの線画で、画面ごとに作りが違う。",
+   "fix": "見出しの印はどちらも線画(またはどちらもゲームの絵)にそろえる。",
+   "priority": "低",
+   "viewpoint": 5,
+   "owner_hint": "マーケット",
+   "machine_verdict": null,
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a003",
+   "area": "マーケット",
+   "scene": "ダイヤショップ〔market-diamond〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "話し手の名前「みゅあ」が9pxで、ピンクの細い字のため読みにくい。",
+   "fix": "話し手の名前は11px以上の太字にする。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "market-diamond"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「終わり」の窓が半透明で、後ろの回想の窓(紫の「閉じる」・顔・「回想・鍵の向こう側へ 第1話～鎖の箱～」の見出し)が透けています。「閉じる」が2つ見え、話の名前も二重に出ます。横では「終わり」の字と「次のお話」が後ろの窓の上に乗っていて、とくに読みにくいです。",
+   "fix": "締めを出すときは後ろの回想の窓を消すか、不透明な暗幕で完全に隠し、「閉じる」を1つにしてください。",
+   "priority": "高",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "直前のせりふ「箱の中から、歌がもう一度だけ、小さく聞こえた」の帯が「第1話」の横に残っていて、見出しに重なっています。縦では帯が画面の右端で切れて読めません。",
+   "fix": "締めに切り替えるときは、せりふの帯を消してください。最後の一言を見せたいなら、「終わり」の下に左そろえで1行として置きます。",
+   "priority": "高",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "この画面でいちばん押させたい「次のお話 第2話～ひだりと、みぎ～」が、暗い枠に小さな字で、押せるかどうか分かりません。灰色の「閉じる」のほうが目立っていて、大事さと大きさが逆です。",
+   "fix": "「▶ 第2話を見る」を色付きの大きな主ボタンにし、話の名前はボタンの中に大きく出してください。「閉じる」は小さめの控えのボタンにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "字間を広げた「終 わ り」が、左へ8px(字間15px)ずれて見えます。上の小さな「鍵 の 向 こ う 側 へ」も字間が広く、ずれていて読みにくいです。",
+   "fix": "字間の分を右に足して中心を戻してください(または字間を0にする)。大会名の行は字間を広げず、12px以上にします。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "縦では、締めの部品が画面の中ほどに寄っています。下の350×264px(画面の33%)には何も無く、透けた後ろの窓が見えるだけです。",
+   "fix": "後ろの窓を隠したうえで、空いた下側にこの話の主役の立ち絵か一場面を大きく置いてください。「次のお話」の主ボタンは親指の届く下側へ移します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCの上部340×240pxの空きは、お話の背景の森の絵が見えている場所で、締めの部品は縦の真ん中にあるため問題ありません。",
+   "fix": "直さなくてよいです。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "空振り",
+   "sid": "replay-end"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "1枚の札に、進み具合が「0 / 3」「進みバー」「進行中 0%」の3通りで出ています。しかも0%なのに「進行中」と書かれています。",
+   "fix": "「進行中 0%」を消し、右上の「0 / 3」とバーだけにしてください。空いた右下には、達成時の「受け取る」か、報酬の絵を大きく出します。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「デイリー」の札に赤い「2」が付いているのに、すぐ下の「全て受け取る (2)」にも同じ2が出ています。",
+   "fix": "タブの赤い数字は残し、ボタンは「全て受け取る」だけにしてください。数字を残すなら「2件まとめて受け取る」のように意味が分かる形にします。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "「デイリーチャレンジ」の説明が「(クラシック・タクティクスどちら/でも)」と、言葉の途中で折り返しています。",
+   "fix": "説明を「チャレンジモードを1回クリア(クラシック・タクティクス可)」のように短くしてください。または、言葉の切れ目でしか折り返さないようにします。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "機械が見つけた「1/1が2回」「0/1が2回」は、別々のミッション(ログインと助手とふれあう、デイリーチャレンジとモンスター育成)の進み具合で、二重ではありません。",
+   "fix": "直さなくてよいです(本当の二重は「0 / 3」と「進行中 0%」の件で挙げました)。",
+   "priority": "低",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": "空振り",
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "どの札にも右上の「受取可」の札と「受け取る」のボタンが両方あり、同じことを2回言っています。",
+   "fix": "「受取可」の札を消してください。期限が近い物だけ「あと○日」の赤い札を出し、空いた所は報酬の絵に回します。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「未受取 (7)」のタブに赤い「7」も付いていて、同じ数が隣り合って二重に出ています。",
+   "fix": "タブは「未受取」と赤い数字だけにしてください。ミッションのタブと同じ形にそろえます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "機械が見つけた「受取期限: 期限なし」「スキップチケット・序 ×1」の2回は、別々のギフトの中身なので二重ではありません。",
+   "fix": "直さなくてよいです。",
+   "priority": "低",
+   "viewpoint": 8,
+   "owner_hint": "HOME",
+   "machine_verdict": "空振り",
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / 神殿〔temple〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では、左の列が吹き出しの下から何も無く、360×250px(画面の28%)が空いています。右の列だけが下に続いていて、5つ目の「限界突破」から先は切れています。",
+   "fix": "横では8つの入口を左右2列に分けて並べてください(左に再生〜お布施、右に限界突破〜魂格進化)。そうすれば、全部がスクロールなしで見えます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": "本物",
+   "sid": "temple"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "報酬が黄色い文字の羅列だけで、どこからどこまでが1つの品か分かりにくいです。「スキップチケット・序/破/急」「セッション券」「性格のたね」「染色もどき」が何に使う物かも分かりません。押しても詳しく見られず、🎶や🌱の絵が付いている品といない品が混ざっています。",
+   "fix": "報酬を、絵と数の付いた小さな札に1つずつ分けてください。札を押すと品の説明(何に使うか)が出るようにします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / 神殿〔temple〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「マスモン」「ベースモン」「強化P」「魂格」「絆Lv」が説明なしで出ています。「限界突破」「超越」「魂格進化」は3つとも上限を上げる話に読め、違いが分かりません。「Lvを99下げて」も意味が通じません。",
+   "fix": "略語をやめて、それぞれ何が上がるかを1行で書き分けてください(例: 限界突破=Lv上限+10)。初めての言葉には「?」で用語の説明を開けるようにします。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "temple"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕・ギフト〔gift〕・神殿〔temple〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "助手の吹き出しの名前「みゅあ」が9px(基準10px)で、ピンクの細字のため読めません。",
+   "fix": "名前は11px以上の太字にしてください。HOMEの助手の名前と同じ大きさにそろえます。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ギフトの吹き出しにだけ「タップで詳しく」があり、ミッションと神殿には無いので、押せる吹き出しと押せない吹き出しの見分けがつきません。何が詳しく見られるのかも分かりません。",
+   "fix": "押して出る中身が無いなら「タップで詳しく」を消してください。出すなら3画面とも同じ形にそろえ、何が見られるかを書きます(例:「ギフトの受け取り方」)。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕・ギフト〔gift〕・神殿〔temple〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "戻るボタンの文字がミッションとギフトでは「戻る」、神殿では「HOMEへ戻る」で、同じ役なのにボタンの幅も変わっています。",
+   "fix": "HOMEから入る画面は全部「← HOME」に統一し、ボタンの大きさもそろえてください。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕・ギフト〔gift〕・神殿〔temple〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しが、ミッションは黄色に一覧の絵、ギフトは水色に箱の絵、神殿は薄紫で絵なしと、画面ごとにばらばらです。選ばれたタブもミッションは橙、ギフトは水色と、形と色が違います。",
+   "fix": "見出しは全画面で同じ色・同じ大きさにし、左に絵を付ける形にそろえてください。選ばれたタブの色も1つに決めます。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕・ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "同じ「全て受け取る」が、ミッションでは橙のグラデーションに件数付き、ギフトでは金色に件数なしで、同じ意味のボタンの形がそろっていません。",
+   "fix": "色・高さ・件数の出し方を1つに決め、両方の画面で同じ部品を使ってください。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "受け取れる「助手とふれあう 1/1」が一覧のいちばん下にあって、画面の外に切れています。赤い数字は2件なのに、見えているのは1件だけです。",
+   "fix": "受け取れる物を一覧の上へまとめて並べてください。その次に進行中、最後に受け取り済みの順にします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "毎日のログインのミッションなのに、説明が「その期間中にログインする」となっていて、日本語として不自然です。",
+   "fix": "「今日ログインする」(ウィークリーなら「今週」)と書いてください。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / 神殿〔temple〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは、入口の一覧と吹き出しの幅(約448px)が上の見出しの線(約568px)より細くなっています。ミッションとギフトの一覧の幅ともそろっていません。",
+   "fix": "一覧の幅を、見出しの線やほかの画面の一覧と同じ幅に広げてください。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "temple"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ミッション〔mission〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「⚔️🎵🃏」の絵の札が付いているミッションと付いていないミッション(ログイン・モンスター育成)が混ざっていて、並びが不ぞろいです。",
+   "fix": "全部のミッションに、遊びの種類を表す絵を1つずつ付けてください。または全部外して、そろえます。",
+   "priority": "低",
+   "viewpoint": 5,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "mission"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "受取期限が「2026/12/21 9:26:42」と秒まで出ていて、細かすぎて読みにくいです。",
+   "fix": "「12/21まで」のように日付だけにし、残り7日を切ったら「あと○日」を赤で出してください。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / ギフト〔gift〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ギフトボックスの中に、ギフトの一覧より上に「ログインボーナス一覧を見る」の大きなボタンがあり、ギフトの札が下へ押し出されています。",
+   "fix": "ログインボーナスへの入口はHOMEのお知らせ側へ移すか、見出しの右に小さな文字のリンクとして置いてください。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "gift"
+  },
+  {
+   "group": "a002",
+   "area": "HOME",
+   "scene": "HOME / 神殿〔temple〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "8つの入口の説明が10px前後の灰色の字で、紫の背景に埋もれて読みにくいです。",
+   "fix": "説明を12px・明るめの色にしてください。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "HOME",
+   "machine_verdict": null,
+   "sid": "temple"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "左上の「チャレンジ / Normal」「クイック / Beginner」が 7px(基準 10px)で、縦でも PC でも読めません。日本語と英語が混ざっていて意味も伝わりにくいです。",
+   "fix": "「チャレンジ・ふつう」のように日本語にそろえ、10px 以上でバッジの中に1行で入れてください。WAVE 表示と同じ大きさにします。",
+   "priority": "高",
+   "viewpoint": 2,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "敵の上の大きな「ためる」の札と、右下「次の行動 ためる」の箱に、同じ行動が2か所に出ています。",
+   "fix": "上の札は行動を出す瞬間だけの演出にして、ふだんは右下の「次の行動」だけにしてください。空いた所は敵の絵を大きく見せるのに使います。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "「た め る」の字間が広く、字の並び全体が札の中心から右にずれて見えます。上の✨絵文字も左に寄っていて、中心がそろっていません。",
+   "fix": "字間は詰めて、字そのものの幅で中央に置いてください。✨は札の外の飾りとして、札の中心に合わせます。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "4つの距離の枠のうち3つが「---」と「0.0%」だけの空き枠です。画面のいちばん大事な中段を、何も無い大きな箱が占めています(縦で約150px×3枠)。",
+   "fix": "空いた枠は高さを半分にした細い帯にして、味方のいる枠だけ大きくしてモンスターを大きく見せてください。空いた高さは手札の効果の表示に回します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "手札の札には名前・種類(攻撃/守り/支援)・必要ガッツしか出ていません。威力、使える距離(「零距離撃」が近い時だけか)、守りの量が分からないため、比べて選べません。",
+   "fix": "札の中の空いた部分に「威力 30・零距離」「受けるダメージ -50%」のような1行を足してください。細かい説明だけ長押しで出すようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PC では手札の札の下の端が画面の下で切れていて、「⚡20」などの箱の下の線が見えていません。",
+   "fix": "手札の段の高さを、画面に入る大きさに合わせて縮めてください。上の敵の場の空きを詰めれば、札全体が入ります。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では敵の赤い丸の下半分が、下の「❤10% ⚡5%」の帯で真横に切られています。ディノの足元が隠れています。",
+   "fix": "敵の丸を小さくして帯の上に収めるか、帯を左の場の下に移して、敵の丸全体が見えるようにしてください。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横は左半分に敵・距離・ゲージが詰め込まれて窮屈です。一方、右半分は手札5枚が3枚と2枚に分かれて小さく並び、上下左右が空いていて、左右の釣り合いが悪いです。",
+   "fix": "右側の手札は5枚を1段で大きく並べ、下の空きに効果の1行を入れてください。左側は距離の枠を細くして、敵と味方を大きく見せます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PC では幅 600px ほどの縦の列が真ん中にあるだけで、左右は真っ黒です。そのうえ敵の場(上から約300px)は小さな丸以外ほとんど空いています。",
+   "fix": "PC は横の配置(左に場・右に手札)を使い、敵とモンスターの絵を大きくしてください。ログや解析は場の横に並べます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「❤10% ⚡5%」「0.0%」「次の行動」の「24」「詳細 2」、敵の名前の横の「零」に説明が無く、何の割合・何の数字なのか分かりません。",
+   "fix": "「毎ターン ライフ+10%」「命中 0%」「予想ダメージ 24」「距離:零」のように、言葉を付けて出してください。「詳細 2」は「効果 2件」にして、押すと一覧が出るようにします。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "敵の名前「ディノ」とライフ「400 / 400」が小さい斜めの字です。下の「ALLY LIFE」の飾り文字と大きさが変わらず、戦う相手の名前が目立ちません。",
+   "fix": "敵の名前は 14px 以上の太字の正体にし、ライフの数字もバーの上に大きく出してください。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "押す所が 44px 未満のものが 9個あります(30px 未満が縦で3個・横で6個)。「詳細 2」40×20・「×1」42×28・設定 28×28・「VIEW」63×32・横の「ログ」28×28 で、指で押しにくいです。",
+   "fix": "押せる範囲を 44×44 以上に広げてください。見た目は小さいままでも、押せる範囲だけ広げる形でかまいません。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横だけ「ログ」「ステータス」「解析」の字が消えて、アイコンだけになっています(機械も「ログ」の字が絵に隠れると報告)。王冠が何を開くのか分かりません。縦・PC と形もそろっていません。",
+   "fix": "横でもアイコンの下に小さく字を付けて、縦と同じ見た目にしてください。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "左下のボタンが「ステータス」となっていて、能力を「能力」と呼ぶ決まりと合っていません。",
+   "fix": "「能力」に直してください。",
+   "priority": "中",
+   "viewpoint": 7,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「ALLY LIFE」「ALLY GUTS」「ACTION CARDS 0/1」「VIEW」「AUTO OFF」など英語の見出しが多いです。ほかの画面の「ライフ」「ガッツ」と呼び方がそろっていません。「0/1」の意味も分かりません。",
+   "fix": "「味方ライフ」「ガッツ」「手札(選んだ数 0/1)」「場を見る」「オート:切」のように日本語にそろえてください。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "手札がすぐ下に並んでいるのに「▶ カードを選ぶ」ボタンがあり、札を直接押すのか、このボタンを押すのか分かりません。「緊急」も何が起きるのか説明がありません。",
+   "fix": "札を押せば選べるようにして、ボタンは選んだ後の「決定」だけにしてください。「緊急」は「緊急回避(ガッツ○)」のように効果を添えます。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札の中の「⇄技変更」は、高さ約20pxの小さな部分です。札を選ぶつもりで押すと技変更が開いてしまう、などの押し間違いが起きやすいです。",
+   "fix": "技変更は札の長押しか、札を選んだ後に出る別のボタンにして、札全体を1つの押す所にしてください。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "モッチーの枠で「ライフ回復」「ガッツ回復」の札がモンスターの頭と体に重なっています。横では「0.0%」の札も体に重なっていて、モンスターが見えにくいです。",
+   "fix": "状態の札は枠の上の帯に小さなアイコンで並べ、モンスターの絵には何も重ねないでください。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クラシックの対戦中〔battle-play〕・クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "敵の次の行動が「しっぽピンタ」になっています。「しっぽビンタ」の誤字に見えます。",
+   "fix": "技の名前を確認して「しっぽビンタ」に直してください。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "battle-play"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "クイックの対戦中〔battle-play-quick〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "「中距離に移動しようとしている…?」の吹き出しが「…?」で終わっていて、確かな予告なのか推測なのか分かりません。縦では出ておらず、大きさによって情報が違います。",
+   "fix": "「次:中距離へ移動」と言い切り、縦・PC でも同じ場所(次の行動の箱の中)に出してください。",
+   "priority": "低",
+   "viewpoint": 5,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-play-quick"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では左側が見出しと押せないボタンだけで、下に 360×230px(画面の26%)の何も無い空きがあります。右側はキットが1つ半しか見えません。",
+   "fix": "左側に、選んだキットの説明(得意なこと・中身の要約)と大きな決定ボタンを置いてください。右側のキット一覧は札を小さくして、3つが見えるようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "3つのキットの違いが、チーム名とモンスター名しか出ていません。強さ・遊び方・中の技カードの特徴を比べるには、1つずつ「中身を見る」を開くしかありません。",
+   "fix": "各キットに「速さで先手を取る/初心者向け」のような1行の特徴と、主な技を2〜3個、札の横に出してください。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PC では幅 600px の列にキットが縦に並び、3つ目のキットは隠れていて、下に動かさないと見えません。左右は黒い空きです。",
+   "fix": "PC ではキット3つを横に3列並べ、全部を1画面で比べられるようにしてください。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "カードの右下の大きな数字「8」「6」「7」に説明が無く、強さなのかコストなのか分かりません。",
+   "fix": "数字の横に「コスト」などの言葉を付けるか、見出しの下に「数字=○○」と1行で説明を入れてください。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "カードの絵の中の名前(ディノ・ハム など)がとても小さく、読めません。名前は下の1行にまとめて書いてあるだけで、どの絵がどれか分かりにくいです。",
+   "fix": "各カードの下に名前を 11px 以上で1つずつ付け、下のまとめ行は「技カード50枚付き」だけにしてください。",
+   "priority": "中",
+   "viewpoint": 2,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "同じ物が「スターター」(見出し)・「キット」(下のボタン)・「チーム」(各見出し)と、3つの名前で呼ばれています。",
+   "fix": "「スターターキット」などの1つの呼び方にそろえ、見出しもボタンも同じ言葉にしてください。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの下の説明文が 9px ほどと小さいです。「ビートP」が何で、どこで貯まるのかの説明もありません。",
+   "fix": "説明文は 11px 以上にし、「ビートP(モンヒロビートで貯まるポイント)」のように一度言葉を添えてください。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a005",
+   "area": "カードバトル",
+   "scene": "MFバトルカード〔card-top〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "キットの枠そのものを押すと選べるのか、「中身を見る」を押すのかが見た目から分かりません。そのため、下の「キットを選んでください」のボタンが押せない理由も分かりにくいです。",
+   "fix": "キットの枠に「選ぶ」の丸い印を付け、選ぶと枠が光るようにしてください。決定ボタンは選んだ後に「このキットで始める」と大きく変わる形にします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "card-top"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "ランキング〔battle-ranking〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "記録が無いと、トロフィーと2行の文が出るだけです。下は何も無い面が縦で390×490px(画面の61%)、PCで600×450px(58%)。PCは列の高さの77%(457px)が空いていて、何の画面か分かりません。",
+   "fix": "空のときも、自分の今のブリーダーLv・絆Lv・総合力と「何位から載るか」を出します。あいた下に「バトルで記録を作る」の大きなボタンを置き、上位の見本の枠(1〜10位の空き枠)も並べます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-ranking"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "1枚の札の中に、経験値とダイヤの倍率「×0.38」が3回出ています(倍率の行・「経験値・ダイヤのみ1.5倍」の行・クリア報酬の箱)。どれが本当にもらえる量なのか分かりません。",
+   "fix": "倍率の行と「1.5倍」の行は消し、クリア報酬の箱1つに「経験値×0.38(育成で1.5倍込み)」とまとめます。空いた分で難易度名と挑戦ボタンを大きくします。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-quick"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では、報酬方針と通常/極限の切り替えで上半分が埋まります。そのため、いちばん押す「この難易度で挑戦▶」が画面の下で切れて見えません(札の下端も切れています)。",
+   "fix": "横では報酬方針と通常/極限を左の細い列に縦に並べ、右に札を置きます。挑戦ボタンが必ず画面内に収まるよう、札の高さを画面の高さに合わせます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-quick"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシック(モード選択)〔battle-classic〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札の中でいちばん大きい字が、まだ0の「0 pt」です。モード名や中身より目立っています。下の「最高スコア・最高到達 WAVE 0」も、0ptがスコアで0がWAVEなのか読み取りにくいです。",
+   "fix": "「0 pt」は小さくして「最高スコア 0pt/最高到達 WAVE 0」の1行に並べます。モード名「チャレンジモード」と「難易度を選ぶ」ボタンを、いちばん大きく見せます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-classic"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "記録の「WAVE 0」が、難易度名「Beginner」より大きく出ています。しかも「クリア 1回」なのに最高到達WAVEが0で、記録どうしが食い違って見えます。",
+   "fix": "難易度名を見出しの大きさに上げ、記録は「最高 WAVE 0・クリア1回」の小さな1行にします。クリア済みなのにWAVE 0になる数え方も直します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-quick"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシック(モード選択)〔battle-classic〕/クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "縦ではタブと札の間が約120px、助手の吹き出しの下も約120px、何も無い帯になっています。札は画面の真ん中に小さく浮いています。PCも札の下が大きく空いています。",
+   "fix": "札を上に詰めて縦に大きくし、ボタンと説明の字を一回り上げます。吹き出しは札のすぐ下に寄せ、画面の下には「難易度を選ぶ/この難易度で挑戦」を広い幅で固定します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-classic"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "主役を選ぶ画面なのに、モンスターの絵は丸枠の中の約40pxで、札の中でいちばん小さい部類です。黄色い総合力の数字のほうが目立っています。",
+   "fix": "絵を札の幅いっぱい(縦で約120px)の大きさにし、名前をその下に太く置きます。総合力は名前の横の小さめの字にします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "選ぶ決め手の「勇者特性」は、札には技名(モッチ砲・サイコキネシス など)しかありません。何が効くのかは、1体ずつ「詳しく見る」を開かないと比べられません。",
+   "fix": "札の技名の下に、勇者特性の効き目を1行(例: 「味方全員のちから+10%・3ターン」)で出します。詳細には、技の数字と説明文だけを残します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "どの札にも「詳しく見る」しか無く、どこを押せば勇者モンに決まるのか分かりません。札そのものを押せるのかも見分けがつきません。",
+   "fix": "札を押したら選んだ印(枠の光)が付くようにします。画面の下に「この勇者モンで決定」の大きなボタンを1つ固定し、「詳しく見る」は札の右上の小さな i にします。",
+   "priority": "高",
+   "viewpoint": 3,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横で中身が幅390pxの列に押し込まれ、左右約230pxずつが真っ黒です。札は3枚しか見えず、2段目は頭だけで切れています。",
+   "fix": "横では画面の幅いっぱいに5〜6列で並べ、1画面で全員が見比べられるようにします。左右の黒帯はなくします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "カードバトル共通〔battle-menu・battle-classic・battle-quick・battle-ranking・battle-hero〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは、どの画面も中央の幅600pxだけを使い、左右の約680pxが真っ黒です。札・字・ボタンがスマホと同じ小ささのままです。",
+   "fix": "PCでは背景を画面いっぱいに広げます。クラシックとクイックは両隣の札まで見える3枚並べ、ランキングと勇者モンは列を増やすなど、横幅を使う並べ方に切り替えます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "common"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "モンヒロバトル(仕組みを選ぶ)〔battle-menu〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "バトルを選ぶ画面の下に助手の札が続き、「修行を見る/応援する 今日0/3/マスモンで対戦(β)/モンヒロサクセス(β)」の同じ5ボタンが、助手ごとに繰り返されます。サクセスは「いまはみゅあ編だけ」なのに全員の札にあり、画面が縦に長くごちゃつきます。「マスモン」も説明がありません。",
+   "fix": "助手は顔と今日の様子の1行だけ並べ、押したら部屋で操作できるようにします。サクセスの入口は上に1つだけにし、「マスモン」は「マスターのモンスター」などと言い換えます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-menu"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシック(モード選択)〔battle-classic〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "上のタブに「ブリーダーLv/絆Lv/総合力」のランキングがあり、札の中にも「ランキング」ボタンがあります。前の画面にも「ランキング」があり、同じ名前の入口が3つあって、どれが何の順位か分かりません。",
+   "fix": "上のタブはやめて、モードを選ぶことに絞ります。ランキングは「モード別ランキング(札の中)」と「全体ランキング(前の画面)」に名前を分けます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-classic"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "モンヒロバトル(仕組みを選ぶ)〔battle-menu〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCの立ち絵は顔を大きく拡大していて、帽子の上と右腕が列の端でまっすぐ切れています。縦・横と違う切り取り方です。",
+   "fix": "縦・横と同じ、全身が収まる縮尺にそろえます。列の幅に合わせて頭から膝まで入れ、帽子の先が切れないようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-menu"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシックバトルの詳しいルール〔battle-rule〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「詳しいルール」の止め絵が、選ぶ画面のままです。各札の「?」を押してもルールが出ていないように見えます。下に「ヘルプ」ボタンもあり、ルールの入口が2つに分かれています。",
+   "fix": "「?」を押したら、その場でルールの窓が開くか確かめます。開くなら札の「?」に一本化し、下の「ヘルプ」はヘルプ全体へ行く入口とはっきり名前を分けます。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-rule"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "モンヒロバトル(仕組みを選ぶ)〔battle-menu〕/クラシックバトルの詳しいルール〔battle-rule〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「立ち絵 ON」「コメント ON」が高さ28px、各札の「?」が40×40pxで、押す所が小さいです。大きな札の中の「?」は、札そのものと押し間違えやすいです。",
+   "fix": "切り替えは歯車の1つにまとめて44px以上にし、「?」も44px以上にして札の外の右端に出します。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-menu"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "ランキング〔battle-ranking〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ブリーダーLvの順位なのに、空の文が「このモードを遊ぶと」になっています。吹き出しも、記録が無いのに「このスコア、どうやって出したの」「難易度切り替えると」と、この画面に無い物の話をしています。",
+   "fix": "空の文は「バトルでブリーダーLvを上げると、ここに載ります」に直します。吹き出しは、記録が無いときの台詞をこの画面向けに用意します。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-ranking"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "ランキング〔battle-ranking〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しが「モンヒロバトル」のままで、何の画面かは小さな添え字にしか書かれていません。「ブリーダーLv・絆Lv・総合力」の違いの説明もありません。いちばん下の注の字も小さく、読ませる位置ではありません。",
+   "fix": "見出しを「ランキング」にし、各タブの下に1行の説明(例: 絆Lv=助手との仲の深さ)を出します。注は空の文のすぐ下に移します。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-ranking"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ほかの画面は細い上帯に「←」だけですが、ここだけ「← 戻る」の枠付きボタンと、斜めの中央見出しです。戻る場所の形と見出しの形が画面ごとに違います。",
+   "fix": "ほかのバトル画面と同じ上帯(左に←・左寄せの見出し・添え字)にそろえます。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "カードバトル共通〔battle-menu・battle-classic・battle-quick・battle-ranking・battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "助手の吹き出しの場所が画面ごとに違います(立ち絵の下・画面の下・タブの下・見出しの下)。「タップで詳しく」も画面によって有ったり無かったりで、押すと何が分かるのか書かれていません。",
+   "fix": "吹き出しは全画面で同じ位置(画面の下・顔は左)に固定します。押した先を「みゅあのヒントを見る」と具体的に書きます。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "common"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「プシュケー」「虹×2」「プロ・極限」「通常 9/極限 6」の数字、「同じ難易度クリアで解放」の意味が、初めての人に通じません。経験値の数字の下線も、押せるのかどうか分かりません。",
+   "fix": "プシュケーと虹には「?」で1行の説明を付け、「9」は「9段階」と書きます。解放の条件は「チャレンジでEasyをクリアすると解放」のように具体的に書きます。下線は消します。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-quick"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "報酬方針の下の字(「経験値あり」「経験値0・虹×2」)が約7pxで、選ぶ決め手なのに読めません。その下の解放条件の注も同じ小ささです。",
+   "fix": "下の字を10px以上にし、ボタンの高さを上げて2行を楽に読めるようにします。",
+   "priority": "中",
+   "viewpoint": 2,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-quick"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札の能力が「ライフ・ちから・丈夫さ・ガッツ」です。決まった6つの能力に無い「ガッツ」が混ざり、かしこさ・命中・回避は出ていません。",
+   "fix": "6つの能力の名前にそろえ、ガッツを残すなら「能力ではない値」として別の行と説明を付けます。",
+   "priority": "中",
+   "viewpoint": 7,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "添え字「勇者モン=バトルの主役。/このモンスターの勇者特性が効く」が、2行のまま中央そろえで、行頭がずれて読みにくいです。",
+   "fix": "左寄せの1行に縮めます(例: 「選んだモンスターの勇者特性がバトル中ずっと効きます」)。",
+   "priority": "中",
+   "viewpoint": 9,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「勇者特性」「ベースモン」「M/B管理」が説明なしで出ています。勇者特性が何に・どれだけ・いつ効くのかも分かりません。",
+   "fix": "タブの下の1行で「編成=M/B管理(モンスターとブリーダーの管理)で組んだ組み合わせ」「ベースモン=手持ちのモンスターそのまま」と説明します。勇者特性は「?」で効き目を出します。",
+   "priority": "中",
+   "viewpoint": 10,
+   "owner_hint": "カードバトル",
+   "machine_verdict": null,
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "勇者モンを選ぶ〔battle-hero〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "能力の名前は灰色の約9px、「総合力」や吹き出しの「みゅあ」も9pxで、暗い札の上で読みにくいです。",
+   "fix": "能力の名前と値を11px以上にし、名前の字を明るい灰色に上げます。",
+   "priority": "中",
+   "viewpoint": 2,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-hero"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシック(モード選択)〔battle-classic〕/クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ページの点が6×6pxのボタン、「?説明」「ランキング」が高さ33pxで、押す所が小さいです。「左右にスワイプして…」は字間を広げた小さな字で、PCではスワイプできないのにそう書いてあります。",
+   "fix": "点は押せない飾りにして、左右の矢印を44px以上に広げます。説明とランキングは高さ44pxにし、案内は「← → で選ぶ」と普通の字間にします。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "本物",
+   "sid": "battle-classic"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "クラシック(モード選択)〔battle-classic〕/クイックモード(難易度)〔battle-quick〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "空振り: 「CHALLENGE」「SPECIES」「EASY」などの途中の折り返しは札の後ろの透かし文字です。同じ文の二重(ランキング・全WAVE詳細・1.5倍・種族チャレンジ・クリア0回 など)も、両隣で一部が見えている別の札の字です。",
+   "fix": "直さなくてよいです(倍率の本当の三重は別の件で挙げています)。",
+   "priority": "低",
+   "viewpoint": 9,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "空振り",
+   "sid": "battle-classic"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "カードバトル共通〔battle-menu・battle-classic・battle-quick・battle-ranking〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "空振り: 「MONHERO BATTLE · SELECT」の8pxは、日本語の見出しの上に添えた英字の飾りで、読ませる字ではありません。",
+   "fix": "直さなくてよいです。気になるなら消して、見出しをその分上げます。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "空振り",
+   "sid": "common"
+  },
+  {
+   "group": "a004",
+   "area": "カードバトル",
+   "scene": "モンヒロバトル(仕組みを選ぶ)〔battle-menu〕/クラシックバトルの詳しいルール〔battle-rule〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "空振り: 「何も無い長方形 390×340px」は、助手の立ち絵が大きく出ている場所で、空いてはいません。",
+   "fix": "直さなくてよいです。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "カードバトル",
+   "machine_verdict": "空振り",
+   "sid": "battle-menu"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "1枚の札に「遊べません」(大見出し)、「準備中・遊べるようになったらお知らせします」、ボタン「準備中▶」があり、どれも「今は遊べない」という同じ意味です。",
+   "fix": "大見出しと下の1行を消し、ボタンの「準備中(近日公開)」だけ残します。空いた場所にはモードの絵か、ルールを1行で置きます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "開いて最初に出るのが遊べないチャレンジモードです。札でいちばん大きい字は「遊べません」で、モード名はそれより小さく出ています。本命のボタンは灰色の「準備中▶」で、白く目立つのは「？説明」だけです。▶が付いているので押せそうに見えます。",
+   "fix": "遊べるモードを最初に開く位置に並べます。遊べないモードは札全体を暗くし、「準備中」バッジ1つにします。モード名をいちばん大きくし、▶は押せるときだけ付けます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "縦では、タブと札の間が約115px、吹き出しの下が約120px空いていて、札は幅約230pxと小さいです。PCは1280幅のうち中央600pxしか使わず、札は約286pxで左右は真っ黒です。",
+   "fix": "縦は札を画面の高さの7割まで広げ、「選ぶ」ボタンを札の下に大きく置きます。PCは左右の黒帯を使い、3つのモードを横に並べて一度に見せます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "縦では、いちばん下の部品から画面の下まで132px(高さの16%)空いています。PCも見出しとタブの間に約110px、吹き出しの下に約110pxの空きがあり、札は幅286pxしかありません。",
+   "fix": "「この難易度で挑戦▶」を画面の下に固定して大きく置き、札を縦に広げてクリア報酬を大きく見せます。PCは難易度を横に並べます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "倍率の行に「ダイヤ ×0.25」があり、すぐ下のクリア報酬にも「💎ダイヤ:×0.25」と同じ数字が出ています。",
+   "fix": "報酬の箱からは消し、倍率の行だけに残します。空いた場所には、その難易度の敵(ボス)の絵を置きます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "クリア報酬の「経験値:通常」と、そのすぐ上の「絆経験値3倍・ブリーダー経験値1.5倍」が食い違って見え、どちらが本当か分かりません。",
+   "fix": "「経験値:通常」を消します。報酬の箱に「絆経験値 ×3/ブリーダー経験値 ×1.5」とまとめて書きます。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「敵強度 ×0.25」「スコア ×0.25」「ダイヤ ×0.25」が何に比べた倍率なのか、数字が大きいと何が起きるのか、説明がありません。",
+   "fix": "「敵の強さ:ふつうの1/4」「もらえるスコア:1/4」のように言葉で書きます。押すと1行の説明が出るようにします。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札でいちばん大きいのが自己ベストの「0 pt」です。初めての人には大きな0が見えるだけで、挑むかどうか決める材料(敵の強さ・報酬)は小さい字になっています。",
+   "fix": "自己ベストは札の右上の小さな札に下げます。難易度名とクリア報酬を大きくします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "通常9段階を1枚ずつスワイプしないと見られず、敵の強さ・スコア倍率・報酬を並べて比べられません。札に出ているのは倍率3つと報酬だけで、WAVEの中身は「全WAVE詳細」を開かないと分かりません。",
+   "fix": "上に9段階の一覧表(名前・敵の強さ・報酬・自己ベスト)を置き、行を押すとその札が開くようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では助手の吹き出しが画面の下にはみ出し、ピンクの枠の上の線だけが見えています(y≈378)。壊れたように見えます。",
+   "fix": "横では吹き出しを出さず、左上の助手アイコンに畳みます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "左上の「プロ / Normal」が7pxで、今どの難易度で遊んでいるか読めません。「WAVE 1/10」の札も小さいです。",
+   "fix": "「WAVE 1/10 ・ プロ ふつう」を1つの札にまとめ、12px以上にします。",
+   "priority": "高",
+   "viewpoint": 2,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "敵の行動が2か所に出ています。縦では敵の上の「⏳様子見!」と右の「次の行動 様子を見ている」が同じ内容です。PCではモッチーの札の「🎯-24」と「次の行動 はり手 24」で24が二重です。さらに敵の上は「👊通常攻撃!」なのに次の行動は「はり手」で、言っていることが食い違っています。",
+   "fix": "敵の行動は右の「次の行動」の札1つにまとめます。狙われているモンスターの札には赤枠だけ付けます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "助手の吹き出しの「「EX」で行が終わり、次の行が「スキルを使用」」になっていて、「EXスキル」という言葉の途中で折り返しています。",
+   "fix": "「EXスキル」は改行しないようにするか、文を短くして1行に収めます。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では助手の吹き出しが4つの枠(零/近/中/遠)の下半分にかぶり、モッチーの絵・ライフ・GUTSが隠れて読めません。一方、右のカード欄は下が約80px空いています。",
+   "fix": "横では吹き出しを右のカード欄の下の空きへ移します。または対戦中は吹き出しを出さず、アイコンだけにします。",
+   "priority": "高",
+   "viewpoint": 12,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "4つの枠のうち3つは「---」だけの空き枠なのに約200pxを使っています。自分のモッチーは枠の左に約60pxの小さな絵で出ているだけです。",
+   "fix": "空いている枠は細い1行に縮めます。出ているモンスターの絵とライフを大きくします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "いちばん押す「▶カードを選ぶ」が、VIEW・緊急・AUTO OFFと同じ灰色の枠で並んでいて目立ちません。",
+   "fix": "「カードを選ぶ」を明るい色で横幅いっぱいにします。ほかの3つは小さなアイコンにまとめます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "手札の札に出ているのはコスト・名前・「技変更 攻撃」「守り・単体」だけで、威力や効き目は札を開かないと比べられません。縦では「モッチ砲」だけ名前がほかの札よりずっと小さいです。",
+   "fix": "札の下に「威力24」「受けるダメージ-30% 2ターン」のような1行を足します。名前は全部の札で同じ大きさにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "押す所が44px未満のものが12〜16個あります。ページの点「1ページ目」16×6・「2ページ目」6×6・「3ページ目」6×6、「？ 説明」85×33(PCは234×33)、「🏆 ランキング」88×33です。",
+   "fix": "点は押せる範囲を44×44に広げるか、押せない飾りにします。説明とランキングのボタンは高さ44pxにします。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの上の英字「MONHERO BATTLE ・ SELECT MODE」が8pxで、「左右にスワイプしてモードを選ぶ」も同じくらい小さいです。上のタブは「モード選択」と「🏆ブリーダーLv/絆Lv/総合力」が同じ形で並び、後ろの3つがランキングだと分かりません。",
+   "fix": "英字の飾りは消すか10px以上にし、スワイプの案内は12pxにします。ランキングの3つは「ランキング」タブ1つにまとめ、その中で切り替えます。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "呼び名がばらばらです。モード選択では「チャレンジモード」、この画面の見出しは「タクティクスプロ」、対戦中は「プロ / Normal」、札は英語の「Beginner/Easy」です。タブ「通常 9」「極限 5」の数字の意味も分からず、「通常」は報酬の「経験値:通常」にも出てきます。",
+   "fix": "モードの呼び名を1つにそろえ、難易度は日本語名にします。タブは「通常(9段階)」のように書きます。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "クリア報酬の箱は、見出しが「クリア/報酬」と2行に割れて左に積まれ、「経験値:通常」だけ右に寄って行の頭がそろいません。「虹のプシュケー」は何の物か、押しても見られません。",
+   "fix": "「クリア報酬」は1行の見出しにして上に置き、中身は左そろえの箇条書きにします。アイテム名を押すと説明が出るようにします。",
+   "priority": "中",
+   "viewpoint": 9,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "透かし文字「BEGINNER」が倍率の数字「×0.25」の真後ろに濃く出ています。PCでは数字の箱と重なって読みにくいです。",
+   "fix": "透かしを札の下の空いた所に移すか、濃さを半分にします。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ページの点9個が「1ページ目」16×6・「2〜4ページ目」6×6などで、押す所が小さすぎます。見出しの上の「MONHERO BATTLE ・ SELECT LEVEL」も8pxです。",
+   "fix": "点は押せる範囲を44×44にするか、押せない飾りにします。英字の飾りは消すか10px以上にします。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "6つの値を見るボタンが「ステータス」になっています。決まりでは「能力」と呼びます。",
+   "fix": "ボタン名を「能力」に変えます。",
+   "priority": "中",
+   "viewpoint": 7,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横ではログ・ステータス・解析が28×28の絵だけの丸になり、字「ログ」の上に絵が重なって字が消えています。縦とPCでは字が付いているので、横だけ形が違います。",
+   "fix": "横でも字の付いたボタンにして、44px以上にします。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「詳細 2」40×20、「×1」42×28、設定の歯車28×28と、押す所が小さすぎます。しかも「×1」(速さ?)や「詳細 2」(何が2つ?)は、押すと何が出るのか分かりません。",
+   "fix": "44px以上にし、「速さ×1」「かかっている効果 2つ」のように言葉を付けます。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "本物",
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "GUTS・EX×3・♥10%・⚡5%・各枠の0.0%・VIEW・緊急・AUTO OFF・ACTION CARDS 0/1など、説明のない略語や英字が多く、初めての人には意味が通じません。",
+   "fix": "日本語の名前にし、押すと1行の説明が出るようにします(例: GUTS→「気力」、0.0%→「〇〇の確率」)。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "タクティクス",
+   "machine_verdict": null,
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "空振りです。「このモード専用のスコアランキング」「準備中・遊べるように…」の二重は、隣のモードの札が端に見えているためで、1枚の中の二重ではありません(本当の二重は別に挙げています)。「T/ACTICS」などの途中の折り返しは札の後ろの透かし文字で、読ませる字ではありません。",
+   "fix": "直す必要はありません。",
+   "priority": "低",
+   "viewpoint": 8,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "空振り",
+   "sid": "tactics-mode"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "空振りです。「自己ベストスコア・最高到達 WAVE」「絆経験値3倍…」「📋 全WAVE詳細」の二重は、隣の難易度の札が見えているためで、1枚の中の二重ではありません(ダイヤの二重は別に挙げています)。「E/ASY」「N/ORMAL」の折り返しは透かし文字です。",
+   "fix": "直す必要はありません。",
+   "priority": "低",
+   "viewpoint": 8,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "空振り",
+   "sid": "tactics-diff"
+  },
+  {
+   "group": "a006",
+   "area": "タクティクス",
+   "scene": "タクティクス / タクティクスプロの対戦中〔tactics-play〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "空振りです。frame-red/blue/purpleの左右がまっすぐ切れて見えるのは、カード枠の絵がもともと持つまっすぐな縁で、カードの絵そのものは切れていません。",
+   "fix": "直す必要はありません。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "タクティクス",
+   "machine_verdict": "空振り",
+   "sid": "tactics-play"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横画面では窓が画面の下にはみ出し、2枚の絵の下半分・名前・説明・「決定」ボタンが見えない。どこまで動かせば決められるのか分からず、選んでも決定できない。",
+   "fix": "横画面では窓を左右に分け、左に説明と「おまかせ」、右に2枚の絵を横長のまま並べて、「決定」を右下に固定する。窓の高さは画面の高さ以内に収める。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "タイトル画像アレンジと同じく、横画面では窓が下で切れ、絵の名前・説明・「決定」が見えない。左右に大きな暗い空きがあるのに、絵は真ん中で縦に詰まっている。",
+   "fix": "横画面では2枚の絵を横長(ホームは横画面だと横長の絵になると本文にある)で左右いっぱいに並べ、「決定」を窓の下に固定して必ず見えるようにする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-home"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕/ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "窓に「×」も「やめる」も無く、閉じるには「決定」を押すしかないように見える。選び直したくないときの戻り方が分からない。",
+   "fix": "窓の右上に、ほかの窓と同じ形の「×」(44px以上)を置く。暗幕を押しても閉じるようにする。",
+   "priority": "高",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕(音量設定〔settings-sound〕・BGMアレンジ〔settings-bgm〕も同じ絵)",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "左の列は戻るボタンとみゅあの吹き出しだけで、その下に 360×240px(画面の27%)の何も無い空きがある。いっぽう右の列は5つ目の「ホーム画面アレンジ」で切れ、時間帯やダウンロードは動かさないと見えない。",
+   "fix": "左の空きに「時間帯」の入/切の箱を移すか、みゅあを大きな立ち絵にして吹き出しを下に置く。右の列は項目の高さを詰めて、7項目すべてが1画面に入るようにする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "左の列は「設定へ戻る」と見出しだけで、その下に 370×320px(画面の38%)の何も無い空きがある。右の列には長い説明と選択肢が詰め込まれ、3つ目の「画面の軽さ」の途中で切れている。",
+   "fix": "左の列に5つの項目名(タクティクスバトル画面・行動カードの見た目・画面の軽さ…)の目次を置き、押すと右の列がその項目まで動くようにする。各項目でいま選んでいる値も目次に出す。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "音量設定〔settings-sound〕/BGMアレンジ〔settings-bgm〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「音量設定」「BGMアレンジ」の場面なのに、どの大きさでも設定のトップ一覧のまま写っている。押しても中の画面が開かない恐れがある。",
+   "fix": "項目を押すと中の画面が開くか確かめる。開かないなら移り先をつなぎ直し、開くなら止め絵を撮る手順を直す。",
+   "priority": "高",
+   "viewpoint": 3,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-sound"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕(音量設定〔settings-sound〕・BGMアレンジ〔settings-bgm〕も同じ絵)",
+   "sizes": [
+    "tate"
+   ],
+   "what": "時間帯の説明が「背景の色が変わ/ります。」「(日本時間)を小さ/く出します。」と、言葉の途中で折り返している。",
+   "fix": "説明の文を短くして1行に収める(例「朝・昼・夕・夜で背景の色が変わる」「ホームに今の時刻を出す」)。または文節ごとに折り返す設定にする。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "縦では本文が「この絵で始まりま/す。」、PCではハロウィンの説明が「モッチーた/ちが仮装して」と、言葉の途中で折り返している。",
+   "fix": "本文を「次からこの絵で始まります。」で改行する形に書き直す。札の説明も短くして(例「月夜のお城とかぼちゃ」)2行目に言葉が割れないようにする。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "本文が「どちらの絵も横長の絵になり/ます。」と、言葉の途中で折り返し、「ます。」だけが2行目に残っている。",
+   "fix": "「横画面では、どちらも横長の絵になります。」と短くして1行に収めるか、文節ごとに折り返すようにする。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-home"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "行動カードの説明が「カードの効果や大き/さ・操作は同じです。」と、言葉の途中で折り返している。PCの「画面の軽さ」も、箱に余りがあるのに早めに改行していて、行の長さがそろわない。",
+   "fix": "文節ごとに折り返すようにし、決め打ちの改行は消す。説明は2行以内に短くする。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕/ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「おまかせ」の箱にある「いまは『クラシック』を出しています」と、クラシックの札の「おまかせ中」のバッジが、同じことを2か所で言っている。",
+   "fix": "箱の2行目を消して「おまかせ(季節で切り替え)」の1行にする。空いた高さは絵の札を大きくするのに回す。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "「決定」は、横幅いっぱいの金色で高さ52pxある。窓の中でいちばん目立っていて、面積が絵の札(押す物)より小さいだけなので問題ではない。",
+   "fix": "直さなくてよい(横画面で見えない件は別の件で扱う)。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": "空振り",
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "「決定」は、横幅いっぱいの金色で高さ52pxあり、窓の中でいちばん目立つ。ほかに大きいのは押して選ぶ絵の札だけで、釣り合いは取れている。",
+   "fix": "直さなくてよい(横画面で見えない件は別の件で扱う)。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": "空振り",
+   "sid": "settings-home"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "タイトル画像アレンジ〔settings-title〕/ホーム画面アレンジ〔settings-home〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "黄色の枠が付いているのは「おまかせ」の箱だけで、2枚の絵の札には選んだ印が無い。絵を押したら何が選ばれた状態になるのか、「決定」で何が決まるのかが分からない。",
+   "fix": "おまかせ・ハロウィン・クラシックの3つを同じ「選ぶ札」として並べ、選んだ物だけに同じ太枠とチェックの印を付ける。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-title"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕・音量設定〔settings-sound〕・BGMアレンジ〔settings-bgm〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの話し手の名前「みゅあ」が9pxで、ピンクの細い字のため読みにくい。",
+   "fix": "名前は11px以上・太字にし、下の文(12px)との差は太さで付ける。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "選ぶボタンの2行目(「従来のタクティクス表示」「かくつきを防ぐ」など)が9pxで、暗い地の上に灰色の字のため読みにくい。",
+   "fix": "2行目は11px以上にし、色はもう少し明るくする。ボタンの高さは今のままで収まる。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "各項目の説明が3〜4行と長く、字も10px前後で小さい。「画面の軽さ」と「重いときは自動で軽く」では、「ダメージや進行は変わりません」が2回出てくる。",
+   "fix": "説明は1〜2行に削り、くり返しの一文は画面のいちばん上に1回だけ置く。細かい話は「?」を押して出す。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「2×2の新しい表示」「クラシックバトル」「タクティクス旧/新」は、初めての人には何のことか分からない。",
+   "fix": "2×2が何の並びかを書く(例「手札を2×2で並べる表示」)。「クラシックバトル」は、ほかの画面で使っているモードの名前にそろえる。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "説明の中に「仲良し度などが上がったときの演出」とあり、ほかの画面で使っている「親密度」と呼び方がちがう。",
+   "fix": "ゲーム全体で使っている言葉(親密度)にそろえる。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "settings-battle"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕/バトル設定〔settings-battle〕/タイトル画像アレンジ〔settings-title〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「選んでいる」印の色が画面ごとにちがう。時間帯の入/切は黄色の塗り、バトル設定は水色の塗り、アレンジの窓は黄色の枠で、同じ意味に見えない。",
+   "fix": "設定の中の「選んでいる」印は、1つの色と形(例: 水色の塗り+白い字)にそろえる。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「入」「切」のボタンが約44×36pxで、高さが44pxに届かない。漢字1字だけなので、どちらが今の状態なのかも分かりにくい。",
+   "fix": "高さを44px以上にし、バトル設定と同じ2択のボタン(「入れる」「切る」)か、1つの切り替えスイッチにする。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "「次の画面へ進む」行(›付き)が並ぶ中に、「時間帯」だけはその場で入/切を選ぶ箱が混ざっていて、一覧の形がそろわない。",
+   "fix": "「時間帯」も「›」付きの1行にして中の画面へ移すか、画面テーマなど見た目の項目と一緒に「見た目」の画面へまとめる。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「画面テーマ(ハロウィン/クラシック)」「タイトル画像アレンジ」「ホーム画面アレンジ」の3つが、どれもハロウィン/クラシックを選ぶ項目に見え、ちがいが分からない。",
+   "fix": "3つを「見た目(季節のテーマ)」の1つの画面にまとめ、その中で「画面の色・タイトルの絵・ホームの背景」を並べて選べるようにする。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕/バトル設定〔settings-battle〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの色がそろっていない。「設定」は白、「バトル設定」は水色で、同じ設定の中なのに別の画面のように見える。",
+   "fix": "設定の中の見出しは同じ色・同じ大きさにそろえる。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕/バトル設定〔settings-battle〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "1280pxの画面で、中身は真ん中の約450px幅だけ。左右は真っ黒で、字は10px前後のまま小さく、PCではとても読みにくい。",
+   "fix": "PCでは中身の幅を広げ、字を1段大きくする。設定トップはバトル設定などと同じく2列(左に目次、右に中身)にする。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの「タップで詳しく」を押すと何が詳しく出るのか分からない。吹き出しの文(「ヘルプもここから開けちゃう!」など)と一覧の項目も結びついていない。",
+   "fix": "吹き出しを押したら、その話題の項目(引き継ぎ・BGMアレンジなど)へ直接移るようにし、文の末尾を「→BGMアレンジを開く」にする。",
+   "priority": "低",
+   "viewpoint": 3,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "項目のアイコンが、端末の絵文字(⚔️🎚️🎵🖼️🏡🎨)のままで、太さ・色・大きさがばらばら。ゲームの絵柄とも合っていない。",
+   "fix": "同じ線の太さと色の、ゲーム専用アイコンにそろえる。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a009",
+   "area": "設定",
+   "scene": "設定〔settings〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「BGMアレンジ」「タイトル画像アレンジ」の「アレンジ」は「曲の編曲」とも読めて、絵や曲を選ぶ項目だと伝わりにくい。",
+   "fix": "「BGMを選ぶ」「タイトルの絵」「ホームの背景」のように、何を選ぶのかがそのまま分かる名前にする。",
+   "priority": "低",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "settings"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / アシストカード〔mb-assist〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「アシストカード編成」「AUTO設定」の2枚の下が丸ごと空いています。縦は下が495px(画面の59%)、横は右の列の62%(222px)、PCは列の77%(444px)が空きで、画面がほとんど空っぽに見えます。",
+   "fix": "2つの入口を絵付きの大きな札にします。札の中に、今の編成(アシストカード5枚の小さな絵と名前)と今のAUTO方針・供モン①〜③を出し、開かなくても今の状態が分かるようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-assist"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "放牧できるマスモンがいないときの文の下が大きく空いています。縦は370×310px(画面の38%)、PCは580×230px(29%)です。横は右の列に文が上に寄っているだけで、その下208px(列の58%)が空いています。",
+   "fix": "空のときの表示を列の縦中央に置き、絵と字を大きくします。その下に「絞り込みを外す」「バトルへ行く」の大きなボタンを置き、空いた所をすぐ次の行動に使えるようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "選んだ数が右上の「0/5」と下の「決定(0体)」の2か所に出ていて、同じ数字が二重です。",
+   "fix": "右上の「0/5」を消し、決定の文を「決定(0/5体)」にまとめます。空いた見出しの右には何も置かず、見出しをすっきりさせます。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。」が2行の中央そろえで、行の頭がそろわず読みにくいです。",
+   "fix": "左そろえの1かたまりにするか、文を「絞り込みで隠れているかも」の1行に短くします。「表示」「種族」の部分は押せるボタンにします。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "yoko",
+    "pc"
+   ],
+   "what": "説明文が「AUTO時にランダムで補/完されます。」と、「補完」という言葉の途中で折り返しています。",
+   "fix": "文を「いない供モンはAUTOが代わりに選びます。」のように短くします。言葉の途中で折り返さない設定(word-break: keep-all など)も入れます。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "左の列は戻る・見出し・決定だけで、決定の下360×230px(画面の26%)が空いています。区切り線も2本続けて引かれています。決定が縦・PCでは下にあるのに、横だけ左上にあり、置き場所もそろっていません。",
+   "fix": "左の列の上に今の設定のまとめ(方針と供モン①〜③の名前・距離)を出し、決定は左の列の下に大きく置きます。区切り線は1本にします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "配置距離の「零・近・中・遠」と「自動」に説明がありません。どこに置くと何が変わるのか(当たりやすさ・受けるダメージなど)が分かりません。",
+   "fix": "「配置距離」の横に?ボタンを付けます。選んだ距離の効き目(例: 近=ちから技が届く・攻撃を受けやすい)を下に1行出します。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "方針の説明に問題があります。「ガッツ重視: ガッツ系を優先」は同じ言葉をくり返しているだけで意味が分かりません。「火力重視: 攻撃・ちから系」は、能力名の「ちから」と「攻撃」が混ざっています。",
+   "fix": "それぞれ「どの種類の技・カードを先に使うか」を具体的に書きます(例: ガッツ重視=倒れにくくなる技を先に使う)。言葉は能力名(ちから・丈夫さ)にそろえます。",
+   "priority": "高",
+   "viewpoint": 10,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「供モン」「WAVE2・4・6の順に対応」が説明なしで出てきます。初めての人には、何を事前に決める画面なのか分かりません。",
+   "fix": "「供モン=バトル中に呼べる助っ人モンスター」と1行で説明します。「WAVE2で①、4で②、6で③が出る」と、それぞれの札の見出しに書きます。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "配置距離のボタンの「零・近・中・遠」が小さく(約9px)、赤・茶・緑・青の地に暗い字なので読みにくいです。",
+   "fix": "字を12px以上の白にし、色は左の帯か枠だけにします。選んだときは✔と太枠で分かるようにします。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「M/B管理へ戻る」と「決定」の2つの出口があります。戻るを押すと保存されないのかが分からず、助手が「最後に決定まで押すの忘れちゃだめ」と注意する必要がある作りになっています。",
+   "fix": "選んだら自動で保存する形にして決定をなくすか、変更があるまま戻ろうとしたら「保存して戻る/捨てる」を確かめる窓を出します。",
+   "priority": "中",
+   "viewpoint": 4,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "5つの点線の丸は押せそうに見えますが、押せるのか、ただの空き枠なのかが分かりません。",
+   "fix": "空き枠に薄い「+」と番号を入れ、「下の一覧から選ぶと入ります」と分かる形にします。入ったあとは×で外せるようにします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「マスモン」「血統▲」「表示 3」が説明なしで出てきます。とくに「表示 3」は、3つの絞り込みが効いていて一覧が0になっているのかが分かりません。",
+   "fix": "「マスモン」に初回の説明を付けます。「表示 3」は「絞り込み中(3)」と書いて色を付け、外す×を付けます。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの色が画面ごとに違います。「放牧設定」は緑、同じM/B管理の中の「AUTO設定」「M/B管理」は青紫です。",
+   "fix": "M/B管理の下の画面は見出しの色と形を1つにそろえます。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / アシストカード〔mb-assist〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは中身の幅が画面ごとに違います。放牧設定は見出しと同じ幅ですが、AUTO設定とM/B管理は448pxに狭まり、左の端が戻るボタンや区切り線とそろいません。",
+   "fix": "M/B管理の下の画面は、中身の幅と左の端を1つの決まり(見出しと同じ幅)にそろえます。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-assist"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / アシストカード〔mb-assist〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「AUTO設定」が「アシストカード」の切り替えの中に入っています。AUTOの方針と供モンはアシストカードではないので、探しても見つかりません。",
+   "fix": "切り替えを「モンスター/バトル準備」にするか、AUTO設定をモンスター側に移し、名前と中身を合わせます。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-assist"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / アシストカード〔mb-assist〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「M/B管理」「M/B管理へ戻る」の略語を、見出しの下の小さな字(M/B=モンスターとブリーダー)で説明しているだけで、ほかの画面の戻るボタンでは通じません。",
+   "fix": "名前を「なかま管理」など略さない言葉に変え、戻るボタンも同じ名前にします。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mb-assist"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "助手の名前「みゅあ」が9pxで、「タップで詳しく」もほぼ同じくらい小さく、ピンクの細い字で読みにくいです(M/B管理の画面も同じです)。",
+   "fix": "名前と「タップで詳しく」を11px以上にします。「タップで詳しく」は吹き出し全体を押せることが分かれば消してもかまいません。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": "本物",
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / アシストカード〔mb-assist〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "決定ボタンの無い入口の画面で、助手が「最後に「決定」まで押すの、忘れちゃだめだよ~」と言っていて、話が画面と合っていません。",
+   "fix": "この画面では、2つの入口の違いを話すせりふに替えます。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "mb-assist"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "助手のせりふ「見た目で選んでOKぢゃん!」の「ぢゃん」は、誤字に見えます。",
+   "fix": "わざとの口ぐせでなければ「じゃん」に直します。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "助手(HOME)",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "供モンの選ぶ欄(おまかせ…)だけが、太くて大きい端末そのままの見た目で、見出しより目立っています。「1. AUTO方針」は札の中にあるのに「2. 供モン事前設定」は札の外にあり、見出しの形もそろっていません。",
+   "fix": "選ぶ欄をほかの札と同じ字の大きさ・見た目にします。2つの区切りの見出しは、どちらも札の外か中のどちらかにそろえます。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / 放牧設定〔mb-ranch〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「並べ替え 血統▲」のボタンだけが横に長く、中が空いています。「種族」「表示」は狭く、3つの大きさの釣り合いが悪いです。",
+   "fix": "3つを同じ幅で並べるか、並べ替えを「血統▲」だけの短いボタンにします。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-ranch"
+  },
+  {
+   "group": "a008",
+   "area": "図鑑",
+   "scene": "図鑑 / AUTO設定〔mb-auto〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "M/B管理と放牧設定には助手の吹き出しがあるのに、AUTO設定だけありません。同じ仲間の画面で作りがそろっていません。",
+   "fix": "どちらかにそろえます(出すなら見出しの下に同じ大きさで出します)。",
+   "priority": "低",
+   "viewpoint": 5,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-auto"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では「決定(8/8)」のボタンが画面に出ていない。この画面でいちばん押すボタンなのに、どこで決めればよいか分からない。",
+   "fix": "横では右の札の列の下に「決定」を幅いっぱいで固定する。左の列の下が空くなら、左の列のいちばん下に大きく置いてもよい。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「編成中 8/8」と「決定 (8/8)」で同じ数字が2回出ている(機械も 8/8 を2回と測った)。上の小さな顔8つも、下でチェックの付いた8枚の札と同じ中身になっている。",
+   "fix": "決定ボタンは「決定」だけにして数字は「編成中」に1つだけ残す。上の顔の列は並び順を見せる大きめの枠にするか消し、空いた分を札の絵を大きくするのに回す。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「図鑑登録数 8/86」の帯と「入手済み 8/86」の見出しで、同じ数字が2回並んでいる(機械も 8/86 を2回と測った)。",
+   "fix": "見出しは「入手済み」だけにして、数字は上の帯に1つだけ残す。帯は進み具合のバーにして、図鑑を埋めていく楽しさが見えるようにする。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(バトル)〔mb-master〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "1体もいないときに画面の下半分以上が空いている(縦は下に 447px・画面の 53%、PC は 55%、横は右の列の 62%)。何をすればマスモンが増えるのか、次に押す物も無い。中身が無いのに並べ替え・種族・表示のボタンだけは出ている。",
+   "fix": "空のときは並べ替えの列を隠す。代わりにマスモンの影絵を大きく置き、その下に「勇者モンでランへ」の大きなボタンを置く。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-master"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(バトル)〔mb-master〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "上の説明「勇者モンをラン終了時に登録すると、ここに並びます…」と、空の欄の「勇者モンでランを終えると登録できます。」が同じことを2回言っている。空の欄の灰色の字は暗くて読みにくい。",
+   "fix": "上の説明は1行の「同じ種は1体まで」だけにし、登録の仕方は空の欄に1回だけ明るい字で出す。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-master"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(モンヒロビート)〔mb-master-beat〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "空の画面の下が広く空いている(縦は 520px・画面の 62%、PC は 61%、横は右側の 46%)。次に何をするかのボタンが無い。",
+   "fix": "空のときは並べ替えの列をたたみ、絵を大きく置き、「部屋でマスモンを呼ぶ」「ランへ」の大きなボタンを置く。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-master-beat"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(モンヒロビート)〔mb-master-beat〕",
+   "sizes": [
+    "tate",
+    "yoko"
+   ],
+   "what": "空のときの文「マスモンがまだいません。モンヒロバトルのランを終えて…」が2行の中央そろえで、行の頭がそろわず読みにくい。",
+   "fix": "左そろえにし、「マスモンがまだいません。」と登録の仕方を2行に分けて書く。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-master-beat"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "右の列は5つ目の「モンスター図鑑」で切れていて、編成・放牧設定・AUTO設定が隠れている。下に続くことも分からない。左の列はタブの下が大きく空いている(360×180px・画面の 21%)。",
+   "fix": "入口8つを右に2列×4段で並べ、すべてが1画面に入るようにする。または、左の空いた所に「モンスター編成」を大きなボタンで置く。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / ベースモン一覧〔mb-base〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "札は大きいのに、モンスターの絵は 40px ほどの丸で小さく、名前も小さい。絵そのものの大きさもばらばらで、ゴーレムは丸いっぱい、ピクシーは細く小さい。モノリスは暗い丸の中で暗い絵がほとんど見えない。",
+   "fix": "絵の丸を札の幅の6割ほどにし、絵の見えている高さをそろえる。暗い絵の後ろには明るい縁や光を付け、名前は 13px 以上にする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-base"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / ベースモン一覧〔mb-base〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "8枚すべてに同じピンクの「マスモン未登録」と「編成中」が出ている。強い色で名前より目立つのに、見比べる手がかりにならない。",
+   "fix": "全部に同じ物は札から外し、登録済み・編成中の物だけに小さな印を付ける。空いた分は絵と総合力を大きくするのに回す。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-base"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / ベースモン一覧〔mb-base〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "左の列は並べ替えの下(縦 160px ほど)が空いたまま、右の札は2段で切れ、3段目が頭だけ見えている。",
+   "fix": "札を4列にして1画面に入る数を増やす。または、左の空いた所に選んでいるモンスターの大きな絵と能力を出す。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-base"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "左の列は血統の絞り込みの下が空いている一方、右の札は2段と少しで切れていて、モノリス・オボロゲソウの名前が見えない。",
+   "fix": "左の空いた所に、選んだ血統の説明かチップの2段目を置く。右の札は4列にして名前まで見える高さにする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "全部の札に同じ「ベースモン」の字が出ていて、比べる役に立たない。編成で選ぶ決め手になる役割(アタッカー・タンク)や得意な技は、札に出ていない。",
+   "fix": "「ベースモン」を消し、その場所に図鑑と同じ役割のバッジを出す。総合力と役割を札で比べられるようにする。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / ベースモン一覧〔mb-base〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "詳細のⓘボタンが 28×28px で、44px より小さい(8個)。上に「タップで詳細を確認できます」とあるので、札を押しても詳細が出るのなら、押す所が2つに分かれている。",
+   "fix": "ここでは札を押せば詳細が出るようにしてⓘを消す。残すなら押せる範囲を 44px 以上にする。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-base"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの右上の「▲」が 24×24px、札のチェックとⓘが 28×28px で、押しにくい(44px 未満が 21個)。吹き出しには「▲」と「タップで詳しく」の2つの押し所がある。",
+   "fix": "「▲」は消して吹き出しを押す所を1つにする。ⓘは押せる範囲を 44px 以上に広げる。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕ほか5場面(mb-base・mb-master・mb-dex・mb-party)",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "吹き出しの話し手の名前「みゅあ」が 9px、その下の「タップで詳しく」もとても小さく、ピンクで背景に埋もれている。",
+   "fix": "名前と「タップで詳しく」を 11px 以上にする。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "本物",
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "吹き出しは「編成は4体まで入れられますよ♪」と言っているのに、画面は「編成中 8/8」。どちらが本当か分からない。",
+   "fix": "助手のセリフを実際の上限に合わせる。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "選んだ札の太い縁と光が、並ぶ欄の上と左の端で切れて見え、札が欠けたように見える。",
+   "fix": "並ぶ欄の内側に縁の太さ分の余白(6px ほど)を取り、縁が切れないようにする。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "セットのタブは「1. セット1✓」だけが大きく、2〜5は細い数字だけで釣り合いが悪い。「1」も2回出ている。⚙が何を設定するのかも分からない。",
+   "fix": "5つを同じ幅の「1」〜「5」にし、選んでいる物だけ色を変える。セットの名前はタブの下に1行で出す。⚙には「名前変更」などの字を添える。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-party"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / ベースモン一覧〔mb-base〕/ モンスター編成〔mb-party〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「表示 3」「表示 5」の数字が何なのか分からない。どちらも3列なのに数字が違う。",
+   "fix": "「表示:3列」「表示:総合力」のように、中身が分かる言葉で出す。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-base"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(モンヒロビート)〔mb-master-beat〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ほかの一覧と並べ替えの形がそろっていない(1行の「並べ替え: ビートLv▼」、「絞り込み」、意味の分からない「▦」)。この画面だけ助手がいない。背景もこの画面だけ濃い紺で、別の画面に来たように見える。",
+   "fix": "並べ替えの列・背景色・助手の吹き出しを、ほかの一覧と同じ部品にする。「▦」は「表示」に置き換える。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-master-beat"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕ほか5場面",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "見出しの色が画面ごとにばらばら(紫・水色・ピンク・黄緑・黄)。説明の行がある画面と無い画面がある。ビートの見出しだけ2行に折り返す。札の地の色も、図鑑だけ茶色でほかは紺。",
+   "fix": "見出しの色とひと言の説明行をすべての画面でそろえる。ビートは「マスモン(ビート)」のように短くして1行に収め、札の地の色も一つにする。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕・マスモン一覧(バトル)〔mb-master〕・モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは中身の幅が 448px に縮んで、見出し・戻るボタンと左の線がずれている。ベースモン一覧と編成は幅いっぱいなので、画面ごとに幅が違う。バトル一覧では、吹き出しは狭く並べ替えは広い。",
+   "fix": "PCの中身の幅を全画面で見出しと同じ幅にそろえ、左の線もそろえる。",
+   "priority": "中",
+   "viewpoint": 1,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "「入手済み 8/86」と「未入手 22/86」を足しても86にならず、残りの56種がどこにいるのか分からない。",
+   "fix": "「未入手(出会った)22」「まだ見ていない 56」のように分ける。または「/86」は入手済みだけに付ける。",
+   "priority": "中",
+   "viewpoint": 10,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "血統のチップが右の端で「ハ」「ピクシー」と切れていて、横に送れることも分かりにくい。",
+   "fix": "右の端をぼかすか「›」を付けて送れることを見せる。または2段に折り返して全部の名前を出す。",
+   "priority": "中",
+   "viewpoint": 2,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "役割バッジの横にある絵だけの小さな印(🛡️・✨・⚔️・💚)の意味が分からず、押しても説明が出ない。ゴーレムは「⚔️アタッカー」の横にまた⚔️があり、二重に見える。",
+   "fix": "印に「得意:守り」などの字を添えるか、押すと説明が出るようにする。役割と同じ印なら消す。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「M/B」「ベースモン」「マスモン」「勇者モン」「供モン」「ラン」「ビートLv」「血統▲」「純血/派生種」と内部の言葉が続き、初めての人には分からない。",
+   "fix": "「M/B管理」は「モンスター」に、「ベースモン」は「なかま図鑑」にするなど、やさしい言葉に変える。どうしても残す言葉は、押すと1行の説明が出るようにする。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / M/B管理〔mb〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "育てたモンスターの入口が「マスモン一覧(バトル)」「マスモン一覧(モンヒロビート)」「マスモンボックス(モンサク)」と、一覧とボックスで呼び方が違う。バトルとモンサクは同じ星の印で見分けにくい。",
+   "fix": "「マスモン(バトル)」「マスモン(ビート)」「マスモン(モンサク)」に呼び方をそろえ、遊び方ごとに違う印にする。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / マスモン一覧(モンヒロビート)〔mb-master-beat〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「今日の無料 あと3回 / セッション券 0枚」が、何が無料なのか、券で何ができるのか分からない。",
+   "fix": "「マスモンを呼べる回数:今日あと3回(無料)」「呼ぶ券:0枚(無料が終わったら使う)」のように書く。",
+   "priority": "中",
+   "viewpoint": 10,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": null,
+   "sid": "mb-master-beat"
+  },
+  {
+   "group": "a007",
+   "area": "図鑑",
+   "scene": "図鑑 / モンスター図鑑〔mb-dex〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "機械が測った大きな空き(410×550px・左上 870,250)は、大半がPCの左右の黒い帯で、遊ぶ画面の中ではない。",
+   "fix": "直す物は無い(PCの中身の幅のずれは別の件で挙げた)。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "図鑑・M/B管理",
+   "machine_verdict": "空振り",
+   "sid": "mb-dex"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "窓のどこにも「✕」や「閉じる」がなく、どこを押せば戻れるか分かりません。横とPCでは暗幕の奥に元の画面の「HOMEへ戻る」が薄く見えていて、そちらを押したくなります。",
+   "fix": "見出し「画面テーマ」の右上に、ほかの窓と同じ形の✕を1つだけ置きます。窓の外をタップしても閉じるようにします。",
+   "priority": "高",
+   "viewpoint": 4,
+   "owner_hint": "窓・閉じる",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「ハロウィン」「クラシック」がどんな見た目なのか、選ぶ前に分かりません。文字のボタンが3つ並んでいるだけなので、押して元の画面に戻らないと確かめられません。",
+   "fix": "3つのボタンそれぞれに、その場面の小さな見本の絵(サムネイル)を付けます。見本の下に名前を書きます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「マーケット」の下の説明がまた「マーケット」です。「タイトル画面/タイトル画面の絵」「ホーム画面/ホーム画面の背景」も、ほとんど同じ言葉が2回並んでいます。",
+   "fix": "見出しと同じ意味の説明は消します。説明は「メニュー画面」「神殿」のように中身を足す場面だけに残し、空いた場所は見本の絵に回します。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "上の説明文が言葉の途中で折り返しています。縦は「切/り替わり」、PCは「切り替/わり」で、読みにくいです(測った値も同じ)。",
+   "fix": "説明を「季節に合わせて切り替わります。」と「10月31日まではハロウィン、11月1日からはクラシックです。」の2文に分けます。行末では語の区切りで折り返すようにします(word-break: keep-all など)。",
+   "priority": "高",
+   "viewpoint": 9,
+   "owner_hint": "設定",
+   "machine_verdict": "本物",
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "yoko"
+   ],
+   "what": "横では1つのボタンが幅約220pxもあるのに、字は小さいままです。1場面に約100pxの高さを使うので、1画面に「まとめて変える」と2場面半しか入りません。",
+   "fix": "横では、左に場面名、右に3つのボタンを置いて1行にまとめます(高さ約56px)。これで1画面に5〜6場面が見えるようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCでは窓が幅約380pxしかなく、左右に約450pxずつ暗い空きがあります。それなのに窓は画面の下の端で切れています。",
+   "fix": "PCでは窓の幅を720px前後に広げます。場面を2列に並べるか、見本の絵を大きく出して、縦に長く伸びるのを抑えます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「まとめて変える」の3つのボタンはどれも選ばれた色になっていません。押すと一度に変わる『操作』なのか、今の状態を表す『選択』なのか分かりません。また、枠の金色が、選んだボタンの金色と同じで紛らわしいです。",
+   "fix": "「まとめて変える」のボタンは「すべておまかせにする」のように動きが分かる名前にします。枠の色は、選んだボタンの色と別の色にします。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「おまかせ」を選んでいても、今はどちらの見た目になっているのかが場面ごとに書かれていません。",
+   "fix": "「おまかせ」ボタンの下に小さく「いまはハロウィン」と、今の結果を出します。",
+   "priority": "中",
+   "viewpoint": 10,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "pc"
+   ],
+   "what": "説明の中の「M/B管理」「マスモン」が、説明なしの略語です。初めての人には通じません。",
+   "fix": "ゲーム内のほかの画面で使っている正式な名前に書き換えます(例: 「マスターモンスター」)。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "場面の下の説明が約10pxの灰色の字で、濃い紺の背景に埋もれて読みにくいです。",
+   "fix": "字を12px以上にし、色をもう一段明るい灰色(#B8C0D0 前後)にします。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "同じ形の札が8つ縦に続くだけです。下にまだ何場面あるのかが分からず、一番下の「モンヒロバトル」の説明は窓の枠に重なって切れています。",
+   "fix": "窓の下に余白とスクロールの影を付けて、続きがあることを見せます。場面の数が多いので、見出しの行だけを固定して表の形にする案も考えます。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a010",
+   "area": "設定",
+   "scene": "設定 / 画面テーマ〔settings-theme〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "ボタンは大きいのに「おまかせ」などの字が約11pxと小さく、ボタンと字の大きさが釣り合っていません。",
+   "fix": "ボタンの字を13〜14pxに上げて、ほかの設定画面のボタンの字とそろえます。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "設定",
+   "machine_verdict": null,
+   "sid": "settings-theme"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "縦では立ち絵の札が画面の上半分近く(約390×380px)を占めています。そのため、いちばん押すモード3枚と「ランキング」「ヘルプ」が下に押し込まれています。下の2つのボタンは画面の下端(y≈832)にほぼ付いていて、指の置き場がありません。",
+   "fix": "立ち絵の札の高さを約80px縮めて胸から上の構図にします。空いた分でモードの札を少し高くし、下の2ボタンは下端から16px以上離します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCだけ「いまモンヒロバトルにいる助手」の箱があります。助手1人につき部屋へ・修行を見る・応援する・マスモンで対戦・モンヒロサクセスの5つのボタンが並び、モード選びより大きく目立っています。3人目の「あつ」は下で切れていて、次に何を押せばよいか分かりません。",
+   "fix": "助手の箱は顔と名前と「部屋へ」だけの小さな札の横並びにし、そのほかの操作は部屋の中へ移します。この画面の主役はモードの3枚に戻します。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "「🌱 モンヒロサクセス(β) モンスターを育てる(いまはみゅあ編だけ)」が、ききの札にもももすけの札にも同じ形で出ています。どの助手の札から押しても同じ所へ行く大きなボタンが2回以上並んでいます。",
+   "fix": "助手の札からは外し、モード札の下に1つだけ置きます。空いた高さはモードの札を大きくするのに回します。",
+   "priority": "高",
+   "viewpoint": 8,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "PCの立ち絵は幅約190pxの細い列に大きく拡大されています。うさ耳と帽子が上端で、右腕と肩が列の右端でまっすぐ切れ、下は吹き出しで隠れています。",
+   "fix": "縦・横と同じく全身が収まる倍率に戻します。列の幅を広げるか、絵を列に合わせて縮め、頭から腰までが切れずに見えるようにします。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "1280幅のPCで、画面は中央の約600px幅にしか描かれておらず、左右の約680pxが真っ黒のまま空いています。そのぶん中が詰まり、助手の箱が下で切れています。",
+   "fix": "PCでは横(844×390)と同じ左右2列の配置を広げて使います。左に立ち絵、右にモード札を大きく置き、助手の箱は右列の下か横に並べます。",
+   "priority": "高",
+   "viewpoint": 13,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "機械の「同じ文・同じ数字が二重」(「今日はまだ修行していません」「修行を見る」「応援する 今日0/3」が2回)は、助手ごとの札に同じ項目が並んでいるだけで、中身はそれぞれ別の値です。",
+   "fix": "直す必要はありません(本当の二重は別に挙げたモンヒロサクセスのボタンのほう)。",
+   "priority": "低",
+   "viewpoint": 8,
+   "owner_hint": "その他",
+   "machine_verdict": "空振り",
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "機械の「何も無い長方形390×340px」は立ち絵の札の中なので、空きではありません(釣り合いの悪さは別に挙げました)。",
+   "fix": "直す必要はありません。",
+   "priority": "低",
+   "viewpoint": 13,
+   "owner_hint": "その他",
+   "machine_verdict": "空振り",
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "助手の吹き出しが「『これまでのバトル』からで大丈夫だよ」と言っています。しかし画面のどこにも「これまでのバトル」というボタンがなく、言われた通りに押せません。",
+   "fix": "吹き出しの文を実際のボタン名(例「クラシックバトル」)に合わせます。または「これまでのバトル」という名前で札を出します。",
+   "priority": "中",
+   "viewpoint": 5,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「立ち絵 ON」64×28・「コメント ON」67×28は30px未満の高さで、モード札の「？」も40×40と44px未満です。指で押しにくくなっています。",
+   "fix": "切り替えは44×44以上の丸い印のボタン(👁・💬)にまとめます。「？」は44×44以上にし、札の右端との余白も広げます。",
+   "priority": "中",
+   "viewpoint": 12,
+   "owner_hint": "その他",
+   "machine_verdict": "本物",
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「立ち絵 ON」「コメント ON」は、今の状態なのか押すとONになるのかが分かりません。さらに立ち絵のドレスの上に重なって置かれています。",
+   "fix": "オン・オフが一目で分かるスイッチの形にします。置き場所は立ち絵の外(札の上端の角や見出しの右)へ移します。",
+   "priority": "中",
+   "viewpoint": 3,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "「マスモン」「10WAVE」「β版」「みゅあ編」が説明なしに出ていて、初めての人には何のことか分かりません。",
+   "fix": "「マスモン」は正式名に、「10WAVE」は「10回戦」に言い換えます。「β版」には「試しの版」と添え、「？」の中にも1行の説明を入れます。",
+   "priority": "中",
+   "viewpoint": 6,
+   "owner_hint": "言葉",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "ボタン「⚔️ マスモン/で対戦(β)」が「マスモン」と「で対戦」の間で折り返され、助詞が行の頭に来て読みにくくなっています。",
+   "fix": "「マスモンと対戦」のように短くして1行に収めます。または「マスモン」「と対戦(β)」の区切りで折ります。",
+   "priority": "中",
+   "viewpoint": 9,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate"
+   ],
+   "what": "クラシックバトルの説明が「モンヒロバトルの基本。育てた/モンスターで10WAVEに挑む」と言葉の途中で折れています。字も約10pxと小さく、色の濃い札の上で読みにくくなっています。",
+   "fix": "説明を「育てたモンスターで10回戦に挑む」の1行に縮めます。字は12px以上にします。",
+   "priority": "中",
+   "viewpoint": 9,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "pc"
+   ],
+   "what": "助手の札の「今日はまだ修行していません」「モンスターを育てる(いまはみゅあ編だけ)」が約9pxと小さいです。さらに緑・白の細い字が濃い背景に埋もれています。",
+   "fix": "12px以上にします。補足の「(いまはみゅあ編だけ)」はボタンから外し、β印の説明に回します。",
+   "priority": "中",
+   "viewpoint": 2,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "立ち絵の枠が、縦は角丸の札、横は角の四角い板、PCは細い四角い列と、大きさごとに形がばらばらです。",
+   "fix": "どの大きさでも同じ角丸と縁の色の札に統一します。",
+   "priority": "低",
+   "viewpoint": 1,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "機械の「MONHERO BATTLE・SELECT 8px」は、見出しの上の飾りの英字です。読ませる文ではありません。",
+   "fix": "直す必要はありません。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "その他",
+   "machine_verdict": "空振り",
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "tate",
+    "yoko",
+    "pc"
+   ],
+   "what": "説明の入口が、各モード札の「？」と下の「ヘルプ」の2種類あります。どちらを押せば何が見られるのか分かりません。",
+   "fix": "「？」は「そのモードの遊び方」、下のボタンは「バトル全体の遊び方」と分かる名前にします(例「遊び方ぜんぶ」)。",
+   "priority": "低",
+   "viewpoint": 5,
+   "owner_hint": "ヘルプ・更新履歴",
+   "machine_verdict": null,
+   "sid": "help"
+  },
+  {
+   "group": "a011",
+   "area": "ヘルプ",
+   "scene": "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕",
+   "sizes": [
+    "yoko",
+    "tate"
+   ],
+   "what": "吹き出しが立ち絵の枠の下の線をまたいではみ出しています。横では顔文字「(｡･ω･)ﾉﾞ」が行末で窮屈に収まり、画面の下端に付いています。",
+   "fix": "吹き出しを立ち絵の枠の内側に収め、下端に8px以上の余白をとります。顔文字は文の頭に寄せるか外します。",
+   "priority": "低",
+   "viewpoint": 12,
+   "owner_hint": "その他",
+   "machine_verdict": null,
+   "sid": "help"
+  }
+ ]
+}
