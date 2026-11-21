@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":145296,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":5870886,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96997,"data/changelog.js":1953221,"data/help.js":901631,"data/rhythm-step3-release.js":8517,"data/assistants.js":2184476,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/success-sounds.js":19367,"tailwind.css":308011,"game-system.compiled.js":12472077,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":145296,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":5870886,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96997,"data/changelog.js":1954168,"data/help.js":901859,"data/rhythm-step3-release.js":8517,"data/assistants.js":2184476,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/success-sounds.js":19367,"tailwind.css":308215,"game-system.compiled.js":12479836,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,11 +98,11 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = 'e20424f49396';
+var GAME_BUILD = '3cb643ff6e4a';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-21 14:13';
+window.__mhBuildDate = '2026-11-21 14:48';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -135,7 +135,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=64174de7fabc" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=1d54b0f2cba9" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* ページそのものの拡大(2本指のピンチ・連続タップの拡大)を止める(2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」)。
@@ -689,7 +689,14 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      「左＝見出し・助手・タブ / 右＝一覧(全高)」の2カラムに組み替える。
      直下に一覧が無い画面(設定のように画面全体がスクロールするもの)は縦積みのまま。
      縦画面・PC・タブレット(高さ600px超)には一切効かない。
-     行は最大8つまで左に積め、最後の行(1fr)が余白を吸う。一覧は全行をまたいで全高になる。 */
+     行は最大8つまで左に積め、最後の行(1fr)が余白を吸う。一覧は全行をまたいで全高になる。
+     2026-11-21(r1119-066③・ゲーム全体の見た目の点検): 左の列が見出しと吹き出しだけで 26〜38% 空き、右の一覧は下で
+     切れて「続きがある」ことも分からなかった(プロフィール・神殿・マーケット・設定・M/B管理・図鑑ほか9画面)。
+     ・左の列を 42% → 36% にして、右の一覧を広げる
+     ・送れる一覧(overflow-y-auto)は下のふちを薄くぼかし、続きがあると分かるようにする。ぼかしの分だけ下に余白を足すので、
+       いちばん下まで送ったときの最後の札はぼけない
+     ・左の列が高い画面の決めるボタンの帯は、一覧と一緒に箱(.mh-scroll-pane・41-screen-ui.jsx の SCREEN_LIST_PANE_CLASS)へ入れ、
+       右の列の一覧の下に出す。左の列の下に積むと、編成のように「決定」が画面の外へ出ていた(r1119-066①) */
   @media (orientation: landscape) and (max-height: 600px) {
     #root > div { max-width: 1024px; }
     /* ただしバトルとHOMEは、この骨組み(data-mh-screen)を使っていない。
@@ -701,13 +708,19 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     #root > div[data-mh-portrait-layout="true"] { max-width: min(600px, var(--mh-vh)); }
     [data-mh-screen]:has(> .mh-scroll) {
       display: grid;
-      grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
       grid-template-rows: repeat(8, auto) 1fr;
       column-gap: 14px;
       align-content: start;
     }
     [data-mh-screen]:has(> .mh-scroll) > * { min-width: 0; }
     [data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
+    [data-mh-screen]:has(> .mh-scroll) > .mh-scroll[class*="overflow-y-auto"],
+    [data-mh-screen]:has(> .mh-scroll) > .mh-scroll-pane > .mh-scroll[class*="overflow-y-auto"] {
+      padding-bottom: 28px;
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+    }
   }
   /* 【自前で画面を回しているとき】(2026-09-06)
      端末が向きの指定を受け付けない端末のために、絵のほうを90度回して描くことがある。
@@ -718,13 +731,19 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      [data-mh-view-rotation="true"] は自前で回しているあいだだけ付く目印。 */
   [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) {
     display: grid;
-    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
     grid-template-rows: repeat(8, auto) 1fr;
     column-gap: 14px;
     align-content: start;
   }
   [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > * { min-width: 0; }
   [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
+  [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > .mh-scroll[class*="overflow-y-auto"],
+  [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > .mh-scroll-pane > .mh-scroll[class*="overflow-y-auto"] {
+    padding-bottom: 28px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+  }
   /* 曲えらびは上の骨組み(data-mh-screen)を使わず、Tailwind の landscape:flex-row だけで
      左右2列にしている。landscape: 自体は tools/build-tailwind.js の設定で差し替えてあるが、
      CSSが読めなかったときでも一覧が潰れないよう、同じ組み替えをここにも書いておく
@@ -2522,8 +2541,8 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=e297d2fa07bf" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=220332204740" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=4853a27d8a23" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=28e6d5022f1f" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=6f2990087605" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

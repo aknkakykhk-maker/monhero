@@ -21304,13 +21304,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 「この難易度で挑戦」まで最初から見えるようにする(下半分が画面の外に出ていた。ダメダシ見回り 10/26 #3) */}
             <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度を選ぶ</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">左右にスワイプして難易度を選ぶ</div>
+                {/* 横の低い画面(844×390)では、報酬方針と「通常/極限」のタブを1段に並べて札を上げ、「この難易度で挑戦」まで見えるようにする
+                    (報酬方針の枠が増えて、ボタンがまた画面の下へ出ていた。2026-11-21 r1119-066①) */}
+                <div data-difficulty-top-row className={`shrink-0 ${quick&&hasExtremeTab?'[@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] [@media(orientation:landscape)_and_(max-height:520px)]:items-end [@media(orientation:landscape)_and_(max-height:520px)]:gap-2':''}`}>
                 {quick&&<fieldset data-quick-reward-policy className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
                   <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
                   <div className="grid grid-cols-3 gap-1">
                     {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2'],[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-0.5 font-black leading-tight active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-[10px]">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
                   </div>
-                  <p className="mt-1 text-center text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
+                  <p className="mt-1 text-center [@media(orientation:landscape)_and_(max-height:520px)]:hidden text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
                 </fieldset>}
                 {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
                     一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
@@ -21344,6 +21347,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?(toExtreme?'on x':'on'):''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>}
+                </div>
                 {/* 極限タブが押せない理由を出す。タブの中は「極限 🔒」しか入らないので、
                     なぜ押せないのかが分からないままだった(極限チャレンジがモードのカードだった頃は
                     カードに解放条件が書いてあった)。文言は極限チャレンジ側の正本をそのまま使う */}
@@ -23096,6 +23100,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     同じことを言っていて、そのぶん一覧が46px押し下げられていた。
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
+                {/* 一覧と「決定」の帯をまとめて右の列へ(横の低い画面で、左の列が高く「決定」が画面の外へ出ていた。2026-11-21 r1119-066①) */}
+                <div className={SCREEN_LIST_PANE_CLASS}>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するモンスターがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
@@ -23136,6 +23142,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                </div>
               </>
             ):(
               <>
@@ -23155,6 +23162,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold leading-relaxed mb-2 px-1 shrink-0">解放済み{unlockedTeachingIds.length}枚・ちょうど{TEACHING_ROSTER_SIZE}枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細</div>
+                {/* 一覧と「決定」の帯をまとめて右の列へ(横の低い画面で、左の列が高く「決定」が画面の外へ出ていた。2026-11-21 r1119-066①) */}
+                <div className={SCREEN_LIST_PANE_CLASS}>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {unlockedTeachingIds.length===0&&<ScreenEmpty emoji="🃏" lines={['まだアシストカードを持っていません。','ブリーダーの教えを進めると使えるカードが増えます。']}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
@@ -23175,6 +23184,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button></div>
+                </div>
               </>
             )}
           </div>
