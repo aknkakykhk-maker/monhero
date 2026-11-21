@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8fffb74b4cbba5a7
+// generated-sha256: c60d5c4c0885a962
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73579,7 +73579,7 @@ const assistantLifeShopNoteOf = (itemId) => {
   if (/^furn_/.test(id)) {
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
     if (!f) return null;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27;
     return { tone: 'f', mark: '🪑 家具', lines: [`💗 +${base}`, '初回だけ'] };
   }
   const g = [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].find(x => x.itemId === id);
@@ -74293,7 +74293,7 @@ function AssistantLifeChekiRow({ pair }) {
 
 // ===== 家具(1人に贈る・部屋に置く。段階B 2026-11-08 社長 GIFT-PLAN.md の3) =====
 // 家具は12種類。部屋に置けるのは天井・壁・床に1つずつ(顔・吹き出し・出かけ札の所は空けておく)。ほかは「しまう」で押し入れへ(入れかえは自由)
-// 仲良し度はその家具をその助手に初めて贈ったときだけ(ふつう +80・好き +120・苦手 +40)。同じ家具は1人に1つ(贈った家具はほかの助手へ移せない)
+// 仲良し度はその家具をその助手に初めて贈ったときだけ(ふつう +27・好き +40・苦手 +14。2026-11-20 r1119-043 ①で 80・120・40 から下げた)。同じ家具は1人に1つ(贈った家具はほかの助手へ移せない)
 // 公開の印 assistantLifeFurniture の後ろ。保存は新しいキー mh_assistant_life_room_v1 だけ
 //   { [助手]: { put: { ceil, wall, floor }(家具の key か null), kept: [key…](押し入れ), got: { [key]: 'YYYY-MM-DD' }(贈った日) } }
 // 置き場所は部屋の箱に対する割合(HOUSE-ART-ORDER.md の部屋の箱と同じ)。描き下ろしの家の絵が来ても同じ所に出る
@@ -74322,7 +74322,13 @@ const assistantLifeFurnLike = (who, key) => {
   if (!t) return 'mid';
   return (t.like || []).includes(key) ? 'like' : (t.bad || []).includes(key) ? 'bad' : 'mid';
 };
-const assistantLifeFurnAmount = (who, key) => Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+// 1回の上限(ASSISTANT_BOND_ACTIONS.lifeFurn.amount)で止める。上がる量の見せ方と、本当に入る量をそろえるため(2026-11-20 r1119-043 ①)
+const assistantLifeFurnAmount = (who, key) => {
+  const raw = Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+  const act = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS ? ASSISTANT_BOND_ACTIONS.lifeFurn : null;
+  const cap = act && Number.isFinite(act.amount) ? act.amount : 40;
+  return Math.max(0, Math.min(cap, raw));
+};
 const normalizeAssistantLifeRoomOne = (raw) => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const keys = new Set(assistantLifeFurnDefs().map(f => f.key));
@@ -74603,7 +74609,7 @@ function AssistantLifeFurnSheet({ id, furnItems, onGiveFurn, onClose, onTalk, la
   // まだ持っていない家具(買ってそのまま贈れる。同じ家具は1人に1つなので、贈った家具は出さない)
   const toBuy = all.filter(f => !room.got[f.key] && !((Number(furnItems && furnItems[f.key]) || 0) > 0) && assistantLifeCanBuy(f));
   const furnGainText = (k) => { const s = shown(k); if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80; return `+${base}(好みで変わる)`; };
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27; return `+${base}(好みで変わる)`; };
   const shown = (k) => assistantLifeGiftShownLike(id, k, st);
   const give = async (k, bought = false) => {
     if (busy) return; setBusy(true);
