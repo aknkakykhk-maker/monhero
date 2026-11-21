@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 389e849d4e54f40a
+// source-sha256: 6c2553f51146a04c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174314,6 +174314,22 @@ const MSX_CSS = `
 .msx .v-party.row>small{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .msx .v-party.row .v-pf{flex:0 1 30px;min-width:0}
 .msx .v-party.row .v-pf img{width:100%;height:auto;aspect-ratio:1/1}
+.msx .v-party-btn{font:inherit;color:inherit;cursor:pointer;text-align:left;min-height:44px;-webkit-tap-highlight-color:transparent}
+.msx .v-party-btn:active{transform:translateY(1px)}
+.msx .v-party-btn .go{flex:none;font-style:normal;font-size:14px;font-weight:900;color:#fde047;margin-left:auto;padding-left:2px}
+.msx-pty-r{display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:6px 10px;margin:5px 0}
+.msx-pty-r.tag{border-color:#f9a8d4}
+.msx-pty-r .fc{flex:none;width:52px;height:52px;border-radius:12px;background:#1e1a36;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx-pty-r .fc img{width:100%;height:100%;object-fit:contain}
+.msx-pty-r .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.msx-pty-r .nm{font-size:15px;font-weight:900;color:#fff;overflow-wrap:anywhere;line-height:1.2}
+.msx-pty-r small{font-size:11.5px;color:#cbd5e1;font-weight:700}
+.msx-pty-r .bd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#f9a8d4;white-space:nowrap}
+.msx-pty-r .bd>b{font-size:14px;color:#fff;min-width:24px;text-align:right}
+.msx-pty-r .pbar{position:relative;flex:1;min-width:50px;height:7px;border-radius:7px;background:#334155;overflow:visible}
+.msx-pty-r .pbar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#f472b6,#f9a8d4)}
+.msx-pty-r .pbar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#fff;border-radius:2px}
+.msx-pty-r .msx-pty-tg{flex:none;font-size:11px;color:#422006;background:#f9a8d4;border-radius:99px;padding:1px 7px}
 .msx .v-bagb.st{position:relative;flex:0 0 auto}
 /* トレーニング: 実行ボタンの近くのまとめ(上がる能力・失敗率・体力消費。2026-11-16 UI改修) */
 .msx .v-trsum{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:6px;padding:6px 10px;border-radius:10px;background:#0f0d24d0;border:1px solid #ffffff2a;font-size:12px;font-weight:800;color:#e2e8f0}
@@ -174470,7 +174486,7 @@ const MSX_CSS = `
 .msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
 .msx .v-fx .ch i{font-style:normal;color:#94a3b8}
 .msx .v-fx .t .mx{color:#fde047;font-size:15px}
-.msx .v-chip .v-chip-sub{display:block;font-size:9.5px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
+.msx .v-chip .v-chip-sub{display:block;font-size:10px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
 .msx button.v-chip.msx-yosu-chip{font-family:inherit;color:#fff;text-align:left;cursor:pointer;min-height:30px}.msx .msx-yosu-chip.on{white-space:normal;max-width:min(260px,70vw);border-radius:12px}
 .msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
 .msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
@@ -174803,7 +174819,7 @@ const MSX_CSS = `
 .msx .v-eps div b{color:#fde047;margin-right:5px;font-size:10px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
 .msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
 .msx.land .v-party{gap:3px}
-.msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
+.msx.s320 .v-party:not(.row){display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party:not(.row)>small{grid-column:1/-1;text-align:center}
 .msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
 .msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
 .msx.s320 .v-scene.sm{height:32px}
@@ -175472,6 +175488,7 @@ const MSX_CSS = `
 /* フレンドの札: 下の帯にアシスト効果の印(2026-11-20 社長「フレンドのアシスト能力が見えない」) */
 .msx .msx-fp-as{display:inline-flex;align-items:center;gap:1px}.msx .msx-fp-as i{font-style:normal;line-height:1}.msx .msx-fp-as small{font-size:10px;font-weight:900;margin-left:1px}
 .msx .msx-fp-dup{font-size:10px;font-weight:900;color:#fde68a;margin-right:2px}
+.msx .mcd-note .msx-fp-dup{color:#9d174d} /* 白い札の中では濃い色(黄色が白に溶けて読めなかった・育-236・239) */
 .msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
 .msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
@@ -177829,8 +177846,9 @@ function MsxMonDetail({
       className: "msx-sheet msx-dt msx-md",
       onClick: e => e.stopPropagation()
     }, React.createElement("h3", {
-      className: "msx-md-ti"
-    }, "モンスターの詳細"), React.createElement("div", {
+      className: "msx-md-ti",
+      "data-msx-md-title": true
+    }, name || msxMonName(species)), React.createElement("div", {
       className: "msx-md-scroll"
     }, React.createElement("div", {
       className: "msx-md-top"
@@ -177840,9 +177858,7 @@ function MsxMonDetail({
       className: "nm"
     }, head ? React.createElement("span", {
       className: "msx-md-head"
-    }, head) : null, React.createElement("span", {
-      className: "nmx"
-    }, name || msxMonName(species)), (() => {
+    }, head) : null, (() => {
       const nm0 = name || msxMonName(species);
       const sb = sub && typeof sub === 'string' && sub.endsWith(`・${nm0}`) ? sub.slice(0, -(nm0.length + 1)) : sub;
       return sb ? React.createElement("small", null, sb) : null;
@@ -179672,7 +179688,16 @@ const msxTpCardM = (rec, mem, species) => ({
   fav: mem && Array.isArray(mem.top) ? mem.top.slice(0, 2) : []
 });
 const msxTpPow = (rec, mem) => rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null;
-const msxTpBonusText = mem => mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}+${Math.round(mem.bonus && mem.bonus[k] || 0)}%`).join(' ') : '';
+const msxTpBonusText = mem => {
+  if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
+  return mem.top.slice(0, 2).map((k, i) => React.createElement(React.Fragment, {
+    key: k
+  }, i ? ' ' : null, React.createElement("span", {
+    className: "msx-tp-bn"
+  }, MSX_STAT_ICON[k], React.createElement("span", {
+    className: "n"
+  }, MSX_STAT_NAME[k]), "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%")));
+};
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
@@ -181279,6 +181304,63 @@ function MsxStRow({
     }, "/", cap)), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
   }));
 }
+function MsxPartySheet({
+  s,
+  tagAt,
+  onClose
+}) {
+  const bar = b => React.createElement("span", {
+    className: "pbar"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(0, Math.min(100, b))}%`
+    }
+  }), React.createElement("em", {
+    style: {
+      left: `${Math.max(0, Math.min(100, tagAt))}%`
+    }
+  }));
+  const row = (key, face, name, subTx, b) => React.createElement("div", {
+    key: key,
+    className: `msx-pty-r${b >= tagAt ? ' tag' : ''}`,
+    "data-msx-party-row": true
+  }, React.createElement("span", {
+    className: "fc"
+  }, face), React.createElement("span", {
+    className: "tx"
+  }, React.createElement("b", {
+    className: "nm"
+  }, name), React.createElement("small", null, subTx), React.createElement("span", {
+    className: "bd"
+  }, "親密度", bar(b), React.createElement("b", null, b), b >= tagAt ? React.createElement("span", {
+    className: "msx-pty-tg"
+  }, "🤝 タッグ") : null)));
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-party": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt msx-pty",
+    onClick: e => e.stopPropagation(),
+    role: "dialog",
+    "aria-modal": "true"
+  }, React.createElement("h3", null, "編成の7体"), React.createElement("div", {
+    className: "msx-note"
+  }, "親密度が", tagAt, "以上になると、いっしょにトレーニングしたときに友情タッグが起きる(棒の白い線)"), React.createElement("div", {
+    className: "msx-dt-body"
+  }, s.team.map((m, i) => row(i, React.createElement(MsxMonFace, {
+    species: m.species,
+    colors: m.colors
+  }), msxMemberName(m), `${m.kind === 'base' ? 'ベースモン' : `ランク ${m.rank}`}${Array.isArray(m.top) && m.top.length ? `・得意 ${m.top.map(k => MSX_STAT_NAME[k]).join('・')}` : ''}`, Number(s.bond[i]) || 0)), row('aid', React.createElement("img", {
+    src: msxFace(s.aid, 'happy'),
+    alt: ""
+  }), msxAidName(s.aid), '助手', Number(s.aidBond) || 0)), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-party-close": true,
+    onClick: onClose
+  }, "閉じる")));
+}
 function MsxPf({
   m,
   bond,
@@ -182101,6 +182183,7 @@ function MsxPlay({
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [partyOpen, setPartyOpen] = useState(false);
   const [tevAt, setTevAt] = useState({
     k: '',
     i: 0
@@ -183582,8 +183665,12 @@ function MsxPlay({
       className: "v-nm"
     }, run.nick)), React.createElement("div", {
       className: "v-under"
-    }, React.createElement("div", {
-      className: "v-party row"
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-party row v-party-btn",
+      onClick: () => setPartyOpen(true),
+      "aria-label": "編成の7体を見る",
+      "data-msx-party-open": true
     }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
       key: i,
       m: m,
@@ -183593,7 +183680,10 @@ function MsxPlay({
       aid: s.aid,
       bond: s.aidBond,
       tagAt: tagAt
-    })), React.createElement("button", {
+    }), React.createElement("i", {
+      className: "go",
+      "aria-hidden": "true"
+    }, "▸")), React.createElement("button", {
       type: "button",
       className: "v-bagb st",
       onClick: () => setSub('bag')
@@ -183605,7 +183695,11 @@ function MsxPlay({
         setDetailTech(null);
         setDetail(true);
       }
-    }, "🔍", React.createElement("small", null, "詳しく"))), React.createElement(MsxStRow, {
+    }, "🔍", React.createElement("small", null, "詳しく"))), partyOpen ? React.createElement(MsxPartySheet, {
+      s: s,
+      tagAt: tagAt,
+      onClose: () => setPartyOpen(false)
+    }) : null, React.createElement(MsxStRow, {
       who: s,
       stats: s.stats
     }), preOn ? React.createElement("div", {
@@ -191983,12 +192077,14 @@ span.mcd{cursor:default}
 .mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
 .mcd .mcd-fit{display:block}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
+/* 「同じ種類」「育てる種」の札は顔にかぶせず絵の下の端へ(名前の帯がある大きさは帯の上)(育-236・239) */
+.mcd:not(.s) .mcd-note{bottom:23%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
 .mcd.s .mcd-art{bottom:5%}
 .mcd .mcd-nms{display:block;white-space:nowrap;overflow:hidden;font-weight:900;font-size:11px;line-height:1.25;color:#fff;text-align:center}.mcd .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
 .mcd .mcd-slot{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:clamp(20px,30cqw,34px);height:clamp(20px,30cqw,34px);font-style:normal;font-weight:900;font-size:clamp(11px,17cqw,19px);color:#fff;background:#2563eb;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px #0008}
-.mcd .mcd-note{position:absolute;left:4%;right:4%;top:24%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcd .mcd-note{position:absolute;z-index:3;left:4%;right:4%;bottom:3%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mcd .mcd-lv{position:absolute;right:3%;bottom:23%;line-height:1.3;padding:0 .3em;background:#0f0d24d9;border-radius:6px;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
 .mcd .mcd-gd{position:absolute;right:3%;top:3%;font-style:normal;font-weight:900;font-size:clamp(9px,14cqw,15px);line-height:1.35;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:7px;padding:0 .35em}
 .mcd .mcd-fav{position:absolute;left:3%;top:3%;display:flex;flex-direction:column;gap:2px}
@@ -192000,6 +192096,10 @@ span.mcd{cursor:default}
 .mcd .mcd-tag{display:block;font-weight:900;font-size:clamp(10px,11cqw,12px);line-height:1.6;border-radius:999px;color:#fff;background:#4f46e5}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
+.mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+/* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
+.mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
+@container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
 .mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
 .mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
 .mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}

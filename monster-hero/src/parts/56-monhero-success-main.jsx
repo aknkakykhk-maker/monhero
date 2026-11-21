@@ -261,6 +261,28 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
     </div>
   );
 }
+// 編成の7体の一覧の窓(育成中のメインの編成の列を押すと開く)。顔・名前・役と得意・親密度の棒(友情タッグの線つき)を1体1行で
+function MsxPartySheet({ s, tagAt, onClose }) {
+  const bar = (b) => (<span className="pbar"><i style={{ width: `${Math.max(0, Math.min(100, b))}%` }}/><em style={{ left: `${Math.max(0, Math.min(100, tagAt))}%` }}/></span>);
+  const row = (key, face, name, subTx, b) => (<div key={key} className={`msx-pty-r${b >= tagAt ? ' tag' : ''}`} data-msx-party-row>
+    <span className="fc">{face}</span>
+    <span className="tx"><b className="nm">{name}</b><small>{subTx}</small>
+      <span className="bd">親密度{bar(b)}<b>{b}</b>{b >= tagAt ? <span className="msx-pty-tg">🤝 タッグ</span> : null}</span></span></div>);
+  return (
+    <div className="msx-ov msx-fade" data-msx-party onClick={onClose}>
+      <div className="msx-sheet msx-dt msx-pty" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <h3>編成の7体</h3>
+        <div className="msx-note">親密度が{tagAt}以上になると、いっしょにトレーニングしたときに友情タッグが起きる(棒の白い線)</div>
+        <div className="msx-dt-body">
+          {s.team.map((m, i) => row(i, <MsxMonFace species={m.species} colors={m.colors}/>, msxMemberName(m),
+            `${m.kind === 'base' ? 'ベースモン' : `ランク ${m.rank}`}${Array.isArray(m.top) && m.top.length ? `・得意 ${m.top.map((k) => MSX_STAT_NAME[k]).join('・')}` : ''}`, Number(s.bond[i]) || 0))}
+          {row('aid', <img src={msxFace(s.aid, 'happy')} alt=""/>, msxAidName(s.aid), '助手', Number(s.aidBond) || 0)}
+        </div>
+        <button type="button" className="msx-dt-close" data-msx-party-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
 function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const tag = bond >= tagAt;
   if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
@@ -565,6 +587,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [partyOpen, setPartyOpen] = useState(false); // 編成の列を押すと、7体の一覧の窓(r1119-069 育-136ほか)
   const [tevAt, setTevAt] = useState({ k: '', i: 0 }); // 編成の子のイベントの拍の位置(56-monsuc-tevent.jsx・6つの拍。-1 = 飛ばして結果だけ)。保存しない
   const [askLeave, setAskLeave] = useState(false); // 能力の画面で、決定していない振り分けがあるまま戻るとき(r1115-202 L8)
   const [sel, setSel] = useState(null);
@@ -1003,10 +1026,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
-        <div className="v-party row"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
+        {/* 編成の顔は列ぜんたいを1つのボタンにして、7体の一覧の窓を開く(1体ずつだと 44px に届かない・r1119-069 育-136・162・164・176・182・203・218・229) */}
+        <button type="button" className="v-party row v-party-btn" onClick={() => setPartyOpen(true)} aria-label="編成の7体を見る" data-msx-party-open><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/><i className="go" aria-hidden="true">▸</i></button>
         <button type="button" className="v-bagb st" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
         <button type="button" className="v-bagb st" data-msx-detail-open onClick={() => { setDetailTech(null); setDetail(true); }}>🔍<small>詳しく</small></button>
       </div>
+      {partyOpen ? <MsxPartySheet s={s} tagAt={tagAt} onClose={() => setPartyOpen(false)}/> : null}
       <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
         <div className="v-act v-act-pre" style={{ gridTemplateColumns: '1fr 1.5fr' }} data-msx-pre-main>

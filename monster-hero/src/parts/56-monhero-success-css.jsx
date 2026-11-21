@@ -181,6 +181,22 @@ const MSX_CSS = `
 .msx .v-party.row>small{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .msx .v-party.row .v-pf{flex:0 1 30px;min-width:0}
 .msx .v-party.row .v-pf img{width:100%;height:auto;aspect-ratio:1/1}
+.msx .v-party-btn{font:inherit;color:inherit;cursor:pointer;text-align:left;min-height:44px;-webkit-tap-highlight-color:transparent}
+.msx .v-party-btn:active{transform:translateY(1px)}
+.msx .v-party-btn .go{flex:none;font-style:normal;font-size:14px;font-weight:900;color:#fde047;margin-left:auto;padding-left:2px}
+.msx-pty-r{display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:6px 10px;margin:5px 0}
+.msx-pty-r.tag{border-color:#f9a8d4}
+.msx-pty-r .fc{flex:none;width:52px;height:52px;border-radius:12px;background:#1e1a36;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx-pty-r .fc img{width:100%;height:100%;object-fit:contain}
+.msx-pty-r .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.msx-pty-r .nm{font-size:15px;font-weight:900;color:#fff;overflow-wrap:anywhere;line-height:1.2}
+.msx-pty-r small{font-size:11.5px;color:#cbd5e1;font-weight:700}
+.msx-pty-r .bd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#f9a8d4;white-space:nowrap}
+.msx-pty-r .bd>b{font-size:14px;color:#fff;min-width:24px;text-align:right}
+.msx-pty-r .pbar{position:relative;flex:1;min-width:50px;height:7px;border-radius:7px;background:#334155;overflow:visible}
+.msx-pty-r .pbar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#f472b6,#f9a8d4)}
+.msx-pty-r .pbar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#fff;border-radius:2px}
+.msx-pty-r .msx-pty-tg{flex:none;font-size:11px;color:#422006;background:#f9a8d4;border-radius:99px;padding:1px 7px}
 .msx .v-bagb.st{position:relative;flex:0 0 auto}
 /* トレーニング: 実行ボタンの近くのまとめ(上がる能力・失敗率・体力消費。2026-11-16 UI改修) */
 .msx .v-trsum{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:6px;padding:6px 10px;border-radius:10px;background:#0f0d24d0;border:1px solid #ffffff2a;font-size:12px;font-weight:800;color:#e2e8f0}
@@ -337,7 +353,7 @@ const MSX_CSS = `
 .msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
 .msx .v-fx .ch i{font-style:normal;color:#94a3b8}
 .msx .v-fx .t .mx{color:#fde047;font-size:15px}
-.msx .v-chip .v-chip-sub{display:block;font-size:9.5px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
+.msx .v-chip .v-chip-sub{display:block;font-size:10px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
 .msx button.v-chip.msx-yosu-chip{font-family:inherit;color:#fff;text-align:left;cursor:pointer;min-height:30px}.msx .msx-yosu-chip.on{white-space:normal;max-width:min(260px,70vw);border-radius:12px}
 .msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
 .msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
@@ -670,7 +686,7 @@ const MSX_CSS = `
 .msx .v-eps div b{color:#fde047;margin-right:5px;font-size:10px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
 .msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
 .msx.land .v-party{gap:3px}
-.msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
+.msx.s320 .v-party:not(.row){display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party:not(.row)>small{grid-column:1/-1;text-align:center}
 .msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
 .msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
 .msx.s320 .v-scene.sm{height:32px}
@@ -1339,6 +1355,7 @@ const MSX_CSS = `
 /* フレンドの札: 下の帯にアシスト効果の印(2026-11-20 社長「フレンドのアシスト能力が見えない」) */
 .msx .msx-fp-as{display:inline-flex;align-items:center;gap:1px}.msx .msx-fp-as i{font-style:normal;line-height:1}.msx .msx-fp-as small{font-size:10px;font-weight:900;margin-left:1px}
 .msx .msx-fp-dup{font-size:10px;font-weight:900;color:#fde68a;margin-right:2px}
+.msx .mcd-note .msx-fp-dup{color:#9d174d} /* 白い札の中では濃い色(黄色が白に溶けて読めなかった・育-236・239) */
 .msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
 .msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
