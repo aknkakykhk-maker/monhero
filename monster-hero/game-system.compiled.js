@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1ed70b2c87c72ab7
+// source-sha256: 47ec836763c4af5d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -124482,6 +124482,165 @@ function AssistantLifeTopStrip({
     "data-assistant-life-top-sum": true
   }, "家に", home, "人 ・ おでかけ", list.length - home, "人"));
 }
+const ASSISTANT_LIFE_GOAL_KEY = 'mh_assistant_life_goal_v1';
+const ASSISTANT_LIFE_GOAL_MIGRATED_KEY = 'mh_assistant_life_goal_migrated_v1';
+const ASSISTANT_LIFE_GOAL_KINDS = Object.freeze(['watch', 'talk', 'give', 'play']);
+const ASSISTANT_LIFE_GOAL_NEED = 3;
+const ASSISTANT_LIFE_GOAL_DAYS = 7;
+const ASSISTANT_LIFE_GOAL_LABEL = Object.freeze({
+  watch: '👀 見る',
+  talk: '💬 話す',
+  give: '🎁 贈る',
+  play: '🎵 誘う'
+});
+const assistantLifeGoalDay = () => {
+  try {
+    if (typeof assistantLifePerkDay === 'function') return assistantLifePerkDay();
+  } catch (_) {}
+  try {
+    if (typeof jstDayKey4 === 'function') return jstDayKey4();
+  } catch (_) {}
+  return '';
+};
+const assistantLifeGoalCount = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+const normalizeAssistantLifeGoal = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const d = o.done && typeof o.done === 'object' && !Array.isArray(o.done) ? o.done : {};
+  const done = {};
+  for (const k of ASSISTANT_LIFE_GOAL_KINDS) done[k] = d[k] === true;
+  return {
+    v: 1,
+    day: typeof o.day === 'string' ? o.day : '',
+    done,
+    streak: assistantLifeGoalCount(o.streak),
+    basket: assistantLifeGoalCount(o.basket)
+  };
+};
+const assistantLifeGoalToday = (st, day) => {
+  const s = normalizeAssistantLifeGoal(st);
+  if (s.day === day) return s;
+  const done = {};
+  for (const k of ASSISTANT_LIFE_GOAL_KINDS) done[k] = false;
+  return {
+    ...s,
+    day,
+    done
+  };
+};
+const assistantLifeGoalDoneCount = st => ASSISTANT_LIFE_GOAL_KINDS.filter(k => st && st.done && st.done[k] === true).length;
+const assistantLifeGoalAchieved = st => assistantLifeGoalDoneCount(st) >= ASSISTANT_LIFE_GOAL_NEED;
+const assistantLifeGoalMark = (st, kind, day) => {
+  const s = assistantLifeGoalToday(st, day);
+  if (!ASSISTANT_LIFE_GOAL_KINDS.includes(kind) || s.done[kind]) return {
+    st: s,
+    added: false,
+    achieved: false
+  };
+  const before = assistantLifeGoalAchieved(s);
+  const next = {
+    ...s,
+    done: {
+      ...s.done,
+      [kind]: true
+    }
+  };
+  const now = assistantLifeGoalAchieved(next);
+  const achieved = !before && now;
+  return {
+    st: achieved ? {
+      ...next,
+      streak: next.streak + 1
+    } : next,
+    added: true,
+    achieved
+  };
+};
+const assistantLifeGoalFromDaily = daily => {
+  const d = typeof assistantLifeDailyNormalize === 'function' ? assistantLifeDailyNormalize(daily) : {
+    days: [],
+    claims: 0
+  };
+  const g = normalizeAssistantLifeGoal(null);
+  return {
+    ...g,
+    streak: Math.min(ASSISTANT_LIFE_GOAL_DAYS, Array.isArray(d.days) ? d.days.length : 0),
+    basket: assistantLifeGoalCount(d.claims)
+  };
+};
+const ASSISTANT_LIFE_GOAL_STORE = {
+  loaded: false,
+  p: null,
+  state: normalizeAssistantLifeGoal(null),
+  subs: new Set(),
+  async load() {
+    if (this.loaded) return this.state;
+    if (!this.p) this.p = (async () => {
+      try {
+        const [cur, migrated] = await Promise.all([storeGet(ASSISTANT_LIFE_GOAL_KEY, null, false), storeGet(ASSISTANT_LIFE_GOAL_MIGRATED_KEY, null, false)]);
+        if (migrated === true) {
+          this.state = normalizeAssistantLifeGoal(cur);
+        } else if (cur && typeof cur === 'object') {
+          this.state = normalizeAssistantLifeGoal(cur);
+          try {
+            await storeSet(ASSISTANT_LIFE_GOAL_MIGRATED_KEY, true, false);
+          } catch (_) {}
+        } else {
+          const daily = typeof ASSISTANT_LIFE_DAILY_KEY !== 'undefined' ? await storeGet(ASSISTANT_LIFE_DAILY_KEY, null, false) : null;
+          this.state = assistantLifeGoalFromDaily(daily);
+          try {
+            await storeSet(ASSISTANT_LIFE_GOAL_KEY, this.state, false);
+            await storeSet(ASSISTANT_LIFE_GOAL_MIGRATED_KEY, true, false);
+          } catch (_) {}
+        }
+      } catch (_) {
+        this.state = normalizeAssistantLifeGoal(null);
+      }
+      this.loaded = true;
+      this.subs.forEach(f => {
+        try {
+          f(this.state);
+        } catch (_) {}
+      });
+      return this.state;
+    })();
+    return this.p;
+  }
+};
+const assistantLifeGoalNote = async kind => {
+  const S = ASSISTANT_LIFE_GOAL_STORE;
+  await S.load();
+  const r = assistantLifeGoalMark(S.state, kind, assistantLifeGoalDay());
+  S.state = r.st;
+  if (r.added) {
+    try {
+      await storeSet(ASSISTANT_LIFE_GOAL_KEY, r.st, false);
+    } catch (_) {}
+    S.subs.forEach(f => {
+      try {
+        f(r.st);
+      } catch (_) {}
+    });
+  }
+  return {
+    added: r.added,
+    achieved: r.achieved,
+    st: r.st
+  };
+};
+const assistantLifeGoalView = (st = ASSISTANT_LIFE_GOAL_STORE.state, day = assistantLifeGoalDay()) => {
+  const s = assistantLifeGoalToday(st, day);
+  const count = assistantLifeGoalDoneCount(s);
+  return {
+    day: s.day,
+    done: s.done,
+    count,
+    need: ASSISTANT_LIFE_GOAL_NEED,
+    achieved: count >= ASSISTANT_LIFE_GOAL_NEED,
+    streak: s.streak,
+    days: ASSISTANT_LIFE_GOAL_DAYS,
+    basket: s.basket
+  };
+};
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
   let opens = [];
