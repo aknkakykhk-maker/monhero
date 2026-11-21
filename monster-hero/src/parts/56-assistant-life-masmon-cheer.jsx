@@ -174,6 +174,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   const [gift, setGift] = useState(null);
   const [failed, setFailed] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [foeSheet, setFoeSheet] = useState(null); // 相手の技の枠を押して開く、その間合いの相手の技の一覧(見るだけ・r1119-070 ③)
   const [bg, setBg] = useState(() => (typeof msaBgRead === 'function' ? msaBgRead() : 'arena'));
   const reduce = useMemo(() => (typeof msaReduce === 'function' ? msaReduce() : false), []);
   const last = amgcLastShugyo(aid);
@@ -198,7 +199,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       const seed = `amgc-${aid}-${last ? last.log.s : 0}`; // 同じ修行なら何度見ても同じ試合
       let r; try { r = engine.simulate({ seed, catalog, teamA, teamB: foe.team, balance: 'A', trace: true }); } catch (_) { setFailed(true); return; }
       const st = r.log[0] || {};
-      setBattle({ r, frames: ambwFramesOf(r.log), maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, teamA, teamB: foe.team, foe });
+      setBattle({ r, frames: ambwFramesOf(r.log), maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, teamA, teamB: foe.team, foe, catalog });
     })();
     return () => { alive = false; };
   }, [engine]);
@@ -249,25 +250,40 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
     const foeFace = faceOf(battle.teamB.assistantId), meFace = faceOf(aid);
     const foeLine = battle.foe.kind === 'friend' ? battle.foe.label : `${foeFace ? foeFace.a.name : ''}の${battle.foe.label}`;
     const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', bg) : null;
+    // 相手の技の枠(r1119-070 ③ 社長の選択「出す」): モンサクの試合と同じ形。自分の枠と操作は無い(見るだけの画面)
+    const st0 = log[0] || {}, mvB = (st0.bMoves || [])[f.act.B], mbB = battle.teamB.members ? battle.teamB.members[f.act.B] : null;
+    const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(battle.catalog, mbB, mvB) : null;
+    const hitAtB = (t, d) => { const v = battle.catalog && typeof ambwHitPct === 'function' ? ambwHitPct(battle.catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
+    const foeOn = Boolean(itemsB && itemsB.length && !done);
+    const tools = (
+      <>
+        <button type="button" className="msa-pause" data-amgc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
+        {AMBW_SPEEDS.filter(x => x.id === 'hl' || x.id === 'x2').map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} data-amgc-speed={x.id} onClick={() => { setSpeed(x.id); setPaused(false); }}>{x.label}</button>)}
+        {typeof MsaBgToggle === 'function' ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
+        <button type="button" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
+      </>
+    );
     return (
-      <div className="msa amgc-wrap" data-amgc-match data-msa-pos={pos}>
-        <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
-        <div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>
-        <div className="msa-stagebox amgc-stagebox" data-msa-stagebox>
-          <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill wide lite={speed === 'hl'}/>
-        </div>
-        <div className="amgc-side me" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>
-        <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
-      </div>);
+      <MsaMatchView className="amgc-wrap" mode="watch" fitMin={typeof window !== 'undefined' && window.innerWidth < 360 ? 220 : 300} attrs={{ 'data-amgc-match': '', 'data-msa-pos': pos }}
+        head={<div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>}
+        foe={foeOn ? { list: itemsB, rep: msaRepIds(itemsB, null), dist: f.d, guts: f.g.B, lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'B') : null, hitAt: hitAtB, danger: typeof msaFoeDangerOf === 'function' ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0, onOpen: (d) => setFoeSheet(d) } : null}
+        stage={<MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill wide lite={speed === 'hl'}/>}
+        say={call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}
+        why={<div className="amgc-side me msa-why" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>}
+        tools={tools}
+        overlay={foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('B')}(練習相手)の${AMBW_DIST[foeSheet]}の技`} list={itemsB} d={foeSheet} dist={f.d} rep={msaRepIds(itemsB, null)} hitAt={hitAtB} onClose={() => setFoeSheet(null)}/> : null}/>);
   };
   return (
     <div className="ambw-root amgc-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))', display: 'flex', flexDirection: 'column' }}>
       <style>{AMBW_CSS}{`
 .amgc-root>*{flex-shrink:0}
-.amgc-root>.amgc-wrap{flex:1 0 auto}
-.amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-root>.msa.msa-mv{flex:none;height:auto}
+.amgc-root .msa-mv .msa-tools button{white-space:nowrap;font-size:11.5px}
+.amgc-root .msa-mv .msa-tools button[data-amgc-speed=hl]{flex:1.5}
+.amgc-root .msa-mv .msa-tools button[data-amgc-skip]{flex:1.3}
+.amgc-root .msa-mv .msa-tools button.msa-bgsw{flex:1.5}
+@media (max-width:359.98px){.amgc-root .msa-mv .msa-tools{gap:3px}.amgc-root .msa-mv .msa-tools button{font-size:10.5px}}
 .amgc-head{display:block;color:#fde68a}.amgc-head span{display:inline-block;white-space:nowrap}.amgc-head .who{margin-top:2px;font-size:12.5px;color:#fde68a}
-.amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
 .amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
 .amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
 .amgc-side img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;background:#312e5a;flex:none}
@@ -282,12 +298,14 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </div>
       <div className="amgc-aim" data-amgc-aim>🎯 <b>狙い</b>: {row ? `${row.nick}の${aim}` : aim}</div>
       {stageBlock()}
-      <div className="ambw-ctl" style={{ marginTop: 6 }}>
+      {battle && battle.solo ? (
+        <div className="ambw-ctl" style={{ marginTop: 6 }}>
         <button className="ambw-btn2" data-amgc-pause onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
         {typeof msaBgWrite === 'function' && <button className="ambw-btn2" data-msa-bg={bg} aria-label="背景を切り替える" onClick={() => { const nx = bg === 'stadium' ? 'arena' : 'stadium'; msaBgWrite(nx); setBg(nx); }}>{bg === 'stadium' ? '🏟️' : '🏛️'}</button>}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
-      </div>
+        </div>
+      ) : null}
       {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
       {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       {!done && battle && !failed ? (
