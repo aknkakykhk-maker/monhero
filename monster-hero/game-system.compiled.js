@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f4a6e9375497b2dc
+// source-sha256: 892b5a8005190bd3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122530,6 +122530,75 @@ const assistantLifeSleepSrc = (pid, src) => {
   const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
   return f || src;
 };
+const ASSISTANT_LIFE_SLEEP_FACE = Object.freeze({
+  'myua_sleep.PNG': {
+    top: 0.14,
+    eye: 0.37,
+    chin: 0.45
+  },
+  'halloween/myua_sleep.PNG': {
+    top: 0.14,
+    eye: 0.37,
+    chin: 0.46
+  },
+  'card-master/myua_sleep.PNG': {
+    top: 0.01,
+    eye: 0.255,
+    chin: 0.37
+  },
+  'kiki_sleep.PNG': {
+    top: 0.21,
+    eye: 0.51,
+    chin: 0.65
+  },
+  'halloween/kiki_sleep.PNG': {
+    top: 0.21,
+    eye: 0.48,
+    chin: 0.58
+  },
+  'twintail/kiki_sleep.PNG': {
+    top: 0.10,
+    eye: 0.218,
+    chin: 0.255
+  },
+  'kyuko_sleep.PNG': {
+    top: 0.015,
+    eye: 0.415,
+    chin: 0.54
+  },
+  'winter/kyuko_sleep.PNG': {
+    top: 0.005,
+    eye: 0.131,
+    chin: 0.185
+  },
+  'atsu_sleep.PNG': {
+    top: 0.09,
+    eye: 0.33,
+    chin: 0.45
+  },
+  'momosuke_sleep.PNG': {
+    top: 0.07,
+    eye: 0.455,
+    chin: 0.54
+  },
+  'halloween/momosuke_sleep.PNG': {
+    top: 0.14,
+    eye: 0.38,
+    chin: 0.48
+  },
+  'sorashido_sleep.PNG': {
+    top: 0.04,
+    eye: 0.25,
+    chin: 0.37
+  }
+});
+const assistantLifeSleepFaceOf = (pid, src) => {
+  const who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  const s0 = String(src || '').replace(/[?#].*$/, ''),
+    dir = who && who.imageDir ? `${who.imageDir}/` : null;
+  const rel = dir && s0.includes(dir) ? s0.slice(s0.indexOf(dir) + dir.length) : null;
+  return rel ? ASSISTANT_LIFE_SLEEP_FACE[rel] || null : null;
+};
 const ASSISTANT_LIFE_SLEEP_GLASSES = Object.freeze({
   dra: {
     skin: '#f6be96',
@@ -122834,6 +122903,58 @@ function AssistantLifeRoomBed({
   }, [key]);
   const F = Math.min(30, W * 0.078);
   const night = look === 'night';
+  const placeHead = (x, i) => {
+    const box = boxes[x.src];
+    if (!box) return null;
+    const r = assistantLifeRoomPlace({
+      ...x,
+      box
+    }, F, 0, 0);
+    const U = r.U || F * 2.63;
+    const cw0 = U * 1.2,
+      ch0 = U * 1.32;
+    const ex = 0.38 * U,
+      ey = 0.18 * U,
+      cw = cw0 + ey * 2,
+      ch = ch0 + ex,
+      y0 = -0.22 * U - ex;
+    const vh = r.visBottom - r.visTop;
+    const sf = assistantLifeSleepFaceOf(x.pid, x.src);
+    const gTop = sf ? sf.top : x.face.top || 0,
+      gChin = sf ? sf.chin : Number.isFinite(x.face.chin) ? x.face.chin : 1;
+    const headLen = Math.max(1, (gChin - gTop) * vh);
+    const k = Math.min(1, 1.10 * U / headLen);
+    const eyeY = ((x.face.eye || 0.33) - (x.face.top || 0)) * vh;
+    const midY = eyeY + k * (((gTop + gChin) / 2 - (x.face.top || 0)) * vh - eyeY);
+    const tx = pillow.left + pillow.w * 0.44 + i * 14,
+      ty = pillow.top + pillow.h * 0.52 - i * 6;
+    const dy = midY - (y0 + ch / 2);
+    const s78 = Math.sin(78 * Math.PI / 180),
+      c78 = Math.cos(78 * Math.PI / 180);
+    const cx = tx - dy * s78,
+      cy = ty - dy * c78;
+    const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
+    const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
+    const imgLeft = r.left + cw / 2;
+    const eyeOrigin = `${((box.l + box.r) / 2 * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
+    const shrink = k < 0.999 ? {
+      transform: `scale(${k.toFixed(3)})`,
+      transformOrigin: eyeOrigin
+    } : {};
+    return {
+      x,
+      r,
+      cw,
+      ch,
+      y0,
+      cx,
+      cy,
+      feather,
+      imgLeft,
+      shrink
+    };
+  };
+  const places = items.map((x, i) => placeHead(x, i));
   return React.createElement("div", {
     "aria-hidden": "true",
     "data-assistant-life-roomview-front": "bed",
@@ -122960,46 +123081,25 @@ function AssistantLifeRoomBed({
         filter: night ? 'brightness(.78)' : undefined
       }
     }));
-  }), items.map((x, i) => {
-    const box = boxes[x.src];
-    if (!box) return null;
-    const r = assistantLifeRoomPlace({
-      ...x,
-      box
-    }, F, 0, 0);
-    const U = r.U || F * 2.63;
-    const cw0 = U * 1.2,
-      ch0 = U * 1.32;
-    const ex = 0.38 * U,
-      ey = 0.18 * U,
-      cw = cw0 + ey * 2,
-      ch = ch0 + ex,
-      y0 = -0.22 * U - ex;
-    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
-      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
-    const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
-    const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
-    const imgLeft = r.left + cw / 2;
-    const visH = r.height * (box.b - box.t),
-      k = Math.min(1, 2.0 * U / Math.max(1, visH));
-    const eyeOrigin = `${((box.l + box.r) / 2 * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
-    const shrink = k < 0.999 ? {
-      transform: `scale(${k.toFixed(3)})`,
-      transformOrigin: eyeOrigin
-    } : {};
+  }), places.map(p => {
+    if (!p) return null;
+    const {
+      x,
+      r
+    } = p;
     return React.createElement("div", {
       key: x.pid,
       "data-assistant-life-roomview-sleeper": x.pid,
       style: {
         position: 'absolute',
-        left: cx - cw / 2,
-        top: cy - ch / 2,
-        width: cw,
-        height: ch,
+        left: p.cx - p.cw / 2,
+        top: p.cy - p.ch / 2,
+        width: p.cw,
+        height: p.ch,
         transform: 'rotate(-78deg)',
         transformOrigin: '50% 50%',
-        WebkitMaskImage: feather,
-        maskImage: feather,
+        WebkitMaskImage: p.feather,
+        maskImage: p.feather,
         WebkitMaskComposite: 'source-in',
         maskComposite: 'intersect'
       }
@@ -123009,12 +123109,12 @@ function AssistantLifeRoomBed({
       draggable: false,
       style: {
         position: 'absolute',
-        left: imgLeft,
-        top: r.top - y0,
+        left: p.imgLeft,
+        top: r.top - p.y0,
         width: r.width,
         height: r.height,
         maxWidth: 'none',
-        ...shrink,
+        ...p.shrink,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
     }), React.createElement(AssistantLifeSleepEyes, {
@@ -123023,9 +123123,9 @@ function AssistantLifeRoomBed({
       w: r.width,
       h: r.height,
       style: {
-        left: imgLeft,
-        top: r.top - y0,
-        ...shrink,
+        left: p.imgLeft,
+        top: r.top - p.y0,
+        ...p.shrink,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
     }));
@@ -123033,8 +123133,9 @@ function AssistantLifeRoomBed({
     const U = U0(F),
       ch = U * 1.32,
       cw = U * 1.2;
-    const headLeft = pillow.left + 2,
-      cy = pillow.top + pillow.h * 0.6 - cw / 2;
+    const fp = places.find(z => z),
+      cy = fp ? fp.cy : pillow.top + pillow.h * 0.6 - cw / 2;
+    const headLeft = pillow.left + 2;
     const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62;
     const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
     const qw = Math.max(60, left + bw - 14 - qx),
