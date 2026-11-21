@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad9e193c0370aa12
+// source-sha256: 930cb5ad01e2b8d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152995,80 +152995,36 @@ const AMBB_CSS = `
 .ambb-fold{margin-top:8px;border-top:1px dashed rgba(255,255,255,.14);padding-top:6px}
 .ambb-fold summary{font-size:12px;font-weight:900;color:#c4b5fd;cursor:pointer;list-style:none}
 .ambb-fold summary::-webkit-details-marker{display:none}
-.ambw.ambb-full{overflow:hidden}
-.ambw.ambb-full .ambw-in{height:100%;display:flex;flex-direction:column;padding-bottom:max(8px,env(safe-area-inset-bottom))}
-.ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:flex;flex-direction:column}
-.ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
-.ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
-.ambb-stagewrap{position:relative}
-.msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
-.ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
-.ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
-.ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
-.ambw.ambb-full .ambw-log .ambb-why{margin-top:3px;gap:6px}
-.ambw.ambb-full .ambw-log .ambb-why .ambw-face{width:22px;height:22px}
-.ambw.ambb-full .ambw-log .ambb-why .ambw-bubble{padding:3px 8px;font-size:11.5px;line-height:1.35}
-.ambw.ambb-full .ambw-seek{margin-top:10px}
-.ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:4px;justify-content:center}
-.ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 8px;font-size:12px;white-space:nowrap;min-width:0}
+/* 観戦の画面(2026-11-21 段3b r1119-070): 並べ方は MsaMatchView(56-monhero-success-arena.jsx の .msa.msa-mv)と同じ。ここは外の入れ物だけ */
+/* 背景はモンサクの試合と同じ一色(手動の縦画面で場面を上に留めるときの帯の色と合わせる) */
+.ambw.ambb-full{overflow-y:auto;background:#191331}
+.ambw.ambb-full .ambw-in{min-height:100%;display:flex;flex-direction:column;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .ambw.ambb-full .ambw-top{min-height:34px}
-.ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
+.ambw.ambb-full [data-ambb-watch]{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.ambw.ambb-full [data-ambb-watch]>.msa-mv{flex:1 1 auto;height:auto;margin-top:4px}
+/* βの手動は場面を上に留めない(帯のボタンが留めた場面の下に隠れないように・ミハリ6 #5891)。画面ごと縦に送る */
+@media (orientation:portrait){.ambw.ambb-full .msa-mv[data-msa-mode=manual] .msa-main{position:static;z-index:auto}}
+.msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
+.ambw.ambb-full .msa-mv .ambb-why{min-height:26px}
+.ambw.ambb-full .msa-mv .msa-tools button[data-ambb-skip]{flex:1.25;white-space:nowrap}
+.ambw.ambb-full .msa-mv .msa-tools button[data-ambb-speed=hl]{flex:1.4;white-space:nowrap;font-size:11px}
+.ambw.ambb-full .msa-mv .ambb-why p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ambw.ambb-full .msa-mv .ambb-say{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw.ambb-full .msa-mv .ambb-say.A{color:#fbcfe8}.ambw.ambb-full .msa-mv .ambb-say.B{color:#bae6fd}
+.ambw.ambb-full .msa-mv .msa-seek{margin-top:2px}
+.ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:0;padding:7px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px;white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]):not([data-msxm-blow]) small{display:none}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
-.ambw.ambb-full [data-ambw-panel]{padding:5px 8px;margin-top:4px}
-.ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
-.ambw.ambb-full [data-ambw-panel] .ambw-face{width:24px;height:24px}
-.ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
-.ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
-/* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
-@media (max-height:740px){
-  .ambw.ambb-full{overflow-y:auto}
-  .ambw.ambb-full .ambw-in{height:auto;display:block}
-  .ambw.ambb-full [data-ambb-watch]{display:block}
-  .ambw.ambb-full .ambb-stagewrap{display:flex}
-  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(160px,34vh,260px);min-height:0}
-  .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none;overflow:visible}
-  .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
-  .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
-}
-/* 縦の画面(2026-11-20 ミハリ #6901): 場の高さをモンサクの大会の試合と同じ(画面の高さの半分・420px まで)にそろえる。入りきらない分は画面ごと縦に送る */
-@media (orientation:portrait) and (min-height:741px){
-  .ambw.ambb-full{overflow-y:auto}
-  .ambw.ambb-full .ambw-in{height:auto;min-height:100%}
-  .ambw.ambb-full .ambw-top{position:sticky;top:0;z-index:8;background:#191331}
-  .ambw.ambb-full [data-ambb-watch]{flex:none}
-  .ambw.ambb-full .ambb-stagewrap{flex:none}
-  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(300px,50vh,420px);min-height:0}
-}
-/* 横の画面(2026-11-19 段3・r1114-023): モンサクの試合と同じ「自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)」 */
+.ambw.ambb-full [data-ambb-review] .ambw-ctl{margin-top:8px;gap:4px;justify-content:center}
+.ambw.ambb-full [data-ambb-review]+.ambw-small+.ambw-seek{margin-top:10px}
 @media (max-height:500px) and (orientation:landscape){
-  .ambw.ambb-full{overflow:hidden}
-  .ambw.ambb-full .ambw-in{height:100%;display:flex;flex-direction:column;max-width:none;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}
+  .ambw.ambb-full .ambw-in{max-width:none;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}
   .ambw.ambb-full .ambw-top{min-height:28px}
-  .ambw.ambb-full [data-ambb-watch] .msxm.c .msxm-h{font-size:10px;flex-wrap:wrap}
-  .ambw.ambb-full [data-ambb-watch] .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
-  .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:grid;grid-template-columns:clamp(100px,14.5vw,128px) minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:minmax(0,1fr) auto auto;column-gap:6px;row-gap:3px}
-  .ambw.ambb-full [data-ambb-watch]>*{min-width:0}
-  .ambw.ambb-full [data-ambb-watch]>.msa-foe{grid-column:3;grid-row:1/4;overflow:auto}
-  .ambw.ambb-full [data-ambb-watch]>.ambb-stagewrap{grid-column:2;grid-row:1;margin-top:0!important;display:flex}
-  .ambw.ambb-full [data-ambb-watch]>.ambb-stagewrap .msa-stage.fill{flex:1;height:auto;min-height:0}
-  .ambw.ambb-full [data-ambb-watch]>.ambw-log{grid-column:2;grid-row:2;margin-top:0}
-  .ambw.ambb-full [data-ambb-watch]>.ambw-seek{grid-column:2;grid-row:3;margin-top:4px}
-  .ambw.ambb-full [data-ambb-watch]>.msa-cardsrow,.ambw.ambb-full [data-ambb-watch]>.ambb-bar-wrap{grid-column:1;grid-row:1;overflow:auto;margin-top:0}
-  .ambw.ambb-full [data-ambb-watch]>.ambw-ctl{grid-column:1;grid-row:2/4;flex-wrap:wrap;margin-top:0;gap:3px}
-  .ambw.ambb-full [data-ambb-watch]>.ambw-ctl button{flex:1 1 30%;min-height:28px;padding:2px;font-size:10.5px}
-  .ambw.ambb-full [data-ambb-watch] .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
-  .ambw.ambb-full [data-ambb-watch] .msa-dc-c{min-height:0;padding:2px 4px}
-  .ambw.ambb-full [data-ambb-watch] .msa-dc-c small.dmg,.ambw.ambb-full [data-ambb-watch] .msa-dc-c small.mv{display:none}
-  .ambw.ambb-full [data-ambb-watch] .msa-rowh small{display:none}
-  .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none}
   .ambw.ambb-full .ambb-bar-wrap .msxm-row.cc,.ambw.ambb-full .ambb-bar-wrap .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-@media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
 /* ---- 試合の見せ方(2026-11-14): 入場・NEXT・実況・決着・結果 ---- */
 .ambb-op{position:fixed;inset:0;z-index:9700;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#3b1d6e 0%,#160f2e 60%,#0b0818 100%);color:#fff;cursor:pointer;animation:ambbFade .3s ease-out both}
@@ -153120,7 +153076,6 @@ const AMBB_CSS = `
 .ambb-star em{font-style:normal;font-size:16px;font-weight:900;color:#fde047;text-align:right}
 .ambb-star em small{display:block;font-size:9.5px;color:#cbd5e1}
 .ambb-star.mvp b:after{content:"MVP";margin-left:6px;font-size:9.5px;color:#422006;background:#fde047;border-radius:5px;padding:0 5px;vertical-align:1px}
-.ambb-stagewrap{position:relative}
 @keyframes ambbFade{from{opacity:0}to{opacity:1}}
 @keyframes ambbSlash{from{transform:translateX(-30%) skewX(-10deg);opacity:0}to{transform:none;opacity:1}}
 @keyframes ambbDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
@@ -154222,30 +154177,7 @@ function AssistantMasmonBattleBeta({
         r: log[k].r
       });
     }
-    const gap = [6, 44, 92, 146][f.d] || 44;
-    const foeSide = e.side === 'A' ? 'B' : 'A';
     const actor = e.side ? typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === (e.side === 'A' ? battle.teamA : battle.teamB).assistantId) : null;
-    const fighter = side => {
-      const i = f.act[side],
-        m = mem(side, i),
-        down = f.hp[side][i] <= 0;
-      const acting = e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : '';
-      const hurt = e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : '';
-      return React.createElement("div", {
-        key: `${side}-${pos}`,
-        className: `ambw-f ${down ? 'down' : ''} ${acting} ${hurt}`
-      }, React.createElement("img", {
-        className: side === 'A' ? 'ambw-flip' : '',
-        src: ALL_PLAYER_MONSTERS[m.species].imgUrl,
-        alt: ""
-      }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
-        className: "ambw-dmg"
-      }, e.crit ? React.createElement("small", null, "会心!") : e.guarded ? React.createElement("small", null, "ガード!") : null, "−", e.dmg) : React.createElement("div", {
-        className: "ambw-dmg miss"
-      }, "はずれ")));
-    };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? e.step > 0 ? '相手を飛ばした' : '技の勢いで移る' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
-    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
       side: x.side
@@ -154286,6 +154218,25 @@ function AssistantMasmonBattleBeta({
     }
     const nextOn = !review && !finish && !opening && ambbIsNext(log, pos);
     const lead = bestStat ? battle.units.slice().sort((a, b) => (Number(a.unit.stats && a.unit.stats[bestStat.k]) || 0) - (Number(b.unit.stats && b.unit.stats[bestStat.k]) || 0))[0] : null;
+    const seekBar = React.createElement("div", {
+      className: "ambw-seek msa-seek",
+      "data-ambb-seek": true
+    }, React.createElement("i", {
+      style: {
+        width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%`
+      }
+    }), kos.map(x => React.createElement("button", {
+      key: x.k,
+      className: x.side,
+      style: {
+        left: `${x.k / Math.max(1, log.length - 1) * 100}%`
+      },
+      onClick: () => {
+        setPos(x.k);
+        setPaused(true);
+        setPhase('watch');
+      }
+    }, "✖")));
     body = React.createElement("div", {
       "data-ambb-watch": true,
       "data-ambb-phase": phase,
@@ -154455,14 +154406,19 @@ function AssistantMasmonBattleBeta({
       className: "ambw-btn2",
       "data-ambb-rank-open": true,
       onClick: () => setPhase('rank')
-    }, "🏆 ランキング"))), !review && !finish && typeof MsaDistCards === 'function' && (() => {
-      const rb = repIdsAt('B', shownF || f);
-      if (!rb.items.length) return null;
+    }, "🏆 ランキング"))), review && React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "見返す: ✖ はたおれた所。押すとそこから見られます"), review && seekBar, !review && typeof MsaMatchView === 'function' && (() => {
       const fr = shownF || f,
         tms = {
           A: battle.teamA,
           B: battle.teamB
         };
+      const rb = repIdsAt('B', fr),
+        ra = repIdsAt('A', fr);
       const hitB = (x, dd) => {
         const v = ambwHitPct(catalog, tms, 'B', {
           ...fr,
@@ -154470,94 +154426,6 @@ function AssistantMasmonBattleBeta({
         }, x.id);
         return v != null ? v : x.hit;
       };
-      return React.createElement("div", {
-        className: "msa msa-foe",
-        "data-msa-foe": true,
-        "data-msa-danger": typeof msaFoeDangerOf === 'function' ? msaFoeDangerOf(rb.items, fr.d, hitB) : 0
-      }, React.createElement("style", null, MSA_CSS), React.createElement("div", {
-        className: "msa-rowh"
-      }, "相手の技", React.createElement("small", null, "押すと、その間合いの技が見られます"), benchOf('B', fr)), React.createElement(MsaDistCards, {
-        list: rb.items,
-        rep: rb.ids,
-        dist: fr.d,
-        guts: fr.g.B,
-        hitAt: hitB,
-        lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'B') : null,
-        dataSide: "B",
-        onOpen: d => setTechList({
-          side: 'B',
-          d
-        })
-      }));
-    })(), review ? null : typeof MsaStage === 'function' ? React.createElement("div", {
-      className: "msa ambb-stagewrap",
-      style: {
-        marginTop: 8
-      }
-    }, React.createElement("style", null, MSA_CSS), React.createElement(MsaStage, {
-      key: opening ? 'op' : 'go',
-      log: log,
-      frames: battle.frames,
-      pos: pos,
-      teams: {
-        A: battle.teamA,
-        B: battle.teamB
-      },
-      venueImg: venue,
-      ended: finish,
-      win: battle.r.winner,
-      endSub: finish ? `${battle.r.rounds} ラウンド` : '',
-      sound: phase === 'watch' && !paused && !opening,
-      introTitle: battle.teamA.members.length > 1 ? '先頭どうし' : battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
-      speedF: {
-        x1: 1,
-        x2: 0.55,
-        x4: 0.3
-      }[speed] || 1,
-      fill: true,
-      wide: true,
-      lite: lite
-    }), nextOn && (() => {
-      const sd = e.side,
-        t = sd === 'A' ? battle.teamA : battle.teamB,
-        fr = battle.frames[pos] || f;
-      return React.createElement(MsaNext, {
-        key: `nx-${pos}`,
-        side: sd,
-        name: who(sd, e.i),
-        hp: fr.hp,
-        names: {
-          A: me.name,
-          B: foeName
-        },
-        face: ambbFace(t.assistantId, 'normal'),
-        line: ambbTalk(t.assistantId, 'next', who(sd, e.i))
-      });
-    })()) : review ? null : React.createElement("div", {
-      className: "ambw-ring"
-    }, React.createElement("div", {
-      className: "ambw-stage"
-    }, fighter('A'), React.createElement("div", {
-      className: "ambw-gap",
-      style: {
-        width: gap
-      }
-    }), fighter('B')), React.createElement("div", {
-      className: "ambw-dist"
-    }, AMBW_DIST.map((n, d) => React.createElement("span", {
-      key: d,
-      className: d === f.d ? 'cur' : ''
-    }, n))), cutText && e.ev !== 'end' && React.createElement("div", {
-      key: `cut-${pos}`,
-      className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
-    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), !manualWait && !review && typeof MsaDistCards === 'function' && (() => {
-      const ra = repIdsAt('A', shownF || f);
-      if (!ra.items.length) return null;
-      const fr = shownF || f,
-        tms = {
-          A: battle.teamA,
-          B: battle.teamB
-        };
       const hitA = (x, dd) => {
         const v = ambwHitPct(catalog, tms, 'A', {
           ...fr,
@@ -154565,83 +154433,143 @@ function AssistantMasmonBattleBeta({
         }, x.id);
         return v != null ? v : x.hit;
       };
-      return React.createElement("div", {
-        className: "msa msa-cardsrow",
-        "data-msa-cards": true,
-        "data-ambw-panel": true
-      }, React.createElement("style", null, MSA_CSS), React.createElement("div", {
-        className: "msa-rowh"
-      }, "自分の技", benchOf('A', fr)), React.createElement(MsaDistCards, {
-        list: ra.items,
-        rep: ra.ids,
-        dist: fr.d,
-        guts: fr.g.A,
-        hitAt: hitA,
-        lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'A') : null,
-        dataSide: "A",
-        onOpen: d => setTechList({
-          side: 'A',
-          d
-        })
-      }));
-    })(), !review && manualWait && typeof MsxManualBar === 'function' && React.createElement("div", {
-      className: "ambb-bar-wrap",
-      "data-ambb-manual": true
-    }, (() => {
-      const ra = repIdsAt('A', f);
-      return React.createElement(MsxManualBar, {
-        opt: battle.match.pending(),
-        onPick: manualPick,
-        onAuto: manualAuto,
-        busy: false,
-        rep: ra.ids,
-        title: ra.name,
-        onRep: ra.k ? (d, id) => setRep(ra.k, d, id) : null,
-        look: "c"
+      const last = recent[recent.length - 1];
+      const whyT = actor && e.why ? ambwWhyOf(e.why, WHY) : '';
+      return React.createElement(MsaMatchView, {
+        mode: battle.match ? 'manual' : 'watch',
+        attrs: {
+          'data-ambb-match': ''
+        },
+        foe: !finish && rb.items.length ? {
+          list: rb.items,
+          rep: rb.ids,
+          dist: fr.d,
+          guts: fr.g.B,
+          hitAt: hitB,
+          lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'B') : null,
+          danger: typeof msaFoeDangerOf === 'function' ? msaFoeDangerOf(rb.items, fr.d, hitB) : 0,
+          extra: benchOf('B', fr),
+          onOpen: d => setTechList({
+            side: 'B',
+            d
+          })
+        } : null,
+        stage: React.createElement(React.Fragment, null, React.createElement(MsaStage, {
+          key: opening ? 'op' : 'go',
+          log: log,
+          frames: battle.frames,
+          pos: pos,
+          teams: tms,
+          venueImg: venue,
+          ended: finish,
+          win: battle.r.winner,
+          endSub: finish ? `${battle.r.rounds} ラウンド` : '',
+          sound: phase === 'watch' && !paused && !opening,
+          introTitle: battle.teamA.members.length > 1 ? '先頭どうし' : battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
+          speedF: {
+            x1: 1,
+            x2: 0.55,
+            x4: 0.3
+          }[speed] || 1,
+          fill: true,
+          wide: true,
+          lite: lite
+        }), nextOn && (() => {
+          const sd = e.side,
+            t = sd === 'A' ? battle.teamA : battle.teamB,
+            fx = battle.frames[pos] || f;
+          return React.createElement(MsaNext, {
+            key: `nx-${pos}`,
+            side: sd,
+            name: who(sd, e.i),
+            hp: fx.hp,
+            names: {
+              A: me.name,
+              B: foeName
+            },
+            face: ambbFace(t.assistantId, 'normal'),
+            line: ambbTalk(t.assistantId, 'next', who(sd, e.i))
+          });
+        })()),
+        say: call ? React.createElement("div", {
+          key: `call-${call.at}`,
+          className: `msa-call ${call.k}`,
+          "data-msa-call": call.k
+        }, "🎙 ", call.t) : last ? React.createElement("span", {
+          key: `ln-${last.k}`,
+          className: `ambb-say ${last.side || ''}`,
+          "data-ambb-say": true
+        }, last.t) : `${battle.pvp ? 'フレンド対戦' : 'マスモン対戦'}、試合開始!`,
+        why: React.createElement("div", {
+          className: "msa-why ambb-why",
+          "data-ambb-why": whyT ? '1' : ''
+        }, whyT ? React.createElement(React.Fragment, null, React.createElement("img", {
+          src: assistantFaceSrc(actor, 'normal'),
+          alt: ""
+        }), React.createElement("p", null, actor.name, "「", whyT, "」")) : null),
+        mine: !manualWait && ra.items.length ? {
+          list: ra.items,
+          rep: ra.ids,
+          dist: fr.d,
+          guts: fr.g.A,
+          hitAt: hitA,
+          lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'A') : null,
+          note: '',
+          extra: benchOf('A', fr),
+          onOpen: d => setTechList({
+            side: 'A',
+            d
+          })
+        } : null,
+        controls: manualWait && typeof MsxManualBar === 'function' ? React.createElement("div", {
+          className: "ambb-bar-wrap",
+          "data-ambb-manual": true
+        }, (() => {
+          const rq = repIdsAt('A', f);
+          return React.createElement(MsxManualBar, {
+            opt: battle.match.pending(),
+            onPick: manualPick,
+            onAuto: manualAuto,
+            busy: false,
+            rep: rq.ids,
+            title: rq.name,
+            onRep: rq.k ? (d, id) => setRep(rq.k, d, id) : null,
+            look: "c"
+          });
+        })()) : null,
+        tools: finish ? null : React.createElement(React.Fragment, null, React.createElement("button", {
+          type: "button",
+          className: "msa-pause",
+          "data-ambb-pause": true,
+          "aria-label": paused ? 'つづける' : '一時停止',
+          onClick: () => setPaused(p => !p)
+        }, paused ? '▶' : '⏸'), (battle.match ? AMBW_SPEEDS.slice(0, 2) : AMBW_SPEEDS).map(x => React.createElement("button", {
+          key: x.id,
+          type: "button",
+          className: speed === x.id ? 'on' : '',
+          "data-ambb-speed": x.id,
+          "aria-label": `見せる速さ ${x.label}`,
+          onClick: () => {
+            setSpeed(x.id);
+            setPaused(false);
+          }
+        }, x.label)), typeof MsaBgToggle === 'function' ? React.createElement(MsaBgToggle, {
+          bg: bg,
+          onChange: setBg
+        }) : null, React.createElement("button", {
+          type: "button",
+          "data-ambb-skip": true,
+          onClick: () => {
+            const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
+            finSeenRef.current = battle.id;
+            setOpening(false);
+            setPos(n - 1);
+            setPhase('review');
+          }
+        }, "⏭ 結果へ")),
+        after: finish ? null : seekBar
       });
-    })()), !review && !manualWait && React.createElement("div", {
-      className: "ambw-card ambw-log"
-    }, call && React.createElement("div", {
-      key: `call-${call.at}`,
-      className: `msa-call ${call.k}`,
-      "data-msa-call": call.k
-    }, "🎙 ", call.t), recent.map(x => React.createElement("p", {
-      key: x.k,
-      className: x.side
-    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && ambwWhyOf(e.why, WHY) && React.createElement("div", {
-      className: "ambw-row ambb-why",
-      style: {
-        marginTop: 6
-      }
-    }, React.createElement("img", {
-      className: "ambw-face",
-      src: assistantFaceSrc(actor, 'normal'),
-      alt: ""
-    }), React.createElement("div", {
-      className: "ambw-bubble"
-    }, actor.name, "「", ambwWhyOf(e.why, WHY), "」"))), review && React.createElement("div", {
-      className: "ambw-small",
-      style: {
-        marginTop: 8
-      }
-    }, "見返す: ✖ はたおれた所。押すとそこから見られます"), React.createElement("div", {
-      className: "ambw-seek"
-    }, React.createElement("i", {
-      style: {
-        width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%`
-      }
-    }), kos.map(x => React.createElement("button", {
-      key: x.k,
-      className: x.side,
-      style: {
-        left: `${x.k / Math.max(1, log.length - 1) * 100}%`
-      },
-      onClick: () => {
-        setPos(x.k);
-        setPaused(true);
-        setPhase('watch');
-      }
-    }, "✖"))), opening && phase === 'watch' && React.createElement(AmbbOpening, {
+    })(), opening && phase === 'watch' && React.createElement(AmbbOpening, {
       teams: {
         A: battle.teamA,
         B: battle.teamB
@@ -154667,43 +154595,7 @@ function AssistantMasmonBattleBeta({
         return t.members[i >= 0 ? i : fr.act[sd]] || t.members[0];
       })(),
       onGo: () => setPhase('review')
-    }), !review && !finish && React.createElement("div", {
-      className: "ambw-ctl"
-    }, React.createElement("button", {
-      className: "ambw-btn2",
-      "data-ambb-pause": true,
-      onClick: () => setPaused(p => !p)
-    }, paused ? '▶' : '⏸'), AMBW_SPEEDS.map(s => React.createElement("button", {
-      key: s.id,
-      className: `ambw-sp ${speed === s.id ? 'on' : ''}`,
-      "data-ambb-speed": s.id,
-      onClick: () => {
-        setSpeed(s.id);
-        setPaused(false);
-      }
-    }, s.label)), typeof msaBgWrite === 'function' && (() => {
-      const nx = bg === 'stadium' ? 'arena' : 'stadium';
-      return React.createElement("button", {
-        className: "ambw-sp",
-        "data-msa-bg": bg,
-        "aria-label": nx === 'arena' ? '背景を闘技場にする' : '背景をスタジアムにする',
-        onClick: () => {
-          msaSe('tap');
-          msaBgWrite(nx);
-          setBg(nx);
-        }
-      }, bg === 'stadium' ? '🏟️' : '🏛️');
-    })(), React.createElement("button", {
-      className: "ambw-btn2",
-      "data-ambb-skip": true,
-      onClick: () => {
-        const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
-        finSeenRef.current = battle.id;
-        setOpening(false);
-        setPos(n - 1);
-        setPhase('review');
-      }
-    }, "⏭ 結果へ")));
+    }));
   }
   const back = phase === 'prep' || !battle ? onClose : () => setPhase('prep');
   return React.createElement("div", {
@@ -192794,7 +192686,7 @@ const MSA_DC_CSS = `
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv.kb{background:#ea580c}
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h i{font-size:10.5px}
 .msa-dc:not(.a) .msa-dc-c .msa-tn{font-weight:900;color:#fff}
-.msa-dc:not(.a) .msa-dc-none{font-size:12px;color:#94a3b8}
+.msa-dc:not(.a) .msa-dc-none{font-size:min(12px,2.8vw);color:#94a3b8;white-space:nowrap}
 /* 自分の「いま」の札は水色のふち(黄色のふちは助手のおすすめだけに使う。2026-11-20 API の点検: 2つの意味で黄色が重なっていた) */
 .msa-dc-c.now{border-color:#7dd3fc;box-shadow:0 0 0 1px #7dd3fc88 inset}
 .msa-dc-c.now .msa-dc-h em{background:#7dd3fc;color:#0c2a3a}
@@ -192957,7 +192849,7 @@ function MsaDistCards({
         name: t.name
       }) : React.createElement("span", {
         className: "msa-dc-none"
-      }, "届く技なし"), t ? React.createElement("span", {
+      }, "使える技なし"), t ? React.createElement("span", {
         className: "msa-dc-l",
         "data-msa-dc-l1": true
       }, dist != null && !now ? Array.isArray(t.dist) && t.dist.length === 1 ? `${MSA_DC_DIST[t.dist[0]]}でのみ届く` : `届く間合い: ${(Array.isArray(t.dist) ? t.dist : []).map(x => MSA_DC_DIST[x]).join('・')}` : `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`) : null, b ? React.createElement("span", {
@@ -192988,7 +192880,7 @@ function MsaDistCards({
       icon: msaKindIcon(t)
     }) : React.createElement("span", {
       className: "msa-dc-none"
-    }, "届く技なし"), t ? (() => {
+    }, "使える技なし"), t ? (() => {
       const v = Number.isFinite(hp) ? Math.round(hp) : null;
       const m = memoOf(d);
       const dir = v == null ? '' : m && m.id === t.id ? v > m.v ? 'up' : v < m.v ? 'down' : m.dir : '';
@@ -193614,8 +193506,8 @@ const MSA_CSS = `
 /* 使った技は、そのモンスターが次に技を出すまで札に白い点線の印を残す */
 .msa-dc-c.use{outline:2px dashed #ffffffcc;outline-offset:-3px}
 /* 実況は場の外・場のすぐ下の1行(技名の札・数字に重ならない) */
-.msc-wrap.msa>.msa-main>.msa-say,.msc-wrap.msa .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.msc-wrap.msa .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa.msa-mv>.msa-main>.msa-say,.msa.msa-mv .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.msa.msa-mv .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 技名の札は場の上(体力の帯の下)へ。零近中遠の字はいつも下のまん中 */
 .msa-stage.big .msa-plate{bottom:auto;top:62px}
 .msa-stage.big .msa-dist.sA,.msa-stage.big .msa-dist.sB{justify-content:center;padding:0}
@@ -193806,17 +193698,23 @@ const MSA_CSS = `
 .msa-stage.fill{height:100%;min-height:220px}
 /* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
-.msc-wrap.msa{height:100%;min-height:0}
+/* 試合の画面の並べ方はここ1か所(MsaMatchView・段3b r1119-070)。モンサクの大会・助手マスモン対戦βが同じ並べ方を使う */
+.msa.msa-mv{display:flex;flex-direction:column;gap:8px;min-width:0;height:100%;min-height:0}
+.msa-mv .msa-why{display:flex;align-items:flex-start;gap:6px;margin-top:-2px}
+.msa-mv .msa-why img{width:24px;height:24px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.msa-mv .msa-why p{position:relative;margin:0;min-width:0;padding:3px 9px;border-radius:10px;background:#fff;color:#1e1b4b;font-size:11.5px;font-weight:700;line-height:1.35}
+.msa-mv .msa-why p:before{content:"";position:absolute;left:-5px;top:7px;border:5px solid transparent;border-left:0;border-right-color:#fff}
+.msa-mv .msa-seek{flex:none}
 .msa-stagebox{flex:1 1 auto;min-height:300px;position:relative}
 /* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
-.msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
+.msa.msa-mv[data-msa-mode=manual]{height:auto;min-height:100%}
 /* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
-.msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
+.msa.msa-mv .msa-stagebox,.msa.msa-mv[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
 /* 縦は部品どうしのすき間を 8→5px に詰め、手動でも下の道具の段まで1画面に入れる(2026-11-20 API の点検 r3-MA1: 札の字を上げた分) */
-@media (orientation:portrait){.msc-wrap.msa{gap:5px}}
+@media (orientation:portrait){.msa.msa-mv{gap:5px}}
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
@@ -193836,43 +193734,45 @@ const MSA_CSS = `
 .msa-main,.msa-side{display:contents}
 /* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
 @media (max-height:500px) and (orientation:landscape){
-  .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
+  .msa.msa-mv{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
   /* 2026-11-19 社長の選択 A①: 場を画面の約 2/3 に広げ、操作は右の 1/3 に詰める(以前は 1.1:1 で場が半分) */
   .msa-main{display:flex;flex-direction:column;gap:6px;flex:2 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
-  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msa.msa-mv .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
   /* 段2(2026-11-19): 自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)。枠は4つを縦に並べる */
-  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
-  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
-  .msc-wrap.msa .msa-main>.msa-topline{grid-column:1/3}
-  .msc-wrap.msa .msa-main>.msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
-  .msc-wrap.msa .msa-main>.msa-say{grid-column:1;grid-row:3}
-  .msc-wrap.msa .msa-main>.msa-foe{grid-column:2;grid-row:2/4;overflow:auto}
-  .msc-wrap.msa .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
-  .msc-wrap.msa .msa-dc-c{min-height:0;padding:2px 4px}
+  .msa.msa-mv .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
+  .msa.msa-mv .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto auto;column-gap:6px;row-gap:4px}
+  .msa.msa-mv .msa-main>.msa-topline{grid-column:1/3}
+  .msa.msa-mv .msa-main>.msa-stagebox,.msa.msa-mv[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
+  .msa.msa-mv .msa-main>.msa-say{grid-column:1;grid-row:3}
+  .msa.msa-mv .msa-main>.msa-foe{grid-column:2;grid-row:2/5;overflow:auto}
+  .msa.msa-mv .msa-main>.msa-why{grid-column:1;grid-row:4;margin-top:0}
+  .msa.msa-mv .msa-side .msa-seek{margin-top:2px}
+  .msa.msa-mv .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
+  .msa.msa-mv .msa-dc-c{min-height:0;padding:2px 4px}
   /* 横は枠の列を細くするため、札のダメージ・移る間合いの行を省く(ミハリ #6883: 場を画面の約2/3に) */
-  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
-  .msc-wrap.msa .msa-side .msa-tools>*{font-size:10.5px}
-  .msc-wrap.msa .msxm-row.cc,.msc-wrap.msa .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .msc-wrap.msa .msa-rowh small{display:none}
-  .msc-wrap.msa .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
-  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
-  .msc-wrap.msa .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
-  .msc-wrap.msa .msxm.c .msxm-h{flex-wrap:wrap}
+  .msa.msa-mv .msa-dc-c small.dmg,.msa.msa-mv .msa-dc-c small.mv{display:none}
+  .msa.msa-mv .msa-side .msa-tools>*{font-size:10.5px}
+  .msa.msa-mv .msxm-row.cc,.msa.msa-mv .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .msa.msa-mv .msa-rowh small{display:none}
+  .msa.msa-mv .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
+  .msa.msa-mv .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
+  .msa.msa-mv .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
+  .msa.msa-mv .msxm.c .msxm-h{flex-wrap:wrap}
 }
 /* 小さい横(高さ340px以下): 札はダメージの行を省き、技名の札を小さく上へ寄せる */
 @media (max-height:340px) and (orientation:landscape){
-  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
-  .msc-wrap.msa .msa-dc-c{padding:2px 4px}
+  .msa.msa-mv .msa-dc-c small.dmg,.msa.msa-mv .msa-dc-c small.mv{display:none}
+  .msa.msa-mv .msa-dc-c{padding:2px 4px}
   .msa-stage.big .msa-plate{top:48px;padding:2px 12px 3px}
   .msa-stage.big .msa-plate b{font-size:15px}
   .msa-stage.big .msa-plate.big b{font-size:17px}
-  .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
-  .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
-  .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
-  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
-  .msc-wrap.msa .msa-stage.fill{min-height:0}
+  .msa.msa-mv .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
+  .msa.msa-mv .msxm-row.cc .msxm-btn small{display:none}
+  .msa.msa-mv .msxm.c .msxm-foot .msxm-none{display:none}
+  .msa.msa-mv .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msa.msa-mv .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){
@@ -193888,7 +193788,7 @@ const MSA_CSS = `
 @media (max-height:700px) and (orientation:portrait){
   .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
   .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
-  .msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-stagebox,.msa.msa-mv .msa-stagebox{height:200px;min-height:0}
   .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
@@ -196625,6 +196525,115 @@ const msaFoeDangerOf = (items, d, hitAt) => {
   const r = sc(t) / Math.max(1, ...items.map(sc));
   return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
 };
+function MsaDistRow({
+  side,
+  row,
+  title,
+  note
+}) {
+  const a = row.attrs || {};
+  return React.createElement("div", _extends({
+    className: side === 'B' ? 'msa-foe' : 'msa-cardsrow'
+  }, side === 'B' ? {
+    'data-msa-foe': '',
+    'data-msa-danger': row.danger || 0
+  } : {
+    'data-msa-cards': ''
+  }, a), React.createElement("div", {
+    className: "msa-rowh"
+  }, title, (row.note != null ? row.note : note) ? React.createElement("small", null, row.note != null ? row.note : note) : null, row.extra || null), React.createElement(MsaDistCards, {
+    list: row.list,
+    rep: row.rep,
+    dist: row.dist,
+    guts: row.guts,
+    lastMove: row.lastMove,
+    dataSide: side,
+    hitAt: row.hitAt,
+    onOpen: row.onOpen
+  }));
+}
+function MsaMatchView({
+  className = '',
+  mode = 'watch',
+  attrs = null,
+  head = null,
+  foe = null,
+  stage = null,
+  say = null,
+  why = null,
+  mine = null,
+  controls = null,
+  tools = null,
+  after = null,
+  overlay = null,
+  fit = true
+}) {
+  const wrapRef = useRef(null);
+  const [stagePx, setStagePx] = useState(null);
+  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 0);
+  useEffect(() => {
+    const on = () => setVh(window.innerHeight);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  React.useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || typeof window === 'undefined' || !fit) return;
+    if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) {
+      if (stagePx != null) setStagePx(null);
+      return;
+    }
+    const box = wrap.querySelector('[data-msa-stagebox]');
+    if (!box) return;
+    const root = wrap.closest('[data-msc-root],[data-ambb-root]');
+    const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
+    const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
+    const cur = box.getBoundingClientRect().height;
+    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
+    if (Math.abs(next - cur) > 2) setStagePx(next);
+  });
+  const rows = (Array.isArray(tools) ? tools : [tools]).filter(Boolean);
+  return React.createElement("div", _extends({
+    ref: wrapRef,
+    className: `msa msa-mv${className ? ` ${className}` : ''}`,
+    "data-msa-mv": true,
+    "data-msa-mode": mode,
+    "data-msa-vh": vh
+  }, attrs || {}), React.createElement("style", null, MSA_CSS, typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''), React.createElement("div", {
+    className: "msa-main",
+    "data-msa-main": true
+  }, head ? React.createElement("div", {
+    className: "msc-top msa-topline"
+  }, head) : null, foe && foe.list && foe.list.length ? React.createElement(MsaDistRow, {
+    side: "B",
+    row: foe,
+    title: "相手の技",
+    note: "押すと、その間合いの技が見られます"
+  }) : null, React.createElement("div", {
+    className: "msa-stagebox",
+    "data-msa-stagebox": true,
+    "data-msa-fit": stagePx || '',
+    style: stagePx ? {
+      height: `${stagePx}px`,
+      minHeight: 0,
+      flex: 'none'
+    } : undefined
+  }, stage), say != null ? React.createElement("div", {
+    className: "msa-say",
+    "data-msa-say": true
+  }, say) : null, why), React.createElement("div", {
+    className: "msa-side",
+    "data-msa-side": true
+  }, mine && mine.list && mine.list.length ? React.createElement(MsaDistRow, {
+    side: "A",
+    row: mine,
+    title: "自分の技"
+  }) : null, controls, rows.map((r, i) => React.createElement("div", {
+    key: i,
+    className: "msa-tools",
+    "data-msa-tools": i + 1
+  }, r)), after), overlay);
+}
 function MonsucArena({
   s,
   info,
@@ -196756,30 +196765,6 @@ function MonsucArena({
       } : {})
     };
   }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
-  const wrapRef = useRef(null);
-  const [stagePx, setStagePx] = useState(null);
-  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 0);
-  useEffect(() => {
-    const on = () => setVh(window.innerHeight);
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
-  React.useLayoutEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap || typeof window === 'undefined') return;
-    if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) {
-      if (stagePx != null) setStagePx(null);
-      return;
-    }
-    const box = wrap.querySelector('[data-msa-stagebox]');
-    if (!box) return;
-    const root = wrap.closest('[data-msc-root]');
-    const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
-    const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
-    const cur = box.getBoundingClientRect().height;
-    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
-    if (Math.abs(next - cur) > 2) setStagePx(next);
-  });
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f, false, monsucMotionKind);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
@@ -196879,99 +196864,15 @@ function MonsucArena({
   })();
   const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
   const foeDanger = foeOn ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0;
-  return React.createElement("div", {
-    ref: wrapRef,
-    className: "msc-wrap msa",
-    "data-msc-match": true,
-    "data-msa-pos": pos,
-    "data-msa-mode": manual ? auto ? 'auto' : 'manual' : 'watch'
-  }, React.createElement("style", null, MSA_CSS, typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''), React.createElement("div", {
-    className: "msa-main",
-    "data-msa-main": true
-  }, React.createElement("div", {
-    className: "msc-top msa-topline"
-  }, React.createElement("b", {
-    className: "msc-ttl"
-  }, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
-    className: "msc-buff"
-  }, "✨ 特別な1話") : null), foeOn ? React.createElement("div", {
-    className: "msa-foe",
-    "data-msa-foe": true,
-    "data-msa-danger": foeDanger
-  }, React.createElement("div", {
-    className: "msa-rowh"
-  }, "相手の技", React.createElement("small", null, "押すと、その間合いの技が見られます")), React.createElement(MsaDistCards, {
-    list: itemsB,
-    rep: msaRepIds(itemsB, null),
-    dist: f.d,
-    guts: f.g.B,
-    lastMove: lastTechOf('B'),
-    dataSide: "B",
-    hitAt: hitAtB,
-    onOpen: d => setFoeSheet(d)
-  })) : null, React.createElement("div", {
-    className: "msa-stagebox",
-    "data-msa-stagebox": true,
-    "data-msa-fit": stagePx || '',
-    style: stagePx ? {
-      height: `${stagePx}px`,
-      minHeight: 0,
-      flex: 'none'
-    } : undefined
-  }, React.createElement(MsaStage, {
-    log: log,
-    frames: frames,
-    pos: pos,
-    teams: stageTeams,
-    venueImg: msaVenueBg(info.venue, bg),
-    ended: ended,
-    win: result ? result.winner : null,
-    introTitle: info.title,
-    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
-    fill: true,
-    wide: true,
-    liveGuts: liveGuts,
-    motionKindOf: monsucMotionKind,
-    onEndGo: ended ? () => setEndTap(1) : null,
-    roundMax: rLimit,
-    endSub: judgeIdx >= 0 ? `${(log[judgeIdx] || {}).limit || rLimit}ラウンドで決着つかず・判定${won ? '勝ち' : '負け'}` : ''
-  })), React.createElement("div", {
-    className: "msa-say",
-    "data-msa-say": true
-  }, call ? React.createElement("div", {
-    key: `call-${call.at}`,
-    className: `msa-call ${call.k}`,
-    "data-msa-call": call.k
-  }, "🎙 ", call.t) : sayNow)), React.createElement("div", {
-    className: "msa-side",
-    "data-msa-side": true
-  }, cardsOn ? React.createElement("div", {
-    className: "msa-cardsrow",
-    "data-msa-cards": true
-  }, React.createElement("div", {
-    className: "msa-rowh"
-  }, "自分の技", React.createElement("small", null, "命中はガッツで上下(▲▼)")), React.createElement(MsaDistCards, {
-    list: itemsA,
-    rep: msaRepIds(itemsA, null),
-    dist: f.d,
-    guts: f.g.A,
-    lastMove: lastTechOf('A'),
-    dataSide: "A",
-    hitAt: hitAtA,
-    onOpen: d => setTechSheet(d)
-  })) : null, React.createElement("div", {
-    ref: barRef
-  }, showBar ? React.createElement(MsxManualBar, {
-    opt: mm.pending,
-    onPick: pick,
-    onAuto: goAuto,
-    busy: busy,
-    look: "c"
-  }) : null), manual && !auto && busy && !ended && !showBar ? React.createElement("div", {
-    className: "msa-wait"
-  }, e.side === 'B' ? '相手の番…' : ' ') : null, (!manual || auto) && !ended ? React.createElement("div", {
-    className: "msa-tools"
-  }, React.createElement("button", {
+  const ctlSw = React.createElement(MsaCtlToggle, {
+    ctl: ctl,
+    save: false,
+    onChange: v => {
+      msaCtlRunWrite(s && s.id, v);
+      setCtl(v);
+    }
+  });
+  const pauseBtn = React.createElement("button", {
     type: "button",
     className: "msa-pause",
     "data-msc-pause": true,
@@ -196979,7 +196880,19 @@ function MonsucArena({
     onClick: () => {
       setPaused(v => !v);
     }
-  }, paused ? '▶' : '⏸'), MSA_SPEEDS.map(x => React.createElement("button", {
+  }, paused ? '▶' : '⏸');
+  const tools = ended ? null : manual && !auto ? [React.createElement(React.Fragment, null, pauseBtn, MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
+    key: x.id,
+    type: "button",
+    className: speed === x.id ? 'on' : '',
+    "aria-label": `見せる速さ ${x.label}`,
+    onClick: () => {
+      setSpeed(x.id);
+    }
+  }, x.label)), ctlSw, React.createElement(MsaBgToggle, {
+    bg: bg,
+    onChange: setBg
+  }))] : [React.createElement(React.Fragment, null, pauseBtn, MSA_SPEEDS.map(x => React.createElement("button", {
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
@@ -197001,71 +196914,102 @@ function MonsucArena({
   }, "⏭ 飛ばす"), !manual ? React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
-    className: "msa-tools"
-  }, React.createElement("button", {
-    type: "button",
-    className: "msa-pause",
-    "data-msc-pause": true,
-    "aria-label": paused ? 'つづける' : '一時停止',
-    onClick: () => {
-      setPaused(v => !v);
-    }
-  }, paused ? '▶' : '⏸'), MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
-    key: x.id,
-    type: "button",
-    className: speed === x.id ? 'on' : '',
-    "aria-label": `見せる速さ ${x.label}`,
-    onClick: () => {
-      setSpeed(x.id);
-    }
-  }, x.label)), React.createElement(MsaCtlToggle, {
-    ctl: ctl,
-    save: false,
-    onChange: v => {
-      msaCtlRunWrite(s && s.id, v);
-      setCtl(v);
-    }
-  }), React.createElement(MsaBgToggle, {
+  }) : null), manual ? React.createElement(React.Fragment, null, ctlSw, React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  })) : null, manual && auto && !ended ? React.createElement("div", {
-    className: "msa-tools",
-    "data-msa-tools2": true
-  }, React.createElement(MsaCtlToggle, {
-    ctl: ctl,
-    save: false,
-    onChange: v => {
-      msaCtlRunWrite(s && s.id, v);
-      setCtl(v);
-    }
-  }), React.createElement(MsaBgToggle, {
-    bg: bg,
-    onChange: setBg
-  })) : null), judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? React.createElement(MsaJudge, {
-    row: log[judgeIdx],
-    names: {
-      A: nm('A'),
-      B: nm('B')
+  })) : null];
+  return React.createElement(MsaMatchView, {
+    className: "msc-wrap",
+    mode: manual ? auto ? 'auto' : 'manual' : 'watch',
+    attrs: {
+      'data-msc-match': '',
+      'data-msa-pos': pos
     },
-    onGo: () => setJudgeOk(true)
-  }) : null, foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
-    title: `${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`,
-    list: itemsB,
-    d: foeSheet,
-    dist: f.d,
-    rep: msaRepIds(itemsB, null),
-    hitAt: hitAtB,
-    onClose: () => setFoeSheet(null)
-  }) : null, techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
-    title: `${nm('A')} の${AMBW_DIST[techSheet]}の技`,
-    list: itemsA,
-    d: techSheet,
-    dist: f.d,
-    rep: msaRepIds(itemsA, null),
-    hitAt: hitAtA,
-    onClose: () => setTechSheet(null)
-  }) : null);
+    head: React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "msc-ttl"
+    }, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
+      className: "msc-buff"
+    }, "✨ 特別な1話") : null),
+    foe: foeOn ? {
+      list: itemsB,
+      rep: msaRepIds(itemsB, null),
+      dist: f.d,
+      guts: f.g.B,
+      lastMove: lastTechOf('B'),
+      hitAt: hitAtB,
+      danger: foeDanger,
+      onOpen: d => setFoeSheet(d)
+    } : null,
+    stage: React.createElement(MsaStage, {
+      log: log,
+      frames: frames,
+      pos: pos,
+      teams: stageTeams,
+      venueImg: msaVenueBg(info.venue, bg),
+      ended: ended,
+      win: result ? result.winner : null,
+      introTitle: info.title,
+      speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
+      fill: true,
+      wide: true,
+      liveGuts: liveGuts,
+      motionKindOf: monsucMotionKind,
+      onEndGo: ended ? () => setEndTap(1) : null,
+      roundMax: rLimit,
+      endSub: judgeIdx >= 0 ? `${(log[judgeIdx] || {}).limit || rLimit}ラウンドで決着つかず・判定${won ? '勝ち' : '負け'}` : ''
+    }),
+    say: call ? React.createElement("div", {
+      key: `call-${call.at}`,
+      className: `msa-call ${call.k}`,
+      "data-msa-call": call.k
+    }, "🎙 ", call.t) : sayNow,
+    mine: cardsOn ? {
+      list: itemsA,
+      rep: msaRepIds(itemsA, null),
+      dist: f.d,
+      guts: f.g.A,
+      lastMove: lastTechOf('A'),
+      hitAt: hitAtA,
+      note: '命中はガッツで上下(▲▼)',
+      onOpen: d => setTechSheet(d)
+    } : null,
+    controls: React.createElement(React.Fragment, null, React.createElement("div", {
+      ref: barRef
+    }, showBar ? React.createElement(MsxManualBar, {
+      opt: mm.pending,
+      onPick: pick,
+      onAuto: goAuto,
+      busy: busy,
+      look: "c"
+    }) : null), manual && !auto && busy && !ended && !showBar ? React.createElement("div", {
+      className: "msa-wait"
+    }, e.side === 'B' ? '相手の番…' : ' ') : null),
+    tools: tools,
+    overlay: React.createElement(React.Fragment, null, judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? React.createElement(MsaJudge, {
+      row: log[judgeIdx],
+      names: {
+        A: nm('A'),
+        B: nm('B')
+      },
+      onGo: () => setJudgeOk(true)
+    }) : null, foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
+      title: `${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`,
+      list: itemsB,
+      d: foeSheet,
+      dist: f.d,
+      rep: msaRepIds(itemsB, null),
+      hitAt: hitAtB,
+      onClose: () => setFoeSheet(null)
+    }) : null, techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
+      title: `${nm('A')} の${AMBW_DIST[techSheet]}の技`,
+      list: itemsA,
+      d: techSheet,
+      dist: f.d,
+      rep: msaRepIds(itemsA, null),
+      hitAt: hitAtA,
+      onClose: () => setTechSheet(null)
+    }) : null)
+  });
 }
 const MSA_SHOW_CSS = `
 .msa-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:msaSNext 1.5s ease-in-out both}

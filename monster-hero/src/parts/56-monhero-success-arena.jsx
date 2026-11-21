@@ -156,8 +156,8 @@ const MSA_CSS = `
 /* 使った技は、そのモンスターが次に技を出すまで札に白い点線の印を残す */
 .msa-dc-c.use{outline:2px dashed #ffffffcc;outline-offset:-3px}
 /* 実況は場の外・場のすぐ下の1行(技名の札・数字に重ならない) */
-.msc-wrap.msa>.msa-main>.msa-say,.msc-wrap.msa .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.msc-wrap.msa .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa.msa-mv>.msa-main>.msa-say,.msa.msa-mv .msa-main .msa-say{min-height:24px;padding:3px 8px;border-radius:9px;background:#0a0820c9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.msa.msa-mv .msa-say .msa-call{margin:0;padding:0;background:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 技名の札は場の上(体力の帯の下)へ。零近中遠の字はいつも下のまん中 */
 .msa-stage.big .msa-plate{bottom:auto;top:62px}
 .msa-stage.big .msa-dist.sA,.msa-stage.big .msa-dist.sB{justify-content:center;padding:0}
@@ -348,17 +348,23 @@ const MSA_CSS = `
 .msa-stage.fill{height:100%;min-height:220px}
 /* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
-.msc-wrap.msa{height:100%;min-height:0}
+/* 試合の画面の並べ方はここ1か所(MsaMatchView・段3b r1119-070)。モンサクの大会・助手マスモン対戦βが同じ並べ方を使う */
+.msa.msa-mv{display:flex;flex-direction:column;gap:8px;min-width:0;height:100%;min-height:0}
+.msa-mv .msa-why{display:flex;align-items:flex-start;gap:6px;margin-top:-2px}
+.msa-mv .msa-why img{width:24px;height:24px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.msa-mv .msa-why p{position:relative;margin:0;min-width:0;padding:3px 9px;border-radius:10px;background:#fff;color:#1e1b4b;font-size:11.5px;font-weight:700;line-height:1.35}
+.msa-mv .msa-why p:before{content:"";position:absolute;left:-5px;top:7px;border:5px solid transparent;border-left:0;border-right-color:#fff}
+.msa-mv .msa-seek{flex:none}
 .msa-stagebox{flex:1 1 auto;min-height:300px;position:relative}
 /* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、下限(当初220px)を下回る低い画面は縦に流す(r1115-193 案③)。下限は 2026-11-17 の場の仕上げで 240px に広げた(安全域ぶん。低い縦画面で場を固定する 200px の規則 r1115-202 M14 はそのまま) */
-.msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
+.msa.msa-mv[data-msa-mode=manual]{height:auto;min-height:100%}
 /* 2026-11-17 社長「バトル画面が小さすぎてみにくすぎる」: 手動の場は「残りの高さ」を待つ作りをやめ、画面の高さの46%を先に取る(下限300px・上限520px)。広がったぶん操作欄は下へ送るが、場面は上に留まる(下の portrait の規則)ので、送っても場・体力の帯・実況はいつも見える。絵の大きさは場の高さから決まる(bigFh)ため、モンスターも一緒に大きくなる */
 /* 2026-11-18 社長「極力1画面に」: 実況を場の上に重ね・道具行を1行に集約・操作欄を圧縮したうえで、場は 42.5% に戻して 390×844 で主要操作までスクロールなしに収める(場は拡大前の作りよりなお大きい) */
 .msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,42.5vh,520px);min-height:300px}
 /* 2026-11-19 段1(P3): オートでも手動と同じ高さにする。操作の切り替えで場の高さ・絵の大きさが変わらないように(オートは残りの高さを全部もらって 520px まで伸びていた) */
-.msc-wrap.msa .msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
+.msa.msa-mv .msa-stagebox,.msa.msa-mv[data-msa-mode=manual] .msa-stagebox{flex:none;height:clamp(300px,50vh,420px);min-height:300px}
 /* 縦は部品どうしのすき間を 8→5px に詰め、手動でも下の道具の段まで1画面に入れる(2026-11-20 API の点検 r3-MA1: 札の字を上げた分) */
-@media (orientation:portrait){.msc-wrap.msa{gap:5px}}
+@media (orientation:portrait){.msa.msa-mv{gap:5px}}
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
@@ -378,43 +384,45 @@ const MSA_CSS = `
 .msa-main,.msa-side{display:contents}
 /* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
 @media (max-height:500px) and (orientation:landscape){
-  .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
+  .msa.msa-mv{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
   /* 2026-11-19 社長の選択 A①: 場を画面の約 2/3 に広げ、操作は右の 1/3 に詰める(以前は 1.1:1 で場が半分) */
   .msa-main{display:flex;flex-direction:column;gap:6px;flex:2 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
   .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
-  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox,.msa.msa-mv .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
   .msa-main .msa-say{flex:none}
   /* 段2(2026-11-19): 自分の技の枠と操作(左)/場(まん中)/相手の技の枠(右)。枠は4つを縦に並べる */
-  .msc-wrap.msa .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
-  .msc-wrap.msa .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
-  .msc-wrap.msa .msa-main>.msa-topline{grid-column:1/3}
-  .msc-wrap.msa .msa-main>.msa-stagebox,.msc-wrap.msa[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
-  .msc-wrap.msa .msa-main>.msa-say{grid-column:1;grid-row:3}
-  .msc-wrap.msa .msa-main>.msa-foe{grid-column:2;grid-row:2/4;overflow:auto}
-  .msc-wrap.msa .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
-  .msc-wrap.msa .msa-dc-c{min-height:0;padding:2px 4px}
+  .msa.msa-mv .msa-side{order:-1;flex:0 0 clamp(100px,14.5vw,128px)}
+  .msa.msa-mv .msa-main{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(100px,14.5vw,128px);grid-template-rows:auto minmax(0,1fr) auto auto;column-gap:6px;row-gap:4px}
+  .msa.msa-mv .msa-main>.msa-topline{grid-column:1/3}
+  .msa.msa-mv .msa-main>.msa-stagebox,.msa.msa-mv[data-msa-mode=manual] .msa-main>.msa-stagebox{grid-column:1;grid-row:2;height:auto;min-height:0}
+  .msa.msa-mv .msa-main>.msa-say{grid-column:1;grid-row:3}
+  .msa.msa-mv .msa-main>.msa-foe{grid-column:2;grid-row:2/5;overflow:auto}
+  .msa.msa-mv .msa-main>.msa-why{grid-column:1;grid-row:4;margin-top:0}
+  .msa.msa-mv .msa-side .msa-seek{margin-top:2px}
+  .msa.msa-mv .msa-dc{grid-template-columns:minmax(0,1fr);gap:3px}
+  .msa.msa-mv .msa-dc-c{min-height:0;padding:2px 4px}
   /* 横は枠の列を細くするため、札のダメージ・移る間合いの行を省く(ミハリ #6883: 場を画面の約2/3に) */
-  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
-  .msc-wrap.msa .msa-side .msa-tools>*{font-size:10.5px}
-  .msc-wrap.msa .msxm-row.cc,.msc-wrap.msa .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .msc-wrap.msa .msa-rowh small{display:none}
-  .msc-wrap.msa .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
-  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
-  .msc-wrap.msa .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
-  .msc-wrap.msa .msxm.c .msxm-h{flex-wrap:wrap}
+  .msa.msa-mv .msa-dc-c small.dmg,.msa.msa-mv .msa-dc-c small.mv{display:none}
+  .msa.msa-mv .msa-side .msa-tools>*{font-size:10.5px}
+  .msa.msa-mv .msxm-row.cc,.msa.msa-mv .msxm-row.cc.n5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .msa.msa-mv .msa-rowh small{display:none}
+  .msa.msa-mv .msa-side .msa-tools{flex-wrap:wrap;gap:3px}
+  .msa.msa-mv .msa-side .msa-tools>*{flex:1 1 30%;min-width:0;font-size:11px;padding:4px 2px;white-space:nowrap}
+  .msa.msa-mv .msxm.c .msxm-all{font-size:10px;padding:2px 6px;border-radius:8px}
+  .msa.msa-mv .msxm.c .msxm-h{flex-wrap:wrap}
 }
 /* 小さい横(高さ340px以下): 札はダメージの行を省き、技名の札を小さく上へ寄せる */
 @media (max-height:340px) and (orientation:landscape){
-  .msc-wrap.msa .msa-dc-c small.dmg,.msc-wrap.msa .msa-dc-c small.mv{display:none}
-  .msc-wrap.msa .msa-dc-c{padding:2px 4px}
+  .msa.msa-mv .msa-dc-c small.dmg,.msa.msa-mv .msa-dc-c small.mv{display:none}
+  .msa.msa-mv .msa-dc-c{padding:2px 4px}
   .msa-stage.big .msa-plate{top:48px;padding:2px 12px 3px}
   .msa-stage.big .msa-plate b{font-size:15px}
   .msa-stage.big .msa-plate.big b{font-size:17px}
-  .msc-wrap.msa .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
-  .msc-wrap.msa .msxm-row.cc .msxm-btn small{display:none}
-  .msc-wrap.msa .msxm.c .msxm-foot .msxm-none{display:none}
-  .msc-wrap.msa .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
-  .msc-wrap.msa .msa-stage.fill{min-height:0}
+  .msa.msa-mv .msxm-row.cc .msxm-btn{min-height:30px;font-size:11px}
+  .msa.msa-mv .msxm-row.cc .msxm-btn small{display:none}
+  .msa.msa-mv .msxm.c .msxm-foot .msxm-none{display:none}
+  .msa.msa-mv .msa-side .msa-tools>*{flex:1 1 22%;min-height:26px;padding:2px 1px;font-size:10px}
+  .msa.msa-mv .msa-stage.fill{min-height:0}
 }
 /* 小さい横(568×320 など)は 2:1 だと手動の札の字が1字ずつ折り返して潰れるので 3:2 にとどめる(札の作り直しは段2) */
 @media (max-height:500px) and (orientation:landscape) and (max-width:739px){
@@ -430,7 +438,7 @@ const MSA_CSS = `
 @media (max-height:700px) and (orientation:portrait){
   .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
   .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
-  .msa[data-msa-mode=manual] .msa-stagebox,.msc-wrap.msa .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-stagebox,.msa.msa-mv .msa-stagebox{height:200px;min-height:0}
   .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
 }
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
@@ -1872,6 +1880,62 @@ const msaFoeDangerOf = (items, d, hitAt) => {
   const r = sc(t) / Math.max(1, ...items.map(sc));
   return r >= 0.75 ? 3 : r >= 0.45 ? 2 : 1;
 };
+// ---- 試合の画面の並べ方(段3b・r1119-070) ----
+//   モンサクの大会の試合・助手マスモン対戦βが、この1つで並べる(縦: 見出し → 相手の技の枠 → 場 → 実況1行(+助手の「なぜ」の吹き出し)→ 自分の技の枠 → 手動の操作 → 道具の段。
+//   横の低い画面: 自分の枠と操作(左)/場(まん中)/相手の枠(右))。並べ方の CSS は MSA_CSS の .msa.msa-mv の所だけ。計算・保存は持たない
+//   foe / mine … { list, rep, dist, guts, hitAt, lastMove, onOpen, danger, note, extra, attrs }(MsaDistCards に渡す。extra は見出しの右・控えの顔など)
+//   tools … 道具の段の中身(配列なら1つ1列)。after … 道具の段の下(見返しの帯など)。overlay … 窓・判定・始まり・決着(上に重ねるだけ)
+function MsaDistRow({ side, row, title, note }) {
+  const a = row.attrs || {};
+  return (
+    <div className={side === 'B' ? 'msa-foe' : 'msa-cardsrow'} {...(side === 'B' ? { 'data-msa-foe': '', 'data-msa-danger': row.danger || 0 } : { 'data-msa-cards': '' })} {...a}>
+      <div className="msa-rowh">{title}{(row.note != null ? row.note : note) ? <small>{row.note != null ? row.note : note}</small> : null}{row.extra || null}</div>
+      <MsaDistCards list={row.list} rep={row.rep} dist={row.dist} guts={row.guts} lastMove={row.lastMove} dataSide={side} hitAt={row.hitAt} onOpen={row.onOpen}/>
+    </div>
+  );
+}
+function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = null, foe = null, stage = null, say = null, why = null, mine = null, controls = null, tools = null, after = null, overlay = null, fit = true }) {
+  // 場の高さを、下のボタン列まで1画面に収まる高さにする(2026-11-20 再点検 バ-24・32・35・44)。上限は決めた 420px(r1119-007)・下限 260px。
+  //   入れ物の下端(スクロールする箱か画面の下)からはみ出た分だけ場を縮め、余れば 420px まで戻す。横向きの低い画面(2列)は今までどおり CSS
+  const wrapRef = useRef(null);
+  const [stagePx, setStagePx] = useState(null);
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 0));
+  useEffect(() => { const on = () => setVh(window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  React.useLayoutEffect(() => {
+    const wrap = wrapRef.current; if (!wrap || typeof window === 'undefined' || !fit) return;
+    if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) { if (stagePx != null) setStagePx(null); return; }
+    const box = wrap.querySelector('[data-msa-stagebox]'); if (!box) return;
+    const root = wrap.closest('[data-msc-root],[data-ambb-root]');
+    const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
+    const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
+    const cur = box.getBoundingClientRect().height;
+    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
+    if (Math.abs(next - cur) > 2) setStagePx(next);
+  });
+  const rows = (Array.isArray(tools) ? tools : [tools]).filter(Boolean);
+  return (
+    <div ref={wrapRef} className={`msa msa-mv${className ? ` ${className}` : ''}`} data-msa-mv data-msa-mode={mode} data-msa-vh={vh} {...(attrs || {})}>
+      <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
+      {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
+      <div className="msa-main" data-msa-main>
+        {/* 2026-11-20 再点検 バ-34: 相手の名前は体力の帯の上と二重だった → 見出しは大会名だけ */}
+        {head ? <div className="msc-top msa-topline">{head}</div> : null}
+        {foe && foe.list && foe.list.length ? <MsaDistRow side="B" row={foe} title="相手の技" note="押すと、その間合いの技が見られます"/> : null}
+        <div className="msa-stagebox" data-msa-stagebox data-msa-fit={stagePx || ''} style={stagePx ? { height: `${stagePx}px`, minHeight: 0, flex: 'none' } : undefined}>{stage}</div>
+        {say != null ? <div className="msa-say" data-msa-say>{say}</div> : null}
+        {why}
+      </div>
+      <div className="msa-side" data-msa-side>
+        {mine && mine.list && mine.list.length ? <MsaDistRow side="A" row={mine} title="自分の技"/> : null}
+        {controls}
+        {rows.map((r, i) => <div key={i} className="msa-tools" data-msa-tools={i + 1}>{r}</div>)}
+        {after}
+      </div>
+      {overlay}
+    </div>
+  );
+}
+
 function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const reduce = useMemo(() => msaReduce(), []);
   const manual = Boolean(input && engine && typeof engine.createMatch === 'function');
@@ -1948,23 +2012,6 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       ...(cA ? { A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: cA } : m)) } } : {}),
       ...(cB && teams.B && Array.isArray(teams.B.members) ? { B: { ...teams.B, members: teams.B.members.map((m, i) => (i === 0 && m ? { ...m, colors: cB } : m)) } } : {}) };
   }, [teams.A, teams.B, info && info.colors, info && info.opp && info.opp.colors]);
-  // 場の高さを、下のボタン列まで1画面に収まる高さにする(2026-11-20 再点検 バ-24・32・35・44)。上限は決めた 420px(r1119-007)・下限 260px。
-  //   入れ物の下端(スクロールする箱か画面の下)からはみ出た分だけ場を縮め、余れば 420px まで戻す。横向きの低い画面(2列)は今までどおり CSS
-  const wrapRef = useRef(null);
-  const [stagePx, setStagePx] = useState(null);
-  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 0));
-  useEffect(() => { const on = () => setVh(window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
-  React.useLayoutEffect(() => {
-    const wrap = wrapRef.current; if (!wrap || typeof window === 'undefined') return;
-    if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) { if (stagePx != null) setStagePx(null); return; }
-    const box = wrap.querySelector('[data-msa-stagebox]'); if (!box) return;
-    const root = wrap.closest('[data-msc-root]');
-    const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
-    const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
-    const cur = box.getBoundingClientRect().height;
-    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
-    if (Math.abs(next - cur) > 2) setStagePx(next);
-  });
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f, false, monsucMotionKind);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
@@ -2012,47 +2059,40 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const sayNow = (() => { for (let k = pos; k >= Math.max(0, pos - 4); k--) { const t = msaSay(log[k], nm, log); if (t) return k <= 2 && (log[k] || {}).ev !== 'tech' ? opening : t; } return opening; })();
   const foeOn = Boolean(itemsB && itemsB.length && typeof MsaDistCards === 'function' && !ended);
   const foeDanger = foeOn ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0;
+  const ctlSw = <MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/>;
+  const pauseBtn = <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>;
+  // 道具の段(丸いボタンの並び・MsaMatchView の tools。1つ1列)。中身は見るだけ/オート/手動で替える
+  const tools = ended ? null : manual && !auto ? [(
+    <>
+      {pauseBtn}
+      {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} aria-label={`見せる速さ ${x.label}`} onClick={() => { setSpeed(x.id); }}>{x.label}</button>)}
+      {ctlSw}
+      <MsaBgToggle bg={bg} onChange={setBg}/>
+    </>
+  )] : [(
+    <>
+      {pauseBtn}
+      {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { setSpeed(x.id); }}>{x.label}</button>)}
+      <button type="button" data-msc-hl className={speed === 'hl' ? 'on' : ''} aria-label="見せ場(技・ダウン)だけを見る" onClick={() => { setSpeed(v => (v === 'hl' ? 'x1' : 'hl')); }}>★見せ場だけ</button>
+      <button type="button" data-msc-skip onClick={skip}>⏭ 飛ばす</button>
+      {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
+    </>
+  ), manual ? <>{ctlSw}<MsaBgToggle bg={bg} onChange={setBg}/></> : null];
   return (
-    <div ref={wrapRef} className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
-      <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
-      {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
-      <div className="msa-main" data-msa-main>
-      <div className="msc-top msa-topline"><b className="msc-ttl">{info.title} {MSC_STARS(info.star)}</b>
-        {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
-        {/* 2026-11-20 再点検 バ-34: 相手の名前は体力の帯の上と二重だった → 見出しは大会名だけ */}</div>
-      {foeOn ? <div className="msa-foe" data-msa-foe data-msa-danger={foeDanger}><div className="msa-rowh">相手の技<small>押すと、その間合いの技が見られます</small></div><MsaDistCards list={itemsB} rep={msaRepIds(itemsB, null)} dist={f.d} guts={f.g.B} lastMove={lastTechOf('B')} dataSide="B" hitAt={hitAtB} onOpen={(d) => setFoeSheet(d)}/></div> : null}
-      <div className="msa-stagebox" data-msa-stagebox data-msa-fit={stagePx || ''} style={stagePx ? { height: `${stagePx}px`, minHeight: 0, flex: 'none' } : undefined}>
-        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind} onEndGo={ended ? () => setEndTap(1) : null} roundMax={rLimit} endSub={judgeIdx >= 0 ? `${(log[judgeIdx] || {}).limit || rLimit}ラウンドで決着つかず・判定${won ? '勝ち' : '負け'}` : ''}/>
-      </div>
-      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : sayNow}</div>
-      </div>
-      <div className="msa-side" data-msa-side>
-      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><div className="msa-rowh">自分の技<small>命中はガッツで上下(▲▼)</small></div><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={lastTechOf('A')} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
-      <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="c"/> : null}</div>
-      {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
-      {(!manual || auto) && !ended ? (
-        <div className="msa-tools">
-          <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>
-          {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { setSpeed(x.id); }}>{x.label}</button>)}
-          <button type="button" data-msc-hl className={speed === 'hl' ? 'on' : ''} aria-label="見せ場(技・ダウン)だけを見る" onClick={() => { setSpeed(v => (v === 'hl' ? 'x1' : 'hl')); }}>★見せ場だけ</button>
-          <button type="button" data-msc-skip onClick={skip}>⏭ 飛ばす</button>
-          {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
-        </div>
-      ) : null}
-      {manual && !auto && !ended ? (
-        <div className="msa-tools">
-          <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>
-          {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} aria-label={`見せる速さ ${x.label}`} onClick={() => { setSpeed(x.id); }}>{x.label}</button>)}
-          <MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/>
-          <MsaBgToggle bg={bg} onChange={setBg}/>
-        </div>
-      ) : null}
-      {manual && auto && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
-      </div>
-      {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
-      {foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`} list={itemsB} d={foeSheet} dist={f.d} rep={msaRepIds(itemsB, null)} hitAt={hitAtB} onClose={() => setFoeSheet(null)}/> : null}
-      {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
-    </div>
+    <MsaMatchView className="msc-wrap" mode={manual ? (auto ? 'auto' : 'manual') : 'watch'} attrs={{ 'data-msc-match': '', 'data-msa-pos': pos }}
+      head={<><b className="msc-ttl">{info.title} {MSC_STARS(info.star)}</b>{info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}</>}
+      foe={foeOn ? { list: itemsB, rep: msaRepIds(itemsB, null), dist: f.d, guts: f.g.B, lastMove: lastTechOf('B'), hitAt: hitAtB, danger: foeDanger, onOpen: (d) => setFoeSheet(d) } : null}
+      stage={<MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts} motionKindOf={monsucMotionKind} onEndGo={ended ? () => setEndTap(1) : null} roundMax={rLimit} endSub={judgeIdx >= 0 ? `${(log[judgeIdx] || {}).limit || rLimit}ラウンドで決着つかず・判定${won ? '勝ち' : '負け'}` : ''}/>}
+      say={call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : sayNow}
+      mine={cardsOn ? { list: itemsA, rep: msaRepIds(itemsA, null), dist: f.d, guts: f.g.A, lastMove: lastTechOf('A'), hitAt: hitAtA, note: '命中はガッツで上下(▲▼)', onOpen: (d) => setTechSheet(d) } : null}
+      controls={<><div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="c"/> : null}</div>
+        {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}</>}
+      tools={tools}
+      overlay={<>
+        {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
+        {foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('B')}(相手)の${AMBW_DIST[foeSheet]}の技`} list={itemsB} d={foeSheet} dist={f.d} rep={msaRepIds(itemsB, null)} hitAt={hitAtB} onClose={() => setFoeSheet(null)}/> : null}
+        {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
+      </>}/>
   );
 }
 
