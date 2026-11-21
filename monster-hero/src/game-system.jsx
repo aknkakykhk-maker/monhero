@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0e4f203ab7789b18
+// generated-sha256: b1020c4d0a7cdffb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90221,6 +90221,8 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
+/* 伸びる間は「/999」を隠して棒を札の幅いっぱいに(幅17pxほどの棒が光って橙の四角に見えた。2026-11-21 r1119-033 育-208・209・213) */
+.msx .v-st.zs .br .cap{display:none}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
@@ -90230,7 +90232,8 @@ const MSX_CSS = `
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
-.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+/* 持ち上がりは隣の札にかからない大きさ(1.1 だと隣のかしこさ・回避にかぶった。育-208・213。社長の A 案「伸びる間だけ拡大」はそのまま) */
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.06);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
@@ -97520,7 +97523,9 @@ const MSX_MM_CSS = `
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
 .msx .mm-ops>.msx-pt{flex:1 1 220px}
-.msx .mm-ops .mm-sel{flex:none}
+.msx .mm-ops .mm-sel{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 1段目は探す欄と逆順、2段目に並べ替えと表示を同じ幅・同じ高さで並べる(表示だけ2段目に落ちて、ちぐはぐだった。2026-11-21 r1119-033 育-129・157) */
+.msx .mm-ops>.msx-pt{flex-basis:100%}.msx .mm-ops .msx-pt-r{font-size:11.5px;border-radius:12px}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
