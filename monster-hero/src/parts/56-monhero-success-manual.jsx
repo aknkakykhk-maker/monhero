@@ -155,6 +155,11 @@ const MSA_DC_CSS = `
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
+/* 2026-11-21 相手の技の枠は2行(社長の選択 r1119-061・案 docs/progress/monsuc-bracket-battle-plan/): 1行目に間合いと技名、2行目に命中。
+   ダメージは枠を押した窓で見る。枠が低くなったぶん、場が高くなる */
+.msa-dc.b2 .msa-dc-c{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:4px;row-gap:0;align-items:baseline;align-content:center}
+.msa-dc.b2 .msa-dc-c small.p,.msa-dc.b2 .msa-dc-c small.gu{grid-column:1/-1}
+@supports (width:1cqw){.msa-dc.b2 .msa-dc-c .msa-tn{font-size:max(8.5px,min(14px,calc((100cqw - 20px) / var(--tnt,1))))}}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .msa-dc.a .msa-dc-c{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:44px;padding:2px 5px}
@@ -239,7 +244,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
   //   手動の帯は番ごとに作り直されるので、覚えは札の外(MSA_DC_HIT_MEMO)に置く。1分より前の覚えは別の試合として使わない
   const memoOf = (d) => { const m = MSA_DC_HIT_MEMO[`${dataSide}:${d}`]; return m && Date.now() - m.at < 60000 ? m : null; };
   return (
-    <div className={`msa-dc ${look === 'a' ? 'a' : ''}`} data-msa-dc={dataSide || ''} data-msa-dc-look={look || ''}><style>{MSA_DC_CSS}</style>
+    <div className={`msa-dc ${look === 'a' ? 'a' : dataSide === 'B' ? 'b2' : ''}`} data-msa-dc={dataSide || ''} data-msa-dc-look={look || ''}><style>{MSA_DC_CSS}</style>
       {[0, 1, 2, 3].map((d) => {
         const at = msaTechsAt(list, d);
         // いまの間合いで、代表でない技を使ったときは、その技を札に出す(観戦で何を撃ったか分かるように)
@@ -279,7 +284,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
               return <small className="p" data-msa-dc-hit={dir || undefined} title={dir ? 'ガッツが多いほど命中が上がります' : undefined}>{v != null ? `命中${v}%` : '命中 —'}{dir ? <span className={`hd ${dir}`}>{dir === "up" ? "▲" : "▼"}</span> : null}</small>;
             })() : null}
             {t && dataSide !== 'B' ? <small className="gu">ガッツ−{t.guts}</small> : null}
-            {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
+            {t && t.base && dataSide !== 'B' ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
           </button>
         );
       })}
