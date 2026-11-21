@@ -54,8 +54,9 @@ check('⑤ 案Dはドラが前に立つ行から戦場の疾風', switchAt > 0 &
 // 2026-11-07 モンヒロビート本オープンのお話も、③のクラッカーから Rising Hope へ替える(社長「切り替え案」)
 // 2026-11-14 モンヒロサクセス第1話も、門ではメインの曲、夕方の山場で休養の曲へ替える(ココロ。ミハリ8の指摘で足した)
 // 2026-11-16 モンヒロサクセス第2話も、台本どおり 門=メイン・滝=トレーニング・会場=大会・山場=勝利・受付=メイン と替える(ココロ4)
+// 2026-11-22 あつとみゅあの歌のお話も、お披露目の行(あつ有・あつ無の2行)から曲 Beyond the Same Sky へ替える(r1119-076)
 check('③ bgm を書いているのは案Dと、きゅうこの加入のお話と、鍵の向こう側へ第7話と、えるびんの加入のお話と、本オープンのお話と、モンヒロサクセス第1話・第2話だけ(ほかの会話イベントは今までどおり)',
-  written.length === 13 && written.includes('monsuc_training') && written.includes('monsuc_cup') && written.includes('monsuc_win') && written.includes('monsuc_menu') && written.includes('monsuc_rest') && written.includes('melo_rising_hope') && written.includes('melo_wrath_of_the_thorn_king') && written.includes('senjou_no_shippuu') && written.includes('melo_toward_the_stars_short')
+  written.length === 15 && written.filter((id) => id === 'melo_beyond_the_same_sky').length === 2 && written.includes('monsuc_training') && written.includes('monsuc_cup') && written.includes('monsuc_win') && written.includes('monsuc_menu') && written.includes('monsuc_rest') && written.includes('melo_rising_hope') && written.includes('melo_wrath_of_the_thorn_king') && written.includes('senjou_no_shippuu') && written.includes('melo_toward_the_stars_short')
   && written.includes('melo_stay_with_me_short') && written.includes('melo_rebellion'), written.join(', '));
 check('⑤ 案Dの会話イベントの曲はイベントBGM 1', /tactics_types:'tacticsTypesEvent'/.test(bgm) && /tacticsTypesEvent:'original_event_01'/.test(bgm));
 const core = read('monster-hero/src/parts/10-core.jsx');

@@ -172,8 +172,9 @@ const skipBox = (page) => page.evaluate(() => {
       await page.close();
     }
     // ④ 光る演出(fx)の無い行の、場面の説明(fxText)。そういう行をお話から探して、その行を開いて見る
+    //   あつ・きゅうこの出し分けの印がある行は、遊ぶ人の台本では行の番号がずれるので選ばない(2026-11-22 あつとみゅあの歌のお話で空振りした)
     let fxOnly = null;
-    for (const ev of list) { const i = ev.script.findIndex((l, k) => k > 0 && l.fxText && !l.fx && !l.stage && !l.monsters && !l.bg); if (i > 0) { fxOnly = { id: ev.id, step: i, text: ev.script[i].fxText }; break; } }
+    for (const ev of list) { const i = ev.script.findIndex((l, k) => k > 0 && l.fxText && !l.fx && !l.stage && !l.monsters && !l.bg && !l.atsu && !l.kyuko && !l.atsuJoin && !l.cardCup); if (i > 0) { fxOnly = { id: ev.id, step: i, text: ev.script[i].fxText }; break; } }
     check('④ 光る演出の無い行に、場面の説明を書いたお話がある(見張る相手がいる)', !!fxOnly);
     if (fxOnly) {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
