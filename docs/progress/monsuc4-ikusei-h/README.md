@@ -1,6 +1,6 @@
 # モンサク④ 育成の再点検の残り(その8・2026-11-21)
 
-表 `docs/progress/kensa/monsuc-recheck-2026-11-20/findings-ikusei.md` のうち、この PR で直した行を「直した(#PR)」にした。
+表 `docs/progress/kensa/monsuc-recheck-2026-11-20/findings-ikusei.md` のうち、この PR で直した行を「直した(#7065)」にした。
 止め絵はこのフォルダ(縦 390×844・`success-r3-shoot.js` で撮った物)。分析の API は使っていない(r1119-056)。
 
 ## 突き合わせ表(決めごと・件 → 止め絵のどこで満たすか)
