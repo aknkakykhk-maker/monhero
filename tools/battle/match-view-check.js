@@ -5,6 +5,7 @@
 //   ② 並べ方の CSS は .msa.msa-mv の1か所。モンサクの古い入れ物(.msc-wrap.msa)と、βの観戦の段の別の並べ方([data-ambb-watch] の格子・ambb-stagewrap)が残っていない
 //   ③ 試合の画面で古い札(AmbwPanel)・古い場(ambw-ring)を使っていない
 //   ⑤ 修行を見る(助手ライフ)も MsaMatchView・相手の技の枠を出す(③ 社長の選択)  ⑥ 古い試作と r3 の古い観戦が残っていない
+//   ⑦ 対戦の場のモンスターの大きさは 16-monster-stage-size.jsx の表から(場のモンスターだけ)
 //   ④ βの実況は1行(数行の記録 ambw-log を出さない)・助手の「なぜ」は1行の下の吹き出し(why)・道具の段は部品の tools(丸いボタンの並び)
 'use strict';
 const fs = require('fs');
@@ -17,6 +18,7 @@ const CHEER = fs.readFileSync(P('56-assistant-life-masmon-cheer.jsx'), 'utf8');
 const VIEW = fs.readFileSync(P('56-assistant-masmon-battle-view.jsx'), 'utf8');
 const R3 = fs.readFileSync(P('56-monhero-success-r3-cup.jsx'), 'utf8');
 const APP = fs.readFileSync(P('60-app.jsx'), 'utf8');
+const SIZE = fs.readFileSync(P('16-monster-stage-size.jsx'), 'utf8');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
@@ -45,6 +47,11 @@ check('④ βの道具の段は部品の tools(丸いボタンの並び)・古�
 const cheer = bodyOf(CHEER, 'AssistantMasmonTrainWatch');
 check('⑤ 修行を見るは MsaMatchView で描き、相手の技の枠(foe)を出す・自分の枠(mine)は無い', /<MsaMatchView[\s>]/.test(cheer) && /\bfoe=\{foeOn/.test(cheer) && !/\bmine=\{/.test(cheer));
 check('⑥ デバッグだけの古い試作 AssistantMasmonBattleWatch・モンサク r3 の古い観戦 MsxR3Watch が残っていない', !/function AssistantMasmonBattleWatch\(/.test(VIEW) && !/AssistantMasmonBattleWatch|masmonBattleWatchOpen/.test(APP) && !/MsxR3Watch/.test(R3));
+
+// 対戦の場の大きさ(r1119-074): 1体ずつの表を場のモンスター(MsaFighter)だけが使う。始まりの対面・技の窓は使わない
+const fighter = bodyOf(ARENA, 'MsaFighter');
+check('⑦ 1体ずつの大きさの表 MONSTER_STAGE_SIZE があり、場のモンスター(MsaFighter)が monsterStageFit で描く', /const MONSTER_STAGE_SIZE = /.test(SIZE) && /monsterStageFit\(/.test(fighter) && /\.msa-f\[data-msa-sz\] img\.msa-img\{/.test(ARENA));
+check('⑦ 始まりの対面(MsaIntro 系)・技の窓は大きさの表を使わない', (ARENA.match(/monsterStageFit\(/g) || []).length === 1);
 
 console.log(failed ? `NG ${failed}件` : 'すべてOK');
 process.exit(failed ? 1 : 0);

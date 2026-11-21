@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 060e1340b18f4c4b
+// source-sha256: 791faaf4ab2ab6c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13955,6 +13955,72 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_C
   },
   className: `rounded-full ${monsterArtUrlNeedsContain(icon) ? 'object-contain' : 'object-cover'} inline-block shrink-0`
 }) : icon;
+const MONSTER_STAGE_SIZE = Object.freeze({
+  Mocchi: 0.72,
+  Suezo: 0.72,
+  Ghost: 0.75,
+  Plant: 0.8,
+  Ham: 0.82,
+  KenshiMocchi: 0.82,
+  Spooky: 0.82,
+  Ark: 0.85,
+  Tiger: 0.9,
+  Mitarashi: 0.9,
+  Pixie: 0.92,
+  Mia: 0.95,
+  Pandora: 0.95,
+  Snegurochka: 0.98,
+  Dreamy: 0.98,
+  Oboro: 1,
+  Undine: 1,
+  Yaobikuni: 1,
+  Illumine: 1,
+  Kyubi: 1,
+  Orihime: 1,
+  Iblis: 1.05,
+  MelWhip: 1.05,
+  Yggdrasil: 1.1,
+  Eiki: 1.15,
+  Zan: 1.25,
+  Melody: 1.3,
+  Kuromy: 1.3,
+  Monol: 1.4,
+  Golem: 1.45
+});
+const MONSTER_STAGE_REF = 1;
+const MONSTER_STAGE_MAX_W = 1.5;
+const monsterStageSizeOf = id => {
+  const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+};
+const monsterStageFit = (id, boxW, boxH) => {
+  const W = Number(boxW),
+    H = Number(boxH);
+  if (!(W > 0) || !(H > 0)) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[id] : null;
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const key = mon && typeof mon.imgUrl === 'string' ? mon.imgUrl.split('?')[0].replace(/^images\//, '') : '';
+  const b = boxes && key ? boxes[key] : null;
+  if (!Array.isArray(b) || b.length < 5) return null;
+  const [x0, y0, x1, y1, a] = b.map(Number);
+  const ch = y1 - y0,
+    cw = x1 - x0;
+  if (!(ch > 0) || !(cw > 0) || !(a > 0)) return null;
+  let h = H * MONSTER_STAGE_REF * monsterStageSizeOf(id) / ch;
+  let w = h * a;
+  const wMax = W * MONSTER_STAGE_MAX_W;
+  if (cw * w > wMax) {
+    const k = wMax / (cw * w);
+    h *= k;
+    w *= k;
+  }
+  return {
+    w: Math.round(w),
+    h: Math.round(h),
+    mb: -Math.round((1 - y1) * h),
+    dx: -Math.round(((x0 + x1) / 2 - 0.5) * w)
+  };
+};
 const rankingPartyColors = (baseId, colors) => {
   const raw = Array.isArray(colors) ? colors : [];
   return Array.from({
@@ -118470,7 +118536,8 @@ function AssistantLifeScene({
   onGive,
   canGive,
   watchLeft = 0,
-  nextSlot = ''
+  nextSlot = '',
+  noResult = false
 }) {
   const peer = typeof useAssistantPeerState === 'function' ? useAssistantPeerState() : null;
   const [started, setStarted] = React.useState(false);
@@ -118589,7 +118656,7 @@ function AssistantLifeScene({
       bottom: 'calc(14px + env(safe-area-inset-bottom))'
     },
     "data-assistant-life-scene-done": true
-  }, scene.before && (() => {
+  }, scene.before && !noResult && (() => {
     const now = assistantLifeSceneSnap(ids);
     const dPeer = Math.max(0, Math.round(now.peer - scene.before.peer));
     const dMe = now.me != null && scene.before.me != null ? Math.max(0, Math.round(now.me - scene.before.me)) : 0;
@@ -118785,6 +118852,7 @@ function AssistantLifeHouse({
     if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot('');
   }, []);
   const [scene, setScene] = React.useState(null);
+  const [aluResult, setAluResult] = React.useState(null);
   const [dailyScene, setDailyScene] = React.useState(null);
   const [dailyKey, setDailyKey] = React.useState(0);
   const [follow, setFollow] = React.useState(null);
@@ -118938,6 +119006,7 @@ function AssistantLifeHouse({
     setScene(null);
     assistantLifeCloseScreen();
   };
+  const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
       setRoomId(null);
@@ -118976,7 +119045,8 @@ function AssistantLifeHouse({
       place: ctx && ctx.place || 'home',
       key: `${talk.id}-${Date.now()}`,
       sleep: sleepIds,
-      before: ctx && ctx.before || null
+      before: ctx && ctx.before || null,
+      resultTitle: ctx && ctx.resultTitle || null
     });
     if (onReplay) onReplay(talk);
     if (sceneIds.length >= 2 && !(ctx && ctx.gift)) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, {
@@ -118993,8 +119063,10 @@ function AssistantLifeHouse({
     playTalk(talk, {
       ids: g.ids,
       place: g.place,
-      before
+      before,
+      resultTitle: '👀 見た'
     });
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('watch');
   };
   const peek = id => {
     const key = `solo:${id}`;
@@ -119023,6 +119095,7 @@ function AssistantLifeHouse({
       place: w ? w.place : 'home',
       sleep: sleeping
     });
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('watch');
   };
   const invite = async id => {
     const w = assistantLifeWhereOf(life, id);
@@ -119033,14 +119106,18 @@ function AssistantLifeHouse({
       bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1,
       place: w.place
     }) : relSolo || assistantLifePickCallTalk(id, life);
+    const before = assistantLifeSceneSnap([id]);
     if (!(await assistantLifeNudge('invite', id))) return;
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('talk');
     followAfterRef.current = !sleeping && typeof ASSISTANT_LIFE_LINKS.chatFollowLine === 'function' ? id : null;
     if (talk) {
       if (!sleeping) assistantLifeMarkSeen(talk);
       playTalk(talk, {
         ids: [id],
         place: w ? w.place : 'home',
-        sleep: sleeping
+        sleep: sleeping,
+        before,
+        resultTitle: '💬 話した'
       });
     } else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
@@ -119133,6 +119210,7 @@ function AssistantLifeHouse({
     if (give && give.solo && soloOn) {
       const who = give.solo,
         kind = give.kind;
+      const before = assistantLifeSceneSnap([who]);
       const talk = await onGiveSolo(who, kind);
       const info = assistantLifeItemInfo(kind);
       setGive(null);
@@ -119145,12 +119223,16 @@ function AssistantLifeHouse({
       playTalk(talk, {
         ids: [who],
         place: w ? w.place : 'home',
-        gift: true
+        gift: true,
+        before,
+        resultTitle: '🎁 贈った'
       });
+      typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('give');
       setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
       return;
     }
     if (!give || !give.pair) return;
+    const before = assistantLifeSceneSnap(give.pair);
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
     if (!talk) {
@@ -119166,8 +119248,11 @@ function AssistantLifeHouse({
     playTalk(talk, {
       ids: give.pair,
       place: g ? g.place : 'home',
-      gift: true
+      gift: true,
+      before,
+      resultTitle: '🎁 贈った'
     });
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('give');
   };
   const chatOn = typeof ASSISTANT_LIFE_LINKS.chatWith === 'function';
   const chat = (id, f) => {
@@ -119182,6 +119267,7 @@ function AssistantLifeHouse({
         });
       }
       setFollow(null);
+      typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('talk');
       ASSISTANT_LIFE_LINKS.chatWith(id, {
         asleep,
         follow: f || null
@@ -119191,6 +119277,7 @@ function AssistantLifeHouse({
   const beat = id => {
     try {
       if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') {
+        typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('play');
         close();
         ASSISTANT_LIFE_LINKS.beatInvite(id);
       }
@@ -119199,6 +119286,7 @@ function AssistantLifeHouse({
   const card = id => {
     try {
       if (typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function') {
+        typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('play');
         close();
         ASSISTANT_LIFE_LINKS.cardInvite(id);
       }
@@ -119597,12 +119685,14 @@ function AssistantLifeHouse({
   })));
   const tabBody = tab === 'house' ? houseView : tab === 'where' ? null : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? React.createElement(AssistantLifeFriendPage, {
     life: life
-  }) : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? React.createElement(AssistantLifeProfilePage, {
+  }) : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? React.createElement(React.Fragment, null, uiV2 && typeof AssistantMasmonNoteBand === 'function' && React.createElement(AssistantMasmonNoteBand, {
+    land: land
+  }), React.createElement(AssistantLifeProfilePage, {
     metIds: metIds,
     bondLevelOf: bondLevelOf,
     land: land,
     onMasmon: setMasmonId
-  }) : tab === 'friends' ? React.createElement("div", {
+  })) : tab === 'friends' ? React.createElement("div", {
     className: "px-3 pb-3 pt-1"
   }, uiV2 && typeof AssistantLifeRewardRoad === 'function' && React.createElement(AssistantLifeRewardRoad, {
     ids: ids.filter(partnerOk),
@@ -119649,7 +119739,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land || tab === 'where' ? 'none' : 480
+      maxWidth: land || tab === 'where' || typedHouse ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -119707,6 +119797,81 @@ function AssistantLifeHouse({
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
       }
     }, icons))
+  }) : typedHouse ? React.createElement(AssistantLifeHouseTyped, {
+    land: land,
+    life: life,
+    ids: ids,
+    metSet: metSet,
+    look: look,
+    rooms: rooms,
+    diary: diary,
+    peerSt: peerSt,
+    nameOf: nameOf,
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2,
+    unwatched: unwatched,
+    onWatch: () => {
+      if (guideSeen === false) markGuideSeen();
+      if (unwatched[0]) watch(unwatched[0]);
+    },
+    tier: tier,
+    note: note,
+    top: quickRunStrip ? React.createElement("div", {
+      "data-assistant-life-quick-strip": true
+    }, quickRunStrip) : React.createElement(AssistantLifeQuickChip, {
+      quickRun: quickRun,
+      onStop: onQuickRunStop,
+      onStart: onQuickRunStart,
+      land: land
+    }),
+    guide: typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) ? React.createElement(AssistantLifeFirstGuide, {
+      land: land,
+      canWatch: !!unwatched.length,
+      onClose: markGuideSeen,
+      onWatch: () => {
+        markGuideSeen();
+        if (unwatched[0]) watch(unwatched[0]);
+      }
+    }) : null,
+    dailyCard: typeof AssistantLifeDailyCard === 'function' ? React.createElement(AssistantLifeDailyCard, {
+      key: dailyKey,
+      ids: ids,
+      nameOf: nameOf,
+      land: land,
+      life: life,
+      onScene: setDailyScene
+    }) : null,
+    planBand: typeof AssistantLifePlanBand === 'function' ? React.createElement(AssistantLifePlanBand, {
+      ids: ids,
+      land: land
+    }) : null,
+    onTalk: () => setCallPicker(true),
+    onGive: () => {
+      setGiftItemsOpen(false);
+      setGiftOpen(true);
+    },
+    onPlay: () => {
+      const solo = Object.keys(life.solo || {}).find(id => !awayFriend(id) && partnerOk(id));
+      const id = beatIds[0] || solo || ids.find(partnerOk);
+      if (id) setRoomId(id);
+    },
+    onRoom: setRoomId,
+    onBoard: () => setBoardOpen(true),
+    onRelView: relView,
+    result: aluResult,
+    onResultClose: () => setAluResult(null)
   }) : land ? React.createElement("div", {
     className: "relative z-[2] flex h-full min-h-0",
     style: {
@@ -119999,9 +120164,17 @@ function AssistantLifeHouse({
       }
     })(),
     canGive: canGive && itemsLeft > 0,
+    noResult: typedHouse,
     onClose: () => {
+      const sc = scene;
       setScene(null);
+      const following = !!followAfterRef.current;
       showFollow();
+      if (typedHouse && sc && sc.before && !following) setAluResult({
+        ids: sc.ids,
+        before: sc.before,
+        title: sc.resultTitle
+      });
     },
     onGive: openGive
   }), dailyScene && typeof AssistantLifeDailySceneView === 'function' && React.createElement(AssistantLifeDailySceneView, {
@@ -120230,6 +120403,256 @@ function AssistantLifeHomeFaces({
     rect: rects.life,
     dockTop: rects.__dockTop
   }));
+}
+const assistantLifeTypedArtWidth = ({
+  wide,
+  w,
+  h
+}, landArt) => {
+  const hh = wide ? h : Math.round(h * 0.5 / 0.42);
+  const byH = landArt ? (hh - 130) / 0.37 + 30 : (hh - 126) / 0.56 + 30;
+  return Math.max(200, Math.floor(Math.min(w, landArt ? 760 : 640, byH)));
+};
+const assistantLifeTypedGroupName = (g, nameOf) => {
+  const list = g && g.ids || [];
+  if (list.length <= 2) return list.map(nameOf).join('と');
+  return `${nameOf(list[0])}たち${list.length}人`;
+};
+function AssistantLifeHouseTyped({
+  land = false,
+  life,
+  ids,
+  metSet,
+  look,
+  rooms,
+  diary,
+  peerSt,
+  nameOf,
+  tabs,
+  tab = 'house',
+  onTab,
+  onBack,
+  unwatched = [],
+  onWatch,
+  tier = null,
+  note = '',
+  top = null,
+  guide = null,
+  dailyCard = null,
+  planBand = null,
+  onTalk,
+  onGive,
+  onPlay,
+  onRoom,
+  onBoard,
+  onRelView,
+  result = null,
+  onResultClose
+}) {
+  const [goal, setGoal] = React.useState(() => typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
+  const [openDaily, setOpenDaily] = React.useState(false);
+  const [openPlan, setOpenPlan] = React.useState(false);
+  const [openNow, setOpenNow] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof ASSISTANT_LIFE_GOAL_STORE === 'undefined') return undefined;
+    const S = ASSISTANT_LIFE_GOAL_STORE;
+    const f = () => {
+      try {
+        setGoal(assistantLifeGoalView());
+      } catch (_) {}
+    };
+    S.subs.add(f);
+    S.load().then(f).catch(() => {});
+    return () => {
+      S.subs.delete(f);
+    };
+  }, []);
+  const near = typeof assistantLifeNearestReward === 'function' ? assistantLifeNearestReward(ids) : null;
+  const head = near ? React.createElement(AluNextReward, {
+    rest: near.remain,
+    text: `${nameOf(near.id)}の 💗 仲良し度 Lv${near.nextLv}${near.opens.length ? ` → ${near.opens.join('・')}` : ''}`
+  }) : React.createElement(AluNextReward, {
+    rest: null,
+    text: "見る・話す・贈るで 💗 仲良し度が上がると、ごほうびが届きます"
+  });
+  const scene = box => {
+    const landArt = box.wide && land;
+    const width = assistantLifeTypedArtWidth(box, landArt);
+    return React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: box.wide ? '100%' : undefined,
+        padding: '6px 0'
+      },
+      "data-assistant-life-top-house": true
+    }, React.createElement(AssistantLifeHouseArt, {
+      width: width,
+      land: landArt,
+      look: look,
+      rooms: rooms,
+      metSet: metSet,
+      onOpen: onRoom,
+      diary: diary,
+      pop: false,
+      onBoard: onBoard,
+      life: life,
+      peerSt: peerSt,
+      v2: true,
+      grid4: !landArt
+    }));
+  };
+  const g0 = unwatched[0];
+  const kindGo = {
+    watch: onWatch,
+    talk: onTalk,
+    give: onGive,
+    play: onPlay
+  };
+  const items = (diary && diary.items || []).slice(-3).reverse();
+  const total = (diary && diary.items || []).length;
+  const face = id => id && typeof AssistantFace === 'function' && typeof assistantById === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+    who: assistantById(id),
+    size: 44
+  }) : '📝';
+  let resultNode = null;
+  if (result) {
+    const now = typeof assistantLifeSceneSnap === 'function' ? assistantLifeSceneSnap(result.ids) : {
+      peer: 0,
+      me: null
+    };
+    const b = result.before || {
+      peer: 0,
+      me: null
+    };
+    const dPeer = Math.max(0, Math.round(now.peer - b.peer));
+    const dMe = now.me != null && b.me != null ? Math.max(0, Math.round(now.me - b.me)) : 0;
+    const gains = [...(dMe > 0 ? [{
+      icon: '💗',
+      label: '仲良し度',
+      v: dMe
+    }] : []), ...(dPeer > 0 ? [{
+      icon: '🤝',
+      label: '友情',
+      v: dPeer
+    }] : [])];
+    const labels = typeof ASSISTANT_LIFE_GOAL_LABEL !== 'undefined' ? ASSISTANT_LIFE_GOAL_LABEL : {};
+    const nextKind = ['watch', 'talk', 'give', 'play'].find(k => !(goal && goal.done && goal.done[k]) && (k !== 'watch' || unwatched.length));
+    const next = nextKind ? {
+      label: `次は ${labels[nextKind] || nextKind}`,
+      onClick: () => {
+        onResultClose();
+        kindGo[nextKind] && kindGo[nextKind]();
+      }
+    } : {
+      label: '🏡 家に戻る',
+      onClick: onResultClose
+    };
+    resultNode = React.createElement("div", {
+      "data-assistant-life-house-result": true
+    }, React.createElement(AluResult, {
+      title: result.title || '結果',
+      line: `${(result.ids || []).map(nameOf).join('・')}${gains.length ? '' : ' · 今日はもう上がりきっています'}`,
+      gains: gains,
+      next: next,
+      onClose: onResultClose
+    }));
+  }
+  return React.createElement(AluFrame, {
+    title: "家",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    head: head,
+    scene: scene,
+    overlay: resultNode,
+    "data-assistant-life-typed-house": "1"
+  }, top, note ? React.createElement("div", {
+    className: "alu-card alu-t",
+    "data-assistant-life-note": true
+  }, note) : null, guide, React.createElement(AluGo, {
+    onClick: () => {
+      if (g0 && onWatch) onWatch();
+    },
+    disabled: !g0,
+    "data-assistant-life-today-act": "watch"
+  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'), React.createElement(AluGoalCard, {
+    view: goal,
+    onKind: k => {
+      const f = kindGo[k];
+      if (f) f();
+    },
+    extra: tier ? `🎉 ${tier.label} 🤝 ×${tier.mult}` : null,
+    below: dailyCard ? React.createElement("div", {
+      style: {
+        marginTop: 8
+      },
+      "data-assistant-life-typed-daily": true
+    }, React.createElement(AluBtn, {
+      onClick: () => setOpenDaily(v => !v),
+      "aria-expanded": openDaily
+    }, "🧺 7日のごほうび ", openDaily ? '▲' : '▼'), openDaily ? React.createElement("div", {
+      style: {
+        marginTop: 8
+      }
+    }, dailyCard) : null) : null
+  }), React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-typed-diary": true
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "今日あったこと"), items.length ? items.map((x, i) => React.createElement(AluRow, {
+    key: `${x.t}-${i}`,
+    pic: face(x.ids && x.ids[0]),
+    text: x.text,
+    note: x.t,
+    action: x.tid && onRelView ? React.createElement(AluBtn, {
+      onClick: () => onRelView(x.tid, x.how || null)
+    }, "読む") : null
+  })) : React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: 4
+    }
+  }, "まだありません。見る・話す・贈るをすると、ここに残ります"), total > items.length ? React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement(AluBtn, {
+    onClick: onBoard
+  }, "もっと見る(全部で", total, "件)")) : null), planBand ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-typed-plan": true
+  }, React.createElement(AluBtn, {
+    onClick: () => setOpenPlan(v => !v),
+    "aria-expanded": openPlan
+  }, "📅 予定 ", openPlan ? '▲' : '▼'), openPlan ? React.createElement("div", {
+    style: {
+      marginTop: 8
+    }
+  }, planBand) : null) : null, React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-v2-status": true
+  }, React.createElement(AluBtn, {
+    onClick: () => setOpenNow(v => !v),
+    "aria-expanded": openNow
+  }, "🏡 みんなの今(", ids.length, "人) ", openNow ? '▲' : '▼'), openNow ? ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id)).map(id => {
+    const w = assistantLifeWhereOf(life, id);
+    const place = w ? assistantLifePlaceShow(w.place) : '家';
+    const doing = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? (ASSISTANT_LIFE_DOINGS[w.doing] || {}).label : '';
+    return React.createElement(AluRow, {
+      key: id,
+      pic: face(id),
+      text: nameOf(id),
+      note: `${place}${doing ? ` · ${doing}` : ''}`,
+      action: React.createElement(AluBtn, {
+        onClick: () => onRoom(id),
+        "data-assistant-life-v2-status-id": id
+      }, "部屋へ")
+    });
+  }) : null));
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
@@ -123700,7 +124123,7 @@ async function assistantLifeUiV2Load() {
 }
 function assistantLifeUiV2Tabs() {
   const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', '友情'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏠', 'フレンド']] : []), ...profile];
 }
 function AssistantLifeIntroduceCard({
   ids,
@@ -124705,8 +125128,8 @@ const ALU_CSS = `
 .alu-chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
 .alu-chip.ok{background:#064e3b;border-color:#34d399;color:#a7f3d0}
 .alu-goal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
-.alu-goal span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
-.alu-goal span.on{background:#064e3b;border-color:#34d399;color:#fff}
+.alu-goal span,.alu .alu-goal button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.alu-goal span.on,.alu .alu-goal button.on{background:#064e3b;border-color:#34d399;color:#fff}
 .alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
 .alu[data-alu-wide="1"] .alu-mask{align-items:center}
 .alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
@@ -124765,7 +125188,8 @@ const useAluWide = () => {
   const ref = React.useRef(null);
   const [box, setBox] = React.useState({
     wide: false,
-    h: 0
+    h: 0,
+    w: 0
   });
   React.useLayoutEffect(() => {
     const el = ref.current;
@@ -124774,9 +125198,10 @@ const useAluWide = () => {
       const w = el.clientWidth,
         h = el.clientHeight;
       const wide = w >= ALU_WIDE_MIN && w > h * 1.15;
-      setBox(b => b.wide === wide && b.h === h ? b : {
+      setBox(b => b.wide === wide && b.h === h && b.w === w ? b : {
         wide,
-        h
+        h,
+        w
       });
     };
     measure();
@@ -124788,7 +125213,7 @@ const useAluWide = () => {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  return [ref, box.wide, box.h];
+  return [ref, box.wide, box.h, box.w];
 };
 const AluTopBar = ({
   title,
@@ -124803,6 +125228,8 @@ const AluTopBar = ({
     type: "button",
     className: "bk",
     "data-alu-back": true,
+    "data-assistant-life-close": true,
+    "aria-label": "戻る",
     onClick: onBack
   }, "← 戻る"), React.createElement("div", {
     className: "ti",
@@ -124814,18 +125241,21 @@ const AluTopBar = ({
 };
 const AluTabBar = ({
   tab,
-  onTab
+  onTab,
+  tabs = ALU_TABS
 }) => React.createElement("div", {
   className: "alu-tabs",
   role: "tablist",
-  "data-alu-tabs": true
-}, ALU_TABS.map(t => React.createElement("button", {
+  "data-alu-tabs": true,
+  "data-assistant-life-icons": true
+}, tabs.map(t => React.createElement("button", {
   key: t.key,
   type: "button",
   role: "tab",
   "aria-selected": tab === t.key,
   className: tab === t.key ? 'on' : '',
   "data-alu-tab": t.key,
+  "data-assistant-life-icon": t.key,
   onClick: () => onTab && onTab(t.key)
 }, React.createElement("i", null, t.icon), t.label)));
 const AluFrame = ({
@@ -124833,21 +125263,35 @@ const AluFrame = ({
   onBack,
   tab,
   onTab,
+  tabs,
   now,
   head,
   scene,
   sceneH = 300,
   children,
-  overlay
+  overlay,
+  ...rest
 }) => {
-  const [ref, wide, frameH] = useAluWide();
+  const [ref, wide, frameH, frameW] = useAluWide();
+  const fit = typeof scene === 'function';
   const sceneHeight = frameH ? Math.max(140, Math.min(sceneH, Math.round(frameH * 0.3))) : sceneH;
-  return React.createElement("div", {
+  const avail = Math.max(0, frameW - 36),
+    mainW = Math.min(560, avail / 2.35);
+  const sceneNode = !scene ? null : !fit ? scene : wide ? scene({
+    wide: true,
+    w: Math.floor(avail - mainW),
+    h: Math.max(0, frameH - 48 - 56 - 24)
+  }) : scene({
+    wide: false,
+    w: Math.max(0, frameW - 24),
+    h: Math.max(140, Math.round(frameH * 0.42))
+  });
+  return React.createElement("div", _extends({
     className: "alu",
     ref: ref,
     "data-alu-frame": true,
     "data-alu-wide": wide ? '1' : undefined
-  }, React.createElement("style", null, ALU_CSS), React.createElement(AluTopBar, {
+  }, rest), React.createElement("style", null, ALU_CSS), React.createElement(AluTopBar, {
     title: title,
     onBack: onBack,
     now: now
@@ -124856,18 +125300,19 @@ const AluFrame = ({
   }, wide && scene ? React.createElement("div", {
     className: "alu-scene",
     "data-alu-scene": true
-  }, scene) : null, React.createElement("div", {
+  }, frameW ? sceneNode : null) : null, React.createElement("div", {
     className: "alu-main",
     "data-alu-main": true
   }, head || null, !wide && scene ? React.createElement("div", {
     className: "alu-scene",
     "data-alu-scene": true,
-    style: {
+    style: fit ? undefined : {
       height: sceneHeight
     }
-  }, scene) : null, children)), React.createElement(AluTabBar, {
+  }, frameW ? sceneNode : null) : null, children)), React.createElement(AluTabBar, {
     tab: tab,
-    onTab: onTab
+    onTab: onTab,
+    tabs: tabs || ALU_TABS
   }), overlay);
 };
 const AluGo = ({
@@ -124995,13 +125440,16 @@ const AluNextReward = ({
   "data-alu-next-reward": true
 }, React.createElement("div", {
   className: "alu-t"
-}, "💗 次のごほうびまで あと ", React.createElement("b", {
+}, "💗 次のごほうび", rest != null ? React.createElement(React.Fragment, null, "まで あと ", React.createElement("b", {
   className: "alu-num"
-}, rest)), text ? React.createElement("div", {
+}, rest)) : null), text ? React.createElement("div", {
   className: "alu-n"
 }, text) : null);
 const AluGoalCard = ({
-  view
+  view,
+  onKind,
+  below,
+  extra
 }) => {
   const v = view || (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
   if (!v) return null;
@@ -125016,7 +125464,13 @@ const AluGoalCard = ({
     className: "alu-num"
   }, Math.min(v.count, v.need)), "/", v.need, v.achieved ? ' ✓ 達成' : ''), React.createElement("div", {
     className: "alu-goal"
-  }, kinds.map(k => React.createElement("span", {
+  }, kinds.map(k => onKind ? React.createElement("button", {
+    type: "button",
+    key: k,
+    className: v.done && v.done[k] ? 'on' : '',
+    "data-alu-goal-kind": k,
+    onClick: () => onKind(k)
+  }, v.done && v.done[k] ? '✓ ' : '', labels[k] || k) : React.createElement("span", {
     key: k,
     className: v.done && v.done[k] ? 'on' : ''
   }, v.done && v.done[k] ? '✓ ' : '', labels[k] || k))), React.createElement("div", {
@@ -125024,7 +125478,7 @@ const AluGoalCard = ({
     style: {
       marginTop: 6
     }
-  }, "4つのうち3つで達成 · 達成した日 ", v.streak % v.days, "/", v.days, "(7日でおやつのバスケット)"));
+  }, "4つのうち3つで達成", extra ? React.createElement(React.Fragment, null, " · ", extra) : null), below || null);
 };
 const AluCond = ({
   id,
@@ -125138,7 +125592,8 @@ const AssistantLifeUiSample = ({
       text: `${a.name} Lv5 で 呼び方が1つ増える`
     })
   }, React.createElement(AluGo, null, "👀 見る — ", a.name, "と", b.name, "の話"), React.createElement(AluGoalCard, {
-    view: goal
+    view: goal,
+    extra: "達成した日 4/7(7日でおやつのバスケット)"
   }), React.createElement("div", {
     className: "alu-card"
   }, React.createElement("div", {
@@ -152944,7 +153399,7 @@ const AMBB_CSS = `
 .ambb-tabs button small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .ambb-mons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .ambb-mon{position:relative;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);padding:4px 2px 5px;text-align:center;color:#fff}
-.ambb-mon img{width:48px;height:48px;object-fit:contain}
+.ambb-mon img{display:block;width:48px;height:48px;margin:0 auto;object-fit:contain} /* 絵は札のまんなか(img はブロックなので text-align が効かない・2026-11-21 社長「モンスターが左に寄ってる」) */
 .ambb-mon b{display:block;font-size:10.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ambb-mon small{display:block;font-size:9.5px;color:#cbd5e1}
 .ambb-mon.on{border-color:#f9a8d4;background:rgba(249,168,212,.18)}
@@ -153214,11 +153669,11 @@ function AmbbOpening({
   const go = () => {
     if (done.current) return;
     done.current = true;
-    ambbSe('card');
+    ambbSe('matchReady');
     onGo();
   };
   useEffect(() => {
-    ambbSe('join');
+    ambbSe('swap');
     const t = setTimeout(go, quick ? 1800 : 4600);
     return () => clearTimeout(t);
   }, []);
@@ -153729,7 +154184,7 @@ function AssistantMasmonBattleBeta({
     if (!m) return;
     const busy = pos < battle.r.log.length - 1;
     if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c);
     if (r && r.ok) {
       syncManual(m);
@@ -174090,7 +174545,15 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
-.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
+/* 月替わりの暦(育-137・194・211): 前は場面全体(inset:0)を暗い膜で覆い、モンスターまで膜の下で白く・半透明に見えた。暦・大会の札・期の帯は上の暗い板1枚にまとめ、モンスターは膜の外にはっきり出す */
+.msx .v-scene .v-clock{inset:auto;top:8px;left:50%;transform:translateX(-50%);width:min(92%,420px);justify-content:flex-start;gap:7px;padding:10px 8px 12px;border-radius:18px;background:rgba(15,13,36,.86);border:1px solid #ffffff26;box-shadow:0 6px 18px #0008}
+.msx .v-scene .v-clock .v-cal{width:136px;box-shadow:0 5px 0 #0006;transform:rotate(-2deg)}
+.msx .v-scene .v-clock .v-cal .mth{font-size:54px}.msx .v-scene .v-clock .v-cal .mth small{font-size:16px}
+.msx .v-scene .v-clock .v-phs{width:100%;margin-top:2px}
+.msx.s320 .v-scene .v-clock{gap:5px;padding:7px 6px 9px}.msx.s320 .v-scene .v-clock .v-cal{width:112px}.msx.s320 .v-scene .v-clock .v-cal .mth{font-size:40px}
+.msx.land .v-scene .v-clock{left:8px;transform:none;width:58%;gap:5px;padding:7px 6px 9px}.msx.land .v-scene .v-clock .v-cal{width:104px}.msx.land .v-scene .v-clock .v-cal .mth{font-size:38px}
+.msx.land .v-scene .v-clock .v-chip{max-width:100%;white-space:nowrap;font-size:13px!important;padding:4px 10px!important}
+.msx.land [data-msx-turn-scene] .mon,.msx.land [data-msx-turn-scene] .gr{left:80%}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -174510,6 +174973,14 @@ const MSX_CSS = `
 .msx .v-bagw .v-item{margin-top:0}
 .v-bagw .v-bgrid{flex:none;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .v-bagw > *{flex-shrink:0}
+/* 持ち物(育-231): 枠は場面の1枚だけ(内側の黄色い枠をやめる)。見出し→札→説明→使うボタンを上から詰め、空いた分で札と字を大きく */
+.msx .v-bagw{left:0;right:0;top:0;bottom:0;border:0;border-radius:inherit;box-shadow:none;background:#151130eb;padding:12px 12px;justify-content:flex-start;gap:10px}
+.msx .v-bagw .t small{font-size:12px}
+.msx .v-bagw .v-bgrid{gap:8px}.msx .v-bagw .v-bgrid div,.msx .v-bagw .v-bgrid button{padding:10px 1px 7px;min-height:96px}
+.msx .v-bagw .v-bgrid .e{font-size:34px;line-height:42px;height:42px}.msx .v-bagw .v-bgrid .v-icw{width:42px;height:42px}
+.msx .v-bagw .v-bgrid small{font-size:10.5px}.msx .v-bagw .v-bgrid i{font-size:12px}
+.msx .v-bagw .v-bsel small{font-size:11.5px}.msx .v-bagw .v-bnote,.msx .v-bagw .v-bnote .dim2{font-size:11.5px;line-height:1.6}
+.msx .v-bagw .v-big{margin-top:4px!important;min-height:48px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -183729,16 +184200,7 @@ function MsxBag({
     className: "v-bagw"
   }, React.createElement("div", {
     className: "t"
-  }, React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), t ? React.createElement("div", {
-    className: "v-bsel"
-  }, React.createElement("span", {
-    className: "e",
-    style: {
-      fontSize: 26
-    }
-  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
-    className: "lim"
-  }, t.carry ? '始める前から効いている' : '育成中、いつでも使える'))) : null, React.createElement("div", {
+  }, React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), React.createElement("div", {
     className: "v-bgrid"
   }, bagList.map(x => React.createElement("button", {
     type: "button",
@@ -183778,7 +184240,16 @@ function MsxBag({
     style: JA_LABEL_STYLE
   }, msxItemNameNode('虹の時渡りの砂時計')))), !bagList.length && !carryList.length ? React.createElement("div", {
     className: "msx-note"
-  }, "持ちこんだ物はありません") : null, React.createElement("div", {
+  }, "持ちこんだ物はありません") : null, t ? React.createElement("div", {
+    className: "v-bsel"
+  }, React.createElement("span", {
+    className: "e",
+    style: {
+      fontSize: 26
+    }
+  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
+    className: "lim"
+  }, t.carry ? '始める前から効いている' : '育成中、いつでも使える'))) : null, React.createElement("div", {
     className: "v-bnote"
   }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
     className: "dim2",
@@ -184726,6 +185197,9 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+/* 「修行終わり!」の題字は木の背景に埋もれない(育-188): 暗い下地と濃いふちを敷く。傾きは小さく */
+.msx .r3 .v-stamp.ok.msx-qend{color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 3px 0 #831843,0 0 10px rgba(0,0,0,.85);width:max-content;max-width:92%;margin:0 auto;padding:4px 16px 8px;border-radius:14px;background:rgba(2,6,23,.74);transform:rotate(-2deg)}
+.msx .r3 .v-stamp.ok.msx-qend small{transform:rotate(2deg)}
 .msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
 .msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
 .msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
@@ -188385,7 +188859,7 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`,
+      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok msx-qend'}`,
       style: {
         top: '5%',
         fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32
@@ -191556,7 +192030,8 @@ span.mcd{cursor:default}
 .mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
 .mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
 .mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
-@media (orientation:landscape){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* 横に並べ増やすのは横向きのスマホ(高さ 520 未満・.msx.land と同じ条件)だけ。PC は遊ぶ欄が縦の幅なので縦と同じ列(育-240・122・123) */
+@media (orientation:landscape) and (max-height:519px){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
 `;
 const msxAsAT = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
 const msxAsScene = (AT, sc) => {
@@ -193783,6 +194258,8 @@ const MSA_CSS = `
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+/* 並んで立つ場面の大きさ(r1119-074): 1体ずつの見た目の大きさで描く(MsaFighter が --msa-iw/ih/ib/ix を決める・16-monster-stage-size.jsx) */
+.msa-stage.big .msa-f[data-msa-sz] img.msa-img{width:var(--msa-iw);height:var(--msa-ih);max-width:none;max-height:none;margin-bottom:var(--msa-ib);position:relative;left:var(--msa-ix);object-fit:fill;flex:none}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
 .msa-stage.big .msa-floor{bottom:25%}
 .msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
@@ -193959,9 +194436,9 @@ const msaReduce = () => {
     return false;
   }
 };
-const msaSe = k => {
+const msaSe = meaning => {
   try {
-    if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k]();
+    if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning);
   } catch (_) {}
 };
 const MH_BATTLE_BGM = {
@@ -195561,6 +196038,7 @@ function MsaFighter({
   }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
+  const fitSz = typeof monsterStageFit === 'function' && fwPx > 0 ? monsterStageFit(sp, fwPx, Math.round(fwPx / 0.82) - 10) : null;
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
     baseId: sp,
     src: src,
@@ -195742,11 +196220,19 @@ function MsaFighter({
     ...style,
     transition: 'none'
   };
+  if (fitSz) style = {
+    ...style,
+    '--msa-iw': `${fitSz.w}px`,
+    '--msa-ih': `${fitSz.h}px`,
+    '--msa-ib': `${fitSz.mb}px`,
+    '--msa-ix': `${side === 'A' ? -fitSz.dx : fitSz.dx}px`
+  };
   return React.createElement("div", {
     ref: rootRef,
     className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
-    "data-msa-fighter": side
+    "data-msa-fighter": side,
+    "data-msa-sz": fitSz ? monsterStageSizeOf(sp) : undefined
   }, React.createElement("span", {
     className: "msa-shadow",
     "aria-hidden": "true"
@@ -195775,12 +196261,12 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
-    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
-      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
-        msaSe('card');
-        later(1750, 'trainingDecide');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');else if (e.ev === 'move') msaSe('move');else if (e.ev === 'swap') msaSe('swap');else if (e.ev === 'ko') msaSe('ko');else if (e.ev === 'start') {
+      if (reduce || sf <= MSA_FAST_F) msaSe('matchGo');else {
+        msaSe('matchReady');
+        later(1750, 'matchGo');
       }
     }
   }, [pos, on]);
@@ -196043,7 +196529,7 @@ function MsaStage({
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   const [preAt, setPreAt] = useState(-1);
   const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
@@ -196781,7 +197267,7 @@ function MonsucArena({
     const over = r.bottom - b.bottom + 8;
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
-  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && !paused && mm.pending);
   useEffect(() => {
     if (!autoWait) return undefined;
     const t = setTimeout(() => {
@@ -197273,7 +197759,7 @@ function MsaJudge({
     onGo();
   };
   useEffect(() => {
-    msaSe('tap');
+    msaSe('decide');
     const t = setTimeout(go, 9000);
     return () => clearTimeout(t);
   }, []);
@@ -197335,8 +197821,8 @@ function MsaFinish({
     onGo();
   };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => {
       clearTimeout(t);

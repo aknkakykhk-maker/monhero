@@ -233,7 +233,7 @@ const AMBB_CSS = `
 .ambb-tabs button small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .ambb-mons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .ambb-mon{position:relative;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);padding:4px 2px 5px;text-align:center;color:#fff}
-.ambb-mon img{width:48px;height:48px;object-fit:contain}
+.ambb-mon img{display:block;width:48px;height:48px;margin:0 auto;object-fit:contain} /* 絵は札のまんなか(img はブロックなので text-align が効かない・2026-11-21 社長「モンスターが左に寄ってる」) */
 .ambb-mon b{display:block;font-size:10.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ambb-mon small{display:block;font-size:9.5px;color:#cbd5e1}
 .ambb-mon.on{border-color:#f9a8d4;background:rgba(249,168,212,.18)}
@@ -412,8 +412,8 @@ const ambbMvpOf = (stars) => { let b = -1, bs = -1; stars.forEach((s, i) => { co
 // 入場: 題字・両方の助手と3体の並び・VS。タップか時間で試合へ
 function AmbbOpening({ teams, title, sub, plan, nameA, nameB, quick, onGo }) {
   const done = useRef(false);
-  const go = () => { if (done.current) return; done.current = true; ambbSe('card'); onGo(); };
-  useEffect(() => { ambbSe('join'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
+  const go = () => { if (done.current) return; done.current = true; ambbSe('matchReady'); onGo(); };
+  useEffect(() => { ambbSe('swap'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
   const side = (sd) => {
     const t = teams[sd], aid = t.assistantId;
     return (
@@ -652,7 +652,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
   const manualPick = (c) => {
     const m = battle && battle.match; if (!m) return;
     const busy = pos < battle.r.log.length - 1; if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; putCtl('auto'); m.auto('A'); syncManual(m); setPaused(false); };

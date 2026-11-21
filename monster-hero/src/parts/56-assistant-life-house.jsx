@@ -1055,7 +1055,7 @@ const assistantLifeSceneSnap = (ids) => {
   try { for (const id of list) { const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null; if (Number.isFinite(p)) { me += p; meOk = true; } } } catch (_) {}
   return { peer, me: meOk ? me : null };
 };
-function AssistantLifeScene({ scene, look, onClose, onGive, canGive, watchLeft = 0, nextSlot = '' }) {
+function AssistantLifeScene({ scene, look, onClose, onGive, canGive, watchLeft = 0, nextSlot = '', noResult = false }) {
   const peer = (typeof useAssistantPeerState === 'function') ? useAssistantPeerState() : null;
   const [started, setStarted] = React.useState(false);
   React.useEffect(() => { if (peer && peer.talking) setStarted(true); }, [peer && peer.talking]);
@@ -1093,7 +1093,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive, watchLeft =
       </div>
       {done && (
         <div className="absolute inset-x-3 flex flex-col gap-1.5" style={{ bottom: 'calc(14px + env(safe-area-inset-bottom))' }} data-assistant-life-scene-done>
-          {scene.before && (() => { const now = assistantLifeSceneSnap(ids); const dPeer = Math.max(0, Math.round(now.peer - scene.before.peer)); const dMe = now.me != null && scene.before.me != null ? Math.max(0, Math.round(now.me - scene.before.me)) : 0;
+          {scene.before && !noResult && (() => { const now = assistantLifeSceneSnap(ids); const dPeer = Math.max(0, Math.round(now.peer - scene.before.peer)); const dMe = now.me != null && scene.before.me != null ? Math.max(0, Math.round(now.me - scene.before.me)) : 0;
             return <div className="rounded-2xl border-2 border-amber-300 bg-slate-950 px-3 py-2 text-white" data-assistant-life-scene-result>
               <p className="text-[12px] font-black text-amber-200">見守った結果</p>
               <p className="mt-0.5 text-[16px] font-black" data-assistant-life-scene-gain>{dPeer > 0 && <span className="mr-3 whitespace-nowrap">🤝 友情 +{dPeer}</span>}{dMe > 0 && <span className="whitespace-nowrap">💗 仲良し度 +{dMe}</span>}{!dPeer && !dMe && <span className="text-[13px]">今日はもう上がりきっています</span>}</p>
@@ -1189,6 +1189,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   }, [tab, roomId, uiV2]);
   React.useEffect(() => () => { if (typeof friendsSetLifeSpot === 'function') friendsSetLifeSpot(''); }, []);
   const [scene, setScene] = React.useState(null);
+  // 段7: 家を型に載せた画面(新UIの家のタブだけ)の結果の1枚(見る・贈る・話すの後。r1119-075 ⑤)。保存しない
+  const [aluResult, setAluResult] = React.useState(null);
   const [dailyScene, setDailyScene] = React.useState(null); // できごとの場面(2026-11-11 案A)。閉じたら札を作り直す(dailyKey)
   const [dailyKey, setDailyKey] = React.useState(0);
   // 声をかけたあとの続きのカード(2026-11-08 社長 ❼A)。掛け合いが閉じたら、同じ部屋のシートを開き直して出す
@@ -1269,6 +1271,10 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const nameOf = assistantLifeName;
   const close = () => { setScene(null); assistantLifeCloseScreen(); };
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
+  // 段7: 新UIの家のタブは型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx)。ほかのタブ・旧UIは今のまま
+  //   window.__mhAssistantLifeUntypedHouse … 検査だけが立てる印(段7 の前の並びを確かめる assistant-life-top-check・benefit-check)。前の並びは段13 の片づけで消す
+  const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
+    && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
   // 掛け合いを、家を閉じずに場面で流す
   const showFollow = () => {
@@ -1285,13 +1291,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     const sceneIds = [...new Set([...((ctx && ctx.ids) || []), ...speakers])];
     const sleepIds = ctx && ctx.sleep ? (ctx.ids || []) : [];
     setRoomId(null); setNote(''); // 前の一言を残さない(ミハリ L13)
-    setScene({ ids: sceneIds, place: (ctx && ctx.place) || 'home', key: `${talk.id}-${Date.now()}`, sleep: sleepIds, before: (ctx && ctx.before) || null });
+    setScene({ ids: sceneIds, place: (ctx && ctx.place) || 'home', key: `${talk.id}-${Date.now()}`, sleep: sleepIds, before: (ctx && ctx.before) || null, resultTitle: (ctx && ctx.resultTitle) || null });
     if (onReplay) onReplay(talk);
     // 道具を贈った掛け合いは「贈った」だけを残す(見守ったとは書かない・2026-11-08 ミハリ)
     if (sceneIds.length >= 2 && !(ctx && ctx.gift)) void assistantLifeDiaryAdd(`${sceneIds.map(nameOf).join('・')}の様子を見守った`, sceneIds, { kind: 'watch' });
   };
   // 見守る前の点を控えて、場面の終わりに「上がった物・次にすること」の1枚を出す(2026-11-20 総点検 F-3。読むだけ・保存しない)
-  const watch = async (g) => { const before = assistantLifeSceneSnap(g.ids); const talk = await assistantLifeWatch(g); if (!talk) { setNote('この組の掛け合いは、いまは見られません'); return; } playTalk(talk, { ids: g.ids, place: g.place, before }); };
+  const watch = async (g) => { const before = assistantLifeSceneSnap(g.ids); const talk = await assistantLifeWatch(g); if (!talk) { setNote('この組の掛け合いは、いまは見られません'); return; } playTalk(talk, { ids: g.ids, place: g.place, before, resultTitle: '👀 見た' }); typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('watch'); };
   const peek = (id) => {
     const key = `solo:${id}`;
     if ((life.watched || []).includes(key)) return;
@@ -1304,6 +1310,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     ASSISTANT_LIFE_STORE.set({ life: { ...life, watched: [...(life.watched || []), key] } });
     assistantLifeSaveLife(); if (!sleeping) assistantLifeMarkSeen(talk);
     playTalk(talk, { ids: [id], place: w ? w.place : 'home', sleep: sleeping });
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('watch');
   };
   const invite = async (id) => {
     // その助手が {name} に話す台本だけ(ほかの助手が出る台本は使わない・2026-11-07 社長の指摘)。寝ていれば寝言か起こされた反応
@@ -1311,10 +1318,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     const sleeping = !!(w && w.doing === 'sleep');
     const relSolo = !sleeping && typeof assistantLifeRelSoloTalk === 'function' ? assistantLifeRelSoloTalk(id, rooms[id]) : null; // やきもち中なら、その気持ちの一言(rel.jsx)
     const talk = sleeping ? assistantLifePickSleepTalk(id, { wake: true, bondLv: typeof bondLevelOf === 'function' ? bondLevelOf(id) : 1, place: w.place }) : (relSolo || assistantLifePickCallTalk(id, life));
+    const before = assistantLifeSceneSnap([id]);
     if (!(await assistantLifeNudge('invite', id))) return;
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('talk');
     // 掛け合いが閉じたら、この部屋に戻って続きのカードを出す(起きている助手だけ・おしゃべりの口があるときだけ)
     followAfterRef.current = (!sleeping && typeof ASSISTANT_LIFE_LINKS.chatFollowLine === 'function') ? id : null;
-    if (talk) { if (!sleeping) assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: w ? w.place : 'home', sleep: sleeping }); }
+    if (talk) { if (!sleeping) assistantLifeMarkSeen(talk); playTalk(talk, { ids: [id], place: w ? w.place : 'home', sleep: sleeping, before, resultTitle: '💬 話した' }); }
     else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
@@ -1373,24 +1382,28 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     const keptText = opts && opts.bought ? `。買った${opts.bought.name}は持ち物に残っています` : '';
     if (give && give.solo && soloOn) {
       const who = give.solo, kind = give.kind;
+      const before = assistantLifeSceneSnap([who]);
       const talk = await onGiveSolo(who, kind);
       const info = assistantLifeItemInfo(kind);
       setGive(null);
       if (!talk) { setNote(`${info ? info.name : '道具'}は、いまは贈れません(1人には1日3回・同じ道具は1日1回・持っている数を見てください)${keptText}`); return; }
       const w = assistantLifeWhereOf(life, who);
       const likeText = talk.like === 'like' ? ' ・ 💗 好きなもの！' : talk.like === 'bad' ? ' ・ 💧 ちょっと苦手…' : '';
-      playTalk(talk, { ids: [who], place: w ? w.place : 'home', gift: true }); // 場面を流すと帯が消えるので、帯はそのあと(家具と同じ)
+      playTalk(talk, { ids: [who], place: w ? w.place : 'home', gift: true, before, resultTitle: '🎁 贈った' }); // 場面を流すと帯が消えるので、帯はそのあと(家具と同じ)
+      typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('give');
       setNote(`${nameOf(who)}に${info ? `${info.emoji} ${info.name}` : ''}を贈った。💗 仲良し度 +${talk.amount}${likeText}`);
       return;
     }
     if (!give || !give.pair) return;
+    const before = assistantLifeSceneSnap(give.pair);
     const talk = await onUseItem(give.kind, give.pair);
     const info = assistantLifeItemInfo(give.kind);
     if (!talk) { setNote(`${info.name}は、いまは贈れません(同じ道具は1日1回・合わせて1日3回・持っている数を見てください)${keptText}`); setGive(null); return; }
     const g = (life.groups || []).find(x => give.pair.every(id => x.ids.includes(id)));
     setGive(null);
     void assistantLifeDiaryAdd(`${give.pair.map(nameOf).join('と')}に${info.name}を贈った`, give.pair, { kind: 'give' });
-    playTalk(talk, { ids: give.pair, place: g ? g.place : 'home', gift: true });
+    playTalk(talk, { ids: give.pair, place: g ? g.place : 'home', gift: true, before, resultTitle: '🎁 贈った' });
+    typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('give');
   };
   // おしゃべり(2026-11-08 社長 ❼〜❿)。助手ライフは閉じずに上に開くので、閉じると同じ部屋のシートに戻る。
   //   寝ていれば起こして話す(今日あったことに残し、生活のリズムの「誘って遊んだ」に数える)
@@ -1402,11 +1415,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       const asleep = !!(w && w.doing === 'sleep');
       if (asleep) { assistantLifeRhythmPlay(id, Date.now()); void assistantLifeDiaryAdd(`${assistantLifeName(id)} 起こされておしゃべり`, [id], { kind: 'woken' }); }
       setFollow(null);
+      typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('talk');
       ASSISTANT_LIFE_LINKS.chatWith(id, { asleep, follow: f || null });
     } catch {}
   };
-  const beat = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.beatInvite(id); } } catch {} };
-  const card = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function') { close(); ASSISTANT_LIFE_LINKS.cardInvite(id); } } catch {} };
+  const beat = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function') { typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('play'); close(); ASSISTANT_LIFE_LINKS.beatInvite(id); } } catch {} };
+  const card = (id) => { try { if (typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function') { typeof assistantLifeGoalNote === 'function' && void assistantLifeGoalNote('play'); close(); ASSISTANT_LIFE_LINKS.cardInvite(id); } } catch {} };
   // 今日やれること
   const unwatched = (life.groups || []).filter(g => !(life.watched || []).includes(assistantLifeGroupKey(g)));
   // フレンドの家へ行っている助手には声をかけられない(2026-11-08 ミハリ。56-assistant-life-friend.jsx)
@@ -1533,7 +1547,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const tabBody = tab === 'house' ? houseView
     : tab === 'where' ? null // 地図は画面いっぱい(下の whereView)
     : tab === 'visit' && typeof AssistantLifeFriendPage === 'function' ? <AssistantLifeFriendPage life={life}/>
-    : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? <AssistantLifeProfilePage metIds={metIds} bondLevelOf={bondLevelOf} land={land} onMasmon={setMasmonId}/> // 📖 紹介(56-assistant-life-profile.jsx)
+    : tab === 'profile' && typeof AssistantLifeProfilePage === 'function' ? <>{uiV2 && typeof AssistantMasmonNoteBand === 'function' && <AssistantMasmonNoteBand land={land}/>}{/* 📒 育成ノートは紹介へ(r1119-075 ④・段12 でマスモンへ) */}<AssistantLifeProfilePage metIds={metIds} bondLevelOf={bondLevelOf} land={land} onMasmon={setMasmonId}/></> // 📖 紹介(56-assistant-life-profile.jsx)
     : tab === 'friends' ? (<div className="px-3 pb-3 pt-1">{uiV2 && typeof AssistantLifeRewardRoad === 'function' && <AssistantLifeRewardRoad ids={ids.filter(partnerOk)} peerSt={peerSt} nameOf={nameOf} onRoom={setRoomId}/>}{uiV2 && typeof AssistantLifeIntroduceCard === 'function' && <AssistantLifeIntroduceCard ids={ids.filter(partnerOk)} life={life}/>}{typeof AssistantPeerMap === 'function' && <AssistantPeerMap metIds={metIds} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem} v2={uiV2} onGivePair={canGive ? (pair) => openGive(pair) : null}/>}</div>)
     : itemsBody;
   return (
@@ -1542,7 +1556,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
       {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
-      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
@@ -1554,6 +1568,18 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
               <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
             </>}/>
+        ) : typedHouse ? (
+          <AssistantLifeHouseTyped land={land} life={life} ids={ids} metSet={metSet} look={look} rooms={rooms} diary={diary} peerSt={peerSt} nameOf={nameOf}
+            tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            unwatched={unwatched} onWatch={() => { if (guideSeen === false) markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }} tier={tier} note={note}
+            top={quickRunStrip ? <div data-assistant-life-quick-strip>{quickRunStrip}</div> : <AssistantLifeQuickChip quickRun={quickRun} onStop={onQuickRunStop} onStart={onQuickRunStart} land={land}/>}
+            guide={typeof AssistantLifeFirstGuide === 'function' && (guideSeen === false || guideOpen) ? <AssistantLifeFirstGuide land={land} canWatch={!!unwatched.length} onClose={markGuideSeen} onWatch={() => { markGuideSeen(); if (unwatched[0]) watch(unwatched[0]); }}/> : null}
+            dailyCard={typeof AssistantLifeDailyCard === 'function' ? <AssistantLifeDailyCard key={dailyKey} ids={ids} nameOf={nameOf} land={land} life={life} onScene={setDailyScene}/> : null}
+            planBand={typeof AssistantLifePlanBand === 'function' ? <AssistantLifePlanBand ids={ids} land={land}/> : null}
+            onTalk={() => setCallPicker(true)} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }}
+            onPlay={() => { const solo = Object.keys(life.solo || {}).find(id => !awayFriend(id) && partnerOk(id)); const id = beatIds[0] || solo || ids.find(partnerOk); if (id) setRoomId(id); }}
+            onRoom={setRoomId} onBoard={() => setBoardOpen(true)} onRelView={relView} result={aluResult} onResultClose={() => setAluResult(null)}/>
         ) : land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
@@ -1609,7 +1635,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
-        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} onClose={() => { setScene(null); showFollow(); }} onGive={openGive}/>}
+        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} noResult={typedHouse} onClose={() => { const sc = scene; setScene(null); const following = !!followAfterRef.current; showFollow(); if (typedHouse && sc && sc.before && !following) setAluResult({ ids: sc.ids, before: sc.before, title: sc.resultTitle }); }} onGive={openGive}/>}
         {dailyScene && typeof AssistantLifeDailySceneView === 'function' && <AssistantLifeDailySceneView plan={dailyScene.plan} place={dailyScene.place} look={look} slotId={dailyScene.slotId} slotLabel={dailyScene.slotLabel} onClose={() => { setDailyScene(null); setDailyKey(k => k + 1); }}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">

@@ -1161,13 +1161,14 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
       <div className="v-bagw">
         {/* 見出しの「持ち物」は上の帯(戻るの横)にあるので、ここは決まりの1行だけ(育-109)。選んだ物の個数は下の札の ×N だけ */}
         <div className="t"><small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small></div>{/* 閉じるは左上の「← 戻る」1つ(M-7) */}
-        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : '育成中、いつでも使える'}</small></div></div> : null}
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
+        {/* 選んだ物の説明は札の下・使うボタンの上(育-231: 見出し→札→説明→使うボタンの順に詰める) */}
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : '育成中、いつでも使える'}</small></div></div> : null}
         <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(始める前から効く物・大会で負けたときの砂時計)')}</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
           {usedNow ? 'このターンはもう使った' : blocked ? (SUC.ITEMS && SUC.ITEMS[t.id] && SUC.ITEMS[t.id].fruit ? 'この日はトレーニングできないので使えない' : 'いまは使えない') : t && !t.carry ? <>{msxItemIco(t)} {t.name}を使う</> : '使う'}</button>
