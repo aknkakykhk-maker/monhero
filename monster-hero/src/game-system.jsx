@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b8b0cda047b49e46
+// generated-sha256: ce3b808a5dc68df1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90071,6 +90071,22 @@ const MSX_CSS = `
 .msx .v-party.row>small{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .msx .v-party.row .v-pf{flex:0 1 30px;min-width:0}
 .msx .v-party.row .v-pf img{width:100%;height:auto;aspect-ratio:1/1}
+.msx .v-party-btn{font:inherit;color:inherit;cursor:pointer;text-align:left;min-height:44px;-webkit-tap-highlight-color:transparent}
+.msx .v-party-btn:active{transform:translateY(1px)}
+.msx .v-party-btn .go{flex:none;font-style:normal;font-size:14px;font-weight:900;color:#fde047;margin-left:auto;padding-left:2px}
+.msx-pty-r{display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:6px 10px;margin:5px 0}
+.msx-pty-r.tag{border-color:#f9a8d4}
+.msx-pty-r .fc{flex:none;width:52px;height:52px;border-radius:12px;background:#1e1a36;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx-pty-r .fc img{width:100%;height:100%;object-fit:contain}
+.msx-pty-r .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.msx-pty-r .nm{font-size:15px;font-weight:900;color:#fff;overflow-wrap:anywhere;line-height:1.2}
+.msx-pty-r small{font-size:11.5px;color:#cbd5e1;font-weight:700}
+.msx-pty-r .bd{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#f9a8d4;white-space:nowrap}
+.msx-pty-r .bd>b{font-size:14px;color:#fff;min-width:24px;text-align:right}
+.msx-pty-r .pbar{position:relative;flex:1;min-width:50px;height:7px;border-radius:7px;background:#334155;overflow:visible}
+.msx-pty-r .pbar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#f472b6,#f9a8d4)}
+.msx-pty-r .pbar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#fff;border-radius:2px}
+.msx-pty-r .msx-pty-tg{flex:none;font-size:11px;color:#422006;background:#f9a8d4;border-radius:99px;padding:1px 7px}
 .msx .v-bagb.st{position:relative;flex:0 0 auto}
 /* トレーニング: 実行ボタンの近くのまとめ(上がる能力・失敗率・体力消費。2026-11-16 UI改修) */
 .msx .v-trsum{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:6px;padding:6px 10px;border-radius:10px;background:#0f0d24d0;border:1px solid #ffffff2a;font-size:12px;font-weight:800;color:#e2e8f0}
@@ -90560,7 +90576,7 @@ const MSX_CSS = `
 .msx .v-eps div b{color:#fde047;margin-right:5px;font-size:10px}.msx .v-eps div.lk{color:#64748b;border-style:dashed}.msx .v-eps div.lk b{color:#64748b}
 .msx.land .v-party .v-pf,.msx.land .v-party .v-pf img{width:24px}.msx.land .v-party .v-pf img{height:24px;border-radius:7px}
 .msx.land .v-party{gap:3px}
-.msx.s320 .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party>small{grid-column:1/-1;text-align:center}
+.msx.s320 .v-party:not(.row){display:grid;grid-template-columns:1fr 1fr;gap:3px 4px}.msx.s320 .v-party:not(.row)>small{grid-column:1/-1;text-align:center}
 .msx.s320 .v-party .v-pf,.msx.s320 .v-party .v-pf img{width:22px}.msx.s320 .v-party .v-pf img{height:22px}
 .msx.s320 .v-scene{--mb:37%}.msx.s320 .v-scene .mon{height:42%}
 .msx.s320 .v-scene.sm{height:32px}
@@ -93681,6 +93697,28 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
     </div>
   );
 }
+// 編成の7体の一覧の窓(育成中のメインの編成の列を押すと開く)。顔・名前・役と得意・親密度の棒(友情タッグの線つき)を1体1行で
+function MsxPartySheet({ s, tagAt, onClose }) {
+  const bar = (b) => (<span className="pbar"><i style={{ width: `${Math.max(0, Math.min(100, b))}%` }}/><em style={{ left: `${Math.max(0, Math.min(100, tagAt))}%` }}/></span>);
+  const row = (key, face, name, subTx, b) => (<div key={key} className={`msx-pty-r${b >= tagAt ? ' tag' : ''}`} data-msx-party-row>
+    <span className="fc">{face}</span>
+    <span className="tx"><b className="nm">{name}</b><small>{subTx}</small>
+      <span className="bd">親密度{bar(b)}<b>{b}</b>{b >= tagAt ? <span className="msx-pty-tg">🤝 タッグ</span> : null}</span></span></div>);
+  return (
+    <div className="msx-ov msx-fade" data-msx-party onClick={onClose}>
+      <div className="msx-sheet msx-dt msx-pty" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <h3>編成の7体</h3>
+        <div className="msx-note">親密度が{tagAt}以上になると、いっしょにトレーニングしたときに友情タッグが起きる(棒の白い線)</div>
+        <div className="msx-dt-body">
+          {s.team.map((m, i) => row(i, <MsxMonFace species={m.species} colors={m.colors}/>, msxMemberName(m),
+            `${m.kind === 'base' ? 'ベースモン' : `ランク ${m.rank}`}${Array.isArray(m.top) && m.top.length ? `・得意 ${m.top.map((k) => MSX_STAT_NAME[k]).join('・')}` : ''}`, Number(s.bond[i]) || 0))}
+          {row('aid', <img src={msxFace(s.aid, 'happy')} alt=""/>, msxAidName(s.aid), '助手', Number(s.aidBond) || 0)}
+        </div>
+        <button type="button" className="msx-dt-close" data-msx-party-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
 function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const tag = bond >= tagAt;
   if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
@@ -93985,6 +94023,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [partyOpen, setPartyOpen] = useState(false); // 編成の列を押すと、7体の一覧の窓(r1119-069 育-136ほか)
   const [tevAt, setTevAt] = useState({ k: '', i: 0 }); // 編成の子のイベントの拍の位置(56-monsuc-tevent.jsx・6つの拍。-1 = 飛ばして結果だけ)。保存しない
   const [askLeave, setAskLeave] = useState(false); // 能力の画面で、決定していない振り分けがあるまま戻るとき(r1115-202 L8)
   const [sel, setSel] = useState(null);
@@ -94423,10 +94462,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
-        <div className="v-party row"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
+        {/* 編成の顔は列ぜんたいを1つのボタンにして、7体の一覧の窓を開く(1体ずつだと 44px に届かない・r1119-069 育-136・162・164・176・182・203・218・229) */}
+        <button type="button" className="v-party row v-party-btn" onClick={() => setPartyOpen(true)} aria-label="編成の7体を見る" data-msx-party-open><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/><i className="go" aria-hidden="true">▸</i></button>
         <button type="button" className="v-bagb st" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
         <button type="button" className="v-bagb st" data-msx-detail-open onClick={() => { setDetailTech(null); setDetail(true); }}>🔍<small>詳しく</small></button>
       </div>
+      {partyOpen ? <MsxPartySheet s={s} tagAt={tagAt} onClose={() => setPartyOpen(false)}/> : null}
       <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
         <div className="v-act v-act-pre" style={{ gridTemplateColumns: '1fr 1.5fr' }} data-msx-pre-main>
