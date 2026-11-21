@@ -414,7 +414,15 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
-.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
+/* 月替わりの暦(育-137・194・211): 前は場面全体(inset:0)を暗い膜で覆い、モンスターまで膜の下で白く・半透明に見えた。暦・大会の札・期の帯は上の暗い板1枚にまとめ、モンスターは膜の外にはっきり出す */
+.msx .v-scene .v-clock{inset:auto;top:8px;left:50%;transform:translateX(-50%);width:min(92%,420px);justify-content:flex-start;gap:7px;padding:10px 8px 12px;border-radius:18px;background:rgba(15,13,36,.86);border:1px solid #ffffff26;box-shadow:0 6px 18px #0008}
+.msx .v-scene .v-clock .v-cal{width:136px;box-shadow:0 5px 0 #0006;transform:rotate(-2deg)}
+.msx .v-scene .v-clock .v-cal .mth{font-size:54px}.msx .v-scene .v-clock .v-cal .mth small{font-size:16px}
+.msx .v-scene .v-clock .v-phs{width:100%;margin-top:2px}
+.msx.s320 .v-scene .v-clock{gap:5px;padding:7px 6px 9px}.msx.s320 .v-scene .v-clock .v-cal{width:112px}.msx.s320 .v-scene .v-clock .v-cal .mth{font-size:40px}
+.msx.land .v-scene .v-clock{left:8px;transform:none;width:58%;gap:5px;padding:7px 6px 9px}.msx.land .v-scene .v-clock .v-cal{width:104px}.msx.land .v-scene .v-clock .v-cal .mth{font-size:38px}
+.msx.land .v-scene .v-clock .v-chip{max-width:100%;white-space:nowrap;font-size:13px!important;padding:4px 10px!important}
+.msx.land [data-msx-turn-scene] .mon,.msx.land [data-msx-turn-scene] .gr{left:80%}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -834,6 +842,14 @@ const MSX_CSS = `
 .msx .v-bagw .v-item{margin-top:0}
 .v-bagw .v-bgrid{flex:none;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .v-bagw > *{flex-shrink:0}
+/* 持ち物(育-231): 枠は場面の1枚だけ(内側の黄色い枠をやめる)。見出し→札→説明→使うボタンを上から詰め、空いた分で札と字を大きく */
+.msx .v-bagw{left:0;right:0;top:0;bottom:0;border:0;border-radius:inherit;box-shadow:none;background:#151130eb;padding:12px 12px;justify-content:flex-start;gap:10px}
+.msx .v-bagw .t small{font-size:12px}
+.msx .v-bagw .v-bgrid{gap:8px}.msx .v-bagw .v-bgrid div,.msx .v-bagw .v-bgrid button{padding:10px 1px 7px;min-height:96px}
+.msx .v-bagw .v-bgrid .e{font-size:34px;line-height:42px;height:42px}.msx .v-bagw .v-bgrid .v-icw{width:42px;height:42px}
+.msx .v-bagw .v-bgrid small{font-size:10.5px}.msx .v-bagw .v-bgrid i{font-size:12px}
+.msx .v-bagw .v-bsel small{font-size:11.5px}.msx .v-bagw .v-bnote,.msx .v-bagw .v-bnote .dim2{font-size:11.5px;line-height:1.6}
+.msx .v-bagw .v-big{margin-top:4px!important;min-height:48px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
