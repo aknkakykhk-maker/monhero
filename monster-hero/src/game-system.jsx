@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a5cea58289a8c291
+// generated-sha256: 22efeabafe459b50
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -100972,7 +100972,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
   // オートの手番: 芯のおすすめの手を少し置いて選ぶ(いつでも手動へ戻せるよう、1手ずつ進める)
-  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  // ⏸ 一時停止のあいだは、オートでも次の手を選ばない(2026-11-21 monsuc-arena-check 段C: 止めても手が進んでいた)
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && !paused && mm.pending);
   useEffect(() => {
     if (!autoWait) return undefined;
     const t = setTimeout(() => { const c = msaAutoChoice(mm.pending); if (c && mm.pick(c)) setPos(p => p + 1); else { mm.toAuto(); } }, reduce ? 60 : 220);
