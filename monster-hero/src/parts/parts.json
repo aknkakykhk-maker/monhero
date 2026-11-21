@@ -437,6 +437,10 @@
       "role": "助手ライフの作り直し 段5(docs/spec/ASSISTANT_LIFE.md §7-3): 今日の目標の土台(見る・話す・贈る・誘うの4つのうち3つで達成・7日でごほうび)。保存は新しいキー mh_assistant_life_goal_v1 と一度きりの写しの印 mh_assistant_life_goal_migrated_v1 だけ(古い mh_assistant_life_daily_v1 は読むだけ)。画面はまだ出さない"
     },
     {
+      "file": "56-assistant-life-ui.jsx",
+      "role": "助手ライフの作り直し 段6(docs/spec/ASSISTANT_LIFE_UI.md): 画面の型の部品(上の帯 AluTopBar・下のタブ AluTabBar・型 AluFrame・窓 AluSheet・結果の1枚 AluResult・主なボタン AluGo・行 AluRow・今日の目標 AluGoalCard・調子 AluCond・通りやすさ AluEase)と見た目 ALU_CSS(.alu の中だけ)。見本 AssistantLifeUiSample は止め絵用でどこからも呼ばない。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-guide.jsx",
       "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
     },

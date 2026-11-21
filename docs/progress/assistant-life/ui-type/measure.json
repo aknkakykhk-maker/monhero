@@ -1,0 +1,225 @@
+{
+ "shots": {
+  "tate-house.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとあつの話",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -58,
+   "ng": []
+  },
+  "tate-sheet.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 15,
+   "ng": []
+  },
+  "tate-result.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "💬 あつと話す",
+    "w": 360,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "s320-house.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとあつの話",
+    "w": 296,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -278,
+   "ng": []
+  },
+  "s320-sheet.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 15,
+   "ng": []
+  },
+  "s320-result.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "💬 あつと話す",
+    "w": 290,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "yoko-house.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとあつの話",
+    "w": 343,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -262,
+   "ng": []
+  },
+  "yoko-sheet.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 15,
+   "ng": []
+  },
+  "yoko-result.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "💬 あつと話す",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "pc-house.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとあつの話",
+    "w": 529,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 156,
+   "ng": []
+  },
+  "pc-sheet.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 15,
+   "ng": []
+  },
+  "pc-result.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "💬 あつと話す",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  }
+ },
+ "errors": []
+}
