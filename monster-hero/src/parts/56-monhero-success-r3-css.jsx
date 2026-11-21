@@ -95,7 +95,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-pv-h{font-size:10px;font-weight:900;color:#fed7aa;margin-bottom:3px}
 .msx .r3 .q-pv-sum{font-size:10px;font-weight:900;color:#fde047;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .msx .r3 .q-tgl{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:inherit}
-.msx .r3 .q-tgl-t{margin-left:auto;font-size:9px;font-weight:800;color:#fbbf24;white-space:nowrap}
+.msx .r3 .q-tgl{min-height:44px}
+.msx .r3 .q-tgl-t{margin-left:auto;font-size:11px;font-weight:800;color:#fbbf24;white-space:nowrap;padding:3px 8px;border-radius:99px;border:1px solid #fbbf2466}
 .msx .r3 .q-pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
 .msx .r3 .q-pv-c{font-size:10.5px;font-weight:800;color:#e2e8f0;line-height:1.35;min-width:0}
 .msx .r3 .q-pv-r1{display:flex;align-items:center;gap:4px}

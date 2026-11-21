@@ -809,12 +809,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div>
       {/* 変わった数は下のゲージ(前から後へ動く)の1か所だけ。白い結果の箱は、何も変わらなかったときだけ(2026-11-20 r1119-033 育-33) */}
       {done && !chips.length ? <div className="v-log" data-msx-react-res={0}><span className="hd2">📋 結果</span><br/>変わったことはなかった</div> : <span hidden data-msx-react-res={done ? chips.length : undefined}/>}
-      <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span>普通</span><span>厳しい</span><span>超スパルタ</span></div>
+      {/* 方針の名前は棒の7こまと同じ並びに置く(両はし・普通・いまの方針。前は名前5つが7こまとずれていた。2026-11-21 r1119-033 育-142) */}
+      <div className="v-pol"><div className="l7">{MSX_POLICY_SCALE.map((n, i) => <span key={n} className={i === pol + 3 ? 'on' : ''}>{i === pol + 3 || i === 0 || i === 3 || i === 6 ? n : ''}</span>)}</div>
         <div className="m">{MSX_POLICY_SCALE.map((n, i) => <i key={n} className={i === pol + 3 ? 'on' : ''}/>)}</div>
         <div className="two">{done && done.from
           ? <MsxReactGauges from={done.from} to={{ ama: s.ama, fear: s.fear, loy }}/>
-          : <><div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
-          <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></>}</div>
+          : <MsxReactGauges from={{ ama: s.ama, fear: s.fear, loy }} to={{ ama: s.ama, fear: s.fear, loy }}/>}{/* 選ぶ前も忠誠度まで3本(選んだあとと同じ形。育-144) */}</div>
         <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4, ...JA_LABEL_STYLE }}>{jaWrap(`忠誠度は 甘え度と恐れ度の合計。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`)}</div></div>
     </>);
     foot = done || !RC || s.reacted
@@ -924,7 +924,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
             {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
-            <div className="o">{MSX_STAT_ICON[k]}{lv ? <i className="lv">Lv.{lv}</i> : null}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn one">{msxTrainName(k, lv)}</small></button>); })}
+            <div className="o">{MSX_STAT_ICON[k]}{lv ? <i className="lv">Lv.{lv}</i> : null}{c && c.tags.length ? <i className="tgm" data-msx-train-tagmark title="友情タッグが起きる">🤝</i> : null}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn one">{msxTrainName(k, lv)}</small></button>); })}
       </div>
       {/* 下の「上がる能力・失敗率・体力」の行はやめた(2026-11-20 社長: 能力の欄の +・丸の上の失敗率・上の帯の体力に同じ物が出ている)。空いた分は場面が伸びて埋める */}
     </>);
@@ -973,6 +973,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   else {
     const can = v.can || [];
     const anyTag = MSX_STATS.some((k) => { const c = msxCardOf(v, k); return c && c.tags.length; });
+    const worn = s.hpMax > 0 && s.hp / s.hpMax < 0.25; // 体力が1/4未満(育-180)
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
     const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; // 成長のピーク(予告は2〜3ターン前)
@@ -1018,8 +1019,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       ) : (<>
         {/* 上の段は 1:2:1 にして、下の段の4つと縦の線をそろえる(2026-11-20 r1119-033 育-205・育-227) */}
         <div className="v-act" style={{ gridTemplateColumns: '1fr 2fr 1fr' }}>
-          <button type="button" className="v-p" onClick={() => { setCareSel('rest'); setSub('care'); }}><div className="e">🛌</div>休む<small>体力を回復</small></button>
-          <button type="button" className="v-p main" onClick={() => setSub('train')}>💪 トレーニング<small>{anyTag ? '🤝 友情タッグのチャンスあり' : '6つのトレーニングから選ぶ'}</small></button>
+          {/* 体力が1/4未満(助手が「あぶないかも」と言う境目・script-engine の turn.start.worn)は、休むを光らせ、トレーニングの光を止めて注意を出す(育-180) */}
+          <button type="button" className={`v-p${worn ? ' rest-hot' : ''}`} onClick={() => { setCareSel('rest'); setSub('care'); }} data-msx-rest-hot={worn ? 1 : undefined}><div className="e">🛌</div>休む<small>{worn ? 'おすすめ' : '体力を回復'}</small></button>
+          <button type="button" className={`v-p main${worn ? ' worn' : ''}`} onClick={() => setSub('train')}>💪 トレーニング<small>{worn ? '⚠ 体力が少ない・失敗しやすい' : anyTag ? '🤝 友情タッグのチャンスあり' : '6つのトレーニングから選ぶ'}</small></button>
           <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力{s.pts ? <small className="pt" data-msx-pts>能力P <b>{s.pts}</b></small> : <small>技・型・編成</small>}</button>
         </div>
         <div className="v-act" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>

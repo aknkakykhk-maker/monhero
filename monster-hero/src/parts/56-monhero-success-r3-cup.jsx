@@ -183,7 +183,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
       <img className="rcv-myua" src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%', width: 'auto', maxWidth: 'none' }}/>
-      <div className="v-ev-h">🏆 大会の受付</div>
+      <div className="v-ev-h cup">🏆 大会の受付</div>
       <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
     </div>
     {/* 2026-11-20 再点検 バ-27: 賞金は右上の札と二重・年月と期は上の箱と二重だった → この帯と場面の年月をやめ、賞金の段は右上の札に添える */}
@@ -559,7 +559,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }} data-msx-r3-pre-scene><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
       <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-4%', bottom: 0, height: '96%', maxWidth: '62%', objectFit: 'contain', objectPosition: 'bottom' }}/>
-      <div className="v-ev-h">🏆 大会の受付</div>
+      <div className="v-ev-h cup">🏆 大会の受付</div>
       <div className="v-ibub msx-kp" style={{ left: '44%', right: 10, top: 'auto', bottom: 12, fontSize: 13 }}>{openLine.t}</div>
     </div>
     {/* 2026-11-20 再点検 バ-27: 賞金は右上の札と二重・年月と期は上の箱と二重だった → この帯と場面の年月をやめ、賞金の段は右上の札に添える */}
