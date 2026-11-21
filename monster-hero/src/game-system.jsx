@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0b1e24af4ebdcba4
+// generated-sha256: ac84ffbc20593531
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69445,11 +69445,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1498, eye: 0.3408, chin: 0.4295, m: 0.66 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
+  'stand-halloween': { mua: { top: 0.1757, eye: 0.316, chin: 0.4299, m: 0.847, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.1327, eye: 0.3124, chin: 0.43, m: 0.875, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
@@ -78678,6 +78678,23 @@ const assistantLifePlanTrust = (lv) => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+// その助手が abs の回にお願いを聞いてくれる確率(仲良し度Lv + 調子の上げ下げ)。予定を当てる所と ◎○△ の見せ方が同じ数を使う(作り直し 段4・r1119-043 ④)
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+// 通りやすさの見せ方(決める前に出す)。気分で通らないことは残す(2026-11-20 社長「部の案で進める」: 0.85以上 ◎・0.65以上 ○・それ未満 △)
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([
+  Object.freeze({ min: 0.85, mark: '◎', label: '聞いてくれそう' }),
+  Object.freeze({ min: 0.65, mark: '○', label: 'たぶん聞いてくれる' }),
+  Object.freeze({ min: 0, mark: '△', label: '断られるかも' }),
+]);
+const assistantLifePlanEaseOfP = (p) => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => { const p = assistantLifePlanTrustOf(id, abs); return { p, ...assistantLifePlanEaseOfP(p) }; };
 const assistantLifePlanLvOf = (id) => {
   try { const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null; return Number.isFinite(p) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(p) : 1; } catch (_) { return 1; }
 };
@@ -78797,7 +78814,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
     // 疲れ・ストレス(56-assistant-life-body.jsx): ひなたの丘の次の回は聞きやすく・ストレスが高いと聞きにくい。印が偽なら 0
-    const trust = {}; for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
     assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
@@ -79420,6 +79437,36 @@ function AssistantLifeBodyPanel({ id, cur }) {
       </div>}
     </div>);
 }
+// ===== 🌡 調子(作り直し 段4・docs/spec/ASSISTANT_LIFE.md §2-1)。新しく保存しない: 疲れ・ストレス・けが・病気・寝ているかから毎回計算する =====
+// 境目は 2026-11-20 社長「部の案で進める」: ねむい=深夜(0〜6時)か寝ている / へとへと=疲れ70以上・ストレス60以上・けが・病気 / おつかれ=疲れ60以上・ストレス50以上 / 元気=どちらも30未満 / ほかはふつう
+// 線は ASSISTANT_LIFE_BODY_LINE をそのまま使う(予定を断る・サボる線と同じ数)
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki:    Object.freeze({ emoji: '😊', label: '元気' }),
+  futsu:    Object.freeze({ emoji: '🙂', label: 'ふつう' }),
+  otsukare: Object.freeze({ emoji: '😓', label: 'おつかれ' }),
+  hetoheto: Object.freeze({ emoji: '😵', label: 'へとへと' }),
+  nemui:    Object.freeze({ emoji: '😪', label: 'ねむい' }),
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+// e … { fat, st, cond }。opt.sleeping … 寝ている回 / opt.hour … 0〜23(深夜の判定)
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat), st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || (h >= 0 && h < 6)) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+// 画面に出す形: { key, emoji, label, mark(けが 🤕・病気 🤒・ほかは '') }。体の印が偽・読み込み前なら null
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id); if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? (e.cond.k === 'hurt' ? '🤕' : '🤒') : '';
+  return { key, ...ASSISTANT_LIFE_COND_FACES[key], mark };
+};
 // 家の断面図・地図の名札に付ける小さな印(黄・赤・けが・病気のときだけ。それ以外は '')
 const assistantLifeBodyBadge = (id) => {
   const e = assistantLifeBodyOf(id); if (!e) return '';
@@ -84171,6 +84218,23 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
       </p>
     </div>);
 }
+
+// ===== 好き・苦手の見る口(作り直し 段4・§2-2 #29〜32)。保存は今のまま(mh_assistant_life_likes_v1 を読むだけ) =====
+// 道具(2人に・1人に)と家具を1つの一覧にして、数え方を1つにする(今は道具「◯/14」と家具「◯/12」が別)。🧸 ぬいぐるみは選んだモンスターで変わるので入れない
+// 返す形: { items: [{ key, kind: 'gift'|'furn', shown: 'like'|'mid'|'bad'|'unknown' }], known, total, like: [key…], bad: [key…] }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return { items, known: 0, total: 0, like: [], bad: [] };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])]
+    .filter(g => g && g.key !== 'monplush').map(g => (typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null)).filter(Boolean);
+  for (const g of gifts) items.push({ key: g.key, kind: 'gift', shown: assistantLifeGiftShownLike(id, g.key, S) });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({ key: f.key, kind: 'furn', shown: assistantLifeGiftShownLike(id, f.key, S) });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return { items, known, total: items.length, like: items.filter(x => x.shown === 'like').map(x => x.key), bad: items.filter(x => x.shown === 'bad').map(x => x.key) };
+};
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
@@ -90248,6 +90312,8 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
+/* 伸びる間は「/999」を隠して棒を札の幅いっぱいに(幅17pxほどの棒が光って橙の四角に見えた。2026-11-21 r1119-033 育-208・209・213) */
+.msx .v-st.zs .br .cap{display:none}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
@@ -90257,7 +90323,8 @@ const MSX_CSS = `
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
-.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+/* 持ち上がりは隣の札にかからない大きさ(1.1 だと隣のかしこさ・回避にかぶった。育-208・213。社長の A 案「伸びる間だけ拡大」はそのまま) */
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.06);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
@@ -97549,7 +97616,9 @@ const MSX_MM_CSS = `
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
 .msx .mm-ops>.msx-pt{flex:1 1 220px}
-.msx .mm-ops .mm-sel{flex:none}
+.msx .mm-ops .mm-sel{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 1段目は探す欄と逆順、2段目に並べ替えと表示を同じ幅・同じ高さで並べる(表示だけ2段目に落ちて、ちぐはぐだった。2026-11-21 r1119-033 育-129・157) */
+.msx .mm-ops>.msx-pt{flex-basis:100%}.msx .mm-ops .msx-pt-r{font-size:11.5px;border-radius:12px}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}

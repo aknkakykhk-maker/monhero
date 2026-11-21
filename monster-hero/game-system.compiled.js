@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f83a011fdf424097
+// source-sha256: ba88228532762508
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117977,10 +117977,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1386,
-      eye: 0.3072,
-      chin: 0.4187,
-      m: 0.829
+      top: 0.1498,
+      eye: 0.3408,
+      chin: 0.4295,
+      m: 0.66
     },
     momosuke: {
       top: 0.0636,
@@ -118038,10 +118038,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1502,
-      eye: 0.3379,
-      chin: 0.4334,
-      m: 0.711,
+      top: 0.1757,
+      eye: 0.316,
+      chin: 0.4299,
+      m: 0.847,
       above: 0.85
     },
     momosuke: {
@@ -118061,10 +118061,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1166,
-      eye: 0.2283,
-      chin: 0.2953,
-      m: 0.499,
+      top: 0.1327,
+      eye: 0.3124,
+      chin: 0.43,
+      m: 0.875,
       above: 0.75
     }
   },
@@ -149771,6 +149771,35 @@ const assistantLifePlanTrust = lv => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([Object.freeze({
+  min: 0.85,
+  mark: '◎',
+  label: '聞いてくれそう'
+}), Object.freeze({
+  min: 0.65,
+  mark: '○',
+  label: 'たぶん聞いてくれる'
+}), Object.freeze({
+  min: 0,
+  mark: '△',
+  label: '断られるかも'
+})]);
+const assistantLifePlanEaseOfP = p => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => {
+  const p = assistantLifePlanTrustOf(id, abs);
+  return {
+    p,
+    ...assistantLifePlanEaseOfP(p)
+  };
+};
 const assistantLifePlanLvOf = id => {
   try {
     const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
@@ -149983,7 +150012,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
-    for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {};
     for (const [id, v] of Object.entries(r.result)) if (v === 'no') {
@@ -151194,6 +151223,52 @@ function AssistantLifeBodyPanel({
     }, "⚠ ", r.kind, " ", Math.round(r.risk * 100), "%"));
   })));
 }
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki: Object.freeze({
+    emoji: '😊',
+    label: '元気'
+  }),
+  futsu: Object.freeze({
+    emoji: '🙂',
+    label: 'ふつう'
+  }),
+  otsukare: Object.freeze({
+    emoji: '😓',
+    label: 'おつかれ'
+  }),
+  hetoheto: Object.freeze({
+    emoji: '😵',
+    label: 'へとへと'
+  }),
+  nemui: Object.freeze({
+    emoji: '😪',
+    label: 'ねむい'
+  })
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat),
+    st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || h >= 0 && h < 6) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id);
+  if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? e.cond.k === 'hurt' ? '🤕' : '🤒' : '';
+  return {
+    key,
+    ...ASSISTANT_LIFE_COND_FACES[key],
+    mark
+  };
+};
 const assistantLifeBodyBadge = id => {
   const e = assistantLifeBodyOf(id);
   if (!e) return '';
@@ -161598,6 +161673,38 @@ function AssistantLifeTasteGiftPicker({
     "data-assistant-life-plush-fav": true
   }, "好きな色のリボンなので、もう少し好きになります。") : '好きな色のリボンだと、もう少し好きになります。'));
 }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return {
+    items,
+    known: 0,
+    total: 0,
+    like: [],
+    bad: []
+  };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])].filter(g => g && g.key !== 'monplush').map(g => typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null).filter(Boolean);
+  for (const g of gifts) items.push({
+    key: g.key,
+    kind: 'gift',
+    shown: assistantLifeGiftShownLike(id, g.key, S)
+  });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({
+    key: f.key,
+    kind: 'furn',
+    shown: assistantLifeGiftShownLike(id, f.key, S)
+  });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return {
+    items,
+    known,
+    total: items.length,
+    like: items.filter(x => x.shown === 'like').map(x => x.key),
+    bad: items.filter(x => x.shown === 'bad').map(x => x.key)
+  };
+};
 const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
 const MONSUC_FUSE_LOG = 50;
 const MONSUC_MEMORY_MAX = 100;
@@ -173653,6 +173760,8 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
+/* 伸びる間は「/999」を隠して棒を札の幅いっぱいに(幅17pxほどの棒が光って橙の四角に見えた。2026-11-21 r1119-033 育-208・209・213) */
+.msx .v-st.zs .br .cap{display:none}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
@@ -173662,7 +173771,8 @@ const MSX_CSS = `
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
-.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+/* 持ち上がりは隣の札にかからない大きさ(1.1 だと隣のかしこさ・回避にかぶった。育-208・213。社長の A 案「伸びる間だけ拡大」はそのまま) */
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.06);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
@@ -190895,7 +191005,9 @@ const MSX_MM_CSS = `
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
 .msx .mm-ops>.msx-pt{flex:1 1 220px}
-.msx .mm-ops .mm-sel{flex:none}
+.msx .mm-ops .mm-sel{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 1段目は探す欄と逆順、2段目に並べ替えと表示を同じ幅・同じ高さで並べる(表示だけ2段目に落ちて、ちぐはぐだった。2026-11-21 r1119-033 育-129・157) */
+.msx .mm-ops>.msx-pt{flex-basis:100%}.msx .mm-ops .msx-pt-r{font-size:11.5px;border-radius:12px}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}

@@ -142,3 +142,20 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
       </p>
     </div>);
 }
+
+// ===== 好き・苦手の見る口(作り直し 段4・§2-2 #29〜32)。保存は今のまま(mh_assistant_life_likes_v1 を読むだけ) =====
+// 道具(2人に・1人に)と家具を1つの一覧にして、数え方を1つにする(今は道具「◯/14」と家具「◯/12」が別)。🧸 ぬいぐるみは選んだモンスターで変わるので入れない
+// 返す形: { items: [{ key, kind: 'gift'|'furn', shown: 'like'|'mid'|'bad'|'unknown' }], known, total, like: [key…], bad: [key…] }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return { items, known: 0, total: 0, like: [], bad: [] };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])]
+    .filter(g => g && g.key !== 'monplush').map(g => (typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null)).filter(Boolean);
+  for (const g of gifts) items.push({ key: g.key, kind: 'gift', shown: assistantLifeGiftShownLike(id, g.key, S) });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({ key: f.key, kind: 'furn', shown: assistantLifeGiftShownLike(id, f.key, S) });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return { items, known, total: items.length, like: items.filter(x => x.shown === 'like').map(x => x.key), bad: items.filter(x => x.shown === 'bad').map(x => x.key) };
+};

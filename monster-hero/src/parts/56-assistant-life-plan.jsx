@@ -59,6 +59,23 @@ const assistantLifePlanTrust = (lv) => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+// その助手が abs の回にお願いを聞いてくれる確率(仲良し度Lv + 調子の上げ下げ)。予定を当てる所と ◎○△ の見せ方が同じ数を使う(作り直し 段4・r1119-043 ④)
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+// 通りやすさの見せ方(決める前に出す)。気分で通らないことは残す(2026-11-20 社長「部の案で進める」: 0.85以上 ◎・0.65以上 ○・それ未満 △)
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([
+  Object.freeze({ min: 0.85, mark: '◎', label: '聞いてくれそう' }),
+  Object.freeze({ min: 0.65, mark: '○', label: 'たぶん聞いてくれる' }),
+  Object.freeze({ min: 0, mark: '△', label: '断られるかも' }),
+]);
+const assistantLifePlanEaseOfP = (p) => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => { const p = assistantLifePlanTrustOf(id, abs); return { p, ...assistantLifePlanEaseOfP(p) }; };
 const assistantLifePlanLvOf = (id) => {
   try { const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null; return Number.isFinite(p) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(p) : 1; } catch (_) { return 1; }
 };
@@ -178,7 +195,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
     // 疲れ・ストレス(56-assistant-life-body.jsx): ひなたの丘の次の回は聞きやすく・ストレスが高いと聞きにくい。印が偽なら 0
-    const trust = {}; for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
     assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
