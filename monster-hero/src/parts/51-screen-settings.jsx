@@ -329,31 +329,50 @@ const settingsBackdropProps = (onClose) => ({
 });
 
 function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onChange, onClose }) {
+  ensureArtPickerCss();
   const auto=value==='auto';
+  // 開いたときの値。「やめる」・窓の外を押したときはこの値へ戻す(2026-11-21 r1119-066②: 閉じる手段が「決定」しか無かった)
+  const [initial]=React.useState(value);
+  const cancel=()=>{ if (value!==initial) onChange(initial); onClose(); };
+  // 窓は共通の3段の型(ModalSheet・41-screen-ui.jsx)。中身だけを巻き、「やめる/決定」はいつも下に見える
+  //   (2026-11-21 r1119-066①: 横 844×390 で窓が下にはみ出し「決定」が見えなかった)。
+  //   onPointerDown … 下のタイトル画面へ「押した」を伝えない(前からの作り)
   return (
-    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
-      <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>{heading}</h3></div>
-        <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
-        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
-            shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
-        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        {/* 横向きの低い画面は、見本の幅を絞って真ん中へ寄せる。縦長の絵(9:16)が2列だと1枚が約530pxになり、絵の全体が見えなかった(2026-10-27) */}
-        <div className="shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center">{options.map(option=>{
+    <ModalSheet title={heading} onClose={cancel} size="wide" dataProps={{'data-art-picker':pickerId,onPointerDown:e=>e.stopPropagation()}}
+      footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-art-picker-ok>決定</ModalSheetButton></>}>
+      <div className="mh-art-picker">
+        <div className="mh-art-picker-side">
+          <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(note)}</p>
+          {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック) */}
+          <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
+        </div>
+        <div className="mh-art-picker-grid">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
             {selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}
             {auto&&resolved===option.id&&<span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-black text-slate-900">おまかせ中</span>}
             <span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span>
-            <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
+            <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(option.desc)}</small>
           </button>;
         })}</div>
-        <button type="button" className="shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" data-mh-back onClick={onClose}>決定</button>
       </div>
-    </div>
+    </ModalSheet>
   );
 }
+// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・2枚の絵。横の低い画面は左に説明とおまかせ、右に2枚の絵(r1119-066①)
+const ART_PICKER_CSS = `
+.mh-art-picker{display:flex;flex-direction:column;gap:12px}
+.mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+`;
+const ensureArtPickerCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-art-picker-css')) return;
+    const el = document.createElement('style'); el.id = 'mh-art-picker-css'; el.textContent = ART_PICKER_CSS; document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても縦に並ぶだけ */ }
+};
 
 // 画面テーマ。画面の種類ごとに おまかせ/ハロウィン/クラシック を選ぶ。
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
@@ -364,25 +383,32 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
+  // 開いたときの値。「やめる」・窓の外を押したときはこの値へ戻す(2026-11-21 r1119-066②: 閉じる手段が「決定」しか無かった)
+  const [initial] = React.useState(() => ({ title: titleArt, home: homeArt, theme: { ...(screenTheme || {}) } }));
+  const cancel = () => {
+    if (titleArt !== initial.title) onChangeTitleArt(initial.title);
+    if (homeArt !== initial.home) onChangeHomeArt(initial.home);
+    SCREEN_THEME_CATEGORIES.forEach(category => { if (screenTheme[category.id] !== initial.theme[category.id]) onChange(category.id, initial.theme[category.id]); });
+    onClose();
+  };
   const chip = (selected) => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  // 窓は共通の3段の型(ModalSheet・41-screen-ui.jsx)。中身だけを巻き、「やめる/決定」はいつも下に見える(r1119-066①)
   return (
-    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
-      <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>画面テーマ</h3></div>
-        <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>
-        <div className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
-          <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
-          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
-        </div>
-        {rows.map(row => (
-          <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
-            <b className="block text-[12px] font-black text-white">{row.label}</b>
-            <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
-            <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
-          </div>
-        ))}
-        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" data-mh-back onClick={onClose}>決定</button>
+    <ModalSheet title="画面テーマ" onClose={cancel} size="wide" dataProps={{'data-screen-theme-picker':'',onPointerDown:e=>e.stopPropagation()}}
+      footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-screen-theme-ok>決定</ModalSheetButton></>}>
+      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')}</p>
+      <div className="mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
+        <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
+        <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
       </div>
-    </div>
+      {/* 横の低い画面は2列に並べ、一度に見える場面を増やす */}
+      <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
+        <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
+          <b className="block text-[12px] font-black text-white">{row.label}</b>
+          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+        </div>
+      ))}</div>
+    </ModalSheet>
   );
 }

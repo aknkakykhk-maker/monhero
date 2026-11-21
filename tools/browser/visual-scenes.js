@@ -27,9 +27,12 @@ const tapAny = async (s, re) => {
   await s.wait(500);
   return s.tapLabel(re, 1500);
 };
-const via = (steps) => async (s) => {
-  for (const re of steps) {
-    if (!(await tapAny(s, re))) return false;
+// keepLast … 最後に開くのが窓(「閉じる」の付いた更新履歴・音量設定など)のとき。押したあとに重なりを閉じると、
+//   開いた窓そのものを閉じて親の画面を撮ってしまう(2026-11-21 r1119-066④。点検で「開いていない」と出た4場面の原因)
+const via = (steps, { keepLast = false } = {}) => async (s) => {
+  for (let i = 0; i < steps.length; i++) {
+    if (!(await tapAny(s, steps[i]))) return false;
+    if (keepLast && i === steps.length - 1) { await s.wait(900); break; }
     await s.dismissOverlays(6);
   }
   return true;
@@ -67,7 +70,7 @@ const homeBtn = (label) => async (s) => {
   await s.dismissOverlays(10);
   return ok;
 };
-const then = (first, steps) => async (s) => (await first(s)) && via(steps)(s);
+const then = (first, steps, opts) => async (s) => (await first(s)) && via(steps, opts)(s);
 
 // モンヒロバトルの仕組み(クラシック・タクティクス・クイック)の画面
 const battleSystem = (id) => async (s) => {
@@ -243,7 +246,7 @@ const monsucHelp = (sub) => async (s) => {
 const SCENES = [
   // ---- HOME まわり ----
   { id: 'home', area: 'HOME', name: 'HOME', go: async () => true },
-  { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/]) },
+  { id: 'home-changelog', area: 'HOME', name: '更新履歴', go: via([/^更新履歴$/], { keepLast: true }) },
   // HOME の助手は吹き出しを押すとメニュー(おしゃべりする・詳しく見る)が出る(r1119-050 窓-36)
   { id: 'home-assistant-menu', area: 'HOME', name: '助手のメニュー(HOME)', go: via([/のメニューを開く$/]) },
   { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', go: async (s) => (await tapAny(s, /のメニューを開く$/)) && (await tapAny(s, /詳しく見る/)) }, // メニューを開いた直後に幕を払うと閉じるので、続けて押す
@@ -298,13 +301,13 @@ const SCENES = [
   // ---- 設定 ----
   { id: 'settings', area: '設定', name: '設定', go: via([/^設定$/]) },
   { id: 'settings-battle', area: '設定', name: 'バトル設定', go: via([/^設定$/, /^バトル設定/]) },
-  { id: 'settings-sound', area: '設定', name: '音量設定', go: via([/^設定$/, /^音量設定/]) },
-  { id: 'settings-bgm', area: '設定', name: 'BGMアレンジ', go: via([/^設定$/, /^BGMアレンジ/]) },
+  { id: 'settings-sound', area: '設定', name: '音量設定', go: via([/^設定$/, /^音量設定/], { keepLast: true }) },
+  { id: 'settings-bgm', area: '設定', name: 'BGMアレンジ', go: via([/^設定$/, /^BGMアレンジ/], { keepLast: true }) },
   { id: 'settings-title', area: '設定', name: 'タイトル画像アレンジ', go: via([/^設定$/, /^タイトル画像アレンジ/]) },
   { id: 'settings-home', area: '設定', name: 'ホーム画面アレンジ', go: via([/^設定$/, /^ホーム画面アレンジ/]) },
   { id: 'settings-theme', area: '設定', name: '画面テーマ', go: via([/^設定$/, /^画面テーマ/]) },
   // ---- ヘルプ ----
-  { id: 'help', area: 'ヘルプ', name: 'ヘルプ(モンヒロバトルから)', go: then(homeBtn('モンヒロバトル'), [/ヘルプ$/]) },
+  { id: 'help', area: 'ヘルプ', name: 'ヘルプ(モンヒロバトルから)', go: then(homeBtn('モンヒロバトル'), [/ヘルプ$/], { keepLast: true }) },
   // ---- モンサク(既定では撮らない) ----
   { id: 'monsuc-story', area: 'モンサク', group: 'monsuc', name: 'モンサクの入口(β版のお話の1ページ目)', go: (s) => monsucHome(s, { keepStory: true }) },
   { id: 'monsuc-home', area: 'モンサク', group: 'monsuc', name: 'モンサクのホーム(入口)', go: (s) => monsucHome(s) },
