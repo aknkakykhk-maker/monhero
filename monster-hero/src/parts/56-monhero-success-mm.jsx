@@ -431,7 +431,9 @@ const MSX_MM_CSS = `
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
 .msx .mm-ops>.msx-pt{flex:1 1 220px}
-.msx .mm-ops .mm-sel{flex:none}
+.msx .mm-ops .mm-sel{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 1段目は探す欄と逆順、2段目に並べ替えと表示を同じ幅・同じ高さで並べる(表示だけ2段目に落ちて、ちぐはぐだった。2026-11-21 r1119-033 育-129・157) */
+.msx .mm-ops>.msx-pt{flex-basis:100%}.msx .mm-ops .msx-pt-r{font-size:11.5px;border-radius:12px}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
