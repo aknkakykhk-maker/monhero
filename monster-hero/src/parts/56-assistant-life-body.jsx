@@ -420,6 +420,36 @@ function AssistantLifeBodyPanel({ id, cur }) {
       </div>}
     </div>);
 }
+// ===== 🌡 調子(作り直し 段4・docs/spec/ASSISTANT_LIFE.md §2-1)。新しく保存しない: 疲れ・ストレス・けが・病気・寝ているかから毎回計算する =====
+// 境目は 2026-11-20 社長「部の案で進める」: ねむい=深夜(0〜6時)か寝ている / へとへと=疲れ70以上・ストレス60以上・けが・病気 / おつかれ=疲れ60以上・ストレス50以上 / 元気=どちらも30未満 / ほかはふつう
+// 線は ASSISTANT_LIFE_BODY_LINE をそのまま使う(予定を断る・サボる線と同じ数)
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki:    Object.freeze({ emoji: '😊', label: '元気' }),
+  futsu:    Object.freeze({ emoji: '🙂', label: 'ふつう' }),
+  otsukare: Object.freeze({ emoji: '😓', label: 'おつかれ' }),
+  hetoheto: Object.freeze({ emoji: '😵', label: 'へとへと' }),
+  nemui:    Object.freeze({ emoji: '😪', label: 'ねむい' }),
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+// e … { fat, st, cond }。opt.sleeping … 寝ている回 / opt.hour … 0〜23(深夜の判定)
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat), st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || (h >= 0 && h < 6)) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+// 画面に出す形: { key, emoji, label, mark(けが 🤕・病気 🤒・ほかは '') }。体の印が偽・読み込み前なら null
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id); if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? (e.cond.k === 'hurt' ? '🤕' : '🤒') : '';
+  return { key, ...ASSISTANT_LIFE_COND_FACES[key], mark };
+};
 // 家の断面図・地図の名札に付ける小さな印(黄・赤・けが・病気のときだけ。それ以外は '')
 const assistantLifeBodyBadge = (id) => {
   const e = assistantLifeBodyOf(id); if (!e) return '';

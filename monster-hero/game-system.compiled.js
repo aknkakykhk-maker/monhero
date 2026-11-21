@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab26dd4c7a8b8e19
+// source-sha256: 1ed70b2c87c72ab7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118023,10 +118023,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1386,
-      eye: 0.3072,
-      chin: 0.4187,
-      m: 0.829
+      top: 0.1498,
+      eye: 0.3408,
+      chin: 0.4295,
+      m: 0.66
     },
     momosuke: {
       top: 0.0636,
@@ -118084,10 +118084,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1502,
-      eye: 0.3379,
-      chin: 0.4334,
-      m: 0.711,
+      top: 0.1757,
+      eye: 0.316,
+      chin: 0.4299,
+      m: 0.847,
       above: 0.85
     },
     momosuke: {
@@ -118107,10 +118107,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1166,
-      eye: 0.2283,
-      chin: 0.2953,
-      m: 0.499,
+      top: 0.1327,
+      eye: 0.3124,
+      chin: 0.43,
+      m: 0.875,
       above: 0.75
     }
   },
@@ -149817,6 +149817,35 @@ const assistantLifePlanTrust = lv => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([Object.freeze({
+  min: 0.85,
+  mark: '◎',
+  label: '聞いてくれそう'
+}), Object.freeze({
+  min: 0.65,
+  mark: '○',
+  label: 'たぶん聞いてくれる'
+}), Object.freeze({
+  min: 0,
+  mark: '△',
+  label: '断られるかも'
+})]);
+const assistantLifePlanEaseOfP = p => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => {
+  const p = assistantLifePlanTrustOf(id, abs);
+  return {
+    p,
+    ...assistantLifePlanEaseOfP(p)
+  };
+};
 const assistantLifePlanLvOf = id => {
   try {
     const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
@@ -150029,7 +150058,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
-    for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {};
     for (const [id, v] of Object.entries(r.result)) if (v === 'no') {
@@ -151240,6 +151269,52 @@ function AssistantLifeBodyPanel({
     }, "⚠ ", r.kind, " ", Math.round(r.risk * 100), "%"));
   })));
 }
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki: Object.freeze({
+    emoji: '😊',
+    label: '元気'
+  }),
+  futsu: Object.freeze({
+    emoji: '🙂',
+    label: 'ふつう'
+  }),
+  otsukare: Object.freeze({
+    emoji: '😓',
+    label: 'おつかれ'
+  }),
+  hetoheto: Object.freeze({
+    emoji: '😵',
+    label: 'へとへと'
+  }),
+  nemui: Object.freeze({
+    emoji: '😪',
+    label: 'ねむい'
+  })
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat),
+    st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || h >= 0 && h < 6) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id);
+  if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? e.cond.k === 'hurt' ? '🤕' : '🤒' : '';
+  return {
+    key,
+    ...ASSISTANT_LIFE_COND_FACES[key],
+    mark
+  };
+};
 const assistantLifeBodyBadge = id => {
   const e = assistantLifeBodyOf(id);
   if (!e) return '';
@@ -155685,6 +155760,32 @@ const MSC_CSS = `
 .msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
 .msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
+/* 2026-11-21 組み合わせ表の作り直し 案A「参考に寄せる」(r1119-052 ③・社長の選択 r1119-061・参考 taikai-bracket.png・v2 84〜90秒)。
+   上に会場の絵の帯と大会名・顔は名前の帯の右の端(顔から線が出る)・負けた行は帯を灰色に沈めて顔を白黒・人気の1〜3番に色・WINNER の札・解説の立ち絵 */
+.msc-ttl{display:inline-block;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-weight:900;font-size:14px;letter-spacing:.04em;line-height:1.35;box-shadow:0 2px 0 rgba(0,0,0,.35)} /* バ-42: 大会まわりの見出しは この1つの形(受付・組み合わせ表・試合) */
+.msc-venue{position:relative;height:64px;background:#3b2a52 center 38%/cover no-repeat;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.msc-venue::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,0),rgba(20,16,38,.45))}
+.msc-venue .msc-ttl{position:relative;z-index:1}
+.msc-venue.low{height:auto;padding:6px 0;background:linear-gradient(180deg,#7c4a1e,#5a3313)}
+.msc-venue.low::after{display:none}
+.msc-bk.a .msc-row .msc-face{order:0;margin-left:-16px;position:relative;z-index:1;border:2px solid #d6a45a;background:#fff}
+.msc-bk.a .msc-row .msc-no{order:0}
+.msc-bk.a .msc-name{margin-right:0;border-radius:99px;padding:0 20px 0 9px}
+.msc-bk.a .msc-row.out{opacity:1}
+.msc-bk.a .msc-row.out .msc-name{background:#a8a29e;border-color:#78716c;color:#f5f5f4}
+.msc-bk.a .msc-row.out .msc-face{border-color:#a8a29e}
+.msc-bk.a .msc-row.out .msc-face img{filter:grayscale(1) brightness(.92)}
+.msc-bk.a .msc-row.out .msc-peek{color:#f5f5f4}
+.msc-bk.a .msc-no.p1{background:#f59e0b;border-color:#b45309;color:#fff}
+.msc-bk.a .msc-no.p2{background:#2563eb;border-color:#1e40af;color:#fff}
+.msc-bk.a .msc-no.p3{background:#dc2626;border-color:#991b1b;color:#fff}
+.msc-bk.a .msc-cupbadge{width:52px;padding:4px 0 5px;font-size:9.5px;letter-spacing:.04em}
+.msc-bk.a .msc-cupbadge .tr{display:block;font-size:20px;line-height:1.1}
+.msc-panel .msc-note.in{color:#78350f;padding:0 10px 8px;font-weight:700}
+.msc-talk.st{margin-top:14px;padding-left:92px;min-height:76px;align-items:center}
+.msc-talk.st .msc-stand{position:absolute;left:4px;bottom:0;width:84px;height:96px;overflow:hidden;pointer-events:none}
+.msc-talk.st .msc-stand img{width:100%;height:auto;border-radius:0;background:none;object-fit:initial;display:block;margin-top:-2px}
+.msc-talk.st .msc-stand img.face{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#fde68a;margin:14px 0 0 6px}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -155946,7 +156047,8 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 340) / 8)));
+  const band = vh >= 700;
+  const H = Math.max(36, Math.min(68, Math.floor((vh - (band ? 404 : 354)) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -156034,9 +156136,15 @@ function MonsucBracket({
   }, "← 戻る")), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
-    className: "msc-head"
-  }, info.title, " ", MSC_STARS(info.star)), React.createElement("div", {
-    className: "msc-bk"
+    className: `msc-venue ${band ? '' : 'low'}`,
+    style: band ? {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    } : undefined,
+    "data-msc-venue": true
+  }, React.createElement("span", {
+    className: "msc-ttl"
+  }, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+    className: "msc-bk a"
   }, E.map((e, i) => React.createElement("div", {
     key: i,
     className: `msc-row ${out(i) ? 'out' : ''} ${e.you ? '' : 'tap'}`,
@@ -156052,7 +156160,7 @@ function MonsucBracket({
       if (ev.key === 'Enter' || ev.key === ' ') setPeek(i);
     }
   }, React.createElement("span", {
-    className: "msc-no",
+    className: `msc-no ${no[i] <= 3 ? `p${no[i]}` : ''}`,
     title: `${no[i]}番人気`,
     "aria-label": `${no[i]}番人気`
   }, no[i]), React.createElement("span", {
@@ -156093,8 +156201,19 @@ function MonsucBracket({
     className: `msc-cupbadge ${result === 'win' ? 'lit' : ''}`,
     style: {
       right: 4
-    }
-  }, "🏆", React.createElement("br", null), "優勝"))), peek != null && E[peek] ? React.createElement(MscEntrantPeek, {
+    },
+    "aria-label": "優勝"
+  }, React.createElement("span", {
+    className: "tr"
+  }, "🏆"), "WINNER")), React.createElement("div", {
+    className: "msc-note in"
+  }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
+    className: "nw"
+  }, info.meName, " VS ", nm(foe))), "。") : null, React.createElement("span", {
+    className: "nw"
+  }, "左の数字は人気の順"), React.createElement("span", {
+    className: "nw"
+  }, "(1が 一番人気)。"))), peek != null && E[peek] ? React.createElement(MscEntrantPeek, {
     suc: suc,
     s: s,
     info: info,
@@ -156107,19 +156226,21 @@ function MonsucBracket({
     colors: shownColors[peek],
     onClose: () => setPeek(null)
   }) : null, React.createElement("div", {
-    className: "msc-note"
-  }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
-    className: "nw"
-  }, info.meName, " VS ", nm(foe))), "。") : null, React.createElement("span", {
-    className: "nw"
-  }, "左の数字は人気の順"), React.createElement("span", {
-    className: "nw"
-  }, "(1が 一番人気)。")), React.createElement("div", {
-    className: "msc-talk"
-  }, React.createElement("img", {
-    src: mscFace(s.aid),
-    alt: ""
-  }), React.createElement("p", {
+    className: "msc-talk st"
+  }, (() => {
+    const full = coach && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(coach, 'happy') : null;
+    return React.createElement("span", {
+      className: "msc-stand",
+      "aria-hidden": "true"
+    }, full ? React.createElement("img", {
+      src: full,
+      alt: ""
+    }) : React.createElement("img", {
+      className: "face",
+      src: mscFace(s.aid),
+      alt: ""
+    }));
+  })(), React.createElement("p", {
     className: "msx-kp"
   }, coach ? React.createElement("b", {
     style: {
@@ -161598,6 +161719,38 @@ function AssistantLifeTasteGiftPicker({
     "data-assistant-life-plush-fav": true
   }, "好きな色のリボンなので、もう少し好きになります。") : '好きな色のリボンだと、もう少し好きになります。'));
 }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return {
+    items,
+    known: 0,
+    total: 0,
+    like: [],
+    bad: []
+  };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])].filter(g => g && g.key !== 'monplush').map(g => typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null).filter(Boolean);
+  for (const g of gifts) items.push({
+    key: g.key,
+    kind: 'gift',
+    shown: assistantLifeGiftShownLike(id, g.key, S)
+  });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({
+    key: f.key,
+    kind: 'furn',
+    shown: assistantLifeGiftShownLike(id, f.key, S)
+  });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return {
+    items,
+    known,
+    total: items.length,
+    like: items.filter(x => x.shown === 'like').map(x => x.key),
+    bad: items.filter(x => x.shown === 'bad').map(x => x.key)
+  };
+};
 const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
 const MONSUC_FUSE_LOG = 50;
 const MONSUC_MEMORY_MAX = 100;
@@ -173653,6 +173806,8 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
+/* 伸びる間は「/999」を隠して棒を札の幅いっぱいに(幅17pxほどの棒が光って橙の四角に見えた。2026-11-21 r1119-033 育-208・209・213) */
+.msx .v-st.zs .br .cap{display:none}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
@@ -173662,7 +173817,8 @@ const MSX_CSS = `
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
-.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+/* 持ち上がりは隣の札にかからない大きさ(1.1 だと隣のかしこさ・回避にかぶった。育-208・213。社長の A 案「伸びる間だけ拡大」はそのまま) */
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.06);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
@@ -173789,6 +173945,8 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+/* バ-42(2026-11-21): 大会まわりの見出しは1つの形(茶色の丸い帯に黄色い字・組み合わせ表と試合の .msc-ttl と同じ) */
+.msx .v-ev-h.cup{left:8px;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-size:13px;letter-spacing:.04em;box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
 .msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
 .msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
@@ -185723,7 +185881,7 @@ function MsxR3Cup({
       maxWidth: 'none'
     }
   }), React.createElement("div", {
-    className: "v-ev-h"
+    className: "v-ev-h cup"
   }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub",
     style: {
@@ -186651,7 +186809,7 @@ function MsxR3PreDesk({
       objectPosition: 'bottom'
     }
   }), React.createElement("div", {
-    className: "v-ev-h"
+    className: "v-ev-h cup"
   }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub msx-kp",
     style: {
@@ -190893,7 +191051,9 @@ const MSX_MM_CSS = `
 .msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-ops{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
 .msx .mm-ops>.msx-pt{flex:1 1 220px}
-.msx .mm-ops .mm-sel{flex:none}
+.msx .mm-ops .mm-sel{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 1段目は探す欄と逆順、2段目に並べ替えと表示を同じ幅・同じ高さで並べる(表示だけ2段目に落ちて、ちぐはぐだった。2026-11-21 r1119-033 育-129・157) */
+.msx .mm-ops>.msx-pt{flex-basis:100%}.msx .mm-ops .msx-pt-r{font-size:11.5px;border-radius:12px}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
@@ -192429,6 +192589,11 @@ const MSA_DC_CSS = `
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
+/* 2026-11-21 相手の技の枠は2行(社長の選択 r1119-061・案 docs/progress/monsuc-bracket-battle-plan/): 1行目に間合いと技名、2行目に命中。
+   ダメージは枠を押した窓で見る。枠が低くなったぶん、場が高くなる */
+.msa-dc.b2 .msa-dc-c{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:4px;row-gap:0;align-items:baseline;align-content:center}
+.msa-dc.b2 .msa-dc-c small.p,.msa-dc.b2 .msa-dc-c small.gu{grid-column:1/-1}
+@supports (width:1cqw){.msa-dc.b2 .msa-dc-c .msa-tn{font-size:max(8.5px,min(14px,calc((100cqw - 20px) / var(--tnt,1))))}}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .msa-dc.a .msa-dc-c{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:44px;padding:2px 5px}
@@ -192533,7 +192698,7 @@ function MsaDistCards({
     return m && Date.now() - m.at < 60000 ? m : null;
   };
   return React.createElement("div", {
-    className: `msa-dc ${look === 'a' ? 'a' : ''}`,
+    className: `msa-dc ${look === 'a' ? 'a' : dataSide === 'B' ? 'b2' : ''}`,
     "data-msa-dc": dataSide || '',
     "data-msa-dc-look": look || ''
   }, React.createElement("style", null, MSA_DC_CSS), [0, 1, 2, 3].map(d => {
@@ -192625,7 +192790,7 @@ function MsaDistCards({
       }, dir === "up" ? "▲" : "▼") : null);
     })() : null, t && dataSide !== 'B' ? React.createElement("small", {
       className: "gu"
-    }, "ガッツ−", t.guts) : null, t && t.base ? (() => {
+    }, "ガッツ−", t.guts) : null, t && t.base && dataSide !== 'B' ? (() => {
       const g = msaTechGrade('power', t.base.power);
       return React.createElement("small", {
         className: "dmg"
@@ -193020,8 +193185,8 @@ const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
 const MSA_PAN_K = 0;
 const MSA_RECENTER = 0.5;
-const MSA_FIG_W = [0.20, 0.17, 0.13, 0.10];
-const MSA_GAP_W = [0.20, 0.35, 0.55, 0.75];
+const MSA_FIG_W = [0.22, 0.19, 0.16, 0.14];
+const MSA_GAP_W = [0.22, 0.38, 0.55, 0.72];
 const MSA_BG_ZOOM = 0.6;
 const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
@@ -193447,6 +193612,7 @@ const MSA_CSS = `
 .msa-stage.big .msa-hx{bottom:calc(25% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(25% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline b.msc-ttl{flex:0 1 auto;font-size:13px;padding:2px 12px} /* バ-42: 見出しは組み合わせ表・受付と同じ形 */
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 /* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
@@ -196507,7 +196673,9 @@ function MonsucArena({
     "data-msa-main": true
   }, React.createElement("div", {
     className: "msc-top msa-topline"
-  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
+  }, React.createElement("b", {
+    className: "msc-ttl"
+  }, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
     className: "msc-buff"
   }, "✨ 特別な1話") : null), foeOn ? React.createElement("div", {
     className: "msa-foe",

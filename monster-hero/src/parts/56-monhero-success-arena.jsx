@@ -25,8 +25,9 @@ const MSA_RECENTER = 0.5; // 守る・ためる・交代などの行で、2体�
 // モンサクの大きな場(wide)の大きさと間合い(2026-11-19 社長 r1119-008「今の案はモンスターがでかい」「距離感がよわい。横幅をいかせていない」・
 //   見本 docs/progress/monsuc-battle-redesign/size-maai-r1119-008.jpg)。どちらも場の幅に対する割合で、零・近・中・遠の順。
 //   絵の大きさは距離で変わる(カメラが寄る・引くように見せる。背景も同じ割合で寄せる)。零は2体が触れ合う
-const MSA_FIG_W = [0.20, 0.17, 0.13, 0.10]; // 絵の幅
-const MSA_GAP_W = [0.20, 0.35, 0.55, 0.75]; // 2体の中心の間
+// 2026-11-21 社長の選択 r1119-061(r1119-052 ④の見直し): 遠で小さくしすぎない。遠 10%→14%(零・近・中も少し上げる)・中心の間は遠でも両端で切れない 72%
+const MSA_FIG_W = [0.22, 0.19, 0.16, 0.14]; // 絵の幅
+const MSA_GAP_W = [0.22, 0.38, 0.55, 0.72]; // 2体の中心の間
 const MSA_BG_ZOOM = 0.6; // 背景を寄せる強さ(遠を 1 倍として、絵の倍率の 6 割だけ背景を寄せる。零で約1.6倍)
 const MSA_SAFE = 12;     // 場の内側の安全域(px。2026-11-17 仕上げ): モンスターの絵・ダメージの数字・札が場の縁で切れないよう、端からこのぶん内側に収める。寸法の棚卸しは ~/workspace/msa-stage-finish/PLAN.md の付録
 const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
@@ -370,6 +371,7 @@ const MSA_CSS = `
 .msa-stage.big .msa-hx{bottom:calc(25% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(25% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline b.msc-ttl{flex:0 1 auto;font-size:13px;padding:2px 12px} /* バ-42: 見出しは組み合わせ表・受付と同じ形 */
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 /* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
@@ -2015,7 +2017,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
       <div className="msa-main" data-msa-main>
-      <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
+      <div className="msc-top msa-topline"><b className="msc-ttl">{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {/* 2026-11-20 再点検 バ-34: 相手の名前は体力の帯の上と二重だった → 見出しは大会名だけ */}</div>
       {foeOn ? <div className="msa-foe" data-msa-foe data-msa-danger={foeDanger}><div className="msa-rowh">相手の技<small>押すと、その間合いの技が見られます</small></div><MsaDistCards list={itemsB} rep={msaRepIds(itemsB, null)} dist={f.d} guts={f.g.B} lastMove={lastTechOf('B')} dataSide="B" hitAt={hitAtB} onOpen={(d) => setFoeSheet(d)}/></div> : null}
