@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6458c22512bb8228
+// generated-sha256: d78ff5181da3bdcc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69830,7 +69830,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const close = () => { setScene(null); assistantLifeCloseScreen(); };
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
   // 段7: 新UIの家のタブは型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx)。ほかのタブ・旧UIは今のまま
-  const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function';
+  //   window.__mhAssistantLifeUntypedHouse … 検査だけが立てる印(段7 の前の並びを確かめる assistant-life-top-check・benefit-check)。前の並びは段13 の片づけで消す
+  const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
+    && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
   // 掛け合いを、家を閉じずに場面で流す
   const showFollow = () => {
