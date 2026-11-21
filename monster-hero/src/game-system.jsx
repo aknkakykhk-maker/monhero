@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac84ffbc20593531
+// generated-sha256: 0aa22f2749534bf2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24006,7 +24006,9 @@ const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
     {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
       style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
   </>;
-  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`;
+  // 横の低い画面では大きい札のジャケットに上限を付ける。横の2列の右が広がり(2026-11-21 r1119-066③)、札のジャケットが
+  // 押して開く拡大(画面の高さで頭打ち)と同じくらいの大きさになって、押しても大きくならなかった
+  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto':'w-12'}`;
   const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
   if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
     onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
@@ -39090,6 +39092,12 @@ const SCREEN_LIST_CLASS = 'flex-1 min-h-0 overflow-y-auto mh-scroll';
 // その下にある中身をスクロール中ずっと覆ってしまう(強化画面で起きていた)。
 const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-white/10 pt-2';
 
+// 一覧と決定の帯をひとまとめにする箱(2026-11-21 r1119-066①)。根の直下に置き、中に一覧(SCREEN_LIST_CLASS)と
+// 決定の帯(SCREEN_FOOTER_CLASS)を入れる。この箱も .mh-scroll なので、横の低い画面では右の列(全高)に入り、
+// 「決定」は右の列の一覧の下にいつも見える。左の列(見出し・助手・タブ)が高い画面で、根の直下に置いた決定の帯が
+// 画面の外へ出ていた(モンスター編成)。縦では今までどおり一覧が伸びて、帯が下に来る
+const SCREEN_LIST_PANE_CLASS = 'mh-scroll mh-scroll-pane flex-1 min-h-0 flex flex-col';
+
 // 画面の頭。「← / 画面の名前 / (補足) / 右の付け足し」の順で、どの画面も同じ形にする。
 //   title    … 画面の名前(日本語)
 //   icon     … 名前の前に置く絵(省略可)
@@ -42647,31 +42655,50 @@ const settingsBackdropProps = (onClose) => ({
 });
 
 function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onChange, onClose }) {
+  ensureArtPickerCss();
   const auto=value==='auto';
+  // 開いたときの値。「やめる」・窓の外を押したときはこの値へ戻す(2026-11-21 r1119-066②: 閉じる手段が「決定」しか無かった)
+  const [initial]=React.useState(value);
+  const cancel=()=>{ if (value!==initial) onChange(initial); onClose(); };
+  // 窓は共通の3段の型(ModalSheet・41-screen-ui.jsx)。中身だけを巻き、「やめる/決定」はいつも下に見える
+  //   (2026-11-21 r1119-066①: 横 844×390 で窓が下にはみ出し「決定」が見えなかった)。
+  //   onPointerDown … 下のタイトル画面へ「押した」を伝えない(前からの作り)
   return (
-    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
-      <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>{heading}</h3></div>
-        <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
-        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
-            shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
-        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        {/* 横向きの低い画面は、見本の幅を絞って真ん中へ寄せる。縦長の絵(9:16)が2列だと1枚が約530pxになり、絵の全体が見えなかった(2026-10-27) */}
-        <div className="shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center">{options.map(option=>{
+    <ModalSheet title={heading} onClose={cancel} size="wide" dataProps={{'data-art-picker':pickerId,onPointerDown:e=>e.stopPropagation()}}
+      footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-art-picker-ok>決定</ModalSheetButton></>}>
+      <div className="mh-art-picker">
+        <div className="mh-art-picker-side">
+          <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(note)}</p>
+          {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック) */}
+          <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
+        </div>
+        <div className="mh-art-picker-grid">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
             {selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}
             {auto&&resolved===option.id&&<span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-black text-slate-900">おまかせ中</span>}
             <span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span>
-            <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
+            <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(option.desc)}</small>
           </button>;
         })}</div>
-        <button type="button" className="shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" data-mh-back onClick={onClose}>決定</button>
       </div>
-    </div>
+    </ModalSheet>
   );
 }
+// 絵を選ぶ窓の中の並び。縦は上から説明・おまかせ・2枚の絵。横の低い画面は左に説明とおまかせ、右に2枚の絵(r1119-066①)
+const ART_PICKER_CSS = `
+.mh-art-picker{display:flex;flex-direction:column;gap:12px}
+.mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+`;
+const ensureArtPickerCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-art-picker-css')) return;
+    const el = document.createElement('style'); el.id = 'mh-art-picker-css'; el.textContent = ART_PICKER_CSS; document.head.appendChild(el);
+  } catch (_) { /* 入れられなくても縦に並ぶだけ */ }
+};
 
 // 画面テーマ。画面の種類ごとに おまかせ/ハロウィン/クラシック を選ぶ。
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
@@ -42682,26 +42709,33 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
+  // 開いたときの値。「やめる」・窓の外を押したときはこの値へ戻す(2026-11-21 r1119-066②: 閉じる手段が「決定」しか無かった)
+  const [initial] = React.useState(() => ({ title: titleArt, home: homeArt, theme: { ...(screenTheme || {}) } }));
+  const cancel = () => {
+    if (titleArt !== initial.title) onChangeTitleArt(initial.title);
+    if (homeArt !== initial.home) onChangeHomeArt(initial.home);
+    SCREEN_THEME_CATEGORIES.forEach(category => { if (screenTheme[category.id] !== initial.theme[category.id]) onChange(category.id, initial.theme[category.id]); });
+    onClose();
+  };
   const chip = (selected) => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  // 窓は共通の3段の型(ModalSheet・41-screen-ui.jsx)。中身だけを巻き、「やめる/決定」はいつも下に見える(r1119-066①)
   return (
-    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
-      <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
-        <div className="mh-dialog-head"><h3>画面テーマ</h3></div>
-        <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>
-        <div className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
-          <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
-          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
-        </div>
-        {rows.map(row => (
-          <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
-            <b className="block text-[12px] font-black text-white">{row.label}</b>
-            <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
-            <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
-          </div>
-        ))}
-        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" data-mh-back onClick={onClose}>決定</button>
+    <ModalSheet title="画面テーマ" onClose={cancel} size="wide" dataProps={{'data-screen-theme-picker':'',onPointerDown:e=>e.stopPropagation()}}
+      footer={<><ModalSheetButton back onClick={cancel}>やめる</ModalSheetButton><ModalSheetButton kind="go" onClick={onClose} data-screen-theme-ok>決定</ModalSheetButton></>}>
+      <p className="text-[12px] font-bold leading-relaxed text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')}</p>
+      <div className="mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
+        <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
+        <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
       </div>
-    </div>
+      {/* 横の低い画面は2列に並べ、一度に見える場面を増やす */}
+      <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
+        <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
+          <b className="block text-[12px] font-black text-white">{row.label}</b>
+          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+        </div>
+      ))}</div>
+    </ModalSheet>
   );
 }
 
@@ -145168,13 +145202,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 「この難易度で挑戦」まで最初から見えるようにする(下半分が画面の外に出ていた。ダメダシ見回り 10/26 #3) */}
             <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度を選ぶ</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:hidden">左右にスワイプして難易度を選ぶ</div>
+                {/* 横の低い画面(844×390)では、報酬方針と「通常/極限」のタブを1段に並べて札を上げ、「この難易度で挑戦」まで見えるようにする
+                    (報酬方針の枠が増えて、ボタンがまた画面の下へ出ていた。2026-11-21 r1119-066①) */}
+                <div data-difficulty-top-row className={`shrink-0 ${quick&&hasExtremeTab?'[@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] [@media(orientation:landscape)_and_(max-height:520px)]:items-end [@media(orientation:landscape)_and_(max-height:520px)]:gap-2':''}`}>
                 {quick&&<fieldset data-quick-reward-policy className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
                   <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
                   <div className="grid grid-cols-3 gap-1">
                     {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2'],[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-0.5 font-black leading-tight active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-[10px]">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
                   </div>
-                  <p className="mt-1 text-center text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
+                  <p className="mt-1 text-center [@media(orientation:landscape)_and_(max-height:520px)]:hidden text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
                 </fieldset>}
                 {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
                     一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
@@ -145208,6 +145245,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     }} className={`mhbs-tab text-[12px] active:scale-95 disabled:opacity-40 ${isUw?'uw':''} ${on?(toExtreme?'on x':'on'):''}`}>{isUw&&<span aria-hidden="true" className="mr-0.5">🛡</span>}{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>}
+                </div>
                 {/* 極限タブが押せない理由を出す。タブの中は「極限 🔒」しか入らないので、
                     なぜ押せないのかが分からないままだった(極限チャレンジがモードのカードだった頃は
                     カードに解放条件が書いてあった)。文言は極限チャレンジ側の正本をそのまま使う */}
@@ -146960,6 +146998,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     同じことを言っていて、そのぶん一覧が46px押し下げられていた。
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
+                {/* 一覧と「決定」の帯をまとめて右の列へ(横の低い画面で、左の列が高く「決定」が画面の外へ出ていた。2026-11-21 r1119-066①) */}
+                <div className={SCREEN_LIST_PANE_CLASS}>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するモンスターがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
@@ -147000,6 +147040,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                </div>
               </>
             ):(
               <>
@@ -147019,6 +147060,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold leading-relaxed mb-2 px-1 shrink-0">解放済み{unlockedTeachingIds.length}枚・ちょうど{TEACHING_ROSTER_SIZE}枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細</div>
+                {/* 一覧と「決定」の帯をまとめて右の列へ(横の低い画面で、左の列が高く「決定」が画面の外へ出ていた。2026-11-21 r1119-066①) */}
+                <div className={SCREEN_LIST_PANE_CLASS}>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {unlockedTeachingIds.length===0&&<ScreenEmpty emoji="🃏" lines={['まだアシストカードを持っていません。','ブリーダーの教えを進めると使えるカードが増えます。']}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
@@ -147039,6 +147082,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button></div>
+                </div>
               </>
             )}
           </div>
