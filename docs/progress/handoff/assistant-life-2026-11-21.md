@@ -35,8 +35,9 @@
 
 ## 手で書く所(ここだけ人が書く。無ければ「なし」)
 
-- やりかけ(どのファイルのどこまで・次の1手): 段1(#6996)・段2(#7037)・段3(#7052)・段4(#7064)・段5(#7074 今日の目標の土台 56-assistant-life-goal.jsx・まだどこからも呼ばない)までマージ済み。次は段6(画面の型: 上の帯・下のタブ・窓・結果の1枚・字の4段と docs/spec/ASSISTANT_LIFE_UI.md。新しい部品1つ・CSS)。見た目が変わるので、公開の前に止め絵と突き合わせ表を窓口へ出して止まる。段4の見る口(assistantLifeCondFaceOf・assistantLifePlanEaseOf・assistantLifeLikesViewOf)と段5の assistantLifeGoalView を型の中で使う
-- 社長・窓口の返事待ち(何を聞いているか): なし(段5 の目標は社長 A「4つのうち3つ」で入れた)
+- **追記(11/21 夕・段6の会話)**: 段6(画面の型 `56-assistant-life-ui.jsx`・`ASSISTANT_LIFE_UI.md`・見張り `tools/assistant/life-ui-shoot.js`)は #7087 でマージ済み(社長 OK・ミハリ OK)。段7 は設計の5問を `docs/progress/assistant-life/step7-plan.md` に出して窓口の返事待ち。返事が来たら、その案のとおり `AssistantLifeHouse` の `uiV2 && tab==='house'` の枝だけを `AluFrame` に載せる(家の組み立ては 56-assistant-life-house.jsx の `const houseView =`〜`return (` のあたり・1500〜1600行。全文は開かない)。家の絵は grid4 で高さ ≒ 126+0.56×(幅−30)、横の4×2 は ≒ 130+0.37×(幅−30) なので、場面の枠の高さから幅を逆算して渡す
+- やりかけ(前の会話): 段1(#6996)・段2(#7037)・段3(#7052)・段4(#7064)・段5(#7074 今日の目標の土台 56-assistant-life-goal.jsx・まだどこからも呼ばない)までマージ済み。次は段6(画面の型: 上の帯・下のタブ・窓・結果の1枚・字の4段と docs/spec/ASSISTANT_LIFE_UI.md。新しい部品1つ・CSS)。見た目が変わるので、公開の前に止め絵と突き合わせ表を窓口へ出して止まる。段4の見る口(assistantLifeCondFaceOf・assistantLifePlanEaseOf・assistantLifeLikesViewOf)と段5の assistantLifeGoalView を型の中で使う
+- 社長・窓口の返事待ち(何を聞いているか): 段7 の5問(step7-plan.md: マスモンのタブ・「きずな」→「友情」・7日のごほうび・家から外す物・結果の1枚)
 - はまった所・次の会話がやってはいけないこと: ①分析の API は使わない(r1119-056)。見た目は visual-life-shoot.js で撮って目で見る・測る検査で確かめる ②data/assistants.js の末尾は ASSISTANT_PEER_REWRITES の生成ブロック(peer-rewrite-table.js が末尾にある前提)。表を足すときはその前に置き、`node tools/assistant/peer-rewrite-table.js` で作り直す ③台詞の字として「育てた子」を data に書かない(monster-ko-check が拾う) ④画面の検査は main でももともと落ちる物が多い(assistant-check の吹き出し・助手ライフ⑬・マスモン応援⑤・HOME 案内・更新履歴の並び・ja-wrap・feature-check の音量・clarity③・フレンドの印・家具/一人の帯・町の札・シートの閉じる・home-layout・rhythm-beat-presence)。NG が出たら main の作業ツリー(git worktree)で同じ検査を回して比べる ⑤4本同時の run-checks は画面の検査が混んで落ちる。落ちた物は1本ずつ回し直す ⑥merge-main.js は2分を超えることがある。前に出すと時間切れで取り込みの途中で止まるので、裏で回す ⑦run-checks の画面の検査は止め絵(docs/progress/assistant-peer/taste-change/real/*.png)を撮り直すので、コミットせず git checkout で戻す ⑧main の NG(段3・4・5 の報告と同じ13本前後)は自分の変更と関係ない
 - 配り直し・SQL で窓口に頼んだまま済んでいないもの: なし
 
