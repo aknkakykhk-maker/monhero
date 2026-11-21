@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b9cbae06bf244c6
+// source-sha256: 21242c09f9a9ad8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187958,7 +187958,7 @@ function MsxR3Shugyo({
         className: "q-bd-h q-tgl",
         onClick: () => setBdOpen(!bdOpen),
         "aria-expanded": bdOpen
-      }, "上がった量のくわしい内訳", React.createElement("span", {
+      }, "上がった量の詳しい内訳", React.createElement("span", {
         className: "q-tgl-t"
       }, bdOpen ? '閉じる ▴' : '開く ▾')), bdOpen ? React.createElement(React.Fragment, null, bdRows.map(({
         k,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cb4d31e2d4539f8f
+// generated-sha256: f1cc8672f00b5b15
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -96502,7 +96502,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         </div>))}</div> : null}
       {(o.partsRaw || o.mulInfo) ? (() => { const rawP = o.partsRaw || {}; const fitP = o.parts || {}; const bdRows = MSX_STAT_KEYS_R3.map((k) => { const rp = rawP[k] || { base: 0, team: [] }; const raw = rp.base + (rp.team || []).reduce((a, x) => a + x.v, 0); const g = gains[k] || 0; if (!(raw > 0) && !g) return null; return { k, rp, g }; }).filter(Boolean); const maxG = Math.max(1, ...bdRows.map((x) => x.g)); return (
       <div className="q-bd" data-msx-r3-qbd>
-        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>{/* 見出しは中身の言葉で。帯ぜんたいを押せる高さにした(育-192) */}上がった量のくわしい内訳<span className="q-tgl-t">{bdOpen ? '閉じる ▴' : '開く ▾'}</span></button>
+        <button type="button" className="q-bd-h q-tgl" onClick={() => setBdOpen(!bdOpen)} aria-expanded={bdOpen}>{/* 見出しは中身の言葉で。帯ぜんたいを押せる高さにした(育-192) */}上がった量の詳しい内訳<span className="q-tgl-t">{bdOpen ? '閉じる ▴' : '開く ▾'}</span></button>
         {bdOpen ? <>{bdRows.map(({ k, rp, g }) => { const before = Math.round(Number((res.before || {})[k]) || 0); const after = Math.round(Number((s.stats || {})[k]) || 0); const segs = fitP[k] || []; return (
         <div className="q-bd-row" key={k}>
           <span className="q-bd-k">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span>
