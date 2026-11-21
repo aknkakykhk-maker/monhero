@@ -176,8 +176,8 @@ const WANT_AMOUNTS = {
   peerTrio: [3, 6], peerEvent: [8, 16], peerMakeup: [8, 8],
   // 助手ライフで2人に道具を贈る(2026-11-08 社長 GIFT-PLAN.md)。1回ぶんは道具と好みで呼ぶ側が決める(いちばん多くて 40×1.5=60・1日3回)。公開の印 assistantLife
   lifeGift: [60, 180],
-  // 助手ライフで家具を贈る(2026-11-08 段階B)。1つの家具は1人に1回・好みで量が変わる(いちばん多くて 80×1.5=120)。1日では止めない(12種類ぶん)
-  lifeFurn: [120, 1440],
+  // 助手ライフで家具を贈る(2026-11-08 段階B)。1つの家具は1人に1回・好みで量が変わる(いちばん多くて 40。2026-11-20 r1119-043 ①で 120・1,440 から下げた)。1日12個ぶん
+  lifeFurn: [40, 480],
   // 助手ライフのフレンドの家との行き来(2026-11-08 社長。公開の印 assistantLifeFriend)
   friendGo: [10, 30], friendWelcome: [6, 12],
   // 助手ライフ STEP2(2026-11-11 社長): 神殿にいる助手との仲良し度。合体・転生などを終えたとき1日1回
@@ -228,7 +228,7 @@ vm.runInContext([
   `const ASSISTANT_BOND_DAILY_MAX = ${A.ASSISTANT_BOND_DAILY_MAX};`,
   // 日付の区切りと、仲良し度の計算をまとめて取り出す(この間に両方が入っている)
   grab(source, 'const loginBonusPeriodKey =', 'const assistantBondLevelOf'),
-  'globalThis.__g = { normalizeAssistantBond, gainAssistantBond, ASSISTANT_BOND_KEY, ASSISTANT_BOND_EMPTY };',
+  'globalThis.__g = { normalizeAssistantBond, gainAssistantBond, loginBonusPeriodKey, ASSISTANT_BOND_KEY, ASSISTANT_BOND_EMPTY };',
 ].join('\n'), gainCtx);
 const G = gainCtx.__g;
 
@@ -261,6 +261,20 @@ check('一部の行動だけでは全体の頭打ちまで届かない', (() => 
   for (let i = 0; i < 100; i++) for (const k of WANTED_ACTIONS) s = G.gainAssistantBond(s, k, day1).state;
   const wantedSum = WANTED_ACTIONS.reduce((a, k) => a + actions[k].dailyMax, 0);
   return s.points === wantedSum && wantedSum < A.ASSISTANT_BOND_DAILY_MAX;
+})());
+// 家具の数を下げた(2026-11-20 r1119-043 ①・120/1,440 → 40/480)。前の数で今日すでに家具を贈った保存でも、点は減らず・今日はもう家具で入らない
+check('家具: 前の数(1回 120)で貯めた保存は点が減らず、今日の家具の数が新しい上限を超えていればもう入らない', (() => {
+  const day = G.loginBonusPeriodKey(day1);
+  const old = { points: 5000, day, daily: { lifeFurn: 1440 }, dailyTotal: 1440 };
+  const r = G.gainAssistantBond(old, 'lifeFurn', day1, 40);
+  const n = G.normalizeAssistantBond(old);
+  return n.points === 5000 && r.gained === 0 && r.state.points === 5000 && r.state.daily.lifeFurn === 1440;
+})());
+check('家具: 1回は 40 で止まり、1日 480(12個ぶん)で止まる', (() => {
+  let s = G.ASSISTANT_BOND_EMPTY;
+  const first = G.gainAssistantBond(s, 'lifeFurn', day1, 120);
+  for (let i = 0; i < 20; i++) s = G.gainAssistantBond(s, 'lifeFurn', day1, 40).state;
+  return first.gained === 40 && s.daily.lifeFurn === 480 && s.points === 480;
 })());
 // 日付が変われば、その日の集計だけ戻る(貯めた量は減らない)
 check('日付が変わると、その日ぶんだけ戻る', (() => {

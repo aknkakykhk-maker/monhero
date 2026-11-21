@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e14eacedd4e31974
+// source-sha256: cad2a02a08a05d24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -138113,7 +138113,7 @@ const assistantLifeShopNoteOf = itemId => {
   if (/^furn_/.test(id)) {
     const f = typeof assistantLifeFurnOf === 'function' ? assistantLifeFurnOf(id) : null;
     if (!f) return null;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27;
     return {
       tone: 'f',
       mark: '🪑 家具',
@@ -139449,7 +139449,12 @@ const assistantLifeFurnLike = (who, key) => {
   if (!t) return 'mid';
   return (t.like || []).includes(key) ? 'like' : (t.bad || []).includes(key) ? 'bad' : 'mid';
 };
-const assistantLifeFurnAmount = (who, key) => Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+const assistantLifeFurnAmount = (who, key) => {
+  const raw = Math.round((typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27) * assistantLifeGiftMult(assistantLifeFurnLike(who, key)));
+  const act = typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS ? ASSISTANT_BOND_ACTIONS.lifeFurn : null;
+  const cap = act && Number.isFinite(act.amount) ? act.amount : 40;
+  return Math.max(0, Math.min(cap, raw));
+};
 const normalizeAssistantLifeRoomOne = raw => {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const keys = new Set(assistantLifeFurnDefs().map(f => f.key));
@@ -139972,7 +139977,7 @@ function AssistantLifeFurnSheet({
   const furnGainText = k => {
     const s = shown(k);
     if (s !== 'unknown') return `+${assistantLifeFurnAmount(id, k)}`;
-    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 80;
+    const base = typeof ASSISTANT_LIFE_FURN_PLAYER !== 'undefined' ? ASSISTANT_LIFE_FURN_PLAYER : 27;
     return `+${base}(好みで変わる)`;
   };
   const shown = k => assistantLifeGiftShownLike(id, k, st);
