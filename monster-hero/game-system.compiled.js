@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eadd7972cb4993c0
+// source-sha256: c2405610102d380d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118023,10 +118023,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1498,
-      eye: 0.3408,
-      chin: 0.4295,
-      m: 0.66
+      top: 0.1489,
+      eye: 0.336,
+      chin: 0.4296,
+      m: 0.696
     },
     momosuke: {
       top: 0.0636,
@@ -118084,11 +118084,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1757,
-      eye: 0.316,
+      top: 0.2342,
+      eye: 0.3496,
       chin: 0.4299,
-      m: 0.847,
-      above: 0.85
+      m: 0.598,
+      above: 1.2
     },
     momosuke: {
       top: 0.0614,
@@ -118107,10 +118107,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1327,
-      eye: 0.3124,
-      chin: 0.43,
-      m: 0.875,
+      top: 0.129,
+      eye: 0.3271,
+      chin: 0.4282,
+      m: 0.752,
       above: 0.75
     }
   },
@@ -175029,6 +175029,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -177824,7 +177827,7 @@ function MsxMonDetail({
           width: `${Math.min(100, over / cp * 100)}%`
         }
       }) : null)), React.createElement("span", {
-        className: `a${apt[i] > 'B' ? ' lo' : ''}`
+        className: `a msx-ap${apt[i]}`
       }, apt[i]));
     })) : null, tab === 'feat' ? React.createElement("div", {
       className: "msx-md-box"
@@ -178314,7 +178317,7 @@ function MsxGatherTable({
     onClick: onClose
   }, "閉じる")));
 }
-const msxAptCls = g => g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo';
+const msxAptCls = g => ['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC';
 const MSX_PERIOD_WHEN = Object.freeze({
   'デビュー期': 'はじめ',
   'ジュニア期': '前半',
@@ -179900,7 +179903,7 @@ function MsxTeamPick({
   const curName = (s, i) => {
     if (frOf(i)) return members[i].name;
     const m = s ? memOf(s) : null;
-    return m ? m.name : 'おまかせ';
+    return m ? m.name : Array.isArray(members) && members[i] ? members[i].name : 'おまかせ';
   };
   return React.createElement("div", {
     className: "msx-ov msx-fade msx-tp-ov",
@@ -179920,20 +179923,21 @@ function MsxTeamPick({
     "data-msx-tp-team": true
   }, view.map((s, i) => {
     const fr = frOf(i);
-    const mm = fr ? members[i] : s ? memOf(s) : null;
+    const mm = fr ? members[i] : s ? memOf(s) : Array.isArray(members) && members[i] || null;
     const rec = s && !fr ? recOf(s) : null;
-    return React.createElement("div", {
-      key: i,
-      className: `msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`,
-      "aria-label": fr ? 'フレンド' : curName(s, i)
-    }, React.createElement(MonsucMonCard, {
-      m: mm ? msxTpCardM(rec, mm) : null,
-      size: "s",
-      empty: String(i + 1),
-      on: i === idx && !!mm
-    }), fr ? React.createElement("b", {
-      className: "fr"
-    }, "🤝") : null);
+    return (React.createElement("div", {
+        key: i,
+        className: `msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`,
+        "aria-label": fr ? 'フレンド' : curName(s, i)
+      }, React.createElement(MonsucMonCard, {
+        m: mm ? msxTpCardM(rec, mm) : null,
+        size: "s",
+        empty: String(i + 1),
+        on: i === idx && !!mm
+      }), fr ? React.createElement("b", {
+        className: "fr"
+      }, "🤝") : null)
+    );
   })), React.createElement("div", {
     className: "msx-tp-tabs",
     "data-msx-tp-tabs": true
@@ -180002,7 +180006,13 @@ function MsxTeamPick({
       note: mk && mk.c !== 'in' || msxTpAssistIcons(msxTpAT(), m) ? React.createElement(React.Fragment, null, mk && mk.c !== 'in' ? React.createElement("b", {
         className: "msx-fp-dup"
       }, mk.n) : null, msxTpAssistIcons(msxTpAT(), m)) : null,
-      num: x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : '',
+      num: (() => {
+        const bn = msxTpBonusText(m);
+        const pwEl = x.kind !== 'base' && pw != null ? React.createElement("span", {
+          className: "msx-tp-pw"
+        }, "総合力 ", msxFmt(pw)) : null;
+        return bn || pwEl ? React.createElement(React.Fragment, null, bn, pwEl) : '';
+      })(),
       attrs: {
         'data-msx-tp-item': x.key,
         ...(x.kind === 'base' ? {
@@ -190632,7 +190642,10 @@ function MsxMmGrid({
   return React.createElement("div", {
     className: "mmg",
     "data-msx-mm-grid": true
-  }, React.createElement("style", null, MSX_MM_GRID_CSS), mons.map(m => {
+  }, React.createElement("style", null, MSX_MM_GRID_CSS), lb === 'namepw' && mons.length ? React.createElement("p", {
+    className: "mmg-lg",
+    "data-msx-mm-legend": true
+  }, "右上はランク・下は Lv と総合力") : null, mons.map(m => {
     const lock = lockOf ? lockOf(m) : null;
     const on = isOn ? isOn(m) : false;
     return React.createElement("button", _extends({
@@ -190660,17 +190673,22 @@ function MsxMmGrid({
     }, lock) : null, mark && mark(m) ? React.createElement("i", {
       className: "mmg-as"
     }, mark(m)) : null, lb === 'namepw' || lb === 'name' ? React.createElement(React.Fragment, null, React.createElement("span", {
-      className: "mmg-nm2"
-    }, msxMmLabelOf(m, lb)), lb === 'namepw' ? React.createElement("span", {
+      className: "mmg-nm2",
+      style: {
+        fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))`
+      }
+    }, msxMmLabelOf(m, lb)), m.nick && m.nick !== msxMonName(m.species) ? React.createElement("span", {
+      className: "mmg-sp"
+    }, msxMonName(m.species)) : null, lb === 'namepw' ? React.createElement("span", {
       className: "mmg-pw"
-    }, m.raised === false ? '未育成' : msxFmt(msxMmPow(m))) : null) : React.createElement("span", {
+    }, m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`) : null) : React.createElement("span", {
       className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -190685,7 +190703,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
@@ -191756,6 +191776,7 @@ function MonsucFitName({
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
     const ro = new ResizeObserver(fit);
     ro.observe(box.current);
+    if (txt.current) ro.observe(txt.current);
     return () => ro.disconnect();
   }, [name]);
   return React.createElement("span", {
@@ -191891,6 +191912,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
