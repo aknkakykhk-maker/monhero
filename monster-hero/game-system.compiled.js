@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46cf31d0ecf3434a
+// source-sha256: 3b8c7d330be0ac86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122788,16 +122788,18 @@ function AssistantLifeRoomBed({
   sleepers = [],
   look
 }) {
-  const bw = Math.min(W * 0.8, 340),
-    left = W / 2 - bw / 2,
-    bottom = floorY + 58,
-    mattTop = bottom - 50;
+  const bw = Math.min(W * 0.86, 360),
+    left = W / 2 - bw / 2;
+  const Lh = bw / 4,
+    BU = Lh / 1.32;
+  const bottom = floorY + Math.round(0.55 * BU),
+    mattTop = bottom - Math.round(0.6 * BU);
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
   const pillow = {
-    left: left + 22,
-    top: mattTop - 20,
-    w: Math.min(110, bw * 0.34),
-    h: 36
+    left: left + 0.26 * BU,
+    top: mattTop - 0.4 * BU,
+    w: Lh * 1.1,
+    h: 0.5 * BU
   };
   const [boxes, setBoxes] = React.useState({});
   const items = sleepers.map(pid => {
@@ -122832,7 +122834,7 @@ function AssistantLifeRoomBed({
       alive = false;
     };
   }, [key]);
-  const F = Math.min(30, W * 0.078);
+  const F = BU / 2.63;
   const night = look === 'night';
   return React.createElement("div", {
     "aria-hidden": "true",
@@ -122863,9 +122865,9 @@ function AssistantLifeRoomBed({
     style: {
       position: 'absolute',
       left,
-      top: mattTop - 64,
-      width: 18,
-      height: 118,
+      top: mattTop - 0.95 * BU,
+      width: 0.2 * BU,
+      height: bottom - mattTop + 0.95 * BU,
       borderRadius: '9px 9px 3px 3px',
       background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)',
       boxShadow: '2px 0 4px #0004'
@@ -122873,30 +122875,30 @@ function AssistantLifeRoomBed({
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + bw - 16,
-      top: mattTop - 22,
-      width: 16,
-      height: 76,
+      left: left + bw - 0.18 * BU,
+      top: mattTop - 0.3 * BU,
+      width: 0.18 * BU,
+      height: bottom - mattTop + 0.3 * BU,
       borderRadius: '8px 8px 3px 3px',
       background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)'
     }
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + 14,
-      top: mattTop + 18,
-      width: bw - 26,
-      height: 26,
+      left: left + 0.16 * BU,
+      top: mattTop + 0.24 * BU,
+      width: bw - 0.32 * BU,
+      height: 0.3 * BU,
       borderRadius: 4,
       background: 'linear-gradient(#8a5a33,#6b4426)'
     }
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + 14,
-      top: mattTop + 2,
-      width: bw - 26,
-      height: 20,
+      left: left + 0.16 * BU,
+      top: mattTop,
+      width: bw - 0.32 * BU,
+      height: 0.26 * BU,
       borderRadius: 6,
       background: '#f8fafc'
     }
@@ -122975,8 +122977,8 @@ function AssistantLifeRoomBed({
       cw = cw0 + ey * 2,
       ch = ch0 + ex,
       y0 = -0.22 * U - ex;
-    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
-      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
+    const cx = pillow.left + ch0 / 2 + Lh * 0.03 + i * 14 - ex / 2,
+      cy = pillow.top + pillow.h * 0.55 - cw0 / 2 - i * 6;
     const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
     const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
     const imgLeft = r.left + cw / 2;
@@ -123032,14 +123034,11 @@ function AssistantLifeRoomBed({
     }));
   }), (() => {
     const U = U0(F),
-      ch = U * 1.32,
-      cw = U * 1.2;
-    const headLeft = pillow.left + 2,
-      cy = pillow.top + pillow.h * 0.6 - cw / 2;
-    const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62;
-    const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
-    const qw = Math.max(60, left + bw - 14 - qx),
-      qh = Math.max(50, mattTop + 34 - qTop);
+      ch = U * 1.32;
+    const qx = items.length ? pillow.left + Lh * 0.03 + ch * 0.86 : pillow.left + pillow.w * 0.9;
+    const qTop = mattTop - 0.5 * U;
+    const qw = Math.max(60, left + bw - 0.16 * U - qx),
+      qh = Math.max(30, mattTop + 0.42 * U - qTop);
     const pid = `mhlq-${id}`;
     const X = r => (qw * r).toFixed(1),
       Y = r => (qh * r).toFixed(1);
@@ -123134,7 +123133,7 @@ function AssistantLifeRoomBed({
     style: {
       position: 'absolute',
       left: pillow.left + pillow.w * 0.3,
-      top: pillow.top - U0(F) * 1.2,
+      top: pillow.top - BU * 1.25,
       fontSize: 22
     }
   }, "💤"));
