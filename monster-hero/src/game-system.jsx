@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f430fb35c4021201
+// generated-sha256: ef50c9e8edf25dc9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91134,6 +91134,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -92757,7 +92760,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {MSX_STATS.map((k, i) => { const v = Number(st[k]) || 0; const cp = capK(k); const over = Math.max(0, v - cp); return (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
                     <span className="v"><b>{st[k]}<small data-msx-stat-cap={k} style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginLeft: 2 }}>/{cp}</small></b><span className={`g${over ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, v / cp * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{over ? <b className="ov" data-msx-stat-over={over} style={{ width: `${Math.min(100, over / cp * 100)}%` }}/> : null}</span></span>
-                    <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+                    <span className={`a msx-ap${apt[i]}`}>{apt[i]}</span></div>
                 ); })}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
@@ -92913,7 +92916,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
 }
 
 // 育てる子を選ぶ段(r1119 ⑦): 伸びやすさ(素質 A〜E)の字の色の段。A=金 / B=緑 / C=白 / D・E=灰
-const msxAptCls = (g) => (g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo');
+// 素質の字の色は文字ごとに固定(A=黄・B=緑・C=白・D=橙・E=赤。毎ターンの能力の札・詳細の窓と同じ・育-148)
+const msxAptCls = (g) => (['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC');
 // 「ピーク ミドル期」では伝わらない(社長)ので、育成のどのあたりでいちばん伸びるかを言葉で添える
 const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュニア期': '前半', 'ミドル期': '中ごろ', 'プロ期': '後半', '最後の期': '終わりごろ' });
 const msxPeakWords = (peak) => {
@@ -97325,6 +97329,8 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
   const lb = label || saved || 'namepw'; const fv = Array.isArray(fav) ? fav : favs;
   return (<div className="mmg" data-msx-mm-grid>
     <style>{MSX_MM_GRID_CSS}</style>
+    {/* 右上の札と下の数が何かを一覧の上に書く(育-158・168) */}
+    {lb === 'namepw' && mons.length ? <p className="mmg-lg" data-msx-mm-legend>右上はランク・下は Lv と総合力</p> : null}
     {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
       return (
         <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>
@@ -97334,7 +97340,7 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
           {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
           {lock ? <i className="mmg-lk">{lock}</i> : null}
           {mark && mark(m) ? <i className="mmg-as">{mark(m)}</i> : null}
-          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : msxFmt(msxMmPow(m))}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
+          {lb === 'namepw' || lb === 'name' ? <>{typeof MonsucFitName === 'function' ? <span className="mmg-nm2 fit"><MonsucFitName name={msxMmLabelOf(m, lb)}/></span> : <span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>}{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
         </button>);
     })}
   </div>);
@@ -97356,7 +97362,11 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-nm2.fit{display:block;width:100%;overflow:visible}
+.mmg .mmg-nm2 .mcd-nms{display:block;white-space:nowrap;overflow:hidden;text-align:center}.mmg .mmg-nm2 .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;

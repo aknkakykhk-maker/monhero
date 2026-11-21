@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2a45c4ad329b52b5
+// source-sha256: 7dba62ecf3c8711d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174640,6 +174640,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -177435,7 +177438,7 @@ function MsxMonDetail({
           width: `${Math.min(100, over / cp * 100)}%`
         }
       }) : null)), React.createElement("span", {
-        className: `a${apt[i] > 'B' ? ' lo' : ''}`
+        className: `a msx-ap${apt[i]}`
       }, apt[i]));
     })) : null, tab === 'feat' ? React.createElement("div", {
       className: "msx-md-box"
@@ -177925,7 +177928,7 @@ function MsxGatherTable({
     onClick: onClose
   }, "閉じる")));
 }
-const msxAptCls = g => g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo';
+const msxAptCls = g => ['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC';
 const MSX_PERIOD_WHEN = Object.freeze({
   'デビュー期': 'はじめ',
   'ジュニア期': '前半',
@@ -190243,7 +190246,10 @@ function MsxMmGrid({
   return React.createElement("div", {
     className: "mmg",
     "data-msx-mm-grid": true
-  }, React.createElement("style", null, MSX_MM_GRID_CSS), mons.map(m => {
+  }, React.createElement("style", null, MSX_MM_GRID_CSS), lb === 'namepw' && mons.length ? React.createElement("p", {
+    className: "mmg-lg",
+    "data-msx-mm-legend": true
+  }, "右上はランク・下は Lv と総合力") : null, mons.map(m => {
     const lock = lockOf ? lockOf(m) : null;
     const on = isOn ? isOn(m) : false;
     return React.createElement("button", _extends({
@@ -190270,11 +190276,17 @@ function MsxMmGrid({
       className: "mmg-lk"
     }, lock) : null, mark && mark(m) ? React.createElement("i", {
       className: "mmg-as"
-    }, mark(m)) : null, lb === 'namepw' || lb === 'name' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, mark(m)) : null, lb === 'namepw' || lb === 'name' ? React.createElement(React.Fragment, null, typeof MonsucFitName === 'function' ? React.createElement("span", {
+      className: "mmg-nm2 fit"
+    }, React.createElement(MonsucFitName, {
+      name: msxMmLabelOf(m, lb)
+    })) : React.createElement("span", {
       className: "mmg-nm2"
-    }, msxMmLabelOf(m, lb)), lb === 'namepw' ? React.createElement("span", {
+    }, msxMmLabelOf(m, lb)), m.nick && m.nick !== msxMonName(m.species) ? React.createElement("span", {
+      className: "mmg-sp"
+    }, msxMonName(m.species)) : null, lb === 'namepw' ? React.createElement("span", {
       className: "mmg-pw"
-    }, m.raised === false ? '未育成' : msxFmt(msxMmPow(m))) : null) : React.createElement("span", {
+    }, m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`) : null) : React.createElement("span", {
       className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
@@ -190296,7 +190308,11 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-nm2.fit{display:block;width:100%;overflow:visible}
+.mmg .mmg-nm2 .mcd-nms{display:block;white-space:nowrap;overflow:hidden;text-align:center}.mmg .mmg-nm2 .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;

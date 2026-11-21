@@ -282,7 +282,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {MSX_STATS.map((k, i) => { const v = Number(st[k]) || 0; const cp = capK(k); const over = Math.max(0, v - cp); return (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
                     <span className="v"><b>{st[k]}<small data-msx-stat-cap={k} style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginLeft: 2 }}>/{cp}</small></b><span className={`g${over ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, v / cp * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{over ? <b className="ov" data-msx-stat-over={over} style={{ width: `${Math.min(100, over / cp * 100)}%` }}/> : null}</span></span>
-                    <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+                    <span className={`a msx-ap${apt[i]}`}>{apt[i]}</span></div>
                 ); })}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
@@ -438,7 +438,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
 }
 
 // 育てる子を選ぶ段(r1119 ⑦): 伸びやすさ(素質 A〜E)の字の色の段。A=金 / B=緑 / C=白 / D・E=灰
-const msxAptCls = (g) => (g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo');
+// 素質の字の色は文字ごとに固定(A=黄・B=緑・C=白・D=橙・E=赤。毎ターンの能力の札・詳細の窓と同じ・育-148)
+const msxAptCls = (g) => (['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC');
 // 「ピーク ミドル期」では伝わらない(社長)ので、育成のどのあたりでいちばん伸びるかを言葉で添える
 const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュニア期': '前半', 'ミドル期': '中ごろ', 'プロ期': '後半', '最後の期': '終わりごろ' });
 const msxPeakWords = (peak) => {
