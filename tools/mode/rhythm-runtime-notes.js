@@ -251,6 +251,7 @@ const RELEASED_MARKERS=Object.freeze({
   erfolg:'erfolg-v3',
   erfolg_piano:'erfolg-piano-v3',
   amakakeru_tsubasa:'amakakeru-tsubasa-v3',
+  desert_crown:'desert-crown-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -337,6 +338,7 @@ const RELEASED_TRACKS=Object.freeze({
   erfolg:'erfolg',
   erfolg_piano:'erfolg_piano',
   amakakeru_tsubasa:'amakakeru_tsubasa',
+  desert_crown:'desert_crown',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });
