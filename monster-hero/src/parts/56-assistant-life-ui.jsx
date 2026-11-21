@@ -42,8 +42,8 @@ const ALU_CSS = `
 .alu-chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
 .alu-chip.ok{background:#064e3b;border-color:#34d399;color:#a7f3d0}
 .alu-goal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
-.alu-goal span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
-.alu-goal span.on{background:#064e3b;border-color:#34d399;color:#fff}
+.alu-goal span,.alu .alu-goal button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.alu-goal span.on,.alu .alu-goal button.on{background:#064e3b;border-color:#34d399;color:#fff}
 .alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
 .alu[data-alu-wide="1"] .alu-mask{align-items:center}
 .alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
@@ -84,31 +84,32 @@ const aluClock = (now = Date.now()) => {
 // 器の幅を測って2段組かを決める
 const useAluWide = () => {
   const ref = React.useRef(null);
-  const [box, setBox] = React.useState({ wide: false, h: 0 });
+  const [box, setBox] = React.useState({ wide: false, h: 0, w: 0 });
   React.useLayoutEffect(() => {
     const el = ref.current; if (!el) return undefined;
-    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h ? b : { wide, h })); };
+    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
     measure();
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();
   }, []);
-  return [ref, box.wide, box.h];
+  return [ref, box.wide, box.h, box.w];
 };
 
 const AluTopBar = ({ title, onBack, now }) => {
   const c = aluClock(now);
   return (
     <div className="alu-top" data-alu-top>
-      <button type="button" className="bk" data-alu-back onClick={onBack}>← 戻る</button>
+      <button type="button" className="bk" data-alu-back data-assistant-life-close aria-label="戻る" onClick={onBack}>← 戻る</button>
       <div className="ti" data-alu-title>{title}</div>
       <div className="ck" data-alu-clock><b>{c.clock} {c.label}</b><small>次に動く {c.next}</small></div>
     </div>);
 };
 
-const AluTabBar = ({ tab, onTab }) => (
-  <div className="alu-tabs" role="tablist" data-alu-tabs>
-    {ALU_TABS.map(t => (
-      <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} onClick={() => onTab && onTab(t.key)}>
+// tabs … 並びを替えるときだけ渡す(段12 まで5つ目は「📖 紹介」・2026-11-21 社長 r1119-075 ①)
+const AluTabBar = ({ tab, onTab, tabs = ALU_TABS }) => (
+  <div className="alu-tabs" role="tablist" data-alu-tabs data-assistant-life-icons>
+    {tabs.map(t => (
+      <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} data-assistant-life-icon={t.key} onClick={() => onTab && onTab(t.key)}>
         <i>{t.icon}</i>{t.label}
       </button>))}
   </div>);
@@ -116,22 +117,29 @@ const AluTabBar = ({ tab, onTab }) => (
 // 画面の型。head = いちばん上の1枚(家なら「次のごほうびまで」)。scene = 場面の絵(家・部屋・町の地図・関係図)
 //   縦: head → 場面の絵 → 中身。場面の絵は画面の高さの3割まで(小さい画面でも主なボタンが最初から見える)
 //   2段組(PC・横): 左に場面の絵、右に head → 中身
-const AluFrame = ({ title, onBack, tab, onTab, now, head, scene, sceneH = 300, children, overlay }) => {
-  const [ref, wide, frameH] = useAluWide();
+//   scene に関数を渡すと、枠の大きさ { wide, w, h }(縦の h は使ってよい高さの上限=画面の4割)を受け取って絵を返す(家の絵の幅を高さから決める)
+const AluFrame = ({ title, onBack, tab, onTab, tabs, now, head, scene, sceneH = 300, children, overlay, ...rest }) => {
+  const [ref, wide, frameH, frameW] = useAluWide();
+  const fit = typeof scene === 'function';
   const sceneHeight = frameH ? Math.max(140, Math.min(sceneH, Math.round(frameH * 0.3))) : sceneH;
+  // 2段組の左の枠: 中身は 1:1.35 で幅 560px まで(ALU_CSS と同じ数)
+  const avail = Math.max(0, frameW - 36), mainW = Math.min(560, avail / 2.35);
+  const sceneNode = !scene ? null : !fit ? scene
+    : wide ? scene({ wide: true, w: Math.floor(avail - mainW), h: Math.max(0, frameH - 48 - 56 - 24) })
+    : scene({ wide: false, w: Math.max(0, frameW - 24), h: Math.max(140, Math.round(frameH * 0.42)) });
   return (
-    <div className="alu" ref={ref} data-alu-frame data-alu-wide={wide ? '1' : undefined}>
+    <div className="alu" ref={ref} data-alu-frame data-alu-wide={wide ? '1' : undefined} {...rest}>
       <style>{ALU_CSS}</style>
       <AluTopBar title={title} onBack={onBack} now={now} />
       <div className="alu-body">
-        {wide && scene ? <div className="alu-scene" data-alu-scene>{scene}</div> : null}
+        {wide && scene ? <div className="alu-scene" data-alu-scene>{frameW ? sceneNode : null}</div> : null}
         <div className="alu-main" data-alu-main>
           {head || null}
-          {!wide && scene ? <div className="alu-scene" data-alu-scene style={{ height: sceneHeight }}>{scene}</div> : null}
+          {!wide && scene ? <div className="alu-scene" data-alu-scene style={fit ? undefined : { height: sceneHeight }}>{frameW ? sceneNode : null}</div> : null}
           {children}
         </div>
       </div>
-      <AluTabBar tab={tab} onTab={onTab} />
+      <AluTabBar tab={tab} onTab={onTab} tabs={tabs || ALU_TABS} />
       {overlay}
     </div>);
 };
@@ -183,12 +191,13 @@ const AluResult = ({ title = '結果', line, gains = [], finds = [], next, onClo
 // 次のごほうびまで(家のいちばん上だけ)
 const AluNextReward = ({ rest, text }) => (
   <div className="alu-card gold" data-alu-next-reward>
-    <div className="alu-t">💗 次のごほうびまで あと <b className="alu-num">{rest}</b></div>
+    <div className="alu-t">💗 次のごほうび{rest != null ? <>まで あと <b className="alu-num">{rest}</b></> : null}</div>
     {text ? <div className="alu-n">{text}</div> : null}
   </div>);
 
 // 今日の目標(段5の見る口 assistantLifeGoalView)
-const AluGoalCard = ({ view }) => {
+// onKind(kind) … 升を押すとその行動へ(家)。below … 札の下に畳んで足す物(7日のごほうびの帯など)。extra … 注の後ろに足す1行
+const AluGoalCard = ({ view, onKind, below, extra }) => {
   const v = view || (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
   if (!v) return null;
   const labels = typeof ASSISTANT_LIFE_GOAL_LABEL !== 'undefined' ? ASSISTANT_LIFE_GOAL_LABEL : {};
@@ -197,9 +206,12 @@ const AluGoalCard = ({ view }) => {
     <div className="alu-card" data-alu-goal>
       <div className="alu-t">今日の目標 <b className="alu-num">{Math.min(v.count, v.need)}</b>/{v.need}{v.achieved ? ' ✓ 達成' : ''}</div>
       <div className="alu-goal">
-        {kinds.map(k => <span key={k} className={v.done && v.done[k] ? 'on' : ''}>{v.done && v.done[k] ? '✓ ' : ''}{labels[k] || k}</span>)}
+        {kinds.map(k => onKind
+          ? <button type="button" key={k} className={v.done && v.done[k] ? 'on' : ''} data-alu-goal-kind={k} onClick={() => onKind(k)}>{v.done && v.done[k] ? '✓ ' : ''}{labels[k] || k}</button>
+          : <span key={k} className={v.done && v.done[k] ? 'on' : ''}>{v.done && v.done[k] ? '✓ ' : ''}{labels[k] || k}</span>)}
       </div>
-      <div className="alu-n" style={{ marginTop: 6 }}>4つのうち3つで達成 · 達成した日 {v.streak % v.days}/{v.days}(7日でおやつのバスケット)</div>
+      <div className="alu-n" style={{ marginTop: 6 }}>4つのうち3つで達成{extra ? <> · {extra}</> : null}</div>
+      {below || null}
     </div>);
 };
 
@@ -240,7 +252,7 @@ const AssistantLifeUiSample = ({ kind = 'house', now }) => {
     <AluFrame title="家" onBack={() => {}} tab={tab} onTab={setTab} now={now} scene={scene} sceneH={250} overlay={overlay}
       head={<AluNextReward rest={120} text={`${a.name} Lv5 で 呼び方が1つ増える`} />}>
       <AluGo>👀 見る — {a.name}と{b.name}の話</AluGo>
-      <AluGoalCard view={goal} />
+      <AluGoalCard view={goal} extra="達成した日 4/7(7日でおやつのバスケット)" />
       <div className="alu-card">
         <div className="alu-h">今日あったこと</div>
         <AluRow pic={face('mua')} text={`🤝 ${a.name}と${b.name}が仲直り`} note="10:00 · 読むと 💗 +2" action={<AluBtn>読む</AluBtn>} />

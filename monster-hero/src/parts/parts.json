@@ -33,6 +33,10 @@
       "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
     },
     {
+      "file": "16-monster-stage-size.jsx",
+      "role": "並んで立つ場面(試合の場など)のモンスターの見た目の大きさの表 MONSTER_STAGE_SIZE と、絵の余白を詰めた描く大きさ monsterStageFit"
+    },
+    {
       "file": "16-ranking-detail-and-widgets.jsx",
       "role": "ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー"
     },
@@ -411,6 +415,10 @@
     {
       "file": "56-assistant-life-house.jsx",
       "role": "助手ライフの専用ページ「助手たちの家」(AssistantLifeHouse: 8人の部屋・部屋を押す・場面・みんなの居場所・入場・今日やれること)と、HOME の施設の横の顔(AssistantLifeHomeFaces)。ビート部とのつなぎ口 assistantLifeAtBeat・assistantLifeBeatIds。公開の印 assistantLife の後ろ。保存は mh_assistant_life_diary_v1・mh_assistant_life_intro_v1 の新しいキーだけ"
+    },
+    {
+      "file": "56-assistant-life-house-typed.jsx",
+      "role": "助手ライフの作り直し 段7(docs/progress/assistant-life/step7-plan.md・社長 r1119-075 は全部 案A): 新UIの家のタブを型(AluFrame)に載せた画面 AssistantLifeHouseTyped。次のごほうび・家の絵・見る・今日の目標(升を押すとその行動・7日のごほうびを畳む)・今日あったこと・予定とみんなの今を1行に畳む・結果の1枚。何も保存しない"
     },
     {
       "file": "56-assistant-life-map.jsx",
