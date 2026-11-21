@@ -12681,7 +12681,7 @@ const KIKI_TWINTAIL_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん�
 // お披露目の行から曲をこの曲(melo_desert_crown)へ替える。曲の BGM がまだ無い版では bgm は無視され、いつものお話の曲のまま
 const DESERT_CROWN_STORY = [
   // ---- 夕方の広場: やってみたくなった ----
-  { bg:'monhero_plaza_evening', who:'mua', e:'happy', fxText:'お披露目のあとの広場。みんな、まだ歌を口ずさんでいる', holdMs:2500, t:'はー、楽しかった！ ひめちんの曲に、あたしたちの帳面の歌……モンビー、どんどん増えてくね♪' },
+  { bg:'monhero_plaza_evening', who:'mua', e:'happy', fxText:'お披露目のあとの広場。みんな、まだ歌を口ずさんでいる', holdMs:2500, t:'はー、楽しかった！ ひめちんの曲に、あたしたちの帳面の歌……モンヒロビート、どんどん増えてくね♪' },
   { who:'kiki',     e:'happy',    t:'みゅあちんたちの歌、焚き火の夜のにおいがしまちた♪♪' },
   { who:'erubin',   e:'normal',   t:'……いいね、ふたりとも。自分の曲があるって' },
   { who:'momosuke', e:'surprise', t:'えるちゃん、いまの言い方……もしかして、うらやましい？' },
