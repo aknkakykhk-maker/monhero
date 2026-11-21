@@ -143,7 +143,7 @@ const MSA_DC_CSS = `
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv.kb{background:#ea580c}
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h i{font-size:10.5px}
 .msa-dc:not(.a) .msa-dc-c .msa-tn{font-weight:900;color:#fff}
-.msa-dc:not(.a) .msa-dc-none{font-size:12px;color:#94a3b8}
+.msa-dc:not(.a) .msa-dc-none{font-size:min(12px,2.8vw);color:#94a3b8;white-space:nowrap}
 /* 自分の「いま」の札は水色のふち(黄色のふちは助手のおすすめだけに使う。2026-11-20 API の点検: 2つの意味で黄色が重なっていた) */
 .msa-dc-c.now{border-color:#7dd3fc;box-shadow:0 0 0 1px #7dd3fc88 inset}
 .msa-dc-c.now .msa-dc-h em{background:#7dd3fc;color:#0c2a3a}
@@ -262,7 +262,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
               {t ? <span className={`msa-dc-ic ${t.kind === 'wise' ? 'wise' : 'pow'}`} aria-hidden="true">{typeof MsxSkillArt === 'function' ? <MsxSkillArt t={t} uid={`dc${dataSide}${d}`}/> : null}<i className="k">{t.kind === 'wise' ? '📖' : '🏋️'}</i>{mvTo != null ? <i className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</i> : null}</span> : null}
               <span className="msa-dc-h">{MSA_DC_DIST[d]}{now ? <em>いま</em> : null}<i>{at.length ? `${at.length}技` : ''}</i></span>
-              {t ? <MsaTechName name={t.name}/> : <span className="msa-dc-none">届く技なし</span>}
+              {t ? <MsaTechName name={t.name}/> : <span className="msa-dc-none">使える技なし</span>}
               {t ? <span className="msa-dc-l" data-msa-dc-l1>{dist != null && !now ? (Array.isArray(t.dist) && t.dist.length === 1 ? `${MSA_DC_DIST[t.dist[0]]}でのみ届く` : `届く間合い: ${(Array.isArray(t.dist) ? t.dist : []).map((x) => MSA_DC_DIST[x]).join('・')}`) : `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`}</span> : null}
               {b ? <span className="msa-dc-l g" data-msa-dc-l2>ダメ<b>{msaTechGrade('power', b.power)}</b>・命<b>{msaTechGrade('hit', b.hit)}</b>・{'\u200b'}ガ<b>{msaTechGrade('gd', b.gd)}</b>・クリ<b>{msaTechGrade('crit', b.crit)}</b></span> : null}
             </button>
@@ -276,7 +276,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
         return (
           <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
             <span className="msa-dc-h">{MSA_DC_DIST[d]}{mvTo != null ? <span className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo} title={typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}` : undefined}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</span> : null}<i>{at.length > 1 ? `ほか${at.length - 1}` : ''}</i></span>
-            {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
+            {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">使える技なし</span>}
             {t ? (() => {
               const v = Number.isFinite(hp) ? Math.round(hp) : null; const m = memoOf(d);
               const dir = v == null ? '' : m && m.id === t.id ? (v > m.v ? 'up' : v < m.v ? 'down' : m.dir) : '';

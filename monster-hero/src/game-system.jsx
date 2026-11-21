@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eff63b66a298c687
+// generated-sha256: 9b6bae23d5720f15
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80273,6 +80273,8 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full [data-ambb-watch]{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full [data-ambb-watch]>.msa-mv{flex:1 1 auto;height:auto;margin-top:4px}
+/* βの手動は場面を上に留めない(帯のボタンが留めた場面の下に隠れないように・ミハリ6 #5891)。画面ごと縦に送る */
+@media (orientation:portrait){.ambw.ambb-full .msa-mv[data-msa-mode=manual] .msa-main{position:static;z-index:auto}}
 .msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
 .ambw.ambb-full .msa-mv .ambb-why{min-height:26px}
 .ambw.ambb-full .msa-mv .msa-tools button[data-ambb-skip]{flex:1.25;white-space:nowrap}
@@ -98536,7 +98538,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
               {t ? <span className={`msa-dc-ic ${t.kind === 'wise' ? 'wise' : 'pow'}`} aria-hidden="true">{typeof MsxSkillArt === 'function' ? <MsxSkillArt t={t} uid={`dc${dataSide}${d}`}/> : null}<i className="k">{t.kind === 'wise' ? '📖' : '🏋️'}</i>{mvTo != null ? <i className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</i> : null}</span> : null}
               <span className="msa-dc-h">{MSA_DC_DIST[d]}{now ? <em>いま</em> : null}<i>{at.length ? `${at.length}技` : ''}</i></span>
-              {t ? <MsaTechName name={t.name}/> : <span className="msa-dc-none">届く技なし</span>}
+              {t ? <MsaTechName name={t.name}/> : <span className="msa-dc-none">使える技なし</span>}
               {t ? <span className="msa-dc-l" data-msa-dc-l1>{dist != null && !now ? (Array.isArray(t.dist) && t.dist.length === 1 ? `${MSA_DC_DIST[t.dist[0]]}でのみ届く` : `届く間合い: ${(Array.isArray(t.dist) ? t.dist : []).map((x) => MSA_DC_DIST[x]).join('・')}`) : `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`}</span> : null}
               {b ? <span className="msa-dc-l g" data-msa-dc-l2>ダメ<b>{msaTechGrade('power', b.power)}</b>・命<b>{msaTechGrade('hit', b.hit)}</b>・{'\u200b'}ガ<b>{msaTechGrade('gd', b.gd)}</b>・クリ<b>{msaTechGrade('crit', b.crit)}</b></span> : null}
             </button>
@@ -98550,7 +98552,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
         return (
           <button key={d} type="button" className={cls} data-msa-dc-card={d} data-msa-dc-rep={t ? t.id : ''} disabled={!t || busy || !onOpen} onClick={() => { if (onOpen && t && !busy) onOpen(d); }}>
             <span className="msa-dc-h">{MSA_DC_DIST[d]}{mvTo != null ? <span className={`mv ${kb ? 'kb' : ''}`} data-msa-dc-move={mvTo} title={typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}` : undefined}>{kb ? '💨' : '↪'}{MSA_DC_DIST[mvTo]}</span> : null}<i>{at.length > 1 ? `ほか${at.length - 1}` : ''}</i></span>
-            {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
+            {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">使える技なし</span>}
             {t ? (() => {
               const v = Number.isFinite(hp) ? Math.round(hp) : null; const m = memoOf(d);
               const dir = v == null ? '' : m && m.id === t.id ? (v > m.v ? 'up' : v < m.v ? 'down' : m.dir) : '';

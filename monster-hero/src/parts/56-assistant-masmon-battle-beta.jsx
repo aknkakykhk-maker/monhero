@@ -281,6 +281,8 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full [data-ambb-watch]{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full [data-ambb-watch]>.msa-mv{flex:1 1 auto;height:auto;margin-top:4px}
+/* βの手動は場面を上に留めない(帯のボタンが留めた場面の下に隠れないように・ミハリ6 #5891)。画面ごと縦に送る */
+@media (orientation:portrait){.ambw.ambb-full .msa-mv[data-msa-mode=manual] .msa-main{position:static;z-index:auto}}
 .msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
 .ambw.ambb-full .msa-mv .ambb-why{min-height:26px}
 .ambw.ambb-full .msa-mv .msa-tools button[data-ambb-skip]{flex:1.25;white-space:nowrap}

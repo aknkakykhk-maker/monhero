@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fe64d965a489bed
+// source-sha256: db1b82b1dc56f0cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152797,6 +152797,8 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full [data-ambb-watch]{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full [data-ambb-watch]>.msa-mv{flex:1 1 auto;height:auto;margin-top:4px}
+/* βの手動は場面を上に留めない(帯のボタンが留めた場面の下に隠れないように・ミハリ6 #5891)。画面ごと縦に送る */
+@media (orientation:portrait){.ambw.ambb-full .msa-mv[data-msa-mode=manual] .msa-main{position:static;z-index:auto}}
 .msa-rowh .ambw-bench{margin-left:auto}.msa-rowh .ambw-bn{width:22px}.msa-rowh .ambw-bn img{width:22px;height:20px}
 .ambw.ambb-full .msa-mv .ambb-why{min-height:26px}
 .ambw.ambb-full .msa-mv .msa-tools button[data-ambb-skip]{flex:1.25;white-space:nowrap}
@@ -192584,7 +192586,7 @@ function MsaDistCards({
         name: t.name
       }) : React.createElement("span", {
         className: "msa-dc-none"
-      }, "届く技なし"), t ? React.createElement("span", {
+      }, "使える技なし"), t ? React.createElement("span", {
         className: "msa-dc-l",
         "data-msa-dc-l1": true
       }, dist != null && !now ? Array.isArray(t.dist) && t.dist.length === 1 ? `${MSA_DC_DIST[t.dist[0]]}でのみ届く` : `届く間合い: ${(Array.isArray(t.dist) ? t.dist : []).map(x => MSA_DC_DIST[x]).join('・')}` : `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`) : null, b ? React.createElement("span", {
@@ -192615,7 +192617,7 @@ function MsaDistCards({
       icon: msaKindIcon(t)
     }) : React.createElement("span", {
       className: "msa-dc-none"
-    }, "届く技なし"), t ? (() => {
+    }, "使える技なし"), t ? (() => {
       const v = Number.isFinite(hp) ? Math.round(hp) : null;
       const m = memoOf(d);
       const dir = v == null ? '' : m && m.id === t.id ? v > m.v ? 'up' : v < m.v ? 'down' : m.dir : '';
