@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0940fa345b9707b6
+// source-sha256: ba88228532762508
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -192543,6 +192543,11 @@ const MSA_DC_CSS = `
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
+/* 2026-11-21 相手の技の枠は2行(社長の選択 r1119-061・案 docs/progress/monsuc-bracket-battle-plan/): 1行目に間合いと技名、2行目に命中。
+   ダメージは枠を押した窓で見る。枠が低くなったぶん、場が高くなる */
+.msa-dc.b2 .msa-dc-c{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:4px;row-gap:0;align-items:baseline;align-content:center}
+.msa-dc.b2 .msa-dc-c small.p,.msa-dc.b2 .msa-dc-c small.gu{grid-column:1/-1}
+@supports (width:1cqw){.msa-dc.b2 .msa-dc-c .msa-tn{font-size:max(8.5px,min(14px,calc((100cqw - 20px) / var(--tnt,1))))}}
 /* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
 .msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .msa-dc.a .msa-dc-c{display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:44px;padding:2px 5px}
@@ -192647,7 +192652,7 @@ function MsaDistCards({
     return m && Date.now() - m.at < 60000 ? m : null;
   };
   return React.createElement("div", {
-    className: `msa-dc ${look === 'a' ? 'a' : ''}`,
+    className: `msa-dc ${look === 'a' ? 'a' : dataSide === 'B' ? 'b2' : ''}`,
     "data-msa-dc": dataSide || '',
     "data-msa-dc-look": look || ''
   }, React.createElement("style", null, MSA_DC_CSS), [0, 1, 2, 3].map(d => {
@@ -192739,7 +192744,7 @@ function MsaDistCards({
       }, dir === "up" ? "▲" : "▼") : null);
     })() : null, t && dataSide !== 'B' ? React.createElement("small", {
       className: "gu"
-    }, "ガッツ−", t.guts) : null, t && t.base ? (() => {
+    }, "ガッツ−", t.guts) : null, t && t.base && dataSide !== 'B' ? (() => {
       const g = msaTechGrade('power', t.base.power);
       return React.createElement("small", {
         className: "dmg"
@@ -193134,8 +193139,8 @@ const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
 const MSA_C_LIM = 0.24;
 const MSA_PAN_K = 0;
 const MSA_RECENTER = 0.5;
-const MSA_FIG_W = [0.20, 0.17, 0.13, 0.10];
-const MSA_GAP_W = [0.20, 0.35, 0.55, 0.75];
+const MSA_FIG_W = [0.22, 0.19, 0.16, 0.14];
+const MSA_GAP_W = [0.22, 0.38, 0.55, 0.72];
 const MSA_BG_ZOOM = 0.6;
 const MSA_SAFE = 12;
 const MSA_SPEEDS = Object.freeze([{
