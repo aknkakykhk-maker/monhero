@@ -36,7 +36,8 @@ const SAMPLE = (() => {
   const open = async (v, on) => {
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); });
+    // 段7 の前の家の並び(得の帯・出かけ先の帯)を確かめる。型に載せた家は tools/assistant/life-house-typed-shoot.js が見る
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));

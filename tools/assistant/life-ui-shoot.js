@@ -21,10 +21,12 @@ const SIZES = { tate: { w: 390, h: 844 }, s320: { w: 320, h: 568 }, yoko: { w: 8
 const KINDS = ['house', 'sheet', 'result'];
 const PORT = 9287;
 const MIME = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
-fs.mkdirSync(OUT, { recursive: true });
+if (require.main === module) fs.mkdirSync(OUT, { recursive: true });
 
-const measure = () => {
+const measure = (o = {}) => {
   const ng = [];
+  // o.skipMain … 下まで送った絵(主なボタンが上へ流れて見えない)は②を見ない。場面の絵([data-alu-scene])の中の字は①④で数えない(絵の札は段8〜で直す)
+  const inScene = (el) => !!(el && el.closest && el.closest('[data-alu-scene]'));
   const frame = document.querySelector('[data-alu-frame]');
   if (!frame) return { ng: ['型(.alu)が描かれていない'] };
   const F = frame.getBoundingClientRect();
@@ -36,7 +38,7 @@ const measure = () => {
   const walker = document.createTreeWalker(frame, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.textContent.trim()) continue;
-    const el = n.parentElement; const r = el.getBoundingClientRect();
+    const el = n.parentElement; if (inScene(el)) continue; const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1 || r.bottom < F.top || r.top > F.bottom) continue;
     const st = getComputedStyle(el); if (st.visibility === 'hidden' || st.display === 'none') continue;
     const px = Math.round(parseFloat(st.fontSize) * 10) / 10; sizes.add(px); if (px < 10) tiny++;
@@ -48,7 +50,7 @@ const measure = () => {
   // ② 主なボタン
   const gos = [...frame.querySelectorAll('.alu-go')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.bottom > F.top && r.top < F.bottom && onTop(e); });
   // 窓(選ぶだけの窓)は主なボタンが無くてよい(1つまで)。画面と結果の1枚はちょうど1つ
-  if (sheet && !sheet.querySelector('[data-alu-result-gains]') ? gos.length > 1 : gos.length !== 1) ng.push(`② 上に見えている主なボタンが ${gos.length}つ(${sheet ? '窓は1つまで' : '1つだけ'})`);
+  if (o.skipMain ? gos.length > 1 : sheet && !sheet.querySelector('[data-alu-result-gains]') ? gos.length > 1 : gos.length !== 1) ng.push(`② 上に見えている主なボタンが ${gos.length}つ(${sheet ? '窓は1つまで' : '1つだけ'})`);
   const main = gos[0] ? (() => { const r = gos[0].getBoundingClientRect(); return { label: gos[0].textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), font: parseFloat(getComputedStyle(gos[0]).fontSize) }; })() : null;
   if (main && (main.w < 120 || main.h < 44)) ng.push(`② 主なボタン「${main.label}」が ${main.w}×${main.h}px(120×44 以上)`);
   if (main && main.font < 13) ng.push(`② 主なボタンの字が ${main.font}px(13 以上)`);
@@ -60,8 +62,8 @@ const measure = () => {
   if (Math.abs(T.bottom - F.bottom) > 1) ng.push(`③ 下のタブが いちばん下にない(${Math.round(F.bottom - T.bottom)}px 上)`);
   // ④ 横のはみ出し
   let over = 0, overEx = '';
-  for (const el of frame.querySelectorAll('*')) { const r = el.getBoundingClientRect(); if (r.width > 0 && (r.right > F.right + 1 || r.left < F.left - 1)) { over++; if (!overEx) overEx = (el.className && String(el.className)) || el.tagName; } }
-  for (const el of frame.querySelectorAll('button, .alu-t, .alu-n, .alu-h')) { if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible') { over++; if (!overEx) overEx = `${el.textContent.trim().slice(0, 12)}(字が切れる)`; } }
+  for (const el of frame.querySelectorAll('*')) { if (inScene(el)) continue; const r = el.getBoundingClientRect(); if (r.width > 0 && (r.right > F.right + 1 || r.left < F.left - 1)) { over++; if (!overEx) overEx = (el.className && String(el.className)) || el.tagName; } }
+  for (const el of frame.querySelectorAll('button, .alu-t, .alu-n, .alu-h')) { if (inScene(el)) continue; if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible') { over++; if (!overEx) overEx = `${el.textContent.trim().slice(0, 12)}(字が切れる)`; } }
   if (over) ng.push(`④ 器の外・切れる物が ${over}か所(例 ${overEx})`);
   // ⑤ 下の空き
   let gap = 0;
@@ -87,7 +89,8 @@ const measure = () => {
   return { w: Math.round(W), h: Math.round(H), wide, twoCol, fontSteps: steps, main, bottomGap: gap, ng };
 };
 
-(async () => {
+module.exports = { measure };
+if (require.main === module) (async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が無い'); process.exit(0); }
   const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(root, 'tools/boot/quiet-boot-seed'));
