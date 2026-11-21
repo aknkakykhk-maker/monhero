@@ -31,6 +31,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/56-assistant-life-finds.jsx`
 - `monster-hero/src/parts/56-assistant-life-success.jsx`
 - `monster-hero/src/parts/56-assistant-life-taste-gift.jsx`
+- `monster-hero/src/parts/56-assistant-life-goal.jsx`
 
 ## 入口の関数
 

@@ -280,6 +280,7 @@
 | 13 | 片づけ: 旧UI・公開の印29個・使われていない部品・ヘルプを5つの節に | 全体・`data/help.js` | 中 ⚠ | 印が偽の道を外した後の全検査 |
 
 - **段4で入れた見る口**(2026-11-21・境目は社長「部の案で進める」): 🌡 `assistantLifeCondFaceOf(id, { sleeping, hour })`(-body。ねむい=深夜0〜6時か寝ている / へとへと=疲れ70・ストレス60以上・けが・病気 / おつかれ=疲れ60・ストレス50以上 / 元気=どちらも30未満 / ほかはふつう。線は `ASSISTANT_LIFE_BODY_LINE`)・予定 `assistantLifePlanTrustOf`・`assistantLifePlanEaseOf`(-plan。0.85以上 ◎・0.65以上 ○・それ未満 △。予定を当てる所も同じ関数)・好き苦手 `assistantLifeLikesViewOf`(-taste-gift。道具と家具を1つに数える)。検査 `tools/assistant/life-view-check.js`。画面に出すのは段6〜9(止め絵を出してから)
+- **段5で入れた土台**(2026-11-21・社長 A「4つのうち3つで達成」): 部品 `56-assistant-life-goal.jsx`(`ASSISTANT_LIFE_GOAL_STORE.load`・`assistantLifeGoalNote(kind)`・`assistantLifeGoalView()`)。写しは初めて `load` したときだけ(印 `mh_assistant_life_goal_migrated_v1`)。まだどこからも呼ばない(画面と行動の差し込みは段7)。7日のごほうびの配り方は今の `mh_assistant_life_daily_v1` のまま。検査 `tools/assistant/life-goal-check.js`
 - 段1〜5 は画面を変えない土台。ここまでで遊ぶ人に見える変化は「時間と場所の呼び名」と「💗 の数」だけ
 - 段7〜12 は画面ごとに1つずつ公開する(1段=1PR)。旧UI は段13まで残す
 - すぐ効く直し(総点検 §4)が `-house`・`-roomview`・`-map` を触っているあいだは、段7〜9 を始めない
