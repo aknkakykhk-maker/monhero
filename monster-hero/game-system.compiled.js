@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7de234e6d7cd490d
+// source-sha256: 47ec836763c4af5d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38276,7 +38276,7 @@ const RhythmSongArt = ({
       backgroundColor: 'rgba(2,6,23,.7)'
     }
   }, "🔍"));
-  const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`;
+  const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto' : 'w-12'}`;
   const box = {
     aspectRatio: '1 / 1',
     background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`
@@ -63443,6 +63443,7 @@ const SCREEN_PANEL_CLASS = 'mh-panel rounded-2xl border border-white/10 bg-slate
 const SCREEN_PANEL_FLAT_CLASS = 'mh-panel-flat rounded-xl border border-white/10 bg-black/30 px-3 py-2';
 const SCREEN_LIST_CLASS = 'flex-1 min-h-0 overflow-y-auto mh-scroll';
 const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-white/10 pt-2';
+const SCREEN_LIST_PANE_CLASS = 'mh-scroll mh-scroll-pane flex-1 min-h-0 flex flex-col';
 const ScreenHead = ({
   title,
   icon = null,
@@ -69118,29 +69119,45 @@ function ArtPickerModal({
   onChange,
   onClose
 }) {
+  ensureArtPickerCss();
   const auto = value === 'auto';
-  return React.createElement("div", _extends({
-    className: "mh-title-modal"
-  }, settingsBackdropProps(onClose)), React.createElement("div", {
-    className: "mh-title-dialog",
-    "data-art-picker": pickerId,
-    style: {
-      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
-      overflowY: 'auto'
-    }
+  const [initial] = React.useState(value);
+  const cancel = () => {
+    if (value !== initial) onChange(initial);
+    onClose();
+  };
+  return React.createElement(ModalSheet, {
+    title: heading,
+    onClose: cancel,
+    size: "wide",
+    dataProps: {
+      'data-art-picker': pickerId,
+      onPointerDown: e => e.stopPropagation()
+    },
+    footer: React.createElement(React.Fragment, null, React.createElement(ModalSheetButton, {
+      back: true,
+      onClick: cancel
+    }, "やめる"), React.createElement(ModalSheetButton, {
+      kind: "go",
+      onClick: onClose,
+      "data-art-picker-ok": true
+    }, "決定"))
   }, React.createElement("div", {
-    className: "mh-dialog-head"
-  }, React.createElement("h3", null, heading)), React.createElement("p", {
-    className: "shrink-0 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, note), React.createElement("button", {
+    className: "mh-art-picker"
+  }, React.createElement("div", {
+    className: "mh-art-picker-side"
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold leading-relaxed text-slate-300",
+    style: JA_LABEL_STYLE
+  }, jaWrap(note)), React.createElement("button", {
     type: "button",
     "aria-pressed": auto,
     onClick: () => onChange('auto'),
-    className: `shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/15 bg-white/5 text-slate-200'}`
+    className: `w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/15 bg-white/5 text-slate-200'}`
   }, "おまかせ(季節に合わせて切り替え)", auto && React.createElement("small", {
     className: "block text-[10px] font-bold text-amber-200/80"
-  }, "いまは「", (options.find(o => o.id === resolved) || options[0]).label, "」を出しています")), React.createElement("div", {
-    className: "shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center"
+  }, "いまは「", (options.find(o => o.id === resolved) || options[0]).label, "」を出しています"))), React.createElement("div", {
+    className: "mh-art-picker-grid"
   }, options.map(option => {
     const selected = value === option.id;
     return React.createElement("button", {
@@ -69161,15 +69178,26 @@ function ArtPickerModal({
     }, "おまかせ中"), React.createElement("span", {
       className: "block px-2 pt-1.5 text-[13px] font-black text-white"
     }, option.label), React.createElement("small", {
-      className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400"
-    }, option.desc));
-  })), React.createElement("button", {
-    type: "button",
-    className: "shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
-    "data-mh-back": true,
-    onClick: onClose
-  }, "決定")));
+      className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap(option.desc)));
+  }))));
 }
+const ART_PICKER_CSS = `
+.mh-art-picker{display:flex;flex-direction:column;gap:12px}
+.mh-art-picker-side{display:flex;flex-direction:column;gap:10px}
+.mh-art-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (orientation:landscape) and (max-height:520px){.mh-art-picker{flex-direction:row;align-items:flex-start}.mh-art-picker-side{flex:1 1 0;min-width:0}.mh-art-picker-grid{flex:none;grid-template-columns:repeat(2,124px)}}
+`;
+const ensureArtPickerCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-art-picker-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-art-picker-css';
+    el.textContent = ART_PICKER_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
 function ScreenThemeModal({
   screenTheme,
   onChange,
@@ -69201,22 +69229,43 @@ function ScreenThemeModal({
     onChangeHomeArt(choice);
     onChange('*', choice);
   };
-  const chip = selected => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
-  return React.createElement("div", _extends({
-    className: "mh-title-modal"
-  }, settingsBackdropProps(onClose)), React.createElement("div", {
-    className: "mh-title-dialog",
-    "data-screen-theme-picker": true,
-    style: {
-      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
-      overflowY: 'auto'
+  const [initial] = React.useState(() => ({
+    title: titleArt,
+    home: homeArt,
+    theme: {
+      ...(screenTheme || {})
     }
-  }, React.createElement("div", {
-    className: "mh-dialog-head"
-  }, React.createElement("h3", null, "画面テーマ")), React.createElement("p", {
-    className: "text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。"), React.createElement("div", {
-    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2"
+  }));
+  const cancel = () => {
+    if (titleArt !== initial.title) onChangeTitleArt(initial.title);
+    if (homeArt !== initial.home) onChangeHomeArt(initial.home);
+    SCREEN_THEME_CATEGORIES.forEach(category => {
+      if (screenTheme[category.id] !== initial.theme[category.id]) onChange(category.id, initial.theme[category.id]);
+    });
+    onClose();
+  };
+  const chip = selected => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  return React.createElement(ModalSheet, {
+    title: "画面テーマ",
+    onClose: cancel,
+    size: "wide",
+    dataProps: {
+      'data-screen-theme-picker': '',
+      onPointerDown: e => e.stopPropagation()
+    },
+    footer: React.createElement(React.Fragment, null, React.createElement(ModalSheetButton, {
+      back: true,
+      onClick: cancel
+    }, "やめる"), React.createElement(ModalSheetButton, {
+      kind: "go",
+      onClick: onClose,
+      "data-screen-theme-ok": true
+    }, "決定"))
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold leading-relaxed text-slate-300",
+    style: JA_LABEL_STYLE
+  }, jaWrap('画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。')), React.createElement("div", {
+    className: "mt-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-amber-100"
   }, "まとめて変える"), React.createElement("div", {
@@ -69226,7 +69275,9 @@ function ScreenThemeModal({
     type: "button",
     onClick: () => setAll(choice.id),
     className: chip(false)
-  }, choice.label)))), rows.map(row => React.createElement("div", {
+  }, choice.label)))), React.createElement("div", {
+    className: "mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2"
+  }, rows.map(row => React.createElement("div", {
     key: row.id,
     "data-screen-theme-row": row.id,
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
@@ -69242,12 +69293,7 @@ function ScreenThemeModal({
     "aria-pressed": row.value === choice.id,
     onClick: () => row.set(choice.id),
     className: chip(row.value === choice.id)
-  }, choice.label))))), React.createElement("button", {
-    type: "button",
-    className: "mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
-    "data-mh-back": true,
-    onClick: onClose
-  }, "決定")));
+  }, choice.label)))))));
 }
 const MH_HOME_SCREEN_GUIDE_KEY = 'mh_home_screen_guide_v1';
 const MH_HOME_SCREEN_GUIDE_GAP_MS = 14 * 24 * 60 * 60 * 1000;
@@ -266137,8 +266183,11 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "mhbs-hint mt-auto mb-1 shrink-0"
-      }, "左右にスワイプして難易度を選ぶ"), quick && React.createElement("fieldset", {
+        className: "mhbs-hint mt-auto mb-1 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+      }, "左右にスワイプして難易度を選ぶ"), React.createElement("div", {
+        "data-difficulty-top-row": true,
+        className: `shrink-0 ${quick && hasExtremeTab ? '[@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] [@media(orientation:landscape)_and_(max-height:520px)]:items-end [@media(orientation:landscape)_and_(max-height:520px)]:gap-2' : ''}`
+      }, quick && React.createElement("fieldset", {
         "data-quick-reward-policy": true,
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, React.createElement("legend", {
@@ -266159,7 +266208,7 @@ function MonsterHeroGame() {
           className: "block text-[8px]"
         }, detail));
       })), React.createElement("p", {
-        className: "mt-1 text-center text-[8px] font-black text-slate-400"
+        className: "mt-1 text-center [@media(orientation:landscape)_and_(max-height:520px)]:hidden text-[8px] font-black text-slate-400"
       }, "同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放")), hasExtremeTab && React.createElement("div", {
         "data-difficulty-tabs": true,
         className: `mhbs-tabs ${challengeExtremeTab ? 'grid-cols-3' : 'grid-cols-2'} w-full shrink-0 mb-1.5`
@@ -266198,7 +266247,7 @@ function MonsterHeroGame() {
         }, "🛡"), tabLabel, React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
         }, locked ? '🔒' : count));
-      })), challengeExtremeTab && !extremeUnlocked && !debugBattle && React.createElement("p", {
+      }))), challengeExtremeTab && !extremeUnlocked && !debugBattle && React.createElement("p", {
         "data-extreme-tab-locked": true,
         className: "shrink-0 mb-1 text-center text-[9px] font-black text-fuchsia-200/80"
       }, "🔒 極限は", EXTREME_UNLOCK_TEXT), React.createElement("div", {
@@ -270817,6 +270866,8 @@ function MonsterHeroGame() {
         className: "w-full h-full object-cover"
       }));
     })))), renderMonsterSortFilterBar(), React.createElement("div", {
+      className: SCREEN_LIST_PANE_CLASS
+    }, React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, unifiedMonsterEntriesDraft.length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
@@ -270898,7 +270949,7 @@ function MonsterHeroGame() {
       onClick: confirmMonsterRoster,
       disabled: draftMonsterRoster.length !== STARTER_MONSTER_IDS.length,
       className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
-    }, "決定 (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")"))) : React.createElement(React.Fragment, null, React.createElement("div", {
+    }, "決定 (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")")))) : React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, React.createElement("span", {
       className: "text-[10px] font-black text-purple-300 shrink-0 leading-tight"
@@ -270920,6 +270971,8 @@ function MonsterHeroGame() {
     }))), React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold leading-relaxed mb-2 px-1 shrink-0"
     }, "解放済み", unlockedTeachingIds.length, "枚・ちょうど", TEACHING_ROSTER_SIZE, "枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細"), React.createElement("div", {
+      className: SCREEN_LIST_PANE_CLASS
+    }, React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, unlockedTeachingIds.length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🃏",
@@ -270960,7 +271013,7 @@ function MonsterHeroGame() {
       onClick: confirmTeachingRoster,
       disabled: draftTeachingRoster.length !== TEACHING_ROSTER_SIZE,
       className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
-    }, "決定 (", draftTeachingRoster.length, "/", TEACHING_ROSTER_SIZE, ")")))), rosterDetailMon && renderMonsterDetailModal({
+    }, "決定 (", draftTeachingRoster.length, "/", TEACHING_ROSTER_SIZE, ")"))))), rosterDetailMon && renderMonsterDetailModal({
       mon: rosterDetailMon,
       masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
       onClose: () => setRosterDetailMon(null),
