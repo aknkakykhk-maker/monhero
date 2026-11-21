@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "c4c1fec13979",
-  "packs": {"beat":{"bytes":250041136,"count":147},"battle":{"bytes":398449623,"count":1560},"card":{"bytes":38155544,"count":1048},"all":{"bytes":686646303,"count":2755},"core":{"bytes":24586882,"count":24}},
+  "id": "fee13605e67f",
+  "packs": {"beat":{"bytes":250041136,"count":147},"battle":{"bytes":398034953,"count":1559},"card":{"bytes":38085297,"count":1046},"all":{"bytes":686161386,"count":2752},"core":{"bytes":24586882,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -377,7 +377,6 @@
     "images/assistant/fullbody/sorashido_hosei__surprise.png": {"v":"6668127be721","size":2889612,"pack":"battle"},
     "images/assistant/fullbody/sorashido_hosei__troubled.png": {"v":"d2ac4471e989","size":2851074,"pack":"battle"},
     "images/assistant/fullbody/sorashido_hosei__wink.png": {"v":"9abd392a70fa","size":2581124,"pack":"battle"},
-    "images/assistant/fullbody/sorashido_sleep.png": {"v":"38c12fe5ff15","size":414670,"pack":"battle"},
     "images/assistant/halloween/face/kiki_angry.PNG": {"v":"f2384c3b4768","size":36804,"pack":"battle"},
     "images/assistant/halloween/face/kiki_crying.PNG": {"v":"89f0df464328","size":38872,"pack":"battle"},
     "images/assistant/halloween/face/kiki_excited.PNG": {"v":"45690d2fb849","size":38823,"pack":"battle"},
@@ -1162,7 +1161,6 @@
     "images/card-battle/l/C058.jpg": {"v":"6b456272c166","size":37026,"pack":"card"},
     "images/card-battle/l/C059.jpg": {"v":"8126349be18a","size":61410,"pack":"card"},
     "images/card-battle/l/C060.jpg": {"v":"7cdf092ff1cf","size":47372,"pack":"card"},
-    "images/card-battle/l/C060C.jpg": {"v":"3bb6cd416fe5","size":51541,"pack":"card"},
     "images/card-battle/l/C061.jpg": {"v":"9119b4c7faed","size":58693,"pack":"card"},
     "images/card-battle/l/C062.jpg": {"v":"c9d8d27fc977","size":51784,"pack":"card"},
     "images/card-battle/l/C063.jpg": {"v":"172b1f75fc91","size":59397,"pack":"card"},
@@ -1694,7 +1692,6 @@
     "images/card-battle/s/C058.jpg": {"v":"af8a2341803c","size":14210,"pack":"card"},
     "images/card-battle/s/C059.jpg": {"v":"ba9fb509bad3","size":21099,"pack":"card"},
     "images/card-battle/s/C060.jpg": {"v":"1dd8e8289fe4","size":17900,"pack":"card"},
-    "images/card-battle/s/C060C.jpg": {"v":"29ff5abb1762","size":18706,"pack":"card"},
     "images/card-battle/s/C061.jpg": {"v":"7ce19590e8fb","size":20254,"pack":"card"},
     "images/card-battle/s/C062.jpg": {"v":"56f6aac2d69f","size":18319,"pack":"card"},
     "images/card-battle/s/C063.jpg": {"v":"418d73fcc73f","size":20795,"pack":"card"},
