@@ -1894,7 +1894,7 @@ function MsaDistRow({ side, row, title, note }) {
     </div>
   );
 }
-function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = null, foe = null, stage = null, say = null, why = null, mine = null, controls = null, tools = null, after = null, overlay = null, fit = true }) {
+function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = null, foe = null, stage = null, say = null, why = null, mine = null, controls = null, tools = null, after = null, overlay = null, fit = true, fitMin = 260 }) {
   // 場の高さを、下のボタン列まで1画面に収まる高さにする(2026-11-20 再点検 バ-24・32・35・44)。上限は決めた 420px(r1119-007)・下限 260px。
   //   入れ物の下端(スクロールする箱か画面の下)からはみ出た分だけ場を縮め、余れば 420px まで戻す。横向きの低い画面(2列)は今までどおり CSS
   const wrapRef = useRef(null);
@@ -1909,7 +1909,7 @@ function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = nul
     const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
     const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
     const cur = box.getBoundingClientRect().height;
-    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
+    const next = Math.round(Math.max(fitMin, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
     if (Math.abs(next - cur) > 2) setStagePx(next);
   });
   const rows = (Array.isArray(tools) ? tools : [tools]).filter(Boolean);

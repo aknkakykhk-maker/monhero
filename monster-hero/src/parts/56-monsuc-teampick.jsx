@@ -60,7 +60,11 @@ const msxTpCardM = (rec, mem, species) => ({
 });
 const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null);
 // 伸びが上がる能力の短い字(札の下の数字の欄)。例「📖+4 🎯+3」
-const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}%`).join(' ') : ''); // 単位の%を付ける(育-93・育-113)
+// カードの下の伸びの表示。絵文字だけでは能力が分からないので名前を添え、1つずつ折れないようにする(育-234・前は「🛡️+4% 🎯 ⏎ +3%」と数だけ次の行へ落ちていた)
+const msxTpBonusText = (mem) => {
+  if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
+  return mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>);
+};
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {

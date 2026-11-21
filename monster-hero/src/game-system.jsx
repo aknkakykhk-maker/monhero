@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d8772b1719cd0fd0
+// generated-sha256: 32397799de833127
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79862,267 +79862,6 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
   );
 }
 
-function AssistantMasmonBattleWatch({ onClose }) {
-  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [size, setSize] = useState(3);
-  const [sideA, setSideA] = useState(AMBW_DEFAULT.A);
-  const [sideB, setSideB] = useState(AMBW_DEFAULT.B);
-  const [diff, setDiff] = useState(0);            // A の能力の合計を B より何%多くするか
-  const [balance, setBalance] = useState('A');
-  const [allTechs, setAllTechs] = useState(true);  // 技を全部使うか、最初の技だけか
-  const [seedNo, setSeedNo] = useState(1);
-  const [speed, setSpeed] = useState('x1');
-  const [phase, setPhase] = useState('setup');    // setup → watch → result
-  const [battle, setBattle] = useState(null);     // { r, frames, teamA, teamB, maxHp }
-  const [pos, setPos] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [compare, setCompare] = useState(null);
-  const rootRef = useRef(null);
-  useEffect(() => { if (rootRef.current) rootRef.current.scrollTop = 0; }, [phase]);
-
-  useEffect(() => {
-    let alive = true;
-    if (!engine) ambwLoadEngine().then((e) => { if (!alive) return; if (e) setEngine(e); else setLoadFailed(true); });
-    return () => { alive = false; };
-  }, []);
-
-  const ready = !!(engine && engine.BALANCE && typeof engine.simulate === 'function');
-  const catalog = useMemo(() => {
-    if (!ready) return null;
-    try { return engine.buildCatalog({ ALL_PLAYER_MONSTERS, ASSISTANT_MASMON_TECHS: ambwTechTable() }); } catch (e) { return null; }
-  }, [ready]);
-  const speciesIds = useMemo(() => (catalog ? Object.keys(catalog.species) : Object.keys(ALL_PLAYER_MONSTERS)), [catalog]);
-  const assistants = useMemo(() => ASSISTANT_LIST.filter(a => ready && engine.STYLES[a.id] && (typeof assistantReleased !== 'function' || assistantReleased(a.id))), [ready]);
-  const BASE_TOTAL = 1800;
-  const teamsNow = () => ({
-    teamA: ambwTeamOf(engine, sideA, size, Math.round(BASE_TOTAL * (1 + diff / 100)), catalog, allTechs),
-    teamB: ambwTeamOf(engine, sideB, size, BASE_TOTAL, catalog, allTechs),
-  });
-  const seedOf = (n) => `watch-${n}`;
-
-  const start = (n = seedNo, bal = balance) => {
-    if (!ready || !catalog) return;
-    const { teamA, teamB } = teamsNow();
-    const r = engine.simulate({ seed: seedOf(n), catalog, teamA, teamB, balance: bal, trace: true });
-    const st = r.log[0] || {};
-    setBattle({ r, frames: ambwFramesOf(r.log), teamA, teamB, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, balance: bal, seedNo: n });
-    setPos(0); setPaused(false); setCompare(null); setPhase('watch');
-  };
-
-  // 再生: 1行ずつ進める。「見せ場だけ」は見せ場の行までとぶ
-  useEffect(() => {
-    if (phase !== 'watch' || !battle || paused) return undefined;
-    const log = battle.r.log;
-    if (pos >= log.length - 1) { const t = setTimeout(() => setPhase('result'), 900); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
-      let next = pos + 1;
-      if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
-      setPos(next);
-    }, sp.ms);
-    return () => clearTimeout(t);
-  }, [phase, battle, pos, paused, speed]);
-
-  // 結果: 同じ編成で 効き方 A・B・C を見比べる(この試合の勝ち負けと、100戦の勝率)。保存しない
-  useEffect(() => {
-    if (phase !== 'result' || !battle || compare) return undefined;
-    const t = setTimeout(() => {
-      const N = 100, out = {};
-      for (const b of ['A', 'B', 'C']) {
-        const same = engine.simulate({ seed: seedOf(battle.seedNo), catalog, teamA: battle.teamA, teamB: battle.teamB, balance: b });
-        let w = 0;
-        for (let k = 0; k < N; k++) if (engine.simulate({ seed: `cmp-${k}`, catalog, teamA: battle.teamA, teamB: battle.teamB, balance: b }).winner === 'A') w++;
-        out[b] = { same: same.winner, rounds: same.rounds, rate: Math.round(w / N * 100) };
-      }
-      setCompare(out);
-    }, 60);
-    return () => clearTimeout(t);
-  }, [phase, battle, compare]);
-
-  const nameOf = (id) => (ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
-  const setSpecies = (which, idx, sp) => { const set = which === 'A' ? setSideA : setSideB; set(s => ({ ...s, species: s.species.map((x, j) => j === idx ? sp : x) })); };
-
-  const sideEditor = (which, side, set) => {
-    const total = which === 'A' ? Math.round(BASE_TOTAL * (1 + diff / 100)) : BASE_TOTAL;
-    return (
-      <div className={`ambw-card ${which === 'A' ? 'me' : 'foe'}`} data-ambw-side={which}>
-        <div className="ambw-row">
-          <img className="ambw-face" src={assistantFaceSrc(ASSISTANT_LIST.find(a => a.id === side.assistant) || ASSISTANT_LIST[0], 'normal')} alt=""/>
-          <div style={{ flex: 1 }}>
-            <div className="ambw-small">{which === 'A' ? '手前の助手' : '奥の助手'}・能力の合計 {total}</div>
-            <select className="ambw-sel" data-ambw-assistant={which} value={side.assistant} onChange={(e) => set(s => ({ ...s, assistant: e.target.value }))}>
-              {assistants.map(a => <option key={a.id} value={a.id}>{a.name}({engine.STYLES[a.id].label})</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="ambw-row" style={{ marginTop: 8, alignItems: 'flex-start' }}>
-          {side.species.slice(0, size).map((sp, j) => (
-            <div key={j} className="ambw-slot">
-              <img src={ALL_PLAYER_MONSTERS[sp].imgUrl} alt=""/>
-              <select className="ambw-sel" data-ambw-species={`${which}${j}`} value={sp} onChange={(e) => setSpecies(which, j, e.target.value)}>
-                {speciesIds.map(id => <option key={id} value={id}>{ALL_PLAYER_MONSTERS[id].name}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  let body = null;
-  if (!ready || !catalog) {
-    body = <div className="ambw-card"><p className="ambw-small">{loadFailed || (engine && !engine.BALANCE) || (ready && !catalog) ? '対戦の計算を読み込めませんでした(計算の第2版がまだ入っていないか、通信が切れています)。' : '対戦の計算を読み込んでいます…'}</p></div>;
-  } else if (phase === 'setup') {
-    body = (
-      <div data-ambw-setup>
-        <div className="ambw-card">
-          <div className="ambw-small">対戦の形</div>
-          <div className="ambw-tabs">{[1, 2, 3].map(n => <button key={n} data-ambw-size={n} className={size === n ? 'on' : ''} onClick={() => setSize(n)}>{n} VS {n}</button>)}</div>
-        </div>
-        {sideEditor('B', sideB, setSideB)}
-        {sideEditor('A', sideA, setSideA)}
-        <div className="ambw-ctl" style={{ marginTop: 6 }}><button className="ambw-btn2" data-ambw-mirror onClick={() => setSideA(s => ({ ...s, species: sideB.species.slice() }))}>手前を奥と同じ種族にそろえる</button></div>
-        <p className="ambw-small" style={{ textAlign: 'center' }}>同じ種族どうしなら、能力の形も同じになり、能力の差だけを見比べられます。</p>
-        <div className="ambw-card">
-          <div className="ambw-small">能力の差(手前の能力の合計を、奥よりどれだけ多くするか)</div>
-          <div className="ambw-tabs">{AMBW_DIFFS.map(d => <button key={d} data-ambw-diff={d} className={diff === d ? 'on' : ''} onClick={() => setDiff(d)}>{d > 0 ? `+${d}%` : d === 0 ? '同じ' : `${d}%`}</button>)}</div>
-          <div className="ambw-small" style={{ marginTop: 8 }}>能力の差の効き方</div>
-          <div className="ambw-tabs">{['A', 'B', 'C'].map(b => <button key={b} data-ambw-balance={b} className={balance === b ? 'on' : ''} onClick={() => setBalance(b)}>{b}</button>)}</div>
-          <div className="ambw-small" style={{ marginTop: 4 }}>{balance}: {AMBW_BALANCE_NOTE[balance]}</div>
-          <div className="ambw-small" style={{ marginTop: 8 }}>使う技</div>
-          <div className="ambw-tabs"><button data-ambw-techs="all" className={allTechs ? 'on' : ''} onClick={() => setAllTechs(true)}>全部の技</button><button data-ambw-techs="start" className={!allTechs ? 'on' : ''} onClick={() => setAllTechs(false)}>最初の技だけ</button></div>
-          <div className="ambw-small" style={{ marginTop: 8 }}>速さ</div>
-          <div className="ambw-tabs">{AMBW_SPEEDS.map(s => <button key={s.id} className={speed === s.id ? 'on' : ''} onClick={() => setSpeed(s.id)}>{s.label}</button>)}</div>
-        </div>
-        <div className="ambw-ctl">
-          <button className="ambw-btn" data-ambw-start onClick={() => start()}>⚔ 対戦を見る(試合 {seedNo})</button>
-          <button className="ambw-btn2" onClick={() => setSeedNo(n => n + 1)}>🎲 別の試合にする</button>
-        </div>
-        <p className="ambw-small" style={{ textAlign: 'center', marginTop: 8 }}>同じ設定・同じ試合の番号なら、何度見ても同じ結果になります。何も保存しません。</p>
-      </div>
-    );
-  } else if (battle) {
-    const log = battle.r.log, e = log[pos] || {}, f = battle.frames[pos] || battle.frames[0];
-    const ended = phase === 'result';
-    const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
-    const who = (side, i) => (mem(side, i) || {}).name || '';
-    const WHY = engine.WHY || {};
-    const lineOf = (x) => {
-      if (!x || !x.side) return '';
-      const n = who(x.side, x.i);
-      if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
-      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
-      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
-      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
-      if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
-      if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
-      if (x.ev === 'guard') return `${n}は 身を守った`;
-      if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
-      if (x.ev === 'ko') return `${x.name} は たおれた`;
-      if (x.ev === 'enter') return `${n} が出た`;
-      return '';
-    };
-    const recent = [];
-    for (let k = pos - 1; k >= 1 && recent.length < 3; k--) { const t = lineOf(log[k]); if (t) recent.unshift({ k, t, side: log[k].side, r: log[k].r }); }
-    const gap = [6, 44, 92, 146][f.d] || 44;
-    const foeSide = e.side === 'A' ? 'B' : 'A';
-    const actor = e.side ? (ASSISTANT_LIST.find(a => a.id === (e.side === 'A' ? battle.teamA : battle.teamB).assistantId) || ASSISTANT_LIST[0]) : null;
-    const fighter = (side) => {
-      const i = f.act[side], m = mem(side, i), down = f.hp[side][i] <= 0;
-      const acting = e.side === side && (e.ev === 'tech') ? `ambw-lunge${side}` : '';
-      const hurt = e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : '';
-      return (
-        <div key={`${side}-${pos}`} className={`ambw-f ${down ? 'down' : ''} ${acting} ${hurt}`}>
-          <img className={side === 'A' ? 'ambw-flip' : ''} src={ALL_PLAYER_MONSTERS[m.species].imgUrl} alt=""/>
-          <em>{m.name}</em>
-          {e.ev === 'tech' && foeSide === side && (e.hit
-            ? <div className="ambw-dmg">{e.crit ? <small>会心!</small> : e.guarded ? <small>ガード!</small> : null}−{e.dmg}</div>
-            : <div className="ambw-dmg miss">はずれ</div>)}
-        </div>
-      );
-    };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
-    const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
-    const kos = log.map((x, k) => x.ev === 'ko' ? { k, side: x.side } : null).filter(Boolean);
-    const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
-    const tech = (side) => log.filter(x => x.ev === 'tech' && x.side === side);
-    const stat = (side) => { const t = tech(side); return { n: t.length, hit: t.filter(x => x.hit).length, crit: t.filter(x => x.crit).length, dmg: t.reduce((a, x) => a + (x.dmg || 0), 0) }; };
-    const sa = stat('A'), sb = stat('B');
-    body = (
-      <div data-ambw-watch data-ambw-pos={pos} data-ambw-phase={phase}>
-        {ended && (
-          <div data-ambw-result>
-            <div className="ambw-res"><b>{winName ? `${winName} の勝ち!` : '引き分け'}</b><span>{battle.r.winner === 'A' ? '手前' : battle.r.winner === 'B' ? '奥' : ''}・{battle.r.rounds} ラウンド・{battle.r.reason === 'judge' ? '判定' : '全滅で決着'}・効き方 {battle.balance}・試合 {battle.seedNo}</span></div>
-            <div className="ambw-card">
-              <table className="ambw-tbl"><tbody>
-                <tr><td>この1戦</td><td className="A">手前 {nameOf(battle.teamA.assistantId)}</td><td className="B">奥 {nameOf(battle.teamB.assistantId)}</td></tr>
-                <tr><td>技が当たった</td><td className="A">{sa.hit}/{sa.n}</td><td className="B">{sb.hit}/{sb.n}</td></tr>
-                <tr><td>会心</td><td className="A">{sa.crit}回</td><td className="B">{sb.crit}回</td></tr>
-                <tr><td>与えたダメージ</td><td className="A">{sa.dmg}</td><td className="B">{sb.dmg}</td></tr>
-              </tbody></table>
-            </div>
-            <div className="ambw-card" data-ambw-compare>
-              <div className="ambw-small">効き方の見比べ(同じ編成・能力の差 {diff > 0 ? `+${diff}%` : diff === 0 ? 'なし' : `${diff}%`})</div>
-              {!compare ? <p className="ambw-small">計算しています…</p> : ['A', 'B', 'C'].map(b => (
-                <div key={b} className="ambw-k"><span>{b}: この試合は {compare[b].same === 'draw' ? '引き分け' : compare[b].same === 'A' ? '手前の勝ち' : '奥の勝ち'}</span><div className="ambw-bar pt"><i style={{ width: `${compare[b].rate}%` }}/></div><b>{compare[b].rate}%</b></div>
-              ))}
-              <div className="ambw-small">右の数字は、同じ編成で100戦したときに手前が勝つ割合</div>
-              <div className="ambw-tabs">{['A', 'B', 'C'].map(b => <button key={b} className={battle.balance === b ? 'on' : ''} onClick={() => { setBalance(b); start(battle.seedNo, b); }}>同じ試合を {b} で見る</button>)}</div>
-            </div>
-            <div className="ambw-ctl">
-              <button className="ambw-btn" onClick={() => start(battle.seedNo, battle.balance)}>▶ もう一度見る</button>
-              <button className="ambw-btn2" onClick={() => { const n = battle.seedNo + 1; setSeedNo(n); start(n, battle.balance); }}>🎲 次の試合</button>
-              <button className="ambw-btn2" data-ambw-back onClick={() => setPhase('setup')}>⚙ 設定へ</button>
-            </div>
-          </div>
-        )}
-        <AmbwPanel side="B" team={battle.teamB} frame={f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
-        <div className="ambw-ring">
-          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: gap }}/>{fighter('B')}</div>
-          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-          {cutText && e.ev !== 'end' && (
-            <div key={`cut-${pos}`} className={`ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`}><small>{cutSmall}</small><b>{cutText}</b></div>
-          )}
-        </div>
-        <AmbwPanel side="A" team={battle.teamA} frame={f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-        {!ended && (
-          <div className="ambw-card ambw-log">
-            {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
-            {actor && e.why && ambwWhyOf(e.why, WHY) && (
-              <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{ambwWhyOf(e.why, WHY)}」</div></div>
-            )}
-          </div>
-        )}
-        <div className="ambw-seek"><i style={{ width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%` }}/>
-          {kos.map(x => <button key={x.k} className={x.side} style={{ left: `${x.k / Math.max(1, log.length - 1) * 100}%` }} onClick={() => { setPos(x.k); setPaused(true); setPhase('watch'); }}>✖</button>)}
-        </div>
-        {!ended && (
-          <div className="ambw-ctl">
-            <button className="ambw-btn2" data-ambw-pause onClick={() => setPaused(p => !p)}>{paused ? '▶' : '⏸'}</button>
-            {AMBW_SPEEDS.map(s => <button key={s.id} className={`ambw-sp ${speed === s.id ? 'on' : ''}`} data-ambw-speed={s.id} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
-            <button className="ambw-btn2" data-ambw-skip onClick={() => { setPos(log.length - 1); setPhase('result'); }}>⏭ 結果へ</button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="ambw" data-ambw-root ref={rootRef}>
-      <style>{AMBW_CSS}</style>
-      <div className="ambw-in">
-        <div className="ambw-top">
-          <button className="ambw-btn2" data-ambw-close onClick={phase === 'setup' || !battle ? onClose : () => setPhase('setup')}>← {phase === 'setup' || !battle ? '戻る' : '設定へ'}</button>
-          <span>⚔ 助手マスモンの対戦(観戦の試作)</span>
-          <b>{phase !== 'setup' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '試作'}</b>
-        </div>
-        {body}
-      </div>
-    </div>
-  );
-}
-
 // ---- part: 56-assistant-masmon-battle-beta.jsx ----
 // ===== 助手マスモンの対戦 β(2026-11-11 ミセカタ2) =====
 // じゅんび(おまかせ/自分で決める)→ 観戦 → 振り返り → ランキング を1つのかたまりにした画面。
@@ -82479,6 +82218,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   const [gift, setGift] = useState(null);
   const [failed, setFailed] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [foeSheet, setFoeSheet] = useState(null); // 相手の技の枠を押して開く、その間合いの相手の技の一覧(見るだけ・r1119-070 ③)
   const [bg, setBg] = useState(() => (typeof msaBgRead === 'function' ? msaBgRead() : 'arena'));
   const reduce = useMemo(() => (typeof msaReduce === 'function' ? msaReduce() : false), []);
   const last = amgcLastShugyo(aid);
@@ -82503,7 +82243,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       const seed = `amgc-${aid}-${last ? last.log.s : 0}`; // 同じ修行なら何度見ても同じ試合
       let r; try { r = engine.simulate({ seed, catalog, teamA, teamB: foe.team, balance: 'A', trace: true }); } catch (_) { setFailed(true); return; }
       const st = r.log[0] || {};
-      setBattle({ r, frames: ambwFramesOf(r.log), maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, teamA, teamB: foe.team, foe });
+      setBattle({ r, frames: ambwFramesOf(r.log), maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, teamA, teamB: foe.team, foe, catalog });
     })();
     return () => { alive = false; };
   }, [engine]);
@@ -82554,25 +82294,40 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
     const foeFace = faceOf(battle.teamB.assistantId), meFace = faceOf(aid);
     const foeLine = battle.foe.kind === 'friend' ? battle.foe.label : `${foeFace ? foeFace.a.name : ''}の${battle.foe.label}`;
     const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', bg) : null;
+    // 相手の技の枠(r1119-070 ③ 社長の選択「出す」): モンサクの試合と同じ形。自分の枠と操作は無い(見るだけの画面)
+    const st0 = log[0] || {}, mvB = (st0.bMoves || [])[f.act.B], mbB = battle.teamB.members ? battle.teamB.members[f.act.B] : null;
+    const itemsB = typeof ambwTechItems === 'function' && Array.isArray(mvB) ? ambwTechItems(battle.catalog, mbB, mvB) : null;
+    const hitAtB = (t, d) => { const v = battle.catalog && typeof ambwHitPct === 'function' ? ambwHitPct(battle.catalog, teams, 'B', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
+    const foeOn = Boolean(itemsB && itemsB.length && !done);
+    const tools = (
+      <>
+        <button type="button" className="msa-pause" data-amgc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
+        {AMBW_SPEEDS.filter(x => x.id === 'hl' || x.id === 'x2').map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} data-amgc-speed={x.id} onClick={() => { setSpeed(x.id); setPaused(false); }}>{x.label}</button>)}
+        {typeof MsaBgToggle === 'function' ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
+        <button type="button" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
+      </>
+    );
     return (
-      <div className="msa amgc-wrap" data-amgc-match data-msa-pos={pos}>
-        <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
-        <div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>
-        <div className="msa-stagebox amgc-stagebox" data-msa-stagebox>
-          <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill wide lite={speed === 'hl'}/>
-        </div>
-        <div className="amgc-side me" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>
-        <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
-      </div>);
+      <MsaMatchView className="amgc-wrap" mode="watch" fitMin={typeof window !== 'undefined' && window.innerWidth < 360 ? 220 : 300} attrs={{ 'data-amgc-match': '', 'data-msa-pos': pos }}
+        head={<div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>}
+        foe={foeOn ? { list: itemsB, rep: msaRepIds(itemsB, null), dist: f.d, guts: f.g.B, lastMove: typeof msaLastTechOf === 'function' ? msaLastTechOf(log, pos, 'B') : null, hitAt: hitAtB, danger: typeof msaFoeDangerOf === 'function' ? msaFoeDangerOf(itemsB, f.d, hitAtB) : 0, onOpen: (d) => setFoeSheet(d) } : null}
+        stage={<MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill wide lite={speed === 'hl'}/>}
+        say={call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}
+        why={<div className="amgc-side me msa-why" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>}
+        tools={tools}
+        overlay={foeSheet != null && itemsB && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('B')}(練習相手)の${AMBW_DIST[foeSheet]}の技`} list={itemsB} d={foeSheet} dist={f.d} rep={msaRepIds(itemsB, null)} hitAt={hitAtB} onClose={() => setFoeSheet(null)}/> : null}/>);
   };
   return (
     <div className="ambw-root amgc-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))', display: 'flex', flexDirection: 'column' }}>
       <style>{AMBW_CSS}{`
 .amgc-root>*{flex-shrink:0}
-.amgc-root>.amgc-wrap{flex:1 0 auto}
-.amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-root>.msa.msa-mv{flex:none;height:auto}
+.amgc-root .msa-mv .msa-tools button{white-space:nowrap;font-size:11.5px}
+.amgc-root .msa-mv .msa-tools button[data-amgc-speed=hl]{flex:1.5}
+.amgc-root .msa-mv .msa-tools button[data-amgc-skip]{flex:1.3}
+.amgc-root .msa-mv .msa-tools button.msa-bgsw{flex:1.5}
+@media (max-width:359.98px){.amgc-root .msa-mv .msa-tools{gap:3px}.amgc-root .msa-mv .msa-tools button{font-size:10.5px}}
 .amgc-head{display:block;color:#fde68a}.amgc-head span{display:inline-block;white-space:nowrap}.amgc-head .who{margin-top:2px;font-size:12.5px;color:#fde68a}
-.amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
 .amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
 .amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
 .amgc-side img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;background:#312e5a;flex:none}
@@ -82587,12 +82342,14 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </div>
       <div className="amgc-aim" data-amgc-aim>🎯 <b>狙い</b>: {row ? `${row.nick}の${aim}` : aim}</div>
       {stageBlock()}
-      <div className="ambw-ctl" style={{ marginTop: 6 }}>
+      {battle && battle.solo ? (
+        <div className="ambw-ctl" style={{ marginTop: 6 }}>
         <button className="ambw-btn2" data-amgc-pause onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
         {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
         {typeof msaBgWrite === 'function' && <button className="ambw-btn2" data-msa-bg={bg} aria-label="背景を切り替える" onClick={() => { const nx = bg === 'stadium' ? 'arena' : 'stadium'; msaBgWrite(nx); setBg(nx); }}>{bg === 'stadium' ? '🏟️' : '🏛️'}</button>}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
-      </div>
+        </div>
+      ) : null}
       {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
       {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       {!done && battle && !failed ? (
@@ -90486,7 +90243,7 @@ const MSX_CSS = `
 .msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
 .msx .v-fx .ch i{font-style:normal;color:#94a3b8}
 .msx .v-fx .t .mx{color:#fde047;font-size:15px}
-.msx .v-chip .v-chip-sub{display:block;font-size:9.5px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
+.msx .v-chip .v-chip-sub{display:block;font-size:10px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
 .msx button.v-chip.msx-yosu-chip{font-family:inherit;color:#fff;text-align:left;cursor:pointer;min-height:30px}.msx .msx-yosu-chip.on{white-space:normal;max-width:min(260px,70vw);border-radius:12px}
 .msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
 .msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
@@ -91488,6 +91245,7 @@ const MSX_CSS = `
 /* フレンドの札: 下の帯にアシスト効果の印(2026-11-20 社長「フレンドのアシスト能力が見えない」) */
 .msx .msx-fp-as{display:inline-flex;align-items:center;gap:1px}.msx .msx-fp-as i{font-style:normal;line-height:1}.msx .msx-fp-as small{font-size:10px;font-weight:900;margin-left:1px}
 .msx .msx-fp-dup{font-size:10px;font-weight:900;color:#fde68a;margin-right:2px}
+.msx .mcd-note .msx-fp-dup{color:#9d174d} /* 白い札の中では濃い色(黄色が白に溶けて読めなかった・育-236・239) */
 .msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
 .msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
@@ -92729,12 +92487,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
     // role="dialog" … 開いている間は右上の「更新あり」を出さずに待つ(WaitForOverlayClose・見出しに重なっていた 2026-11-20 社長の実機)
     <div className="msx-ov msx-fade" data-msx-detail role="dialog" aria-modal="true" onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
-        <h3 className="msx-md-ti">モンスターの詳細</h3>
+        {/* 窓の題はモンスターの名前(「モンスターの詳細」の題が大きく、名前が絵の左上の小さな字だった・育-139・173) */}
+        <h3 className="msx-md-ti" data-msx-md-title>{name || msxMonName(species)}</h3>
         <div className="msx-md-scroll">
           <div className="msx-md-top">
             <div className="msx-md-art">
               {/* 名前を付けていない子は「スネグーラチカ / Lv.3・スネグーラチカ」と同じ名前が2行になっていたので、下の行の種の名前を落とす(2026-11-20 r1119-033 育-41) */}
-              <div className="nm">{head ? <span className="msx-md-head">{head}</span> : null}<span className="nmx">{name || msxMonName(species)}</span>{(() => { const nm0 = name || msxMonName(species); const sb = sub && typeof sub === 'string' && sub.endsWith(`・${nm0}`) ? sub.slice(0, -(nm0.length + 1)) : sub; return sb ? <small>{sb}</small> : null; })()}</div>
+              <div className="nm">{head ? <span className="msx-md-head">{head}</span> : null}{(() => { const nm0 = name || msxMonName(species); const sb = sub && typeof sub === 'string' && sub.endsWith(`・${nm0}`) ? sub.slice(0, -(nm0.length + 1)) : sub; return sb ? <small>{sb}</small> : null; })()}</div>
               {art || <img src={msxMonImg(species)} alt=""/>}
               {power != null ? <div className="pw"><small>総合力</small><b>{msxFmt(power)}</b>{rank ? <i className={msxRankCls(rank)}>{rank}</i> : null}{gradeLabel ? <i className="msx-md-grade">{gradeLabel}</i> : null}</div> : null}
             </div>
@@ -93324,7 +93083,11 @@ const msxTpCardM = (rec, mem, species) => ({
 });
 const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null);
 // 伸びが上がる能力の短い字(札の下の数字の欄)。例「📖+4 🎯+3」
-const msxTpBonusText = (mem) => (mem && Array.isArray(mem.top) ? mem.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}+${Math.round((mem.bonus && mem.bonus[k]) || 0)}%`).join(' ') : ''); // 単位の%を付ける(育-93・育-113)
+// カードの下の伸びの表示。絵文字だけでは能力が分からないので名前を添え、1つずつ折れないようにする(育-234・前は「🛡️+4% 🎯 ⏎ +3%」と数だけ次の行へ落ちていた)
+const msxTpBonusText = (mem) => {
+  if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
+  return mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>);
+};
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
@@ -96027,58 +95790,6 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   );
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot} rankName={rank ? rank.name : ''}/>;
 }
-
-// ---- 観戦(助手マスモン対戦の観戦の部品を使い回す) ----
-function MsxR3Watch({ fight, onDone }) {
-  const [pos, setPos] = useState(0);
-  const [speed, setSpeed] = useState('hl');
-  const log = fight.r.log; const len = log.length;
-  useEffect(() => {
-    if (pos >= len - 1) { const t = setTimeout(() => onDone(), 900); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find((x) => x.id === speed) || AMBW_SPEEDS[0];
-    const msxR3Step = () => {
-      let n = pos + 1;
-      if (speed === 'hl') while (n < len - 1 && !ambwIsHighlight(log[n], fight.maxHp)) n++;
-      setPos(n);
-    };
-    const t = setTimeout(msxR3Step, sp.ms);
-    return () => clearTimeout(t);
-  }, [pos, speed]);
-  const e = log[pos] || {}; const f = fight.frames[pos] || fight.frames[0]; const foeSide = e.side === 'A' ? 'B' : 'A';
-  const fighter = (side) => {
-    const team = side === 'A' ? fight.teamA : fight.teamB; const m = team.members[f.act[side]] || team.members[0];
-    return (
-      <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
-        <img className={side === 'A' ? 'ambw-flip' : ''} src={msxMonImg(m.species)} alt=""/><em>{m.name}</em>
-        {e.ev === 'tech' && foeSide === side && (e.hit ? <div className="ambw-dmg">−{e.dmg}</div> : <div className="ambw-dmg miss">はずれ</div>)}
-      </div>);
-  };
-  return (
-    <div className="r3-watch" data-msx-r3-watch>
-      <style>{AMBW_CSS}</style>
-      {/* 横画面では左に対戦の場を残し、右の HP・技・操作だけがスクロールする(2026-11-16 UI改修)。
-          縦画面では並び順(相手の札→場→自分の札→操作)を CSS の order で今までどおりに戻す */}
-      <div className="r3-watch-side">
-        <AmbwPanel side="B" team={fight.teamB} frame={f} maxHp={fight.maxHp} moves={fight.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
-        <AmbwPanel side="A" team={fight.teamA} frame={f} maxHp={fight.maxHp} moves={fight.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-        <div className="ambw-ctl">
-          {AMBW_SPEEDS.filter((x) => x.id === 'hl' || x.id === 'x2').map((x) => <button type="button" key={x.id} className={speed === x.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
-          <button type="button" className="ambw-btn2" data-msx-r3-towatch-end onClick={() => onDone()}>⏭ 結果へ</button>
-        </div>
-      </div>
-      <div className="ambw-ring">
-        <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
-        <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-        {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '🏋️ ちから技' : '📖 かしこさ技'}</small><b>{e.name}</b></div>}
-      </div>
-    </div>
-  );
-}
-
-// 組み合わせ表(2026-11-14 社長「トーナメントの表示がおかしい。最初に1回戦が動く演出がない。バトルは決勝の一戦だけ」・参考 taikai-bracket.png・v2 84〜90秒・v4 48〜52秒)
-//   8体・自分はいちばん上(橙)・番号は人気順(1〜8)・1番人気の王者は反対の山。開いたら 1回戦→準決勝 が自動で進む:
-//   勝った側へ線が赤く伸び、負けた側は暗くなる(自分も演出で勝ち上がる)。解説のひとこと。SKIP で飛ばせる。戦うのは決勝の1戦だけ
-//   線は行の高さ RH から px で引く(行と線がずれない)。芯の bracketOf: entrants・rounds[1回戦の勝ち4・準決勝の勝ち2]・final[自分, 相手]・pop
 function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settle, result, toCard, onPause }) {
   const br = msxSuc.SUC.bracketOf(s) || { entrants: [], rounds: [[], []], final: [0, 4], pop: [] };
   const E = br.entrants; const r1 = br.rounds[0] || []; const r2 = br.rounds[1] || []; const fi = (br.final && br.final[1]) || 4;
@@ -96602,15 +96313,6 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['rematch']} ctx={{ ...actx, bond: bondLv || 1 }}/> : null}
     </>);
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><span className="v-wait">えらんでね</span></div>}/>;
-  }
-
-  // ---- 観戦 ----
-  if (step === 'watch') {
-    const body = (<>
-      <div className="v-ev-h" style={{ position: 'relative', marginTop: 6 }}><small>{name}</small>⚔ {run.nick} VS {foeName}</div>
-      <MsxR3Watch fight={fight} onDone={result}/>
-    </>);
-    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={null}/>;
   }
 
   // ---- バトルカード(C2): 能力の比べ ----
@@ -97930,12 +97632,14 @@ span.mcd{cursor:default}
 .mcd .mcd-art .mm-art{display:block;width:100%;height:100%}
 .mcd .mcd-fit{display:block}
 .mcd .mcd-art img{width:100%!important;height:100%!important;object-fit:contain;object-position:50% 100%}
+/* 「同じ種類」「育てる種」の札は顔にかぶせず絵の下の端へ(名前の帯がある大きさは帯の上)(育-236・239) */
+.mcd:not(.s) .mcd-note{bottom:23%}
 .mcd .mcd-strip{position:absolute;left:0;right:0;bottom:0;height:21%;display:flex;align-items:center;justify-content:center;gap:4%;padding:0 5%;background:#0f0d24e6;border-top:1px solid #ffffff22}
 .mcd .mcd-nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:900;font-size:clamp(9px,15cqw,14px);line-height:1.1;letter-spacing:-.02em}
 .mcd.s .mcd-art{bottom:5%}
 .mcd .mcd-nms{display:block;white-space:nowrap;overflow:hidden;font-weight:900;font-size:11px;line-height:1.25;color:#fff;text-align:center}.mcd .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
 .mcd .mcd-slot{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;width:clamp(20px,30cqw,34px);height:clamp(20px,30cqw,34px);font-style:normal;font-weight:900;font-size:clamp(11px,17cqw,19px);color:#fff;background:#2563eb;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px #0008}
-.mcd .mcd-note{position:absolute;left:4%;right:4%;top:24%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcd .mcd-note{position:absolute;z-index:3;left:4%;right:4%;bottom:3%;font-weight:900;font-size:clamp(9px,11cqw,11px);background:#ffffffe6;color:#1e1a36;border-radius:999px;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mcd .mcd-lv{position:absolute;right:3%;bottom:23%;line-height:1.3;padding:0 .3em;background:#0f0d24d9;border-radius:6px;font-weight:900;font-size:clamp(9px,11cqw,13px);color:#fde68a}
 .mcd .mcd-gd{position:absolute;right:3%;top:3%;font-style:normal;font-weight:900;font-size:clamp(9px,14cqw,15px);line-height:1.35;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:7px;padding:0 .35em}
 .mcd .mcd-fav{position:absolute;left:3%;top:3%;display:flex;flex-direction:column;gap:2px}
@@ -97947,6 +97651,10 @@ span.mcd{cursor:default}
 .mcd .mcd-tag{display:block;font-weight:900;font-size:clamp(10px,11cqw,12px);line-height:1.6;border-radius:999px;color:#fff;background:#4f46e5}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
+.mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+/* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
+.mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
+@container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
 .mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
 .mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
 .mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
@@ -100849,7 +100557,7 @@ function MsaDistRow({ side, row, title, note }) {
     </div>
   );
 }
-function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = null, foe = null, stage = null, say = null, why = null, mine = null, controls = null, tools = null, after = null, overlay = null, fit = true }) {
+function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = null, foe = null, stage = null, say = null, why = null, mine = null, controls = null, tools = null, after = null, overlay = null, fit = true, fitMin = 260 }) {
   // 場の高さを、下のボタン列まで1画面に収まる高さにする(2026-11-20 再点検 バ-24・32・35・44)。上限は決めた 420px(r1119-007)・下限 260px。
   //   入れ物の下端(スクロールする箱か画面の下)からはみ出た分だけ場を縮め、余れば 420px まで戻す。横向きの低い画面(2列)は今までどおり CSS
   const wrapRef = useRef(null);
@@ -100864,7 +100572,7 @@ function MsaMatchView({ className = '', mode = 'watch', attrs = null, head = nul
     const bottomLine = Math.min(window.innerHeight, root ? root.getBoundingClientRect().bottom : window.innerHeight);
     const contentBottom = wrap.getBoundingClientRect().top + wrap.scrollHeight;
     const cur = box.getBoundingClientRect().height;
-    const next = Math.round(Math.max(260, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
+    const next = Math.round(Math.max(fitMin, Math.min(420, cur - (contentBottom - bottomLine) - 4)));
     if (Math.abs(next - cur) > 2) setStagePx(next);
   });
   const rows = (Array.isArray(tools) ? tools : [tools]).filter(Boolean);
@@ -127054,7 +126762,6 @@ function MonsterHeroGame() {
   const [callnameToast, setCallnameToast] = useState(null);
   // 助手とおしゃべりの窓(2026-10-14)。開いているあいだだけ真。公開の印 assistantChat が立つまではデバッグ設定からだけ開ける
   const [assistantChatOpen, setAssistantChatOpen] = useState(false);
-  const [masmonBattleWatchOpen, setMasmonBattleWatchOpen] = useState(false); // 助手マスモンの対戦の観戦(試作・デバッグ設定からだけ)
   // おしゃべりの相手(2026-11-08 社長 ❼〜❿)。null のときは、いま選んでいる助手。助手ライフの部屋から開いたときは { id, opening, fromLife }
   const [assistantChatWith, setAssistantChatWith] = useState(null);
   // 関係図から見返す助手どうしの特別なお話(台本)。null なら見返していない
@@ -144269,7 +143976,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}
-        {masmonBattleWatchOpen&&typeof AssistantMasmonBattleWatch==='function'&&<AssistantMasmonBattleWatch onClose={()=>setMasmonBattleWatchOpen(false)}/>}
         {/* 助手マスモンの対戦 β(2026-11-11)。開くのは assistantMasmonBattleOpen(部屋の「できること」・居場所「モンヒロバトル」・デバッグ設定) */}
         {typeof AssistantMasmonBattleHost==='function'&&<AssistantMasmonBattleHost/>}
         {typeof AssistantLifeSuccessHost==='function'&&<AssistantLifeSuccessHost onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>}
@@ -146533,7 +146239,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
-                  <DebugMenuRow data-debug-masmon-battle-watch icon="🐾" label="助手マスモンの対戦を見る(試作)" desc="助手・種族・能力の差・効き方 A/B/C・速さを選んで観戦。何も保存しません" onClick={()=>setMasmonBattleWatchOpen(true)}/>
                   <DebugMenuRow data-debug-masmon-battle-beta icon="⚔" label="助手マスモンの対戦 β(公開前の確かめ)" desc="じゅんび→観戦→振り返り→ランキングを本物のマスモンで。印が偽のあいだは何も保存しません" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug'});}}/>
                   <DebugMenuRow data-debug-masmon-battle-pvp-try icon="👥" label="助手マスモンのフレンド対戦を試す(本物のサーバ)" desc="この起動のあいだだけフレンド対戦を出す。登録と対戦は本物のサーバ・ランキングに残ります(この端末の保存はしません)" onClick={()=>{if(typeof assistantMasmonBattleOpen==='function')assistantMasmonBattleOpen({from:'debug',tryPvp:true});}}/>
               </DebugMenuGroup>

@@ -353,7 +353,7 @@ const MSX_CSS = `
 .msx .v-fx .ch span.res{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#0000;font-size:11.5px}
 .msx .v-fx .ch i{font-style:normal;color:#94a3b8}
 .msx .v-fx .t .mx{color:#fde047;font-size:15px}
-.msx .v-chip .v-chip-sub{display:block;font-size:9.5px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
+.msx .v-chip .v-chip-sub{display:block;font-size:10px;font-weight:800;opacity:.9;line-height:1.2;text-align:left}
 .msx button.v-chip.msx-yosu-chip{font-family:inherit;color:#fff;text-align:left;cursor:pointer;min-height:30px}.msx .msx-yosu-chip.on{white-space:normal;max-width:min(260px,70vw);border-radius:12px}
 .msx .v-burst{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 42%,#fde04740 0 8deg,#0000 8deg 16deg)}
 .msx .v-burst.b2{background:repeating-conic-gradient(from 0deg at 50% 42%,#94a3b830 0 8deg,#0000 8deg 16deg)}
@@ -1355,6 +1355,7 @@ const MSX_CSS = `
 /* フレンドの札: 下の帯にアシスト効果の印(2026-11-20 社長「フレンドのアシスト能力が見えない」) */
 .msx .msx-fp-as{display:inline-flex;align-items:center;gap:1px}.msx .msx-fp-as i{font-style:normal;line-height:1}.msx .msx-fp-as small{font-size:10px;font-weight:900;margin-left:1px}
 .msx .msx-fp-dup{font-size:10px;font-weight:900;color:#fde68a;margin-right:2px}
+.msx .mcd-note .msx-fp-dup{color:#9d174d} /* 白い札の中では濃い色(黄色が白に溶けて読めなかった・育-236・239) */
 .msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
 .msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
