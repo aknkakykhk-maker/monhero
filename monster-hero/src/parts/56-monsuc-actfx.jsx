@@ -336,7 +336,7 @@ const MSX_ACT_CSS = `
 @keyframes msxQgFly{0%{opacity:0;transform:translateY(6px)}25%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
 @keyframes msxQlSweep{0%{left:0}35%{left:100%}70%{left:20%}100%{left:var(--stop)}}
 @keyframes msxQlWin{from{border-color:#64748b;box-shadow:none}to{border-color:#facc15;box-shadow:0 0 16px #facc15aa}}
-.msx .msx-qst .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0aa}
+.msx .msx-qst .skip{display:none} /* 修行は下の「結果へ」ボタン1つで進む(題の帯に重なって読めず、同じ働きが2つあった。育-186) */
 @keyframes msxQbg{from{opacity:0;transform:scale(1.08)}to{opacity:1;transform:none}}
 @keyframes msxQban{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
 /* ---- その動きをしているトレーニング(mv-on)・修行の技の動き(2026-11-14) ---- */

@@ -95,7 +95,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const room = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_life_room_v1')));
       check(`③ ${tag}: 贈ると持ち物が1つ減り、部屋の床に置く(新しいキー)`, owned.furn_sofa === 0 && room && room.atsu && room.atsu.put.floor === 'sofa');
       const note = await page.locator('[data-assistant-life-note]').first().innerText().catch(() => '');
-      check(`③ ${tag}: お知らせの帯に、贈った家具と仲良し度の量(好きな家具 +120)`, /ふかふかソファ/.test(note) && /\+120/.test(note), note);
+      check(`③ ${tag}: お知らせの帯に、贈った家具と仲良し度の量(好きな家具 +40)`, /ふかふかソファ/.test(note) && /\+40/.test(note), note);
       for (const k of ['trophy', 'lantern', 'record']) await give(page, 'atsu', k);
       const ng = await furnProblems(page, 'atsu');
       if (process.env.FURN_DEBUG) console.log(tag, await page.evaluate(() => { const room = document.querySelector('[data-assistant-life-room="atsu"]'); const rr = room.getBoundingClientRect(); const g = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.left - rr.left), Math.round(r.top - rr.top), Math.round(r.width), Math.round(r.height)]; };

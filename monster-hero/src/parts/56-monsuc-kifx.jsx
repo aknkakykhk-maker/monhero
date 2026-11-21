@@ -62,7 +62,7 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
           </React.Fragment>))}
         </div>
       </>)}
-      <div className="msx-ki-tap">TAP</div>
+      <div className="msx-ki-tap">{/* 押すと次の段へ。下の「スキップ」は最後まで飛ばす(英語の TAP では分からなかった。育-248) */}タップで次へ ▶</div>
     </div>
   );
 }
@@ -105,7 +105,7 @@ const MSX_KI_CSS = `
 .msx .msx-ki-lad .rg.next .mk{left:-18px;color:#fde047;text-shadow:0 0 6px #000}
 .msx .msx-ki-lad .rg.gold{min-height:36px;background:linear-gradient(180deg,#fde68a,#d97706);color:#3b1d05;border-color:#fef3c7;box-shadow:0 0 14px #fbbf2499}
 .msx .msx-ki-lad .rg.gold.next{box-shadow:0 0 18px #fde047,0 0 4px #fff}
-.msx .msx-ki-tap{position:absolute;right:10px;bottom:4px;z-index:5;font-size:11px;font-weight:900;color:#e2e8f0;letter-spacing:.1em;padding:1px 8px;border-radius:8px;background:#0f0d24b3}
+.msx .msx-ki-tap{position:absolute;right:10px;bottom:4px;z-index:5;font-size:11px;font-weight:900;color:#e2e8f0;padding:1px 8px;border-radius:8px;background:#0f0d24b3}
 /* 章の区切り(段0): 見出しは1行のまま幅に合わせて縮める。TAP は見出しに重ねず、賞金の箱の下に置く(2026-11-20 点検 Q0「第二章 終/了」) */
 .msx .msx-ki.st0 .msx-ki-sum{bottom:26px}
 @container (max-height:330px){.msx .msx-ki-ttl{top:3%}.msx .msx-ki-ttl b{font-size:min(28px,calc((100cqw - 48px) / 6.8))}.msx .msx-ki-ttl span{margin-top:3px;font-size:13px}.msx .msx-ki-sum{padding:3px 12px 4px}.msx .msx-ki-sum .r{margin:0}.msx .msx-ki-sum .r>b{font-size:20px}.msx .msx-ki-sum .r>b>em{font-size:12px}}

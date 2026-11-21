@@ -185,6 +185,7 @@
 - **保存は変えない**: 貯まった点・Lv・行動ごとの今日の数(`mh_assistant_bond_*` の `daily`)はそのまま。変えるのは `data/assistants.js` の `lifeFurn` の `amount`・`dailyMax` と、家具の窓で `amount` を決めている所(いちばん多くて 80×1.5=120 の式)だけ
 - すでに家具で上げた人の点は取り上げない(減らさない)。Lv の必要量(`ASSISTANT_BOND_LEVELS`)も変えない
 - 家具の窓の「💗 +80(好みで変わる)」の札も、新しい数に合わせる
+- **段3で入れた値**(2026-11-20): 好き **+40**・ふつう **+27**・苦手 **+14**(`ASSISTANT_LIFE_FURN_PLAYER` 27 × 倍率。好きの 40.5 は `lifeFurn.amount` 40 で止める)。札は「💗 +27(好みで変わる)」。検査: `assistant-bond-check.js`(前の数の保存で点が減らない・40/480 で止まる)・`assistant-life-gift-check.js` ⑨(2回目は入らない)
 
 ## 5. 画面の型と、画面ごとのいちばん押してほしい物
 
