@@ -36,3 +36,26 @@
 ## 重さの検査(r1119-058)
 
 下の「重さの結果」に書く。
+
+### 重さの結果(`rhythm-stall-check.js --song`・HARD・CPU 4倍遅く・0〜12秒目)
+
+| 曲 | 止まり(50ms超) | 最大 | 基準 crossing_field | 判定 |
+| --- | --- | --- | --- | --- |
+| 原曲 | 4回 | 133ms | 5回・83ms | OK |
+| short ver. | 5回 | 83ms | 3回・100ms | OK |
+
+- 裏で別の検査を回しながら測った回は、変えていない天翔る翼でも 6→12 回と出た(ぶれ)。静かな状態で測り直した値を載せた
+- short ver. は1回目 2→5 で許す幅を1回超え、2回目 3→5 で OK(ぶれの範囲)
+
+## 前からある NG(作業前のコミット 22da83d4 でも落ちる・新曲と無関係)
+
+`audio/bgm-check.js`・`audio/auto-bgm-picker-browser-check.js`・`mode/extreme-browser-check.js`・`mode/raid-jack-home-say-tap-check.js`・
+`mode/raid-jack-screen-browser-check.js`・`mode/rhythm-chart-v3-check.js`(seasons)・`mode/rhythm-hell-level-check.js`(seasons)・
+`mode/rhythm-landscape-layout-check.js`・`mode/rhythm-multi-layout-check.js`・`mode/rhythm-option-preview-check.js`・
+`mode/rhythm-portrait-play-modes-check.js`・`mode/rhythm-result-effect-check.js`・`mode/rhythm-song-list-scroll-check.js`・`mode/rhythm-touch-bridge-check.js`
+
+## この変更で新しく落ちる検査(窓口へ)
+
+`mode/rhythm-song-shop-check.js`: ビートP交換所の「曲」で、幅320px(narrow)のときだけ、天翔る翼の札に 38px の空き(基準 32px 以内)。
+同じ段に並ぶ新曲の札は題「Beyond the Same Sky」が2行に折れて高いので、段の高さにそろえた天翔る翼の札に空きが出る(r1115-162 の「同じ段は下にそろえる」の結果)。
+390px・横持ちでは出ない。交換所の見た目の直しはモンビーの直し(r1119-036・直す前に社長に聞く)なので、この PR では直していない。
