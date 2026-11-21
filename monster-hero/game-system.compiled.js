@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60674f8f2777391e
+// source-sha256: 6fc836faf0639250
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118023,10 +118023,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1498,
-      eye: 0.3408,
-      chin: 0.4295,
-      m: 0.66
+      top: 0.1489,
+      eye: 0.336,
+      chin: 0.4296,
+      m: 0.696
     },
     momosuke: {
       top: 0.0636,
@@ -118084,11 +118084,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-halloween': {
     mua: {
-      top: 0.1757,
-      eye: 0.316,
+      top: 0.2342,
+      eye: 0.3496,
       chin: 0.4299,
-      m: 0.847,
-      above: 0.85
+      m: 0.598,
+      above: 1.2
     },
     momosuke: {
       top: 0.0614,
@@ -118107,10 +118107,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-card-master': {
     mua: {
-      top: 0.1327,
-      eye: 0.3124,
-      chin: 0.43,
-      m: 0.875,
+      top: 0.129,
+      eye: 0.3271,
+      chin: 0.4282,
+      m: 0.752,
       above: 0.75
     }
   },
@@ -124640,6 +124640,518 @@ const assistantLifeGoalView = (st = ASSISTANT_LIFE_GOAL_STORE.state, day = assis
     days: ASSISTANT_LIFE_GOAL_DAYS,
     basket: s.basket
   };
+};
+const ALU_CSS = `
+.alu{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:#fff;font-weight:700;font-size:13px;line-height:1.5;
+  background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%);word-break:auto-phrase;-webkit-text-size-adjust:100%}
+.alu *{box-sizing:border-box}
+.alu button{font:inherit;color:inherit;cursor:pointer}
+.alu .alu-h{font-size:16px;font-weight:900;line-height:1.35}
+.alu .alu-t{font-size:13px}
+.alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
+.alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.alu .alu-nw{white-space:nowrap}
+.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top .bk{flex:none;min-width:72px;height:36px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
+.alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
+.alu-body{flex:1;min-height:0;display:flex}
+.alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
+.alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
+.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
+.alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
+.alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.alu-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px 12px}
+.alu-card.gold{border-color:#fde047;background:linear-gradient(180deg,#3b2f12,#1e1a36)}
+.alu .alu-go{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-width:120px;min-height:52px;padding:8px 14px;border:0;border-radius:999px;
+  background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d66;color:#fff;font-size:16px;font-weight:900;text-align:center;line-height:1.3}
+.alu .alu-go:disabled{filter:grayscale(.8);opacity:.6}
+.alu .alu-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:44px;min-width:64px;padding:6px 12px;border-radius:999px;background:#f8fafc;border:1px solid #cbd5e1;color:#1e1b4b !important;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-row{display:flex;align-items:center;gap:10px;min-height:56px}
+.alu-row .pic{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#312e5a;display:grid;place-items:center;font-size:20px}
+.alu-row .tx{flex:1;min-width:0}
+.alu-chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
+.alu-chip.ok{background:#064e3b;border-color:#34d399;color:#a7f3d0}
+.alu-goal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.alu-goal span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.alu-goal span.on{background:#064e3b;border-color:#34d399;color:#fff}
+.alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
+.alu[data-alu-wide="1"] .alu-mask{align-items:center}
+.alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
+.alu[data-alu-wide="1"] .alu-sheet{border-radius:18px;max-height:92%}
+.alu-sheet .sh{flex:none;display:flex;align-items:flex-start;gap:8px;padding:12px 6px 8px 14px;border-bottom:1px solid #3b3566}
+.alu-sheet .sh .tt{flex:1;min-width:0}
+.alu-sheet .x{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:20px;font-weight:900;color:#e2e8f0}
+.alu-sheet .q{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:16px;font-weight:900;color:#cbd5e1}
+.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.alu-sheet .help{background:#0f172a;border-radius:10px;padding:8px 10px}
+.alu-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.alu-gains>div{min-width:88px;padding:8px 10px;border-radius:12px;background:#0f172a;border:1px solid #475569;text-align:center}
+.alu-gains>div b{display:block}
+.alu-ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:12px;color:#94a3b8;
+  background:repeating-linear-gradient(135deg,#1e1a36 0 12px,#231e40 12px 24px)}
+`;
+const ALU_TABS = Object.freeze([Object.freeze({
+  key: 'house',
+  icon: '🏡',
+  label: '家'
+}), Object.freeze({
+  key: 'where',
+  icon: '🗺',
+  label: '町'
+}), Object.freeze({
+  key: 'friends',
+  icon: '🤝',
+  label: '友情'
+}), Object.freeze({
+  key: 'visit',
+  icon: '🏠',
+  label: 'フレンド'
+}), Object.freeze({
+  key: 'masmon',
+  icon: '🐾',
+  label: 'マスモン'
+})]);
+const ALU_WIDE_MIN = 700;
+const aluClock = (now = Date.now()) => {
+  const parts = typeof timeOfDayJstParts === 'function' ? timeOfDayJstParts(now) : {
+    h: new Date(now).getHours(),
+    m: 0
+  };
+  const slot = typeof timeOfDayAt === 'function' ? timeOfDayAt(now) : {
+    label: ''
+  };
+  const clock = typeof timeOfDayClockText === 'function' ? timeOfDayClockText(now) : `${parts.h}:${String(parts.m).padStart(2, '0')}`;
+  const next = (Math.floor(parts.h / 2) * 2 + 2) % 24;
+  return {
+    clock,
+    label: slot.label || '',
+    next: `${next}:00`
+  };
+};
+const useAluWide = () => {
+  const ref = React.useRef(null);
+  const [box, setBox] = React.useState({
+    wide: false,
+    h: 0
+  });
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const w = el.clientWidth,
+        h = el.clientHeight;
+      const wide = w >= ALU_WIDE_MIN && w > h * 1.15;
+      setBox(b => b.wide === wide && b.h === h ? b : {
+        wide,
+        h
+      });
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, box.wide, box.h];
+};
+const AluTopBar = ({
+  title,
+  onBack,
+  now
+}) => {
+  const c = aluClock(now);
+  return React.createElement("div", {
+    className: "alu-top",
+    "data-alu-top": true
+  }, React.createElement("button", {
+    type: "button",
+    className: "bk",
+    "data-alu-back": true,
+    onClick: onBack
+  }, "← 戻る"), React.createElement("div", {
+    className: "ti",
+    "data-alu-title": true
+  }, title), React.createElement("div", {
+    className: "ck",
+    "data-alu-clock": true
+  }, React.createElement("b", null, c.clock, " ", c.label), React.createElement("small", null, "次に動く ", c.next)));
+};
+const AluTabBar = ({
+  tab,
+  onTab
+}) => React.createElement("div", {
+  className: "alu-tabs",
+  role: "tablist",
+  "data-alu-tabs": true
+}, ALU_TABS.map(t => React.createElement("button", {
+  key: t.key,
+  type: "button",
+  role: "tab",
+  "aria-selected": tab === t.key,
+  className: tab === t.key ? 'on' : '',
+  "data-alu-tab": t.key,
+  onClick: () => onTab && onTab(t.key)
+}, React.createElement("i", null, t.icon), t.label)));
+const AluFrame = ({
+  title,
+  onBack,
+  tab,
+  onTab,
+  now,
+  head,
+  scene,
+  sceneH = 300,
+  children,
+  overlay
+}) => {
+  const [ref, wide, frameH] = useAluWide();
+  const sceneHeight = frameH ? Math.max(140, Math.min(sceneH, Math.round(frameH * 0.3))) : sceneH;
+  return React.createElement("div", {
+    className: "alu",
+    ref: ref,
+    "data-alu-frame": true,
+    "data-alu-wide": wide ? '1' : undefined
+  }, React.createElement("style", null, ALU_CSS), React.createElement(AluTopBar, {
+    title: title,
+    onBack: onBack,
+    now: now
+  }), React.createElement("div", {
+    className: "alu-body"
+  }, wide && scene ? React.createElement("div", {
+    className: "alu-scene",
+    "data-alu-scene": true
+  }, scene) : null, React.createElement("div", {
+    className: "alu-main",
+    "data-alu-main": true
+  }, head || null, !wide && scene ? React.createElement("div", {
+    className: "alu-scene",
+    "data-alu-scene": true,
+    style: {
+      height: sceneHeight
+    }
+  }, scene) : null, children)), React.createElement(AluTabBar, {
+    tab: tab,
+    onTab: onTab
+  }), overlay);
+};
+const AluGo = ({
+  children,
+  onClick,
+  disabled,
+  ...rest
+}) => React.createElement("button", _extends({
+  type: "button",
+  className: "alu-go",
+  "data-alu-go": true,
+  onClick: onClick,
+  disabled: disabled
+}, rest), children);
+const AluBtn = ({
+  children,
+  onClick,
+  disabled,
+  ...rest
+}) => React.createElement("button", _extends({
+  type: "button",
+  className: "alu-btn",
+  onClick: onClick,
+  disabled: disabled
+}, rest), children);
+const AluRow = ({
+  pic,
+  text,
+  note,
+  action
+}) => React.createElement("div", {
+  className: "alu-row",
+  "data-alu-row": true
+}, React.createElement("div", {
+  className: "pic"
+}, pic), React.createElement("div", {
+  className: "tx"
+}, React.createElement("div", {
+  className: "alu-t"
+}, text), note ? React.createElement("div", {
+  className: "alu-n"
+}, note) : null), action || null);
+const AluSheet = ({
+  title,
+  gain,
+  help,
+  onClose,
+  children
+}) => {
+  const [open, setOpen] = React.useState(false);
+  return React.createElement("div", {
+    className: "alu-mask",
+    "data-alu-mask": true,
+    onClick: e => {
+      if (e.target === e.currentTarget && onClose) onClose();
+    }
+  }, React.createElement("div", {
+    className: "alu-sheet",
+    role: "dialog",
+    "aria-label": title,
+    "data-alu-sheet": true
+  }, React.createElement("div", {
+    className: "sh"
+  }, React.createElement("div", {
+    className: "tt"
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, title), gain ? React.createElement("div", {
+    className: "alu-n",
+    "data-alu-sheet-gain": true
+  }, "上がる物: ", gain) : null), help ? React.createElement("button", {
+    type: "button",
+    className: "q",
+    "aria-label": "説明",
+    "aria-expanded": open,
+    "data-alu-sheet-help": true,
+    onClick: () => setOpen(v => !v)
+  }, "?") : null, React.createElement("button", {
+    type: "button",
+    className: "x",
+    "aria-label": "閉じる",
+    "data-alu-sheet-close": true,
+    onClick: onClose
+  }, "✕")), React.createElement("div", {
+    className: "sb"
+  }, open && help ? React.createElement("div", {
+    className: "help alu-n",
+    "data-alu-sheet-help-text": true
+  }, help) : null, children)));
+};
+const AluResult = ({
+  title = '結果',
+  line,
+  gains = [],
+  finds = [],
+  next,
+  onClose
+}) => React.createElement(AluSheet, {
+  title: title,
+  onClose: onClose
+}, line ? React.createElement("div", {
+  className: "alu-t",
+  "data-alu-result-line": true
+}, line) : null, React.createElement("div", {
+  className: "alu-gains",
+  "data-alu-result-gains": true
+}, gains.map((g, i) => React.createElement("div", {
+  key: i
+}, React.createElement("span", {
+  className: "alu-n"
+}, g.icon, " ", g.label), React.createElement("b", {
+  className: "alu-num"
+}, "+", g.v)))), finds.length ? React.createElement("div", {
+  className: "alu-t",
+  "data-alu-result-finds": true
+}, "🧺 拾い物: ", finds.join('・')) : null, next ? React.createElement(AluGo, {
+  onClick: next.onClick,
+  "data-alu-result-next": true
+}, next.label) : null);
+const AluNextReward = ({
+  rest,
+  text
+}) => React.createElement("div", {
+  className: "alu-card gold",
+  "data-alu-next-reward": true
+}, React.createElement("div", {
+  className: "alu-t"
+}, "💗 次のごほうびまで あと ", React.createElement("b", {
+  className: "alu-num"
+}, rest)), text ? React.createElement("div", {
+  className: "alu-n"
+}, text) : null);
+const AluGoalCard = ({
+  view
+}) => {
+  const v = view || (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
+  if (!v) return null;
+  const labels = typeof ASSISTANT_LIFE_GOAL_LABEL !== 'undefined' ? ASSISTANT_LIFE_GOAL_LABEL : {};
+  const kinds = typeof ASSISTANT_LIFE_GOAL_KINDS !== 'undefined' ? ASSISTANT_LIFE_GOAL_KINDS : Object.keys(v.done || {});
+  return React.createElement("div", {
+    className: "alu-card",
+    "data-alu-goal": true
+  }, React.createElement("div", {
+    className: "alu-t"
+  }, "今日の目標 ", React.createElement("b", {
+    className: "alu-num"
+  }, Math.min(v.count, v.need)), "/", v.need, v.achieved ? ' ✓ 達成' : ''), React.createElement("div", {
+    className: "alu-goal"
+  }, kinds.map(k => React.createElement("span", {
+    key: k,
+    className: v.done && v.done[k] ? 'on' : ''
+  }, v.done && v.done[k] ? '✓ ' : '', labels[k] || k))), React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: 6
+    }
+  }, "4つのうち3つで達成 · 達成した日 ", v.streak % v.days, "/", v.days, "(7日でおやつのバスケット)"));
+};
+const AluCond = ({
+  id,
+  sleeping,
+  hour,
+  face
+}) => {
+  const f = face || (typeof assistantLifeCondFaceOf === 'function' ? assistantLifeCondFaceOf(id, {
+    sleeping,
+    hour
+  }) : null);
+  if (!f) return null;
+  return React.createElement("span", {
+    className: "alu-chip",
+    "data-alu-cond": f.key
+  }, f.emoji, " ", f.label, f.mark ? ` ${f.mark}` : '');
+};
+const AluEase = ({
+  id,
+  abs,
+  ease
+}) => {
+  const e = ease || (typeof assistantLifePlanEaseOf === 'function' ? assistantLifePlanEaseOf(id, abs) : null);
+  if (!e) return null;
+  return React.createElement("span", {
+    className: "alu-chip",
+    "data-alu-ease": e.mark
+  }, e.mark, " ", e.label);
+};
+const AssistantLifeUiSample = ({
+  kind = 'house',
+  now
+}) => {
+  const [tab, setTab] = React.useState('house');
+  const who = id => (typeof assistantById === 'function' ? assistantById(id) : null) || {
+    id,
+    name: id
+  };
+  const face = id => typeof AssistantFace === 'function' ? React.createElement(AssistantFace, {
+    who: who(id),
+    size: 44
+  }) : '🙂';
+  const a = who('mua'),
+    b = who('atsu');
+  const goal = {
+    count: 1,
+    need: 3,
+    achieved: false,
+    done: {
+      watch: true,
+      talk: false,
+      give: false,
+      play: false
+    },
+    streak: 4,
+    days: 7
+  };
+  const scene = React.createElement("div", {
+    className: "alu-ph alu-n"
+  }, "場面の絵(段7〜9で入る)");
+  const overlay = kind === 'sheet' ? React.createElement(AluSheet, {
+    title: `🎁 ${a.name}に贈る`,
+    gain: "💗 仲良し度 · 🤝 友情",
+    help: "道具を1つ選んで贈ります。好きな物だと 💗 が多く上がります。今日はあと3回。",
+    onClose: () => {}
+  }, React.createElement(AluRow, {
+    pic: "🍪",
+    text: "クッキー",
+    note: "好き · 持っている数 2",
+    action: React.createElement(AluBtn, null, "贈る")
+  }), React.createElement(AluRow, {
+    pic: "🧸",
+    text: "モンスターのぬいぐるみ",
+    note: "まだ分からない · 300P",
+    action: React.createElement(AluBtn, null, "贈る")
+  }), React.createElement(AluRow, {
+    pic: "🌸",
+    text: "花かざり",
+    note: "ふつう · 持っている数 1",
+    action: React.createElement(AluBtn, null, "贈る")
+  })) : kind === 'result' ? React.createElement(AluResult, {
+    title: "👀 見た",
+    line: `${a.name}と${b.name}が、おやつの最後の1個を半分こした。`,
+    gains: [{
+      icon: '💗',
+      label: '仲良し度',
+      v: 5
+    }, {
+      icon: '🤝',
+      label: '友情',
+      v: 3
+    }],
+    finds: ['星のかけら'],
+    next: {
+      label: `💬 ${b.name}と話す`,
+      onClick: () => {}
+    },
+    onClose: () => {}
+  }) : null;
+  return React.createElement(AluFrame, {
+    title: "家",
+    onBack: () => {},
+    tab: tab,
+    onTab: setTab,
+    now: now,
+    scene: scene,
+    sceneH: 250,
+    overlay: overlay,
+    head: React.createElement(AluNextReward, {
+      rest: 120,
+      text: `${a.name} Lv5 で 呼び方が1つ増える`
+    })
+  }, React.createElement(AluGo, null, "👀 見る — ", a.name, "と", b.name, "の話"), React.createElement(AluGoalCard, {
+    view: goal
+  }), React.createElement("div", {
+    className: "alu-card"
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "今日あったこと"), React.createElement(AluRow, {
+    pic: face('mua'),
+    text: `🤝 ${a.name}と${b.name}が仲直り`,
+    note: "10:00 · 読むと 💗 +2",
+    action: React.createElement(AluBtn, null, "読む")
+  }), React.createElement(AluRow, {
+    pic: face('dra'),
+    text: `💢 ${who('dra').name}と${who('kyuko').name}が喧嘩`,
+    note: "12:00 · 読むと 💗 +2",
+    action: React.createElement(AluBtn, null, "読む")
+  }), React.createElement(AluRow, {
+    pic: face('kiki'),
+    text: `🎵 ${who('kiki').name}とモンヒロビート`,
+    note: "13:00 · 誘った",
+    action: React.createElement(AluBtn, null, "見る")
+  }), React.createElement(AluRow, {
+    pic: face('atsu'),
+    text: `🧺 ${b.name}が拾い物`,
+    note: React.createElement("span", null, "星のかけら ", React.createElement(AluCond, {
+      id: "atsu",
+      face: {
+        key: 'genki',
+        emoji: '😊',
+        label: '元気',
+        mark: ''
+      }
+    }), " ", React.createElement(AluEase, {
+      id: "atsu",
+      ease: {
+        mark: '◎',
+        label: '聞いてくれそう'
+      }
+    })),
+    action: React.createElement(AluBtn, null, "見る")
+  })));
 };
 const ASSISTANT_LIFE_GUIDE_KEY = 'mh_assistant_life_guide_seen_v1';
 function assistantLifeBondOpens(id, nextLevel) {
@@ -174128,6 +174640,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -176923,7 +177438,7 @@ function MsxMonDetail({
           width: `${Math.min(100, over / cp * 100)}%`
         }
       }) : null)), React.createElement("span", {
-        className: `a${apt[i] > 'B' ? ' lo' : ''}`
+        className: `a msx-ap${apt[i]}`
       }, apt[i]));
     })) : null, tab === 'feat' ? React.createElement("div", {
       className: "msx-md-box"
@@ -177413,7 +177928,7 @@ function MsxGatherTable({
     onClick: onClose
   }, "閉じる")));
 }
-const msxAptCls = g => g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo';
+const msxAptCls = g => ['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC';
 const MSX_PERIOD_WHEN = Object.freeze({
   'デビュー期': 'はじめ',
   'ジュニア期': '前半',
@@ -178999,7 +179514,7 @@ function MsxTeamPick({
   const curName = (s, i) => {
     if (frOf(i)) return members[i].name;
     const m = s ? memOf(s) : null;
-    return m ? m.name : 'おまかせ';
+    return m ? m.name : Array.isArray(members) && members[i] ? members[i].name : 'おまかせ';
   };
   return React.createElement("div", {
     className: "msx-ov msx-fade msx-tp-ov",
@@ -179019,20 +179534,21 @@ function MsxTeamPick({
     "data-msx-tp-team": true
   }, view.map((s, i) => {
     const fr = frOf(i);
-    const mm = fr ? members[i] : s ? memOf(s) : null;
+    const mm = fr ? members[i] : s ? memOf(s) : Array.isArray(members) && members[i] || null;
     const rec = s && !fr ? recOf(s) : null;
-    return React.createElement("div", {
-      key: i,
-      className: `msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`,
-      "aria-label": fr ? 'フレンド' : curName(s, i)
-    }, React.createElement(MonsucMonCard, {
-      m: mm ? msxTpCardM(rec, mm) : null,
-      size: "s",
-      empty: String(i + 1),
-      on: i === idx && !!mm
-    }), fr ? React.createElement("b", {
-      className: "fr"
-    }, "🤝") : null);
+    return (React.createElement("div", {
+        key: i,
+        className: `msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`,
+        "aria-label": fr ? 'フレンド' : curName(s, i)
+      }, React.createElement(MonsucMonCard, {
+        m: mm ? msxTpCardM(rec, mm) : null,
+        size: "s",
+        empty: String(i + 1),
+        on: i === idx && !!mm
+      }), fr ? React.createElement("b", {
+        className: "fr"
+      }, "🤝") : null)
+    );
   })), React.createElement("div", {
     className: "msx-tp-tabs",
     "data-msx-tp-tabs": true
@@ -179101,7 +179617,13 @@ function MsxTeamPick({
       note: mk && mk.c !== 'in' || msxTpAssistIcons(msxTpAT(), m) ? React.createElement(React.Fragment, null, mk && mk.c !== 'in' ? React.createElement("b", {
         className: "msx-fp-dup"
       }, mk.n) : null, msxTpAssistIcons(msxTpAT(), m)) : null,
-      num: x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : '',
+      num: (() => {
+        const bn = msxTpBonusText(m);
+        const pwEl = x.kind !== 'base' && pw != null ? React.createElement("span", {
+          className: "msx-tp-pw"
+        }, "総合力 ", msxFmt(pw)) : null;
+        return bn || pwEl ? React.createElement(React.Fragment, null, bn, pwEl) : '';
+      })(),
       attrs: {
         'data-msx-tp-item': x.key,
         ...(x.kind === 'base' ? {
@@ -189731,7 +190253,10 @@ function MsxMmGrid({
   return React.createElement("div", {
     className: "mmg",
     "data-msx-mm-grid": true
-  }, React.createElement("style", null, MSX_MM_GRID_CSS), mons.map(m => {
+  }, React.createElement("style", null, MSX_MM_GRID_CSS), lb === 'namepw' && mons.length ? React.createElement("p", {
+    className: "mmg-lg",
+    "data-msx-mm-legend": true
+  }, "右上はランク・下は Lv と総合力") : null, mons.map(m => {
     const lock = lockOf ? lockOf(m) : null;
     const on = isOn ? isOn(m) : false;
     return React.createElement("button", _extends({
@@ -189759,17 +190284,22 @@ function MsxMmGrid({
     }, lock) : null, mark && mark(m) ? React.createElement("i", {
       className: "mmg-as"
     }, mark(m)) : null, lb === 'namepw' || lb === 'name' ? React.createElement(React.Fragment, null, React.createElement("span", {
-      className: "mmg-nm2"
-    }, msxMmLabelOf(m, lb)), lb === 'namepw' ? React.createElement("span", {
+      className: "mmg-nm2",
+      style: {
+        fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))`
+      }
+    }, msxMmLabelOf(m, lb)), m.nick && m.nick !== msxMonName(m.species) ? React.createElement("span", {
+      className: "mmg-sp"
+    }, msxMonName(m.species)) : null, lb === 'namepw' ? React.createElement("span", {
       className: "mmg-pw"
-    }, m.raised === false ? '未育成' : msxFmt(msxMmPow(m))) : null) : React.createElement("span", {
+    }, m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`) : null) : React.createElement("span", {
       className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -189784,7 +190314,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
@@ -190855,6 +191387,7 @@ function MonsucFitName({
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
     const ro = new ResizeObserver(fit);
     ro.observe(box.current);
+    if (txt.current) ro.observe(txt.current);
     return () => ro.disconnect();
   }, [name]);
   return React.createElement("span", {
@@ -190990,6 +191523,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}

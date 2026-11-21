@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 32397799de833127
+// generated-sha256: 2d82f543cfc9f5f0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69479,11 +69479,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1498, eye: 0.3408, chin: 0.4295, m: 0.66 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1757, eye: 0.316, chin: 0.4299, m: 0.847, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1327, eye: 0.3124, chin: 0.43, m: 0.875, above: 0.75 } },
+  'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.129, eye: 0.3271, chin: 0.4282, m: 0.752, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
@@ -72104,6 +72104,260 @@ const assistantLifeGoalView = (st = ASSISTANT_LIFE_GOAL_STORE.state, day = assis
   const s = assistantLifeGoalToday(st, day);
   const count = assistantLifeGoalDoneCount(s);
   return { day: s.day, done: s.done, count, need: ASSISTANT_LIFE_GOAL_NEED, achieved: count >= ASSISTANT_LIFE_GOAL_NEED, streak: s.streak, days: ASSISTANT_LIFE_GOAL_DAYS, basket: s.basket };
+};
+
+// ---- part: 56-assistant-life-ui.jsx ----
+// ===== 助手ライフの作り直し 段6: 画面の型(docs/spec/ASSISTANT_LIFE_UI.md・ASSISTANT_LIFE.md §5) =====
+// どの画面も同じ型に載せる: 上の帯(← 戻る・題・時刻)/ 下のタブ5つ / 中身 / 窓 / 結果の1枚。
+// 字は 見出し16・本文13・注11・数字20 の4段だけ(10px 未満は使わない)。主なボタンは1画面に1つ(120×44px 以上・字13px 以上・桃→橙)。
+// PC・横は2段組(左に場面の絵・右に中身)。真ん中に細く寄せない。
+// 見た目は .alu の中だけに効く(ほかの画面の CSS は触らない)。保存はしない(読むだけの見る口を使う)。
+// 段6では画面にまだ差し込まない(家は段7・部屋は段8・町は段9)。止め絵は tools/assistant/life-ui-shoot.js が見本(AssistantLifeUiSample)を撮る。
+const ALU_CSS = `
+.alu{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:#fff;font-weight:700;font-size:13px;line-height:1.5;
+  background:linear-gradient(180deg,#1d1740 0,#151130 45%,#0f0d24 100%);word-break:auto-phrase;-webkit-text-size-adjust:100%}
+.alu *{box-sizing:border-box}
+.alu button{font:inherit;color:inherit;cursor:pointer}
+.alu .alu-h{font-size:16px;font-weight:900;line-height:1.35}
+.alu .alu-t{font-size:13px}
+.alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
+.alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.alu .alu-nw{white-space:nowrap}
+.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top .bk{flex:none;min-width:72px;height:36px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
+.alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
+.alu-body{flex:1;min-height:0;display:flex}
+.alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
+.alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
+.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
+.alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
+.alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.alu-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:10px 12px}
+.alu-card.gold{border-color:#fde047;background:linear-gradient(180deg,#3b2f12,#1e1a36)}
+.alu .alu-go{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-width:120px;min-height:52px;padding:8px 14px;border:0;border-radius:999px;
+  background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d66;color:#fff;font-size:16px;font-weight:900;text-align:center;line-height:1.3}
+.alu .alu-go:disabled{filter:grayscale(.8);opacity:.6}
+.alu .alu-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:44px;min-width:64px;padding:6px 12px;border-radius:999px;background:#f8fafc;border:1px solid #cbd5e1;color:#1e1b4b !important;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-row{display:flex;align-items:center;gap:10px;min-height:56px}
+.alu-row .pic{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#312e5a;display:grid;place-items:center;font-size:20px}
+.alu-row .tx{flex:1;min-width:0}
+.alu-chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:900;background:#0f172a;border:1px solid #475569;color:#cbd5e1;white-space:nowrap}
+.alu-chip.ok{background:#064e3b;border-color:#34d399;color:#a7f3d0}
+.alu-goal{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.alu-goal span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border-radius:10px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;white-space:nowrap}
+.alu-goal span.on{background:#064e3b;border-color:#34d399;color:#fff}
+.alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
+.alu[data-alu-wide="1"] .alu-mask{align-items:center}
+.alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
+.alu[data-alu-wide="1"] .alu-sheet{border-radius:18px;max-height:92%}
+.alu-sheet .sh{flex:none;display:flex;align-items:flex-start;gap:8px;padding:12px 6px 8px 14px;border-bottom:1px solid #3b3566}
+.alu-sheet .sh .tt{flex:1;min-width:0}
+.alu-sheet .x{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:20px;font-weight:900;color:#e2e8f0}
+.alu-sheet .q{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:16px;font-weight:900;color:#cbd5e1}
+.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.alu-sheet .help{background:#0f172a;border-radius:10px;padding:8px 10px}
+.alu-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.alu-gains>div{min-width:88px;padding:8px 10px;border-radius:12px;background:#0f172a;border:1px solid #475569;text-align:center}
+.alu-gains>div b{display:block}
+.alu-ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:12px;color:#94a3b8;
+  background:repeating-linear-gradient(135deg,#1e1a36 0 12px,#231e40 12px 24px)}
+`;
+
+// 下のタブは5つ。どの画面でも同じ並び・同じ位置(町も下)。キーは今の画面のタブと同じ(段7〜で差し替えやすく)
+const ALU_TABS = Object.freeze([
+  Object.freeze({ key: 'house', icon: '🏡', label: '家' }),
+  Object.freeze({ key: 'where', icon: '🗺', label: '町' }),
+  Object.freeze({ key: 'friends', icon: '🤝', label: '友情' }),
+  Object.freeze({ key: 'visit', icon: '🏠', label: 'フレンド' }),
+  Object.freeze({ key: 'masmon', icon: '🐾', label: 'マスモン' }),
+]);
+// 2段組にする幅(器の幅で決める。🔄横で回した中でも器の大きさで測る)
+const ALU_WIDE_MIN = 700;
+
+// 上の帯の時刻: 「15:00 昼」と「次 16:00」(助手は2時間ごとに動く。ASSISTANT_LIFE_PER_DAY = 12)
+const aluClock = (now = Date.now()) => {
+  const parts = typeof timeOfDayJstParts === 'function' ? timeOfDayJstParts(now) : { h: new Date(now).getHours(), m: 0 };
+  const slot = typeof timeOfDayAt === 'function' ? timeOfDayAt(now) : { label: '' };
+  const clock = typeof timeOfDayClockText === 'function' ? timeOfDayClockText(now) : `${parts.h}:${String(parts.m).padStart(2, '0')}`;
+  const next = (Math.floor(parts.h / 2) * 2 + 2) % 24;
+  return { clock, label: slot.label || '', next: `${next}:00` };
+};
+
+// 器の幅を測って2段組かを決める
+const useAluWide = () => {
+  const ref = React.useRef(null);
+  const [box, setBox] = React.useState({ wide: false, h: 0 });
+  React.useLayoutEffect(() => {
+    const el = ref.current; if (!el) return undefined;
+    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h ? b : { wide, h })); };
+    measure();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
+    const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  return [ref, box.wide, box.h];
+};
+
+const AluTopBar = ({ title, onBack, now }) => {
+  const c = aluClock(now);
+  return (
+    <div className="alu-top" data-alu-top>
+      <button type="button" className="bk" data-alu-back onClick={onBack}>← 戻る</button>
+      <div className="ti" data-alu-title>{title}</div>
+      <div className="ck" data-alu-clock><b>{c.clock} {c.label}</b><small>次に動く {c.next}</small></div>
+    </div>);
+};
+
+const AluTabBar = ({ tab, onTab }) => (
+  <div className="alu-tabs" role="tablist" data-alu-tabs>
+    {ALU_TABS.map(t => (
+      <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} data-alu-tab={t.key} onClick={() => onTab && onTab(t.key)}>
+        <i>{t.icon}</i>{t.label}
+      </button>))}
+  </div>);
+
+// 画面の型。head = いちばん上の1枚(家なら「次のごほうびまで」)。scene = 場面の絵(家・部屋・町の地図・関係図)
+//   縦: head → 場面の絵 → 中身。場面の絵は画面の高さの3割まで(小さい画面でも主なボタンが最初から見える)
+//   2段組(PC・横): 左に場面の絵、右に head → 中身
+const AluFrame = ({ title, onBack, tab, onTab, now, head, scene, sceneH = 300, children, overlay }) => {
+  const [ref, wide, frameH] = useAluWide();
+  const sceneHeight = frameH ? Math.max(140, Math.min(sceneH, Math.round(frameH * 0.3))) : sceneH;
+  return (
+    <div className="alu" ref={ref} data-alu-frame data-alu-wide={wide ? '1' : undefined}>
+      <style>{ALU_CSS}</style>
+      <AluTopBar title={title} onBack={onBack} now={now} />
+      <div className="alu-body">
+        {wide && scene ? <div className="alu-scene" data-alu-scene>{scene}</div> : null}
+        <div className="alu-main" data-alu-main>
+          {head || null}
+          {!wide && scene ? <div className="alu-scene" data-alu-scene style={{ height: sceneHeight }}>{scene}</div> : null}
+          {children}
+        </div>
+      </div>
+      <AluTabBar tab={tab} onTab={onTab} />
+      {overlay}
+    </div>);
+};
+
+// 主なボタン(1画面に1つ)とほかのボタン(白地の同じ形)
+const AluGo = ({ children, onClick, disabled, ...rest }) => <button type="button" className="alu-go" data-alu-go onClick={onClick} disabled={disabled} {...rest}>{children}</button>;
+const AluBtn = ({ children, onClick, disabled, ...rest }) => <button type="button" className="alu-btn" onClick={onClick} disabled={disabled} {...rest}>{children}</button>;
+
+// 行: 左に絵・中に1行(+注)・右にボタン1つ
+const AluRow = ({ pic, text, note, action }) => (
+  <div className="alu-row" data-alu-row>
+    <div className="pic">{pic}</div>
+    <div className="tx"><div className="alu-t">{text}</div>{note ? <div className="alu-n">{note}</div> : null}</div>
+    {action || null}
+  </div>);
+
+// 窓: 地は不透明・右上に ✕・上に1行「何が上がるか」・説明は「?」に畳む
+const AluSheet = ({ title, gain, help, onClose, children }) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="alu-mask" data-alu-mask onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
+      <div className="alu-sheet" role="dialog" aria-label={title} data-alu-sheet>
+        <div className="sh">
+          <div className="tt"><div className="alu-h">{title}</div>{gain ? <div className="alu-n" data-alu-sheet-gain>上がる物: {gain}</div> : null}</div>
+          {help ? <button type="button" className="q" aria-label="説明" aria-expanded={open} data-alu-sheet-help onClick={() => setOpen(v => !v)}>?</button> : null}
+          <button type="button" className="x" aria-label="閉じる" data-alu-sheet-close onClick={onClose}>✕</button>
+        </div>
+        <div className="sb">
+          {open && help ? <div className="help alu-n" data-alu-sheet-help-text>{help}</div> : null}
+          {children}
+        </div>
+      </div>
+    </div>);
+};
+
+// 結果の1枚: 見る・話す・贈る・誘うの後に必ず出す。上がった物(数字20px)と「次にすること」1つ
+//   gains = [{ icon, label, v }](v は数。+ を付けて出す)/ finds = ['拾い物の名前'] / next = { label, onClick }
+const AluResult = ({ title = '結果', line, gains = [], finds = [], next, onClose }) => (
+  <AluSheet title={title} onClose={onClose}>
+    {line ? <div className="alu-t" data-alu-result-line>{line}</div> : null}
+    <div className="alu-gains" data-alu-result-gains>
+      {gains.map((g, i) => (
+        <div key={i}><span className="alu-n">{g.icon} {g.label}</span><b className="alu-num">+{g.v}</b></div>))}
+    </div>
+    {finds.length ? <div className="alu-t" data-alu-result-finds>🧺 拾い物: {finds.join('・')}</div> : null}
+    {next ? <AluGo onClick={next.onClick} data-alu-result-next>{next.label}</AluGo> : null}
+  </AluSheet>);
+
+// 次のごほうびまで(家のいちばん上だけ)
+const AluNextReward = ({ rest, text }) => (
+  <div className="alu-card gold" data-alu-next-reward>
+    <div className="alu-t">💗 次のごほうびまで あと <b className="alu-num">{rest}</b></div>
+    {text ? <div className="alu-n">{text}</div> : null}
+  </div>);
+
+// 今日の目標(段5の見る口 assistantLifeGoalView)
+const AluGoalCard = ({ view }) => {
+  const v = view || (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
+  if (!v) return null;
+  const labels = typeof ASSISTANT_LIFE_GOAL_LABEL !== 'undefined' ? ASSISTANT_LIFE_GOAL_LABEL : {};
+  const kinds = typeof ASSISTANT_LIFE_GOAL_KINDS !== 'undefined' ? ASSISTANT_LIFE_GOAL_KINDS : Object.keys(v.done || {});
+  return (
+    <div className="alu-card" data-alu-goal>
+      <div className="alu-t">今日の目標 <b className="alu-num">{Math.min(v.count, v.need)}</b>/{v.need}{v.achieved ? ' ✓ 達成' : ''}</div>
+      <div className="alu-goal">
+        {kinds.map(k => <span key={k} className={v.done && v.done[k] ? 'on' : ''}>{v.done && v.done[k] ? '✓ ' : ''}{labels[k] || k}</span>)}
+      </div>
+      <div className="alu-n" style={{ marginTop: 6 }}>4つのうち3つで達成 · 達成した日 {v.streak % v.days}/{v.days}(7日でおやつのバスケット)</div>
+    </div>);
+};
+
+// 🌡 調子の印(段4の見る口 assistantLifeCondFaceOf)。読み込み前・印が偽なら出さない
+const AluCond = ({ id, sleeping, hour, face }) => {
+  const f = face || (typeof assistantLifeCondFaceOf === 'function' ? assistantLifeCondFaceOf(id, { sleeping, hour }) : null);
+  if (!f) return null;
+  return <span className="alu-chip" data-alu-cond={f.key}>{f.emoji} {f.label}{f.mark ? ` ${f.mark}` : ''}</span>;
+};
+// 予定の通りやすさ ◎○△(段4の見る口 assistantLifePlanEaseOf)
+const AluEase = ({ id, abs, ease }) => {
+  const e = ease || (typeof assistantLifePlanEaseOf === 'function' ? assistantLifePlanEaseOf(id, abs) : null);
+  if (!e) return null;
+  return <span className="alu-chip" data-alu-ease={e.mark}>{e.mark} {e.label}</span>;
+};
+
+// ---- 見本(止め絵を撮るためだけ。どの画面からも呼ばない。tools/assistant/life-ui-shoot.js が描く) ----
+//   kind: 'house'(家の型)/ 'sheet'(窓)/ 'result'(結果の1枚)
+const AssistantLifeUiSample = ({ kind = 'house', now }) => {
+  const [tab, setTab] = React.useState('house');
+  const who = (id) => (typeof assistantById === 'function' ? assistantById(id) : null) || { id, name: id };
+  const face = (id) => (typeof AssistantFace === 'function' ? <AssistantFace who={who(id)} size={44} /> : '🙂');
+  const a = who('mua'), b = who('atsu');
+  const goal = { count: 1, need: 3, achieved: false, done: { watch: true, talk: false, give: false, play: false }, streak: 4, days: 7 };
+  const scene = <div className="alu-ph alu-n">場面の絵(段7〜9で入る)</div>;
+  const overlay = kind === 'sheet' ? (
+    <AluSheet title={`🎁 ${a.name}に贈る`} gain="💗 仲良し度 · 🤝 友情" help="道具を1つ選んで贈ります。好きな物だと 💗 が多く上がります。今日はあと3回。" onClose={() => {}}>
+      <AluRow pic="🍪" text="クッキー" note="好き · 持っている数 2" action={<AluBtn>贈る</AluBtn>} />
+      <AluRow pic="🧸" text="モンスターのぬいぐるみ" note="まだ分からない · 300P" action={<AluBtn>贈る</AluBtn>} />
+      <AluRow pic="🌸" text="花かざり" note="ふつう · 持っている数 1" action={<AluBtn>贈る</AluBtn>} />
+    </AluSheet>
+  ) : kind === 'result' ? (
+    <AluResult title="👀 見た" line={`${a.name}と${b.name}が、おやつの最後の1個を半分こした。`}
+      gains={[{ icon: '💗', label: '仲良し度', v: 5 }, { icon: '🤝', label: '友情', v: 3 }]} finds={['星のかけら']}
+      next={{ label: `💬 ${b.name}と話す`, onClick: () => {} }} onClose={() => {}} />
+  ) : null;
+  return (
+    <AluFrame title="家" onBack={() => {}} tab={tab} onTab={setTab} now={now} scene={scene} sceneH={250} overlay={overlay}
+      head={<AluNextReward rest={120} text={`${a.name} Lv5 で 呼び方が1つ増える`} />}>
+      <AluGo>👀 見る — {a.name}と{b.name}の話</AluGo>
+      <AluGoalCard view={goal} />
+      <div className="alu-card">
+        <div className="alu-h">今日あったこと</div>
+        <AluRow pic={face('mua')} text={`🤝 ${a.name}と${b.name}が仲直り`} note="10:00 · 読むと 💗 +2" action={<AluBtn>読む</AluBtn>} />
+        <AluRow pic={face('dra')} text={`💢 ${who('dra').name}と${who('kyuko').name}が喧嘩`} note="12:00 · 読むと 💗 +2" action={<AluBtn>読む</AluBtn>} />
+        <AluRow pic={face('kiki')} text={`🎵 ${who('kiki').name}とモンヒロビート`} note="13:00 · 誘った" action={<AluBtn>見る</AluBtn>} />
+        <AluRow pic={face('atsu')} text={`🧺 ${b.name}が拾い物`} note={<span>星のかけら <AluCond id="atsu" face={{ key: 'genki', emoji: '😊', label: '元気', mark: '' }} /> <AluEase id="atsu" ease={{ mark: '◎', label: '聞いてくれそう' }} /></span>} action={<AluBtn>見る</AluBtn>} />
+      </div>
+    </AluFrame>);
 };
 
 // ---- part: 56-assistant-life-guide.jsx ----
@@ -90880,6 +91134,9 @@ const MSX_CSS = `
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+/* 素質の字の色は文字ごとに固定(育-148) */
+.msx .msx-apA{color:#fde047}.msx .msx-apB{color:#86efac}.msx .msx-apC{color:#e2e8f0}.msx .msx-apD{color:#fdba74}.msx .msx-apE{color:#fca5a5}
+.g.gapA{background:#facc15;color:#1f1300}.g.gapB{background:#22c55e;color:#04210f}.g.gapC{background:#e2e8f0;color:#0f172a}.g.gapD{background:#fb923c;color:#2a1000}.g.gapE{background:#f87171;color:#2a0606}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:12px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;min-width:8.1em;white-space:nowrap;color:#f9a8d4;font-size:11.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 /* ラベル列の幅: 最も長い「友情タッグの強さ」(8字)が収まる 8.1em に統一。6em のときは「クリティカル率」(7字)だけが列からはみ出し、その行の値だけ右にずれていた(2026-11-18 実機報告) */
@@ -92503,7 +92760,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {MSX_STATS.map((k, i) => { const v = Number(st[k]) || 0; const cp = capK(k); const over = Math.max(0, v - cp); return (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
                     <span className="v"><b>{st[k]}<small data-msx-stat-cap={k} style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginLeft: 2 }}>/{cp}</small></b><span className={`g${over ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, v / cp * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{over ? <b className="ov" data-msx-stat-over={over} style={{ width: `${Math.min(100, over / cp * 100)}%` }}/> : null}</span></span>
-                    <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+                    <span className={`a msx-ap${apt[i]}`}>{apt[i]}</span></div>
                 ); })}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
@@ -92659,7 +92916,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
 }
 
 // 育てる子を選ぶ段(r1119 ⑦): 伸びやすさ(素質 A〜E)の字の色の段。A=金 / B=緑 / C=白 / D・E=灰
-const msxAptCls = (g) => (g === 'A' ? 'hi' : g === 'B' ? 'md' : g === 'C' ? 'mid' : 'lo');
+// 素質の字の色は文字ごとに固定(A=黄・B=緑・C=白・D=橙・E=赤。毎ターンの能力の札・詳細の窓と同じ・育-148)
+const msxAptCls = (g) => (['A', 'B', 'C', 'D', 'E'].includes(g) ? `ap${g}` : 'apC');
 // 「ピーク ミドル期」では伝わらない(社長)ので、育成のどのあたりでいちばん伸びるかを言葉で添える
 const MSX_PERIOD_WHEN = Object.freeze({ 'デビュー期': 'はじめ', 'ジュニア期': '前半', 'ミドル期': '中ごろ', 'プロ期': '後半', '最後の期': '終わりごろ' });
 const msxPeakWords = (peak) => {
@@ -93207,14 +93465,15 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   const recOf = (slot) => (slot && slot.box ? raised.find((m) => m.id === slot.box) : slot && slot.assist ? stock.find((m) => m.id === slot.assist) : null) || null;
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモモン', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k, , n]) => k !== 'memo' || n);
   const frOf = (i) => i === friendAt && i !== idx && members[i] && members[i].friend; // その枠にフレンドがいる(押した枠は選び直すので数えない)
-  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : 'おまかせ'; };
+  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : (Array.isArray(members) && members[i] ? members[i].name : 'おまかせ'); };
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         {/* 戻るはほかの画面と同じ左上の「← 戻る」1つ(下の帯は「外す」「決定」だけ。r1119-033 窓-45・53) */}
         <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-tp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const rec = s && !fr ? recOf(s) : null; return (
-          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : (Array.isArray(members) && members[i]) || null; const rec = s && !fr ? recOf(s) : null; return (
+          // 枠が空のときは、実際に編成に入る既定のモンスター(members)を写す(数字だけで今の編成が見えなかった・育-235)
+          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
             <MonsucMonCard m={mm ? msxTpCardM(rec, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{fr ? <b className="fr">🤝</b> : null}</div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
@@ -93228,7 +93487,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
             <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={(mk && mk.c !== 'in') || msxTpAssistIcons(msxTpAT(), m) ? <>{mk && mk.c !== 'in' ? <b className="msx-fp-dup">{mk.n}</b> : null}{msxTpAssistIcons(msxTpAT(), m)}</> : null}
-              num={x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : ''}
+              num={(() => { const bn = msxTpBonusText(m); const pwEl = x.kind !== 'base' && pw != null ? <span className="msx-tp-pw">総合力 {msxFmt(pw)}</span> : null; return bn || pwEl ? <>{bn}{pwEl}</> : ''; })()} /* どのタブも 1段目=伸びが上がる能力・2段目=総合力(育-238) */
               attrs={{ 'data-msx-tp-item': x.key, ...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {}) }}
               onClick={() => setCand(on ? null : x.slot)}/>); })}</MonsucCardGrid>
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
@@ -97071,6 +97330,8 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
   const lb = label || saved || 'namepw'; const fv = Array.isArray(fav) ? fav : favs;
   return (<div className="mmg" data-msx-mm-grid>
     <style>{MSX_MM_GRID_CSS}</style>
+    {/* 右上の札と下の数が何かを一覧の上に書く(育-158・168) */}
+    {lb === 'namepw' && mons.length ? <p className="mmg-lg" data-msx-mm-legend>右上はランク・下は Lv と総合力</p> : null}
     {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
       return (
         <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>
@@ -97080,14 +97341,14 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
           {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
           {lock ? <i className="mmg-lk">{lock}</i> : null}
           {mark && mark(m) ? <i className="mmg-as">{mark(m)}</i> : null}
-          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : msxFmt(msxMmPow(m))}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
+          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2" style={{ fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))` }}>{msxMmLabelOf(m, lb)}</span>{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
         </button>);
     })}
   </div>);
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -97102,7 +97363,9 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
-.mmg .mmg-nm2{max-width:100%;font-size:10.5px;font-weight:900;color:#fff;white-space:nowrap;letter-spacing:-.03em;line-height:1.25;transform:scaleX(.92)}
+.mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
+.mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
+.mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:contain}
 `;
@@ -97581,7 +97844,8 @@ function MonsucFitName({ name }) {
     const fit = () => { const b = box.current; const t = txt.current; if (!b || !t) return; const w = t.scrollWidth; const W = b.clientWidth; setK(w > W && W > 0 ? Math.max(0.6, W / w) : 1); };
     fit();
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
-    const ro = new ResizeObserver(fit); ro.observe(box.current); return () => ro.disconnect();
+    // 字の幅が後から変わる(字体の読み込みなど)ときも測り直す。縮めるのは transform なので、字の要素を見張っても繰り返さない
+    const ro = new ResizeObserver(fit); ro.observe(box.current); if (txt.current) ro.observe(txt.current); return () => ro.disconnect();
   }, [name]);
   return <span className="mcd-nms" ref={box}><span className="mcd-nmt" ref={txt} style={k < 1 ? { transform: `scaleX(${k.toFixed(3)})` } : undefined}>{name}</span></span>;
 }
@@ -97652,6 +97916,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}
