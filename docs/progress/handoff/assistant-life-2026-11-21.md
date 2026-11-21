@@ -35,8 +35,8 @@
 
 ## 手で書く所(ここだけ人が書く。無ければ「なし」)
 
-- やりかけ(どのファイルのどこまで・次の1手): 作り直し(docs/spec/ASSISTANT_LIFE.md §8)の段1(#6996)・段2(#7037)まで済んでマージ済み。次は段3: 💗 の家具の数(data/assistants.js の ASSISTANT_BOND_ACTIONS の lifeFurn 120→40・1日 1,440→480)と家具の窓の札。保存データに触れる(⚠)ので、gate が「要る」ならマージの前に止まって窓口へ知らせる
-- 社長・窓口の返事待ち(何を聞いているか): なし
+- やりかけ(どのファイルのどこまで・次の1手): 段1(#6996)・段2(#7037)・段3(#7052 家具の💗 40/480)までマージ済み。次は段4(🌡 調子・好き苦手・予定の「見る口」。`-body`・`-taste*`・`-plan`)。境目の案を窓口へ出して返事待ち。OK が来たら、計算だけの関数(保存は今のまま)と「今の保存で同じ答え」「◎○△ と本当の通りやすさが合う」検査から作る
+- 社長・窓口の返事待ち(何を聞いているか): 段4 の境目の案 ①🌡 5段: ねむい=深夜0〜6時か家で寝ている回/へとへと=疲れ≥70・ストレス≥60・けが・病気/おつかれ=疲れ≥60・ストレス≥50/元気=疲れ<30かつストレス<30/ほかはふつう(ASSISTANT_LIFE_BODY_LINE の線をそのまま使う) ②◎○△: assistantLifePlanTrust(Lv)+assistantLifeBodyTrustAdj の確率が 0.85以上 ◎・0.65以上 ○・それ未満 △
 - はまった所・次の会話がやってはいけないこと: ①分析の API は使わない(r1119-056)。見た目は visual-life-shoot.js で撮って目で見る・測る検査で確かめる ②data/assistants.js の末尾は ASSISTANT_PEER_REWRITES の生成ブロック(peer-rewrite-table.js が末尾にある前提)。表を足すときはその前に置き、`node tools/assistant/peer-rewrite-table.js` で作り直す ③台詞の字として「育てた子」を data に書かない(monster-ko-check が拾う) ④画面の検査は main でももともと落ちる物が多い(assistant-check の吹き出し・助手ライフ⑬・マスモン応援⑤・HOME 案内・更新履歴の並び・ja-wrap・feature-check の音量・clarity③・フレンドの印・家具/一人の帯・町の札・シートの閉じる・home-layout・rhythm-beat-presence)。NG が出たら main の作業ツリー(git worktree)で同じ検査を回して比べる ⑤4本同時の run-checks は画面の検査が混んで落ちる。落ちた物は1本ずつ回し直す
 - 配り直し・SQL で窓口に頼んだまま済んでいないもの: なし
 
