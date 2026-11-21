@@ -12707,7 +12707,7 @@ const BEYOND_SAME_SKY_STORY = [
   { who:'mua',      e:'normal',   atsu:'without', t:'1行目はあたし。「知らない街を駆け抜けて」。旅に出て、最初の夜に書いたの' },
   { who:'mua',      e:'wink',     atsu:'without', t:'見たこともない空で、ほんとはちょっと怖かったんだけど……強がってた！' },
   { who:'kiki',     e:'normal',   atsu:'without', t:'あっくんの行は……「傷だらけの剣を握り」。あっくんらしいでつね' },
-  { who:'mua',      e:'troubled', atsu:'without', t:'あつくん、あのころ「守るもんなんかない」って言ってたの。だから W.o.F が、あつくんの帰る場所になればいいなって、ずっと思ってた' },
+  { who:'mua',      e:'troubled', atsu:'without', t:'あのころのあつくん、自分には守るものなんてないって、よく言ってたの。だから W.o.F が、あつくんの帰る場所になればいいなって、ずっと思ってた' },
   // ---- 夜: あのころの思い出 ----
   { bg:'monhero_night', who:'mua', e:'happy', fxText:'帳面をめくるたびに、あのころの夜がよみがえる', holdMs:2500, t:'焚き火を囲んで、くだらない夢の話して……朝まで笑ってたよね' },
   { who:'momosuke', e:'happy',    t:'あったあった！ ももが「お城に住む！」って言ったら、みんな大笑いしたやつ w' },
