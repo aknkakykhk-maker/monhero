@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23123404166b0a1d
+// source-sha256: ab26dd4c7a8b8e19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38276,7 +38276,7 @@ const RhythmSongArt = ({
       backgroundColor: 'rgba(2,6,23,.7)'
     }
   }, "🔍"));
-  const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`;
+  const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto' : 'w-12'}`;
   const box = {
     aspectRatio: '1 / 1',
     background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`

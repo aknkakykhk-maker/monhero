@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5eb2d18af194e6ee
+// generated-sha256: 399fdba5bc48581d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24006,7 +24006,9 @@ const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
     {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
       style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
   </>;
-  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`;
+  // 横の低い画面では大きい札のジャケットに上限を付ける。横の2列の右が広がり(2026-11-21 r1119-066③)、札のジャケットが
+  // 押して開く拡大(画面の高さで頭打ち)と同じくらいの大きさになって、押しても大きくならなかった
+  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto':'w-12'}`;
   const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
   if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
     onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
