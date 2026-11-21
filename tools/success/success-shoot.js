@@ -109,7 +109,7 @@ const makeRun = async (kind) => {
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
-    ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
+    ['KI', 'ki', ['cont']], ['CAL', 'mid', ['cal']], ['CALC', 'mid', ['calcup']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
     // 続きの止め絵(SHOT_SEQ で名指ししたときだけ。見せ場と流れの点検 r1119-033): イベント1つ・トレーニングの1ターン
     ['SQE', 'mid', ['cont', 'event', 'pick', 'next', 'next']], ['SQT', 'mid', ['cont', 'train', 'go', 'next', 'praise', 'next', 'next']], ['SQV', 'mid', ['tev', 'next', 'next']],
     ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['TV1S', 'mid', ['tev', 'wait:200', 'wait:400', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next', 'tev:next']], ['TV1K', 'mid', ['tev', 'wait:1200', 'tev:skip']], ['TV2S', 'mid', ['tevLot', 'wait:600', 'tev:next', 'tev:next', 'tev:next']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], ['BF1', 'buff', ['cont']], ['BF2', 'buff', ['cont', 'buffchip:neboke']], ['BF3', 'buff', ['cont', 'train']], // ひとときの状態の札と、押したときの説明の窓(r1119-029) // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
@@ -271,6 +271,16 @@ const makeRun = async (kind) => {
             if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
             if (st === 'rest') { if (!click(/^🛌/)) return false; await new Promise((r) => setTimeout(r, 300)); const g = document.querySelector('[data-msx-care-go]'); if (g && !g.disabled) { g.click(); return true; } return false; } // 2026-11-18 Issue #6807 UI-2: 休むも選ぶ画面から実行ボタンで確定
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
+            if (st === 'cal' || st === 'calcup') { // 月替わりの暦(期の途中の月)を開く。calcup は前の月の大会の優勝の札も出す(育-137・194・211)
+              const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const P = msxSuc.core.PERIODS;
+              const t = P[0].len + P[1].len + 3; raw.s = { ...raw.s, turn: t, acted: false }; raw.phase = 'turn'; raw.out = { from: t - 1 }; delete raw.ki;
+              if (st === 'calcup') raw.log = [...(Array.isArray(raw.log) ? raw.log : []), { turn: t - 1, t: 'さざんか杯 ★★: 優勝' }];
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
             if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
               const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const P = msxSuc.core.PERIODS;
               const t = P[0].len + P[1].len + 1; raw.s = { ...raw.s, turn: t, acted: false }; raw.phase = 'turn'; raw.out = { from: t - 1 }; delete raw.ki;
