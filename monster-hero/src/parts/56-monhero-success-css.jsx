@@ -134,6 +134,9 @@ const MSX_CSS = `
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
 /* 体力とストレスは1段ずつ横いっぱいに取る。2つ並べると数字と名前で幅が取られ、棒が短くて残量が読めなかった(2026-11-17 社長「体力のゲージがやたら短くて見にくい」) */
 .msx .v-b2{display:grid;grid-template-columns:1fr;gap:5px;margin-top:6px}
+.msx .msx-gd-note.msx-gd-note{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1;margin-top:2px;white-space:normal}
+/* 体力とストレスの棒の始まりをそろえる(名前の長さで棒の左がずれていた。2026-11-21 r1119-033 育-226) */
+.msx .v-b2 .v-ga>span:first-child{flex:0 0 auto;min-width:5.8em}
 .msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
@@ -265,6 +268,10 @@ const MSX_CSS = `
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
 .msx .v-p small.pt{color:#fde047;font-weight:900}.msx .v-p small.pt b{font-size:12px}
 .msx .v-p.off small{color:#94a3b8}
+.msx .v-p.rest-hot{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 12px #22d3ee99}.msx .v-p.rest-hot small{color:#cffafe;font-weight:900}
+.msx .v-p.main.worn{background:linear-gradient(180deg,#475569,#334155);border-color:#94a3b8;border-bottom-color:#1e293b;box-shadow:none;animation:none}.msx .v-p.main.worn small{color:#fecaca}
+/* 押せないボタンの名前と理由が、暗い地に暗い字でほとんど読めなかった。地は暗いまま、字だけ読める明るさに(2026-11-21 r1119-033 育-181) */
+.msx .v-p.off.off{color:#a3b0c2;opacity:1}.msx .v-p.off.off small{color:#a3b0c2}
 .msx .v-act-pre .v-p{min-height:74px;font-size:15px}.msx .v-act-pre .v-p .e{font-size:24px}
 .msx .v-p.hb{font-size:19px;background:linear-gradient(160deg,#f59e0b,#dc2626);border-color:#fde68a;border-bottom-color:#7f1d1d;box-shadow:0 0 16px #f59e0bb3}
 .msx .v-p.hb small{white-space:normal;font-size:11px}
@@ -348,6 +355,8 @@ const MSX_CSS = `
 .msx .v-res3 .cap b{color:#fde047}
 .msx .v-strip{position:absolute;left:-10%;right:-10%;top:16%;height:46%;background:linear-gradient(90deg,#f472b6,#fb923c);transform:rotate(-5deg);box-shadow:0 6px 0 #0005}
 .msx .v-body2{position:absolute;left:50%;transform:translateX(-50%);height:62%;top:6%;object-fit:contain;filter:drop-shadow(0 6px 4px #0008)}
+/* 立ち絵は膝の上で切れた絵なので、下の端をぼかして消す(横一直線に切れて見えた。2026-11-21 r1119-033 育-143) */
+.msx .v-body2{-webkit-mask-image:linear-gradient(180deg,#000 80%,transparent 99%);mask-image:linear-gradient(180deg,#000 80%,transparent 99%)}
 .msx .v-q{position:absolute;left:8px;right:8px;bottom:8px}
 .msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
 .msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
@@ -358,6 +367,7 @@ const MSX_CSS = `
 .msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
 .msx .v-pol .l{display:flex;justify-content:space-between;font-size:10px;color:#cbd5e1;font-weight:900;white-space:nowrap}
 .msx .v-pol .m{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:3px 0}
+.msx .v-pol .l7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:10px;line-height:13px;min-height:13px;color:#cbd5e1;font-weight:900;white-space:nowrap}.msx .v-pol .l7 span{justify-self:center}.msx .v-pol .l7 span:first-child{justify-self:start}.msx .v-pol .l7 span:last-child{justify-self:end}.msx .v-pol .l7 span.on{color:#fde047}
 .msx .v-pol .m i{height:9px;border-radius:3px;background:#334155}.msx .v-pol .m i.on{background:#fde047;box-shadow:0 0 8px #fde047}
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
@@ -583,6 +593,8 @@ const MSX_CSS = `
 .msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
 /* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
 .msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+/* 横に続きがあると分かるよう、右のはしをぼかす。最後の札はぼかしの外まで送れる(育-196) */
+.msx .r3 .r3-bar.sc{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);padding-right:36px}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:11px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.5}
 .msx .v-a3 .ex b{color:#fff;word-break:keep-all;overflow-wrap:anywhere} /* 「忠/誠度」「春/夏秋冬」と言葉の途中で折れていた */
@@ -808,6 +820,8 @@ const MSX_CSS = `
 .msx .v-tr .tn{display:block;font-size:10px;font-weight:800;color:#fde68a;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-height:2.3em;padding:0 1px;text-align:center}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
+/* 光っている丸は友情タッグが起きる所。光の意味が分かるよう、右上に🤝を付ける(2026-11-21 r1119-033 育-222) */
+.msx .v-tr .o .tgm{position:absolute;right:-4px;top:-4px;z-index:3;width:18px;height:18px;border-radius:50%;background:#3b2f0b;border:1px solid #fde047;font-size:11px;line-height:16px;text-align:center;font-style:normal}
 .msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
 .msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
 .msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
@@ -999,6 +1013,8 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
 .msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 覚えた技は右上に「✓」(明るさの差だけでは見分けにくかった。2026-11-21 r1119-033 育-147・育-174) */
+.msx .msx-md-tg .tc.got::after{content:"✓";position:absolute;right:2px;top:2px;z-index:2;width:14px;height:14px;border-radius:50%;background:#22c55e;color:#fff;font-size:10px;font-weight:900;line-height:14px;text-align:center;border:1px solid #052e16}
 /* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
 .msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
 .msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
@@ -1263,6 +1279,8 @@ const MSX_CSS = `
 .msx .v-b3 small{font-size:11px;color:#cbd5e1;font-weight:700} /* 忠誠の「/100」: 指定が無いとブラウザ既定の80%で 8px になっていた(API 点検 ④ 2026-11-20) */
 .msx .v-b3 .v-dl{font-style:normal;font-size:10.5px;font-weight:900;animation:msxDl 2.6s ease-out both}
 .msx .v-b3 .v-dl.up{color:#86efac}.msx .v-b3 .v-dl.dn{color:#fca5a5}
+/* 汎用の .msx .up(大きな浮き数字)が効いて「+3」が人気の絵文字の上へ飛んでいた。帯の増減は字の隣に置く(2026-11-21 r1119-033 育-232) */
+.msx .v-b3 .v-dl.v-dl{position:static;text-shadow:none;white-space:nowrap}
 @keyframes msxDl{0%{opacity:0;transform:translateY(4px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
 @keyframes msxBarGrow{from{width:var(--w0)}}
 /* 押し物の見た目の高さをそろえる(2026-11-14 点検「押しにくい」): はじめる画面のタブ・まとめの行・叱る/褒めるの「なにもしない」は44px、上の「← 中断」は36px(押せる範囲は ::after で44px) */
