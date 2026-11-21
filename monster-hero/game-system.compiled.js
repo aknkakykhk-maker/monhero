@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21242c09f9a9ad8e
+// source-sha256: e14eacedd4e31974
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155587,6 +155587,22 @@ const MSC_CSS = `
 .msc-bk{position:relative;padding:8px 6px 10px 8px}
 .msc-row{position:relative;display:flex;align-items:center;gap:5px;height:40px;transition:opacity .4s}
 .msc-row.out{opacity:.45}
+.msc-row.tap{cursor:pointer}.msc-row.tap:active .msc-name{filter:brightness(.92)}
+.msc-peek{margin-left:auto;flex:none;font-style:normal;font-size:12px;line-height:1;color:#b45309;opacity:.8}
+.msc-peekwin{position:fixed;inset:0;z-index:60;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msc-peekwin .in{width:100%;max-width:340px;max-height:calc(100% - 8px);overflow:auto;background:#f6ead0;color:#3b2a14;border-radius:16px;border:3px solid #d6a45a;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
+.msc-peekwin .h{text-align:center;font-weight:900;font-size:14px;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+.msc-peekwin .top{display:flex;align-items:center;gap:10px}
+.msc-peekwin .msc-face.big{width:64px;height:64px;margin:0}
+.msc-peekwin .nm{display:flex;flex-direction:column;min-width:0}.msc-peekwin .nm b{font-size:16px}.msc-peekwin .nm small{font-size:12px;font-weight:800;color:#78350f}
+.msc-peekwin .sts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:8px}
+.msc-peekwin .sts i{font-style:normal}
+.msc-peekwin .sts div{background:#fffaf0;border:1.5px solid #e2c89a;border-radius:8px;padding:2px 6px;display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:800}.msc-peekwin .sts b{font-size:15px}
+.msc-peekwin .apt{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:800}.msc-peekwin .apt i{font-style:normal;color:#78350f}.msc-peekwin .apt b{margin-left:2px;color:#b45309}
+.msc-peekwin .sub{margin-top:8px;font-size:12px;font-weight:900;color:#78350f}
+.msc-peekwin .tk{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.msc-peekwin .tk span{background:#fff;border:1.5px solid #e2c89a;border-radius:8px;padding:2px 6px;font-size:13px;font-weight:800}.msc-peekwin .tk small{margin-left:4px;color:#b45309;font-size:11px}
+.msc-peekwin .nt{margin:8px 0 0;font-size:12px;line-height:1.5;color:#57534e}
+.msc-peekwin .cl{display:block;width:100%;margin-top:10px}
 .msc-no{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:#fff;border:2px solid #d6a45a;color:#b45309;font-weight:900;font-size:13px;display:grid;place-items:center}
 .msc-name{flex:1 1 auto;width:auto;min-width:0;margin-right:6px;height:26px;border-radius:7px;background:#fffaf0;border:1.5px solid #e2c89a;display:flex;align-items:center;gap:4px;padding:0 6px;font-weight:800;font-size:13px}
 .msc-name span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -155781,22 +155797,87 @@ const MSC_CSS = `
   .msc-hero .big,.msc-cut .word{font-size:46px}
 }
 `;
+function MscEntrantPeek({
+  suc,
+  s,
+  info,
+  catalog,
+  e,
+  isFoe,
+  known,
+  name,
+  no,
+  colors,
+  onClose
+}) {
+  const o = isFoe && info.opp || {};
+  const DIST = typeof AMBW_DIST !== 'undefined' ? AMBW_DIST : ['零', '近', '中', '遠'];
+  const sp = catalog && catalog.species ? catalog.species[e.species] : null;
+  const allTechs = sp && Array.isArray(sp.techs) ? sp.techs : [];
+  const techs = isFoe ? allTechs.slice(0, Math.max(1, mscNum(o.techs, 2))) : allTechs.slice(0, 3);
+  const apt = sp && Array.isArray(sp.apt) ? sp.apt : null;
+  const st = o.stats || null;
+  const brd = e.breeder && typeof msxBreederLabel === 'function' ? msxBreederLabel(e.breeder, e.rivalKind || o.rivalKind) : '';
+  return React.createElement("div", {
+    className: "msc-peekwin",
+    onClick: onClose,
+    "data-msc-peek": isFoe ? 'foe' : 'other'
+  }, React.createElement("div", {
+    className: "in",
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "h"
+  }, isFoe ? '決勝の相手' : '出場者'), React.createElement("div", {
+    className: "top"
+  }, React.createElement("span", {
+    className: "msc-face big"
+  }, React.createElement(MscMyMon, {
+    sp: e.species,
+    colors: colors
+  })), React.createElement("div", {
+    className: "nm"
+  }, React.createElement("b", null, name), React.createElement("small", null, no, "番人気", e.champ ? '・👑王者' : '', e.rival ? '・ライバル' : ''), brd ? React.createElement("small", null, brd) : null)), isFoe && st ? React.createElement("div", {
+    className: "sts"
+  }, MSC_STAT_KEYS.map(k => React.createElement("div", {
+    key: k
+  }, React.createElement("i", null, MSC_STAT_JP[k]), React.createElement("b", null, mscNum(st[k]))))) : null, apt ? React.createElement("div", {
+    className: "apt"
+  }, React.createElement("i", null, "間合いの適性"), DIST.map((d, k) => React.createElement("span", {
+    key: d
+  }, d, React.createElement("b", null, apt[k] || '—')))) : null, React.createElement("div", {
+    className: "sub"
+  }, isFoe ? '使う技' : '覚える技(一部)'), React.createElement("div", {
+    className: "tk"
+  }, techs.length ? techs.map(t => React.createElement("span", {
+    key: t.id
+  }, t.kind === 'pow' ? '🏋️' : '📖', t.name, React.createElement("small", null, (t.dist || []).map(d => DIST[d]).join('')))) : React.createElement("span", null, "—")), isFoe ? null : React.createElement("p", {
+    className: "nt msx-kp"
+  }, known ? 'この大会では戦わない相手です。' : '決勝の相手は、表が決勝まで進むと分かります。', "能力は、決勝の相手だけ見られます"), React.createElement("button", {
+    type: "button",
+    className: "msc-btn g s cl",
+    onClick: onClose,
+    "data-msc-peek-close": true
+  }, "閉じる")));
+}
 function MonsucBracket({
   suc,
   s,
   info,
+  catalog,
   result: resultProp,
   onFight,
   onResultOnly,
   onClose,
   canSkip
 }) {
+  const [peek, setPeek] = useState(null);
   const result = resultProp || typeof window !== 'undefined' && window.__MSC_BK_RESULT || null;
   const bk = info.bracket;
   const [stage, setStage] = useState(0);
   useEffect(() => {
     const k = typeof window !== 'undefined' && Number(window.__MSC_BK_T) || 1;
-    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
+    const up = n => setStage(v => Math.max(v, n));
+    const ts = [setTimeout(() => up(1), 1200 * k), setTimeout(() => up(2), 3000 * k), setTimeout(() => up(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
   const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
@@ -155814,7 +155895,7 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 395) / 8)));
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 340) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -155860,6 +155941,28 @@ function MonsucBracket({
     const i = E.indexOf(e);
     return i >= 0 ? shownName[i] : e.you ? info.meName : e.name || mscMonName(e.species);
   };
+  const shownColors = (() => {
+    const pal = ['blue', 'green', 'purple', 'orange', 'red', 'teal'];
+    const keepFirst = E.map((e, i) => Boolean(e.you || i === fi || e.champ || e.rival));
+    const seen = {};
+    const out = E.map(e => e.you ? info.colors : e.colors);
+    E.map((e, i) => ({
+      e,
+      i
+    })).sort((a, b) => (keepFirst[b.i] ? 1 : 0) - (keepFirst[a.i] ? 1 : 0) || a.i - b.i).forEach(({
+      e,
+      i
+    }) => {
+      const k = e.species;
+      const n = seen[k] || 0;
+      seen[k] = n + 1;
+      if (n > 0 && !keepFirst[i] && !mscDyed(out[i])) {
+        const c = pal[(n - 1) % pal.length];
+        out[i] = [c, c, c];
+      }
+    });
+    return out;
+  })();
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0];
   const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
@@ -155885,12 +155988,18 @@ function MonsucBracket({
     className: "msc-bk"
   }, E.map((e, i) => React.createElement("div", {
     key: i,
-    className: `msc-row ${out(i) ? 'out' : ''}`,
+    className: `msc-row ${out(i) ? 'out' : ''} ${e.you ? '' : 'tap'}`,
     style: {
       paddingRight: W,
       height: H
     },
-    "data-msc-entrant": e.you ? 'you' : i === fi ? 'foe' : i
+    "data-msc-entrant": e.you ? 'you' : i === fi ? 'foe' : i,
+    role: e.you ? undefined : 'button',
+    tabIndex: e.you ? undefined : 0,
+    onClick: e.you ? undefined : () => setPeek(i),
+    onKeyDown: e.you ? undefined : ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') setPeek(i);
+    }
   }, React.createElement("span", {
     className: "msc-no",
     title: `${no[i]}番人気`,
@@ -155903,14 +156012,14 @@ function MonsucBracket({
     className: "msc-tag rv"
   }, "ライバル"), e.champ && React.createElement("i", {
     className: "msc-tag ch"
-  }, "👑王者")), React.createElement("span", {
+  }, "👑王者"), e.you ? null : React.createElement("i", {
+    className: "msc-peek",
+    "aria-hidden": "true"
+  }, "ⓘ")), React.createElement("span", {
     className: `msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`
-  }, e.you ? React.createElement(MscMyMon, {
+  }, React.createElement(MscMyMon, {
     sp: e.species,
-    colors: info.colors
-  }) : React.createElement(MscMyMon, {
-    sp: e.species,
-    colors: e.colors
+    colors: shownColors[i]
   })))), React.createElement("svg", {
     className: "msc-lines",
     width: W,
@@ -155934,7 +156043,19 @@ function MonsucBracket({
     style: {
       right: 4
     }
-  }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
+  }, "🏆", React.createElement("br", null), "優勝"))), peek != null && E[peek] ? React.createElement(MscEntrantPeek, {
+    suc: suc,
+    s: s,
+    info: info,
+    catalog: catalog,
+    e: E[peek],
+    isFoe: peek === fi && st >= 3,
+    known: st >= 3,
+    name: nm(E[peek]),
+    no: no[peek],
+    colors: shownColors[peek],
+    onClose: () => setPeek(null)
+  }) : null, React.createElement("div", {
     className: "msc-note"
   }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
     className: "nw"
@@ -156722,6 +156843,7 @@ function MonsucCupShowInner({
     suc: suc,
     s: s,
     info: info,
+    catalog: catalog,
     canSkip: canSkip,
     onClose: onClose,
     onFight: () => setPhase('card'),
