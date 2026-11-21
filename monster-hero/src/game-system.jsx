@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 80c10d4ac3964474
+// generated-sha256: 1456dcd809f9dbda
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98142,7 +98142,8 @@ span.mcd{cursor:default}
 .mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
 .mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
 .mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
-@media (orientation:landscape){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* 横に並べ増やすのは横向きのスマホ(高さ 520 未満・.msx.land と同じ条件)だけ。PC は遊ぶ欄が縦の幅なので縦と同じ列(育-240・122・123) */
+@media (orientation:landscape) and (max-height:519px){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
 `;
 
 // ---- part: 56-monsuc-asimon.jsx ----
