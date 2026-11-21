@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f4a6e9375497b2dc
+// source-sha256: 61862f045172da10
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13971,7 +13971,7 @@ const MONSTER_STAGE_SIZE = Object.freeze({
   Monol: 1.4,
   Golem: 1.45
 });
-const MONSTER_STAGE_REF = 0.8;
+const MONSTER_STAGE_REF = 1;
 const MONSTER_STAGE_MAX_W = 1.5;
 const monsterStageSizeOf = id => {
   const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
