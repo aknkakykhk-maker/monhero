@@ -35,9 +35,9 @@
 
 ## 手で書く所(ここだけ人が書く。無ければ「なし」)
 
-- やりかけ(どのファイルのどこまで・次の1手): 段1(#6996)・段2(#7037)・段3(#7052)・段4(#7064 見る口・検査 tools/assistant/life-view-check.js)までマージ済み。次は段5(今日の目標): 新しいキー mh_assistant_life_goal_v1 と一度きりの写し(印 mh_assistant_life_goal_migrated_v1・写すのは mh_assistant_life_daily_v1 の続けた日数と7日のバスケットの数だけ・古いキーは消さず書き換えず、旧UIのあいだは古いキーにも今の形で書く)。仕様 §7-3。⚠ 保存データなのでマージ前にミハリ
-- 社長・窓口の返事待ち(何を聞いているか): 段5 の目標の数。仕様 §1 は「見る・話す・贈る・誘うを1回ずつ(今日の目標3つ)」、§7-3 の保存は done:{watch,talk,give,play} の4つで食い違う。案: A 4つのうち3つで「達成」(推奨) / B 4つ全部で達成 / C 誘うを外して3つ。返事が来てから作る
-- はまった所・次の会話がやってはいけないこと: ①分析の API は使わない(r1119-056)。見た目は visual-life-shoot.js で撮って目で見る・測る検査で確かめる ②data/assistants.js の末尾は ASSISTANT_PEER_REWRITES の生成ブロック(peer-rewrite-table.js が末尾にある前提)。表を足すときはその前に置き、`node tools/assistant/peer-rewrite-table.js` で作り直す ③台詞の字として「育てた子」を data に書かない(monster-ko-check が拾う) ④画面の検査は main でももともと落ちる物が多い(assistant-check の吹き出し・助手ライフ⑬・マスモン応援⑤・HOME 案内・更新履歴の並び・ja-wrap・feature-check の音量・clarity③・フレンドの印・家具/一人の帯・町の札・シートの閉じる・home-layout・rhythm-beat-presence)。NG が出たら main の作業ツリー(git worktree)で同じ検査を回して比べる ⑤4本同時の run-checks は画面の検査が混んで落ちる。落ちた物は1本ずつ回し直す
+- やりかけ(どのファイルのどこまで・次の1手): 段1(#6996)・段2(#7037)・段3(#7052)・段4(#7064)・段5(#7074 今日の目標の土台 56-assistant-life-goal.jsx・まだどこからも呼ばない)までマージ済み。次は段6(画面の型: 上の帯・下のタブ・窓・結果の1枚・字の4段と docs/spec/ASSISTANT_LIFE_UI.md。新しい部品1つ・CSS)。見た目が変わるので、公開の前に止め絵と突き合わせ表を窓口へ出して止まる。段4の見る口(assistantLifeCondFaceOf・assistantLifePlanEaseOf・assistantLifeLikesViewOf)と段5の assistantLifeGoalView を型の中で使う
+- 社長・窓口の返事待ち(何を聞いているか): なし(段5 の目標は社長 A「4つのうち3つ」で入れた)
+- はまった所・次の会話がやってはいけないこと: ①分析の API は使わない(r1119-056)。見た目は visual-life-shoot.js で撮って目で見る・測る検査で確かめる ②data/assistants.js の末尾は ASSISTANT_PEER_REWRITES の生成ブロック(peer-rewrite-table.js が末尾にある前提)。表を足すときはその前に置き、`node tools/assistant/peer-rewrite-table.js` で作り直す ③台詞の字として「育てた子」を data に書かない(monster-ko-check が拾う) ④画面の検査は main でももともと落ちる物が多い(assistant-check の吹き出し・助手ライフ⑬・マスモン応援⑤・HOME 案内・更新履歴の並び・ja-wrap・feature-check の音量・clarity③・フレンドの印・家具/一人の帯・町の札・シートの閉じる・home-layout・rhythm-beat-presence)。NG が出たら main の作業ツリー(git worktree)で同じ検査を回して比べる ⑤4本同時の run-checks は画面の検査が混んで落ちる。落ちた物は1本ずつ回し直す ⑥merge-main.js は2分を超えることがある。前に出すと時間切れで取り込みの途中で止まるので、裏で回す ⑦run-checks の画面の検査は止め絵(docs/progress/assistant-peer/taste-change/real/*.png)を撮り直すので、コミットせず git checkout で戻す ⑧main の NG(段3・4・5 の報告と同じ13本前後)は自分の変更と関係ない
 - 配り直し・SQL で窓口に頼んだまま済んでいないもの: なし
 
 ## 社長の決めごと(2026-11-16 から・この部に関わる分)
