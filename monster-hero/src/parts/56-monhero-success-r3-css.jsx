@@ -14,6 +14,9 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+/* 「修行終わり!」の題字は木の背景に埋もれない(育-188): 暗い下地と濃いふちを敷く。傾きは小さく */
+.msx .r3 .v-stamp.ok.msx-qend{color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 3px 0 #831843,0 0 10px rgba(0,0,0,.85);width:max-content;max-width:92%;margin:0 auto;padding:4px 16px 8px;border-radius:14px;background:rgba(2,6,23,.74);transform:rotate(-2deg)}
+.msx .r3 .v-stamp.ok.msx-qend small{transform:rotate(2deg)}
 .msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
 .msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
 .msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
