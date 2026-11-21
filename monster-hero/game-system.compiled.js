@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b817c4694bb7fdb6
+// source-sha256: ebe63445cf80ff8b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155634,6 +155634,32 @@ const MSC_CSS = `
 .msc-talk{position:relative}.msc-sk{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:13px;font-weight:900;padding:0 12px;min-height:44px;min-width:72px}
 .msc-talk:has(.msc-sk)>p{padding-right:84px}
 .msc-row{transition:opacity .5s}
+/* 2026-11-21 組み合わせ表の作り直し 案A「参考に寄せる」(r1119-052 ③・社長の選択 r1119-061・参考 taikai-bracket.png・v2 84〜90秒)。
+   上に会場の絵の帯と大会名・顔は名前の帯の右の端(顔から線が出る)・負けた行は帯を灰色に沈めて顔を白黒・人気の1〜3番に色・WINNER の札・解説の立ち絵 */
+.msc-ttl{display:inline-block;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-weight:900;font-size:14px;letter-spacing:.04em;line-height:1.35;box-shadow:0 2px 0 rgba(0,0,0,.35)} /* バ-42: 大会まわりの見出しは この1つの形(受付・組み合わせ表・試合) */
+.msc-venue{position:relative;height:64px;background:#3b2a52 center 38%/cover no-repeat;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.msc-venue::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,0),rgba(20,16,38,.45))}
+.msc-venue .msc-ttl{position:relative;z-index:1}
+.msc-venue.low{height:auto;padding:6px 0;background:linear-gradient(180deg,#7c4a1e,#5a3313)}
+.msc-venue.low::after{display:none}
+.msc-bk.a .msc-row .msc-face{order:0;margin-left:-16px;position:relative;z-index:1;border:2px solid #d6a45a;background:#fff}
+.msc-bk.a .msc-row .msc-no{order:0}
+.msc-bk.a .msc-name{margin-right:0;border-radius:99px;padding:0 20px 0 9px}
+.msc-bk.a .msc-row.out{opacity:1}
+.msc-bk.a .msc-row.out .msc-name{background:#a8a29e;border-color:#78716c;color:#f5f5f4}
+.msc-bk.a .msc-row.out .msc-face{border-color:#a8a29e}
+.msc-bk.a .msc-row.out .msc-face img{filter:grayscale(1) brightness(.92)}
+.msc-bk.a .msc-row.out .msc-peek{color:#f5f5f4}
+.msc-bk.a .msc-no.p1{background:#f59e0b;border-color:#b45309;color:#fff}
+.msc-bk.a .msc-no.p2{background:#2563eb;border-color:#1e40af;color:#fff}
+.msc-bk.a .msc-no.p3{background:#dc2626;border-color:#991b1b;color:#fff}
+.msc-bk.a .msc-cupbadge{width:52px;padding:4px 0 5px;font-size:9.5px;letter-spacing:.04em}
+.msc-bk.a .msc-cupbadge .tr{display:block;font-size:20px;line-height:1.1}
+.msc-panel .msc-note.in{color:#78350f;padding:0 10px 8px;font-weight:700}
+.msc-talk.st{margin-top:14px;padding-left:92px;min-height:76px;align-items:center}
+.msc-talk.st .msc-stand{position:absolute;left:4px;bottom:0;width:84px;height:96px;overflow:hidden;pointer-events:none}
+.msc-talk.st .msc-stand img{width:100%;height:auto;border-radius:0;background:none;object-fit:initial;display:block;margin-top:-2px}
+.msc-talk.st .msc-stand img.face{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#fde68a;margin:14px 0 0 6px}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -155895,7 +155921,8 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 340) / 8)));
+  const band = vh >= 700;
+  const H = Math.max(36, Math.min(68, Math.floor((vh - (band ? 404 : 354)) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -155983,9 +156010,15 @@ function MonsucBracket({
   }, "← 戻る")), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
-    className: "msc-head"
-  }, info.title, " ", MSC_STARS(info.star)), React.createElement("div", {
-    className: "msc-bk"
+    className: `msc-venue ${band ? '' : 'low'}`,
+    style: band ? {
+      backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
+    } : undefined,
+    "data-msc-venue": true
+  }, React.createElement("span", {
+    className: "msc-ttl"
+  }, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+    className: "msc-bk a"
   }, E.map((e, i) => React.createElement("div", {
     key: i,
     className: `msc-row ${out(i) ? 'out' : ''} ${e.you ? '' : 'tap'}`,
@@ -156001,7 +156034,7 @@ function MonsucBracket({
       if (ev.key === 'Enter' || ev.key === ' ') setPeek(i);
     }
   }, React.createElement("span", {
-    className: "msc-no",
+    className: `msc-no ${no[i] <= 3 ? `p${no[i]}` : ''}`,
     title: `${no[i]}番人気`,
     "aria-label": `${no[i]}番人気`
   }, no[i]), React.createElement("span", {
@@ -156042,8 +156075,19 @@ function MonsucBracket({
     className: `msc-cupbadge ${result === 'win' ? 'lit' : ''}`,
     style: {
       right: 4
-    }
-  }, "🏆", React.createElement("br", null), "優勝"))), peek != null && E[peek] ? React.createElement(MscEntrantPeek, {
+    },
+    "aria-label": "優勝"
+  }, React.createElement("span", {
+    className: "tr"
+  }, "🏆"), "WINNER")), React.createElement("div", {
+    className: "msc-note in"
+  }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
+    className: "nw"
+  }, info.meName, " VS ", nm(foe))), "。") : null, React.createElement("span", {
+    className: "nw"
+  }, "左の数字は人気の順"), React.createElement("span", {
+    className: "nw"
+  }, "(1が 一番人気)。"))), peek != null && E[peek] ? React.createElement(MscEntrantPeek, {
     suc: suc,
     s: s,
     info: info,
@@ -156056,19 +156100,21 @@ function MonsucBracket({
     colors: shownColors[peek],
     onClose: () => setPeek(null)
   }) : null, React.createElement("div", {
-    className: "msc-note"
-  }, st >= 3 ? React.createElement(React.Fragment, null, React.createElement("b", null, "決勝は ", React.createElement("span", {
-    className: "nw"
-  }, info.meName, " VS ", nm(foe))), "。") : null, React.createElement("span", {
-    className: "nw"
-  }, "左の数字は人気の順"), React.createElement("span", {
-    className: "nw"
-  }, "(1が 一番人気)。")), React.createElement("div", {
-    className: "msc-talk"
-  }, React.createElement("img", {
-    src: mscFace(s.aid),
-    alt: ""
-  }), React.createElement("p", {
+    className: "msc-talk st"
+  }, (() => {
+    const full = coach && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(coach, 'happy') : null;
+    return React.createElement("span", {
+      className: "msc-stand",
+      "aria-hidden": "true"
+    }, full ? React.createElement("img", {
+      src: full,
+      alt: ""
+    }) : React.createElement("img", {
+      className: "face",
+      src: mscFace(s.aid),
+      alt: ""
+    }));
+  })(), React.createElement("p", {
     className: "msx-kp"
   }, coach ? React.createElement("b", {
     style: {
@@ -173728,6 +173774,8 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+/* バ-42(2026-11-21): 大会まわりの見出しは1つの形(茶色の丸い帯に黄色い字・組み合わせ表と試合の .msc-ttl と同じ) */
+.msx .v-ev-h.cup{left:8px;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-size:13px;letter-spacing:.04em;box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
 .msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
 .msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
@@ -185648,7 +185696,7 @@ function MsxR3Cup({
       maxWidth: 'none'
     }
   }), React.createElement("div", {
-    className: "v-ev-h"
+    className: "v-ev-h cup"
   }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub",
     style: {
@@ -186576,7 +186624,7 @@ function MsxR3PreDesk({
       objectPosition: 'bottom'
     }
   }), React.createElement("div", {
-    className: "v-ev-h"
+    className: "v-ev-h cup"
   }, "🏆 大会の受付"), React.createElement("div", {
     className: "v-ibub msx-kp",
     style: {
@@ -193371,6 +193419,7 @@ const MSA_CSS = `
 .msa-stage.big .msa-hx{bottom:calc(25% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(25% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline b.msc-ttl{flex:0 1 auto;font-size:13px;padding:2px 12px} /* バ-42: 見出しは組み合わせ表・受付と同じ形 */
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 /* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
@@ -196431,7 +196480,9 @@ function MonsucArena({
     "data-msa-main": true
   }, React.createElement("div", {
     className: "msc-top msa-topline"
-  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
+  }, React.createElement("b", {
+    className: "msc-ttl"
+  }, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
     className: "msc-buff"
   }, "✨ 特別な1話") : null), foeOn ? React.createElement("div", {
     className: "msa-foe",
