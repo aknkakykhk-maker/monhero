@@ -33,6 +33,10 @@
       "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
     },
     {
+      "file": "16-monster-stage-size.jsx",
+      "role": "並んで立つ場面(試合の場など)のモンスターの見た目の大きさの表 MONSTER_STAGE_SIZE と、絵の余白を詰めた描く大きさ monsterStageFit"
+    },
+    {
       "file": "16-ranking-detail-and-widgets.jsx",
       "role": "ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー"
     },

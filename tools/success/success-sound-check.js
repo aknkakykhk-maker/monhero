@@ -167,8 +167,8 @@ for (const [name, got, w] of flow) eq(name, got, w);
 // 8: 画面を見張る
 const partsDir = path.join(root, 'monster-hero/src/parts');
 const monsucFiles = fs.readdirSync(partsDir).filter((f) => /^56-(monhero-success-|monsuc-).*\.jsx$/.test(f));
-// 試合の部品はバトルの会話(②)が差し替え中。差し替えが済んだらこの行を消す(残したままにしない)
-const PENDING = { '56-monhero-success-arena.jsx': 'バトルの会話(②)が msaSe を意味の表へ差し替え中' };
+// 試合の部品(56-monhero-success-arena.jsx)の msaSe も意味の表で鳴らす(段3d 2026-11-21 で差し替え済み)。待ちは無い
+const PENDING = {};
 const code = (src) => src.split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/ .*$/, '')).join('\n');
 const sceneIds = new Set(ids);
 const pending = [];

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2405610102d380d
+// source-sha256: 18057c07d14f7b12
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -13939,6 +13939,72 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_C
   },
   className: `rounded-full ${monsterArtUrlNeedsContain(icon) ? 'object-contain' : 'object-cover'} inline-block shrink-0`
 }) : icon;
+const MONSTER_STAGE_SIZE = Object.freeze({
+  Mocchi: 0.72,
+  Suezo: 0.72,
+  Ghost: 0.75,
+  Plant: 0.8,
+  Ham: 0.82,
+  KenshiMocchi: 0.82,
+  Spooky: 0.82,
+  Ark: 0.85,
+  Tiger: 0.9,
+  Mitarashi: 0.9,
+  Pixie: 0.92,
+  Mia: 0.95,
+  Pandora: 0.95,
+  Snegurochka: 0.98,
+  Dreamy: 0.98,
+  Oboro: 1,
+  Undine: 1,
+  Yaobikuni: 1,
+  Illumine: 1,
+  Kyubi: 1,
+  Orihime: 1,
+  Iblis: 1.05,
+  MelWhip: 1.05,
+  Yggdrasil: 1.1,
+  Eiki: 1.15,
+  Zan: 1.25,
+  Melody: 1.3,
+  Kuromy: 1.3,
+  Monol: 1.4,
+  Golem: 1.45
+});
+const MONSTER_STAGE_REF = 0.8;
+const MONSTER_STAGE_MAX_W = 1.5;
+const monsterStageSizeOf = id => {
+  const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+};
+const monsterStageFit = (id, boxW, boxH) => {
+  const W = Number(boxW),
+    H = Number(boxH);
+  if (!(W > 0) || !(H > 0)) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[id] : null;
+  const boxes = typeof ART_CONTENT_BOXES === 'object' && ART_CONTENT_BOXES ? ART_CONTENT_BOXES : null;
+  const key = mon && typeof mon.imgUrl === 'string' ? mon.imgUrl.split('?')[0].replace(/^images\//, '') : '';
+  const b = boxes && key ? boxes[key] : null;
+  if (!Array.isArray(b) || b.length < 5) return null;
+  const [x0, y0, x1, y1, a] = b.map(Number);
+  const ch = y1 - y0,
+    cw = x1 - x0;
+  if (!(ch > 0) || !(cw > 0) || !(a > 0)) return null;
+  let h = H * MONSTER_STAGE_REF * monsterStageSizeOf(id) / ch;
+  let w = h * a;
+  const wMax = W * MONSTER_STAGE_MAX_W;
+  if (cw * w > wMax) {
+    const k = wMax / (cw * w);
+    h *= k;
+    w *= k;
+  }
+  return {
+    w: Math.round(w),
+    h: Math.round(h),
+    mb: -Math.round((1 - y1) * h),
+    dx: -Math.round(((x0 + x1) / 2 - 0.5) * w)
+  };
+};
 const rankingPartyColors = (baseId, colors) => {
   const raw = Array.isArray(colors) ? colors : [];
   return Array.from({
@@ -153577,11 +153643,11 @@ function AmbbOpening({
   const go = () => {
     if (done.current) return;
     done.current = true;
-    ambbSe('card');
+    ambbSe('matchReady');
     onGo();
   };
   useEffect(() => {
-    ambbSe('join');
+    ambbSe('swap');
     const t = setTimeout(go, quick ? 1800 : 4600);
     return () => clearTimeout(t);
   }, []);
@@ -154092,7 +154158,7 @@ function AssistantMasmonBattleBeta({
     if (!m) return;
     const busy = pos < battle.r.log.length - 1;
     if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c);
     if (r && r.ok) {
       syncManual(m);
@@ -194146,6 +194212,8 @@ const MSA_CSS = `
 /* 2026-11-20 再点検 バ-24・32・35・44: 縦 390×844・PC 1280×800 で下のボタン列が画面の外に出ていた → 場の高さは MonsucArena が画面に残る高さを測って決める(上限 420px・下限 260px。インラインの height) */
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:25%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+/* 並んで立つ場面の大きさ(r1119-074): 1体ずつの見た目の大きさで描く(MsaFighter が --msa-iw/ih/ib/ix を決める・16-monster-stage-size.jsx) */
+.msa-stage.big .msa-f[data-msa-sz] img.msa-img{width:var(--msa-iw);height:var(--msa-ih);max-width:none;max-height:none;margin-bottom:var(--msa-ib);position:relative;left:var(--msa-ix);object-fit:fill;flex:none}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
 .msa-stage.big .msa-floor{bottom:25%}
 .msa-stage.big .msa-spot{bottom:calc(25% - 7px)}
@@ -194322,9 +194390,9 @@ const msaReduce = () => {
     return false;
   }
 };
-const msaSe = k => {
+const msaSe = meaning => {
   try {
-    if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k]();
+    if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning);
   } catch (_) {}
 };
 const MH_BATTLE_BGM = {
@@ -195924,6 +195992,7 @@ function MsaFighter({
   }, [blownRow ? e.k : -1]);
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
+  const fitSz = typeof monsterStageFit === 'function' && fwPx > 0 ? monsterStageFit(sp, fwPx, Math.round(fwPx / 0.82) - 10) : null;
   const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
     baseId: sp,
     src: src,
@@ -196105,11 +196174,19 @@ function MsaFighter({
     ...style,
     transition: 'none'
   };
+  if (fitSz) style = {
+    ...style,
+    '--msa-iw': `${fitSz.w}px`,
+    '--msa-ih': `${fitSz.h}px`,
+    '--msa-ib': `${fitSz.mb}px`,
+    '--msa-ix': `${side === 'A' ? -fitSz.dx : fitSz.dx}px`
+  };
   return React.createElement("div", {
     ref: rootRef,
     className: `msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`,
     style: style,
-    "data-msa-fighter": side
+    "data-msa-fighter": side,
+    "data-msa-sz": fitSz ? monsterStageSizeOf(sp) : undefined
   }, React.createElement("span", {
     className: "msa-shadow",
     "aria-hidden": "true"
@@ -196138,12 +196215,12 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
-    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
-      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
-        msaSe('card');
-        later(1750, 'trainingDecide');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');else if (e.ev === 'move') msaSe('move');else if (e.ev === 'swap') msaSe('swap');else if (e.ev === 'ko') msaSe('ko');else if (e.ev === 'start') {
+      if (reduce || sf <= MSA_FAST_F) msaSe('matchGo');else {
+        msaSe('matchReady');
+        later(1750, 'matchGo');
       }
     }
   }, [pos, on]);
@@ -196406,7 +196483,7 @@ function MsaStage({
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   const [preAt, setPreAt] = useState(-1);
   const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
@@ -197144,7 +197221,7 @@ function MonsucArena({
     const over = r.bottom - b.bottom + 8;
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
-  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && !paused && mm.pending);
   useEffect(() => {
     if (!autoWait) return undefined;
     const t = setTimeout(() => {
@@ -197636,7 +197713,7 @@ function MsaJudge({
     onGo();
   };
   useEffect(() => {
-    msaSe('tap');
+    msaSe('decide');
     const t = setTimeout(go, 9000);
     return () => clearTimeout(t);
   }, []);
@@ -197698,8 +197775,8 @@ function MsaFinish({
     onGo();
   };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => {
       clearTimeout(t);
