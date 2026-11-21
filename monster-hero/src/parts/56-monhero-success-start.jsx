@@ -397,7 +397,7 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, stock = [], teamBox, t
             {stock.map((m) => { const on = cur && cur.assist === m.id; return (
               <button type="button" key={m.id} className={`v-item${on ? ' sel' : ''}`} disabled={!on && boxFull} style={{ padding: '4px 8px', width: '100%' }} data-msx-pick-assist={m.id} onClick={() => onPick({ assist: m.id })}>
                 <MsxMonFace species={m.species} colors={m.colors} style={thumb}/>
-                <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}・メモモン</small></div>
+                <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}・メモリアルモンスター</small></div>
                 <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })}
           </>) : null}
         </div>
@@ -420,9 +420,11 @@ function MsxGatherTable({ members, SUC, onClose }) {
             return (
               <div key={k} className="msx-gt-row" data-msx-gather-row={k}>
                 <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{msxTrainName(k, 1)}</b><span className="st">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="n">{rows.length}体</span></div>
+                {/* 「得意・来やすさ・伸び」は列の見出しに1回だけ出し、行には数字だけを並べる(同じ文のくり返しをやめた・育-243) */}
+                {rows.length ? <div className="msx-gt-cols" aria-hidden="true"><span/><span/><span>得意</span><span>来やすさ</span><span>伸び</span></div> : null}
                 {rows.length ? rows.map(({ m, j }, i) => { const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null; return (
-                  <div key={i} className="msx-gt-mon"><MsxMonFace species={m.species} colors={m.colors}/><span className="nm">{m.name}</span>
-                    <span className="v">得意{RANK[j]}{ch != null ? `・来やすさ${Math.round(ch * 100)}%` : ''}・伸び+{Math.round(m.bonus[k] || 0)}%</span></div>); })
+                  <div key={i} className="msx-gt-tr" aria-label={`${m.name} 得意${RANK[j]}${ch != null ? `・来やすさ${Math.round(ch * 100)}%` : ''}・伸び+${Math.round(m.bonus[k] || 0)}%`}><MsxMonFace species={m.species} colors={m.colors}/><span className="nm">{m.name}</span>
+                    <b>{RANK[j]}</b><b>{ch != null ? `${Math.round(ch * 100)}%` : '—'}</b><b className="msx-gt-g">+{Math.round(m.bonus[k] || 0)}%</b></div>); })
                   : <div className="msx-gt-none">集まりやすいモンスターなし</div>}
               </div>
             );
@@ -639,8 +641,10 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf, onOpenSh
           </div>); })}
       </MonsucCardGrid></div>
       <div className="msx-note msx-sl-legend" data-msx-slot-legend>{sameBond ? `どの枠も 初めの親密度 ${members[0].bond0}・友情タッグ +${members[0].tag}%。` : ''}カードの下は、そのモンスターといっしょにトレーニングしたときに伸びが上がる能力と割合(%)。カードを押すと入れ替え</div>
-      <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
-        <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
+      <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと内訳を見る ▶</span></div>
+        {/* 色の意味を見出しの下に小さく添える。能力の絵はカードと同じ ❤️🏋️📖🎯👣🛡️ にそろえる(育-241・242) */}
+        <div className="msx-dt-sm" style={{ color: '#cbd5e1', marginTop: 1 }} data-msx-heat-legend>集まる体数。色は <span style={{ background: '#7c2d5e', color: '#fff', borderRadius: 6, padding: '0 5px' }}>2体</span> <span style={{ background: '#be185d', color: '#fff', borderRadius: 6, padding: '0 5px' }}>3体以上</span></div>
+        <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{MSX_STAT_ICON[k]}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
     </>);
     ftPre = (<>
       <button type="button" disabled={!(raised.length || stock.length) || typeof msxTeamAuto !== 'function'} onClick={() => setTeamSlotsSt((cur) => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null))} data-msx-team-auto>おまかせ</button>

@@ -642,7 +642,7 @@ const MSX_CSS = `
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
   .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
-  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}.msx .v-st .vl{gap:1px}.msx .v-st .msx-srk{min-width:14px;height:14px;font-size:9px;padding:0 2px}.msx .v-st .br{gap:2px;margin:1px 3px 0}
+  .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}.msx .v-st .vl{gap:1px}.msx .v-st .msx-srk{min-width:14px;height:14px;font-size:10px;padding:0 2px}.msx .v-st .br{gap:2px;margin:1px 3px 0}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
   .msx .v-pf,.msx .v-pf img{width:24px}.msx .v-pf img{height:24px;border-radius:7px}
@@ -1098,6 +1098,12 @@ const MSX_CSS = `
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
+.msx-gt-cols,.msx-gt-tr{display:grid;grid-template-columns:34px minmax(0,1fr) 40px 58px 46px;align-items:center;column-gap:4px}
+.msx-gt-cols{margin-top:4px;font-size:10px;font-weight:800;color:#94a3b8;text-align:center}
+.msx-gt-tr{margin-top:3px;font-size:12px}
+.msx-gt-tr img{width:34px;height:34px;border-radius:8px;object-fit:contain;background:#1e1a36}
+.msx-gt-tr .nm{min-width:0;font-weight:800;overflow-wrap:anywhere;line-height:1.2}
+.msx-gt-tr b{text-align:center;font-size:13px;color:#e2e8f0;white-space:nowrap}.msx-gt-tr b.msx-gt-g{color:#86efac}
 /* 選ぶ画面: はじめの能力(数字を大きく・素質は小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
@@ -1189,9 +1195,12 @@ const MSX_CSS = `
 /* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
 .msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
 /* 能力の列を押すと素質(A〜E)に切り替わる(2026-11-14 社長)。右上の小さな札が押せる印 */
-.msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:4px;row-gap:2px;-webkit-tap-highlight-color:transparent}
 .msx .v-st.tg:active{transform:translateY(1px)}
-.msx .v-st .v-sttg{position:absolute;right:2px;top:-14px;z-index:2;font-size:10px;font-weight:900;line-height:14px;padding:0 6px;border-radius:99px;background:#334155;color:#fde047;border:1px solid #fde04788;pointer-events:none;white-space:nowrap}
+.msx .v-st .v-sthd{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 1px;min-height:24px;pointer-events:none}
+.msx .v-st .v-sthd .lg{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:#cbd5e1;white-space:nowrap}
+.msx .v-st .v-sthd .lg .msx-srk{min-width:15px;height:14px;font-size:10px;font-style:normal;font-weight:900}
+.msx .v-st .v-sttg{font-size:12px;font-weight:900;line-height:22px;padding:0 10px;border-radius:99px;background:#334155;color:#fde047;border:1px solid #fde047aa;white-space:nowrap}
 .msx .v-st.apton .v-sttg{background:#fde047;color:#422006}
 .msx .v-st .ap{display:block;font-size:10.5px;font-weight:900;line-height:1.2;margin-top:1px;color:#e2e8f0;white-space:nowrap}
 .msx .v-st .ap.aA{color:#fde047}.msx .v-st .ap.aB{color:#86efac}.msx .v-st .ap.aC{color:#e2e8f0}.msx .v-st .ap.aD{color:#fdba74}.msx .v-st .ap.aE{color:#fca5a5}
@@ -1511,6 +1520,6 @@ const MSX_CSS = `
 /* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
 .msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
 .msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
-.msx .msx-tp-bar .msx-pt-s select{max-width:66px}
+.msx .msx-tp-bar .msx-pt-s select{max-width:none;width:auto}
 `;
 
