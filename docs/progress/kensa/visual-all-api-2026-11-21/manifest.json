@@ -1,0 +1,124 @@
+{
+ "at": "2026-11-21T00:34:52.940Z",
+ "usd_est": 3.08,
+ "requests": [
+  {
+   "custom_id": "a001",
+   "area": "HOME",
+   "scenes": [
+    "HOME / HOME〔home〕",
+    "HOME / 更新履歴〔home-changelog〕",
+    "HOME / 助手のメニュー(HOME)〔home-assistant-menu〕",
+    "HOME / 助手の説明(HOME)〔home-assistant-help〕",
+    "HOME / プロフィール〔profile〕",
+    "HOME / プロフィール → イベント回想(まとまりを開いた所)〔replay-list〕"
+   ],
+   "usd_est": 0.2986
+  },
+  {
+   "custom_id": "a002",
+   "area": "HOME",
+   "scenes": [
+    "HOME / イベント回想 → お話の締め(終わり)〔replay-end〕",
+    "HOME / ミッション〔mission〕",
+    "HOME / ギフト〔gift〕",
+    "HOME / 神殿〔temple〕"
+   ],
+   "usd_est": 0.2809
+  },
+  {
+   "custom_id": "a003",
+   "area": "マーケット",
+   "scenes": [
+    "マーケット / マーケット〔market〕",
+    "マーケット / ダイヤショップ〔market-diamond〕"
+   ],
+   "usd_est": 0.2678
+  },
+  {
+   "custom_id": "a004",
+   "area": "カードバトル",
+   "scenes": [
+    "カードバトル / モンヒロバトル(仕組みを選ぶ)〔battle-menu〕",
+    "カードバトル / クラシックバトルの詳しいルール〔battle-rule〕",
+    "カードバトル / クラシック(モード選択)〔battle-classic〕",
+    "カードバトル / クイックモード(難易度)〔battle-quick〕",
+    "カードバトル / ランキング〔battle-ranking〕",
+    "カードバトル / 勇者モンを選ぶ〔battle-hero〕"
+   ],
+   "usd_est": 0.2998
+  },
+  {
+   "custom_id": "a005",
+   "area": "カードバトル",
+   "scenes": [
+    "カードバトル / クラシックの対戦中〔battle-play〕",
+    "カードバトル / クイックの対戦中〔battle-play-quick〕",
+    "カードバトル / MFバトルカード〔card-top〕"
+   ],
+   "usd_est": 0.2704
+  },
+  {
+   "custom_id": "a006",
+   "area": "タクティクス",
+   "scenes": [
+    "タクティクス / タクティクス(モード選択)〔tactics-mode〕",
+    "タクティクス / タクティクスプロ(難易度)〔tactics-diff〕",
+    "タクティクス / タクティクスプロの対戦中〔tactics-play〕"
+   ],
+   "usd_est": 0.2781
+  },
+  {
+   "custom_id": "a007",
+   "area": "図鑑",
+   "scenes": [
+    "図鑑 / M/B管理〔mb〕",
+    "図鑑 / ベースモン一覧〔mb-base〕",
+    "図鑑 / マスモン一覧(バトル)〔mb-master〕",
+    "図鑑 / マスモン一覧(モンヒロビート)〔mb-master-beat〕",
+    "図鑑 / モンスター図鑑〔mb-dex〕",
+    "図鑑 / モンスター編成〔mb-party〕"
+   ],
+   "usd_est": 0.298
+  },
+  {
+   "custom_id": "a008",
+   "area": "図鑑",
+   "scenes": [
+    "図鑑 / 放牧設定〔mb-ranch〕",
+    "図鑑 / AUTO設定〔mb-auto〕",
+    "図鑑 / アシストカード〔mb-assist〕"
+   ],
+   "usd_est": 0.2752
+  },
+  {
+   "custom_id": "a009",
+   "area": "設定",
+   "scenes": [
+    "設定 / 設定〔settings〕",
+    "設定 / バトル設定〔settings-battle〕",
+    "設定 / 音量設定〔settings-sound〕",
+    "設定 / BGMアレンジ〔settings-bgm〕",
+    "設定 / タイトル画像アレンジ〔settings-title〕",
+    "設定 / ホーム画面アレンジ〔settings-home〕"
+   ],
+   "usd_est": 0.2952
+  },
+  {
+   "custom_id": "a010",
+   "area": "設定",
+   "scenes": [
+    "設定 / 画面テーマ〔settings-theme〕"
+   ],
+   "usd_est": 0.2586
+  },
+  {
+   "custom_id": "a011",
+   "area": "ヘルプ",
+   "scenes": [
+    "ヘルプ / ヘルプ(モンヒロバトルから)〔help〕"
+   ],
+   "usd_est": 0.2596
+  }
+ ]
+}
