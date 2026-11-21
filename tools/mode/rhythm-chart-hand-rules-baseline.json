@@ -3123,6 +3123,41 @@
    "fastSameSide": 23,
    "heldHandSwitch": 0
   },
+  "desert_crown/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3294,6 +3329,11 @@
    "at": "2026-11-20T00:43",
    "reason": "天翔る翼の譜面を作り直し(密度増に伴う件数の増加を確認)",
    "changed": 3
+  },
+  {
+   "at": "2026-11-21T16:57",
+   "reason": "新曲 Desert Crown を公開",
+   "changed": 5
   }
  ]
 }

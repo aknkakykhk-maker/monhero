@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "05fe379b2147",
-  "packs": {"beat":{"bytes":250041136,"count":147},"battle":{"bytes":397380944,"count":1559},"card":{"bytes":38085297,"count":1046},"all":{"bytes":685507377,"count":2752},"core":{"bytes":24615272,"count":24}},
+  "id": "00559eac9765",
+  "packs": {"beat":{"bytes":254355282,"count":149},"battle":{"bytes":397380944,"count":1559},"card":{"bytes":38085297,"count":1046},"all":{"bytes":689821523,"count":2754},"core":{"bytes":24660427,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -24,6 +24,7 @@
     "audio/bgm-crossing-field.mp3": {"v":"1e2e7cc1d3d5","size":1070496,"pack":"beat"},
     "audio/bgm-departure-short.mp3": {"v":"d2dcbe5c72a8","size":1686047,"pack":"beat"},
     "audio/bgm-departure.mp3": {"v":"ad4d5a6838c8","size":4757629,"pack":"beat"},
+    "audio/bgm-desert-crown.mp3": {"v":"1a440c813bbb","size":3686976,"pack":"beat"},
     "audio/bgm-dr-wily-stage-1-okkussenman.mp3": {"v":"1653c82ce75e","size":5668406,"pack":"beat"},
     "audio/bgm-dr-wily-stage-1.mp3": {"v":"80f1ad0c564c","size":5305618,"pack":"beat"},
     "audio/bgm-dullahan-clockwork-alt.mp3": {"v":"9e934451770b","size":4926380,"pack":"battle"},
@@ -2249,6 +2250,7 @@
     "images/song-art/crazy-party-night.jpg": {"v":"cc3f31ed7b0d","size":86588,"pack":"beat"},
     "images/song-art/crossing-field.jpg": {"v":"7062766e0099","size":75222,"pack":"beat"},
     "images/song-art/departure.jpg": {"v":"fa45a696f06d","size":34272,"pack":"beat"},
+    "images/song-art/desert-crown.jpg": {"v":"a46a8421a65c","size":627170,"pack":"beat"},
     "images/song-art/dr-wily-stage-1-okkussenman.jpg": {"v":"560278a149cb","size":434764,"pack":"beat"},
     "images/song-art/dr-wily-stage-1.jpg": {"v":"5b878b55cc76","size":397225,"pack":"beat"},
     "images/song-art/dullahan-clockwork.jpg": {"v":"2227eb23f4d0","size":72430,"pack":"beat"},
@@ -2757,7 +2759,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"0df47bf455fd","size":308215,"pack":"core"},
+    "tailwind.css": {"v":"ffec79f35a28","size":308215,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2765,12 +2767,12 @@
     "data/breeder.js": {"v":"94e44f8d7df0","size":145296,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"75526d15a70b","size":5870886,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"36082f5d8953","size":5914054,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"e297d2fa07bf","size":96997,"pack":"core"},
-    "data/changelog.js": {"v":"b3de0e598aee","size":1959937,"pack":"core"},
+    "data/changelog.js": {"v":"acbf1a2e6c23","size":1960714,"pack":"core"},
     "data/help.js": {"v":"54f48c97d408","size":903673,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2778,6 +2780,6 @@
     "data/card-battle-cards.js": {"v":"a1453d49f17e","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"ba3c8904f13c","size":12492763,"pack":"core"}
+    "game-system.compiled.js": {"v":"0d3c244d4970","size":12493973,"pack":"core"}
   }
 }

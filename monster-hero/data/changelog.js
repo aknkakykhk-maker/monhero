@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-22 01:57", type:'update', group:'rhythm', status:'new',
+    title:'新曲「Desert Crown」を追加しました',
+    image:'images/song-art/desert-crown.jpg?v=a46a8421a65c',
+    items:[
+      'モンヒロビートに「Desert Crown」を追加しました。えるびんの曲（2分34秒・BPM 100）です。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.18 ／ MASTER Lv.30 ／ HELL Lv.36 です。',
+      'ノーツ数は 134 ／ 165 ／ 223 ／ 357 ／ 449 ／ 581 です。',
+      'この曲はビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_desert_crown_v1', type:'content' },
+  },
+  {
     date: "2026-11-21 22:18", type:'update', title:'みゅあのイラストを差し替えました', status:'new', group:'assistant',
     items:[
       'みゅあ（カードマスターの服）の全身絵・バスト絵・顔アイコン・立ち絵を、新しく描き直した絵に差し替えました。表情ごとにポーズも変わっています。',
