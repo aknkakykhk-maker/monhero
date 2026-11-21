@@ -1,0 +1,228 @@
+#!/usr/bin/env node
+// モンヒロビートの演奏中に裏で動いている物を洗い出して測る、一度きりの調べの台本(r1119-078・ゲーム本体は変えない)。
+// 演奏画面への入り方・CPU の遅くし方・止まりの数え方は tools/mode/rhythm-stall-check.js と同じ。
+// それに加えて、曲が鳴っている間だけ
+//   ① CPU の時間を関数ごとに集める(Chrome の Profiler。自分の時間と、呼んだ先を含めた時間)
+//   ② タイマー(setTimeout / setInterval)と requestAnimationFrame を、作られた場所ごとに 回数・合計時間・最大 で数える
+//   ③ 通信(fetch / XHR / WebSocket / BroadcastChannel)と localStorage の書き込みを数える
+//   ④ 50ms を超える止まりのコマの中で動いたタイマー・rAF を記録する
+// を取る。
+//   node docs/progress/beat-background-2026-11/survey.js.txt [--runs 3] [--rate 4] [--sec 20] [--song crossing_field] [--diff HARD] [--no-profile]
+'use strict';
+const fs = require('fs'), path = require('path'), http = require('http'), os = require('os');
+const { execFileSync } = require('child_process');
+const ROOT = path.resolve(__dirname, '..', '..', '..');
+const PORT = 9427;
+const { installPlayer, installArgs } = require(path.join(ROOT, 'tools/playbot/scenarios/rhythm'));
+const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed'));
+const argv = process.argv.slice(2);
+const opt = (n, d) => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
+const SONG = opt('--song', 'crossing_field'), DIFF = opt('--diff', 'HARD').toUpperCase();
+const RUNS = Number(opt('--runs', 3)) || 3, RATE = Number(opt('--rate', 4)) || 4, SEC = Number(opt('--sec', 20)) || 20;
+const PROFILE = !argv.includes('--no-profile'), WRAP = !argv.includes('--no-wrap');
+// 試し: 測るページの中だけで止めてみる(本体は変えない)。base = 何もしない / timers = 演奏前から動いている setInterval を曲の始まりで全部止める
+//        / noanim = CSS のアニメーションとトランジションを止める。--exp base,timers,noanim のように並べると交互に測る
+const EXPS = opt('--exp', '').split(',').filter(Boolean);
+const OUT = opt('--out', path.join(os.tmpdir(), 'mh-beat-bg-survey.json'));
+
+const toneJs = () => {
+  const file = path.join(os.tmpdir(), 'mh-tone-14.8.49', 'package', 'build', 'Tone.js');
+  if (fs.existsSync(file)) return fs.readFileSync(file);
+  try {
+    const dir = path.dirname(path.dirname(path.dirname(file))); fs.mkdirSync(dir, { recursive: true });
+    execFileSync('npm', ['pack', 'tone@14.8.49', '--silent'], { cwd: dir, stdio: 'ignore' });
+    execFileSync('tar', ['xzf', 'tone-14.8.49.tgz'], { cwd: dir });
+    return fs.readFileSync(file);
+  } catch (e) { return null; }
+};
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
+const serve = () => new Promise((res) => {
+  const sv = http.createServer((q, s) => {
+    const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, ''));
+    if (!f.startsWith(ROOT + path.sep) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { s.writeHead(404); s.end(); return; }
+    s.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(s);
+  });
+  sv.listen(PORT, () => res(sv));
+});
+
+// ページより先に入れる見張り
+function probe() {
+  const W = window.__bg = { on: false, sites: {}, net: [], ls: {}, frames: [], stallHits: [], cur: [] };
+  const site = () => {
+    const lim = Error.stackTraceLimit; Error.stackTraceLimit = 7;
+    const st = (new Error().stack || '').split('\n').slice(3); Error.stackTraceLimit = lim;
+    const f = st.find(l => !/__bgwrap|survey|addInitScript/.test(l)) || st[0] || '';
+    const m = f.match(/at (?:(\S+) )?\(?(?:.*\/)?([^/:]+):(\d+):(\d+)\)?/);
+    // 呼んだ側の関数名を2段ぶん残す(どこの useEffect かを見分ける)
+    const names = st.slice(0, 4).map(l => (l.match(/at (\S+) \(/) || [])[1]).filter(Boolean).slice(0, 3).join('<');
+    return m ? `${m[2]}:${m[3]} ${names}` : f.trim();
+  };
+  const rec = (kind, key, ms) => {
+    const k = kind + ' ' + key, s = W.sites[k] || (W.sites[k] = { n: 0, ms: 0, max: 0 });
+    s.n++; s.ms += ms; if (ms > s.max) s.max = ms; W.cur.push([k, Math.round(ms * 10) / 10]);
+  };
+  const wrapCb = (kind, key, cb) => function __bgwrap() {
+    if (!W.on) return cb.apply(this, arguments);
+    const t = performance.now();
+    try { return cb.apply(this, arguments); } finally { rec(kind, key, performance.now() - t); }
+  };
+  const oST = window.setTimeout, oSI = window.setInterval, oRAF = window.requestAnimationFrame;
+  window.setTimeout = function (cb, ms, ...a) { if (typeof cb !== 'function') return oST(cb, ms, ...a); return oST(wrapCb('timeout', site() + ' ' + (ms | 0) + 'ms', cb), ms, ...a); };
+  window.setInterval = function (cb, ms, ...a) { if (typeof cb !== 'function') return oSI(cb, ms, ...a); return oSI(wrapCb('interval', site() + ' ' + (ms | 0) + 'ms', cb), ms, ...a); };
+  window.requestAnimationFrame = function (cb) { return oRAF(wrapCb('raf', site(), cb)); };
+  const oFetch = window.fetch;
+  window.fetch = function (u) { if (W.on) W.net.push(['fetch', String(u && u.url || u).slice(0, 120)]); return oFetch.apply(this, arguments); };
+  const oOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (m, u) { if (W.on) W.net.push(['xhr', String(u).slice(0, 120)]); return oOpen.apply(this, arguments); };
+  if (window.WebSocket) { const oSend = WebSocket.prototype.send; WebSocket.prototype.send = function () { if (W.on) W.net.push(['ws', this.url]); return oSend.apply(this, arguments); }; }
+  const oSet = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (k) { if (W.on) { const t = performance.now(); try { return oSet.apply(this, arguments); } finally { const s = W.ls[k] || (W.ls[k] = { n: 0, ms: 0 }); s.n++; s.ms += performance.now() - t; } } return oSet.apply(this, arguments); };
+  // コマの間隔と、そのコマの中で動いた物
+  let last = 0;
+  const loop = (t) => {
+    if (last && W.on) {
+      let sm = null; try { sm = window.__mhTestHooks.rhythmSongMs(); } catch (e) {}
+      const dt = t - last;
+      if (Number.isFinite(sm) && sm > 0) {
+        W.frames.push([Math.round(dt * 10) / 10, Math.round(sm)]);
+        if (dt > 50) W.stallHits.push({ dt: Math.round(dt), sm: Math.round(sm), ran: W.cur.filter(x => x[1] >= 1).sort((a, b) => b[1] - a[1]).slice(0, 6) });
+      }
+    }
+    W.cur = []; last = t; oRAF(loop);
+  };
+  oRAF(loop);
+  // React の再描画: 1回の確定ごとに、描き直した部品(PerformedWork の印)の名前を数える
+  W.commits = 0; W.rendered = {}; W.seen = new WeakMap();
+  const nameOf = (f) => { const t = f.type; return t && (t.displayName || t.name) || (t && t.render && (t.render.displayName || t.render.name)) || null; };
+  window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: false, supportsFiber: true, renderers: new Map(), inject() { return 1; }, onScheduleFiberRoot() {}, onCommitFiberUnmount() {}, onPostCommitFiberRoot() {},
+    onCommitFiberRoot(id, root) {
+      if (!W.on) return; W.commits++;
+      // ★描き直していない部品は前の印(flags)が残るので、前の確定でも同じ物として見た部品は数えない
+      //   (描き直すと current と alternate が入れ替わり、別の物になる)
+      const n0 = W.commits;
+      const walk = (f, d) => { for (let c = f; c; c = c.sibling) { if ((c.flags & 1) && typeof c.type !== 'string') { const n = nameOf(c); const seen = W.seen.get(c); W.seen.set(c, n0); if (n && seen !== n0 - 1) W.rendered[n] = (W.rendered[n] || 0) + 1; } if (c.child && d < 400) walk(c.child, d + 1); } };
+      try { walk(root.current.child, 0); } catch (e) {}
+    } };
+  try { new PerformanceObserver((l) => { if (W.on) for (const e of l.getEntries()) (W.long || (W.long = [])).push(Math.round(e.duration)); }).observe({ type: 'longtask', buffered: false }); } catch (e) {}
+}
+
+const OWNED = ['amakakeru_tsubasa', 'dr_wily_stage_1', 'gourmet_race_64', 'gourmet_race_dx', 'eiyuu_no_akashi', 'departure', 'rpg', 'midnight_studio', 'hopes_and_dreams', 'sparkling_pink_overture'];
+let currentExp = '';
+async function runOnce(playwright, tone) {
+  const exe = '/opt/pw-browsers/chromium';
+  const browser = await playwright.chromium.launch({ executablePath: fs.existsSync(exe) ? exe : undefined, args: ['--autoplay-policy=no-user-gesture-required'] });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } });
+  try {
+    await ctx.route(/cdnjs\.cloudflare\.com\/ajax\/libs\/tone\//, (r) => tone ? r.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: tone }) : r.abort());
+    await ctx.route(/supabase\.co/, (r) => /rest\/v1/.test(r.request().url()) ? r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }) : r.abort());
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    if (WRAP) await p.addInitScript(probe);
+    await p.addInitScript((exp) => {
+      const F = window.__fr = { on: false, frames: [], exp, killed: 0, pre: [] };
+      const oSI = window.setInterval; const live = new Set();
+      window.setInterval = function () { const id = oSI.apply(this, arguments); if (!F.on) live.add(id); return id; };
+      const oCI = window.clearInterval; window.clearInterval = function (id) { live.delete(id); return oCI.apply(this, arguments); };
+      F.start = () => {
+        F.on = true;
+        if (exp === 'timers') { for (const id of live) { oCI(id); F.killed++; } live.clear(); }
+        if (exp === 'noanim') { const st = document.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; document.head.appendChild(st); }
+      };
+      let last = 0; const raf = window.requestAnimationFrame.bind(window);
+      const loop = (t) => { if (last && F.on) { let sm = null; try { sm = window.__mhTestHooks.rhythmSongMs(); } catch (e) {} if (Number.isFinite(sm) && sm > 0) F.frames.push([Math.round((t - last) * 10) / 10, Math.round(sm)]); } last = t; raf(loop); };
+      raf(loop);
+    }, currentExp);
+    await p.addInitScript((ids) => {
+      window.__mhSupabaseStubbed = true;
+      const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+      ['mh_intro_done', 'mh_onboarded', 'mh_tutorial_seen_v1', 'mh_battle_tutorial_seen_v1', 'mh_battle_tutorial_guide_shown_v1', 'mh_assistant_unlock_seen_v1', 'mh_update_notice_seen_v1', 'mh_rhythm_tutorial_seen_v1', 'mh_rhythm_hell_story_seen_v1', 'mh_inherited_unique_level_compensation_v1', 'mh_masu_level_cap_compensation_notice_seen_v1'].forEach(k => put(k, true));
+      put('mh_breeder_name', 'モンヒロくん'); put('mh_breeder_icon', '🐣'); put('mh_rhythm_owned_songs_v1', ids);
+    }, OWNED);
+    await p.addInitScript(eventStorySeed());
+    await p.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
+    await p.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 60000 });
+    await p.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+    await p.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await p.waitForFunction(() => !!document.querySelector('main.mh-home-scene'), null, { timeout: 60000 });
+    await p.waitForTimeout(1500);
+    for (let i = 0; i < 10; i++) {
+      const ok = await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length); if (b) b.click(); return !!b; });
+      if (!ok) break; await p.waitForTimeout(500);
+    }
+    await p.evaluate(() => document.querySelector('[data-home-fac="rhythm"]')?.click());
+    await p.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 }); await p.waitForTimeout(800);
+    await p.evaluate(() => [...document.querySelectorAll('button')].find(b => /ソロライブ/.test(b.innerText || ''))?.click());
+    await p.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 }); await p.waitForTimeout(800);
+    const row = p.locator(`[data-rhythm-song-row="${SONG}"]`).first();
+    await row.scrollIntoViewIfNeeded(); await row.click(); await p.waitForTimeout(600);
+    await p.evaluate((d) => { const b = [...document.querySelectorAll('button')].find(x => new RegExp('^\\d+ ' + d + '\\b').test((x.innerText || '').replace(/\s+/g, ' ').trim())); if (b && !b.disabled) b.click(); }, DIFF);
+    await p.waitForTimeout(800);
+    const cdp = await ctx.newCDPSession(p);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
+    await p.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
+    await p.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && (window.__mhTestHooks.rhythmNotes() || []).length > 0, null, { timeout: 90000 });
+    await p.evaluate(installPlayer, { ...installArgs({ rand: Math.random }), sigma: 4, missRate: 0, dropRate: 0, lateRate: 0 });
+    // 曲が鳴り始めたら測り始める
+    await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 200; } catch (e) { return false; } }, null, { timeout: 60000, polling: 50 });
+    if (PROFILE) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 }); await cdp.send('Profiler.start'); }
+    await cdp.send('Performance.enable');
+    const m0 = (await cdp.send('Performance.getMetrics')).metrics;
+    const t0 = Date.now();
+    await p.evaluate(() => { if (window.__bg) window.__bg.on = true; window.__fr.start(); });
+    await p.waitForTimeout(5000);
+    // 演奏中のページの様子: 動いているアニメーション・DOM の数・載っている画面
+    const snap = await p.evaluate(() => {
+      const anim = {};
+      for (const a of document.getAnimations()) {
+        if (a.playState !== 'running') continue;
+        const el = a.effect && a.effect.target; const cls = el ? (el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : '') + (el.closest('[data-rhythm-play-area]') ? ' [演奏エリア内]' : '')) : '?';
+        let vis = false; try { const r = el.getBoundingClientRect(); vis = r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth && getComputedStyle(el).visibility !== 'hidden'; } catch (e) {}
+        const k = (a.animationName || a.constructor.name) + ' ' + cls.slice(0, 80) + (vis ? '' : ' (見えない)');
+        anim[k] = (anim[k] || 0) + 1;
+      }
+      const marks = [...document.querySelectorAll('main, [data-home-fac], canvas, video, iframe')].map(e => e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(/\s+/)[0] : '') + (e.getClientRects().length ? '' : '(非表示)'));
+      const mk = {}; marks.forEach(m => mk[m] = (mk[m] || 0) + 1);
+      return { anim, dom: document.getElementsByTagName('*').length, marks: mk };
+    });
+    await p.waitForFunction((ms) => { try { return window.__mhTestHooks.rhythmSongMs() >= ms; } catch (e) { return false; } }, SEC * 1000, { timeout: (SEC + 90) * 1000, polling: 500 });
+    const wall = Date.now() - t0;
+    const m1 = (await cdp.send('Performance.getMetrics')).metrics;
+    const met = {}; for (const m of m1) { const a = m0.find(x => x.name === m.name); if (/Duration$|Count$/.test(m.name)) met[m.name] = Math.round(((m.value - (a ? a.value : 0)) * (/Duration$/.test(m.name) ? 1000 : 1))); }
+    const bg = await p.evaluate(() => { const W = window.__bg; if (!W) return null; W.on = false; return { sites: W.sites, net: W.net, ls: W.ls, frames: W.frames, stallHits: W.stallHits, long: W.long || [], commits: W.commits, rendered: W.rendered }; });
+    if (bg) { bg.snap = snap; bg.met = met; }
+    const fr = await p.evaluate(() => ({ frames: window.__fr.frames, killed: window.__fr.killed }));
+    let prof = null;
+    if (PROFILE) prof = (await cdp.send('Profiler.stop')).profile;
+    return { exp: currentExp, fr, wall, bg: bg || { snap, met }, prof: prof ? summarizeProfile(prof) : null };
+  } finally { await ctx.close().catch(() => {}); await browser.close().catch(() => {}); }
+}
+
+// 関数ごとの 自分の時間 / 呼んだ先を含む時間(ms)
+function summarizeProfile(prof) {
+  const byId = new Map(prof.nodes.map(n => [n.id, n]));
+  const parent = new Map(); for (const n of prof.nodes) for (const c of (n.children || [])) parent.set(c, n.id);
+  const dt = new Map(); // node id → ms
+  for (let i = 0; i < prof.samples.length; i++) dt.set(prof.samples[i], (dt.get(prof.samples[i]) || 0) + (prof.timeDeltas[i + 1] || 0) / 1000);
+  const key = (n) => { const c = n.callFrame; return `${c.functionName || '(無名)'} ${(c.url || '').split('/').pop().split('?')[0]}:${c.lineNumber + 1}`; };
+  const self = {}, total = {};
+  for (const [id, ms] of dt) {
+    const n = byId.get(id); self[key(n)] = (self[key(n)] || 0) + ms;
+    const seen = new Set(); let cur = id;
+    while (cur != null) { const k = key(byId.get(cur)); if (!seen.has(k)) { total[k] = (total[k] || 0) + ms; seen.add(k); } cur = parent.get(cur); }
+  }
+  const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => [k, Math.round(v)]);
+  const all = Object.values(self).reduce((a, b) => a + b, 0);
+  return { allMs: Math.round(all), self: top(self, 60), total: top(total, 120) };
+}
+
+(async () => {
+  const playwright = require('playwright');
+  const tone = toneJs();
+  const sv = await serve();
+  const runs = [];
+  const order = EXPS.length ? EXPS : [''];
+  try { for (let i = 0; i < RUNS; i++) for (let j = 0; j < order.length; j++) { currentExp = order[(i + j) % order.length]; const r = await runOnce(playwright, tone); runs.push(r); const f = r.fr.frames.filter(x => x[1] <= SEC * 1000); process.stdout.write(`[${currentExp || '-'}${r.fr.killed ? '・止めた' + r.fr.killed : ''}] `); console.log(`回${i + 1}: ${Math.round(r.wall / 1000)}秒・コマ ${f.length}・50ms超 ${f.filter(x => x[0] > 50).length}・最大 ${Math.round(Math.max(0, ...f.map(x => x[0])))}ms`); } }
+  finally { sv.close(); }
+  fs.writeFileSync(OUT, JSON.stringify({ song: SONG, diff: DIFF, rate: RATE, sec: SEC, runs }, null, 0));
+  console.log('書き出し: ' + OUT);
+})().catch((e) => { console.log('NG: ' + String(e && e.stack || e).split('\n').slice(0, 3).join(' / ')); process.exit(1); });
