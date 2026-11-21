@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b6bae23d5720f15
+// generated-sha256: e816e05fa24536bd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -98419,7 +98419,7 @@ const MSA_DC_CSS = `
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h .mv.kb{background:#ea580c}
 .msa-dc:not(.a) .msa-dc-c .msa-dc-h i{font-size:10.5px}
 .msa-dc:not(.a) .msa-dc-c .msa-tn{font-weight:900;color:#fff}
-.msa-dc:not(.a) .msa-dc-none{font-size:12px;color:#94a3b8}
+.msa-dc:not(.a) .msa-dc-none{font-size:min(12px,2.8vw);color:#94a3b8;white-space:nowrap}
 /* 自分の「いま」の札は水色のふち(黄色のふちは助手のおすすめだけに使う。2026-11-20 API の点検: 2つの意味で黄色が重なっていた) */
 .msa-dc-c.now{border-color:#7dd3fc;box-shadow:0 0 0 1px #7dd3fc88 inset}
 .msa-dc-c.now .msa-dc-h em{background:#7dd3fc;color:#0c2a3a}
