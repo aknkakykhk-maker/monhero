@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef50c9e8edf25dc9
+// generated-sha256: 8afc77524f9458b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -93465,14 +93465,15 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
   const recOf = (slot) => (slot && slot.box ? raised.find((m) => m.id === slot.box) : slot && slot.assist ? stock.find((m) => m.id === slot.assist) : null) || null;
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモモン', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k, , n]) => k !== 'memo' || n);
   const frOf = (i) => i === friendAt && i !== idx && members[i] && members[i].friend; // その枠にフレンドがいる(押した枠は選び直すので数えない)
-  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : 'おまかせ'; };
+  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : (Array.isArray(members) && members[i] ? members[i].name : 'おまかせ'); };
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         {/* 戻るはほかの画面と同じ左上の「← 戻る」1つ(下の帯は「外す」「決定」だけ。r1119-033 窓-45・53) */}
         <div className="msx-tp-hd"><button type="button" className="bk" onClick={onClose} data-mh-back data-msx-tp-back>← 戻る</button><b>{idx + 1}枠目を選ぶ</b><small>{tab === 'base' ? '選んで「効果・詳細」で中身を見る' : `自分のモンスター ${raisedN}/6体`}</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : null; const rec = s && !fr ? recOf(s) : null; return (
-          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s || fr ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const mm = fr ? members[i] : s ? memOf(s) : (Array.isArray(members) && members[i]) || null; const rec = s && !fr ? recOf(s) : null; return (
+          // 枠が空のときは、実際に編成に入る既定のモンスター(members)を写す(数字だけで今の編成が見えなかった・育-235)
+          <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${mm ? '' : ' em'}`} aria-label={fr ? 'フレンド' : curName(s, i)}>
             <MonsucMonCard m={mm ? msxTpCardM(rec, mm) : null} size="s" empty={String(i + 1)} on={i === idx && !!mm}/>{fr ? <b className="fr">🤝</b> : null}</div>); })}</div>
         <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
           {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
@@ -93486,7 +93487,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
             <MonsucMonCard key={x.key} m={msxTpCardM(x.rec, m, x.species)} size="s" on={on} slot={on ? idx + 1 : at >= 0 ? at + 1 : null} note={(mk && mk.c !== 'in') || msxTpAssistIcons(msxTpAT(), m) ? <>{mk && mk.c !== 'in' ? <b className="msx-fp-dup">{mk.n}</b> : null}{msxTpAssistIcons(msxTpAT(), m)}</> : null}
-              num={x.kind === 'base' ? msxTpBonusText(m) : pw != null ? msxFmt(pw) : ''}
+              num={(() => { const bn = msxTpBonusText(m); const pwEl = x.kind !== 'base' && pw != null ? <span className="msx-tp-pw">総合力 {msxFmt(pw)}</span> : null; return bn || pwEl ? <>{bn}{pwEl}</> : ''; })()} /* どのタブも 1段目=伸びが上がる能力・2段目=総合力(育-238) */
               attrs={{ 'data-msx-tp-item': x.key, ...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {}) }}
               onClick={() => setCand(on ? null : x.slot)}/>); })}</MonsucCardGrid>
             : <div className="msx-tp-none">{tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません'}</div>}
@@ -97340,14 +97341,14 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
           {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
           {lock ? <i className="mmg-lk">{lock}</i> : null}
           {mark && mark(m) ? <i className="mmg-as">{mark(m)}</i> : null}
-          {lb === 'namepw' || lb === 'name' ? <>{typeof MonsucFitName === 'function' ? <span className="mmg-nm2 fit"><MonsucFitName name={msxMmLabelOf(m, lb)}/></span> : <span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>}{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
+          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2" style={{ fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))` }}>{msxMmLabelOf(m, lb)}</span>{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
         </button>);
     })}
   </div>);
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -97363,8 +97364,6 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
 .mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
-.mmg .mmg-nm2.fit{display:block;width:100%;overflow:visible}
-.mmg .mmg-nm2 .mcd-nms{display:block;white-space:nowrap;overflow:hidden;text-align:center}.mmg .mmg-nm2 .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
 .mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
 .mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
@@ -97845,7 +97844,8 @@ function MonsucFitName({ name }) {
     const fit = () => { const b = box.current; const t = txt.current; if (!b || !t) return; const w = t.scrollWidth; const W = b.clientWidth; setK(w > W && W > 0 ? Math.max(0.6, W / w) : 1); };
     fit();
     if (typeof ResizeObserver !== 'function' || !box.current) return undefined;
-    const ro = new ResizeObserver(fit); ro.observe(box.current); return () => ro.disconnect();
+    // 字の幅が後から変わる(字体の読み込みなど)ときも測り直す。縮めるのは transform なので、字の要素を見張っても繰り返さない
+    const ro = new ResizeObserver(fit); ro.observe(box.current); if (txt.current) ro.observe(txt.current); return () => ro.disconnect();
   }, [name]);
   return <span className="mcd-nms" ref={box}><span className="mcd-nmt" ref={txt} style={k < 1 ? { transform: `scaleX(${k.toFixed(3)})` } : undefined}>{name}</span></span>;
 }
@@ -97916,6 +97916,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
 @container (max-width:74px){.mcd .mcd-num .msx-tp-bn .n{display:none}}

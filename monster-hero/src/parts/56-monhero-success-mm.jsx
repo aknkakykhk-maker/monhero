@@ -81,14 +81,14 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
           {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
           {lock ? <i className="mmg-lk">{lock}</i> : null}
           {mark && mark(m) ? <i className="mmg-as">{mark(m)}</i> : null}
-          {lb === 'namepw' || lb === 'name' ? <>{typeof MonsucFitName === 'function' ? <span className="mmg-nm2 fit"><MonsucFitName name={msxMmLabelOf(m, lb)}/></span> : <span className="mmg-nm2">{msxMmLabelOf(m, lb)}</span>}{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
+          {lb === 'namepw' || lb === 'name' ? <><span className="mmg-nm2" style={{ fontSize: `max(9px, min(12px, 94cqw / ${Math.max(1, [...String(msxMmLabelOf(m, lb))].length)}))` }}>{msxMmLabelOf(m, lb)}</span>{m.nick && m.nick !== msxMonName(m.species) ? <span className="mmg-sp">{msxMonName(m.species)}</span> : null}{lb === 'namepw' ? <span className="mmg-pw">{m.raised === false ? '未育成' : `Lv.${Math.round(Number(m.lv) || 1)}・${msxFmt(msxMmPow(m))}`}</span> : null}</> : <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>}
         </button>);
     })}
   </div>);
 }
 const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c{container-type:inline-size;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
 .mmg .mmg-fc{display:block;position:relative;width:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
 /* 顔の正方形はスペーサー(padding-top:100%)で決める(選ぶ画面の統一方式。aspect-ratio だと対応の弱い端末で高さが付かず行が重なる) */
@@ -104,8 +104,6 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mmg-pw{font-size:10px;font-weight:900;color:#fde68a;line-height:1.1}
 .mmg .mmg-nm2{max-width:100%;font-size:12px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em;line-height:1.25}
-.mmg .mmg-nm2.fit{display:block;width:100%;overflow:visible}
-.mmg .mmg-nm2 .mcd-nms{display:block;white-space:nowrap;overflow:hidden;text-align:center}.mmg .mmg-nm2 .mcd-nmt{display:inline-block;transform-origin:50% 50%;white-space:nowrap}
 .mmg .mmg-sp{max-width:100%;font-size:10px;font-weight:800;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1;margin-top:-2px}
 .mmg .mmg-lg{grid-column:1/-1;margin:0 2px;font-size:11px;font-weight:800;color:#cbd5e1}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
