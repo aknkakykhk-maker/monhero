@@ -266,12 +266,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
     // role="dialog" … 開いている間は右上の「更新あり」を出さずに待つ(WaitForOverlayClose・見出しに重なっていた 2026-11-20 社長の実機)
     <div className="msx-ov msx-fade" data-msx-detail role="dialog" aria-modal="true" onClick={onClose}>
       <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
-        <h3 className="msx-md-ti">モンスターの詳細</h3>
+        {/* 窓の題はモンスターの名前(「モンスターの詳細」の題が大きく、名前が絵の左上の小さな字だった・育-139・173) */}
+        <h3 className="msx-md-ti" data-msx-md-title>{name || msxMonName(species)}</h3>
         <div className="msx-md-scroll">
           <div className="msx-md-top">
             <div className="msx-md-art">
               {/* 名前を付けていない子は「スネグーラチカ / Lv.3・スネグーラチカ」と同じ名前が2行になっていたので、下の行の種の名前を落とす(2026-11-20 r1119-033 育-41) */}
-              <div className="nm">{head ? <span className="msx-md-head">{head}</span> : null}<span className="nmx">{name || msxMonName(species)}</span>{(() => { const nm0 = name || msxMonName(species); const sb = sub && typeof sub === 'string' && sub.endsWith(`・${nm0}`) ? sub.slice(0, -(nm0.length + 1)) : sub; return sb ? <small>{sb}</small> : null; })()}</div>
+              <div className="nm">{head ? <span className="msx-md-head">{head}</span> : null}{(() => { const nm0 = name || msxMonName(species); const sb = sub && typeof sub === 'string' && sub.endsWith(`・${nm0}`) ? sub.slice(0, -(nm0.length + 1)) : sub; return sb ? <small>{sb}</small> : null; })()}</div>
               {art || <img src={msxMonImg(species)} alt=""/>}
               {power != null ? <div className="pw"><small>総合力</small><b>{msxFmt(power)}</b>{rank ? <i className={msxRankCls(rank)}>{rank}</i> : null}{gradeLabel ? <i className="msx-md-grade">{gradeLabel}</i> : null}</div> : null}
             </div>
