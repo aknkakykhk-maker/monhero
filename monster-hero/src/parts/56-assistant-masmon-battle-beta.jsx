@@ -233,7 +233,7 @@ const AMBB_CSS = `
 .ambb-tabs button small{display:block;font-size:10px;color:#cbd5e1;font-weight:700}
 .ambb-mons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .ambb-mon{position:relative;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);padding:4px 2px 5px;text-align:center;color:#fff}
-.ambb-mon img{width:48px;height:48px;object-fit:contain}
+.ambb-mon img{display:block;width:48px;height:48px;margin:0 auto;object-fit:contain} /* 絵は札のまんなか(img はブロックなので text-align が効かない・2026-11-21 社長「モンスターが左に寄ってる」) */
 .ambb-mon b{display:block;font-size:10.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ambb-mon small{display:block;font-size:9.5px;color:#cbd5e1}
 .ambb-mon.on{border-color:#f9a8d4;background:rgba(249,168,212,.18)}
