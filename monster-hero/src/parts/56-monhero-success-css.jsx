@@ -372,6 +372,8 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+/* バ-42(2026-11-21): 大会まわりの見出しは1つの形(茶色の丸い帯に黄色い字・組み合わせ表と試合の .msc-ttl と同じ) */
+.msx .v-ev-h.cup{left:8px;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-size:13px;letter-spacing:.04em;box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
 .msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
 .msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
