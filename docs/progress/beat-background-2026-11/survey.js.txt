@@ -27,7 +27,8 @@ const RAW = opt('--raw', '');
 const TRACE = opt('--trace', ''); // ブラウザの記録(Tracing)の書き出し先 // Profiler の生データの書き出し先(回ごとに名前の後ろへ時刻を付ける)
 const BISECT = argv.includes('--bisect') || argv.includes('--bisect-lite'), BISECT_LITE = argv.includes('--bisect-lite');
 // --has-keep <正規表現|none>: 差し込まれる <style> の :has() のルールを、当たる物だけ残して抜いてから開く(開き直して比べる用)
-const HAS_KEEP = opt('--has-keep', ''); // 判定の文字の入れ替えで起きるレイアウトの重さを、部品を隠し・CSS を足して切り分ける
+const HAS_KEEP = opt('--has-keep', '');
+const ADD_CSS = opt('--add-css', ''); // 開いたあとに足す CSS(直し方の候補を試す) // 判定の文字の入れ替えで起きるレイアウトの重さを、部品を隠し・CSS を足して切り分ける
 const EXPS = opt('--exp', '').split(',').filter(Boolean);
 const OUT = opt('--out', path.join(os.tmpdir(), 'mh-beat-bg-survey.json'));
 
@@ -124,6 +125,7 @@ async function runOnce(playwright, tone) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const p = await ctx.newPage();
     if (WRAP) await p.addInitScript(probe);
+    if (ADD_CSS) await p.addInitScript((css) => { window.__addCss = css; }, ADD_CSS);
     if (HAS_KEEP) await p.addInitScript((keep) => {
       const re = keep === 'none' ? null : new RegExp(keep);
       const filt = (css) => { try { const sh = new CSSStyleSheet(); sh.replaceSync(css); let dropped = 0; const walk = (list) => { for (let i = list.length - 1; i >= 0; i--) { const r = list[i]; if (r.selectorText && r.selectorText.includes(':has(') && !(re && re.test(r.selectorText))) { list === sh.cssRules ? sh.deleteRule(i) : r.parentRule.deleteRule(i); dropped++; } else if (r.cssRules) walk(r.cssRules); } }; walk(sh.cssRules); window.__hasDropped = (window.__hasDropped || 0) + dropped; return dropped ? [...sh.cssRules].map(r => r.cssText).join('\n') : css; } catch (e) { return css; } };
@@ -139,6 +141,7 @@ async function runOnce(playwright, tone) {
       const oCI = window.clearInterval; window.clearInterval = function (id) { live.delete(id); return oCI.apply(this, arguments); };
       F.start = () => {
         F.on = true;
+        if (window.__addCss) { const st = document.createElement('style'); st.textContent = window.__addCss; document.head.appendChild(st); }
         if (exp === 'timers') { for (const id of live) { oCI(id); F.killed++; } live.clear(); }
         if (exp === 'contain') { const st = document.createElement('style'); st.textContent = ':has(>[data-rhythm-judgment-text]){contain:layout style}'; document.head.appendChild(st); }
         if (exp === 'font') { const st = document.createElement('style'); st.textContent = '*{font-family:"DejaVu Sans",sans-serif!important}'; document.head.appendChild(st); }
@@ -244,7 +247,15 @@ async function layoutBisect(lite) {
   const desc = (el) => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 4).join('.') : '') + [...el.attributes].filter(a => /^data-/.test(a.name)).slice(0, 2).map(a => `[${a.name}]`).join('');
   const out = { base: {} };
   out.base.none = await measure('none'); out.base.color = await measure('color'); out.base.judg = await measure(judg); out.base.small = await measure(small);
-  if (lite) { const sp = async (n = 40) => { const a = []; for (let i = 0; i < n; i++) { await sleep(6); void document.body.offsetHeight; const t = performance.now(); judg.textContent = words[i % words.length]; void getComputedStyle(judg).color; a.push(performance.now() - t); } a.sort((p, q) => p - q); return Math.round(a[Math.floor(a.length / 2)] * 100) / 100; }; let left = 0; for (const sh of document.styleSheets) { try { const w = (l) => { for (const r of l) { if (r.selectorText && r.selectorText.includes(':has(')) left++; if (r.cssRules) w(r.cssRules); } }; w(sh.cssRules); } catch (e) {} } return { lite: true, styleMs: await sp(), judgMs: out.base.judg, hasLeft: left, dropped: window.__hasDropped || 0 }; }
+  if (lite) { const sp = async (n = 40) => { const a = []; for (let i = 0; i < n; i++) { await sleep(6); void document.body.offsetHeight; const t = performance.now(); judg.textContent = words[i % words.length]; void getComputedStyle(judg).color; a.push(performance.now() - t); } a.sort((p, q) => p - q); return Math.round(a[Math.floor(a.length / 2)] * 100) / 100; }; let left = 0; for (const sh of document.styleSheets) { try { const w = (l) => { for (const r of l) { if (r.selectorText && r.selectorText.includes(':has(')) left++; if (r.cssRules) w(r.cssRules); } }; w(sh.cssRules); } catch (e) {} } if (window.__addCss) { const st = document.createElement('style'); st.textContent = window.__addCss; document.head.appendChild(st); await sleep(100); }
+    const desc0 = (e) => e.tagName.toLowerCase() + [...e.attributes].filter(a => /^data-/.test(a.name)).slice(0, 2).map(a => `[${a.name}]`).join('');
+    const pz = document.querySelector('[data-rhythm-pause]'); const pa1 = document.querySelector('[data-rhythm-play-area]');
+    let ca = pz; while (ca && !ca.contains(pa1)) ca = ca.parentElement;
+    const upTo = (e, top) => { const r = []; for (let x = e; x && x !== top; x = x.parentElement) r.push(desc0(x)); return r.reverse().join(' > '); };
+    const rel = ca ? { common: desc0(ca), toPause: upTo(pz, ca), toPlayArea: upTo(pa1, ca) } : null;
+    // カウントダウンの印を一時的に付けて、ボタンが薄くなるか(候補の CSS が効くか)を見る
+    const op0 = getComputedStyle(pz).opacity; pa1.setAttribute('data-rhythm-counting', '1'); const op1 = getComputedStyle(pz).opacity; pa1.removeAttribute('data-rhythm-counting');
+    const opacity = `ふだん ${op0} / カウントダウン中 ${op1}`; const pa0 = document.querySelector('[data-rhythm-play-area]'); return { lite: true, rel, opacity, pauseInPlayArea: !!(pz && pa0 && pa0.contains(pz)), pauseCount: document.querySelectorAll('[data-rhythm-pause]').length, styleMs: await sp(), judgMs: out.base.judg, hasLeft: left, dropped: window.__hasDropped || 0 }; }
   out.counts = { elements: document.getElementsByTagName('*').length, svg: document.querySelectorAll('svg *').length };
   // 判定の文字から上の祖先
   const anc = []; for (let e = judg.parentElement; e && e !== document.documentElement; e = e.parentElement) anc.push(e);
