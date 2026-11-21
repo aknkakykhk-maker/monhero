@@ -7,7 +7,8 @@
 //   ③ 通信(fetch / XHR / WebSocket / BroadcastChannel)と localStorage の書き込みを数える
 //   ④ 50ms を超える止まりのコマの中で動いたタイマー・rAF を記録する
 // を取る。
-//   node docs/progress/beat-background-2026-11/survey.js.txt [--runs 3] [--rate 4] [--sec 20] [--song crossing_field] [--diff HARD] [--no-profile]
+//   node docs/progress/beat-background-2026-11/survey.js.txt [--runs 3] [--rate 4] [--sec 20] [--song crossing_field] [--diff HARD] [--no-profile] [--no-wrap]
+//   [--exp base,timers,noanim,font,contain(交互に試す)] [--raw <Profiler の生データ>] [--trace <ブラウザの記録>]
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), os = require('os');
 const { execFileSync } = require('child_process');
@@ -22,6 +23,8 @@ const RUNS = Number(opt('--runs', 3)) || 3, RATE = Number(opt('--rate', 4)) || 4
 const PROFILE = !argv.includes('--no-profile'), WRAP = !argv.includes('--no-wrap');
 // 試し: 測るページの中だけで止めてみる(本体は変えない)。base = 何もしない / timers = 演奏前から動いている setInterval を曲の始まりで全部止める
 //        / noanim = CSS のアニメーションとトランジションを止める。--exp base,timers,noanim のように並べると交互に測る
+const RAW = opt('--raw', '');
+const TRACE = opt('--trace', ''); // ブラウザの記録(Tracing)の書き出し先 // Profiler の生データの書き出し先(回ごとに名前の後ろへ時刻を付ける)
 const EXPS = opt('--exp', '').split(',').filter(Boolean);
 const OUT = opt('--out', path.join(os.tmpdir(), 'mh-beat-bg-survey.json'));
 
@@ -126,10 +129,16 @@ async function runOnce(playwright, tone) {
       F.start = () => {
         F.on = true;
         if (exp === 'timers') { for (const id of live) { oCI(id); F.killed++; } live.clear(); }
+        if (exp === 'contain') { const st = document.createElement('style'); st.textContent = ':has(>[data-rhythm-judgment-text]){contain:layout style}'; document.head.appendChild(st); }
+        if (exp === 'font') { const st = document.createElement('style'); st.textContent = '*{font-family:"DejaVu Sans",sans-serif!important}'; document.head.appendChild(st); }
         if (exp === 'noanim') { const st = document.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; document.head.appendChild(st); }
       };
+      // 部品の変化(足された・消えた要素と、変わった属性)を、コマごとにまとめて残す
+      F.mut = []; let curMut = [];
+      const label = (n) => n.nodeType === 1 ? (n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className ? '.' + n.className.trim().split(/\s+/).slice(0, 3).join('.') : '') + [...n.attributes].filter(a => /^data-/.test(a.name)).slice(0, 2).map(a => `[${a.name}]`).join('')) : (n.nodeType === 3 ? '#text' : '?');
+      try { new MutationObserver((list) => { if (!F.on) return; for (const m of list) { if (m.type === 'childList') { m.addedNodes.forEach(n => curMut.push('+' + label(n) + (n.nodeType === 3 ? ' "' + String(n.textContent).slice(0, 16) + '"' : ''))); m.removedNodes.forEach(n => curMut.push('-' + label(n))); } else if (m.type === 'attributes') curMut.push('@' + m.attributeName + ' ' + label(m.target)); else curMut.push('~text ' + label(m.target.parentNode || m.target) + ' "' + String(m.target.textContent).slice(0, 16) + '"'); } }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true }); } catch (e) {}
       let last = 0; const raf = window.requestAnimationFrame.bind(window);
-      const loop = (t) => { if (last && F.on) { let sm = null; try { sm = window.__mhTestHooks.rhythmSongMs(); } catch (e) {} if (Number.isFinite(sm) && sm > 0) F.frames.push([Math.round((t - last) * 10) / 10, Math.round(sm)]); } last = t; raf(loop); };
+      const loop = (t) => { if (last && F.on) { let sm = null; try { sm = window.__mhTestHooks.rhythmSongMs(); } catch (e) {} if (Number.isFinite(sm) && sm > 0) { F.frames.push([Math.round((t - last) * 10) / 10, Math.round(sm)]); if (curMut.length) { const c = {}; curMut.forEach(k => c[k] = (c[k] || 0) + 1); F.mut.push([Math.round(sm), Math.round((t - last) * 10) / 10, Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 8)]); } } } curMut = []; last = t; raf(loop); };
       raf(loop);
     }, currentExp);
     await p.addInitScript((ids) => {
@@ -164,6 +173,8 @@ async function runOnce(playwright, tone) {
     await p.evaluate(installPlayer, { ...installArgs({ rand: Math.random }), sigma: 4, missRate: 0, dropRate: 0, lateRate: 0 });
     // 曲が鳴り始めたら測り始める
     await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 200; } catch (e) { return false; } }, null, { timeout: 60000, polling: 50 });
+    let traceEvents = null;
+    if (TRACE) { traceEvents = []; cdp.on('Tracing.dataCollected', (e) => { for (const ev of e.value) traceEvents.push(ev); }); await cdp.send('Tracing.start', { categories: 'devtools.timeline,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.invalidationTracking,blink.user_timing', transferMode: 'ReportEvents' }); }
     if (PROFILE) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 }); await cdp.send('Profiler.start'); }
     await cdp.send('Performance.enable');
     const m0 = (await cdp.send('Performance.getMetrics')).metrics;
@@ -190,9 +201,11 @@ async function runOnce(playwright, tone) {
     const met = {}; for (const m of m1) { const a = m0.find(x => x.name === m.name); if (/Duration$|Count$/.test(m.name)) met[m.name] = Math.round(((m.value - (a ? a.value : 0)) * (/Duration$/.test(m.name) ? 1000 : 1))); }
     const bg = await p.evaluate(() => { const W = window.__bg; if (!W) return null; W.on = false; return { sites: W.sites, net: W.net, ls: W.ls, frames: W.frames, stallHits: W.stallHits, long: W.long || [], commits: W.commits, rendered: W.rendered }; });
     if (bg) { bg.snap = snap; bg.met = met; }
-    const fr = await p.evaluate(() => ({ frames: window.__fr.frames, killed: window.__fr.killed }));
+    const fr = await p.evaluate(() => ({ frames: window.__fr.frames, killed: window.__fr.killed, mut: window.__fr.mut }));
     let prof = null;
     if (PROFILE) prof = (await cdp.send('Profiler.stop')).profile;
+    if (TRACE) { const done = new Promise(r => cdp.once('Tracing.tracingComplete', r)); await cdp.send('Tracing.end'); await done; fs.writeFileSync(TRACE.replace(/(\.json)?$/, `-${Date.now()}.json`), JSON.stringify(traceEvents)); }
+    if (prof && RAW) fs.writeFileSync(RAW.replace(/(\.json)?$/, `-${Date.now()}.json`), JSON.stringify(prof));
     return { exp: currentExp, fr, wall, bg: bg || { snap, met }, prof: prof ? summarizeProfile(prof) : null };
   } finally { await ctx.close().catch(() => {}); await browser.close().catch(() => {}); }
 }
