@@ -25,6 +25,9 @@ const PROFILE = !argv.includes('--no-profile'), WRAP = !argv.includes('--no-wrap
 //        / noanim = CSS のアニメーションとトランジションを止める。--exp base,timers,noanim のように並べると交互に測る
 const RAW = opt('--raw', '');
 const TRACE = opt('--trace', ''); // ブラウザの記録(Tracing)の書き出し先 // Profiler の生データの書き出し先(回ごとに名前の後ろへ時刻を付ける)
+const BISECT = argv.includes('--bisect') || argv.includes('--bisect-lite'), BISECT_LITE = argv.includes('--bisect-lite');
+// --has-keep <正規表現|none>: 差し込まれる <style> の :has() のルールを、当たる物だけ残して抜いてから開く(開き直して比べる用)
+const HAS_KEEP = opt('--has-keep', ''); // 判定の文字の入れ替えで起きるレイアウトの重さを、部品を隠し・CSS を足して切り分ける
 const EXPS = opt('--exp', '').split(',').filter(Boolean);
 const OUT = opt('--out', path.join(os.tmpdir(), 'mh-beat-bg-survey.json'));
 
@@ -121,6 +124,12 @@ async function runOnce(playwright, tone) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const p = await ctx.newPage();
     if (WRAP) await p.addInitScript(probe);
+    if (HAS_KEEP) await p.addInitScript((keep) => {
+      const re = keep === 'none' ? null : new RegExp(keep);
+      const filt = (css) => { try { const sh = new CSSStyleSheet(); sh.replaceSync(css); let dropped = 0; const walk = (list) => { for (let i = list.length - 1; i >= 0; i--) { const r = list[i]; if (r.selectorText && r.selectorText.includes(':has(') && !(re && re.test(r.selectorText))) { list === sh.cssRules ? sh.deleteRule(i) : r.parentRule.deleteRule(i); dropped++; } else if (r.cssRules) walk(r.cssRules); } }; walk(sh.cssRules); window.__hasDropped = (window.__hasDropped || 0) + dropped; return dropped ? [...sh.cssRules].map(r => r.cssText).join('\n') : css; } catch (e) { return css; } };
+      const fix = (n) => { if (n.tagName === 'STYLE' && n.textContent.includes(':has(')) n.textContent = filt(n.textContent); };
+      new MutationObserver((l) => { for (const m of l) { if (m.type === 'childList') { m.addedNodes.forEach(n => { if (n.nodeType === 1) { fix(n); n.querySelectorAll && n.querySelectorAll('style').forEach(fix); } }); if (m.target.tagName === 'STYLE') fix(m.target); } else if (m.type === 'characterData' && m.target.parentNode && m.target.parentNode.tagName === 'STYLE') fix(m.target.parentNode); } }).observe(document, { subtree: true, childList: true, characterData: true });
+    }, HAS_KEEP);
     await p.addInitScript((exp) => {
       const F = window.__fr = { on: false, frames: [], exp, killed: 0, pre: [] };
       const oSI = window.setInterval; const live = new Set();
@@ -171,6 +180,7 @@ async function runOnce(playwright, tone) {
     await p.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
     await p.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && (window.__mhTestHooks.rhythmNotes() || []).length > 0, null, { timeout: 90000 });
     await p.evaluate(installPlayer, { ...installArgs({ rand: Math.random }), sigma: 4, missRate: 0, dropRate: 0, lateRate: 0 });
+    if (BISECT) { await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 1500; } catch (e) { return false; } }, null, { timeout: 60000, polling: 100 }); return { bisect: await p.evaluate(layoutBisect, BISECT_LITE) }; }
     // 曲が鳴り始めたら測り始める
     await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 200; } catch (e) { return false; } }, null, { timeout: 60000, polling: 50 });
     let traceEvents = null;
@@ -210,6 +220,131 @@ async function runOnce(playwright, tone) {
   } finally { await ctx.close().catch(() => {}); await browser.close().catch(() => {}); }
 }
 
+
+// ページの中で: 判定の文字を何十回も入れ替え、そのたびのレイアウトの時間(真ん中の値)を測る。
+// 部品を1つずつ隠す・CSS を足すと、どれが並べ直しの範囲を広げているかが分かる
+async function layoutBisect(lite) {
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const judg = document.querySelector('[data-rhythm-judgment-text]');
+  if (!judg) return { why: '判定の文字が無い' };
+  const small = judg.nextElementSibling;
+  const words = ['HOLD', 'MARVELOUS', 'GREAT', 'PERFECT'];
+  const measure = async (target, n = 30) => {
+    const ts = [];
+    for (let i = 0; i < n; i++) {
+      await sleep(6); void document.body.offsetHeight;
+      const t = performance.now();
+      if (target === 'none') { /* 何も変えない */ } else if (target === 'color') judg.style.color = i % 2 ? '#fff' : '#ffe'; else target.textContent = target === small ? (i % 2 ? 'SLOW' : '—') : words[i % words.length];
+      void document.body.offsetHeight; ts.push(performance.now() - t);
+    }
+    ts.sort((a, b) => a - b); return Math.round(ts[Math.floor(ts.length / 2)] * 100) / 100;
+  };
+  const desc = (el) => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).slice(0, 4).join('.') : '') + [...el.attributes].filter(a => /^data-/.test(a.name)).slice(0, 2).map(a => `[${a.name}]`).join('');
+  const out = { base: {} };
+  out.base.none = await measure('none'); out.base.color = await measure('color'); out.base.judg = await measure(judg); out.base.small = await measure(small);
+  if (lite) { const sp = async (n = 40) => { const a = []; for (let i = 0; i < n; i++) { await sleep(6); void document.body.offsetHeight; const t = performance.now(); judg.textContent = words[i % words.length]; void getComputedStyle(judg).color; a.push(performance.now() - t); } a.sort((p, q) => p - q); return Math.round(a[Math.floor(a.length / 2)] * 100) / 100; }; let left = 0; for (const sh of document.styleSheets) { try { const w = (l) => { for (const r of l) { if (r.selectorText && r.selectorText.includes(':has(')) left++; if (r.cssRules) w(r.cssRules); } }; w(sh.cssRules); } catch (e) {} } return { lite: true, styleMs: await sp(), judgMs: out.base.judg, hasLeft: left, dropped: window.__hasDropped || 0 }; }
+  out.counts = { elements: document.getElementsByTagName('*').length, svg: document.querySelectorAll('svg *').length };
+  // 判定の文字から上の祖先
+  const anc = []; for (let e = judg.parentElement; e && e !== document.documentElement; e = e.parentElement) anc.push(e);
+  out.ancestors = anc.map(e => { const cs = getComputedStyle(e); return `${desc(e)} | ${cs.display} ${cs.position} contain=${cs.contain} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`; });
+  // 1) 判定の文字の祖先それぞれの兄弟の部品を隠す(判定の文字への道筋は残す)
+  out.hide = [];
+  for (const a of anc) {
+    for (const sib of a.children) {
+      if (sib.contains(judg) || sib.tagName === 'SCRIPT' || sib.tagName === 'STYLE') continue;
+      const prev = sib.style.display; sib.style.display = 'none';
+      const v = await measure(judg, 20);
+      sib.style.display = prev;
+      out.hide.push([v, desc(sib).slice(0, 120), sib.getElementsByTagName('*').length]);
+    }
+  }
+  out.hide.sort((x, y) => x[0] - y[0]);
+  // 2) CSS の試し
+  const tryCss = async (name, css, n = 30) => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); void document.body.offsetHeight; await sleep(50); const v = await measure(judg, n); st.remove(); return [name, v]; };
+  out.css = [];
+  // :has() を含むルールを一時的に外す
+  const hasRules = [];
+  for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch (e) { continue; } for (let i = rules.length - 1; i >= 0; i--) { const r = rules[i]; if (r.selectorText && r.selectorText.includes(':has(')) hasRules.push([sh, i, r.cssText]); } }
+  out.hasRuleCount = hasRules.length; out.hasRules = hasRules.slice(0, 12).map(x => x[2].slice(0, 160));
+  for (const [sh, i] of hasRules) sh.deleteRule(i);
+  void document.body.offsetHeight; await sleep(50);
+  out.css.push([':has() のルールを全部外す', await measure(judg)]);
+  for (const [sh, i, txt] of [...hasRules].reverse()) { try { sh.insertRule(txt, i); } catch (e) {} }
+  const jp = judg.parentElement;
+  jp.setAttribute('data-bisect-jp', '');
+  out.css.push(await tryCss('判定の入れ物を contain:strict+大きさ固定', `[data-bisect-jp]{contain:strict;width:${Math.ceil(jp.getBoundingClientRect().width)}px;height:${Math.ceil(jp.getBoundingClientRect().height)}px}`));
+  out.css.push(await tryCss('判定の文字を contain:strict+大きさ固定', `[data-rhythm-judgment-text]{contain:strict;height:${Math.ceil(judg.getBoundingClientRect().height)}px}`));
+  out.css.push(await tryCss('判定の入れ物を overflow:hidden+大きさ固定', `[data-bisect-jp]{overflow:hidden;width:${Math.ceil(jp.getBoundingClientRect().width)}px;height:${Math.ceil(jp.getBoundingClientRect().height)}px}`));
+  out.css.push(await tryCss('文字の詰めをやめる(tracking・font-black)', `[data-bisect-jp] *{letter-spacing:normal!important;font-weight:400!important}`));
+  // 3) 文字そのものの重さ: 同じ class の文字を画面の端に1つだけ置いて入れ替える / フォントを変える
+  const cs = getComputedStyle(judg); out.font = { family: cs.fontFamily, weight: cs.fontWeight, size: cs.fontSize, letter: cs.letterSpacing };
+  const lone = document.createElement('b'); lone.className = judg.className; lone.style.cssText = 'position:fixed;left:0;top:0;opacity:0.01;pointer-events:none'; lone.textContent = 'HOLD'; document.body.appendChild(lone);
+  out.css.push(['同じ class の文字を1つだけ置いて入れ替える', await measure(lone)]);
+  lone.style.fontFamily = 'monospace'; out.css.push(['その文字を monospace に', await measure(lone)]);
+  lone.style.fontFamily = 'Inter'; out.css.push(['その文字を Inter に', await measure(lone)]);
+  lone.className = ''; lone.style.fontFamily = ''; out.css.push(['class なし(既定の字)の文字', await measure(lone)]);
+  // 祖先の段ごとに、同じ文字を子として置いて入れ替える(どの段から重くなるか)
+  out.levels = [];
+  lone.className = judg.className; lone.style.fontFamily = ''; lone.style.position = 'absolute';
+  for (const a of [judg.parentElement, ...anc.slice(1)]) { a.appendChild(lone); out.levels.push([await measure(lone, 20), desc(a).slice(0, 90)]); }
+  // .mh-app と祖先の CSS で、並べ直しの範囲を広げそうな物
+  const app = document.querySelector('.mh-app');
+  const props = ['containerType', 'containerName', 'zoom', 'contain', 'contentVisibility', 'transform', 'filter', 'willChange', 'fontSizeAdjust', 'textSizeAdjust', 'writingMode', 'overflow', 'isolation'];
+  out.appStyle = [app, ...[app.parentElement]].map(e => props.map(k => k + '=' + getComputedStyle(e)[k]).join(' '));
+  out.appAttrs = [...app.attributes].map(a => a.name + '=' + String(a.value).slice(0, 80));
+  const cq = []; for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch (e) { continue; } const walk = (rs) => { for (const r of rs) { if (r.constructor.name === 'CSSContainerRule') cq.push(r.cssText.slice(0, 140)); else if (r.cssRules) walk(r.cssRules); } }; walk(rules); }
+  out.containerRules = [cq.length, ...cq.slice(0, 8)];
+  out.inlineVars = (app.getAttribute('style') || '').slice(0, 300);
+  // スタイルだけ確定(getComputedStyle の color)とレイアウトまで確定(offsetHeight)を分ける
+  const split = async (target, n = 30) => { const a = [], b = []; for (let i = 0; i < n; i++) { await sleep(6); void document.body.offsetHeight; let t = performance.now(); target.textContent = words[i % words.length]; void getComputedStyle(target).color; const t1 = performance.now(); void document.body.offsetHeight; const t2 = performance.now(); a.push(t1 - t); b.push(t2 - t1); } const m = x => { x.sort((p, q) => p - q); return Math.round(x[Math.floor(x.length / 2)] * 100) / 100; }; return `スタイル ${m(a)}ms / レイアウト ${m(b)}ms`; };
+  out.split = { judg: await split(judg) };
+  // .mh-app の中で、文字を fixed で置く / 囲った箱の中に置く
+  const app2 = document.querySelector('.mh-app');
+  lone.className = judg.className; lone.style.position = 'fixed'; app2.appendChild(lone); out.levels.push([await measure(lone, 20), '.mh-app の中に fixed で']); out.split.loneInApp = await split(lone);
+  const boxEl = document.createElement('div'); boxEl.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:40px;contain:strict;opacity:0.01'; app2.appendChild(boxEl); boxEl.appendChild(lone); lone.style.position = 'static';
+  out.levels.push([await measure(lone, 20), '.mh-app の中の contain:strict の箱の中']); out.split.loneInBox = await split(lone);
+  document.body.appendChild(boxEl); out.levels.push([await measure(lone, 20), 'body の中の contain:strict の箱の中']); out.split.loneInBodyBox = await split(lone);
+  boxEl.remove();
+  // :has() のルールを、@media などの内側まで含めて全部探す。subject(:has の左)ごとにまとめ、まとめごとに外して測る
+  const allHas = [];
+  const walkHas = (list, owner) => { for (let i = 0; i < list.length; i++) { const r = list[i]; if (r.selectorText && r.selectorText.includes(':has(')) allHas.push({ owner, r, text: r.cssText }); if (r.cssRules) walkHas(r.cssRules, r); } };
+  for (const sh of document.styleSheets) { try { walkHas(sh.cssRules, sh); } catch (e) {} }
+  const subj = (t) => (t.selectorText.split(':has(')[0].trim().split(/\s+/).pop() || '?').slice(0, 60);
+  const groups = {}; allHas.forEach(h => { const k = subj(h.r); (groups[k] = groups[k] || []).push(h); });
+  out.hasAll = { total: allHas.length, groups: Object.entries(groups).map(([k, v]) => [k, v.length]) };
+  const removeRules = (hs) => { const back = []; for (const h of hs) { const list = h.owner.cssRules; for (let i = list.length - 1; i >= 0; i--) if (list[i] === h.r) { h.owner.deleteRule(i); back.push([h.owner, i, h.text]); break; } } return () => { for (const [o, i, t] of back.reverse()) { try { o.insertRule(t, i); } catch (e) {} } }; };
+  { const undo = removeRules(allHas); await sleep(50); out.split.noHasAll = await split(judg); undo(); }
+  out.hasGroupEffect = [];
+  for (const [k, v] of Object.entries(groups)) { const undo = removeRules(v); await sleep(30); out.hasGroupEffect.push([await split(judg, 16), k, v.length, v[0].text.slice(0, 140)]); undo(); }
+  // 判定の文字の祖先(と自分)に当たりうる :has() だけを外す → そのうち1つだけ残して測る
+  const stripHas = (sel) => { let t = sel, prev; do { prev = t; t = t.replace(/:has\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)/g, ''); } while (t !== prev); return t.replace(/:not\(\s*\)/g, ''); };
+  const chain = [judg, ...anc];
+  const hitsAnc = (h) => h.r.selectorText.split(',').some(part => { const sp = part.split(':has(')[0]; const subjSel = stripHas(part).trim(); try { return chain.some(a => a.matches(subjSel)) || chain.some(a => { try { return a.matches(sp.trim()); } catch (e) { return false; } }); } catch (e) { return false; } });
+  const ancHas = allHas.filter(hitsAnc);
+  out.ancHas = ancHas.map(h => h.text.slice(0, 150));
+  { const undo = removeRules(ancHas); await sleep(50); out.split.noAncHas = await split(judg); undo(); }
+  out.leaveOneIn = [];
+  for (const keep of allHas) { const undo = removeRules(allHas.filter(h => h !== keep)); await sleep(30); out.leaveOneIn.push([await split(judg, 16), keep.text.slice(0, 150)]); undo(); }
+  out.attrs = [judg, judg.parentElement].map(e => [...e.attributes].map(a => a.name + '=' + String(a.value).slice(0, 30)).join(' '));
+  lone.remove();
+  out.css.push(await tryCss('判定の文字を Inter に', `[data-rhythm-judgment-text]{font-family:Inter!important}`));
+  out.css.push(await tryCss('判定の文字を monospace に', `[data-rhythm-judgment-text]{font-family:monospace!important}`));
+  // 4) 段ごとに囲う(並べ直しの伝わりを止める)。囲ったときに演奏エリアの位置・大きさが変わらないかも見る
+  const pa = document.querySelector('[data-rhythm-play-area]');
+  const box = () => { const r = pa.getBoundingClientRect(); const j = judg.getBoundingClientRect(); return `演奏エリア ${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} / 判定 ${Math.round(j.left)},${Math.round(j.top)} ${Math.round(j.width)}x${Math.round(j.height)}`; };
+  out.boxBase = box(); out.boxes = [];
+  const tryBox = async (name, css) => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); void document.body.offsetHeight; await sleep(50); const b = box(); const v = await measure(judg); st.remove(); out.boxes.push(b); return [name, v, b === out.boxBase ? '位置・大きさ同じ' : '変わった: ' + b]; };
+  out.css.push(await tryBox('演奏エリアを contain:strict', '[data-rhythm-play-area]{contain:strict}'));
+  out.css.push(await tryBox('演奏エリアを contain:size layout', '[data-rhythm-play-area]{contain:size layout}'));
+  out.css.push(await tryBox('演奏エリアを contain:layout', '[data-rhythm-play-area]{contain:layout}'));
+  out.css.push(await tryBox('判定の入れ物を contain:size layout(大きさは今のまま固定)', `[data-rhythm-judgment-display]{contain:size layout;width:${Math.ceil(jp.getBoundingClientRect().width)}px;height:${Math.ceil(jp.getBoundingClientRect().height)}px}`));
+  out.css.push(await tryBox('main を contain:strict', 'main[data-rhythm-tap-test]{contain:strict}'));
+  out.css.push(await tryBox('.mh-app を contain:strict', '.mh-app{contain:strict}'));
+  out.css.push(await tryCss('svg を全部隠す', `svg{display:none!important}`));
+  out.css.push(await tryCss('canvas を隠す', `canvas{display:none!important}`));
+  return out;
+}
+
 // 関数ごとの 自分の時間 / 呼んだ先を含む時間(ms)
 function summarizeProfile(prof) {
   const byId = new Map(prof.nodes.map(n => [n.id, n]));
@@ -234,7 +369,7 @@ function summarizeProfile(prof) {
   const sv = await serve();
   const runs = [];
   const order = EXPS.length ? EXPS : [''];
-  try { for (let i = 0; i < RUNS; i++) for (let j = 0; j < order.length; j++) { currentExp = order[(i + j) % order.length]; const r = await runOnce(playwright, tone); runs.push(r); const f = r.fr.frames.filter(x => x[1] <= SEC * 1000); process.stdout.write(`[${currentExp || '-'}${r.fr.killed ? '・止めた' + r.fr.killed : ''}] `); console.log(`回${i + 1}: ${Math.round(r.wall / 1000)}秒・コマ ${f.length}・50ms超 ${f.filter(x => x[0] > 50).length}・最大 ${Math.round(Math.max(0, ...f.map(x => x[0])))}ms`); } }
+  try { for (let i = 0; i < RUNS; i++) for (let j = 0; j < order.length; j++) { currentExp = order[(i + j) % order.length]; const r = await runOnce(playwright, tone); runs.push(r); if (r.bisect) { console.log(JSON.stringify(r.bisect, null, 1)); continue; } const f = r.fr.frames.filter(x => x[1] <= SEC * 1000); process.stdout.write(`[${currentExp || '-'}${r.fr.killed ? '・止めた' + r.fr.killed : ''}] `); console.log(`回${i + 1}: ${Math.round(r.wall / 1000)}秒・コマ ${f.length}・50ms超 ${f.filter(x => x[0] > 50).length}・最大 ${Math.round(Math.max(0, ...f.map(x => x[0])))}ms`); } }
   finally { sv.close(); }
   fs.writeFileSync(OUT, JSON.stringify({ song: SONG, diff: DIFF, rate: RATE, sec: SEC, runs }, null, 0));
   console.log('書き出し: ' + OUT);
