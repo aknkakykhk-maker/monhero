@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c60d5c4c0885a962
+// generated-sha256: 43c2cc9fe823763a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78678,6 +78678,23 @@ const assistantLifePlanTrust = (lv) => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+// その助手が abs の回にお願いを聞いてくれる確率(仲良し度Lv + 調子の上げ下げ)。予定を当てる所と ◎○△ の見せ方が同じ数を使う(作り直し 段4・r1119-043 ④)
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+// 通りやすさの見せ方(決める前に出す)。気分で通らないことは残す(2026-11-20 社長「部の案で進める」: 0.85以上 ◎・0.65以上 ○・それ未満 △)
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([
+  Object.freeze({ min: 0.85, mark: '◎', label: '聞いてくれそう' }),
+  Object.freeze({ min: 0.65, mark: '○', label: 'たぶん聞いてくれる' }),
+  Object.freeze({ min: 0, mark: '△', label: '断られるかも' }),
+]);
+const assistantLifePlanEaseOfP = (p) => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => { const p = assistantLifePlanTrustOf(id, abs); return { p, ...assistantLifePlanEaseOfP(p) }; };
 const assistantLifePlanLvOf = (id) => {
   try { const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null; return Number.isFinite(p) && typeof assistantBondLevelOf === 'function' ? assistantBondLevelOf(p) : 1; } catch (_) { return 1; }
 };
@@ -78797,7 +78814,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     const want = {}; for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || (d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length)) return decided;
     // 疲れ・ストレス(56-assistant-life-body.jsx): ひなたの丘の次の回は聞きやすく・ストレスが高いと聞きにくい。印が偽なら 0
-    const trust = {}; for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    const trust = {}; for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {}; for (const [id, v] of Object.entries(r.result)) if (v === 'no') { const g = (r.life.groups || []).find(x => x.ids.includes(id)); const pl = g ? g.place : (r.life.solo[id] || {}).place; if (pl) went[id] = pl; }
     assistantLifePlanSave({ ...d, result: { ...d.result, [String(decided.abs)]: r.result }, went: { ...(d.went || {}), [String(decided.abs)]: went } });
@@ -79420,6 +79437,36 @@ function AssistantLifeBodyPanel({ id, cur }) {
       </div>}
     </div>);
 }
+// ===== 🌡 調子(作り直し 段4・docs/spec/ASSISTANT_LIFE.md §2-1)。新しく保存しない: 疲れ・ストレス・けが・病気・寝ているかから毎回計算する =====
+// 境目は 2026-11-20 社長「部の案で進める」: ねむい=深夜(0〜6時)か寝ている / へとへと=疲れ70以上・ストレス60以上・けが・病気 / おつかれ=疲れ60以上・ストレス50以上 / 元気=どちらも30未満 / ほかはふつう
+// 線は ASSISTANT_LIFE_BODY_LINE をそのまま使う(予定を断る・サボる線と同じ数)
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki:    Object.freeze({ emoji: '😊', label: '元気' }),
+  futsu:    Object.freeze({ emoji: '🙂', label: 'ふつう' }),
+  otsukare: Object.freeze({ emoji: '😓', label: 'おつかれ' }),
+  hetoheto: Object.freeze({ emoji: '😵', label: 'へとへと' }),
+  nemui:    Object.freeze({ emoji: '😪', label: 'ねむい' }),
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+// e … { fat, st, cond }。opt.sleeping … 寝ている回 / opt.hour … 0〜23(深夜の判定)
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat), st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || (h >= 0 && h < 6)) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+// 画面に出す形: { key, emoji, label, mark(けが 🤕・病気 🤒・ほかは '') }。体の印が偽・読み込み前なら null
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id); if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? (e.cond.k === 'hurt' ? '🤕' : '🤒') : '';
+  return { key, ...ASSISTANT_LIFE_COND_FACES[key], mark };
+};
 // 家の断面図・地図の名札に付ける小さな印(黄・赤・けが・病気のときだけ。それ以外は '')
 const assistantLifeBodyBadge = (id) => {
   const e = assistantLifeBodyOf(id); if (!e) return '';
@@ -84144,6 +84191,23 @@ function AssistantLifeTasteGiftPicker({ who, nameOf }) {
       </p>
     </div>);
 }
+
+// ===== 好き・苦手の見る口(作り直し 段4・§2-2 #29〜32)。保存は今のまま(mh_assistant_life_likes_v1 を読むだけ) =====
+// 道具(2人に・1人に)と家具を1つの一覧にして、数え方を1つにする(今は道具「◯/14」と家具「◯/12」が別)。🧸 ぬいぐるみは選んだモンスターで変わるので入れない
+// 返す形: { items: [{ key, kind: 'gift'|'furn', shown: 'like'|'mid'|'bad'|'unknown' }], known, total, like: [key…], bad: [key…] }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return { items, known: 0, total: 0, like: [], bad: [] };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])]
+    .filter(g => g && g.key !== 'monplush').map(g => (typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null)).filter(Boolean);
+  for (const g of gifts) items.push({ key: g.key, kind: 'gift', shown: assistantLifeGiftShownLike(id, g.key, S) });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({ key: f.key, kind: 'furn', shown: assistantLifeGiftShownLike(id, f.key, S) });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return { items, known, total: items.length, like: items.filter(x => x.shown === 'like').map(x => x.key), bad: items.filter(x => x.shown === 'bad').map(x => x.key) };
+};
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------

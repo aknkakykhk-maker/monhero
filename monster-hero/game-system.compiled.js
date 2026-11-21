@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0898c26e10ca4749
+// source-sha256: c498f4405976ecc1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149771,6 +149771,35 @@ const assistantLifePlanTrust = lv => {
   const L = Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1;
   return Math.min(ASSISTANT_LIFE_PLAN_TRUST.max, ASSISTANT_LIFE_PLAN_TRUST.base + (L - 1) * ASSISTANT_LIFE_PLAN_TRUST.perLv);
 };
+const assistantLifePlanTrustOf = (id, abs) => {
+  const lv = typeof assistantLifePlanLvOf === 'function' ? assistantLifePlanLvOf(id) : 1;
+  const adj = typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, abs) : 0;
+  return Math.max(0, Math.min(1, assistantLifePlanTrust(lv) + (Number.isFinite(adj) ? adj : 0)));
+};
+const ASSISTANT_LIFE_PLAN_EASE = Object.freeze([Object.freeze({
+  min: 0.85,
+  mark: '◎',
+  label: '聞いてくれそう'
+}), Object.freeze({
+  min: 0.65,
+  mark: '○',
+  label: 'たぶん聞いてくれる'
+}), Object.freeze({
+  min: 0,
+  mark: '△',
+  label: '断られるかも'
+})]);
+const assistantLifePlanEaseOfP = p => {
+  const q = Number.isFinite(p) ? p : 0;
+  return ASSISTANT_LIFE_PLAN_EASE.find(x => q >= x.min) || ASSISTANT_LIFE_PLAN_EASE[ASSISTANT_LIFE_PLAN_EASE.length - 1];
+};
+const assistantLifePlanEaseOf = (id, abs) => {
+  const p = assistantLifePlanTrustOf(id, abs);
+  return {
+    p,
+    ...assistantLifePlanEaseOfP(p)
+  };
+};
 const assistantLifePlanLvOf = id => {
   try {
     const p = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
@@ -149983,7 +150012,7 @@ const assistantLifePlanOnDecide = (decided, salt = '') => {
     for (const [id, p] of Object.entries(want0)) if (assistantLifePlanCanAsk(id)) want[id] = p;
     if (!want || !Object.keys(want).length || d.result[String(decided.abs)] && Object.keys(d.result[String(decided.abs)]).length) return decided;
     const trust = {};
-    for (const id of Object.keys(want)) trust[id] = Math.max(0, Math.min(1, assistantLifePlanTrust(assistantLifePlanLvOf(id)) + (typeof assistantLifeBodyTrustAdj === 'function' ? assistantLifeBodyTrustAdj(id, decided.abs) : 0)));
+    for (const id of Object.keys(want)) trust[id] = assistantLifePlanTrustOf(id, decided.abs);
     const r = assistantLifePlanApply(decided, want, trust, salt);
     const went = {};
     for (const [id, v] of Object.entries(r.result)) if (v === 'no') {
@@ -151194,6 +151223,52 @@ function AssistantLifeBodyPanel({
     }, "⚠ ", r.kind, " ", Math.round(r.risk * 100), "%"));
   })));
 }
+const ASSISTANT_LIFE_COND_FACES = Object.freeze({
+  genki: Object.freeze({
+    emoji: '😊',
+    label: '元気'
+  }),
+  futsu: Object.freeze({
+    emoji: '🙂',
+    label: 'ふつう'
+  }),
+  otsukare: Object.freeze({
+    emoji: '😓',
+    label: 'おつかれ'
+  }),
+  hetoheto: Object.freeze({
+    emoji: '😵',
+    label: 'へとへと'
+  }),
+  nemui: Object.freeze({
+    emoji: '😪',
+    label: 'ねむい'
+  })
+});
+const ASSISTANT_LIFE_COND_GENKI = 30;
+const assistantLifeCondFaceKey = (e, opt = {}) => {
+  if (!e || typeof e !== 'object') return 'futsu';
+  const L = ASSISTANT_LIFE_BODY_LINE;
+  const fat = assistantLifeBodyClamp(e.fat),
+    st = assistantLifeBodyClamp(e.st);
+  const h = Number.isFinite(opt.hour) ? Math.floor(opt.hour) : -1;
+  if (opt.sleeping || h >= 0 && h < 6) return 'nemui';
+  if (e.cond || fat >= L.fatBad || st >= L.stBad) return 'hetoheto';
+  if (fat >= L.fatWarn || st >= L.stWarn) return 'otsukare';
+  if (fat < ASSISTANT_LIFE_COND_GENKI && st < ASSISTANT_LIFE_COND_GENKI) return 'genki';
+  return 'futsu';
+};
+const assistantLifeCondFaceOf = (id, opt = {}) => {
+  const e = assistantLifeBodyOf(id);
+  if (!e) return null;
+  const key = assistantLifeCondFaceKey(e, opt);
+  const mark = e.cond ? e.cond.k === 'hurt' ? '🤕' : '🤒' : '';
+  return {
+    key,
+    ...ASSISTANT_LIFE_COND_FACES[key],
+    mark
+  };
+};
 const assistantLifeBodyBadge = id => {
   const e = assistantLifeBodyOf(id);
   if (!e) return '';
@@ -161552,6 +161627,38 @@ function AssistantLifeTasteGiftPicker({
     "data-assistant-life-plush-fav": true
   }, "好きな色のリボンなので、もう少し好きになります。") : '好きな色のリボンだと、もう少し好きになります。'));
 }
+const assistantLifeLikesViewOf = (id, st) => {
+  const S = st || (typeof ASSISTANT_LIFE_GIFT_STORE !== 'undefined' ? ASSISTANT_LIFE_GIFT_STORE.state : null);
+  const items = [];
+  if (!S || typeof assistantLifeGiftShownLike !== 'function') return {
+    items,
+    known: 0,
+    total: 0,
+    like: [],
+    bad: []
+  };
+  const soloOn = typeof assistantLifeSoloOn === 'function' && assistantLifeSoloOn();
+  const gifts = [...(typeof assistantLifeGiftKinds === 'function' ? assistantLifeGiftKinds() : []), ...(soloOn && typeof assistantLifeSoloDefs === 'function' ? assistantLifeSoloDefs() : [])].filter(g => g && g.key !== 'monplush').map(g => typeof assistantLifeGiftOf === 'function' ? assistantLifeGiftOf(g.kind) : null).filter(Boolean);
+  for (const g of gifts) items.push({
+    key: g.key,
+    kind: 'gift',
+    shown: assistantLifeGiftShownLike(id, g.key, S)
+  });
+  const furnOn = typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled();
+  if (furnOn && typeof assistantLifeFurnDefs === 'function') for (const f of assistantLifeFurnDefs()) items.push({
+    key: f.key,
+    kind: 'furn',
+    shown: assistantLifeGiftShownLike(id, f.key, S)
+  });
+  const known = items.filter(x => x.shown !== 'unknown').length;
+  return {
+    items,
+    known,
+    total: items.length,
+    like: items.filter(x => x.shown === 'like').map(x => x.key),
+    bad: items.filter(x => x.shown === 'bad').map(x => x.key)
+  };
+};
 const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
 const MONSUC_FUSE_LOG = 50;
 const MONSUC_MEMORY_MAX = 100;
