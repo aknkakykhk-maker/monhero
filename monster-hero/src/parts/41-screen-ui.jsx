@@ -53,6 +53,12 @@ const SCREEN_LIST_CLASS = 'flex-1 min-h-0 overflow-y-auto mh-scroll';
 // その下にある中身をスクロール中ずっと覆ってしまう(強化画面で起きていた)。
 const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-white/10 pt-2';
 
+// 一覧と決定の帯をひとまとめにする箱(2026-11-21 r1119-066①)。根の直下に置き、中に一覧(SCREEN_LIST_CLASS)と
+// 決定の帯(SCREEN_FOOTER_CLASS)を入れる。この箱も .mh-scroll なので、横の低い画面では右の列(全高)に入り、
+// 「決定」は右の列の一覧の下にいつも見える。左の列(見出し・助手・タブ)が高い画面で、根の直下に置いた決定の帯が
+// 画面の外へ出ていた(モンスター編成)。縦では今までどおり一覧が伸びて、帯が下に来る
+const SCREEN_LIST_PANE_CLASS = 'mh-scroll mh-scroll-pane flex-1 min-h-0 flex flex-col';
+
 // 画面の頭。「← / 画面の名前 / (補足) / 右の付け足し」の順で、どの画面も同じ形にする。
 //   title    … 画面の名前(日本語)
 //   icon     … 名前の前に置く絵(省略可)
