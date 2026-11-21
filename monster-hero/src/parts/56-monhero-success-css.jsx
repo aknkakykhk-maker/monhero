@@ -236,6 +236,8 @@ const MSX_CSS = `
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
 .msx .v-st u.g{position:relative;height:6px;overflow:visible}
+/* 伸びる間は「/999」を隠して棒を札の幅いっぱいに(幅17pxほどの棒が光って橙の四角に見えた。2026-11-21 r1119-033 育-208・209・213) */
+.msx .v-st.zs .br .cap{display:none}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.33,1,.68,1) .25s}
@@ -245,7 +247,8 @@ const MSX_CSS = `
 .msx .v-st.grow.on u.g s.gd{opacity:0;transition:opacity .9s ease-out .25s}
 @keyframes msxStGlow{from{filter:brightness(1)}to{filter:brightness(1.6)}}
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
-.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
+/* 持ち上がりは隣の札にかからない大きさ(1.1 だと隣のかしこさ・回避にかぶった。育-208・213。社長の A 案「伸びる間だけ拡大」はそのまま) */
+.msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.06);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
 .msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
@@ -372,6 +375,8 @@ const MSX_CSS = `
 .msx .v-pol .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px}
 .msx .v-ev-h{position:absolute;left:0;top:8px;background:linear-gradient(90deg,#f472b6,#fb923c);border-radius:0 99px 99px 0;padding:3px 14px 3px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
 .msx .v-ev-h small{display:block;font-size:10px;font-weight:800}
+/* バ-42(2026-11-21): 大会まわりの見出しは1つの形(茶色の丸い帯に黄色い字・組み合わせ表と試合の .msc-ttl と同じ) */
+.msx .v-ev-h.cup{left:8px;background:linear-gradient(180deg,#7c4a1e,#5a3313);color:#fde68a;border:1.5px solid #d6a45a;border-radius:99px;padding:3px 14px;font-size:13px;letter-spacing:.04em;box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .msx .v-ev-h.k-story{background:linear-gradient(90deg,#f97316,#fb923c)}
 .msx .v-ev-h.k-days{background:linear-gradient(90deg,#ec4899,#f472b6)}
 .msx .v-ev-h.k-team{background:linear-gradient(90deg,#2563eb,#38bdf8)}
