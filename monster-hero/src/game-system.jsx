@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 84063703a84b4574
+// generated-sha256: 80c10d4ac3964474
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90757,7 +90757,15 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
-.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
+/* 月替わりの暦(育-137・194・211): 前は場面全体(inset:0)を暗い膜で覆い、モンスターまで膜の下で白く・半透明に見えた。暦・大会の札・期の帯は上の暗い板1枚にまとめ、モンスターは膜の外にはっきり出す */
+.msx .v-scene .v-clock{inset:auto;top:8px;left:50%;transform:translateX(-50%);width:min(92%,420px);justify-content:flex-start;gap:7px;padding:10px 8px 12px;border-radius:18px;background:rgba(15,13,36,.86);border:1px solid #ffffff26;box-shadow:0 6px 18px #0008}
+.msx .v-scene .v-clock .v-cal{width:136px;box-shadow:0 5px 0 #0006;transform:rotate(-2deg)}
+.msx .v-scene .v-clock .v-cal .mth{font-size:54px}.msx .v-scene .v-clock .v-cal .mth small{font-size:16px}
+.msx .v-scene .v-clock .v-phs{width:100%;margin-top:2px}
+.msx.s320 .v-scene .v-clock{gap:5px;padding:7px 6px 9px}.msx.s320 .v-scene .v-clock .v-cal{width:112px}.msx.s320 .v-scene .v-clock .v-cal .mth{font-size:40px}
+.msx.land .v-scene .v-clock{left:8px;transform:none;width:58%;gap:5px;padding:7px 6px 9px}.msx.land .v-scene .v-clock .v-cal{width:104px}.msx.land .v-scene .v-clock .v-cal .mth{font-size:38px}
+.msx.land .v-scene .v-clock .v-chip{max-width:100%;white-space:nowrap;font-size:13px!important;padding:4px 10px!important}
+.msx.land [data-msx-turn-scene] .mon,.msx.land [data-msx-turn-scene] .gr{left:80%}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -91177,6 +91185,14 @@ const MSX_CSS = `
 .msx .v-bagw .v-item{margin-top:0}
 .v-bagw .v-bgrid{flex:none;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .v-bagw > *{flex-shrink:0}
+/* 持ち物(育-231): 枠は場面の1枚だけ(内側の黄色い枠をやめる)。見出し→札→説明→使うボタンを上から詰め、空いた分で札と字を大きく */
+.msx .v-bagw{left:0;right:0;top:0;bottom:0;border:0;border-radius:inherit;box-shadow:none;background:#151130eb;padding:12px 12px;justify-content:flex-start;gap:10px}
+.msx .v-bagw .t small{font-size:12px}
+.msx .v-bagw .v-bgrid{gap:8px}.msx .v-bagw .v-bgrid div,.msx .v-bagw .v-bgrid button{padding:10px 1px 7px;min-height:96px}
+.msx .v-bagw .v-bgrid .e{font-size:34px;line-height:42px;height:42px}.msx .v-bagw .v-bgrid .v-icw{width:42px;height:42px}
+.msx .v-bagw .v-bgrid small{font-size:10.5px}.msx .v-bagw .v-bgrid i{font-size:12px}
+.msx .v-bagw .v-bsel small{font-size:11.5px}.msx .v-bagw .v-bnote,.msx .v-bagw .v-bnote .dim2{font-size:11.5px;line-height:1.6}
+.msx .v-bagw .v-big{margin-top:4px!important;min-height:48px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -95061,13 +95077,14 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
       <div className="v-bagw">
         {/* 見出しの「持ち物」は上の帯(戻るの横)にあるので、ここは決まりの1行だけ(育-109)。選んだ物の個数は下の札の ×N だけ */}
         <div className="t"><small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small></div>{/* 閉じるは左上の「← 戻る」1つ(M-7) */}
-        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : '育成中、いつでも使える'}</small></div></div> : null}
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
+        {/* 選んだ物の説明は札の下・使うボタンの上(育-231: 見出し→札→説明→使うボタンの順に詰める) */}
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : '育成中、いつでも使える'}</small></div></div> : null}
         <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(始める前から効く物・大会で負けたときの砂時計)')}</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
           {usedNow ? 'このターンはもう使った' : blocked ? (SUC.ITEMS && SUC.ITEMS[t.id] && SUC.ITEMS[t.id].fruit ? 'この日はトレーニングできないので使えない' : 'いまは使えない') : t && !t.carry ? <>{msxItemIco(t)} {t.name}を使う</> : '使う'}</button>
@@ -95337,6 +95354,9 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+/* 「修行終わり!」の題字は木の背景に埋もれない(育-188): 暗い下地と濃いふちを敷く。傾きは小さく */
+.msx .r3 .v-stamp.ok.msx-qend{color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 3px 0 #831843,0 0 10px rgba(0,0,0,.85);width:max-content;max-width:92%;margin:0 auto;padding:4px 16px 8px;border-radius:14px;background:rgba(2,6,23,.74);transform:rotate(-2deg)}
+.msx .r3 .v-stamp.ok.msx-qend small{transform:rotate(2deg)}
 .msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
 .msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
 .msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
@@ -96924,7 +96944,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[o.course] || 'forest_evening'}.jpg`} alt=""/><div className="sh"/>{learned ? <div className="v-burst"/> : null}
         <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/><MsxMonArt run={run} className="mon" noPeak style={{ bottom: '16%', height: '44%', ...(learned ? {} : { filter: 'grayscale(.25)' }) }}/>
         {/* 覚えた/覚えなかったをはっきり(2026-11-15 社長 r1115-063): 覚えた=金・覚えられなかった=灰・技を選ばなかった=修行終わり */}
-        <div className={`v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`} style={{ top: '5%', fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32 }} data-msx-r3-qstamp={learned ? 'hit' : tries.length ? 'miss' : 'none'}>{learned ? (missed.length ? '1つ覚えた!' : '技を覚えた!') : tries.length ? '覚えられなかった…' : '修行終わり!'}
+        <div className={`v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok msx-qend'}`} style={{ top: '5%', fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32 }} data-msx-r3-qstamp={learned ? 'hit' : tries.length ? 'miss' : 'none'}>{learned ? (missed.length ? '1つ覚えた!' : '技を覚えた!') : tries.length ? '覚えられなかった…' : '修行終わり!'}
           <small>{learnedAll.length > 1 ? `✨ ${learnedAll.map((x) => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}の間合い)` : tries.length ? `次は覚える率が +${SH.miss || 15}%` : '能力が上がった'}</small></div>
         {/* 上がった能力は下の能力の札の「+」の1か所だけ(2026-11-20 r1119-033 育-67・育-76: 場面の札・能力の札・下の文の3か所に出ていた)。
             場面には、いっしょに修行した編成の数だけを出す(下の文の「いっしょに修行した」は消した・育-68・育-77) */}
