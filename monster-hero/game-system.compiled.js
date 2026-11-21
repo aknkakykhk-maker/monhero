@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f3ef15228bf2cb3
+// source-sha256: 6915930d1bd6d9f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153254,11 +153254,11 @@ function AmbbOpening({
   const go = () => {
     if (done.current) return;
     done.current = true;
-    ambbSe('card');
+    ambbSe('matchReady');
     onGo();
   };
   useEffect(() => {
-    ambbSe('join');
+    ambbSe('swap');
     const t = setTimeout(go, quick ? 1800 : 4600);
     return () => clearTimeout(t);
   }, []);
@@ -153769,7 +153769,7 @@ function AssistantMasmonBattleBeta({
     if (!m) return;
     const busy = pos < battle.r.log.length - 1;
     if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c);
     if (r && r.ok) {
       syncManual(m);
@@ -194001,9 +194001,9 @@ const msaReduce = () => {
     return false;
   }
 };
-const msaSe = k => {
+const msaSe = meaning => {
   try {
-    if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k]();
+    if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning);
   } catch (_) {}
 };
 const MH_BATTLE_BGM = {
@@ -195826,12 +195826,12 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = teams[e.side] && teams[e.side].members && teams[e.side].members[e.i] || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
-    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');else if (e.ev === 'move') msaSe('trainingMove');else if (e.ev === 'swap') msaSe('join');else if (e.ev === 'ko') msaSe('enemyCharge');else if (e.ev === 'start') {
-      if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide');else {
-        msaSe('card');
-        later(1750, 'trainingDecide');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
+    } else if (e.ev === 'guard') msaSe('guard');else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');else if (e.ev === 'move') msaSe('move');else if (e.ev === 'swap') msaSe('swap');else if (e.ev === 'ko') msaSe('ko');else if (e.ev === 'start') {
+      if (reduce || sf <= MSA_FAST_F) msaSe('matchGo');else {
+        msaSe('matchReady');
+        later(1750, 'matchGo');
       }
     }
   }, [pos, on]);
@@ -196094,7 +196094,7 @@ function MsaStage({
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   const [preAt, setPreAt] = useState(-1);
   const fxNow = msaFxOf(log, log[pos], reduce, Number(speedF) || 1);
@@ -197324,7 +197324,7 @@ function MsaJudge({
     onGo();
   };
   useEffect(() => {
-    msaSe('tap');
+    msaSe('decide');
     const t = setTimeout(go, 9000);
     return () => clearTimeout(t);
   }, []);
@@ -197386,8 +197386,8 @@ function MsaFinish({
     onGo();
   };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => {
       clearTimeout(t);

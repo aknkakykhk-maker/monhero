@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d2c4771faefc5a5a
+// generated-sha256: a5cea58289a8c291
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80578,8 +80578,8 @@ const ambbMvpOf = (stars) => { let b = -1, bs = -1; stars.forEach((s, i) => { co
 // 入場: 題字・両方の助手と3体の並び・VS。タップか時間で試合へ
 function AmbbOpening({ teams, title, sub, plan, nameA, nameB, quick, onGo }) {
   const done = useRef(false);
-  const go = () => { if (done.current) return; done.current = true; ambbSe('card'); onGo(); };
-  useEffect(() => { ambbSe('join'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
+  const go = () => { if (done.current) return; done.current = true; ambbSe('matchReady'); onGo(); };
+  useEffect(() => { ambbSe('swap'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
   const side = (sd) => {
     const t = teams[sd], aid = t.assistantId;
     return (
@@ -80818,7 +80818,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
   const manualPick = (c) => {
     const m = battle && battle.match; if (!m) return;
     const busy = pos < battle.r.log.length - 1; if (busy) return;
-    if (typeof msaSe === 'function') msaSe('tap');
+    if (typeof msaSe === 'function') msaSe('decide');
     const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; putCtl('auto'); m.auto('A'); syncManual(m); setPaused(false); };
@@ -99520,8 +99520,8 @@ const msaReduce = () => {
 };
 
 // ---- 音(2026-11-12 社長「音もないし音楽もホームの音楽だし味気なさすぎる」) ----
-// 効果音は今あるバトルの音(Audio_.fgSe。カードバトルと同じ、裏の周回の音止めに巻き込まれない口)をそのまま使う。消音の設定はそのまま効く
-const msaSe = (k) => { try { if (typeof Audio_ !== 'undefined' && Audio_.fgSe && typeof Audio_.fgSe[k] === 'function') Audio_.fgSe[k](); } catch (_) {} };
+// 効果音は意味で鳴らす(意味の表 data/success-sounds.js の SUCCESS_SFX → SuccessSound.sfx。段3d 2026-11-21)。鳴る音はカードバトルと同じ口(裏の周回の音止めに巻き込まれない)。消音の設定はそのまま効く
+const msaSe = (meaning) => { try { if (typeof SuccessSound !== 'undefined' && SuccessSound && typeof SuccessSound.sfx === 'function') SuccessSound.sfx(meaning); } catch (_) {} };
 // 試合の画面が開いている間は、BGMアレンジの「バトル」の曲にする(60-app の bgmKeyForState が見る口)。閉じたら元の曲へ戻る
 const MH_BATTLE_BGM = { n: 0, on: false, val: false, stack: [], subs: new Set() };
 // 保持が曲名(track)つきなら、アレンジの「バトル」ではなくその曲にする(助手マスモン対戦βの試合を、モンサクの試合の曲 cupMatch にそろえる。2026-11-14 社長)
@@ -100460,14 +100460,14 @@ function useMsaSfx(log, pos, teams, reduce, on, sf = 1, motionKindOf = msaMotion
     if (e.ev === 'tech') {
       const m = (teams[e.side] && teams[e.side].members && teams[e.side].members[e.i]) || {};
       const hitMs = reduce ? 0 : msaFxOf(log, e, reduce, sf).pre + msaMotionMs(motionKindOf(m.species, msaTechInfo(log, e))).hit;
-      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('special');      // 大技は出だしに溜めの音
-      later(hitMs, !e.hit ? 'trainingMove' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'attack' : 'enemyAttack');
+      if ((Number(msaTechInfo(log, e).guts) || 0) >= 40) msaSe('bigTech');      // 大技は出だしに溜めの音
+      later(hitMs, !e.hit ? 'miss' : e.crit ? 'crit' : e.guarded ? 'guard' : e.side === 'A' ? 'hit' : 'hitTaken');
     } else if (e.ev === 'guard') msaSe('guard');
-    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'trainingBad' : 'trainingGood');
-    else if (e.ev === 'move') msaSe('trainingMove');
-    else if (e.ev === 'swap') msaSe('join');
-    else if (e.ev === 'ko') msaSe('enemyCharge');
-    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('trainingDecide'); else { msaSe('card'); later(1750, 'trainingDecide'); } }
+    else if (e.ev === 'charge') msaSe(e.why === 'sulk' ? 'sulk' : 'charge');
+    else if (e.ev === 'move') msaSe('move');
+    else if (e.ev === 'swap') msaSe('swap');
+    else if (e.ev === 'ko') msaSe('ko');
+    else if (e.ev === 'start') { if (reduce || sf <= MSA_FAST_F) msaSe('matchGo'); else { msaSe('matchReady'); later(1750, 'matchGo'); } }
   }, [pos, on]);
 }
 
@@ -100624,7 +100624,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   useEffect(() => {
     if (!ended || endSaid.current) return;
     endSaid.current = true;
-    if (sound) msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    if (sound) msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
   }, [ended]);
   // 大技のため: ため終わるまで技の動きを出さない(pos ごとに数え直す)
   const [preAt, setPreAt] = useState(-1);
@@ -101200,7 +101200,7 @@ const MSA_JUDGE_CSS = `
 function MsaJudge({ row, names, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
-  useEffect(() => { msaSe('tap'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
+  useEffect(() => { msaSe('decide'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
   const fmt = (k, v) => (k === 'pct' ? `${v}%` : String(v));
   const rows = Array.isArray(row.rows) ? row.rows : [];
   const win = row.winner === 'A';
@@ -101236,8 +101236,8 @@ function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => {
-    msaSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    msaSe(win === 'A' ? 'winSolo' : 'loseSolo');
+    const f = win === 'A' ? setTimeout(() => msaSe('great'), 650) : null;
     const t = setTimeout(go, 7000);
     return () => { clearTimeout(t); if (f) clearTimeout(f); };
   }, []);
