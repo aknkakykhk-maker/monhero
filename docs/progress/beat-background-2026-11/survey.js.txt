@@ -127,7 +127,9 @@ async function runOnce(playwright, tone) {
     if (HAS_KEEP) await p.addInitScript((keep) => {
       const re = keep === 'none' ? null : new RegExp(keep);
       const filt = (css) => { try { const sh = new CSSStyleSheet(); sh.replaceSync(css); let dropped = 0; const walk = (list) => { for (let i = list.length - 1; i >= 0; i--) { const r = list[i]; if (r.selectorText && r.selectorText.includes(':has(') && !(re && re.test(r.selectorText))) { list === sh.cssRules ? sh.deleteRule(i) : r.parentRule.deleteRule(i); dropped++; } else if (r.cssRules) walk(r.cssRules); } }; walk(sh.cssRules); window.__hasDropped = (window.__hasDropped || 0) + dropped; return dropped ? [...sh.cssRules].map(r => r.cssText).join('\n') : css; } catch (e) { return css; } };
-      const fix = (n) => { if (n.tagName === 'STYLE' && n.textContent.includes(':has(')) n.textContent = filt(n.textContent); };
+      // ★書き換えると見張りがまた反応するので、中身が変わるときだけ書き換え、書き換えた物は覚えておく
+      const done = new WeakMap();
+      const fix = (n) => { if (n.tagName !== 'STYLE' || !n.textContent.includes(':has(') || done.get(n) === n.textContent) return; const t = filt(n.textContent); if (t !== n.textContent) n.textContent = t; done.set(n, n.textContent); };
       new MutationObserver((l) => { for (const m of l) { if (m.type === 'childList') { m.addedNodes.forEach(n => { if (n.nodeType === 1) { fix(n); n.querySelectorAll && n.querySelectorAll('style').forEach(fix); } }); if (m.target.tagName === 'STYLE') fix(m.target); } else if (m.type === 'characterData' && m.target.parentNode && m.target.parentNode.tagName === 'STYLE') fix(m.target.parentNode); } }).observe(document, { subtree: true, childList: true, characterData: true });
     }, HAS_KEEP);
     await p.addInitScript((exp) => {
