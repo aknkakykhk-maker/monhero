@@ -179,7 +179,7 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
       atsu: 'sofa record trophy guitar/heartmirror windowflower', kyuko: 'nyacushion starpic bookshelf fishbowl/mirrorball', sorashido: 'starpic trophy lantern map/bear', erubin: 'plant lantern windbell pendant/mirrorball garland' };
     const dF = IDS.filter(id => `${FL[id].like.join(' ')}/${FL[id].bad.join(' ')}` !== OKF[id]);
     check('⑨ 家具の好みは社長の OK の表と同じ', !dF.length, dF.join(','));
-    check('⑨ 仲良し度: ふつう +80・好き +120・苦手 +40', G("assistantLifeFurnAmount('atsu', 'plant')") === 80 && G("assistantLifeFurnAmount('atsu', 'sofa')") === 120 && G("assistantLifeFurnAmount('atsu', 'heartmirror')") === 40 && G('ASSISTANT_BOND_ACTIONS').lifeFurn.amount >= 120);
+    check('⑨ 仲良し度: ふつう +27・好き +40・苦手 +14(1回の上限 40・1日 480。r1119-043 ①)', G("assistantLifeFurnAmount('atsu', 'plant')") === 27 && G("assistantLifeFurnAmount('atsu', 'sofa')") === 40 && G("assistantLifeFurnAmount('atsu', 'heartmirror')") === 14 && G('ASSISTANT_BOND_ACTIONS').lifeFurn.amount === 40 && G('ASSISTANT_BOND_ACTIONS').lifeFurn.dailyMax === 480);
     const giveS = G('assistantLifeFurnGiveState'), moveS = G('assistantLifeFurnMoveState');
     let room = {};
     let r = giveS(room, 'atsu', 'sofa', '2026-11-09'); room = r.room;
@@ -199,8 +199,11 @@ const OFFERS = G('RHYTHM_EVENT_POINT_SHOP_OFFERS');
     store.state = { ...store.state };
     added.length = 0;
     const t = await G('assistantLifeFurnGive')('kiki', 'plant');
-    check('⑨ 贈ると部屋に置き・好みが分かり・仲良し度(lifeFurn)・ひとこと(届いた台詞)', t && t.like === 'like' && t.amount === 120 && added.includes('kiki:lifeFurn:120') && mem.mh_assistant_life_room_v1.kiki.put.floor === 'plant'
+    check('⑨ 贈ると部屋に置き・好みが分かり・仲良し度(lifeFurn)・ひとこと(届いた台詞)', t && t.like === 'like' && t.amount === 40 && added.includes('kiki:lifeFurn:40') && mem.mh_assistant_life_room_v1.kiki.put.floor === 'plant'
       && G("assistantLifeGiftShownLike('kiki', 'plant')") === 'like' && t.lines.length >= 1 && t.lines.every(l => l.who === 'kiki' && !/\{item\}/.test(l.t)), JSON.stringify({ like: t && t.like, amount: t && t.amount, added, room: mem.mh_assistant_life_room_v1 }).slice(0, 200));
+    added.length = 0;
+    const again = await G('assistantLifeFurnGive')('kiki', 'plant');
+    check('⑨ 同じ家具を同じ助手へ2回目は贈れず、仲良し度も二重に入らない', !again && !added.some(x => /^kiki:lifeFurn:/.test(x)), JSON.stringify({ again: !!again, added }));
     const told = await G('assistantLifeGiftOnBondLevel')('sorashido', 3, () => 0.99);
     check('⑨ 家具が開いていれば、好きな家具も教えてくれる(候補に入る)', ['starpic', 'trophy', 'lantern', 'map', 'onigiri', 'puzzle', 'sleeve'].includes(told) && !!G('assistantLifeGiftHintLine')('sorashido', 'lantern'));
     flags.assistantLifeFurniture = false;
