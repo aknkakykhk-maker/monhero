@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e28e55e0cb2e285
+// generated-sha256: ae6cb70bc0c90d05
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61606,6 +61606,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const fill = Math.min(1, Math.max(0, team.average / 1000000));
     const marks = ['C', 'B', 'A', 'S', 'SS'].map((id) => ({ id, pos: (RHYTHM_RANKS.find((r) => r.id === id) || { min: 0 }).min / 1000000 }));
     const drawnLevel = (diffId) => (drawnSong && drawnSong.difficulties && drawnSong.difficulties[diffId] ? Number(drawnSong.difficulties[diffId].level) || 0 : 0);
+    // 列は「いる人数」だけ出す(2026-11-22 r1119-094・点検 N41)。3人でも5人分の列が並び、空き枠2つが幅の約4割を取って名前が「モンヒロ…」と切れていた。
+    // 1列は広がりすぎないよう 200px までにし、まん中へ寄せる
+    const resultCols = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, team.rows.length || 1));
+    const resultGridStyle = { gridTemplateColumns: `repeat(${resultCols}, minmax(0, 1fr))` };
+    const resultWidthStyle = { maxWidth: `${resultCols * 200}px` };
     return (
       <main data-rhythm-multi data-rhythm-multi-step="result" className={`${shell} bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950`}>
         <b aria-hidden="true" className="pointer-events-none absolute left-2 top-0 text-6xl font-black italic tracking-widest text-white/[0.06]" style={{ top: 'var(--mh-sa-top)' }}>RESULT</b>
@@ -61634,7 +61639,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
           <div className="flex w-16 shrink-0 flex-col items-center">
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
-            <small className="text-[8px] font-black tracking-widest text-slate-400">SCORE RANK</small>
+            {/* だれのランクか分かるように「チーム」と書く(MVP がフルコンボでも D と出て、自分が D だと思った・点検 N42) */}
+            <small data-rhythm-multi-team-rank-label className="whitespace-nowrap text-[9px] font-black text-slate-300">チームのランク</small>
           </div>
         </section>
         {/* 縦画面ではゲージを曲の下へ1段で出す(横画面では上の帯の中) */}
@@ -61652,15 +61658,15 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             横向き(🔄横も)は送らない: カードの上の吹き出しが欄の上で切れるため。横は育ちの札の欄が中で送る */}
         <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible">
         {/* カードに最低の高さを持たせる。下の育ちの札・友情Lv の欄やあいさつの段に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長・🔄横。320幅の縦ではカードがほぼ消えていた) */}
-        <ul className="relative grid max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
-          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2">
-            {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
+            {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
               return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
             })}
           </li>
-          {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+          {Array.from({ length: resultCols }).map((_, i) => {
             const r = team.rows[i];
             if (!r) return <li key={`empty${i}`} aria-hidden="true" className="rounded-xl border border-dashed border-white/5" />;
             const isMvp = r.m.id === team.mvpId && !team.waiting;
@@ -61733,9 +61739,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         </div>
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
-            className="min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">メンバーの成績</button>
+            className="min-h-[46px] shrink-0 rounded-full border border-white/20 bg-slate-800/80 px-3 text-xs font-black text-slate-200 landscape:w-36 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">📋 メンバーの成績</button>
           <button data-rhythm-multi-result-next type="button" onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
-            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
+            className="min-h-[52px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 text-lg font-black text-slate-950 shadow-[0_0_14px_rgba(45,212,191,.4)] landscape:w-64 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
         </div>
         {/* 結果が出たら対戦の記録へ足す(自分が参加して、全員の結果がそろってから) */}
         {(() => {

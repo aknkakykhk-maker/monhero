@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2dd33d830258a7b0
+// source-sha256: 29f2d4d5450327c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103482,6 +103482,13 @@ function RhythmMultiScreenBody({
       }).min / 1000000
     }));
     const drawnLevel = diffId => drawnSong && drawnSong.difficulties && drawnSong.difficulties[diffId] ? Number(drawnSong.difficulties[diffId].level) || 0 : 0;
+    const resultCols = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, team.rows.length || 1));
+    const resultGridStyle = {
+      gridTemplateColumns: `repeat(${resultCols}, minmax(0, 1fr))`
+    };
+    const resultWidthStyle = {
+      maxWidth: `${resultCols * 200}px`
+    };
     return React.createElement("main", {
       "data-rhythm-multi": true,
       "data-rhythm-multi-step": "result",
@@ -103540,8 +103547,9 @@ function RhythmMultiScreenBody({
       "data-rhythm-multi-team-rank": true,
       className: "text-5xl font-black leading-none text-amber-300 drop-shadow"
     }, team.waiting ? '…' : team.rank), React.createElement("small", {
-      className: "text-[8px] font-black tracking-widest text-slate-400"
-    }, "SCORE RANK"))), React.createElement("div", {
+      "data-rhythm-multi-team-rank-label": true,
+      className: "whitespace-nowrap text-[9px] font-black text-slate-300"
+    }, "チームのランク"))), React.createElement("div", {
       className: "mx-3 mt-4 shrink-0 landscape:hidden"
     }, React.createElement("div", {
       className: "relative h-2.5 rounded-full bg-slate-800"
@@ -103562,13 +103570,19 @@ function RhythmMultiScreenBody({
       "data-rhythm-multi-result-body": true,
       className: "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible"
     }, React.createElement("ul", {
-      className: "relative grid max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+      "data-rhythm-multi-result-cards": resultCols,
+      style: {
+        ...resultWidthStyle,
+        ...resultGridStyle
+      },
+      className: "relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, React.createElement("li", {
       "aria-hidden": "true",
       "data-rhythm-multi-result-bubbles": true,
-      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2"
+      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2",
+      style: resultGridStyle
     }, Array.from({
-      length: RHYTHM_MULTI_ROOM_MAX
+      length: resultCols
     }).map((_, i) => {
       const r = team.rows[i];
       return React.createElement("span", {
@@ -103578,7 +103592,7 @@ function RhythmMultiScreenBody({
         text: chatBubbleOf(r.m.id)
       }) : null);
     })), Array.from({
-      length: RHYTHM_MULTI_ROOM_MAX
+      length: resultCols
     }).map((_, i) => {
       const r = team.rows[i];
       if (!r) return React.createElement("li", {
@@ -103694,12 +103708,12 @@ function RhythmMultiScreenBody({
       "data-rhythm-multi-member-stats": true,
       type: "button",
       onClick: () => setStatsOpen(true),
-      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
-    }, "メンバーの成績"), React.createElement("button", {
+      className: "min-h-[46px] shrink-0 rounded-full border border-white/20 bg-slate-800/80 px-3 text-xs font-black text-slate-200 landscape:w-36 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
+    }, "📋 メンバーの成績"), React.createElement("button", {
       "data-rhythm-multi-result-next": true,
       type: "button",
       onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
-      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
+      className: "min-h-[52px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 text-lg font-black text-slate-950 shadow-[0_0_14px_rgba(45,212,191,.4)] landscape:w-64 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]"
     }, team.waiting ? isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)' : '次へ')), (() => {
       const mine = team.rows.find(row => row.m.id === view.selfId);
       if (team.waiting || !mine || !mine.res) return null;
