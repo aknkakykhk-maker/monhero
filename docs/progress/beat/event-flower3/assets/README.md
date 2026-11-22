@@ -7,3 +7,4 @@
 - きき「全部必殺技でつ( `･ω･)」: `kiki-zenbu-hissatsuwaza.mp3`(116秒) / `kiki-zenbu-hissatsuwaza-jacket.png`
 - ももすけ「きみ待ち♡ループ」: `momo-kimimachi-loop.mp3`(160秒) / `momo-kimimachi-loop-jacket.png` / 歌詞カード `momo-kimimachi-loop-lyrics.png`
 - キービジュアル v1(横長 1774×887): `keyvisual-wide-v1.png`。**使わない**(「新曲が1日1曲ずつ登場」の文と曜日が誤り。社長が作り直す)
+- キービジュアル v2(横長): `keyvisual-wide-v2.png`。**これを使う**(曜日 11/23(月)・11/29(日)、「1日1曲」の文なし。社長 11-22)
