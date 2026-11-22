@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44ce499b79e5a54a
+// source-sha256: 922d5b04934c551e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -71743,10 +71743,8 @@ function ProfileScreen({
   }, React.createElement("div", {
     className: "flex items-center gap-2"
   }, React.createElement("small", {
-    className: "shrink-0 text-[10px] font-black leading-tight text-sky-300"
-  }, "性別", React.createElement("span", {
-    className: "block text-[9px] font-bold text-slate-400"
-  }, "非公開")), React.createElement("div", {
+    className: "shrink-0 text-[11px] font-black leading-tight text-sky-300"
+  }, "性別"), React.createElement("div", {
     className: "grid flex-1 grid-cols-3 gap-1.5",
     role: "radiogroup",
     "aria-label": "性別"
@@ -71758,7 +71756,9 @@ function ProfileScreen({
     "data-gender": id,
     onClick: () => onSelectBreederGender(id),
     className: `min-h-[36px] rounded-lg border text-[11px] font-black active:scale-95 ${breederGender === id ? 'border-sky-300 bg-sky-500/30 text-white' : 'border-white/10 bg-slate-800/80 text-slate-300'}`
-  }, label))))), (() => {
+  }, label)))), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-tight text-slate-400"
+  }, "ほかの人には見せません")), (() => {
     const frameName = (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし';
     const tile = 'flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
     return React.createElement("div", {
@@ -83928,12 +83928,14 @@ function HomeScreen({
   }), React.createElement("div", {
     className: "mh-home-player-copy"
   }, React.createElement("strong", null, breederName), React.createElement("span", null, "ブリーダー Lv.", breederLevel.level), React.createElement("div", {
+    className: "mh-home-xp-row"
+  }, React.createElement("div", {
     className: "mh-home-xp"
   }, React.createElement("i", {
     style: {
       width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
     }
-  })), React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), React.createElement(ChevronRight, {
+  })), React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), "/", breederLevel.xpForNext.toLocaleString(), " XP"))), React.createElement(ChevronRight, {
     className: "mh-home-profile-arrow",
     size: 15
   }), Number(friendRequestCount) > 0 && React.createElement("span", {
@@ -117528,7 +117530,8 @@ function AssistantLifeRoomSheet({
   canGiveSolo = false,
   returnToMap = false,
   uiV2 = false,
-  onGoPlace = null
+  onGoPlace = null,
+  typed = null
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false);
@@ -117881,6 +117884,371 @@ function AssistantLifeRoomSheet({
   })), React.createElement("p", {
     className: "mt-3 text-[11px] font-black text-slate-300"
   }, "詳しく")) : null;
+  if (uiV2 && typed && typeof AssistantLifeRoomTyped === 'function' && typeof assistantLifeTypedRoomOn === 'function' && assistantLifeTypedRoomOn()) {
+    const groupIds = w && w.group ? w.group.ids : [id];
+    const giveSolo = soloOn && canGiveSolo,
+      giveGroup = !!(w && w.group && canGive);
+    const give = giveSolo ? {
+      k: 'give-solo',
+      on: () => onGiveSolo(id, groupIds)
+    } : giveGroup ? {
+      k: 'give',
+      on: () => onGive(w.group)
+    } : {
+      k: soloOn ? 'give-solo' : 'give',
+      disabled: true,
+      why: soloOn || w && w.group ? '今日はもう贈れません' : '一緒にいる2人に贈れます(いまはひとり)'
+    };
+    const distant = !!(w && w.reason === 'distance');
+    const talk = {
+      label: asleep ? '💤 そっと話しかける' : `💬 ${who.name}と話す`,
+      on: () => onInvite(id),
+      disabled: distant,
+      why: distant ? 'いまは遠くにいて声が届きません' : ''
+    };
+    const beatOn = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function';
+    let battleInfo = null;
+    try {
+      battleInfo = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+    } catch (_) {
+      battleInfo = null;
+    }
+    let succInfo = null;
+    try {
+      succInfo = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+    } catch (_) {
+      succInfo = null;
+    }
+    const play = [...(beatOn ? [{
+      k: 'beat',
+      icon: '🎵',
+      label: atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う',
+      sub: atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)',
+      go: '誘う',
+      gain: '💗+',
+      on: () => onBeat(id)
+    }] : []), ...(canCardNow ? [{
+      k: cardSpent ? 'card-spent' : 'card',
+      icon: '🃏',
+      label: 'MFバトルカードで対戦する',
+      sub: 'MFバトルカードにいる助手と対戦すると、ごほうびアップ',
+      go: '誘う',
+      gain: 'アップ',
+      on: () => onCard(id),
+      disabled: !!cardSpent,
+      why: cardSpent ? typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました' : ''
+    }] : []), ...(battleInfo ? [{
+      k: 'masmon-battle',
+      icon: '⚔',
+      label: (battleInfo.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''),
+      sub: battleInfo.sub || '',
+      go: '誘う',
+      on: () => {
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      },
+      disabled: !!battleInfo.disabled,
+      why: battleInfo.why || ''
+    }] : []), ...(succInfo ? [{
+      k: 'monhero-success',
+      icon: '🌱',
+      label: succInfo.label.replace(/^🌱\s*/, ''),
+      sub: succInfo.sub,
+      go: '誘う',
+      on: () => {
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      }
+    }] : [])];
+    let planInfo = null;
+    try {
+      planInfo = typeof assistantLifePlanRowInfo === 'function' ? assistantLifePlanRowInfo(id) : null;
+    } catch (_) {
+      planInfo = null;
+    }
+    const more = [w && w.group ? {
+      k: 'watch',
+      icon: '👀',
+      label: home ? '見守る' : '見守りに行く',
+      short: '見守る',
+      sub: '組のおしゃべりを見る(同じ組は時間帯に1回)',
+      go: '見る',
+      gain: '🤝💗+',
+      on: () => onWatch(w.group),
+      disabled: !canWatch,
+      why: 'この時間帯はもう見守りました'
+    } : {
+      k: 'peek',
+      icon: '👀',
+      label: 'ようすを見る',
+      short: 'ようす',
+      sub: 'ひとりごとや、あなたへのひとこと(時間帯に1回)',
+      go: '見る',
+      on: () => onPeek(id),
+      disabled: !canWatch,
+      why: 'この時間帯はもう見ました'
+    }, ...(onChat && !follow ? [{
+      k: 'chat',
+      icon: asleep ? '💤' : '💬',
+      label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
+      short: 'おしゃべり',
+      sub: '話すと仲良し度が少し上がる(1日の上限あり)',
+      go: '話す',
+      gain: '💗+',
+      on: () => onChat(id, null)
+    }] : []), {
+      k: 'masmon',
+      icon: '🐾',
+      label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
+      short: 'マスモン',
+      sub: '育ち方・編成を見る',
+      go: '見る',
+      on: onMasmon ? () => onMasmon(id) : null,
+      why: 'まだ見られません'
+    }, ...(planInfo ? [{
+      k: 'plan',
+      icon: '📅',
+      label: '次の行き先を決める',
+      short: '予定',
+      sub: planInfo.sub,
+      go: '決める',
+      on: () => assistantLifePlanOpen({
+        who: id
+      })
+    }] : []), ...(furnOn ? [{
+      k: 'furn',
+      icon: '🪑',
+      label: '部屋の家具',
+      short: '家具',
+      sub: `置いてある家具 ${rvFurn.length}個`,
+      go: '開く',
+      on: () => setFurnOpen(true)
+    }] : [])];
+    let trainInfo = null;
+    try {
+      trainInfo = w && w.place === 'battle' && typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+    } catch (_) {
+      trainInfo = null;
+    }
+    const perk = typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['home', 'cardroom', 'studio'].includes(w.place) ? React.createElement(AssistantLifePlacePerk, {
+      life: life,
+      ids: [id],
+      place: w.place,
+      land: land,
+      onGo: onGoPlace
+    }) : null;
+    const hot = trainInfo || perk || atBeat && beatFree && !asleep ? React.createElement(React.Fragment, null, atBeat && beatFree && !asleep && React.createElement(AssistantLifeRoomTypedRow, {
+      k: "beat-free",
+      icon: "🎵",
+      label: "モンヒロビートで会う",
+      sub: "いまモンヒロビートにいるので、券なしで一緒に遊べる",
+      go: "会う",
+      gain: "券なし",
+      on: () => onBeat(id)
+    }), trainInfo && React.createElement("div", {
+      "data-assistant-life-room-train": id
+    }, React.createElement(AssistantLifeRoomTypedRow, {
+      k: "train-watch",
+      icon: "👀",
+      label: "修行を見る",
+      sub: "マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)",
+      go: "見る",
+      on: typeof assistantMasmonTrainWatchOpen === 'function' ? () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      } : null
+    }), React.createElement(AssistantLifeRoomTypedRow, {
+      k: "cheer",
+      icon: "📣",
+      label: `応援する(今日${trainInfo.perDay - trainInfo.left}/${trainInfo.perDay})`,
+      sub: "修行が少し進み、仲良し度も上がる(時間帯に1回)",
+      go: "応援",
+      gain: "💗+",
+      disabled: !trainInfo.canCheer,
+      why: trainInfo.why || '',
+      on: typeof assistantMasmonCheer === 'function' ? () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : r && r.why || '');
+      } : null
+    }), cheerNote && React.createElement("div", {
+      className: "alu-n",
+      "data-assistant-life-room-cheer-msg": id
+    }, cheerNote)), perk) : null;
+    const followNode = follow && onChat ? React.createElement("div", {
+      className: "alu-card",
+      "data-assistant-life-room-follow": follow.kind
+    }, React.createElement("div", {
+      className: "alu-t"
+    }, who.name, "「", follow.text, "」"), React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8,
+        marginTop: 8
+      }
+    }, React.createElement(AluBtn, {
+      onClick: () => onChat(id, follow),
+      "data-assistant-life-room-follow-chat": true
+    }, "💬 おしゃべりする"), React.createElement(AluBtn, {
+      onClick: () => onFollowDone && onFollowDone(),
+      "data-assistant-life-room-follow-bye": true
+    }, "またね"))) : null;
+    const rhythm = (() => {
+      try {
+        const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
+        const rh = ASSISTANT_LIFE_RHYTHM[id];
+        return rh ? `🕰 生活のリズム: ${rh.label}${Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}` : '';
+      } catch (_) {
+        return '';
+      }
+    })();
+    const feel = asleep ? '💤 ぐっすり寝ている' : w && w.reason === 'lonely' ? '💭 さみしそう(だれか来てほしい)' : mood ? `気分: ${mood}` : '';
+    const statusLine = [`${where}${groupNames ? `(${groupNames})` : ''}`, !home && slotDef ? `⏱ ${slotDef.to % 24}時までいる` : '', feel].filter(Boolean).join(' · ');
+    const details = React.createElement("div", {
+      "data-assistant-life-room-details": true,
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement("div", {
+      className: "alu-n"
+    }, "詳しく"), React.createElement(AluRow, {
+      pic: "🤝",
+      text: `友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`,
+      note: "一番仲のいい3人"
+    }), sess ? React.createElement(AluRow, {
+      pic: "🎵",
+      text: `セッションLv${sess.level}`,
+      note: `一緒に ${sess.lives}回`
+    }) : null, rhythm ? React.createElement(AluRow, {
+      pic: "🕰",
+      text: rhythm.replace(/^🕰 /, ''),
+      note: ""
+    }) : null, typeof AssistantLifeRoomTypedLikes === 'function' && React.createElement(AssistantLifeRoomTypedLikes, {
+      id: id
+    }), typeof amgpOn === 'function' && amgpOn() && typeof assistantMasmonNoteOpen === 'function' && React.createElement(AluRow, {
+      pic: "📒",
+      text: "育成ノート",
+      note: "予定を組む・疲れとストレスを見る",
+      action: React.createElement(AluBtn, {
+        onClick: () => assistantMasmonNoteOpen(id),
+        "data-amgp-room-link": true
+      }, "開く")
+    }), soloOn && typeof AssistantLifeRoomTypedCheki === 'function' && React.createElement(AssistantLifeRoomTypedCheki, {
+      id: id
+    }), React.createElement("div", {
+      className: "alu-n",
+      style: {
+        marginTop: 6
+      }
+    }, "今日あったこと"), items.length ? items.map((x, i) => React.createElement(AluRow, {
+      key: i,
+      pic: "📝",
+      text: x.text,
+      note: x.t
+    })) : React.createElement("div", {
+      className: "alu-n"
+    }, "まだありません"));
+    const typedScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
+      id: id,
+      look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+      land: land,
+      people: people,
+      sleepIds: sleepIds,
+      away: away,
+      team: rvTeam,
+      furn: rvFurn,
+      bubble: follow && follow.text ? follow.text : '',
+      title: "",
+      sub: "",
+      onPerson: null,
+      onMasmon: onMasmon ? () => onMasmon(id) : null,
+      dock: null,
+      layoutWho: layoutOn ? id : null
+    }) : null;
+    const canGiveAny = !give.disabled;
+    return React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        zIndex: 25
+      },
+      "data-assistant-life-room-sheet": id
+    }, React.createElement(AssistantLifeRoomTyped, {
+      id: id,
+      who: who,
+      land: land,
+      tabs: typed.tabs,
+      tab: typed.tab,
+      onTab: typed.onTab,
+      onBack: onClose,
+      scene: typedScene,
+      lv: lv,
+      sleeping: asleep,
+      statusLine: statusLine,
+      talk: talk,
+      give: give,
+      play: play,
+      hot: hot,
+      follow: followNode,
+      rel: typeof AssistantLifeRelSheetRow === 'function' ? React.createElement(AssistantLifeRelSheetRow, {
+        id: id,
+        state: roomState,
+        peerSt: peerSt,
+        onMediate: onMediate,
+        onView: onRelView
+      }) : null,
+      more: more,
+      details: details,
+      moreOpen: moreOpen,
+      onMore: () => {
+        ASSISTANT_LIFE_ROOM_MORE.open = !moreOpen;
+        setMoreOpen(!moreOpen);
+      },
+      result: typed.result,
+      onResultClose: typed.onResultClose,
+      nextAfter: canGiveAny ? {
+        label: '🎁 贈る',
+        on: give.on
+      } : null
+    }), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+      id: id,
+      furnItems: furnItems || {},
+      onGiveFurn: onGiveFurn,
+      land: land,
+      onClose: () => setFurnOpen(false),
+      onTalk: (talk2, text) => {
+        setFurnOpen(false);
+        if (onFurnTalk) onFurnTalk(talk2, text);
+      },
+      onLayout: layoutOn ? () => {
+        setFurnOpen(false);
+        setLayoutOpen(true);
+      } : null
+    }), layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && React.createElement(AssistantLifeRoomEditor, {
+      id: id,
+      land: land,
+      onClose: () => setLayoutOpen(false),
+      room: {
+        look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+        people,
+        sleepIds,
+        away,
+        team: rvTeam
+      }
+    }));
+  }
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -120203,6 +120571,25 @@ function AssistantLifeHouse({
     className: "-mx-3"
   }, itemsBody))), roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
+    typed: uiV2 ? {
+      tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+        key,
+        icon,
+        label
+      })),
+      tab,
+      onTab: k => {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+        setGiftOpen(false);
+        setTab(k);
+        setRoomId(null);
+        setFollow(null);
+        setFurnBack(null);
+      },
+      result: aluResult,
+      onResultClose: () => setAluResult(null)
+    } : null,
     onGoPlace: fn => {
       try {
         close();
@@ -120346,7 +120733,7 @@ function AssistantLifeHouse({
       setScene(null);
       const following = !!followAfterRef.current;
       showFollow();
-      if (typedHouse && sc && sc.before && !following) setAluResult({
+      if ((typedHouse || uiV2 && roomId) && sc && sc.before && !following) setAluResult({
         ids: sc.ids,
         before: sc.before,
         title: sc.resultTitle
@@ -120829,6 +121216,290 @@ function AssistantLifeHouseTyped({
       }, "部屋へ")
     });
   }) : null));
+}
+const assistantLifeTypedRoomOn = () => typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedRoom);
+const AssistantLifeRoomTypedRow = ({
+  k,
+  icon,
+  label,
+  sub = '',
+  go = '開く',
+  gain = '',
+  on = null,
+  disabled = false,
+  why = ''
+}) => {
+  const off = disabled || typeof on !== 'function';
+  return React.createElement(AluRow, {
+    pic: icon,
+    text: label,
+    note: off && why ? why : sub,
+    action: React.createElement(AluBtn, {
+      onClick: off ? undefined : on,
+      disabled: off,
+      "data-assistant-life-room-act": k,
+      "data-assistant-life-room-do": k
+    }, go, gain && !off ? ` ${gain}` : '')
+  });
+};
+function AssistantLifeRoomTyped({
+  id,
+  who,
+  land = false,
+  tabs,
+  tab = 'house',
+  onTab,
+  onBack,
+  scene,
+  lv = null,
+  sleeping = false,
+  statusLine = '',
+  talk,
+  give,
+  play = [],
+  hot = null,
+  follow = null,
+  rel = null,
+  more = [],
+  details = null,
+  moreOpen = false,
+  onMore,
+  overlay = null,
+  result = null,
+  onResultClose,
+  nextAfter = null
+}) {
+  const [playOpen, setPlayOpen] = React.useState(false);
+  const [wideOpen, setWideOpen] = React.useState(() => typeof window !== 'undefined' && window.innerWidth >= ALU_WIDE_MIN && window.innerWidth > window.innerHeight * 1.15 && window.innerHeight >= 600);
+  const open = moreOpen || wideOpen;
+  const toggleMore = () => {
+    if (open) {
+      setWideOpen(false);
+      if (moreOpen) onMore();
+    } else onMore();
+  };
+  const pts = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
+  const next = Number.isFinite(pts) && typeof assistantBondNext === 'function' ? assistantBondNext(pts) : null;
+  const hour = typeof timeOfDayJstParts === 'function' ? timeOfDayJstParts(Date.now()).h : new Date().getHours();
+  const head = React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-head": true,
+    "data-assistant-life-bond-road": lv != null ? lv : undefined
+  }, React.createElement("div", {
+    className: "alu-t",
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: '2px 8px'
+    }
+  }, lv != null ? React.createElement("span", {
+    className: "alu-nw"
+  }, "💗 仲良し度 ", React.createElement("b", null, "Lv", lv)) : null, lv != null ? React.createElement("span", {
+    className: "alu-n alu-nw",
+    "data-assistant-life-bond-road-remain": next ? next.remain : undefined
+  }, next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました') : null, React.createElement(AluCond, {
+    id: id,
+    sleeping: sleeping,
+    hour: hour
+  })), statusLine ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: 2
+    },
+    "data-assistant-life-room-where": true
+  }, statusLine) : null);
+  const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
+  let resultNode = null;
+  if (result) {
+    const now = typeof assistantLifeSceneSnap === 'function' ? assistantLifeSceneSnap(result.ids) : {
+      peer: 0,
+      me: null
+    };
+    const b = result.before || {
+      peer: 0,
+      me: null
+    };
+    const dPeer = Math.max(0, Math.round(now.peer - b.peer));
+    const dMe = now.me != null && b.me != null ? Math.max(0, Math.round(now.me - b.me)) : 0;
+    const gains = [...(dMe > 0 ? [{
+      icon: '💗',
+      label: '仲良し度',
+      v: dMe
+    }] : []), ...(dPeer > 0 ? [{
+      icon: '🤝',
+      label: '友情',
+      v: dPeer
+    }] : [])];
+    const nx = nextAfter ? {
+      label: nextAfter.label,
+      onClick: () => {
+        onResultClose();
+        nextAfter.on();
+      }
+    } : {
+      label: '🏡 部屋に戻る',
+      onClick: onResultClose
+    };
+    resultNode = React.createElement("div", {
+      "data-assistant-life-room-result": true
+    }, React.createElement(AluResult, {
+      title: result.title || '結果',
+      line: `${(result.ids || []).map(x => typeof assistantLifeName === 'function' ? assistantLifeName(x) : x).join('・')}${gains.length ? '' : ' · 今日はもう上がりきっています'}`,
+      gains: gains,
+      next: nx,
+      onClose: onResultClose
+    }));
+  }
+  const playSheet = playOpen ? React.createElement(AluSheet, {
+    title: `🎉 ${who.name}を誘う`,
+    gain: "💗 仲良し度 · ごほうび",
+    onClose: () => setPlayOpen(false)
+  }, play.map(p => React.createElement(AssistantLifeRoomTypedRow, _extends({
+    key: p.k
+  }, p, {
+    on: p.on ? () => {
+      setPlayOpen(false);
+      p.on();
+    } : null
+  })))) : null;
+  const sceneFn = box => React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5))
+    },
+    "data-assistant-life-roomview-typed-scene": true
+  }, scene);
+  return React.createElement(AluFrame, {
+    title: `${who.name}の部屋`,
+    onBack: onBack,
+    backProps: {
+      'data-assistant-life-close': undefined,
+      'data-assistant-life-roomview-close': '',
+      'data-assistant-life-room-close': ''
+    },
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    head: head,
+    scene: sceneFn,
+    overlay: resultNode || playSheet || overlay,
+    "data-assistant-life-typed-room": id
+  }, rel, follow, React.createElement(AluGo, {
+    onClick: talk.on,
+    disabled: !!talk.disabled,
+    "data-assistant-life-room-act": "invite",
+    "data-assistant-life-room-do": "invite"
+  }, talk.label, talk.disabled ? '' : ' · 💗+'), talk.disabled && talk.why ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: -4
+    }
+  }, talk.why) : null, React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 8
+    },
+    "data-assistant-life-room-acts": true
+  }, React.createElement(AluBtn, {
+    onClick: give.on,
+    disabled: !!give.disabled,
+    "data-assistant-life-room-act": give.k,
+    "data-assistant-life-room-do": give.k,
+    style: {
+      width: '100%'
+    }
+  }, "🎁 贈る", give.disabled ? '' : ' 💗+'), React.createElement(AluBtn, {
+    onClick: () => setPlayOpen(true),
+    disabled: !playable.length,
+    "data-assistant-life-room-act": "play",
+    "data-assistant-life-room-do": "play",
+    style: {
+      width: '100%'
+    }
+  }, "🎉 誘う", playable.length ? ' ごほうび' : '')), give.disabled && give.why ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: -4
+    }
+  }, "🎁 ", give.why) : null, hot ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-hot": true
+  }, hot) : null, React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-do-list": true
+  }, React.createElement(AluBtn, {
+    onClick: toggleMore,
+    "aria-expanded": open,
+    "data-assistant-life-room-more": true,
+    style: {
+      width: '100%'
+    }
+  }, open ? 'もっと見る ▲' : `もっと見る ▼ ${more.map(m => m.short).filter(Boolean).join('・')}`), open ? React.createElement("div", {
+    "data-assistant-life-room-more-list": true
+  }, more.map(m => React.createElement(AssistantLifeRoomTypedRow, _extends({
+    key: m.k
+  }, m))), details) : null));
+}
+function AssistantLifeRoomTypedLikes({
+  id
+}) {
+  const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  if (!st || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
+  const told = (st.likes && st.likes.told || []).filter(x => x.who === id).slice(-1)[0] || null;
+  const hint = told ? assistantLifeGiftHintLine(id, told.key) : null;
+  const mark = {
+    like: '💗',
+    bad: '💧',
+    unknown: '?'
+  };
+  return React.createElement("div", {
+    "data-assistant-life-gift-likes": id
+  }, React.createElement(AluRow, {
+    pic: "🎁",
+    text: "贈り物の好み",
+    note: `${gifts.length}種類のうち ${known} 分かった`,
+    action: hint ? React.createElement(AluBtn, {
+      onClick: () => assistantLifeGiftToldSeen(id),
+      "data-assistant-life-gift-told": told.key
+    }, "閉じる") : null
+  }), hint ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginBottom: 4
+    }
+  }, "💡 ", hint.t) : null, React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 4
+    }
+  }, gifts.map(g => {
+    const s = assistantLifeGiftShownLike(id, g.key, st);
+    return React.createElement("span", {
+      key: g.key,
+      className: `alu-chip${s === 'like' ? ' ok' : ''}`,
+      "data-assistant-life-gift-like": `${g.key}:${s}`,
+      title: `${g.name} ${ASSISTANT_LIFE_GIFT_LABEL[s]}`
+    }, g.emoji, mark[s] || '');
+  })));
+}
+function AssistantLifeRoomTypedCheki({
+  id
+}) {
+  const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const days = st && st.cheki && st.cheki[String(id)] || [];
+  if (!days.length) return null;
+  return React.createElement("div", {
+    "data-assistant-life-cheki": id
+  }, React.createElement(AluRow, {
+    pic: "📸",
+    text: `チェキ ${days.length}枚`,
+    note: `一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`
+  }));
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
@@ -123887,7 +124558,7 @@ function AssistantLifeRoomScene({
       wordBreak: 'auto-phrase'
     },
     "data-assistant-life-roomview-bubble": true
-  }, bubble), React.createElement("div", {
+  }, bubble), (title || sub || onBack) && React.createElement("div", {
     className: "absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-[#0b1020f0] to-transparent px-3 pb-4",
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))',
@@ -125278,7 +125949,7 @@ const ALU_CSS = `
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
 .alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
-.alu-top .bk{flex:none;min-width:72px;height:36px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
@@ -125395,20 +126066,21 @@ const useAluWide = () => {
 const AluTopBar = ({
   title,
   onBack,
-  now
+  now,
+  backProps = null
 }) => {
   const c = aluClock(now);
   return React.createElement("div", {
     className: "alu-top",
     "data-alu-top": true
-  }, React.createElement("button", {
+  }, React.createElement("button", _extends({
     type: "button",
     className: "bk",
     "data-alu-back": true,
     "data-assistant-life-close": true,
     "aria-label": "戻る",
     onClick: onBack
-  }, "← 戻る"), React.createElement("div", {
+  }, backProps || {}), "← 戻る"), React.createElement("div", {
     className: "ti",
     "data-alu-title": true
   }, title), React.createElement("div", {
@@ -125438,6 +126110,7 @@ const AluTabBar = ({
 const AluFrame = ({
   title,
   onBack,
+  backProps,
   tab,
   onTab,
   tabs,
@@ -125471,7 +126144,8 @@ const AluFrame = ({
   }, rest), React.createElement("style", null, ALU_CSS), React.createElement(AluTopBar, {
     title: title,
     onBack: onBack,
-    now: now
+    now: now,
+    backProps: backProps
   }), React.createElement("div", {
     className: "alu-body"
   }, wide && scene ? React.createElement("div", {
@@ -265513,7 +266187,7 @@ function MonsterHeroGame() {
         scene: "temple",
         compact: true
       })), React.createElement("div", {
-        className: `w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`
+        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`
       }, templeLink(React.createElement(PlusCircle, {
         size: 18
       }), '再生', 'ベースモンから新しいマスモンを再生する', () => {
@@ -283729,7 +284403,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img,.mh-home-background.is-square img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:30%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(5px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}/* XP の字は 8px の等幅で読めなかった(2026-11-22 点検 #7059・r1119-080)。棒の右に 10px で並べ、札の高さは変えない */.mh-home-xp-row{display:flex;align-items:center;gap:4px;margin-top:2px}.mh-home-player-copy small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7e3dc;font-size:10px;line-height:12px;font-weight:700;font-variant-numeric:tabular-nums}.mh-home-xp{flex:1 1 auto;min-width:18px;height:4px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(153px + var(--wal-grow,0px));padding:3px 4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:44px;min-height:44px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}[data-assistant-life-map] .mh-home-facility.management{left:2.52%;top:26.58%}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}[data-assistant-life-map] .mh-home-facility.temple{right:2.94%;top:25.9%}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}[data-assistant-life-map] .mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}[data-assistant-life-map] .mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}[data-assistant-life-map] .mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}[data-assistant-life-map] .mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}[data-assistant-life-map] .mh-home-facility.battle:active>span{transform:scale(.94)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008;text-align:left}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}[data-assistant-life-map] .mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}[data-assistant-life-map] .mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}/* 公式杯の札(2026-10-31 社長・案A)。イベントの札の下・MFバトルカードの札の上(MFバトルカードの札のいつもの段)。イベントの札が無いときは1段上がる。公式杯の札があるときは、MFバトルカードの札は1段下(below-tour) */.mh-home-tour-banner{display:flex;align-items:center;gap:6px;max-width:min(calc(100% - 150px),240px);padding:3px 10px 3px 7px;border:1.5px solid #fde68a;border-radius:13px;background:linear-gradient(135deg,#78350fee,#b45309ee 45%,#1e1b4bee);color:#fffbeb;text-align:left;box-shadow:0 0 0 2px #f59e0b55,0 3px 10px #0008}.mh-home-tour-banner>span:first-child{font-size:19px;line-height:1}.mh-home-tour-banner>span:last-child{display:flex;min-width:0;flex-direction:column;gap:1px;line-height:1.2}.mh-home-tour-banner b{overflow:hidden;font-size:11.5px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner small{display:block;overflow:hidden;font-size:9.5px;font-weight:800;color:#fde68a;text-overflow:ellipsis;white-space:nowrap}.mh-home-tour-banner em{margin-left:5px;padding:0 5px;border-radius:999px;background:#fbbf24;color:#3d2305;font-style:normal;font-size:9px;font-weight:900;line-height:1.5}.mh-home-tour-banner:active{transform:scale(.96);filter:brightness(1.15)}[data-assistant-life-map] .mh-home-card-battle.below-tour{bottom:min(calc(33% - 84px),calc(44.75% - 170px))}[data-assistant-life-map] .mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}[data-assistant-life-map] .mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}[data-assistant-life-map] .mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){[data-assistant-life-map] .mh-home-card-battle{bottom:12px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) *//* 横向きの公式杯の札は MFバトルカードの札のすぐ上、イベントの札はその上 */}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも

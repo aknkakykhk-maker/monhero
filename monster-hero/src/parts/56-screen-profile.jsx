@@ -215,7 +215,7 @@ function ProfileScreen({
           {onSelectBreederGender&&!onboardingPreview&&(
             <div className="mt-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5" data-profile-gender>
               <div className="flex items-center gap-2">
-                <small className="shrink-0 text-[10px] font-black leading-tight text-sky-300">性別<span className="block text-[9px] font-bold text-slate-400">非公開</span></small>
+                <small className="shrink-0 text-[11px] font-black leading-tight text-sky-300">性別</small>
                 <div className="grid flex-1 grid-cols-3 gap-1.5" role="radiogroup" aria-label="性別">
                   {[['male','男の子'],['female','女の子'],['none','答えない']].map(([id,label])=>(
                     <button key={id} type="button" role="radio" aria-checked={breederGender===id} data-gender={id} onClick={()=>onSelectBreederGender(id)}
@@ -223,6 +223,8 @@ function ProfileScreen({
                   ))}
                 </div>
               </div>
+              {/* 左の「非公開」が「答えない」と同じ意味に読めた(2026-11-22 点検 #7059・r1119-080)。ほかの人に見せないことは下に1行で書く */}
+              <p className="mt-1 text-[10px] font-bold leading-tight text-slate-400">ほかの人には見せません</p>
             </div>
           )}
           {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
