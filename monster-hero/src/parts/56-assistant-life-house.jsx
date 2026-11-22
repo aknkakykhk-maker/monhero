@@ -1377,6 +1377,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
   // 段11: 新UIのフレンドのタブを型に載せる(56-assistant-life-friend.jsx の AssistantLifeVisitTyped・2026-11-22 案A)。検査だけ window.__mhAssistantLifeUntypedVisit で前のページを開く
+  // 段12: 下のタブ5つ目「🐾 マスモン」(56-assistant-life-house-typed.jsx の AssistantLifeMasmonTyped・2026-11-22 案A)。前の画面は無い
+  const typedMasmon = uiV2 && tab === 'masmon' && typeof AssistantLifeMasmonTyped === 'function' && typeof AluFrame === 'function';
   const typedVisit = uiV2 && tab === 'visit' && typeof AssistantLifeVisitTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedVisit);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
@@ -1660,7 +1662,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
       {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
-      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit || typedMasmon ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
@@ -1678,6 +1680,10 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
               <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
             </>}/>
+        ) : typedMasmon ? (
+          <AssistantLifeMasmonTyped ids={ids.filter(id => metSet.has(id))} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            bondLvOf={(id) => (typeof bondLevelOf === 'function' ? bondLevelOf(id) : null)} onSheet={(id) => setMasmonId(id)} onProfile={() => { setTab('profile'); setRoomId(null); }}/>
         ) : typedVisit ? (
           <AssistantLifeVisitTyped life={life} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
             onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}/>
