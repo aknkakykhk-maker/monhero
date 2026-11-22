@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>段9 町の案</title>
+<!-- 助手ライフの作り直し 段9(町を型に載せる)の案の見本。?plan=a|b|c。撮るのは tools/assistant/life-town-plan-shoot.js
+     型の見た目は本物の ALU_CSS(56-assistant-life-ui.jsx)を読み込んで使う。場所の位置は places.json(いまの町を本物の画面で測った値)。
+     データは見本(15:00・ドラ・ソラシド・えるびんがMFバトルカード、ももすけがモンヒロバトル、きゅうこが図書室、みゅあ・ききがおやつ屋さん、あつが家) -->
+<style id="alu"></style>
+<style>
+html,body{margin:0;height:100%;background:#0f0d24;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+#app{position:relative;width:100vw;height:100vh}
+.map{position:relative;overflow:hidden;border-radius:14px;border:1px solid #3b3566;flex:none}
+.map .bg{position:absolute;left:0;top:0;width:390px;height:844px;background:url(../../../../monster-hero/data/images/home-background.jpg) center/cover;transform-origin:0 0}
+.pl{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;white-space:nowrap}
+.pl .fc{display:flex;gap:2px}
+.pl .fc img{width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:#312e5a;object-fit:cover}
+.pl .nm{font-size:13px;font-weight:900;color:#fff;background:#151130e6;border:1px solid #475569;border-radius:999px;padding:2px 10px;line-height:1.5}
+.pl.pk .nm{border-color:#fde047;box-shadow:0 0 0 2px #fde04755}
+.pl .pk2{font-size:11px;font-weight:900;border-radius:999px;padding:0 8px;line-height:1.6}
+.pk-h{background:#fbcfe8;color:#831843}.pk-t{background:#fde68a;color:#78350f}
+.pl.dim .nm{opacity:.55}
+.leg{display:flex;gap:6px;flex-wrap:wrap}
+.float-go{position:absolute;left:12px;right:12px;bottom:12px}
+.hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);white-space:nowrap}
+.tag{position:absolute;right:10px;top:-10px;font-size:11px;font-weight:900;background:#111;color:#fde047;border-radius:999px;padding:0 8px}
+</style></head>
+<body><div id="app"></div>
+<script>
+(async () => {
+  const src = await (await fetch('../../../../monster-hero/src/parts/56-assistant-life-ui.jsx')).text();
+  document.getElementById('alu').textContent = (src.match(/const ALU_CSS = `([\s\S]*?)`;/) || [])[1] || '';
+  const places = (await (await fetch('places.json')).json()).places;
+  const P = Object.fromEntries(places.map(p => [p.place, p]));
+  const plan = (new URLSearchParams(location.search).get('plan') || 'a').toLowerCase();
+  const face = (id) => `../../../../monster-hero/images/assistant/face/${id === 'mua' ? 'myua' : id}_normal.PNG`;
+  const NAME = { mua: 'みゅあ', kiki: 'きき', dra: 'ドラ', sorashido: 'ソラシド', erubin: 'えるびん', momosuke: 'ももすけ', kyuko: 'きゅうこ', atsu: 'あつ' };
+  // 場所: 名前・いる助手・得(2種類: 💗 多め / 🎟 券・割引)
+  const SPOTS = [
+    { k: 'cardroom', nm: '🃏 MFバトルカード', who: ['dra', 'sorashido', 'erubin'], perk: ['t', '🎟 ごほうび×1.375'], doing: 'カードを研究' },
+    { k: 'battle', nm: '⚔️ モンヒロバトル', who: ['momosuke'], perk: ['h', '💗 多め'], doing: 'マスモンの修行' },
+    { k: 'library', nm: '📚 図書室', who: ['kyuko'], perk: null, doing: '読書' },
+    { k: 'cafe', nm: '🍰 おやつ屋さん', who: ['mua', 'kiki'], perk: null, doing: 'ひと休み' },
+    { k: 'home', nm: '🏡 助手の家', who: ['atsu'], perk: null, doing: '部屋でぼーっと' },
+    { k: 'studio', nm: '🎵 モンヒロビート', who: [], perk: null }, { k: 'temple', nm: '✨ 神殿', who: [], perk: null }, { k: 'market', nm: '🛍 マーケット', who: [], perk: null },
+    { k: 'plaza', nm: '⛲ 広場', who: [], perk: null }, { k: 'hill', nm: '🌄 ひなたの丘', who: [], perk: null }, { k: 'garden', nm: '🌷 中庭', who: [], perk: null },
+    { k: 'clinic', nm: '🏥 病院', who: [], perk: null }, { k: 'ranch', nm: '🥚 M/B管理', who: [], perk: null },
+  ];
+  const chip = (pk) => pk ? `<span class="pk2 ${pk[0] === 'h' ? 'pk-h' : 'pk-t'}">${pk[1]}</span>` : '';
+  // 地図: 前の町(390×844 いっぱい)の絵を s 倍・(ox,oy) ずらして箱に入れる。札は縮めない(字は型の段のまま)
+  const mapBox = (w, h, s, ox, oy, { onlyPeople = false, faces = true } = {}) => {
+    const pins = SPOTS.filter(x => P[x.k] && (!onlyPeople || x.who.length || x.perk)).map(x => {
+      const p = P[x.k]; const left = p.x * s + ox, top = p.y * s + oy;
+      if (left < 30 || left > w - 30 || top < 20 || top > h - 16) return '';
+      return `<div class="pl ${x.perk ? 'pk' : ''} ${!x.who.length && !x.perk ? 'dim' : ''}" style="left:${Math.min(w - 70, Math.max(70, left))}px;top:${top}px">`
+        + (faces && x.who.length ? `<div class="fc" aria-hidden="true">${x.who.map(id => `<img src="${face(id)}" alt="">`).join('')}</div>` : '')
+        + `<span class="nm">${x.nm}${x.who.length && !faces ? ` ${x.who.length}人` : ''}</span>${chip(x.perk)}</div>`;
+    }).join('');
+    return `<div class="map alu-scene" style="width:${w}px;height:${h}px"><div class="bg" aria-hidden="true" style="transform:translate(${ox}px,${oy}px) scale(${s})"></div>${pins}</div>`;
+  };
+  const top = `<div class="alu-top"><button class="bk">← 戻る</button><div class="ti">町</div><div class="ck"><b>15:00 昼</b><small>次に動く 16:00</small></div></div>`;
+  const tabs = `<div class="alu-tabs">${[['🏡', '家'], ['🗺', '町', 1], ['🤝', '友情'], ['🏠', 'フレンド'], ['📖', '紹介']].map(([i, l, on]) => `<button class="${on ? 'on' : ''}"><i>${i}</i>${l}</button>`).join('')}</div>`;
+  const row = (pic, text, note, btn) => `<div class="alu-row"><div class="pic">${pic}</div><div class="tx"><div class="alu-t">${text}</div>${note ? `<div class="alu-n">${note}</div>` : ''}</div>${btn ? `<button class="alu-btn">${btn}</button>` : ''}</div>`;
+  const img = (id) => `<img src="${face(id)}" alt="" style="width:44px;height:44px;object-fit:cover">`;
+  const go = `<button class="alu-go">🃏 MFバトルカードへ行く — 🎟 ごほうび×1.375</button>`;
+  const W = innerWidth, mainW = W - 24;
+  let body = '';
+  if (plan === 'a') {
+    // 案A 配置図どおり: 地図を大きく(中身の半分)・下に主なボタンと、その場所にいる助手の行(部屋へ)
+    const h = 400;
+    body = `<div class="alu-main">${mapBox(mainW, h, 0.94, -1, -150)}
+      ${go}
+      <div class="alu-card"><div class="alu-h">MFバトルカードにいる助手</div>
+        ${['dra', 'sorashido', 'erubin'].map(id => row(img(id), NAME[id], 'カードを研究', '部屋へ')).join('')}</div>
+      <div class="alu-card">${row('⚔️', 'モンヒロバトル', 'ももすけ · マスモンの修行 · 💗 多め', '見る')}</div></div>`;
+  } else if (plan === 'b') {
+    // 案B 型どおり: 地図は画面の3割で、主なボタンの行き先のあたりだけ切り出す(町の地図は3割の高さに縮めきれない)・主なボタン・場所の札の一覧(得のある順・行く)
+    const h = 250;
+    body = `<div class="alu-main">${mapBox(mainW, h, 0.94, -1, -(P.cardroom.y * 0.94 - 150), { onlyPeople: true, faces: true })}
+      ${go}
+      <div class="alu-card"><div class="alu-h">いま助手がいる場所</div>
+        <div class="leg alu-n" style="margin:4px 0 2px">${chip(['h', '💗 多め'])}${chip(['t', '🎟 券・割引'])} が付いた場所は、いま行くと得</div>
+        ${SPOTS.filter(x => x.who.length).map(x => row(x.nm.split(' ')[0], `${x.nm.split(' ').slice(1).join(' ')} ${x.perk ? chip(x.perk) : ''}`, `${x.who.map(id => NAME[id]).join('・')} · ${x.doing}`, x.k === 'home' ? '家へ' : '行く')).join('')}</div></div>`;
+  } else {
+    // 案C 地図いっぱい: 上の帯と下のタブのあいだを地図にし、主なボタンだけ地図の下に浮かせる。場所を押すと型の窓(いる助手の行・行く)
+    const h = innerHeight - 48 - 56;
+    body = `<div style="position:relative;flex:1;min-height:0">${mapBox(W, h, 1, 0, -48)}
+      <div class="hint alu-chip">場所を押すと、いる助手と得が出ます</div>
+      <div class="float-go">${go}</div></div>`;
+  }
+  document.getElementById('app').innerHTML = `<div class="alu" data-plan="${plan}">${top}<div class="alu-body" style="${plan === 'c' ? 'flex-direction:column' : ''}">${body}</div>${tabs}</div>`;
+})();
+</script></body></html>

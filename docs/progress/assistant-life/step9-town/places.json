@@ -1,0 +1,86 @@
+{
+ "view": {
+  "w": 390,
+  "h": 844
+ },
+ "places": [
+  {
+   "place": "ranch",
+   "x": 64,
+   "y": 246,
+   "label": "M/B管理 モンスター・編成"
+  },
+  {
+   "place": "temple",
+   "x": 341,
+   "y": 239,
+   "label": "神殿"
+  },
+  {
+   "place": "market",
+   "x": 333,
+   "y": 501,
+   "label": "マーケット"
+  },
+  {
+   "place": "battle",
+   "x": 195,
+   "y": 805,
+   "label": "モンヒロバトル 得"
+  },
+  {
+   "place": "home",
+   "x": 62,
+   "y": 334,
+   "label": "🏡 助手ライフ みんなの家"
+  },
+  {
+   "place": "studio",
+   "x": 64,
+   "y": 437,
+   "label": "🎵 モンヒロビート"
+  },
+  {
+   "place": "cardroom",
+   "x": 71,
+   "y": 545,
+   "label": "🃏 MFバトルカード"
+  },
+  {
+   "place": "hill",
+   "x": 181,
+   "y": 109,
+   "label": "🌄 ひなたの丘"
+  },
+  {
+   "place": "library",
+   "x": 300,
+   "y": 173,
+   "label": "📚 図書室"
+  },
+  {
+   "place": "cafe",
+   "x": 290,
+   "y": 341,
+   "label": "🍰 おやつ屋さん"
+  },
+  {
+   "place": "garden",
+   "x": 338,
+   "y": 389,
+   "label": "🌷 中庭"
+  },
+  {
+   "place": "plaza",
+   "x": 196,
+   "y": 392,
+   "label": "⛲ 広場"
+  },
+  {
+   "place": "clinic",
+   "x": 247,
+   "y": 473,
+   "label": "🏥 病院"
+  }
+ ]
+}
