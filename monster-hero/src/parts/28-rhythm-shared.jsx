@@ -426,6 +426,12 @@ const RhythmOrientationButton=({className=''})=>{
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
     }finally{setBusy(false);}
   };
+  // PC(マウスで操作する広い画面)では出さない。モニターは回せないので、押すと画面全体が横倒しになって読めなかった(2026-11-22 r1119-094・点検 N58)。
+  // ただし絵を回している最中は、元へ戻せるよう出したままにする。試験のブラウザはタッチが無くても電話の大きさなら出す(短い辺 600px 未満)
+  const pcLike=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    &&Math.min(window.innerWidth||0,window.innerHeight||0)>=600;
+  const rotatedNow=typeof RHYTHM_VIEW_ROTATION==='object'&&!!RHYTHM_VIEW_ROTATION&&typeof RHYTHM_VIEW_ROTATION.active==='function'&&RHYTHM_VIEW_ROTATION.active();
+  if(pcLike&&!rotatedNow&&note==='')return null;
   return <div className={`relative shrink-0 ${className}`}>
     <button data-rhythm-orientation-toggle data-orientation={landscape?'landscape':'portrait'}
       aria-label={label} title={label} onClick={toggle} disabled={busy} aria-busy={busy?'true':undefined}
@@ -433,9 +439,11 @@ const RhythmOrientationButton=({className=''})=>{
       <span aria-hidden="true" className="text-base leading-none">🔄</span>
       <span className="text-[9px] font-black leading-none">{landscape?'縦':'横'}</span>
     </button>
-    {note!==''&&<p data-rhythm-orientation-note onClick={()=>setNote('')}
-      style={{whiteSpace:'pre-line'}}
-      className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg">{note}<span className="mt-1 block text-[8px] font-black text-amber-300/80">タップで閉じる</span></p>}
+    {/* 案内はボタンの下に箱で出していたが、フリーマッチ・ランキングのボタンや部屋のメンバーの枠、ルームコードに重なった(2026-11-22 r1119-094・点検 N59・N62)。
+        画面の上の端に細い帯で出す(押すと閉じる)。回しているときは回した画面の上の端になる */}
+    {note!==''&&<p data-rhythm-orientation-note role="status" onClick={()=>setNote('')}
+      style={{whiteSpace:'pre-line',top:'calc(var(--mh-sa-top, 0px) + 4px)',left:'calc(var(--mh-sa-left, 0px) + 8px)',right:'calc(var(--mh-sa-right, 0px) + 8px)'}}
+      className="fixed z-[90000] mx-auto max-w-lg rounded-xl border border-amber-300/60 bg-slate-950/95 px-3 py-1.5 text-[10px] font-bold leading-snug text-amber-100 shadow-lg">{note}<span className="mt-1 block text-[8px] font-black text-amber-300/80">タップで閉じる</span></p>}
   </div>;
 };
 // ============================================================================
