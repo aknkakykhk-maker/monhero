@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d666c685aae3f469
+// source-sha256: 1087dea92b1f7b49
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102523,9 +102523,9 @@ function RhythmMultiScreenBody({
     onClick: openRanking,
     className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`
   }, React.createElement("span", {
-    className: "text-lg"
+    className: "text-lg landscape:text-sm"
   }, "🏆"), React.createElement("span", {
-    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100"
+    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100 landscape:mt-0 landscape:text-[8px]"
   }, "ランキング"));
   const rankingWideButton = (extra = '') => rankingSupport && React.createElement("button", {
     "data-rhythm-multi-ranking": true,
