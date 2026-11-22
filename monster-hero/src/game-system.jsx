@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cfb94a1158e46b2a
+// generated-sha256: 77606dde3b7a1f62
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15484,7 +15484,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
           {/* 名前は小さい吹き出しでも 11px(2026-11-22 点検 #7059「みゅあ」が 9px で読めない・r1119-080) */}
-          <span className="block font-black tracking-widest text-[11px]" style={{ color }}>{who.name}</span>
+          <span className="block font-black tracking-widest text-[11px]" style={{ color, lineHeight: compact ? '13px' : '15px' }}>{who.name}</span>{/* 行の高さは 9px・10px のときと同じ(吹き出しの高さを変えない。HOME の細いバナーに重なった) */}
           {/* maxLines … セリフをこの行数で切る(0なら切らない)。HOMEは吹き出しの下に施設の札があるので2行まで
               (2026-10-23 社長「MB管理に助手のコメントが被ってくる」)。全文は「タップで詳しく」で開く画面の上に出る */}
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
