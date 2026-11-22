@@ -12,22 +12,36 @@
 'use strict';
 
 // 端末の大きさ(依頼文: iPhone 縦 390×844・横 844×390・PC)
+// sa … iPhone の切り欠きの余白(px)。ブラウザに env(safe-area-inset-*) として効かせて撮る(2026-11-22 社長の iPhone で、助手ライフの部屋の上の帯が時刻と重なり「戻る」が押せなかった。
+//   それまでの撮影は切り欠きの余白なしで、気づけなかった)。縦: 上47・下34 / 横: 左右47・下21
 const SIZES = [
-  { tag: 'tate', w: 390, h: 844, name: '縦' },
-  { tag: 'yoko', w: 844, h: 390, name: '横' },
-  { tag: 'pc', w: 1280, h: 800, name: 'PC' },
-  { tag: 'rot', w: 390, h: 844, name: '🔄横', rot: true },
+  { tag: 'tate', w: 390, h: 844, name: '縦', sa: { top: 47, bottom: 34, left: 0, right: 0 } },
+  { tag: 'yoko', w: 844, h: 390, name: '横', sa: { top: 0, bottom: 21, left: 47, right: 47 } },
+  { tag: 'pc', w: 1280, h: 800, name: 'PC', sa: { top: 0, bottom: 0, left: 0, right: 0 } },
+  { tag: 'rot', w: 390, h: 844, name: '🔄横', rot: true, sa: { top: 47, bottom: 34, left: 0, right: 0 } },
 ];
 const DEFAULT_SIZES = ['tate', 'yoko', 'pc'];
 const BEAT_SIZES = ['tate', 'yoko', 'pc', 'rot'];
 
-// 助手ライフの部屋: 家を開いて、いちばん上の部屋を押す
-const lifeRoom = async (s) => {
+// 助手ライフを HOME から開く
+const lifeOpen = async (s) => {
   const open = await s.page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.getAttribute('aria-label') || x.innerText || '').trim() === '助手ライフ'); if (b) b.click(); return !!b; });
   if (!open) return false;
   await s.wait(1800); await s.dismissOverlays(10);
+  return true;
+};
+// 助手ライフの部屋: 家を開いて、いちばん上の部屋を押す
+const lifeRoom = async (s) => {
+  if (!(await lifeOpen(s))) return false;
   const ok = await s.page.evaluate(() => { const b = document.querySelector('[data-assistant-life-room]'); if (b) b.click(); return !!b; });
   await s.wait(1200);
+  return ok;
+};
+// 助手ライフの下のタブ(where=町・friends=友情・visit=フレンド・profile=紹介)
+const lifeTab = (k) => async (s) => {
+  if (!(await lifeOpen(s))) return false;
+  const ok = await s.page.evaluate((key) => { const b = [...document.querySelectorAll(`[data-assistant-life-icon="${key}"]`)].find((x) => x.getClientRects().length); if (b) b.click(); return !!b; }, k);
+  await s.wait(1500);
   return ok;
 };
 
@@ -41,6 +55,9 @@ const BEAT_STATES = {
   // フルコンボ(新記録なし)
   fc: { ...BIG, score: 951200, judgments: { MARVELOUS: 250, EXCELLENT: 70, GREAT: 9, GOOD: 2, BAD: 0, MISS: 0 }, isNewRecord: false, cleared: true, fullCombo: true, allExcellent: false, allMarvelous: false },
 };
+
+// 助手ライフで歩き回る絵(止めても毎回ちがう)
+const LIFE_MOVE = '[data-assistant-life-room-masmon-pet],[data-assistant-life-roomview-masmon]';
 
 const SCENES = [
   // ---- HOME ----
@@ -57,6 +74,10 @@ const SCENES = [
   // ---- 助手ライフ ----
   { id: 'life-top', area: '助手ライフ', name: '助手ライフ(家)', kind: 'walk', hide: '[data-assistant-life-room-masmon-pet]' }, // 部屋の中を歩くマスモン
   { id: 'life-room', area: '助手ライフ', name: '助手ライフ(部屋)', kind: 'walk', go: lifeRoom, hide: '[data-assistant-life-room-masmon-pet],[data-assistant-life-roomview-masmon]' },
+  { id: 'life-town', area: '助手ライフ', name: '助手ライフ(町)', kind: 'walk', go: lifeTab('where'), hide: LIFE_MOVE },
+  { id: 'life-bond', area: '助手ライフ', name: '助手ライフ(友情)', kind: 'walk', go: lifeTab('friends'), hide: LIFE_MOVE },
+  { id: 'life-friend', area: '助手ライフ', name: '助手ライフ(フレンド)', kind: 'walk', go: lifeTab('visit'), hide: LIFE_MOVE },
+  { id: 'life-profile', area: '助手ライフ', name: '助手ライフ(紹介)', kind: 'walk', go: lifeTab('profile'), hide: LIFE_MOVE },
   // ---- モンヒロビート ----
   { id: 'beat-top', area: 'モンヒロビート', name: 'モンヒロビート(入口)', kind: 'walk' },
   { id: 'beat-songs', area: 'モンヒロビート', name: '曲えらび', kind: 'walk' },
