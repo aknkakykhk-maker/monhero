@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7dff35ead5dbfbf0
+// source-sha256: eaecaf62555e1931
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6536,6 +6536,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_zenbu_hissatsuwaza',
+  name: '全部必殺技でつ( `･ω･)',
+  creator: 'オリジナル',
+  src: 'audio/bgm-zenbu-hissatsuwaza.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_walkure',
   name: 'ワルキューレ',
   creator: 'ALHAMBRA',
@@ -6547,6 +6554,13 @@ const BGM_TRACKS = [{
   name: 'ワルキューレ short ver.',
   creator: 'ALHAMBRA',
   src: 'audio/bgm-walkure-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_kimimachi_loop',
+  name: 'きみ待ち♡ループ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-kimimachi-loop.mp3',
   gain: 1,
   loop: true
 }, {
@@ -8385,6 +8399,7 @@ const Audio_ = (() => {
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
+    "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
@@ -8447,6 +8462,7 @@ const Audio_ = (() => {
     "audio/bgm-walkure-short.mp3": "4ac3e2f2af3e",
     "audio/bgm-walkure.mp3": "c0643f725dff",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
+    "audio/bgm-zenbu-hissatsuwaza.mp3": "5b91503c1743",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1"
@@ -15189,6 +15205,10 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   }
 });
 const changelogTypeOf = entry => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+const changelogEventUpcoming = (entry, nowMs = Date.now()) => {
+  const startMs = Date.parse(entry && typeof entry.eventStartAt === 'string' ? entry.eventStartAt : '');
+  return Number.isFinite(startMs) && Number(nowMs) < startMs;
+};
 const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
@@ -54326,6 +54346,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
+    'listen:kimimachi_loop': [['excited', '1:00でいきなりいちばん強くなるの！ ここ、まぢテンション上がるー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -54380,7 +54401,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['surprise', '6分以上あるの！？ 3:13のサビまで、わくわくがずっと続くぢゃん♪']],
     'listen:evans': [['surprise', '0:59でいきなり強くなるとこ、ドキッとするぢゃんｗ']],
     'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']],
-    'listen:walkure': [['excited', '1:37でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']]
+    'listen:walkure': [['excited', '1:37でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']],
+    'listen:zenbu_hissatsuwaza': [['excited', '1:31からいちばん強いの！ 最後まで全開で駆け抜けるやつなのー♪']]
   },
   kiki: {
     join: [['happy', '{name}、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
@@ -54421,6 +54443,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
+    'listen:kimimachi_loop': [['normal', '頭の静かなところから、少しずつ近づいてくる感じがかわいいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -54475,7 +54498,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['happy', '最初の48秒、静かに広がっていくところが美しいでつ']],
     'listen:evans': [['normal', '0:27で静かになるところ、きれいな間ですね']],
     'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
-    'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']]
+    'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']],
+    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところで一回ひと息つけるでつ。そこからまた全力でつ']]
   },
   momosuke: {
     join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
@@ -54516,6 +54540,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
+    'listen:kimimachi_loop': [['excited', '1:00と2:02と2:32、いちばん強いところが3回あるよ♡ 何回でも会いに来てね♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -54570,7 +54595,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['excited', '3:13から6秒だけのサビ！！ 一瞬だけど、そこがピーク！！']],
     'listen:evans': [['excited', '1:33からのサビ！！ 短いけど、ぎゅっと詰まってるの！！']],
     'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']],
-    'listen:walkure': [['excited', '2:20も2:39もいちばん強い！ ももはこの勢いが大好き♡']]
+    'listen:walkure': [['excited', '2:20も2:39もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:zenbu_hissatsuwaza': [['excited', 'サビは1:31から最後までだよ♡ ずっと最高潮で止まらないよ♡']]
   },
   dra: {
     join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', '{name}、今日もよろしくな']],
@@ -54611,6 +54637,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
+    'listen:kimimachi_loop': [['happy', 'BPM167で弾むように進むな。2分42秒、最後まで走り抜けるぞ']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -54665,7 +54692,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['surprise', '6分25秒だぞ。これはもう、長い長い冒険だな']],
     'listen:evans': [['surprise', '2分もないのにLv.44だぞ。短くて濃い冒険だな']],
     'listen:humanoid': [['troubled', 'Lv.50だぞ。短いけど、おでには大冒険だな']],
-    'listen:walkure': [['normal', '11分32秒もある長い冒険だな。BPM216で駆け抜けるからな']]
+    'listen:walkure': [['normal', '11分32秒もある長い冒険だな。BPM216で駆け抜けるからな']],
+    'listen:zenbu_hissatsuwaza': [['happy', 'BPM193の全力疾走だな。2分足らずで一気に突っ切るぞ']]
   },
   atsu: {
     join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たよ！ 今日もやろ笑']],
@@ -54706,6 +54734,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
+    'listen:kimimachi_loop': [['happy', '2:22で一回静かになってから、2:32でもう一回いちばん強くなるのずるいね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -54760,7 +54789,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['happy', '5:01でもう一回いちばん強くなって、そこから締めに向かう笑']],
     'listen:evans': [['happy', '1:45ですっと静かに締めるとこ、かっこいい笑']],
     'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']],
-    'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']]
+    'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']],
+    'listen:zenbu_hissatsuwaza': [['happy', '1:45でもう一回いちばん強くなって、そのまま締めるのいいね笑']]
   },
   kyuko: {
     join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
@@ -54801,6 +54831,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
+    'listen:kimimachi_loop': [['happy', '静か→ふつう→いちばん強いを何度もくり返す構成なんだよね〜 名前どおりループしてる笑']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -54855,7 +54886,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['normal', '6分を、静かな所と強い所で細かく区切ってる構成なんだよねぇ']],
     'listen:evans': [['happy', '好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑']],
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
-    'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']]
+    'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']],
+    'listen:zenbu_hissatsuwaza': [['happy', '0:34で強めに入って、1:03で一回静かにして、1:31で爆発する構成なんだよね〜']]
   },
   sorashido: {
     join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
@@ -54896,6 +54928,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
+    'listen:kimimachi_loop': [['normal', 'BPM167です。強い音が32%・・・！ 軽やかなのに芯のある音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -54950,7 +54983,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けますよ']],
     'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
     'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']],
-    'listen:walkure': [['normal', 'BPM216で3460ノーツ！ 強い音54%・軽い音3%、力で押し切る配分だぜ・・・！']]
+    'listen:walkure': [['normal', 'BPM216で3460ノーツ！ 強い音54%・軽い音3%、力で押し切る配分だぜ・・・！']],
+    'listen:zenbu_hissatsuwaza': [['normal', 'BPM193です。強く打つ音が46%・・・！ 叩きごたえのある音です']]
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -54991,6 +55025,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
+    'listen:kimimachi_loop': [['normal', '1:31から強めになって、2:02へつながっていく流れがきれいだね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -55045,7 +55080,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:altar_world_tree': [['happy', '好きな曲なんだ。4:00の静かな所、何度聞いても落ち着くね']],
     'listen:evans': [['happy', '1:45で静かに終わる所、聞き終わってほっとするね']],
     'listen:humanoid': [['normal', '1:27で強めに落ちる所、少しほっとできるね']],
-    'listen:walkure': [['normal', '5:14や6:33の静かな所は落ち着くね。長い曲だし、そこで息を整えようかな']]
+    'listen:walkure': [['normal', '5:14や6:33の静かな所は落ち着くね。長い曲だし、そこで息を整えようかな']],
+    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところ、ここで落ち着いて息を整えようね']]
   }
 });
 const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
@@ -253473,14 +253509,16 @@ function MonsterHeroGame() {
         color: '#ffedd5'
       }
     }, React.createElement("span", {
+      "data-changelog-pinned-badge": true,
       style: {
         background: '#f97316',
         color: '#1c1917',
         borderRadius: 999,
         padding: '1px 8px',
-        fontSize: 11
+        fontSize: 11,
+        flexShrink: 0
       }
-    }, typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉', " 開催中"), React.createElement("span", {
+    }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
       "data-changelog-pinned-title": true,
       style: {
         flex: 1,

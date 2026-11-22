@@ -168,12 +168,16 @@
   "beyond_the_same_sky/HELL": 22,
   "beyond_the_same_sky_short/MASTER": 7,
   "beyond_the_same_sky_short/HELL": 19,
+  "zenbu_hissatsuwaza/MASTER": 0,
+  "zenbu_hissatsuwaza/HELL": 0,
   "desert_crown/MASTER": 7,
   "desert_crown/HELL": 0,
   "walkure/MASTER": 1,
   "walkure/HELL": 10,
   "walkure_short/MASTER": 0,
-  "walkure_short/HELL": 1
+  "walkure_short/HELL": 1,
+  "kimimachi_loop/MASTER": 0,
+  "kimimachi_loop/HELL": 0
  },
  "history": [
   {
@@ -190,6 +194,16 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 4
+  },
+  {
+   "at": "2026-11-22T11:33",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 2
+  },
+  {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
+   "changed": 2
   }
  ]
 }
