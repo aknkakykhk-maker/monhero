@@ -503,6 +503,13 @@ const MSX_MM_CSS = `
 .msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
 .msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
 .msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
+/* 詳細の下は「貸し出す」「お別れ」「閉じる」の3段で約170pxを使い、アシストの札や技の段が切れていた(API 総点検① 2026-11-23 X4・X9・X10・X12)。
+   貸し出すとお別れを1行に並べて2段にし、空いた高さを中身に回す。貸し出すは押せないボタンに見えない色の主ボタンにする */
+.msx .msx-md-foot:has(>.mm-acts){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-hint{grid-column:1/-1}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-acts{margin-top:4px}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-bye-row{margin-top:4px}
+.msx .mm-acts button{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff;box-shadow:0 2px 0 #9a3412}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
