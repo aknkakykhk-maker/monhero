@@ -22,6 +22,8 @@
 //   ・CSS の動き(animation・transition)は止める / 動画は隠す
 //   ・それでも動く所(JS で動かす粒・歩く絵など)は、同じ画面を間をあけて3回撮り、変わった画素を「動く所」として比べる範囲から外す
 //   ・モンヒロビートの演奏中は、曲の時計を決まった秒で止めて撮る
+// 【切り欠き】iPhone の切り欠きの余白(縦: 上47・下34 / 横: 左右47・下21)を効かせて撮る。押す物(戻る・タブ・下のボタン)が切り欠きの範囲に入っていたら、
+//   main に無く枝で新しく入った物は NG、main にもある物は「前からある」として出す(--head-only で全部出る)
 // 【守ること】デバッグの合言葉・DEBUG MENU は使わない。通信はにせの Supabase が受け止める(本番へは送らない)。写る名前はボットの名前だけ
 // run-checks-timeout: 1200
 'use strict';
@@ -32,7 +34,7 @@ const crypto = require('crypto');
 const { execFileSync, spawn } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const { SCENES, SIZES, DEFAULT_SIZES, BEAT_STATES, BEAT_HOLD_SEC } = require('./compare-scenes');
-const { FREEZE, stableInit, toRaw, diffMask, stableShot } = require('./stable-shot');
+const { FREEZE, stableInit, toRaw, diffMask, stableShot, setSafeArea, measureSafeArea } = require('./stable-shot');
 
 const argv = process.argv.slice(2);
 const opt = (name) => { const i = argv.indexOf(name); return i >= 0 ? (argv[i + 1] || '') : ''; };
@@ -78,7 +80,8 @@ const statusLine = (r, fresh) => {
   if (!fresh) return '撮り比べ: 前に撮ったあとで画面のファイルが変わった(撮り直す) → node tools/browser/visual-compare-check.js';
   const open = r.diffs.filter((d) => !d.intended).length;
   const miss = (r.missed || []).length;
-  return `撮り比べ: 違い ${r.diffs.length} 画面${r.diffs.length ? `(うち意図した違い ${r.diffs.length - open})` : ''}${miss ? `・撮れなかった ${miss}` : ''}${r.skipped ? '(画面のファイルに差なし)' : ''}`
+  const sn = (r.safeNew || []).length;
+  return `撮り比べ: 違い ${r.diffs.length} 画面${r.diffs.length ? `(うち意図した違い ${r.diffs.length - open})` : ''}${miss ? `・撮れなかった ${miss}` : ''}${sn ? `・切り欠きに新しく入った押す物 ${sn}` : ''}${r.skipped ? '(画面のファイルに差なし)' : ''}`
     + (open ? ` → 止め絵 ${rel(path.join(OUT, 'diff'))}/ を見る` : '');
 };
 const isFresh = (r) => { if (!r) return false; const base = baseRev(); return r.fingerprint === fingerprint(base, servedDiff(base)); };
@@ -167,6 +170,14 @@ const clockInit = () => {
 
 const sizeOf = (tag) => SIZES.find((z) => z.tag === tag);
 const shotFile = (side, tag, id) => path.join(OUT, side, tag, `${id}.png`);
+// 切り欠きの範囲に入っていた押す物(版ごと)
+const safeHits = { base: [], head: [] };
+const measureSafe = async (page, side, sc, tag) => {
+  const z = sizeOf(tag);
+  if (z.rot || !z.sa || !(z.sa.top || z.sa.bottom || z.sa.left || z.sa.right)) return; // 🔄横はゲームが自分で回すので測らない
+  const hits = await page.evaluate(measureSafeArea, z.sa).catch(() => []);
+  for (const h of hits) safeHits[side].push({ id: sc.id, name: sc.name, size: tag, sizeName: z.name, ...h });
+};
 const missed = [];
 const miss = (side, sc, tag, why) => missed.push({ side, id: sc.id, name: sc.name, size: tag, why: String(why).split('\n')[0].slice(0, 140) });
 
@@ -178,6 +189,7 @@ const newSession = async (side, port, size, persona) => {
   fs.mkdirSync(botOut, { recursive: true });
   const s = await openSession({ playwright, pageUrl: `http://localhost:${port}/monster-hero/index.html`, port, out: botOut, rand, persona, report, viewport: { width: size.w, height: size.h } });
   await s.context.addInitScript(stableInit, FIXED_NOW);
+  await setSafeArea(s.context, s.page, size.sa); // iPhone の切り欠きあり
   return s;
 };
 const settle = async (s, sc) => {
@@ -205,6 +217,7 @@ async function walk(side, port, tag, scenes) {
       if (!ok) { miss(side, sc, tag, go ? 'HOME から押す手順の途中のボタンが見つからない' : '手順が無い(visual-scenes.js に同じ id の場面が無い)'); continue; }
       await settle(s, sc);
       await stableShot(s.page, shotFile(side, tag, sc.id), i + 1).catch((e) => miss(side, sc, tag, e.message));
+      await measureSafe(s.page, side, sc, tag);
     }
   } finally { await s.close(); }
 }
@@ -242,6 +255,7 @@ async function beat(side, port, scenes, tags) {
   const resize = async (tag) => {
     const z = sizeOf(tag);
     await page.setViewportSize({ width: z.w, height: z.h });
+    await setSafeArea(s.context, page, z.sa);
     const ok = await page.evaluate((deg) => { try { RHYTHM_VIEW_ROTATION.set(deg); return true; } catch (e) { return false; } }, z.rot ? 90 : 0); // eslint-disable-line no-undef
     await page.waitForTimeout(600);
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
@@ -290,6 +304,7 @@ async function beat(side, port, scenes, tags) {
         await page.evaluate(() => { const b = document.querySelector('[data-rhythm-result-scroll]'); if (b) { b.scrollTop = 1; b.scrollTop = 0; b.dispatchEvent(new Event('scroll')); } window.dispatchEvent(new Event('resize')); });
         await page.waitForTimeout(1500);
         await stableShot(page, shotFile(side, tag, sc.id)).catch((e) => miss(side, sc, tag, e.message));
+        await measureSafe(page, side, sc, tag);
       }
     }
   } catch (e) {
@@ -423,6 +438,7 @@ const pool = async (jobs, n) => { let i = 0; await Promise.all(Array.from({ leng
     for (const d of diffs) fs.rmSync(path.join(ROOT, d.shot), { force: true });
     for (const [sc, tag] of again) for (const side of ['base', 'head']) { fs.rmSync(shotFile(side, tag, sc.id), { force: true }); fs.rmSync(shotFile(side, tag, sc.id).replace(/\.png$/, '.move'), { force: true }); }
     const ids = new Set(again.map(([sc]) => sc.id)), tg = new Set(again.map(([, tag]) => tag));
+    for (const side of ['base', 'head']) safeHits[side] = safeHits[side].filter((h) => !again.some(([sc, tag]) => sc.id === h.id && tag === h.size));
     for (let i = missed.length - 1; i >= 0; i--) if (again.some(([sc, tag]) => sc.id === missed[i].id && tag === missed[i].size)) missed.splice(i, 1);
     console.log(`  違い ${diffs.length} 画面 → 撮り直して確かめる`);
     await shootAll(scenes.filter((sc) => ids.has(sc.id)), tags.filter((t) => tg.has(t)));
@@ -441,7 +457,16 @@ const pool = async (jobs, n) => { let i = 0; await Promise.all(Array.from({ leng
   const seconds = Math.round((Date.now() - t0) / 1000);
   // 片方でも撮れなかった画面(同じ画面・大きさは1件にまとめる)
   const missedUniq = [...new Map(missed.map((x) => [`${x.id}/${x.size}`, x])).values()];
-  const result = { at: new Date().toISOString(), base: gitText(['rev-parse', '--short', base]), fingerprint: fp, partial, self, seconds, shots, recheck, diffs, missed: missedUniq };
+  // 切り欠き: 枝で新しく入った物(main には無い)を NG にする。main にもある物は「前からある」として数だけ出す(直す部へ回す)
+  const keyOf = (h) => `${h.id}/${h.size}/${h.edge}/${h.label}`;
+  const uniq = (list) => [...new Map(list.map((h) => [keyOf(h), h])).values()];
+  const baseKeys = new Set(safeHits.base.map(keyOf));
+  const safeAll = uniq(safeHits.head).sort((x, y) => y.px - x.px);
+  const safeNew = headOnly ? [] : safeAll.filter((h) => !baseKeys.has(keyOf(h)));
+  const safeOld = headOnly ? safeAll : safeAll.filter((h) => baseKeys.has(keyOf(h)));
+  const headKeys = new Set(safeHits.head.map(keyOf));
+  const safeFixed = headOnly ? [] : uniq(safeHits.base).filter((h) => !headKeys.has(keyOf(h))); // main にあって枝で消えた(直った)物
+  const result = { at: new Date().toISOString(), base: gitText(['rev-parse', '--short', base]), fingerprint: fp, partial, self, seconds, shots, recheck, diffs, missed: missedUniq, safeNew, safeOld, safeFixed };
   if (!partial) fs.writeFileSync(RESULT, JSON.stringify(result, null, 1));
   else fs.writeFileSync(path.join(OUT, 'result-partial.json'), JSON.stringify(result, null, 1));
 
@@ -451,9 +476,13 @@ const pool = async (jobs, n) => { let i = 0; await Promise.all(Array.from({ leng
   if (missedUniq.length > 6) console.log(`  …ほか ${missedUniq.length - 6} 件(${rel(partial ? path.join(OUT, 'result-partial.json') : RESULT)})`);
   open.slice(0, 8).forEach((d) => console.log(`  違い: ${d.name}(${d.sizeName}) ${d.sizeChanged ? '絵の大きさが違う' : `${d.rate}%`} → ${d.shot}`));
   if (open.length > 8) console.log(`  …ほか ${open.length - 8} 画面(${rel(RESULT)})`);
+  const safeLine = (h) => `${h.name}(${h.sizeName})「${h.label}」が${h.edge}の切り欠きに ${h.px}px 入っている`;
+  safeNew.slice(0, 8).forEach((h) => console.log(`  切り欠き(新しく入った): ${safeLine(h)}`));
+  if (safeFixed.length) console.log(`  切り欠き(main にあって枝で直った・${safeFixed.length} 件): ${safeFixed.slice(0, 4).map((h) => `${h.name}(${h.sizeName})「${h.label}」${h.edge} ${h.px}px`).join(' / ')}`);
+  if (safeOld.length) console.log(`  切り欠き(前からある・${safeOld.length} 件。直す部へ): ${safeOld.slice(0, headOnly ? 30 : 4).map(safeLine).join(' / ')}${safeOld.length > (headOnly ? 30 : 4) ? ' …' : ''}`);
   if (headOnly) { console.log(`${missedUniq.length ? 'NG' : 'OK'}: 枝だけ撮った(比べていない) → ${rel(path.join(OUT, 'head'))}/`); process.exit(missedUniq.length ? 1 : 0); }
-  const ok = !open.length && !missedUniq.length;
-  console.log(`${ok ? 'OK' : 'NG'}: 撮り比べ: 違い ${diffs.length} 画面${diffs.length ? `(うち意図した違い ${diffs.length - open.length})` : ''}${missedUniq.length ? `・撮れなかった ${missedUniq.length}` : ''}`);
+  const ok = !open.length && !missedUniq.length && !safeNew.length;
+  console.log(`${ok ? 'OK' : 'NG'}: 撮り比べ: 違い ${diffs.length} 画面${diffs.length ? `(うち意図した違い ${diffs.length - open.length})` : ''}${missedUniq.length ? `・撮れなかった ${missedUniq.length}` : ''}${safeNew.length ? `・切り欠きに新しく入った押す物 ${safeNew.length}(直す)` : ''}`);
   if (open.length) console.log('  → 止め絵(左 main・右 枝・赤い枠が違う所)を見る。直した所のつもりの違いなら node tools/browser/visual-compare-check.js --intended "<理由>" で控え、出た1行を PR の本文に書く。つもりの無い違いは直す');
   process.exit(ok ? 0 : 1);
 })();
