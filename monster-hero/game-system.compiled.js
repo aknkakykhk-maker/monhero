@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0a079400d6cd9e22
+// source-sha256: 2cb1e39b72a30695
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41961,7 +41961,8 @@ const rhythmChartFingerprint = chart => {
   return `${notes.length}:${times.length ? Math.round(times[0]) : 0}:${times.length ? Math.round(times[times.length - 1]) : 0}`;
 };
 const RhythmResultMoreHint = ({
-  label
+  label,
+  inline = false
 }) => {
   const [more, setMore] = React.useState(false);
   React.useEffect(() => {
@@ -41986,10 +41987,15 @@ const RhythmResultMoreHint = ({
     };
   }, []);
   if (!more) return null;
+  if (inline) return React.createElement("div", {
+    "data-rhythm-result-more": "inline",
+    "aria-hidden": "true",
+    className: "pointer-events-none hidden w-[4.5rem] shrink-0 items-center justify-center self-stretch rounded-xl border border-white/15 bg-slate-900 px-1 text-center text-[10px] font-black leading-tight text-slate-200 landscape:flex"
+  }, "▼ 下に", React.createElement("br", null), label);
   return React.createElement("div", {
     "data-rhythm-result-more": true,
     "aria-hidden": "true",
-    className: "pointer-events-none mb-1 flex justify-center"
+    className: "pointer-events-none mb-1 flex justify-center landscape:hidden"
   }, React.createElement("span", {
     className: "rounded-full border border-white/15 bg-slate-900 px-3 py-0.5 text-[10px] font-black leading-4 text-slate-200"
   }, "▼ 下に ", label));
@@ -47143,12 +47149,9 @@ const RhythmTapTest = ({
     }, view.result.tickJust), "/", view.result.tickTotal, view.result.tickMiss > 0 ? React.createElement("span", {
       className: "text-rose-300"
     }, "(MISS ", view.result.tickMiss, ")") : null, React.createElement("span", {
-      className: "block text-[9px] font-bold text-slate-400"
-    }, React.createElement("span", {
-      className: "inline-block"
-    }, "ホールド・スライドの刻みも"), React.createElement("span", {
-      className: "inline-block"
-    }, "コンボに数えます"))), React.createElement("div", {
+      className: "block text-left text-[9px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ホールド・スライドの刻みもコンボに数えます'))), React.createElement("div", {
       className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
@@ -47379,12 +47382,15 @@ const RhythmTapTest = ({
     }, React.createElement(RhythmResultMoreHint, {
       label: [result.eventPointAward && result.eventPointAward.amount > 0 ? 'ビートP' : null, Array.isArray(result.liveLog) && result.liveLog.some(section => section.total > 0) ? 'ライブログ' : null].filter(Boolean).join('・') || '続き'
     }), React.createElement("div", {
-      className: multi ? "flex items-center gap-2" : ""
+      className: "flex items-center gap-2"
     }, multi && React.createElement("div", {
       "data-rhythm-result-orientation": true,
       className: "shrink-0"
-    }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
-      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2"
+    }, React.createElement(RhythmOrientationButton, null)), React.createElement(RhythmResultMoreHint, {
+      inline: true,
+      label: [result.eventPointAward && result.eventPointAward.amount > 0 ? 'ビートP' : null, Array.isArray(result.liveLog) && result.liveLog.some(section => section.total > 0) ? 'ライブログ' : null].filter(Boolean).join('・') || '続き'
+    }), React.createElement("div", {
+      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : "grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2"
     }, !multi && !raidPlay && React.createElement("button", {
       "data-rhythm-result-retry": true,
       className: "min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black",
