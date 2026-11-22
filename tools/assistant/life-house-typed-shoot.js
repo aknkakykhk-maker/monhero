@@ -54,6 +54,8 @@ fs.mkdirSync(OUT, { recursive: true });
     if (Object.keys(WORN).length) await page.addInitScript((worn) => { localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(Object.values(worn))); localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify(worn)); }, WORN);
     // --notch … iPhone の切り欠きあり(上47px・下34px)で撮る。env() はブラウザで作れないので、ゲームの切り欠きの変数(--mh-safe-top ほか)に入れる(2026-11-22 社長の iPhone で上の帯が時刻に重なった r1119-098)
     if (argv.includes('--notch')) await page.addInitScript(() => { const set = () => { const r = document.documentElement; r.style.setProperty('--mh-safe-top', '47px'); r.style.setProperty('--mh-safe-bottom', '34px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); });
+    // --short-bottom <px> … 助手ライフの器が画面の下の端まで届かない形(社長の iPhone のホーム画面のアプリで器の下に黒い帯が出ていた)を作って撮る
+    if (opt('--short-bottom', '')) await page.addInitScript((px) => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = `.mhl-root{bottom:${px}px!important}`; document.head.appendChild(st); }); }, Number(opt('--short-bottom', '0')));
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: Number(opt('--bond', '')) || null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
