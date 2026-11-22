@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 933e60d2869ccc2c
+// source-sha256: a8beafda32aad870
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38453,7 +38453,8 @@ const RhythmSongArt = ({
   song,
   large = false,
   marked = true,
-  onZoom = null
+  onZoom = null,
+  listenMark = false
 }) => {
   const hue = rhythmSongArtHue(song && song.songId);
   const src = typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song && typeof song.artwork === 'string' ? song.artwork : '';
@@ -38475,7 +38476,14 @@ const RhythmSongArt = ({
     style: {
       backgroundColor: 'rgba(2,6,23,.7)'
     }
-  }, "🔍"));
+  }, "🔍"), zoomable && listenMark && React.createElement("i", {
+    "data-rhythm-song-art-listen-mark": true,
+    "aria-hidden": "true",
+    className: "absolute bottom-0.5 left-0.5 flex h-5 items-center gap-0.5 rounded-md border border-teal-300/70 px-1 text-[10px] font-black not-italic leading-none text-teal-50",
+    style: {
+      backgroundColor: 'rgba(15,61,58,.9)'
+    }
+  }, "🎧 鑑賞"));
   const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto' : 'w-12'}`;
   const box = {
     aspectRatio: '1 / 1',
@@ -38488,7 +38496,7 @@ const RhythmSongArt = ({
   } : {}, {
     "data-rhythm-song-art-zoom": true,
     onClick: onZoom,
-    "aria-label": `${rhythmSongFullName(song)}のジャケットを大きく見る`,
+    "aria-label": `${rhythmSongFullName(song)}のジャケットを大きく見る${listenMark ? '(曲の鑑賞もここから)' : ''}`,
     className: shape,
     style: box
   }), inner);
@@ -38598,7 +38606,8 @@ const RhythmSongSelect = ({
   unlockAll = false,
   songLock = null,
   scrollToSelected = false,
-  detailInfoPanel = false
+  detailInfoPanel = false,
+  onListen = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -38614,6 +38623,7 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const [listenDiffId, setListenDiffId] = React.useState('');
   const [viewWide, setViewWide] = React.useState(() => orientationIsLandscape());
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -39143,7 +39153,11 @@ const RhythmSongSelect = ({
     } : {}), React.createElement(RhythmSongArt, {
       song: song,
       large: true,
-      onZoom: () => setArtZoom(true)
+      listenMark: typeof onListen === 'function' && !lockedSong(song),
+      onZoom: () => {
+        setListenDiffId('');
+        setArtZoom(true);
+      }
     }), tier && React.createElement("span", {
       key: `${song.songId}:${difficulty.id}`,
       "aria-label": tier.label
@@ -39527,7 +39541,49 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), React.createElement("button", {
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && openList.length > 0 && (() => {
+      const pick = openList.find(item => item.id === listenDiffId) || (difficulty && openList.includes(difficulty) ? difficulty : openList[0]);
+      return React.createElement("div", {
+        "data-rhythm-listen-panel": true,
+        onClick: e => e.stopPropagation(),
+        className: "mt-3 w-full max-w-xs rounded-2xl border border-teal-300/50 bg-teal-950/60 p-2"
+      }, React.createElement("p", {
+        className: "text-[11px] font-black text-teal-100"
+      }, "🎧 曲を鑑賞する(ノーツが自動で叩かれます)"), React.createElement("div", {
+        "data-rhythm-listen-diffs": true,
+        className: "mt-1.5 flex gap-1"
+      }, openList.map(item => {
+        const on = item === pick;
+        const lv = song.difficulties && song.difficulties[item.id] ? song.difficulties[item.id].level : '';
+        return React.createElement("button", {
+          key: item.id,
+          type: "button",
+          "data-rhythm-listen-diff": item.id,
+          "aria-pressed": on,
+          onClick: () => setListenDiffId(item.id),
+          className: `min-h-[44px] min-w-0 flex-1 rounded-lg border-2 px-0.5 text-center leading-none ${on ? 'border-amber-300 bg-amber-900/70 text-white' : 'border-slate-500 bg-slate-900/80 text-slate-100'}`
+        }, React.createElement("b", {
+          className: "block text-sm font-black"
+        }, lv), React.createElement("small", {
+          className: "mt-0.5 block text-[9px] font-black"
+        }, item.id));
+      })), React.createElement("button", {
+        type: "button",
+        "data-rhythm-listen-start": true,
+        onClick: () => {
+          setArtZoom(false);
+          onListen(song, pick);
+        },
+        className: "mt-2 min-h-[52px] w-full rounded-xl text-sm font-black text-white",
+        style: {
+          minHeight: '52px',
+          background: 'linear-gradient(90deg,#14b8a6,#0ea5e9)'
+        }
+      }, "🎧 この譜面を鑑賞する"), React.createElement("p", {
+        style: JA_WRAP_STYLE,
+        className: "mt-1 text-center text-[10px] font-bold text-teal-100/80"
+      }, jaWrap('鑑賞はスコア・ランキング・ビートPに載りません')));
+    })(), React.createElement("button", {
       type: "button",
       "data-rhythm-song-art-close": true,
       onClick: () => setArtZoom(false),
@@ -42462,6 +42518,142 @@ const rhythmSetText = (el, text) => {
   }
   el.textContent = value;
 };
+const RHYTHM_LISTEN_HIDE_CSS = '[data-rhythm-judgment-display],[data-rhythm-sky-judgment-display],[data-rhythm-combo],[data-rhythm-combo-box],[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]),[data-rhythm-ability-badge]{visibility:hidden!important}';
+const rhythmListenClock = ms => {
+  const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+const RhythmListenBar = ({
+  runRef,
+  song,
+  difficulty,
+  onSeek,
+  onPause,
+  onClose,
+  isLandscape,
+  paused = false
+}) => {
+  const [now, setNow] = useState({
+    ms: 0,
+    total: 0
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      const run = runRef.current;
+      const a = run && run.audio;
+      if (!a) return;
+      const ms = Number(a.songTimeMs && a.songTimeMs()) || 0;
+      const total = Number(a.durationMs) || 0;
+      setNow(p => Math.abs(p.ms - ms) < 120 && p.total === total ? p : {
+        ms,
+        total
+      });
+    }, 250);
+    return () => clearInterval(id);
+  }, [runRef]);
+  const pct = now.total > 0 ? Math.max(0, Math.min(100, now.ms / now.total * 100)) : 0;
+  const btn = 'flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), !paused && React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-rhythm-listen-top": true,
+    className: "pointer-events-auto absolute z-[35] flex items-center gap-1.5",
+    style: {
+      top: 'calc(var(--mh-safe-top,0px) + 8px)',
+      right: 'calc(var(--mh-safe-right,0px) + 10px)'
+    }
+  }, React.createElement("span", {
+    className: "max-w-[220px] truncate rounded-full border border-teal-700 bg-slate-900/85 px-2.5 py-1 text-[11px] font-black text-teal-200"
+  }, "🎧 鑑賞中・", difficulty && difficulty.id), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-close": true,
+    onClick: onClose,
+    "aria-label": "鑑賞をやめて曲選びへ戻る",
+    className: "flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white"
+  }, "✕")), isLandscape ? React.createElement("div", {
+    "data-rhythm-listen-bar": true,
+    "data-layout": "side",
+    className: "pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5",
+    style: {
+      right: 'calc(var(--mh-safe-right,0px) + 8px)',
+      top: '50%',
+      transform: 'translateY(-62%)'
+    }
+  }, React.createElement("span", {
+    "data-rhythm-listen-time": true,
+    className: "text-center text-[10px] font-black tabular-nums leading-tight text-slate-200"
+  }, rhythmListenClock(now.ms), React.createElement("br", null), React.createElement("small", {
+    className: "text-[9px] text-slate-400"
+  }, "/ ", rhythmListenClock(now.total))), React.createElement("div", {
+    className: "relative h-1.5 rounded-full bg-slate-700"
+  }, React.createElement("div", {
+    className: "absolute inset-y-0 left-0 rounded-full bg-teal-400",
+    style: {
+      width: `${pct}%`
+    }
+  })), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-seek": "-10000",
+    onClick: () => onSeek(-10000),
+    "aria-label": "10秒戻す",
+    className: btn
+  }, "-10秒"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-pause": true,
+    onClick: onPause,
+    "aria-label": "止める",
+    className: "flex h-12 items-center justify-center rounded-xl border border-teal-300/60 text-lg font-black text-white",
+    style: {
+      background: 'linear-gradient(180deg,#14b8a6,#0e7490)'
+    }
+  }, "Ⅱ"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-seek": "10000",
+    onClick: () => onSeek(10000),
+    "aria-label": "10秒送る",
+    className: btn
+  }, "+10秒")) : React.createElement("div", {
+    "data-rhythm-listen-bar": true,
+    className: "pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2",
+    style: {
+      left: '10px',
+      right: '10px',
+      bottom: 'calc(var(--mh-safe-bottom,0px) + 8px)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 text-[10px] font-black tabular-nums text-slate-200"
+  }, React.createElement("span", {
+    "data-rhythm-listen-time": true
+  }, rhythmListenClock(now.ms)), React.createElement("div", {
+    className: "relative h-1.5 flex-1 rounded-full bg-slate-700"
+  }, React.createElement("div", {
+    className: "absolute inset-y-0 left-0 rounded-full bg-teal-400",
+    style: {
+      width: `${pct}%`
+    }
+  })), React.createElement("span", null, rhythmListenClock(now.total))), React.createElement("div", {
+    className: "mt-1.5 flex items-center justify-center gap-3"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-seek": "-10000",
+    onClick: () => onSeek(-10000),
+    "aria-label": "10秒戻す",
+    className: btn
+  }, "-10秒"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-pause": true,
+    onClick: onPause,
+    "aria-label": "止める",
+    className: "flex h-12 w-12 items-center justify-center rounded-full border border-teal-300/60 text-lg font-black text-white",
+    style: {
+      background: 'linear-gradient(180deg,#14b8a6,#0e7490)'
+    }
+  }, "Ⅱ"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-seek": "10000",
+    onClick: () => onSeek(10000),
+    "aria-label": "10秒送る",
+    className: btn
+  }, "+10秒")))));
+};
 const RhythmLineAdjustPanel = ({
   adjust,
   onBump,
@@ -42644,7 +42836,8 @@ const RhythmTapTest = ({
   tutorial = tutorial || !!lineAdjust;
   const lineAdjustRef = useRef(lineAdjust);
   lineAdjustRef.current = lineAdjust;
-  const previewHands = !!(lineAdjust && lineAdjust.preview);
+  const listenMode = !!(lineAdjust && lineAdjust.listen);
+  const previewHands = !!(lineAdjust && (lineAdjust.preview || lineAdjust.listen));
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
@@ -44433,7 +44626,7 @@ const RhythmTapTest = ({
       paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
       rhythmSetText(paceEl, `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`);
     }
-    if (settings.judgmentAtTap === true && judgment !== 'MISS' && !calibrating) {
+    if (settings.judgmentAtTap === true && judgment !== 'MISS' && !calibrating && !(lineAdjustRef.current && lineAdjustRef.current.listen)) {
       const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
         nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
       const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
@@ -45892,6 +46085,41 @@ const RhythmTapTest = ({
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   });
+  const listenSeek = async deltaMs => {
+    const run = runRef.current;
+    if (!listenMode || !run || run.finished || run.paused || !run.audio || typeof run.audio.seek !== 'function') return;
+    if (countdownStep !== null || songIntroRef.current) return;
+    const nowMs = Number(run.audio.songTimeMs()) || 0;
+    const lastNote = run.notes.reduce((m, n) => Math.max(m, Number(n.endTimeMs) || 0, Number(n.timeMs) || 0), 0);
+    const limit = Math.max(0, Math.min(Number(run.audio.durationMs) || lastNote + 2000, lastNote + 2000) - 3000);
+    const target = Math.max(0, Math.min(limit, nowMs + deltaMs));
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);
+    run.activePointers.clear();
+    run.standbyPointers?.clear();
+    run.activeTouchInputs?.clear();
+    run.outsideStartInputs?.clear();
+    run.inputFeedbackState?.clear();
+    run.activePointerFeedback?.clear();
+    run.activePointerSkyFeedback?.clear();
+    liveTouchSkySubLanesRef.current = [];
+    setPressedLanes([]);
+    const notes = makeRuntimeNotes(run.tickRules);
+    notes.forEach(note => {
+      if ((Number(note.timeMs) || 0) < target - 30) {
+        note.done = true;
+        note._rhythmCanvasSettled = true;
+      }
+    });
+    run.notes = notes;
+    run.scanFrom = 0;
+    run._stageNoteIndex = notes.findIndex(note => !note.done);
+    if (run._stageNoteIndex < 0) run._stageNoteIndex = notes.length;
+    laneRefs.current.forEach?.(el => {
+      if (el) el._rhythmHidden = false;
+    });
+    if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSlideBands(notes);
+    await run.audio.seek(target);
+  };
   const pause = () => {
     const run = runRef.current;
     if (countdownStep !== null) return;
@@ -47619,7 +47847,16 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }))), lineAdjust && React.createElement(RhythmLineAdjustPanel, {
+  }))), listenMode ? React.createElement(RhythmListenBar, {
+    runRef: runRef,
+    song: song,
+    difficulty: difficulty,
+    onSeek: listenSeek,
+    onPause: pause,
+    onClose: onExit,
+    isLandscape: isLandscape,
+    paused: view.status === 'paused'
+  }) : lineAdjust && React.createElement(RhythmLineAdjustPanel, {
     adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),
     isLandscape: isLandscape
@@ -48123,7 +48360,7 @@ const RhythmTapTest = ({
       className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`
     }, difficulty.id), !calibrating && !tutorial && React.createElement("span", {
       className: "text-cyan-300"
-    }, "Lv.", chart.level), React.createElement("span", {
+    }, "Lv.", chart.level), !listenMode && React.createElement(React.Fragment, null, React.createElement("span", {
       className: "ml-auto tabular-nums text-slate-300"
     }, "SCORE ", React.createElement("b", {
       className: "text-white"
@@ -48131,7 +48368,7 @@ const RhythmTapTest = ({
       className: "tabular-nums text-slate-300"
     }, "COMBO ", React.createElement("b", {
       className: "text-white"
-    }, hudRef.current.get().combo))), React.createElement("div", {
+    }, hudRef.current.get().combo)))), React.createElement("div", {
       className: "mt-2 flex items-center gap-2"
     }, React.createElement("div", {
       className: "relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
@@ -48158,7 +48395,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
+  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : listenMode ? '鑑賞をやめて曲選びへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
 };
 const rhythmPreviewHandsStart = area => {
   if (typeof window === 'undefined' || !area) return () => {};
@@ -48360,9 +48597,22 @@ const rhythmPreviewHandsStart = area => {
     }
   }
   events.sort((a, b) => a.at - b.at);
+  let lastMs = null;
+  const jumpTo = ms => {
+    timers.forEach(clearTimeout);
+    timers.clear();
+    for (const f of follows) if (f.on) {
+      f.on = false;
+      send('pointerup', f.id, posOf(f.n, f.from));
+    }
+    k = 0;
+    while (k < events.length && events[k].at < ms - 30) k++;
+  };
   const tick = () => {
     if (stopped) return;
     const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null && lastMs != null && (ms < lastMs - 300 || ms > lastMs + 2000)) jumpTo(ms);
+    if (ms != null) lastMs = ms;
     if (ms != null) {
       while (k < events.length && events[k].at <= ms + 17) {
         const ev = events[k++];
@@ -73447,6 +73697,7 @@ function RhythmSongSelectScreen({
   onOpenOptions,
   onOpenRanking,
   onPlaySong,
+  onListenSong = null,
   onToggleRhythmSetting,
   quickClearCounts,
   quickRhythmBackgroundVisible,
@@ -73982,6 +74233,7 @@ function RhythmSongSelectScreen({
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
     onPlay: onPlaySong,
+    onListen: debugAll || raidChallenge ? null : onListenSong,
     notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",
       compact: true
@@ -245001,6 +245253,29 @@ function MonsterHeroGame() {
       key: p.key + 1
     } : p)
   } : null;
+  const startRhythmListen = (song, difficulty) => {
+    if (!song || !difficulty) return;
+    if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
+    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return;
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({
+      song,
+      difficulty,
+      from: 'listen'
+    });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmListen = () => {
+    setRhythmPlay(null);
+    setGameState('RHYTHM_DEMO_HOME');
+  };
+  const rhythmListenProps = {
+    phase: 'try',
+    listen: true,
+    onEnd: leaveRhythmListen,
+    onFix: leaveRhythmListen,
+    onLoop: leaveRhythmListen
+  };
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -260000,6 +260275,7 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
         if (rhythmPlay.from === 'preview') return;
+        if (rhythmPlay.from === 'listen') return;
         if (rhythmPlay.from === 'raid') void completeRaidJackRhythm(result, rhythmPlay.song, rhythmPlay.difficulty);
         const assistBonus = rhythmPlay.from === 'multi' && rhythmAssistSessionEnabled() ? rhythmAssistSessionRewardBonusNow() : 0;
         const multiScale = rhythmPlay.from === 'multi' ? Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) * (1 + assistBonus) * 100) / 100 : 1;
@@ -260130,7 +260406,7 @@ function MonsterHeroGame() {
       debugPlay: rhythmPlay.from === 'debug' || rhythmPlay.from === 'proto',
       tutorial: rhythmPlay.from === 'tutorial' || rhythmPlay.from === 'notedex',
       calibrating: rhythmPlay.from === 'calibration',
-      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : rhythmPlay.from === 'preview' ? rhythmPreviewProps : null,
+      lineAdjust: rhythmPlay.from === 'lineAdjust' ? rhythmLineAdjustProps : rhythmPlay.from === 'preview' ? rhythmPreviewProps : rhythmPlay.from === 'listen' ? rhythmListenProps : null,
       onApplyCalibration: async measured => {
         const offsetMs = Number(measured && measured.offsetMs);
         if (Number.isFinite(offsetMs)) {
@@ -260410,6 +260686,7 @@ function MonsterHeroGame() {
         loadRhythmRanking(song);
         setGameState('RHYTHM_RANKING');
       },
+      onListenSong: startRhythmListen,
       onPlaySong: (song, difficulty) => {
         if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();

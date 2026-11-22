@@ -58,9 +58,20 @@ const rhythmPreviewHandsStart = (area) => {
     }
   }
   events.sort((a, b) => a.at - b.at);
+  // 曲鑑賞の「-10秒・+10秒」(2026-11-23 r1119-112)で曲の時刻が跳んだら、押さえている指を離し、移した先から叩き直す。
+  //   見本(オプションの「▶ 見てみる」)は跳ばないので、今までと同じ動き
+  let lastMs = null;
+  const jumpTo = (ms) => {
+    timers.forEach(clearTimeout); timers.clear();
+    for (const f of follows) if (f.on) { f.on = false; send('pointerup', f.id, posOf(f.n, f.from)); }
+    k = 0; while (k < events.length && events[k].at < ms - 30) k++;
+    // 移した先で押さえる途中のホールド・スライドは、押し始めを飛ばしたので叩かない(ノーツの側も済んだ扱いになっている)
+  };
   const tick = () => {
     if (stopped) return;
     const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null && lastMs != null && (ms < lastMs - 300 || ms > lastMs + 2000)) jumpTo(ms);
+    if (ms != null) lastMs = ms;
     if (ms != null) {
       while (k < events.length && events[k].at <= ms + 17) { const ev = events[k++]; const wait = ev.at - ms; if (wait > 1) later(wait, ev.f); else ev.f(); }
       for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
