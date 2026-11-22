@@ -171,8 +171,16 @@ const BGM_TRACKS = [
 const BGM_PROTO_TRACKS = Object.freeze([
   { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
 ]);
+// 公開を止めている曲の音源(2026-11-23 社長決定・台帳 r1119-120)。試作曲と同じ扱いで、BGM_TRACKS へは
+// 入れない(BGMアレンジ・自動周回の選択肢に出てしまうため)。曲データ(rhythm-mode.js)から id で引ける
+// よう、BGM_TRACK_BY_ID にだけ足す。★解禁するときは、この2行を BGM_TRACKS へ移す
+const BGM_UNRELEASED_TRACKS = Object.freeze([
+  { id:'melo_battle_5', name:'Battle #5', creator:'オリジナル', src:'audio/bgm-battle-5.mp3', gain:1, loop:true },
+  { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
+]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
+BGM_UNRELEASED_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
