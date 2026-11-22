@@ -46,6 +46,8 @@ fs.mkdirSync(OUT, { recursive: true });
     page.on('pageerror', e => result.errors.push(`${sizeId}: ${String(e.message || e).slice(0, 160)}`));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; if (window.__untyped) window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
     if (UNTYPED) await page.addInitScript(() => { window.__untyped = true; });
+    // --bedtry '{"headDiv":3,"bedHeads":3,"quiltDrop":0.2}' … 寝ている部屋のベッドの釣り合いの案(ページの中だけ)
+    if (opt('--bedtry', '')) await page.addInitScript((t) => { window.__mhAssistantLifeBedTry = t; }, JSON.parse(opt('--bedtry', '{}')));
     // --worn kiki:kiki_twintail_v1,… … 着せ替えを着せて撮る(着替えの保存 mh_assistant_costume_*_v1 はページの中だけ)
     const WORN = Object.fromEntries((opt('--worn', '') || '').split(',').filter(Boolean).map(x => x.split(':')));
     if (Object.keys(WORN).length) await page.addInitScript((worn) => { localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(Object.values(worn))); localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify(worn)); }, WORN);

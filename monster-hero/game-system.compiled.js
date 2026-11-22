@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1de7601eab9ecf48
+// source-sha256: 8bdaa2dc015516be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122788,10 +122788,12 @@ function AssistantLifeRoomBed({
   sleepers = [],
   look
 }) {
-  const bw = Math.min(W * 0.86, 360),
+  const T = typeof window !== 'undefined' && window.__mhAssistantLifeBedTry || {};
+  const base = Math.min(W * 0.86, 360);
+  const Lh = base / (T.headDiv || 4.6),
+    bw = Math.min(base, Lh * (T.bedHeads || 4.6)),
     left = W / 2 - bw / 2;
-  const Lh = bw / 4.6,
-    BU = Lh / 1.32;
+  const BU = Lh / 1.32;
   const bottom = floorY + Math.round(0.55 * BU),
     mattTop = bottom - Math.round(0.6 * BU);
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
@@ -123037,7 +123039,7 @@ function AssistantLifeRoomBed({
     const U = U0(F),
       ch = U * 1.32;
     const qx = items.length ? pillow.left + Lh * 0.06 + ch * 0.72 : pillow.left + pillow.w * 0.9;
-    const qTop = items.length ? headCy + U * 1.2 * 0.04 : mattTop - 0.5 * U;
+    const qTop = items.length ? headCy + U * 1.2 * (Number.isFinite(T.quiltDrop) ? T.quiltDrop : 0.04) : mattTop - 0.5 * U;
     const qw = Math.max(60, left + bw - 0.16 * U - qx),
       qh = Math.max(30, mattTop + 0.42 * U - qTop);
     const pid = `mhlq-${id}`;

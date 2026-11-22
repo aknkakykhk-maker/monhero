@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 135ef6bea0f32927
+// generated-sha256: 20f66478544eb995
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71305,8 +71305,11 @@ function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
 function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
   // 大きさの釣り合い(2026-11-22 社長「寝顔はききだけじゃなくて全部だめ」「サイズ感も合ってない」): ベッドの長さ=寝ている体の長さ=頭の長さ(Lh)の4つぶん。
   //   頭・枕・布団・ベッドは全部この1つの単位 U(=Lh/1.32・立ち絵と同じ顔の単位)から決める。頭は枕の上に収め、布団は顎から右へ・体の厚みくらいの低さで掛ける
-  const bw = Math.min(W * 0.86, 360), left = W / 2 - bw / 2;
-  const Lh = bw / 4.6, BU = Lh / 1.32; // 頭の長さ(倒した頭の横の長さ)と単位。体はベッドいっぱい=頭4.6個ぶん(2026-11-22 社長「顔だけ浮いてない？」で頭を少し小さく)
+  // 釣り合いの案を比べる止め絵のためだけの印(tools/assistant/life-house-typed-shoot.js --bedtry)。社長が選んだら既定の数に焼き込み、この印は外す
+  const T = (typeof window !== 'undefined' && window.__mhAssistantLifeBedTry) || {};
+  const base = Math.min(W * 0.86, 360);
+  const Lh = base / (T.headDiv || 4.6), bw = Math.min(base, Lh * (T.bedHeads || 4.6)), left = W / 2 - bw / 2;
+  const BU = Lh / 1.32; // 頭の長さ(倒した頭の横の長さ)と単位。体はベッドいっぱい=頭4.6個ぶん(2026-11-22 社長「顔だけ浮いてない？」で頭を少し小さく)
   const bottom = floorY + Math.round(0.55 * BU), mattTop = bottom - Math.round(0.6 * BU);
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
   const pillow = { left: left + 0.26 * BU, top: mattTop - 0.42 * BU, w: Lh * 1.2, h: 0.52 * BU };
@@ -71371,7 +71374,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         //   → 2026-11-22 社長「顔だけ浮いてない？」: 首とあごの下は布団の中。布団の上端(左の端)を頭の真ん中の少し下まで上げ、首・あごの下・絵の切れ目を覆う。
         //     顔(目・口)には かぶせない。そこから胸・腰・ひざ・足先へ低く下がる(壁のように立てない)
         const qx = items.length ? pillow.left + Lh * 0.06 + ch * 0.72 : pillow.left + pillow.w * 0.9;
-        const qTop = items.length ? headCy + U * 1.2 * 0.04 : mattTop - 0.5 * U;
+        const qTop = items.length ? headCy + U * 1.2 * (Number.isFinite(T.quiltDrop) ? T.quiltDrop : 0.04) : mattTop - 0.5 * U;
         const qw = Math.max(60, left + bw - 0.16 * U - qx), qh = Math.max(30, mattTop + 0.42 * U - qTop);
         const pid = `mhlq-${id}`;
         const X = (r) => (qw * r).toFixed(1), Y = (r) => (qh * r).toFixed(1);
