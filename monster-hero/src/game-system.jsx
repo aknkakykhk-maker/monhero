@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18226b2e411395f4
+// generated-sha256: e64e2a036b8fb1a8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15161,8 +15161,15 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 // ヘルプ本文のブロックを描く。ヘルプ画面と助手の詳細で同じ見た目にするため1か所にまとめる
 // ヘルプの文は言葉の切れ目で折る(2026-10-24 窓口「部品を通さずに描いている文の多い画面」の1番目)。
 // 長い段落なので行の長さはそろえず(balance は使わない)、言葉の途中で折らないことだけを守る。文字列でないもの(絵・表の部品)はそのまま
-const helpWrap = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
-  ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
+// 矢印でつないだ切り替わりの順(「OFF → AUTO → ∞ → OFF」)と「∞周回」は1つの塊で出し、途中で折らない
+// (2026-11-22 点検 #7059 HOME の助手の説明「OFF → / AUTO」「その∞ / 周回」と折れて順が読めなかった・r1119-080)
+const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
+const helpWrap = (x) => {
+  if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
+  const parts = x.split(HELP_NOWRAP_RE);
+  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? jaWrap(x)
+    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? jaWrap(t) : null}</React.Fragment>))}</span>;
+};
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
   if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
@@ -15469,14 +15476,15 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {oneLine ? <>
             <span className="absolute" style={{ left:'-9px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
             <span className="absolute" style={{ left:'-6px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-            <span className="shrink-0 text-[9px] font-black tracking-widest" style={{ color }}>{who.name}</span>
+            <span className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</span>
             <span data-bubble-text data-bubble-max-lines={1} className="min-w-0 flex-1 truncate text-[10px] leading-snug text-white" style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}>{text}</span>{/* index.html の text-wrap: balance が折らない指定を上書きするので、ここで直に止める */}
             {hasDetail&&<span data-bubble-more-text aria-hidden="true" className="shrink-0" style={{ color }}><ChevronRight size={12}/></span>}
           </> : <>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-          <span className={`block font-black tracking-widest ${compact?'text-[9px]':'text-[10px]'}`} style={{ color }}>{who.name}</span>
+          {/* 名前は小さい吹き出しでも 11px(2026-11-22 点検 #7059「みゅあ」が 9px で読めない・r1119-080) */}
+          <span className="block font-black tracking-widest text-[11px]" style={{ color, lineHeight: compact ? '13px' : '15px' }}>{who.name}</span>{/* 行の高さは 9px・10px のときと同じ(吹き出しの高さを変えない。HOME の細いバナーに重なった) */}
           {/* maxLines … セリフをこの行数で切る(0なら切らない)。HOMEは吹き出しの下に施設の札があるので2行まで
               (2026-10-23 社長「MB管理に助手のコメントが被ってくる」)。全文は「タップで詳しく」で開く画面の上に出る */}
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
@@ -15496,28 +15504,36 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           </div>
         </>}
       </div>
-      {open&&(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
-            <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
-              <AssistantFace who={who} size={68} accent={color} expression={face}/>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
-                <div className="text-[12px] text-white leading-relaxed" style={bubbleWrapStyle()}>{bubbleWrap(text)}</div>
+      {open&&(()=>{
+        // 説明の窓(2026-11-22 点検 #7059 HOME の助手の説明・r1119-080)
+        //  ・閉じるは下の大きな1つだけ(右上の小さい「閉じる」と二重だった)
+        //  ・ゲームの器(.mh-app)の直下へ出す。吹き出しの中に置くと、HOME の札に重ねた助手の顔の束が窓より手前に出て本文に重なった
+        //  ・横の低い画面は顔を小さく・セリフを1行・閉じるを細くし、本文の見える高さを広げる。窓は下に余白を空けて真ん中に置く
+        const low = typeof window !== 'undefined' && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+        const sheet = (
+        <div className={`fixed inset-0 flex ${low?'items-center p-2':'items-end'} justify-center`} style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000,...(low?{paddingTop:'max(8px, var(--mh-sa-top))',paddingBottom:'max(8px, var(--mh-sa-bottom))'}:{})}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`} data-assistant-help-sheet>
+          <div className={`w-full ${low?'max-w-2xl rounded-3xl border-2 max-h-full':'max-w-md rounded-t-3xl border-t-2 border-x-2 max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]'} bg-slate-950 flex flex-col`} style={{ borderColor:color }}>
+            <div className={`shrink-0 flex items-center border-b border-white/10 ${low?'gap-2 px-3 py-1.5':'gap-3 p-4'}`}>
+              <AssistantFace who={who} size={low?32:68} accent={color} expression={face}/>
+              <div className={`flex-1 min-w-0 ${low?'flex items-baseline gap-2':''}`}>
+                <div className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</div>
+                <div className={`text-[12px] text-white leading-relaxed ${low?'min-w-0 truncate':''}`} style={low?{whiteSpace:'nowrap'}:bubbleWrapStyle()}>{low?text:bubbleWrap(text)}</div>
               </div>
-              <button onClick={()=>setOpen(false)} className="mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5">
+            <div className={`flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low?'px-4 py-3':'p-4'}`}>
               {topic
                 ? renderHelpBlocks(topic.blocks, color)
                 : (paragraphs || []).map((x,i)=><p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(x)}</p>)}
             </div>
-            <div className="shrink-0 p-4 pt-2" style={{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
-              <button onClick={()=>setOpen(false)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{ backgroundColor:color }}>閉じる</button>
+            <div className={`shrink-0 ${low?'px-3 py-2':'p-4 pt-2'}`} style={low?undefined:{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
+              <button onClick={()=>setOpen(false)} data-assistant-help-close className={`w-full ${low?'min-h-[44px]':'min-h-[48px]'} rounded-2xl font-black text-sm text-black active:scale-[.98]`} style={{ backgroundColor:color }}>閉じる</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>);
+        // 出す先はゲームの器(.mh-app)。モンヒロビートで画面を自前で回しているとき(data-mh-view-rotation)も、窓がいっしょに回る
+        const host = typeof document !== 'undefined' ? document.querySelector('.mh-app') : null;
+        return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && host) ? ReactDOM.createPortal(sheet, host) : sheet;
+      })()}
     </>
   );
 };
@@ -148422,6 +148438,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
           // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
           // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
+          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&String(activeGroup.label||'').includes(p.series)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -148468,7 +148485,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>
                   </div>
-                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5">お話の順に並んでいます。</p>
+                  {/* 「お話の順に並んでいます。」と下の「イベントの一覧へ戻る」は外した(2026-11-22 点検 #7059: 9px で読めない・戻るが二重・r1119-080) */}
+                  <div className="shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5" aria-hidden="true"/>
                   <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
                     {activeGroup.events.map(event=>{
                       const eventUnlocked=isEventReplayUnlocked(event);
@@ -148488,14 +148506,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
                           <Play size={16} className="text-fuchsia-300 shrink-0"/>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[12px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(event.title)}</b>
-                            <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
+                            {/* 行ごとに見出しと同じシリーズ名と「タップして見返す」が並び、話の名前が目立たなかった(2026-11-22 点検 #7059)。続きものは「第1話 ～鎖の箱～」だけを大きく出す */}
+                            <b className="block text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(episodeTitle(event.title))}</b>
+                            {eventReplayDateText(event)&&<small data-event-replay-date className="block text-[10px] tabular-nums text-fuchsia-300/70">{eventReplayDateText(event)}</small>}
                           </span>
                         </button>
                       );
                     })}
                   </div>
-                  <button onClick={()=>setEventReplayGroupId(null)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">イベントの一覧へ戻る</button>
                 </>
               )}
             </div>
@@ -149489,6 +149507,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   w … 文字の欄の幅(px)・fs … 字の大きさ(px)。かたまりで折れないときは jaWrap の切れ目で、行の長さをそろえて折る
         const storyCenterCap=(w,fs)=>Math.max(4,Math.floor(w/fs-0.2));
         const storyCenter=(text,w,fs)=>{const t=String(text??'');const cap=storyCenterCap(w,fs);const ch=typeof storyChunkLines==='function'?storyChunkLines(t,cap,3):null;return <span style={ch?{...bubbleWrapStyle(),textWrap:'wrap'}:bubbleWrapStyle()}>{storyLineNodes(t,cap)}</span>;};
+        // 字間を広げた題字(「終 わ り」「鍵 の 向 こ う 側 へ」)。最後の字の後ろには字間を付けず、左右の中心をそろえる
+        //   (2026-11-22 点検 #7059 回想の締め「終わり」が左へ 8px ずれて見えた・r1119-080。前は左に字間ぶんの余白を足して合わせていた)
+        const storySpaced=(text)=>{const a=[...String(text??'')];return a.length<2?text:<>{a.slice(0,-1).join('')}<span style={{letterSpacing:0}}>{a[a.length-1]}</span></>;};
         // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
         const storyLineStyle=(text,cap)=>{
           const st=bubbleWrapStyle();
@@ -149652,12 +149673,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
-          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:eventReplay.ending?'none':'auto',zIndex:1,...(eventReplay.ending?{opacity:0,transition:'opacity .5s ease-out'}:{})}}>
+            {/* 締め(終わりの札)のあいだは台詞の窓を消す(2026-11-22 点検 #7059: 半透明の幕ごしに窓の「閉じる」と題が透けて二重に見えた・r1119-080) */}
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
@@ -149746,7 +149768,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   :<p className="relative inline-block text-[34px] font-black leading-tight" style={{background:'linear-gradient(180deg,#fef3c7,#fbbf24 55%,#b45309)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 14px rgba(251,191,36,.55))'}}>{event.openingLogo.text}</p>}
                   {event.openingLogo.badge&&<span data-story-opening-badge className="ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100">{event.openingLogo.badge}</span>}
                 </div>
-                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
+                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:'storyEndCard 1s ease-out .2s both'}}>{storySpaced(parts.series)}</p>}
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:'storyEndCard 1s ease-out .9s both'}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
                 {prevParts&&<p data-story-opening-prev className="mt-6 text-[11px] font-bold text-slate-400" style={{animation:'storyEndCard 1s ease-out 1.5s both'}}>{storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`,Math.min(storyBoxW,384)-48,11)}</p>}
@@ -149767,6 +149789,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
             const nextEv=parts.serial&&!parts.final?(series[series.findIndex(ev=>ev.id===event.id)+1]||null):null;
             const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
+            const nextPlay=!!(nextEv&&!eventReplay.live&&!eventReplay.debug&&isEventReplayUnlocked(nextEv));
             // 次が「終章」で、結果で分かれる(終章が2つある)ときは、副題を出さない(どちらになるかを先に見せない)
             if(nextParts&&nextParts.final&&series.filter(ev=>storyEpisodeTitleParts(ev.title).final).length>1) nextParts.sub='';
             const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
@@ -149788,11 +149811,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
               style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
               <div className="w-full max-w-sm px-6 text-center">
-                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{storySpaced(parts.series)}</p>
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
-                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{paddingLeft:'.4em',animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'終わり'}</p>
-                {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{storySpaced(parts.final?'おしまい':'終わり')}</p>
+                {/* 回想で見ているとき、次のお話をもう見たことがあれば、そのまま次を流す主ボタンにする(2026-11-22 点検 #7059「次のお話」が押せるか分からない・r1119-080)。
+                    本編(live)と、まだ見ていないお話は今までどおり予告の札 */}
+                {rich&&nextPlay&&<button type="button" data-story-ending-play-next onClick={(e)=>{e.stopPropagation();const fromList=!!eventReplay.fromList;next();setEventReplay({id:nextEv.id,step:0,fromList});setShowEventReplayList(false);}}
+                  className="mt-5 min-h-[56px] w-full rounded-2xl bg-fuchsia-500 px-3 py-2 text-slate-950 active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                  <span className="block text-[15px] font-black">▶ {nextParts.ep}を見る</span>
+                  {nextParts.sub&&<span className="block text-[12px] font-black">{storyCenter(nextParts.sub,Math.min(storyBoxW,384)-80,12)}</span>}
+                </button>}
+                {rich&&nextEv&&!nextPlay&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
                   <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
                   <p className="text-[14px] font-black text-white">{storyCenter(`${nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}${nextParts.ep} ${nextParts.sub}`,Math.min(storyBoxW,384)-80,14)}</p>
                   {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
@@ -149811,7 +149841,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
                   <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
                 </div>}
-                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className="mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
+                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className={`mt-4 w-full rounded-2xl text-sm font-black active:scale-[.98] ${nextPlay?'min-h-[44px] border border-white/20 bg-slate-900 text-slate-200':'min-h-[48px] bg-slate-700 text-white'}`} style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
               </div>
             </div>);
           })()}

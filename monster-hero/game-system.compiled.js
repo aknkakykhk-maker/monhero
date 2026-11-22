@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62597b8f07bca410
+// source-sha256: f3befee7d9a7d737
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21745,9 +21745,22 @@ const AssistantFace = ({
     }
   }, who.emoji));
 };
-const helpWrap = x => typeof x === 'string' && typeof jaWrap === 'function' ? React.createElement("span", {
-  style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
-}, jaWrap(x)) : x;
+const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
+const helpWrap = x => {
+  if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
+  const parts = x.split(HELP_NOWRAP_RE);
+  return React.createElement("span", {
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, parts.length === 1 ? jaWrap(x) : parts.map((t, i) => i % 2 === 1 ? React.createElement("span", {
+    key: i,
+    "data-help-nowrap": true,
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, t) : React.createElement(React.Fragment, {
+    key: i
+  }, t ? jaWrap(t) : null)));
+};
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   if (b && b.playerFlag && !(typeof helpPlayerFlagOn === 'function' && helpPlayerFlagOn(b.playerFlag))) return null;
   if (b.t === 'video') return React.createElement("div", {
@@ -22270,7 +22283,7 @@ const AssistantBubble = ({
       borderRight: '9px solid rgba(15,23,42,0.92)'
     }
   }), React.createElement("span", {
-    className: "shrink-0 text-[9px] font-black tracking-widest",
+    className: "shrink-0 text-[11px] font-black tracking-widest",
     style: {
       color
     }
@@ -22314,9 +22327,10 @@ const AssistantBubble = ({
       borderRight: '9px solid rgba(15,23,42,0.92)'
     }
   }), React.createElement("span", {
-    className: `block font-black tracking-widest ${compact ? 'text-[9px]' : 'text-[10px]'}`,
+    className: "block font-black tracking-widest text-[11px]",
     style: {
-      color
+      color,
+      lineHeight: compact ? '13px' : '15px'
     }
   }, who.name), React.createElement("span", {
     "data-bubble-text": true,
@@ -22389,59 +22403,69 @@ const AssistantBubble = ({
       setOpen(true);
     },
     className: "min-h-[44px] rounded-xl px-3 text-left text-[12px] font-black text-white bg-white/10 active:scale-[.98]"
-  }, "📖 詳しく見る")))), open && React.createElement("div", {
-    className: "fixed inset-0 flex items-end justify-center",
-    style: {
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(2,6,23,0.94)',
-      zIndex: 70000
-    },
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-label": `${who.name}の説明`
-  }, React.createElement("div", {
-    className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]",
-    style: {
-      borderColor: color
-    }
-  }, React.createElement("div", {
-    className: "shrink-0 flex items-center gap-3 p-4 border-b border-white/10"
-  }, React.createElement(AssistantFace, {
-    who: who,
-    size: 68,
-    accent: color,
-    expression: face
-  }), React.createElement("div", {
-    className: "flex-1 min-w-0"
-  }, React.createElement("div", {
-    className: "text-[10px] font-black tracking-widest",
-    style: {
-      color
-    }
-  }, who.name), React.createElement("div", {
-    className: "text-[12px] text-white leading-relaxed",
-    style: bubbleWrapStyle()
-  }, bubbleWrap(text))), React.createElement("button", {
-    onClick: () => setOpen(false),
-    className: "mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90"
-  }, "閉じる")), React.createElement("div", {
-    className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5"
-  }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
-    key: i,
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, helpWrap(x)))), React.createElement("div", {
-    className: "shrink-0 p-4 pt-2",
-    style: {
-      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
-    }
-  }, React.createElement("button", {
-    onClick: () => setOpen(false),
-    className: "w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
-    style: {
-      backgroundColor: color
-    }
-  }, "閉じる")))));
+  }, "📖 詳しく見る")))), open && (() => {
+    const low = typeof window !== 'undefined' && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+    const sheet = React.createElement("div", {
+      className: `fixed inset-0 flex ${low ? 'items-center p-2' : 'items-end'} justify-center`,
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(2,6,23,0.94)',
+        zIndex: 70000,
+        ...(low ? {
+          paddingTop: 'max(8px, var(--mh-sa-top))',
+          paddingBottom: 'max(8px, var(--mh-sa-bottom))'
+        } : {})
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": `${who.name}の説明`,
+      "data-assistant-help-sheet": true
+    }, React.createElement("div", {
+      className: `w-full ${low ? 'max-w-2xl rounded-3xl border-2 max-h-full' : 'max-w-md rounded-t-3xl border-t-2 border-x-2 max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]'} bg-slate-950 flex flex-col`,
+      style: {
+        borderColor: color
+      }
+    }, React.createElement("div", {
+      className: `shrink-0 flex items-center border-b border-white/10 ${low ? 'gap-2 px-3 py-1.5' : 'gap-3 p-4'}`
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: low ? 32 : 68,
+      accent: color,
+      expression: face
+    }), React.createElement("div", {
+      className: `flex-1 min-w-0 ${low ? 'flex items-baseline gap-2' : ''}`
+    }, React.createElement("div", {
+      className: "shrink-0 text-[11px] font-black tracking-widest",
+      style: {
+        color
+      }
+    }, who.name), React.createElement("div", {
+      className: `text-[12px] text-white leading-relaxed ${low ? 'min-w-0 truncate' : ''}`,
+      style: low ? {
+        whiteSpace: 'nowrap'
+      } : bubbleWrapStyle()
+    }, low ? text : bubbleWrap(text)))), React.createElement("div", {
+      className: `flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low ? 'px-4 py-3' : 'p-4'}`
+    }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
+      key: i,
+      className: "text-[12px] text-slate-200 leading-relaxed"
+    }, helpWrap(x)))), React.createElement("div", {
+      className: `shrink-0 ${low ? 'px-3 py-2' : 'p-4 pt-2'}`,
+      style: low ? undefined : {
+        paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
+      }
+    }, React.createElement("button", {
+      onClick: () => setOpen(false),
+      "data-assistant-help-close": true,
+      className: `w-full ${low ? 'min-h-[44px]' : 'min-h-[48px]'} rounded-2xl font-black text-sm text-black active:scale-[.98]`,
+      style: {
+        backgroundColor: color
+      }
+    }, "閉じる"))));
+    const host = typeof document !== 'undefined' ? document.querySelector('.mh-app') : null;
+    return typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && host ? ReactDOM.createPortal(sheet, host) : sheet;
+  })());
 };
 const QuickStepScreen = ({
   onDone,
@@ -273336,6 +273360,10 @@ function MonsterHeroGame() {
         return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
       };
       const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      const episodeTitle = t => {
+        const p = storyEpisodeTitleParts(t);
+        return p.serial && p.series && activeGroup && String(activeGroup.label || '').includes(p.series) ? `${p.ep} ${p.sub}`.trim() : t;
+      };
       const titleWrap = t => String(t || '').split(/(\s+)/).map((x, i) => !x || /^\s+$/.test(x) ? x : [...x].length <= 12 ? React.createElement("span", {
         key: i,
         "data-ja-keep": true,
@@ -273443,9 +273471,10 @@ function MonsterHeroGame() {
       }, "見たお話 ", seenOf(activeGroup), "/", activeGroup.events.length)), React.createElement("span", {
         className: "w-[76px] shrink-0",
         "aria-hidden": "true"
-      })), React.createElement("p", {
-        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5"
-      }, "お話の順に並んでいます。"), React.createElement("div", {
+      })), React.createElement("div", {
+        className: "shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5",
+        "aria-hidden": "true"
+      }), React.createElement("div", {
         "data-event-replay-episodes": true,
         className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2"
       }, activeGroup.events.map(event => {
@@ -273486,18 +273515,13 @@ function MonsterHeroGame() {
         }), React.createElement("span", {
           className: "min-w-0 flex-1"
         }, React.createElement("b", {
-          className: "block text-[12px] font-black text-white",
+          className: "block text-[13px] font-black text-white",
           style: JA_LABEL_STYLE
-        }, titleWrap(event.title)), React.createElement("small", {
-          className: "block text-[9px] text-fuchsia-300/70"
-        }, eventReplayDateText(event) && React.createElement("span", {
+        }, titleWrap(episodeTitle(event.title))), eventReplayDateText(event) && React.createElement("small", {
           "data-event-replay-date": true,
-          className: "tabular-nums"
-        }, eventReplayDateText(event), "・"), "タップして見返す")));
-      })), React.createElement("button", {
-        onClick: () => setEventReplayGroupId(null),
-        className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-      }, "イベントの一覧へ戻る"))));
+          className: "block text-[10px] tabular-nums text-fuchsia-300/70"
+        }, eventReplayDateText(event))));
+      })))));
     })(), showIconPicker && (() => {
       const closeIcon = () => {
         setShowIconPicker(false);
@@ -275277,6 +275301,14 @@ function MonsterHeroGame() {
           } : bubbleWrapStyle()
         }, storyLineNodes(t, cap));
       };
+      const storySpaced = text => {
+        const a = [...String(text ?? '')];
+        return a.length < 2 ? text : React.createElement(React.Fragment, null, a.slice(0, -1).join(''), React.createElement("span", {
+          style: {
+            letterSpacing: 0
+          }
+        }, a[a.length - 1]));
+      };
       const storyLineStyle = (text, cap) => {
         const st = bubbleWrapStyle();
         return storyZones && typeof storyChunkLines === 'function' && storyChunkLines(text, cap, storyChunkMax(cap)) ? {
@@ -275565,7 +275597,7 @@ function MonsterHeroGame() {
           transform: `rotate(${deg}deg)`,
           animationDelay: `${i % 3 * 40}ms`
         }
-      }))), line.fxText && !storyOpening && React.createElement("div", {
+      }))), line.fxText && !storyOpening && !eventReplay.ending && React.createElement("div", {
         key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
         className: "px-4 py-2.5 text-center text-[17px] font-black",
@@ -275591,8 +275623,12 @@ function MonsterHeroGame() {
         className: "relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-          pointerEvents: 'auto',
-          zIndex: 1
+          pointerEvents: eventReplay.ending ? 'none' : 'auto',
+          zIndex: 1,
+          ...(eventReplay.ending ? {
+            opacity: 0,
+            transition: 'opacity .5s ease-out'
+          } : {})
         }
       }, React.createElement("div", {
         "data-story-body": true,
@@ -275807,10 +275843,9 @@ function MonsterHeroGame() {
         }, event.openingLogo.badge)) : parts.series && React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
-            paddingLeft: '.3em',
             animation: 'storyEndCard 1s ease-out .2s both'
           }
-        }, parts.series), React.createElement("p", {
+        }, storySpaced(parts.series)), React.createElement("p", {
           className: "mt-2 text-[30px] font-black leading-tight text-white",
           style: {
             animation: 'storyOpenTitle 1.3s ease-out .4s both',
@@ -275848,6 +275883,7 @@ function MonsterHeroGame() {
         const series = parts.serial ? allEv.filter(ev => ev.group === event.group && eventReplayReleased(ev) && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
         const nextEv = parts.serial && !parts.final ? series[series.findIndex(ev => ev.id === event.id) + 1] || null : null;
         const nextParts = nextEv ? storyEpisodeTitleParts(nextEv.title) : null;
+        const nextPlay = !!(nextEv && !eventReplay.live && !eventReplay.debug && isEventReplayUnlocked(nextEv));
         if (nextParts && nextParts.final && series.filter(ev => storyEpisodeTitleParts(ev.title).final).length > 1) nextParts.sub = '';
         const nextAt = nextEv ? storyJstMs(nextEv.date) : NaN;
         const now = Date.now();
@@ -275887,10 +275923,9 @@ function MonsterHeroGame() {
         }, React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
-            paddingLeft: '.3em',
             animation: `storyEndCard 1s ease-out ${delay + .2}s both`
           }
-        }, parts.series), React.createElement("p", {
+        }, storySpaced(parts.series)), React.createElement("p", {
           className: "mt-2 text-[30px] font-black leading-tight text-white",
           style: {
             animation: `storyEndCard 1s ease-out ${delay + .35}s both`,
@@ -275905,14 +275940,35 @@ function MonsterHeroGame() {
           "data-story-ending-fin": true,
           className: "mt-5 text-[38px] font-black tracking-[.4em]",
           style: {
-            paddingLeft: '.4em',
             animation: `storyEndFin 1.4s ease-out ${delay + .9}s both`,
             background: 'linear-gradient(180deg,#fde68a,#f0abfc)',
             WebkitBackgroundClip: 'text',
             backgroundClip: 'text',
             color: 'transparent'
           }
-        }, parts.final ? 'おしまい' : '終わり'), rich && nextEv && React.createElement("div", {
+        }, storySpaced(parts.final ? 'おしまい' : '終わり')), rich && nextPlay && React.createElement("button", {
+          type: "button",
+          "data-story-ending-play-next": true,
+          onClick: e => {
+            e.stopPropagation();
+            const fromList = !!eventReplay.fromList;
+            next();
+            setEventReplay({
+              id: nextEv.id,
+              step: 0,
+              fromList
+            });
+            setShowEventReplayList(false);
+          },
+          className: "mt-5 min-h-[56px] w-full rounded-2xl bg-fuchsia-500 px-3 py-2 text-slate-950 active:scale-[.98]",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, React.createElement("span", {
+          className: "block text-[15px] font-black"
+        }, "▶ ", nextParts.ep, "を見る"), nextParts.sub && React.createElement("span", {
+          className: "block text-[12px] font-black"
+        }, storyCenter(nextParts.sub, Math.min(storyBoxW, 384) - 80, 12))), rich && nextEv && !nextPlay && React.createElement("div", {
           "data-story-ending-next": true,
           className: "mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2",
           style: {
@@ -275982,7 +276038,7 @@ function MonsterHeroGame() {
             e.stopPropagation();
             next();
           },
-          className: "mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]",
+          className: `mt-4 w-full rounded-2xl text-sm font-black active:scale-[.98] ${nextPlay ? 'min-h-[44px] border border-white/20 bg-slate-900 text-slate-200' : 'min-h-[48px] bg-slate-700 text-white'}`,
           style: {
             animation: `storyEndCard 1s ease-out ${delay + (rich ? 2 : 1.4)}s both`
           }
