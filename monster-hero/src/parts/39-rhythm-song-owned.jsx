@@ -36,8 +36,18 @@ const rhythmSongBundleSongs = (songId) => {
   return [owner, ...rhythmSongBundleIds(owner)].map((id) => RHYTHM_SONGS.find((song) => song && song.songId === id)).filter(Boolean);
 };
 
-const rhythmSongPrice = (songId) => {
-  const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
+// イベントのあいだだけ無料の曲(2026-11-23 花の女3人のイベント・社長「開催中は無料、終わったらビートPで買う」)。
+//   data/rhythm-event.js の rhythmEventFreeSongUntilMs が無料の終わる時刻を返す曲は、その時刻までは0(無料)、
+//   それからは表に値段が無くても RHYTHM_SONG_DEFAULT_PRICE。★時刻は呼ばれるたびに数え直す(CLAUDE.md ⑥-4)
+const rhythmSongFreeUntilMs = (songId) => {
+  const ms = typeof rhythmEventFreeSongUntilMs === 'function' ? rhythmEventFreeSongUntilMs(rhythmSongOwnerId(songId)) : null;
+  return Number.isFinite(ms) ? ms : null;
+};
+const rhythmSongPrice = (songId, nowMs = Date.now()) => {
+  const freeUntil = rhythmSongFreeUntilMs(songId);
+  if (freeUntil !== null && Number(nowMs) < freeUntil) return 0;
+  const listed = RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)];
+  const n = Math.floor(Number(listed === undefined && freeUntil !== null ? RHYTHM_SONG_DEFAULT_PRICE : listed));
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 const rhythmSongIsPaid = (songId) => rhythmSongPrice(songId) > 0;

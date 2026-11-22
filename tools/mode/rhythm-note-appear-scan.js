@@ -25,7 +25,8 @@ fs.mkdirSync(OUT,{recursive:true});
  const server=http.createServer((req,res)=>{const f=path.join(ROOT,decodeURIComponent(req.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}
   const t={'.js':'text/javascript','.html':'text/html','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.mp3':'audio/mpeg','.m4a':'audio/mp4','.json':'application/json'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t});fs.createReadStream(f).pipe(res);}).listen(PORT);
  const b=await require('playwright').chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const page=await b.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,hasTouch:true,isMobile:true});
+ const MOBILE=process.env.MOBILE!=='0'; // PC で撮るときは MOBILE=0(端末の真似をしない)
+ const page=await b.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,hasTouch:MOBILE,isMobile:MOBILE});
  await page.addInitScript(({songId,diff})=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
   put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
