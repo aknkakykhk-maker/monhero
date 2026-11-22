@@ -97,6 +97,13 @@ async function shootSize(size, server) {
   let seed = 12345;
   const rand = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 2 ** 32; };
   const s = await openSession({ playwright, pageUrl: `http://localhost:${PORT}/monster-hero/index.html`, port: PORT, out: botOut, rand, persona: `visual-${size.tag}`, report, viewport: { width: size.w, height: size.h } });
+  // SHOT_NOTCH=1 … iPhone の切り欠きの余白を入れて撮る(2026-11-22 窓口の決まり: 縦 上47・下34 / 横 左右47・下21)。
+  //   画面の余白は var(--mh-safe-*) から入る(index.html の --mh-sa-*)。env() を直に書いた部品には効かない
+  if (process.env.SHOT_NOTCH === '1') {
+    await s.page.addInitScript((land) => { document.addEventListener('DOMContentLoaded', () => { const r = document.documentElement.style;
+      const v = land ? { top: '0px', bottom: '21px', left: '47px', right: '47px' } : { top: '47px', bottom: '34px', left: '0px', right: '0px' };
+      Object.entries(v).forEach(([k, x]) => r.setProperty(`--mh-safe-${k}`, x)); }); }, size.w > size.h);
+  }
   const errs = [];
   s.page.on('pageerror', (e) => errs.push({ kind: 'JSエラー', text: String((e && e.message) || e) }));
   s.page.on('console', (m) => { if (m.type() === 'error' && !IGNORE_CONSOLE.test(m.text())) errs.push({ kind: 'コンソールエラー', text: m.text() }); });

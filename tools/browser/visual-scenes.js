@@ -283,6 +283,14 @@ const SCENES = [
     for (let k = 0; k < 3 && (await s.tapLabel(/^この案内を閉じる$/, 500)); k++);
     return true;
   } },
+  // 🔄横(縦の端末で絵だけ回す)の曲えらび。社長の iPhone はこの形(2026-11-22 r1119-094)。縦の大きさ(tate)で撮る
+  { id: 'beat-songs-rot', area: 'モンヒロビート', name: '曲えらび(ソロライブ・🔄横)', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs');
+    if (!(await song.go(s))) return false;
+    if (!(await s.tapLabel(/^(🔄\s*)?横$|横画面に|横向き/, 1500))) return false;
+    await s.page.waitForTimeout(6500); // 「絵のほうを横向きにしました」の知らせが消えるまで待つ
+    return true;
+  } },
   // ---- MFバトルカード ----
   { id: 'card-top', area: 'カードバトル', name: 'MFバトルカード', go: homeBtn('MFバトルカード') },
   // ---- 助手ライフ ----
