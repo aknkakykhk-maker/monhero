@@ -21,7 +21,9 @@
   言葉の頭(歌の拍)が要るなら、声だけの音源から立ち上がりを取る(既存の解析ファイル `tools/mode/authoring/*-v3-audio.json` は**作り直さない**。読むのはよい)
 - 道具: `tools/audio/vocal-split-speaker.py`(声の主で0.5秒ごとに2人へ)・`tools/audio/vocal-parts-table.py`(表を作る)
 - #7187 の前の譜面は git の記録にある(#7187 のマージより前の `monster-hero/data/rhythm-mode.js` のマーカー
-  `beyond-the-same-sky(-short)-v3-{master,hell}-notes`)。今の本番 = #7187 の版
+  `beyond-the-same-sky(-short)-v3-{master,hell}-notes`)。**#7198(別の会話・19:18)が #7187 を直す前へ戻して「押せない所を作らない条件」で直し直した**。
+  今の本番 = #7198 の版(交差 原曲 MASTER 2・HELL 22 / short MASTER 7・HELL 19。手の決まりの検査に9番=親指2本の押せない が足された)。
+  絵は「#7187 の前・#7187・新しい版」の3つ(窓口の指示)。#7198 も並べるかは窓口に確かめる
 - 位置だけ裏返す写し方(`rhythm-vocal-hands.js`)は試したが、社長の評価を受けてやめた(譜面に入れていない・道具も消した)
 
 ## 組み直しの決まり(tools/mode/CLAUDE.md より)
