@@ -32,7 +32,7 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
     // 段7 の前の家の並び(得の3行)を確かめる。型に載せた家は tools/assistant/life-house-typed-shoot.js が見る
-    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; window.__mhAssistantLifeUntypedHouse = true; if (on) localStorage.setItem('mh_assistant_life_ui_v2', 'true'); }, v2);
+    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; window.__mhAssistantLifeUntypedHouse = true; window.__mhAssistantLifeUntypedFriends = true; /* 段10: 前の友情の並び(段13で片づけ) */ if (on) localStorage.setItem('mh_assistant_life_ui_v2', 'true'); }, v2);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     if (first) await page.addInitScript(() => { if (localStorage.getItem('mh_check_guide_first') === null) { localStorage.setItem('mh_check_guide_first', '1'); localStorage.removeItem('mh_assistant_life_guide_seen_v1'); } }); // 初めての人: 見た印だけ無くす(道具の案内の窓は出さない)

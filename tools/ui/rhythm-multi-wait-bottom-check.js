@@ -41,7 +41,16 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.waitForTimeout(2500);
       for (let i = 0; i < 12; i++) { const hit = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /^(スキップ|受け取る|閉じる|OK)$/.test((e.innerText || '').trim())); if (x) { x.click(); return true; } return false; }); if (!hit) break; await page.waitForTimeout(300); }
-      await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /モンヒロビート/.test(e.innerText || '')); x && x.click(); });
+      // 更新履歴などの窓が少し遅れて開くので、閉じては押すを入れるまで繰り返す。上の「本オープン記念」の札ではなく HOME の入口(「音ゲー」)を押す(2026-11-22)
+      for (let i = 0; i < 30; i++) {
+        if (await page.$('[data-rhythm-mode-select]')) break;
+        await page.evaluate(() => {
+          const close = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /^(スキップ|受け取る|閉じる|OK)$/.test((e.innerText || '').trim()));
+          if (close) { close.click(); return; }
+          const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /モンヒロビート[\s\S]*音ゲー/.test(e.innerText || '')); if (x) x.click();
+        });
+        await page.waitForTimeout(700);
+      }
       await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
       await page.waitForTimeout(800);
       if (rot) await page.evaluate(() => { try { RHYTHM_VIEW_ROTATION.set(90); } catch (e) {} });

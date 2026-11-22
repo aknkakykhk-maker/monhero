@@ -68,7 +68,8 @@ check('M5 マルチの部屋: 縦向きは下の欄を枠のすぐ下へ(mt-auto
   // 2026-11 に、狭い画面で中身がはみ出さないよう shrink-0 を min-h-0 shrink にした(縦で下の欄を枠のすぐ下へ・70% の上限・mt-auto は横だけ、は同じ)
   /className="max-h-\[70%\] (?:shrink-0|min-h-0 shrink) overflow-y-auto border-t border-white\/10 bg-slate-950\/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-\[58%\]/.test(multi));
 // 2026-11 に、CPU(助手・マスモン)の名前は1行に収める形に分けた。人の名前は今までどおり2行まで
-check('M5 マルチの部屋: 大きい札の名前は2行まで', multi.includes("'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}") || multi.includes("${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}"));
+// 2026-11-22 r1119-094 N25: 「モンヒロく/ん*」と言葉の途中で折れたので、人の名前は1行(長い名前は字を小さく・入らなければ「…」)にした。1行も「2行まで」に入る
+check('M5 マルチの部屋: 大きい札の名前は2行まで', /truncate whitespace-nowrap \$\{\[\.\.\.String\(m\.name/.test(multi) || multi.includes("'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}") || multi.includes("${tall ? 'line-clamp-2 break-all text-[11px] landscape:text-sm' : 'truncate text-[10px]'}"));
 check('M5 選曲の制限時間の札は狭い画面で詰める(「なし」が次の行へ落ちない)', multi.includes('max-[359px]:min-w-[44px] max-[359px]:px-1.5'));
 
 check('M6 結果に、その難易度の満点に対する出来(満点の◯%)を出す', /data-rhythm-result-achievement[^>]*>満点の\{Math\.min\(100,Math\.floor\(view\.score\/Number\(difficulty\.maxScore\)\*100\)\)\}%/.test(play));
