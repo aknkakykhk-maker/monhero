@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e68a4b2ad5b563c5
+// source-sha256: ae1526d59877cc19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98459,7 +98459,7 @@ function RhythmMultiResultBubble({
     className: "relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs",
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
-    className: "line-clamp-2"
+    className: "line-clamp-2 [@media(orientation:portrait)_and_(min-height:700px)]:line-clamp-3"
   }, jaWrap(text)), React.createElement("i", {
     "aria-hidden": "true",
     className: "absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white"
@@ -102451,8 +102451,12 @@ function RhythmMultiScreenBody({
     type: "button",
     "aria-label": "全国ランキング",
     onClick: openRanking,
-    className: `min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`
-  }, "🏆");
+    className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`
+  }, React.createElement("span", {
+    className: "text-lg"
+  }, "🏆"), React.createElement("span", {
+    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100"
+  }, "ランキング"));
   const rankingWideButton = (extra = '') => rankingSupport && React.createElement("button", {
     "data-rhythm-multi-ranking": true,
     type: "button",
@@ -102467,8 +102471,8 @@ function RhythmMultiScreenBody({
     "data-rhythm-multi-ranking-layer": true,
     className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
   }, rankingSupport.render(() => setRankingOpen(false)));
-  const chatLatestButton = (extra = '') => {
-    const last = chatList.length ? chatList[chatList.length - 1] : null;
+  const chatLatestButton = (extra = '', plain = false) => {
+    const last = !plain && chatList.length ? chatList[chatList.length - 1] : null;
     return React.createElement("button", {
       "data-rhythm-multi-chat-open": true,
       type: "button",
@@ -103610,11 +103614,11 @@ function RhythmMultiScreenBody({
         ...resultWidthStyle,
         ...resultGridStyle
       },
-      className: "relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+      className: "relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 [@media(orientation:portrait)_and_(min-height:700px)]:pt-[58px] landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, React.createElement("li", {
       "aria-hidden": "true",
       "data-rhythm-multi-result-bubbles": true,
-      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2",
+      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2",
       style: resultGridStyle
     }, Array.from({
       length: resultCols
@@ -103658,10 +103662,10 @@ function RhythmMultiScreenBody({
       })), React.createElement("span", {
         className: `relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`
       }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
-        className: "block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
+        className: "block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]"
       }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
         className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`
-      }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
+      }, r.res ? r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString() : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
         className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5"
       }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
         className: "text-[8px] font-black text-rose-300"
@@ -103675,7 +103679,7 @@ function RhythmMultiScreenBody({
       big: true,
       limit: 6,
       className: "min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap"
-    }), rankingButton('landscape:min-h-[34px]'), chatLatestButton('landscape:min-h-[34px]')), (() => {
+    }), rankingButton('landscape:min-h-[34px]'), chatLatestButton('landscape:min-h-[34px]', true)), (() => {
       if (team.waiting) return null;
       const myRow = team.rows.find(row => row.m.id === view.selfId);
       if (!myRow || !myRow.res || myRow.res.quit) return null;
@@ -105904,21 +105908,22 @@ function RhythmBuddyGrowth({
   if (!shown || !masu) return null;
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
-  return React.createElement("p", {
-    "data-rhythm-buddy-growth": true,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100"
-  }, React.createElement("span", {
-    className: "max-w-full truncate"
-  }, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
-    className: "text-lime-300"
-  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
-    "data-rhythm-buddy-levelup": true,
-    className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
-    className: "text-amber-200"
-  }, "この曲の得意度+1"), trait && React.createElement("span", {
-    className: "text-pink-200"
-  }, "性格が「", trait.label, "」になった!"));
+  return (React.createElement("p", {
+      "data-rhythm-buddy-growth": true,
+      className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]"
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, "🎵 ", rhythmBuddyMasuName(masu), "に"), React.createElement("span", {
+      className: "text-lime-300"
+    }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+      "data-rhythm-buddy-levelup": true,
+      className: "rounded bg-amber-300 px-1 text-slate-950"
+    }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
+      className: "text-amber-200"
+    }, "この曲の得意度+1"), trait && React.createElement("span", {
+      className: "text-pink-200"
+    }, "性格が「", trait.label, "」になった!"))
+  );
 }
 const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
 const rhythmBuddyRankCache = new Map();
@@ -106848,25 +106853,26 @@ function RhythmAssistSessionGrowth({
   }, [assistantId, round]);
   if (!shown || !assistantId) return null;
   const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
-  return React.createElement("p", {
-    "data-rhythm-assist-growth": true,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100"
-  }, React.createElement("span", {
-    className: "max-w-full truncate"
-  }, "🎤 ", rhythmAssistSessionName(assistantId)), React.createElement("span", {
-    className: "text-pink-200"
-  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
-    "data-rhythm-assist-levelup": true,
-    className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
-    className: "text-amber-200"
-  }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
-    "data-rhythm-assist-ticket": true,
-    className: "text-lime-200"
-  }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
-    "data-rhythm-assist-cheer": true,
-    className: "text-violet-200"
-  }, shown.cheer.label));
+  return (React.createElement("p", {
+      "data-rhythm-assist-growth": true,
+      className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]"
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, "🎤 ", rhythmAssistSessionName(assistantId), "に"), React.createElement("span", {
+      className: "text-pink-200"
+    }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+      "data-rhythm-assist-levelup": true,
+      className: "rounded bg-amber-300 px-1 text-slate-950"
+    }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
+      className: "text-amber-200"
+    }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
+      "data-rhythm-assist-ticket": true,
+      className: "text-lime-200"
+    }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
+      "data-rhythm-assist-cheer": true,
+      className: "text-violet-200"
+    }, shown.cheer.label))
+  );
 }
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;

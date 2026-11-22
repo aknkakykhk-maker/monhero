@@ -1035,8 +1035,9 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return (
-    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
-      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
+    // だれに入ったかを「◯◯に」で書き、縦では字を大きくする(点検 N43)
+    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]">
+      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}に</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
