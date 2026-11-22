@@ -60401,6 +60401,73 @@ const desertCrownHellNotes=((t,h,f,s,T,F,S)=>[
 // </desert-crown-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const desertCrownHellChart=mhChart(36,desertCrownHellNotes,DESERT_CROWN_DURATION_MS,6);
+const WALKURE_DURATION_MS=691931;
+const walkureEasyNotes=((t,h,f,s)=>[
+// <walkure-v3-easy-notes>
+// </walkure-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureNormalNotes=((t,h,f,s)=>[
+// <walkure-v3-normal-notes>
+// </walkure-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureHardNotes=((t,h,f,s)=>[
+// <walkure-v3-hard-notes>
+// </walkure-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureExpertNotes=((t,h,f,s)=>[
+// <walkure-v3-expert-notes>
+// </walkure-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureMasterNotes=((t,h,f,s)=>[
+// <walkure-v3-master-notes>
+// </walkure-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureCharts=Object.freeze({
+  EASY:mhChart(1,walkureEasyNotes,WALKURE_DURATION_MS,6),
+  NORMAL:mhChart(1,walkureNormalNotes,WALKURE_DURATION_MS,6),
+  HARD:mhChart(1,walkureHardNotes,WALKURE_DURATION_MS,6),
+  EXPERT:mhChart(1,walkureExpertNotes,WALKURE_DURATION_MS,6),
+  MASTER:mhChart(1,walkureMasterNotes,WALKURE_DURATION_MS,6)
+});
+const walkureHellNotes=((t,h,f,s,T,F,S)=>[
+// <walkure-v3-hell-notes>
+// </walkure-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const walkureHellChart=mhChart(1,walkureHellNotes,WALKURE_DURATION_MS,6);
+const WALKURE_SHORT_DURATION_MS=180428;
+const walkureShortEasyNotes=((t,h,f,s)=>[
+// <walkure-short-v3-easy-notes>
+// </walkure-short-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureShortNormalNotes=((t,h,f,s)=>[
+// <walkure-short-v3-normal-notes>
+// </walkure-short-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureShortHardNotes=((t,h,f,s)=>[
+// <walkure-short-v3-hard-notes>
+// </walkure-short-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureShortExpertNotes=((t,h,f,s)=>[
+// <walkure-short-v3-expert-notes>
+// </walkure-short-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureShortMasterNotes=((t,h,f,s)=>[
+// <walkure-short-v3-master-notes>
+// </walkure-short-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+const walkureShortCharts=Object.freeze({
+  EASY:mhChart(1,walkureShortEasyNotes,WALKURE_SHORT_DURATION_MS,6),
+  NORMAL:mhChart(1,walkureShortNormalNotes,WALKURE_SHORT_DURATION_MS,6),
+  HARD:mhChart(1,walkureShortHardNotes,WALKURE_SHORT_DURATION_MS,6),
+  EXPERT:mhChart(1,walkureShortExpertNotes,WALKURE_SHORT_DURATION_MS,6),
+  MASTER:mhChart(1,walkureShortMasterNotes,WALKURE_SHORT_DURATION_MS,6)
+});
+const walkureShortHellNotes=((t,h,f,s,T,F,S)=>[
+// <walkure-short-v3-hell-notes>
+// </walkure-short-v3-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const walkureShortHellChart=mhChart(1,walkureShortHellNotes,WALKURE_SHORT_DURATION_MS,6);
+
 // HELL(デバッグ専用・2026-10-11)。参考譜面の空中(空中のタップ・高さのあるスライド)を土台に、親指2本で押せる形へ直した譜面
 // (tools/mode/rhythm-ref-thumbfix.js。同じ親指が地上と空中を行き来する間は1.5拍以上・押せない0・指の交差0)。速さの演出と組は MASTER と同じ
 // 2026-10-13 社長の決定「案3 X のまま」: 上下に交わる3か所(15.4・67.7・135.7秒)で、右手の空中スライドも左へ1レーン動かし、左手の地上スライドとすれ違う X にした
@@ -62778,6 +62845,8 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   beyond_the_same_sky:Object.freeze({EASY:7,NORMAL:9,HARD:14,EXPERT:25,MASTER:33}),
   beyond_the_same_sky_short:Object.freeze({EASY:7,NORMAL:9,HARD:15,EXPERT:23,MASTER:35}),
   desert_crown:Object.freeze({EASY:6,NORMAL:7,HARD:9,EXPERT:18,MASTER:30}),
+  walkure:Object.freeze({EASY:1,NORMAL:1,HARD:1,EXPERT:1,MASTER:1}),
+  walkure_short:Object.freeze({EASY:1,NORMAL:1,HARD:1,EXPERT:1,MASTER:1}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -63849,6 +63918,27 @@ const RHYTHM_SONG_ENTRIES = [
     ])))
   }),
   Object.freeze({
+    songId:'walkure',
+    displayName:'ワルキューレ',
+    bgmTrackId:'melo_walkure',
+    // 2026-11-22 追加。ALHAMBRA「ワルキューレ」(アルバム Fadista)の原曲(約11分32秒・BPM 216.0)。ジャケットはアルバムの絵
+    artwork:'images/song-art/walkure.jpg?v=25ed534ed26b',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,walkureCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
+    songId:'walkure_short',
+    displayName:'ワルキューレ',
+    subtitle:'short ver.',
+    bgmTrackId:'melo_walkure_short',
+    // 2026-11-22 追加。「ワルキューレ」のショート版(約3分・原曲の頭から約178秒にフェードアウト)。ジャケットは原曲と同じ絵
+    artwork:'images/song-art/walkure.jpg?v=25ed534ed26b',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,walkureShortCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
     songId:'atsu_cup_theme_debug_short',
     displayName:'あつ杯テーマ DEBUG 60s',
     debugDescription:'約60秒の総合テスト（正式候補・WIDTH TESTとは別）',
@@ -64128,6 +64218,8 @@ const RHYTHM_SONG_BEATS=Object.freeze({
   beyond_the_same_sky:[337.0787,2058,4],
   beyond_the_same_sky_short:[337.0787,2058,4],
   desert_crown:[600.12,2392,4],
+  walkure:[277.743,70,4],
+  walkure_short:[277.743,23,4],
   megalovania_sans:[250,200.5,4],
   megalovania_smash:[375,761,4],
 });
@@ -69353,7 +69445,7 @@ const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
 // </monster-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const monsterShortHellChart=mhChart(35,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
-const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart,megalovania_sans:megalovaniaSansHellChart,megalovania_smash:megalovaniaSmashHellChart,departure:departureHellChart,departure_short:departureShortHellChart,rpg:rpgHellChart,rpg_short:rpgShortHellChart,midnight_studio:midnightStudioHellChart,midnight_studio_short:midnightStudioShortHellChart,hopes_and_dreams:hopesAndDreamsHellChart,hopes_and_dreams_short:hopesAndDreamsShortHellChart,sparkling_pink_overture:sparklingPinkOvertureHellChart,seasons_of_a_little_plaza:seasonsOfALittlePlazaHellChart,eiyuu_no_akashi:eiyuuNoAkashiHellChart,eiyuu_no_akashi_milktea:eiyuuNoAkashiMilkteaHellChart,gourmet_race_64:gourmetRace64HellChart,gourmet_race_dx:gourmetRaceDxHellChart,dr_wily_stage_1:drWilyStage1HellChart,dr_wily_stage_1_okkussenman:drWilyStage1OkkussenmanHellChart,erfolg:erfolgHellChart,erfolg_piano:erfolgPianoHellChart,amakakeru_tsubasa:amakakeruTsubasaHellChart,beyond_the_same_sky:beyondTheSameSkyHellChart,beyond_the_same_sky_short:beyondTheSameSkyShortHellChart,desert_crown:desertCrownHellChart});
+const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart,megalovania_sans:megalovaniaSansHellChart,megalovania_smash:megalovaniaSmashHellChart,departure:departureHellChart,departure_short:departureShortHellChart,rpg:rpgHellChart,rpg_short:rpgShortHellChart,midnight_studio:midnightStudioHellChart,midnight_studio_short:midnightStudioShortHellChart,hopes_and_dreams:hopesAndDreamsHellChart,hopes_and_dreams_short:hopesAndDreamsShortHellChart,sparkling_pink_overture:sparklingPinkOvertureHellChart,seasons_of_a_little_plaza:seasonsOfALittlePlazaHellChart,eiyuu_no_akashi:eiyuuNoAkashiHellChart,eiyuu_no_akashi_milktea:eiyuuNoAkashiMilkteaHellChart,gourmet_race_64:gourmetRace64HellChart,gourmet_race_dx:gourmetRaceDxHellChart,dr_wily_stage_1:drWilyStage1HellChart,dr_wily_stage_1_okkussenman:drWilyStage1OkkussenmanHellChart,erfolg:erfolgHellChart,erfolg_piano:erfolgPianoHellChart,amakakeru_tsubasa:amakakeruTsubasaHellChart,beyond_the_same_sky:beyondTheSameSkyHellChart,beyond_the_same_sky_short:beyondTheSameSkyShortHellChart,desert_crown:desertCrownHellChart,walkure:walkureHellChart,walkure_short:walkureShortHellChart});
 // はじめての HELL の目安(2026-10-21 改善部 N6・社長の決定)。HELL は MASTER を1回クリアで開くが、MASTER と HELL の Lv. の差が大きい曲がある
 //   (デュラハンテーマ MASTER 25 → HELL 59 など)。HELL の譜面のうち Lv. がいちばん低い公開曲を、実データから選ぶ(曲名・Lv. を手で書かない)
 const rhythmHellEntrySong=()=>{
@@ -70299,6 +70391,26 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
       id,rhythmChartOnRoad(id==='HELL'?desertCrownHellChart:emptyRhythmChart())
     ])))
   }),
+  Object.freeze({
+    songId:'walkure_hell_debug',
+    displayName:'ワルキューレ',
+    subtitle:'HELL',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面。遊んでも記録しない。',
+    bgmTrackId:'melo_walkure',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?walkureHellChart:emptyRhythmChart())
+    ])))
+  }),
+  Object.freeze({
+    songId:'walkure_short_hell_debug',
+    displayName:'ワルキューレ',
+    subtitle:'HELL(short ver.)',
+    debugDescription:'曲の解析から HELL 用に一から作った譜面。遊んでも記録しない。',
+    bgmTrackId:'melo_walkure_short',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
+      id,rhythmChartOnRoad(id==='HELL'?walkureShortHellChart:emptyRhythmChart())
+    ])))
+  }),
   // BLACK SHOUT の HELL(2026-10-21)。公開曲の HELL(RHYTHM_HELL_CHARTS)と同じ譜面。rhythm-hell-mix.js が Lv. を測るときにも使う
   Object.freeze({
     songId:'black_shout_hell_debug',
@@ -70516,6 +70628,9 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'beyond_the_same_sky_short',
   // 2026-11-21 追加。Desert Crown(えるびんの曲)。HELL あり。有料(ビートP500)
   'desert_crown',
+  // 2026-11-22 追加。ワルキューレ(原曲とショート版の2つの版)。HELL あり。有料(ビートP500で両方の版が開く)
+  'walkure',
+  'walkure_short',
 ]);
 // 同じ曲の別の版(2026-10-03・ユーザー指示「同じ曲でショートとかリミックスとか色々あるけど
 // これを同じとこにまとめて難易度とか選ぶあたりに切り替えられるように」)。
@@ -70555,6 +70670,8 @@ const RHYTHM_SONG_VERSION_GROUPS=Object.freeze([
   // 2026-11-19 Erfolg(原曲とピアノ版。ジャケットは両版とも同じ絵)
   Object.freeze([['erfolg','原曲'],['erfolg_piano','ピアノ ver.']]),
   Object.freeze([['beyond_the_same_sky','原曲'],['beyond_the_same_sky_short','short ver.']]),
+  // 2026-11-22 ワルキューレ(原曲とショート版。ジャケットは両版とも同じ絵)
+  Object.freeze([['walkure','原曲'],['walkure_short','short ver.']]),
 ]);
 const rhythmSongVersionGroup=songId=>RHYTHM_SONG_VERSION_GROUPS.find(group=>group.some(([id])=>id===songId))||null;
 // その曲の組の原曲の songId(組に入っていない曲はその曲自身)
