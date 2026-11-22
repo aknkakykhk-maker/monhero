@@ -1,5 +1,5 @@
 // 助手ライフ: 人間らしい関係の出来事(けんか・仲直り・やきもちなど)の台本を、
-// 56-assistant-life-rel.jsx の印のあいだ(ASSISTANT_LIFE_REL_TALKS)へ書き出す。2026-11-07 社長「助手同士の関係で喧嘩とか仲直りとかそういう人間じみたのもどんどんいれてね」
+// data/assistant-life-rel-talks.js の印のあいだ(ASSISTANT_LIFE_REL_TALKS・段10で 56-assistant-life-rel.jsx から移した)へ書き出す。2026-11-07 社長「助手同士の関係で喧嘩とか仲直りとかそういう人間じみたのもどんどんいれてね」
 //   node tools/assistant/life-rel-talks-import.js          書き出す
 //   node tools/assistant/life-rel-talks-import.js --check  書き出し済みと台本が同じか確かめる(違えば NG)
 // 台本: docs/progress/assistant-peer/lines/kotoba-house.txt・tsumugi-house.txt(注文 ORDER-HOUSE.md)。読む種類と形:
@@ -14,7 +14,7 @@
 const fs = require('fs'), path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const SRCS = ['kotoba-house.txt', 'tsumugi-house.txt'].map(f => path.join(root, 'docs/progress/assistant-peer/lines', f));
-const DEST = path.join(root, 'monster-hero/src/parts/56-assistant-life-rel.jsx');
+const DEST = path.join(root, 'monster-hero/data/assistant-life-rel-talks.js');
 const BEGIN = '// <life-rel-talks:begin>', END = '// <life-rel-talks:end>';
 const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];

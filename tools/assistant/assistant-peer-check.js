@@ -35,10 +35,15 @@ const ctx = vm.createContext({
   RELEASE_FLAGS: { assistantPeer: true },
 });
 vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8'), ctx);
+vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistant-life-rel-talks.js'), 'utf8'), ctx); // 関係の出来事の台本(段10で data/ へ)
 let dayNow = '2026-11-07';
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var assistantById = (id) => ASSISTANTS.find(a => a.id === id);', Object.assign(ctx, { __day: () => dayNow }));
 const part = babel.transformSync(fs.readFileSync(path.join(root, 'monster-hero', 'src', 'parts', '56-assistant-peer.jsx'), 'utf8'), { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code;
 vm.runInContext(part, ctx);
+// けんか・仲直りの台本は 56-assistant-life-rel.jsx の1つの表から(段10)。そこも読む
+// この検査は助手ライフの部品を読まない(印 assistantLife が偽の世界)。rel の口が見る印だけ置く
+vm.runInContext('var assistantLifeEnabled = () => false;', ctx);
+vm.runInContext(babel.transformSync(fs.readFileSync(path.join(root, 'monster-hero', 'src', 'parts', '56-assistant-life-rel.jsx'), 'utf8'), { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code, ctx);
 const G = (expr) => vm.runInContext(expr, ctx);
 
 const TALKS = G('ASSISTANT_PEER_TALKS');
