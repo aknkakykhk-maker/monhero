@@ -1,6 +1,6 @@
 # 助手ライフの画面の決まり(ASSISTANT_LIFE_UI)
 
-- 状態: 段6(2026-11-21 ナカヨシ)。型の部品を作った。**画面にはまだ差し込んでいない**(家は段7・部屋は段8・町は段9…)
+- 状態: 段6(2026-11-21 ナカヨシ)で型の部品を作り、段7で家・段8で部屋(2026-11-22)を載せた。町は段9…
 - 元: [`ASSISTANT_LIFE.md`](ASSISTANT_LIFE.md) §5(画面の型と、いちばん押してほしい物)・配置図 [`overhaul-design/`](../progress/assistant-life/overhaul-design/README.md)
 - 考え方は [`MONSUC_UI.md`](MONSUC_UI.md) にそろえる(1画面に主なボタンは1つ・大きさは決まった段だけ・色はモンサクと同じ紺の地と桃→橙)
 - 部品: `monster-hero/src/parts/56-assistant-life-ui.jsx`(見た目 `ALU_CSS` は `.alu` の中だけに効く。何も保存しない)
