@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 52e073b5ea707d4e
+// generated-sha256: 15a03d29c5e848b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -41184,8 +41184,8 @@ function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
       <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
-      {/* 「ビートP 300」「セッション券 1枚」の数は名前から離して折らない(「セッション券／1枚」と切れていた・2026-11-23 API総点検② V23) */}
-      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${String(next).replace(/ (?=[\d,]+(?:枚|個|P|回)?(?:・|$))/g, '\u00a0')}`)}</p>}
+      {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );

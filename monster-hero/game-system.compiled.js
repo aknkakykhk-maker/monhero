@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9390e49cc0026c97
+// source-sha256: b50ff0f6ecea1ab5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66838,9 +66838,11 @@ function PlayerRankGain({
     }
   }), next && React.createElement("p", {
     "data-player-rank-gain-next": true,
-    className: "text-[10px] font-bold text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`次は ${String(next).replace(/ (?=[\d,]+(?:枚|個|P|回)?(?:・|$))/g, '\u00a0')}`)), up && done && React.createElement(PlayerRankUp, {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "次は ", String(next).split('・').map((part, i) => React.createElement("span", {
+    key: i,
+    className: "inline-block whitespace-nowrap"
+  }, `${i ? '・' : ''}${part}`))), up && done && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
