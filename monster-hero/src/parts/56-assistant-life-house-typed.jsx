@@ -78,13 +78,18 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
         {g0 && onWatch ? <div style={{ marginTop: 10 }}><AluGo onClick={() => { if (onGuideClose) onGuideClose(); onWatch(); }} data-assistant-life-guide-watch>👀 見てみる — {assistantLifeTypedGroupName(g0, nameOf)}の話</AluGo></div> : null}
       </AluSheet>
     </div>) : null;
+  const goBtn = (
+    <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
+      {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
+    </AluGo>);
+  // 背の低い縦(320×568 など)は、切り欠き(上47px・下34px)で帯とタブが太り、家の絵の下の主なボタンが最初の画面に入らない。
+  //   主なボタンを「次のごほうび」のすぐ下(家の絵の上)へ(家の絵を小さくすると部屋の札が切れる・2026-11-22)
+  const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return (
-    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
+    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
       {top}
       {note ? <div className="alu-card alu-t" data-assistant-life-note>{note}</div> : null}
-      <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
-        {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
-      </AluGo>
+      {low ? null : goBtn}
       <AluGoalCard view={goal} onKind={(k) => { const f = kindGo[k]; if (f) f(); }}
         extra={tier ? `🎉 ${tier.label} 🤝 ×${tier.mult}` : null}
         below={dailyCard ? (

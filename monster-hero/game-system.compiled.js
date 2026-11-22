@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9175142965d0b12c
+// source-sha256: 071a37f56d86d5d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121168,26 +121168,28 @@ function AssistantLifeHouseTyped({
     },
     "data-assistant-life-guide-watch": true
   }, "👀 見てみる — ", assistantLifeTypedGroupName(g0, nameOf), "の話")) : null)) : null;
+  const goBtn = React.createElement(AluGo, {
+    onClick: () => {
+      if (g0 && onWatch) onWatch();
+    },
+    disabled: !g0,
+    "data-assistant-life-today-act": "watch"
+  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に');
+  const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return React.createElement(AluFrame, {
     title: "家",
     onBack: onBack,
     tab: tab,
     onTab: onTab,
     tabs: tabs,
-    head: head,
+    head: low ? React.createElement(React.Fragment, null, head, goBtn) : head,
     scene: scene,
     overlay: resultNode || guideNode,
     "data-assistant-life-typed-house": "1"
   }, top, note ? React.createElement("div", {
     className: "alu-card alu-t",
     "data-assistant-life-note": true
-  }, note) : null, React.createElement(AluGo, {
-    onClick: () => {
-      if (g0 && onWatch) onWatch();
-    },
-    disabled: !g0,
-    "data-assistant-life-today-act": "watch"
-  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'), React.createElement(AluGoalCard, {
+  }, note) : null, low ? null : goBtn, React.createElement(AluGoalCard, {
     view: goal,
     onKind: k => {
       const f = kindGo[k];
@@ -126071,13 +126073,13 @@ const ALU_CSS = `
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
-.alu-body{flex:1;min-height:0;display:flex}
+.alu-body{flex:1;min-height:0;display:flex;padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
-.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px calc(12px + var(--mh-sa-right,0px)) 0 calc(12px + var(--mh-sa-left,0px))}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px))}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px));padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}

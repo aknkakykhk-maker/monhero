@@ -52,8 +52,10 @@ fs.mkdirSync(OUT, { recursive: true });
     // --worn kiki:kiki_twintail_v1,… … 着せ替えを着せて撮る(着替えの保存 mh_assistant_costume_*_v1 はページの中だけ)
     const WORN = Object.fromEntries((opt('--worn', '') || '').split(',').filter(Boolean).map(x => x.split(':')));
     if (Object.keys(WORN).length) await page.addInitScript((worn) => { localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(Object.values(worn))); localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify(worn)); }, WORN);
-    // --notch … iPhone の切り欠きあり(上47px・下34px)で撮る。env() はブラウザで作れないので、ゲームの切り欠きの変数(--mh-safe-top ほか)に入れる(2026-11-22 社長の iPhone で上の帯が時刻に重なった r1119-098)
-    if (argv.includes('--notch')) await page.addInitScript(() => { const set = () => { const r = document.documentElement; r.style.setProperty('--mh-safe-top', '47px'); r.style.setProperty('--mh-safe-bottom', '34px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); });
+    // --notch … iPhone の切り欠きあり(縦: 上47px・下34px / 横: 左右47px・下21px)で撮る。env() はブラウザで作れないので、ゲームの切り欠きの変数(--mh-safe-top ほか)に入れる(2026-11-22 社長の iPhone で上の帯が時刻に重なった r1119-098)
+    if (argv.includes('--notch')) await page.addInitScript(() => { const set = () => { const r = document.documentElement; const land = window.innerWidth > window.innerHeight; // 横は左右47px・下21px(2026-11-22 窓口: 全部の部への決まり)
+        r.style.setProperty('--mh-safe-top', land ? '0px' : '47px'); r.style.setProperty('--mh-safe-bottom', land ? '21px' : '34px');
+        r.style.setProperty('--mh-safe-left', land ? '47px' : '0px'); r.style.setProperty('--mh-safe-right', land ? '47px' : '0px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); });
     // --short-bottom <px> … 助手ライフの器が画面の下の端まで届かない形(社長の iPhone のホーム画面のアプリで器の下に黒い帯が出ていた)を作って撮る
     if (opt('--short-bottom', '')) await page.addInitScript((px) => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = `.mhl-root{bottom:${px}px!important}`; document.head.appendChild(st); }); }, Number(opt('--short-bottom', '0')));
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
