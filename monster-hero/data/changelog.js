@@ -43,6 +43,14 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-23 01:20", type:'fix', group:'rhythm', status:'new',
+    title:'Beyond the Same Sky の MASTER と HELL で、ノーツの幅がそろってしまっていたのを直しました',
+    items:[
+      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL で、ノーツの幅がすべて同じになっていたのを直しました。',
+      'レベルは、原曲 HELL Lv.56、short ver. MASTER Lv.33 ／ HELL Lv.63 になりました。これまでのスコアとランキングの記録はそのまま残ります。',
+    ],
+  },
+  {
     date: "2026-11-22 23:41", type:'fix', title:'横画面の曲選びで、版を選べる曲の難易度が切れないようになりました', status:'new', group:'rhythm',
     items:[
       '原曲と short ver. のように版を選べる曲を横画面で選ぶと、難易度のボタンが細くなり、HARD〜HELL の字と自己ベストが切れていました。',
@@ -125,7 +133,7 @@ const CHANGELOG = [
     title:'Beyond the Same Sky の MASTER と HELL が、2人の歌い分けに合わせた譜面になりました',
     items:[
       'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL を、あつとみゅあの歌に合わせて作り直しました。',
-      'レベルは、原曲 MASTER Lv.36、short ver. MASTER Lv.32 です。HELL は変わりません。',
+      'レベルは、原曲 MASTER Lv.36 ／ HELL Lv.56、short ver. MASTER Lv.33 ／ HELL Lv.63 です。',
       'これまでのスコアとランキングの記録はそのまま残ります。',
     ],
   },
@@ -410,9 +418,9 @@ const CHANGELOG = [
     image:'images/song-art/beyond-the-same-sky.jpg?v=ecf19c624394',
     items:[
       'モンヒロビートに「Beyond the Same Sky」を追加しました。あつとみゅあの曲で、ギルド「W.o.F」のころの思い出を歌っています。原曲（4分18秒・BPM 178）と short ver.（2分31秒・BPM 178）の、2バージョンの曲組です。',
-      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.36 ／ HELL Lv.55 です。',
+      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.36 ／ HELL Lv.56 です。',
       '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1112 ／ 1227 です。',
-      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.32 ／ HELL Lv.58 です。',
+      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.33 ／ HELL Lv.63 です。',
       'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 639 ／ 733 です。',
       'ジャケットは版ごとに違う絵です。譜面も版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
