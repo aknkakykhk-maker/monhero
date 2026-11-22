@@ -178,6 +178,10 @@
   "walkure/HELL": 10,
   "walkure_short/MASTER": 0,
   "walkure_short/HELL": 1,
+  "battle_5/MASTER": 15,
+  "battle_5/HELL": 12,
+  "battle_5_short/MASTER": 9,
+  "battle_5_short/HELL": 18,
   "kimimachi_loop/MASTER": 0,
   "kimimachi_loop/HELL": 0
  },
@@ -221,6 +225,11 @@
    "at": "2026-11-22T15:07",
    "reason": "全部必殺技でつ を作り直した(r1119-109)",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T16:28",
+   "reason": "main 取り込み後の再生成(Battle #5 は非表示マージ・台帳 r1119-117/118)",
+   "changed": 4
   }
  ]
 }

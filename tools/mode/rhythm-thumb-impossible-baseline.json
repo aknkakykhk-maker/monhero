@@ -355,6 +355,14 @@
   "walkure_short/MASTER/portrait": 0,
   "walkure_short/HELL/landscape": 0,
   "walkure_short/HELL/portrait": 2,
+  "battle_5/MASTER/landscape": 0,
+  "battle_5/MASTER/portrait": 0,
+  "battle_5/HELL/landscape": 0,
+  "battle_5/HELL/portrait": 2,
+  "battle_5_short/MASTER/landscape": 0,
+  "battle_5_short/MASTER/portrait": 0,
+  "battle_5_short/HELL/landscape": 0,
+  "battle_5_short/HELL/portrait": 1,
   "kimimachi_loop/MASTER/landscape": 0,
   "kimimachi_loop/MASTER/portrait": 0,
   "kimimachi_loop/HELL/landscape": 0,
@@ -400,6 +408,11 @@
    "at": "2026-11-22T15:07",
    "reason": "全部必殺技でつ を作り直した(r1119-109)",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T16:28",
+   "reason": "main 取り込み後の再生成(Battle #5 は非表示マージ・台帳 r1119-117/118)",
+   "changed": 8
   }
  ]
 }

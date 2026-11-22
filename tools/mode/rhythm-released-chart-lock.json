@@ -1222,6 +1222,11 @@
     "zenbu_hissatsuwaza/master",
     "zenbu_hissatsuwaza/hell"
    ]
+  },
+  {
+   "at": "2026-11-23 01:28",
+   "reason": "main 取り込み後の再生成(Battle #5 は非表示マージ・台帳 r1119-118。公開曲の一覧に無いため控えに入れない)",
+   "changed": []
   }
  ]
 }
