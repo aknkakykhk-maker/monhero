@@ -158,11 +158,13 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
     const rel=O.rhythmEventBanner(e).split('?')[0];
     return !html.includes(`"${rel}"`);
   }));
-  // スマホの通信量に直接効くので、入れる前に軽くする(CLAUDE.md ⑥-2)
-  check('告知画像は軽い(200KB以内)',withBanner.every(e=>{
+  // スマホの通信量に直接効くので、重すぎる絵は止める(CLAUDE.md ⑥-2)。
+  // 上限は 1MB(2026-11-22 窓口の判断)。社長の決まり r1115-143「絵は元の大きさ・元の色数のまま。縮めない」に合わせ、
+  // 元の大きさの JPEG(花の女3人のイベントの絵は 561KB)が通る上限にした。前は 200KB
+  check('告知画像は重すぎない(1MB以内)',withBanner.every(e=>{
     const rel=O.rhythmEventBanner(e).split('?')[0];
     const file=path.join(ROOT,'monster-hero',rel);
-    return !fsx.existsSync(file)||fsx.statSync(file).size<=200*1024;
+    return !fsx.existsSync(file)||fsx.statSync(file).size<=1024*1024;
   }),withBanner.map(e=>{
     const file=path.join(ROOT,'monster-hero',O.rhythmEventBanner(e).split('?')[0]);
     return fsx.existsSync(file)?`${(fsx.statSync(file).size/1024).toFixed(0)}KB`:'?';

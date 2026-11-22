@@ -13,7 +13,9 @@ const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${deta
 
 const ctx={console,Object,Number,Math,Array,JSON,String,Boolean,isNaN,parseInt,parseFloat,Date,Map,Set};
 vm.createContext(ctx);
+// イベントで時刻に開く曲(data/rhythm-event.js の FLOWER3_SONG_SLOTS・2026-11-22)も rhythmSongReleased が見るので、ゲームと同じくあとに続けて読む
 vm.runInContext(fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')
+  +'\n'+fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-event.js'),'utf8')
   +'\nthis.out={RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS,rhythmSongVersionHead,rhythmSongVersionLabel,rhythmSongReleased};',ctx);
 const {RHYTHM_SONGS,RHYTHM_DEMO_SONG_IDS,RHYTHM_SONG_VERSION_GROUPS:GROUPS,rhythmSongVersionHead,rhythmSongReleased}=ctx.out;
 const ids=GROUPS.flatMap(group=>group.map(([id])=>id));

@@ -87,6 +87,7 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   desert_crown:{marker:'desert-crown-v3',zero:2392,beat:600.12,levelRe:/const desertCrownHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.6},
   // BRAND NEW SKY(2026-11-22・みゅあの曲・花の女3人のイベント)。段変えの上限(r1119-090)を守るため levelSettle を付ける
   brand_new_sky:{marker:'brand-new-sky-v3',zero:438.1,beat:410.558,levelRe:/const brandNewSkyHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,levelSettle:true},
+  zenbu_hissatsuwaza:{marker:'zenbu-hissatsuwaza-v3',zero:1236.1,beat:310.29,levelRe:/const zenbuHissatsuwazaHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   walkure:{marker:'walkure-v3',zero:70,beat:277.743,levelRe:/const walkureHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['ground','L','ground','R'],levelSettle:true},
   walkure_short:{marker:'walkure-short-v3',zero:23,beat:277.743,levelRe:/const walkureShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
