@@ -89,7 +89,8 @@ const rhythmWeekId = (nowMs) => {
 //   報酬が要るのは、いまのところ期間限定イベントだけ。
 // ===== 花の女3人のモンヒロビートイベント(2026-11-23〜11-30・台帳 r1119-101・台本 docs/progress/event-flower3/script.md) =====
 // 社長「みゅあ・きき・ももの新曲3曲でモンビーイベント。毎日開く形(パンドラと同じ)」。
-//   ・曲は1日に1曲ずつ開く(下の FLOWER3_SONG_SLOTS の openAt。曲えらびに出る時刻は rhythm-mode.js の rhythmSongReleased がここを見る)
+//   ・3曲は開始(11/23 10:00)から全部遊べる。毎日開くのはお話だけ(社長「新曲が1曲ずつ追加は意図と違う」・パンドラと同じ形)。
+//     曲えらびに出る時刻は FLOWER3_SONG_SLOTS の openAt(3曲とも開始の時刻)を rhythm-mode.js の rhythmSongReleased が見る
 //   ・3曲はイベントのあいだ無料、終わったら1曲 RHYTHM_SONG_DEFAULT_PRICE(500)のビートPで買う曲になる(39-rhythm-song-owned.jsx の rhythmSongPrice がここを見る)
 //   ・開始はパンドラと同じ月曜12:00、終わりは週の区切り(月曜4:00・画面は 3:59 まで)
 // ★曲の受け口: 曲は別の会話が rhythm-song-add で1曲ずつ入れる。入れたら songId の仮の名前を本物の id へ差し替える
@@ -113,10 +114,13 @@ const FLOWER3_TARGET_POINT_BOOST = 7;
 const FLOWER3_SONG_SLOTS = Object.freeze([
   // 曲名は窓口から(BRAND NEW SKY / 全部必殺技でつ( `･ω･) / きみ待ち♡ループ)。id は曲を入れる会話の報告が届いたら差し替える
   Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT }),
-  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: '2026-11-24T10:00:00+09:00' }),
-  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: '2026-11-25T10:00:00+09:00' }),
+  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: FLOWER3_START_AT }),
+  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});
+// 告知の横長の絵(キービジュアル)。社長が作り直した絵が届いたら images/events/flower3-2026-wide.jpg に置き、ここへその道を書く
+// (?v= は build.js が打つ)。null のあいだはイベントタブに絵が出ないだけで画面は壊れない。お知らせ(changelog.js)の image も同じ道を書く
+const FLOWER3_BANNER = null;
 // 受け口の曲のうち、公開曲の一覧(rhythm-mode.js・先に読み込まれる)に入っているもの
 const flower3PublishedSlots = () => {
   // 検査の道具が読む順番を変えて連結すると、まだ初期化されていない const を typeof でも触れずに止まるので、try で包む
@@ -146,6 +150,7 @@ const flower3RhythmEvent = (() => {
     name: FLOWER3_EVENT_NAME,
     startAt: FLOWER3_START_AT,
     endAt: FLOWER3_END_AT,
+    ...(FLOWER3_BANNER ? { banner: FLOWER3_BANNER } : {}),
     songIds: Object.freeze(songIds),
     ...(Object.keys(versions).length ? { songVersions: Object.freeze(versions) } : {}),
     // 超越の実の種族(案: パンドラと同じピクシー・社長の決定待ち)
