@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d2b6d7137915253
+// source-sha256: f3befee7d9a7d737
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174388,6 +174388,8 @@ const MSX_CSS = `
 .msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
 .msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx button.v-pow{color:inherit;font:inherit;cursor:pointer;min-height:44px;text-align:left}.msx button.v-pow:active{transform:translateY(1px)}
+.msx .msx-stsh-pow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:900;margin:4px 0 8px}.msx .msx-stsh-pow b{font-size:22px;color:#fde047}
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
@@ -181169,6 +181171,7 @@ function MsxBand({
   stFrom = null,
   gainTag = true
 }) {
+  const [stOpen, setStOpen] = useState(false);
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax);
   const hp = Math.max(0, Math.min(max, s.hp));
@@ -181231,9 +181234,13 @@ function MsxBand({
     className: "ph"
   }, v.period.name, React.createElement("small", null, cal.year, "年目 ", cal.month, "月")), React.createElement("div", {
     className: "n"
-  }, "残り", React.createElement("b", null, v.period.left), "ターン")), React.createElement("div", {
-    className: "v-pow"
-  }, React.createElement("div", null, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power))), React.createElement("i", {
+  }, "残り", React.createElement("b", null, v.period.left), "ターン")), React.createElement("button", {
+    type: "button",
+    className: "v-pow",
+    onClick: () => setStOpen(true),
+    "aria-label": "6つの能力を見る",
+    "data-msx-band-pow": true
+  }, React.createElement("div", null, React.createElement("small", null, "総合力 ▸"), React.createElement("b", null, msxFmt(ev.power))), React.createElement("i", {
     className: `${msxRankCls(ev.rank)} big`
   }, ev.rank))), React.createElement("div", {
     className: "v-b2"
@@ -181291,7 +181298,11 @@ function MsxBand({
       "data-msx-band-lw": true,
       title: l.map(y => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')
     }, React.createElement("small", null, (Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : '', msxLwWhy(x.w), "で "), msxLwAmt(x), l.length > 1 ? React.createElement("small", null, ` ほか${l.length - 1}`) : null);
-  })()));
+  })()), stOpen ? React.createElement(MsxStatSheet, {
+    s: s,
+    ev: ev,
+    onClose: () => setStOpen(false)
+  }) : null);
 }
 const MSX_YOSU_NAME = {
   sabori: 'サボりグセ',
@@ -181531,6 +181542,34 @@ function MsxPartySheet({
     type: "button",
     className: "msx-dt-close",
     "data-msx-party-close": true,
+    onClick: onClose
+  }, "閉じる")));
+}
+function MsxStatSheet({
+  s,
+  ev,
+  onClose
+}) {
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-stat-sheet": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt msx-stsh",
+    onClick: e => e.stopPropagation(),
+    role: "dialog",
+    "aria-modal": "true"
+  }, React.createElement("h3", null, "いまの能力"), React.createElement("div", {
+    className: "msx-stsh-pow"
+  }, "総合力 ", React.createElement("b", null, msxFmt(ev.power)), React.createElement("i", {
+    className: `${msxRankCls(ev.rank)} big`
+  }, ev.rank)), React.createElement(MsxStRow, {
+    who: s,
+    stats: s.stats
+  }), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-stat-close": true,
     onClick: onClose
   }, "閉じる")));
 }
@@ -191297,7 +191336,9 @@ function MsxR3Box({
     }, React.createElement("span", {
       className: "e",
       "aria-hidden": "true"
-    }, "🐾"), React.createElement("b", null, "マスモンボックス"), React.createElement("small", null, box.mons.length, " / ", box.cap, "体")), typeof MonsucFuseSheet === 'function' ? React.createElement("button", {
+    }, "🐾"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "マスモンボックス"), React.createElement("small", null, box.mons.length, " / ", box.cap, "体"))), typeof MonsucFuseSheet === 'function' ? React.createElement("button", {
       type: "button",
       className: "mm-card",
       onClick: () => setPage('fuse'),
@@ -191306,7 +191347,9 @@ function MsxR3Box({
     }, React.createElement("span", {
       className: "e",
       "aria-hidden": "true"
-    }, "🧬"), React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン')) : null), React.createElement("button", {
+    }, "🧬"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'))) : null, React.createElement("button", {
       type: "button",
       className: "mm-card mm-asb",
       onClick: () => {
@@ -191315,7 +191358,12 @@ function MsxR3Box({
         setMsg('');
       },
       "data-msx-mm-open-assist": true
-    }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体(合体・お別れしたモンスター。編成にだけ入れられる)")), box.memory.length ? React.createElement("div", {
+    }, React.createElement("span", {
+      className: "e",
+      "aria-hidden": "true"
+    }, "💠"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体")))), box.memory.length ? React.createElement("div", {
       className: "mm-memo"
     }, "思い出: ", box.memory.slice(-5).map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
     foot = null;
@@ -191834,6 +191882,13 @@ const MSX_MM_CSS = `
 .msx .mm-asb{grid-column:1/-1;min-height:46px;margin-top:6px;width:100%;flex-direction:column}
 .msx .mm-keep{margin-top:4px;font-size:11px;font-weight:800;color:#c7d2fe;line-height:1.5}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
+/* 入口(育-159): 絵は上に収め、3つのボタンを同じ大きさで縦に(絵文字は左・名前と数は右) */
+.msx .mm-gate .mm-desk{flex:1 1 0;min-height:150px;max-height:52%}
+.msx .mm-gate .mm-cards{grid-template-columns:1fr;gap:8px}
+.msx .mm-gate .mm-card{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:8px 16px;text-align:left}
+.msx .mm-gate .mm-card .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.msx .mm-gate .mm-card small{font-size:12px}
+.msx .mm-gate .mm-asb{margin-top:0}
 .msx .mm-memo{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx .mm-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-tabs button{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #4a4380;font-size:13px;font-weight:900;text-align:center}
