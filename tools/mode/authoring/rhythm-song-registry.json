@@ -2087,6 +2087,20 @@
     "MASTER": "smooth"
    }
   },
+  "zenbu_hissatsuwaza": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-zenbu-hissatsuwaza.mp3",
+   "chartRevision": 40,
+   "audioSha256": "5b91503c17430b97e9689efa49e290b88bdf3c9736fe5484013bfc537996e852",
+   "durationMs": 118032,
+   "analyzedTiming": {
+    "bpm": 193.367,
+    "beatZeroMs": 1236.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
   "kimimachi_loop": {
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-kimimachi-loop.mp3",

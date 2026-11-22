@@ -128,6 +128,7 @@ const BGM_TRACKS = [
   { id:'melo_beyond_the_same_sky', name:'Beyond the Same Sky', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky.mp3', gain:1, loop:true },
   { id:'melo_beyond_the_same_sky_short', name:'Beyond the Same Sky short ver.', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky-short.mp3', gain:1, loop:true },
   { id:'melo_desert_crown', name:'Desert Crown', creator:'えるびん', src:'audio/bgm-desert-crown.mp3', gain:1, loop:true },
+  { id:'melo_zenbu_hissatsuwaza', name:'全部必殺技でつ( `･ω･)', creator:'オリジナル', src:'audio/bgm-zenbu-hissatsuwaza.mp3', gain:1, loop:true },
   { id:'melo_walkure', name:'ワルキューレ', creator:'ALHAMBRA', src:'audio/bgm-walkure.mp3', gain:1, loop:true },
   { id:'melo_walkure_short', name:'ワルキューレ short ver.', creator:'ALHAMBRA', src:'audio/bgm-walkure-short.mp3', gain:1, loop:true },
   { id:'melo_kimimachi_loop', name:'きみ待ち♡ループ', creator:'オリジナル', src:'audio/bgm-kimimachi-loop.mp3', gain:1, loop:true },

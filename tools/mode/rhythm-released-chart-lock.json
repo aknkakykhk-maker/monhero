@@ -421,6 +421,11 @@
   "kimimachi_loop/hard": "5f8316826b8fc0e6",
   "kimimachi_loop/expert": "a590f649d59c759a",
   "kimimachi_loop/master": "804001a10a1ec514",
+  "zenbu_hissatsuwaza/easy": "b2bb4fe15f7f1292",
+  "zenbu_hissatsuwaza/normal": "d8a57e4b86363b8e",
+  "zenbu_hissatsuwaza/hard": "7493d66ef70c7cf5",
+  "zenbu_hissatsuwaza/expert": "8a0573e5483dacb3",
+  "zenbu_hissatsuwaza/master": "eaaf5b77f179df44",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -515,6 +520,7 @@
   "beyond_the_same_sky_short/hell": "ddf78efbca21f9eb",
   "desert_crown/hell": "662c4a0b30060ef2",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
+  "zenbu_hissatsuwaza/hell": "ec77dbc8f23c77ab",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -1142,6 +1148,28 @@
     "beyond_the_same_sky/hell",
     "beyond_the_same_sky_short/hell",
     "desert_crown/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 20:29",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": [
+    "zenbu_hissatsuwaza/easy",
+    "zenbu_hissatsuwaza/normal",
+    "zenbu_hissatsuwaza/hard",
+    "zenbu_hissatsuwaza/expert",
+    "zenbu_hissatsuwaza/master",
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 20:34",
+   "reason": "新曲 全部必殺技でつ を公開(押さえ中の交差を0に直した形)",
+   "changed": [
+    "zenbu_hissatsuwaza/expert",
+    "zenbu_hissatsuwaza/master",
+    "zenbu_hissatsuwaza/hell"
+
    ]
   },
   {
