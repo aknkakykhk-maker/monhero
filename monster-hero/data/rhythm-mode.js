@@ -1475,11 +1475,21 @@ const rhythmSlideSkyAt=(note,chartTimeMs)=>{
   return h(points[points.length-1]);
 };
 const rhythmChartHasSky=notes=>Array.isArray(notes)&&notes.some(note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note));
-// 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか(判定ラインの高さで rect.height*RHYTHM_SKY_LIFT_RATIO)
-const rhythmSkyLiftPx=(rect,yRatio)=>{
-  const h=Number(rect?.height)||0,line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
-  return base>0?h*RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(rhythmClamp01(Number(yRatio)))/base:0;
+// 画面の高さ yRatio の位置で、高さ1のノーツを画面の高さの何割持ち上げるか(判定ラインの高さで RHYTHM_SKY_LIFT.ratio・画面の上端で0)。
+// ★上端で0にする(2026-11-22 台帳 r1119-096 追記2・社長「直す」)。以前は「奥の縮み(y)/判定ラインの縮み」で、上端でも持ち上げが残ったため、
+//   道の奥が画面の外へ切れる横持ちでは空中ノーツだけ地上より約0.32秒遅れて、道の途中の大きさで上端から急に現れた(縦でも約0.1秒)。
+//   いまは (縮み(y)−上端の縮み)/(判定ラインの縮み−上端の縮み) で、上端では地上と同じ所から出て、近づくにつれて空中の段へ上がる。
+//   判定ラインでの高さは前と同じ。空中の線は判定ラインより3%以上低い(rhythmSkyLiftMaxFor)ので、画面の位置は上端から下へ単調に進む(途中で上へ戻らない)。
+//   GPU の帯(シェーダーの proj・skyK)と、演奏画面の空中の面(30-rhythm-play.jsx)も同じ式を通す。調べ: docs/progress/beat/chart-fix-2026-11-22/note-appear/
+//   上端より上(yRatio<0)も同じ1次の式のまま延ばす(持ち上げは負になる)。画面の位置は「地上の位置×(1−持ち上げの比)」の1次になり、
+//   上端を越える瞬間は地上と同じ・帯の形が折れない・GPU の帯(点を粗くつなぐ)と 2D の絵がずれない(rhythm-gpu-band-check.js)
+const rhythmSkyLiftRatio=yRatio=>{
+  const line=RHYTHM_JUDGMENT_LINE_Y.ratio,top=rhythmProjectionScale(0),base=rhythmProjectionScale(line);
+  if(!(base>top))return 0;
+  return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(Math.min(1,Number(yRatio)||0))-top)/(base-top);
 };
+// 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか
+const rhythmSkyLiftPx=(rect,yRatio)=>(Number(rect?.height)||0)*rhythmSkyLiftRatio(yRatio);
 // 空中の判定ラインの高さ(プレイエリアの中の割合)と、地上と空中を分ける高さ
 const rhythmSkyLineRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio;
 const rhythmSkySplitRatio=()=>RHYTHM_JUDGMENT_LINE_Y.ratio-RHYTHM_SKY_LIFT.ratio/2;
@@ -75557,6 +75567,9 @@ const RHYTHM_SONG_RELEASE_AT=Object.freeze({
   crazy_party_night_full:'2026-10-04T08:00:00+09:00',
 });
 const rhythmSongReleased=(songId,nowMs=Date.now())=>{
+  // イベントで日ごとに開く曲(data/rhythm-event.js の FLOWER3_SONG_SLOTS・2026-11-23)。あとから読み込まれるので呼ばれた時に引く
+  const eventOpenMs=typeof rhythmEventSongOpenAtMs==='function'?rhythmEventSongOpenAtMs(songId):null;
+  if(eventOpenMs!==null&&!(Number(nowMs)>=eventOpenMs))return false;
   const at=RHYTHM_SONG_RELEASE_AT[songId];
   if(!at)return true;
   const ms=Date.parse(at);
@@ -76824,7 +76837,8 @@ const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Num
     const yRatio=rhythmClamp01(y/rect.height);
     const span=rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,yRatio,at);
     const half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
-    const lift=rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,yRatio)*rhythmSlideSkyAt(note,at):0;
+    // 持ち上げは上端より上も1次の式で延ばす(rhythmSkyLiftRatio)。上端で切った yRatio を渡すと GPU の帯と食い違う
+    const lift=rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,Math.min(1,y/rect.height))*rhythmSlideSkyAt(note,at):0;
     lines.push({x1:rect.width*span.center-half,x2:rect.width*span.center+half,y:y-lift});
   }
   return lines;
@@ -77200,11 +77214,11 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const skyHead=rhythmNoteIsSlide(note)?rhythmSlideSkyAt(note,Math.max(Number(note.timeMs)||0,Number(chartNowMs)||0)):rhythmNoteSkyHeight(note);
   if(skyHead>0){
     out.skyShadow={cx:out.head.cx,cy:out.head.cy,w:out.head.w,h:out.head.h};
-    out.head={...out.head,cy:out.head.cy-rhythmSkyLiftPx(rect,yRatio)*skyHead};
+    out.head={...out.head,cy:out.head.cy-rhythmSkyLiftPx(rect,Math.min(1,centerY/rect.height))*skyHead};
   }
   if(out.end&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)){
     const endSky=rhythmSlideSkyAt(note,rhythmReleaseTargetMs(note));
-    if(endSky>0)out.end={...out.end,cy:out.end.cy-rhythmSkyLiftPx(rect,rhythmClamp01(out.end.cy/rect.height))*endSky};
+    if(endSky>0)out.end={...out.end,cy:out.end.cy-rhythmSkyLiftPx(rect,Math.min(1,out.end.cy/rect.height))*endSky};
   }
   return out;
 };
@@ -77332,7 +77346,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky;return vec2(x,y-lift);}'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*(depth(min(yr,1.0))-uTop)*uRoad*sky;return vec2(x,y-lift);}'+
     // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
     // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
     'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;float f=aMisc.w;'+
@@ -77522,7 +77536,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       const t=now();e.usedAt=t;e.pinned=false;sweep(t);
       const nowMs=Math.max(e.t0,Math.min(e.t1,Number(travel.chartNowMs)||e.t0));
       if(!(nowMs<e.t1))return false;
-      const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio);
+      // 空中の持ち上げは rhythmSkyLiftRatio と同じ(上端で0・シェーダーは (depth−uTop)×uRoad×skyK)
+      const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio)-rhythmProjectionScale(0);
       const c={e,u:{snow:rhythmScrollPos(Number(travel.visualTime),note.scrollGroup)-e.s0,tnow:nowMs-e.t0,travel:Number(travel.travelMs),spawnY:Number(travel.spawnY),travelPx:Number(travel.travelPx),halfH:Number(halfH)||0,
         w:Number(rect.width)||0,h:Number(rect.height)||1,skyK:base>0?(Number(rect.height)||0)*RHYTHM_SKY_LIFT.ratio/base:0,size:Number(size)||1}};
       // いまの位置で切る。rhythmSlideSegmentQuads と同じく、押さえている帯は「いまの位置から次の譜面の点まで」をその場で刻み直し、

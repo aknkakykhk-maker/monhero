@@ -491,7 +491,8 @@ check('部門の分母は対象曲の数から作る',screen.includes('const eve
 // 名前の作り方は1か所(rhythmSongFullName)だけに置く。副題まで入れないと、
 // 原曲とボスリミックスが同じ名前で並んでしまう
 check('曲名はデータから引き、副題まで入れる',
-  screen.includes('rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))')
+  // 2026-11-22: 曲えらびの案内も部門(rhythmEventDivisions)から引く形にした(日ごとに開く曲は開くまで名前を出さない)。どちらもデータから引く
+  (screen.includes('rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))')||screen.includes('rhythmEventDivisions(rhythmEventNotice,RHYTHM_SONGS)'))
   &&screen.includes('rhythmSongFullName(division.song)')
   &&!/song\.displayName|\.displayName\s*\|\|/.test(eventData));
 
