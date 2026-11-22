@@ -405,12 +405,12 @@
   "beyond_the_same_sky/normal": "aa4f942b81fae2c2",
   "beyond_the_same_sky/hard": "7378982020dd476d",
   "beyond_the_same_sky/expert": "fd2ffd03a9f026a0",
-  "beyond_the_same_sky/master": "2ab05e687d59657c",
+  "beyond_the_same_sky/master": "c7310f4927d12366",
   "beyond_the_same_sky_short/easy": "243f4f846aa14db1",
   "beyond_the_same_sky_short/normal": "3d0a892da99ad12d",
   "beyond_the_same_sky_short/hard": "1ad292bd42fd3ce9",
   "beyond_the_same_sky_short/expert": "980fa0f61461396f",
-  "beyond_the_same_sky_short/master": "e45f582b83a63869",
+  "beyond_the_same_sky_short/master": "7e5518b1b3c7bd76",
   "desert_crown/easy": "78ff62f3f59453f5",
   "desert_crown/normal": "8900d3fe0631d6e5",
   "desert_crown/hard": "c751db1e76ca1edd",
@@ -521,8 +521,8 @@
   "walkure/hell": "94860f0aa2cf55ca",
   "walkure_short/hell": "ca1fdfc6c9e030fb",
   "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
-  "beyond_the_same_sky/hell": "102ea3fc65e86d5c",
-  "beyond_the_same_sky_short/hell": "f0667345dc0cce0d",
+  "beyond_the_same_sky/hell": "6cc4ed78ed09571f",
+  "beyond_the_same_sky_short/hell": "8a448637b891bf04",
   "desert_crown/hell": "662c4a0b30060ef2",
   "brand_new_sky/hell": "184d3b1d09c53b39",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
@@ -1226,6 +1226,26 @@
   {
    "at": "2026-11-23 01:21",
    "reason": "Beyond the Same Sky(原曲・short)の MASTER・HELL のノーツの幅を混ぜ、HELL の段変えを上限の内側へ(台帳 r1119-105 の続き・社長「全部ノーツが小さい」)",
+   "changed": [
+    "beyond_the_same_sky/master",
+    "beyond_the_same_sky_short/master",
+    "beyond_the_same_sky/hell",
+    "beyond_the_same_sky_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 02:18",
+   "reason": "Beyond the Same Sky(原曲・short)の MASTER・HELL を遊んで楽しい譜面に作り直した(台帳 r1119-116・展開ごとのスライド・ホールド・帯+刻み)",
+   "changed": [
+    "beyond_the_same_sky/master",
+    "beyond_the_same_sky_short/master",
+    "beyond_the_same_sky/hell",
+    "beyond_the_same_sky_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 02:26",
+   "reason": "Beyond the Same Sky(原曲・short)の MASTER・HELL を遊んで楽しい譜面に作り直した(台帳 r1119-116・展開ごとのスライド・ホールド・帯+刻み・2人の鏡写しのスライド)",
    "changed": [
     "beyond_the_same_sky/master",
     "beyond_the_same_sky_short/master",

@@ -38,7 +38,8 @@ const pick = P('67-screen-pick.jsx');
 check('M3 アシストカードの継承・強化の題名と説明は言葉の切れ目で折る', pick.includes("{jaWrap('アシストカードの継承・強化')}") && pick.includes("{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}"));
 check('M3 カードの効果(3行まで)と、選んだカードの段の説明も言葉の切れ目で折る', pick.includes('...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}') && pick.includes('style={JA_WRAP_STYLE}>{jaWrap(info.desc)}'));
 const play = P('30-rhythm-play.jsx');
-check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.includes("{jaWrap('ホールド・スライドの刻みもコンボに数えます')}"));
+// 2026-11-23 API総点検② V22: 中央そろえの2行で頭がずれたので左そろえにした
+check('M3 結果の「刻み」の説明は言葉の切れ目で折る(左そろえ)', play.includes(`<span className="block text-left text-[9px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホールド・スライドの刻みもコンボに数えます')}</span>`));
 check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /whitespace-nowrap text-\[10px\] font-black tracking-\[\.2em\] max-\[359px\]:tracking-\[\.06em\][^>]*>MAX COMBO</.test(play));
 
 const home = P('69-screen-home.jsx');
@@ -84,7 +85,8 @@ const assistant = P('21-assistant.jsx');
 check('M7 HOME: 幅360未満でみゅあの文は9px・切らずに全部出す', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }') && !/\[data-bubble-text\][^}]*-webkit-line-clamp/.test(html)); // みゅあの吹き出しの文だけを見る(マルチの席のスタンプなど、ほかの所の line-clamp には関係しない)
 
 check('M8 結果: 幅360未満で判定の表と MAX COMBO を詰める', play.includes('max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]') && play.includes('max-[359px]:text-[28px]'));
-check('M8 結果: 下の帯の上に、続きがあるあいだだけ「▼ ビートP・ライブログ」の印', /const RhythmResultMoreHint=\(\{label\}\)=>/.test(play) && play.includes('<RhythmResultMoreHint label=')
+// 2026-11-23 API総点検② V16・V17: 印は帯の上に浮かせず帯の中へ(縦はボタンの上の1行・横はボタンの左の札 inline)
+check('M8 結果: 下の帯の中に、続きがあるあいだだけ「▼ ビートP・ライブログ」の印', /const RhythmResultMoreHint=\(\{label,inline=false\}\)=>/.test(play) && play.includes('<RhythmResultMoreHint inline label=') && play.includes('<RhythmResultMoreHint label=')
   && /box\.scrollHeight-box\.scrollTop-box\.clientHeight>24/.test(play));
 
 const rhythmScreens = P('29-rhythm-screens.jsx');
