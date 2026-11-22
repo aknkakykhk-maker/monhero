@@ -175,7 +175,11 @@
   "walkure/MASTER": 1,
   "walkure/HELL": 10,
   "walkure_short/MASTER": 0,
-  "walkure_short/HELL": 1
+  "walkure_short/HELL": 1,
+  "kimimachi_loop/MASTER": 0,
+  "kimimachi_loop/HELL": 0,
+  "brand_new_sky/MASTER": 0,
+  "brand_new_sky/HELL": 0
  },
  "history": [
   {
@@ -199,6 +203,16 @@
    "changed": 2
   },
   {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
+   "changed": 2
+  },
+  {
+   "at": "2026-11-22T12:05",
+   "reason": "新曲 BRAND NEW SKY を公開",
+   "changed": 2
+   },
+   {
    "at": "2026-11-22T13:25",
    "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
    "changed": 4

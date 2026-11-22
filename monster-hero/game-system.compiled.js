@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5100e5d1df8136a0
+// source-sha256: 564e38cd4e228dcd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6536,6 +6536,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_brand_new_sky',
+  name: 'BRAND NEW SKY',
+  creator: 'オリジナル',
+  src: 'audio/bgm-brand-new-sky.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_zenbu_hissatsuwaza',
   name: '全部必殺技でつ( `･ω･)',
   creator: 'オリジナル',
@@ -6554,6 +6561,13 @@ const BGM_TRACKS = [{
   name: 'ワルキューレ short ver.',
   creator: 'ALHAMBRA',
   src: 'audio/bgm-walkure-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_kimimachi_loop',
+  name: 'きみ待ち♡ループ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-kimimachi-loop.mp3',
   gain: 1,
   loop: true
 }, {
@@ -8350,6 +8364,7 @@ const Audio_ = (() => {
     "audio/bgm-black-shout.mp3": "03a627c682de",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
+    "audio/bgm-brand-new-sky.mp3": "b93b1a67de51",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
@@ -8392,6 +8407,7 @@ const Audio_ = (() => {
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
+    "audio/bgm-kimimachi-loop.mp3": "1be296a6cdb3",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
     "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
@@ -15197,6 +15213,10 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   }
 });
 const changelogTypeOf = entry => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+const changelogEventUpcoming = (entry, nowMs = Date.now()) => {
+  const startMs = Date.parse(entry && typeof entry.eventStartAt === 'string' ? entry.eventStartAt : '');
+  return Number.isFinite(startMs) && Number(nowMs) < startMs;
+};
 const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
@@ -54323,6 +54343,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
     'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
+    'listen:brand_new_sky': [['excited', '1:19からいちばん強いところ、みんなで一緒に跳んでほしいの！']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:desert_crown': [['excited', '1:07からいちばん強いの！ 最後までずっと全開なのー♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
@@ -54334,6 +54355,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['excited', '2:05からの最後のサビ、いちばん強くてテンション上がるぢゃん♪']],
     'listen:gourmet_race_dx': [['excited', '1:14からのサビ、いちばん強い音が押し寄せるぢゃん！ テンション上がるよ♪']],
     'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
+    'listen:kimimachi_loop': [['excited', '1:00でいきなりいちばん強くなるの！ ここ、まぢテンション上がるー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -54419,6 +54441,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
     'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
+    'listen:brand_new_sky': [['happy', 'BPM146で、ずっと前へ前へ走っていく感じでつ']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:desert_crown': [['normal', '頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
@@ -54430,6 +54453,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', '2:13で静かになるところ、音がすっと引いてとてもきれいです♪']],
     'listen:gourmet_race_dx': [['normal', '1:30で音がすっと引くところ、静かでとてもきれいです♪']],
     'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
+    'listen:kimimachi_loop': [['normal', '頭の静かなところから、少しずつ近づいてくる感じがかわいいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -54515,6 +54539,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
+    'listen:brand_new_sky': [['excited', '2:20でもう一回いちばん強くなるの、最後まで最高潮だよ♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:desert_crown': [['excited', '1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
@@ -54526,6 +54551,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['excited', '0:38も1:00もいちばん強い！ ももはこの勢いが大好き♡']],
     'listen:gourmet_race_dx': [['excited', '1:14でいちばん強くなるの、ももはここが大好き♡']],
     'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
+    'listen:kimimachi_loop': [['excited', '1:00と2:02と2:32、いちばん強いところが3回あるよ♡ 何回でも会いに来てね♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -54611,6 +54637,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
+    'listen:brand_new_sky': [['happy', '強く打つ音が多いな。2分半、走り切るぞ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:desert_crown': [['happy', 'BPM100でじっくり進む旅だな。2分半、砂漠を越えるぞ']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
@@ -54622,6 +54649,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', '0:02から強めで一気に駆け出すぞ。レースのスタートみたいだな']],
     'listen:gourmet_race_dx': [['happy', '0:12から強めの音で駆け出すぞ。レースの始まりみたいだな']],
     'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
+    'listen:kimimachi_loop': [['happy', 'BPM167で弾むように進むな。2分42秒、最後まで走り抜けるぞ']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -54707,6 +54735,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
     'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
+    'listen:brand_new_sky': [['happy', '0:46で強めに上がってから、1:19で一気にひらける流れがいいね']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:desert_crown': [['happy', '2:02からもう一回いちばん強くなって、そのまま締めるのいいね']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
@@ -54718,6 +54747,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', '2:13で静かに終わるの、締めがきれいだね笑']],
     'listen:gourmet_race_dx': [['happy', '1:51で静かに終わるの、締めがきれいだね笑']],
     'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
+    'listen:kimimachi_loop': [['happy', '2:22で一回静かになってから、2:32でもう一回いちばん強くなるのずるいね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -54803,6 +54833,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
     'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
+    'listen:brand_new_sky': [['happy', '静か→ふつう→強め→いちばん強いって、きれいに上がっていく構成なんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:desert_crown': [['happy', '静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
@@ -54814,6 +54845,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['happy', 'いちばん強い所が何度も来て、間にふつうが挟まる。ためが効いてるんだよね〜']],
     'listen:gourmet_race_dx': [['happy', '1:14のサビのあと1:30で一度静かになる。構成が効いてるんだよね〜']],
     'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
+    'listen:kimimachi_loop': [['happy', '静か→ふつう→いちばん強いを何度もくり返す構成なんだよね〜 名前どおりループしてる笑']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -54899,6 +54931,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
+    'listen:brand_new_sky': [['normal', 'BPM146です。強く打つ音が48%・・・！ 元気な音です']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:desert_crown': [['normal', 'BPM100です。強く打つ音が40%・・・！ どっしりした音です']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
@@ -54910,6 +54943,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', 'BPM187です。強い音27%に軽い音1%、速くて芯のある配分です']],
     'listen:gourmet_race_dx': [['normal', 'BPM160です。強い音67%に軽い音6%、力のこもった配分です']],
     'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
+    'listen:kimimachi_loop': [['normal', 'BPM167です。強い音が32%・・・！ 軽やかなのに芯のある音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -54995,6 +55029,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
     'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
+    'listen:brand_new_sky': [['normal', '2:07で少し落ち着いてから最後に戻ってくるところ、ぐっとくるね']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:desert_crown': [['normal', '始まりの静かなところ、落ち着いて入っていけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
@@ -55006,6 +55041,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:gourmet_race_64': [['normal', '0:14と1:11のふつうな所は落ち着くね。息を整えてから行けるかな']],
     'listen:gourmet_race_dx': [['normal', '0:48のふつうな所と1:30の静かな所は落ち着くね。息を整えられるかな']],
     'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
+    'listen:kimimachi_loop': [['normal', '1:31から強めになって、2:02へつながっていく流れがきれいだね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -98497,7 +98533,7 @@ function RhythmMultiResultBubble({
     className: "relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs",
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
-    className: "line-clamp-2"
+    className: "line-clamp-2 [@media(orientation:portrait)_and_(min-height:700px)]:line-clamp-3"
   }, jaWrap(text)), React.createElement("i", {
     "aria-hidden": "true",
     className: "absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white"
@@ -98934,10 +98970,10 @@ function RhythmMultiRoomList({
     className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('いま人を待っている部屋です。自動で新しくなります')), list == null ? React.createElement("p", {
-    className: "rounded-xl bg-slate-950/50 p-3 text-center text-[12px] font-bold text-slate-300"
+    className: "px-1 py-2 text-[12px] font-bold text-slate-300"
   }, "部屋を探しています…") : list.length === 0 ? React.createElement("p", {
     "data-rhythm-multi-room-list-empty": true,
-    className: "rounded-xl border border-dashed border-slate-500/60 p-3 text-center text-[12px] font-bold leading-snug text-slate-300",
+    className: "rounded-xl border border-dashed border-slate-500/60 p-3 text-left text-[12px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap('いま開いている部屋はありません。部屋を作って待ってみましょう')) : React.createElement("ul", {
     className: "flex flex-col gap-1.5"
@@ -99778,7 +99814,7 @@ function RhythmMultiMemberCards({
   const tall = size === 'tall';
   return React.createElement("ul", {
     "data-rhythm-multi-cards": true,
-    className: tall ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3' : 'grid shrink-0 grid-cols-5 gap-1 border-b border-white/10 bg-slate-900/70 px-1.5 pb-1 pt-2 landscape:pt-1.5'
+    className: tall ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3 landscape:[@media(min-height:600px)]:max-h-[210px]' : 'grid shrink-0 grid-cols-5 gap-1 border-b border-white/10 bg-slate-900/70 px-1.5 pb-1 pt-2 landscape:pt-1.5'
   }, Array.from({
     length: RHYTHM_MULTI_ROOM_MAX
   }).map((_, i) => {
@@ -102401,7 +102437,18 @@ function RhythmMultiScreenBody({
     style: {
       paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
-  }, React.createElement("button", {
+  }, opts.exitLabel ? React.createElement("button", {
+    "data-rhythm-multi-back": true,
+    "data-rhythm-multi-exit": true,
+    type: "button",
+    "aria-label": opts.exitLabel,
+    className: "flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[40px] shrink-0 flex-col items-center justify-center rounded-xl border border-rose-300/40 bg-rose-950/40 font-black leading-none text-rose-100",
+    onClick: onBackClick
+  }, React.createElement("span", {
+    className: "text-base"
+  }, "←"), React.createElement("span", {
+    className: "mt-0.5 text-[9px]"
+  }, "出る")) : React.createElement("button", {
     "data-rhythm-multi-back": true,
     type: "button",
     "aria-label": "戻る",
@@ -102433,7 +102480,7 @@ function RhythmMultiScreenBody({
       RHYTHM_MULTI.hostAdvance();
     },
     className: "min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black"
-  }, opts.advance), opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden landscape:block'), opts.timer != null && React.createElement("b", {
+  }, opts.advance), opts.selectTime && view && room && isHost && opts.timer == null && selectTimeButton('max-[480px]:hidden landscape:block'), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
   }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && liveBoardButton(), view && optionsButton(), view && inviteButton(), view && chatButton());
@@ -102489,8 +102536,12 @@ function RhythmMultiScreenBody({
     type: "button",
     "aria-label": "全国ランキング",
     onClick: openRanking,
-    className: `min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`
-  }, "🏆");
+    className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`
+  }, React.createElement("span", {
+    className: "text-lg"
+  }, "🏆"), React.createElement("span", {
+    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100"
+  }, "ランキング"));
   const rankingWideButton = (extra = '') => rankingSupport && React.createElement("button", {
     "data-rhythm-multi-ranking": true,
     type: "button",
@@ -102505,8 +102556,8 @@ function RhythmMultiScreenBody({
     "data-rhythm-multi-ranking-layer": true,
     className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
   }, rankingSupport.render(() => setRankingOpen(false)));
-  const chatLatestButton = (extra = '') => {
-    const last = chatList.length ? chatList[chatList.length - 1] : null;
+  const chatLatestButton = (extra = '', plain = false) => {
+    const last = !plain && chatList.length ? chatList[chatList.length - 1] : null;
     return React.createElement("button", {
       "data-rhythm-multi-chat-open": true,
       type: "button",
@@ -103105,7 +103156,7 @@ function RhythmMultiScreenBody({
       }
     }), React.createElement("div", {
       "data-rhythm-mode-free-sheet": true,
-      className: "absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-fuchsia-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(420px,60%)] landscape:rounded-none landscape:rounded-l-3xl landscape:border-l landscape:border-t-0",
+      className: "absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-fuchsia-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-auto landscape:bottom-auto landscape:left-auto landscape:top-3 landscape:right-[calc(.75rem+var(--mh-sa-right))] landscape:max-h-[calc(100%-1.5rem)] landscape:w-[min(420px,60%)] landscape:rounded-3xl landscape:border",
       style: {
         paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
       }
@@ -103282,7 +103333,7 @@ function RhythmMultiScreenBody({
       onClick: () => setPrivateOpen(false)
     }), React.createElement("div", {
       "data-rhythm-mode-private-sheet": true,
-      className: "absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(440px,62%)] landscape:rounded-none landscape:border-l landscape:border-t-0",
+      className: "absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-auto landscape:bottom-auto landscape:left-auto landscape:top-3 landscape:right-[calc(.75rem+var(--mh-sa-right))] landscape:max-h-[calc(100%-1.5rem)] landscape:w-[min(440px,62%)] landscape:rounded-3xl landscape:border",
       style: {
         paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
       }
@@ -103436,13 +103487,13 @@ function RhythmMultiScreenBody({
       })
     }), React.createElement("div", {
       "data-rhythm-multi-wait-panel": true,
-      className: "max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
+      className: "max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2 landscape:[@media(min-height:600px)]:mt-0 landscape:[@media(min-height:600px)]:max-h-none",
       style: {
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("section", {
       "data-rhythm-multi-matching": true,
-      className: "rounded-2xl border border-white/15 bg-slate-900/85 p-2"
+      className: view ? 'rounded-2xl border border-white/15 bg-slate-900/85 p-2' : 'px-1 py-2'
     }, React.createElement("p", {
       "data-rhythm-multi-matching-title": true,
       className: `text-sm font-black ${view && members.length >= 2 ? 'text-lime-200' : 'animate-pulse text-amber-200'}`
@@ -103540,7 +103591,7 @@ function RhythmMultiScreenBody({
     }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
       "data-rhythm-multi-leave": true,
       type: "button",
-      className: `${btn} w-full bg-slate-700`,
+      className: `${btn} w-full bg-slate-700 ${!view ? 'landscape:col-span-2' : ''}`,
       onClick: leaveRoomAfterTap
     }, "ルームを出る")), message && React.createElement("p", {
       className: "text-[12px] font-black text-rose-300"
@@ -103648,11 +103699,11 @@ function RhythmMultiScreenBody({
         ...resultWidthStyle,
         ...resultGridStyle
       },
-      className: "relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
+      className: "relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 [@media(orientation:portrait)_and_(min-height:700px)]:pt-[58px] landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2"
     }, React.createElement("li", {
       "aria-hidden": "true",
       "data-rhythm-multi-result-bubbles": true,
-      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2",
+      className: "pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2",
       style: resultGridStyle
     }, Array.from({
       length: resultCols
@@ -103696,10 +103747,10 @@ function RhythmMultiScreenBody({
       })), React.createElement("span", {
         className: `relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`
       }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
-        className: "block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
+        className: "block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]"
       }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
         className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`
-      }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
+      }, r.res ? r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString() : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
         className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5"
       }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
         className: "text-[8px] font-black text-rose-300"
@@ -103713,7 +103764,7 @@ function RhythmMultiScreenBody({
       big: true,
       limit: 6,
       className: "min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap"
-    }), rankingButton('landscape:min-h-[34px]'), chatLatestButton('landscape:min-h-[34px]')), (() => {
+    }), rankingButton('landscape:min-h-[34px]'), chatLatestButton('landscape:min-h-[34px]', true)), (() => {
       if (team.waiting) return null;
       const myRow = team.rows.find(row => row.m.id === view.selfId);
       if (!myRow || !myRow.res || myRow.res.quit) return null;
@@ -104134,7 +104185,8 @@ function RhythmMultiScreenBody({
     timer: room.deadline ? room.left : null,
     advance: '締め切る',
     buddy: true,
-    selectTime: true
+    selectTime: true,
+    exitLabel: 'ルームを出る'
   }), React.createElement(RhythmMultiMemberCards, {
     onOpen: openBuddyInfo,
     bubbleOf: chatBubbleOf,
@@ -104167,7 +104219,7 @@ function RhythmMultiScreenBody({
     }, React.createElement("p", {
       className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
-    }, jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
+    }, jaWrap('全員の選曲からシャッフルで1曲に決まります'), !room.deadline && jaWrap('(いまは時間の制限なし)')), isHost && !room.deadline && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "mh-multi-select-footer-box"
     }, React.createElement("div", {
@@ -104182,12 +104234,7 @@ function RhythmMultiScreenBody({
     }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : '', React.createElement("small", {
       "data-rhythm-multi-omakase-note": true,
       className: "block text-[8px] font-bold opacity-80"
-    }, members.some(m => m.cpu) ? members.some(m => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に' : 'ほかの人の曲が優先')), React.createElement("button", {
-      "data-rhythm-multi-leave": true,
-      type: "button",
-      onClick: leaveRoom,
-      className: "flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300 landscape:min-h-[34px]"
-    }, "ルームを出る")))
+    }, members.some(m => m.cpu) ? members.some(m => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に' : 'ほかの人の曲が優先'))))
   }), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer, countdownLayer);
 }
 const RHYTHM_BUDDY_STORE = (() => {
@@ -104749,13 +104796,17 @@ function RhythmBuddyAllowance({
   return React.createElement("p", {
     "data-rhythm-buddy-allowance": true,
     className: `font-black ${compact ? 'text-[10px] leading-none' : 'text-[11px] leading-snug'} ${className}`
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
   }, "今日の無料 ", React.createElement("b", {
     className: freeLeft > 0 ? 'text-lime-300' : 'text-slate-400'
-  }, "あと", freeLeft, "回"), React.createElement("span", {
+  }, "あと", freeLeft, "回")), React.createElement("span", {
     className: "mx-1 text-slate-500"
-  }, "/"), "セッション券 ", React.createElement("b", {
+  }, "/"), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "セッション券 ", React.createElement("b", {
     className: "text-amber-200"
-  }, tickets, "枚"));
+  }, tickets, "枚")));
 }
 const rhythmBuddyDiffShort = Object.freeze({
   EASY: 'EASY',
@@ -105593,6 +105644,13 @@ function RhythmBuddySheet({
     id: preselectAssistant
   }] : []);
   const [pickNote, setPickNote] = React.useState('');
+  const roomyNow = () => typeof window !== 'undefined' && window.innerWidth >= 900 && window.innerHeight >= 600;
+  const [roomy, setRoomy] = React.useState(roomyNow);
+  React.useEffect(() => {
+    const on = () => setRoomy(roomyNow());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const isPicked = (kind, id) => picks.some(p => p.kind === kind && p.id === id);
   const togglePick = (kind, id) => {
     const key = kind === 'assistant' ? rhythmAssistSessionKey(id) : id;
@@ -105661,10 +105719,13 @@ function RhythmBuddySheet({
   const showMultiBar = !!(masuPicker || assistOn) && !detail;
   const multiBar = React.createElement("div", {
     "data-rhythm-buddy-multi": true,
-    className: "mt-2 shrink-0 rounded-2xl border border-lime-300/40 bg-slate-950/85 p-2"
+    className: `mt-2 shrink-0 rounded-2xl border border-lime-300/40 bg-slate-950/85 p-2 ${roomy ? 'landscape:flex landscape:items-center landscape:gap-2' : ''}`
+  }, React.createElement("div", {
+    className: `min-w-0 ${roomy ? 'landscape:flex-1' : ''}`
   }, picks.length === 0 ? React.createElement("p", {
-    className: "text-center text-[11px] font-bold text-slate-400"
-  }, helpWrap('呼びたい相手をタップしてください(何人でも選べます)')) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-400 landscape:self-center",
+    style: JA_WRAP_STYLE
+  }, jaWrap('呼びたい相手をタップしてください(何人でも選べます)')) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mb-1 flex flex-wrap items-center gap-1"
   }, picks.map(p => {
     const masu = p.kind === 'masu' ? (masuMons || []).find(x => x && x.id === p.id) : null;
@@ -105681,7 +105742,7 @@ function RhythmBuddySheet({
     "data-rhythm-buddy-multi-cost": true,
     className: "text-[10px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(`選んでいる ${picks.length}人 / 空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
+  }, jaWrap(`空き席 ${freeSeats}。${paidPicks ? `無料 ${useFree}回${useTickets ? `・セッション券 ${useTickets}枚` : ''}を使います` : '回数は使いません'}${visitPicks ? `(モンヒロビートにいる助手 ${visitPicks}人は回数なし)` : ''}`)), asleepPicks > 0 && React.createElement("p", {
     "data-rhythm-buddy-multi-asleep": true,
     className: "text-[10px] font-bold text-indigo-200",
     style: JA_WRAP_STYLE
@@ -105695,8 +105756,8 @@ function RhythmBuddySheet({
   }, "🎤 デュオ: ", duoNow.map(d => `${rhythmAssistSessionName(d.a)}×${rhythmAssistSessionName(d.b)}`).join('・'))), pickNote && React.createElement("p", {
     "data-rhythm-buddy-multi-note": true,
     className: "text-[10px] font-black text-amber-200"
-  }, pickNote), React.createElement("div", {
-    className: "mt-1 flex gap-1.5"
+  }, pickNote)), React.createElement("div", {
+    className: `mt-1 flex gap-1.5 ${roomy ? 'landscape:mt-0 landscape:w-[40%] landscape:shrink-0' : ''}`
   }, singleMasu && React.createElement("button", {
     type: "button",
     onClick: () => setDetailId(singleMasu.id),
@@ -105717,17 +105778,20 @@ function RhythmBuddySheet({
     onClick: onClose
   }), React.createElement("section", {
     "data-rhythm-buddy-sheet": true,
-    className: "relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:h-[92%] landscape:max-h-[92%] landscape:max-w-3xl landscape:flex-row landscape:gap-3 landscape:rounded-3xl",
+    className: "relative flex max-h-[88%] w-full max-w-md flex-col rounded-t-3xl border border-lime-300/30 bg-slate-900 p-3 shadow-2xl landscape:max-h-[92%] landscape:max-w-3xl landscape:rounded-3xl",
     style: {
       paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("div", {
-    className: "shrink-0 landscape:w-[34%] landscape:overflow-y-auto"
+    className: "flex min-h-0 flex-1 flex-col landscape:flex-row landscape:gap-3"
+  }, React.createElement("div", {
+    className: "shrink-0 landscape:flex landscape:w-[34%] landscape:flex-col landscape:overflow-y-auto"
   }, React.createElement("header", {
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("h3", {
-    className: "min-w-0 flex-1 text-base font-black text-lime-200"
-  }, assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ'), React.createElement("button", {
+    className: "min-w-0 flex-1 text-base font-black text-lime-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(assistOn ? '🎵 一緒に遊ぶ相手を呼ぶ' : '🎵 マスモンを呼ぶ')), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
@@ -105755,8 +105819,8 @@ function RhythmBuddySheet({
   }, jaWrap('助手をえらんで、CPUとしてこの部屋に呼べます。回数はマスモンと同じです(1日3回までは無料、そのあとはセッション券を1枚使います)。')) : React.createElement("p", {
     className: `mb-2 text-[10px] font-bold leading-relaxed text-slate-400 ${picks.length ? 'landscape:hidden' : ''}`,
     style: JA_WRAP_STYLE
-  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)), showMultiBar && React.createElement("div", {
-    className: "hidden landscape:block"
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)), showMultiBar && !roomy && React.createElement("div", {
+    className: "hidden landscape:mt-auto landscape:block"
   }, multiBar)), tabNow === 'assistant' ? React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, refused && refused.id && React.createElement("p", {
@@ -105768,7 +105832,8 @@ function RhythmBuddySheet({
     calledIds: calledIds,
     guideAssistantId: guideAssistantId,
     picked: pickedAssistantIds,
-    onToggle: id => togglePick('assistant', id)
+    onToggle: id => togglePick('assistant', id),
+    roomy: roomy
   })) : React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
@@ -105798,7 +105863,7 @@ function RhythmBuddySheet({
     className: `relative ${masuPicker.cardClass} ${isPicked('masu', e.masu.id) ? 'border-lime-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
   }, isPicked('masu', e.masu.id) && React.createElement("b", {
     className: "absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-[12px] font-black text-slate-950"
-  }, picks.findIndex(p => p.kind === 'masu' && p.id === e.masu.id) + 1), masuPicker.renderCardBody({
+  }, "✓"), masuPicker.renderCardBody({
     masu: e.masu,
     base: e.base,
     nameBand: true,
@@ -105820,8 +105885,8 @@ function RhythmBuddySheet({
   }))), listControls.sheet, !masuPicker && !canPay && React.createElement("p", {
     "data-rhythm-buddy-empty": true,
     className: "mt-2 break-keep text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます")), showMultiBar && React.createElement("div", {
-    className: "landscape:hidden"
+  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます"))), showMultiBar && React.createElement("div", {
+    className: roomy ? '' : 'landscape:hidden'
   }, multiBar)));
 }
 function MasuBeatScreen({
@@ -105942,21 +106007,22 @@ function RhythmBuddyGrowth({
   if (!shown || !masu) return null;
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
-  return React.createElement("p", {
-    "data-rhythm-buddy-growth": true,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100"
-  }, React.createElement("span", {
-    className: "max-w-full truncate"
-  }, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
-    className: "text-lime-300"
-  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
-    "data-rhythm-buddy-levelup": true,
-    className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
-    className: "text-amber-200"
-  }, "この曲の得意度+1"), trait && React.createElement("span", {
-    className: "text-pink-200"
-  }, "性格が「", trait.label, "」になった!"));
+  return (React.createElement("p", {
+      "data-rhythm-buddy-growth": true,
+      className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]"
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, "🎵 ", rhythmBuddyMasuName(masu), "に"), React.createElement("span", {
+      className: "text-lime-300"
+    }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+      "data-rhythm-buddy-levelup": true,
+      className: "rounded bg-amber-300 px-1 text-slate-950"
+    }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
+      className: "text-amber-200"
+    }, "この曲の得意度+1"), trait && React.createElement("span", {
+      className: "text-pink-200"
+    }, "性格が「", trait.label, "」になった!"))
+  );
 }
 const RHYTHM_BUDDY_RANK_CACHE_MS = 20000;
 const rhythmBuddyRankCache = new Map();
@@ -106479,7 +106545,8 @@ function RhythmAssistSessionPicker({
   calledIds = [],
   guideAssistantId = '',
   picked = [],
-  onToggle = null
+  onToggle = null,
+  roomy = false
 }) {
   const state = useRhythmAssistSessionState();
   const list = (assistants || []).filter(who => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
@@ -106523,13 +106590,13 @@ function RhythmAssistSessionPicker({
       className: `relative flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${picked.includes(who.id) ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`
     }, React.createElement(AssistantFace, {
       who: who,
-      size: 48,
+      size: roomy ? 84 : 48,
       accent: who.accent,
       expression: picked.includes(who.id) ? 'happy' : null
     }), picked.includes(who.id) && React.createElement("b", {
       className: "absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pink-400 text-[12px] font-black text-slate-950"
     }, "✓"), React.createElement("span", {
-      className: "w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black"
+      className: `w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center font-black ${roomy ? 'text-[14px]' : 'text-[11px]'}`
     }, who.name), React.createElement("span", {
       className: "whitespace-nowrap text-[10px] font-black text-pink-200"
     }, "セッションLv.", lv), lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && React.createElement("span", {
@@ -106886,25 +106953,26 @@ function RhythmAssistSessionGrowth({
   }, [assistantId, round]);
   if (!shown || !assistantId) return null;
   const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
-  return React.createElement("p", {
-    "data-rhythm-assist-growth": true,
-    className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100"
-  }, React.createElement("span", {
-    className: "max-w-full truncate"
-  }, "🎤 ", rhythmAssistSessionName(assistantId)), React.createElement("span", {
-    className: "text-pink-200"
-  }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
-    "data-rhythm-assist-levelup": true,
-    className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
-    className: "text-amber-200"
-  }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
-    "data-rhythm-assist-ticket": true,
-    className: "text-lime-200"
-  }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
-    "data-rhythm-assist-cheer": true,
-    className: "text-violet-200"
-  }, shown.cheer.label));
+  return (React.createElement("p", {
+      "data-rhythm-assist-growth": true,
+      className: "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]"
+    }, React.createElement("span", {
+      className: "max-w-full truncate"
+    }, "🎤 ", rhythmAssistSessionName(assistantId), "に"), React.createElement("span", {
+      className: "text-pink-200"
+    }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+      "data-rhythm-assist-levelup": true,
+      className: "rounded bg-amber-300 px-1 text-slate-950"
+    }, "セッションLv.UP! Lv.", level), shown.likeUp > 0 && React.createElement("span", {
+      className: "text-amber-200"
+    }, "好み度+", shown.likeUp), shown.tickets > 0 && React.createElement("span", {
+      "data-rhythm-assist-ticket": true,
+      className: "text-lime-200"
+    }, "セッション券+", shown.tickets), shown.cheer && React.createElement("span", {
+      "data-rhythm-assist-cheer": true,
+      className: "text-violet-200"
+    }, shown.cheer.label))
+  );
 }
 const rhythmAssistSessionPeerLevel = (a, b) => {
   if (typeof assistantPeerEnabled !== 'function' || !assistantPeerEnabled() || typeof ASSISTANT_PEER_STORE === 'undefined') return 0;
@@ -253463,14 +253531,16 @@ function MonsterHeroGame() {
         color: '#ffedd5'
       }
     }, React.createElement("span", {
+      "data-changelog-pinned-badge": true,
       style: {
         background: '#f97316',
         color: '#1c1917',
         borderRadius: 999,
         padding: '1px 8px',
-        fontSize: 11
+        fontSize: 11,
+        flexShrink: 0
       }
-    }, typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉', " 開催中"), React.createElement("span", {
+    }, changelogEventUpcoming(c) ? '📅 開催予定' : `${typeof c.pinEmoji === 'string' && c.pinEmoji ? c.pinEmoji : '🎉'} 開催中`), React.createElement("span", {
       "data-changelog-pinned-title": true,
       style: {
         flex: 1,

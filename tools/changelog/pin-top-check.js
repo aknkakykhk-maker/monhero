@@ -76,5 +76,16 @@ check('pinTop の days は日時が読めないときは固定しない', change
 { const beta = CHANGELOG.find((e) => e && e.assistantNotice && e.assistantNotice.id === 'update_notice_monsaku_v1');
   check('モンヒロサクセス β公開の項目は、公開から2週間 上に固定する帯を持つ', !!beta && beta.pinTop && beta.pinTop.days === 14 && beta.pinEmoji === '🌱' && beta.pinTitle === '新しい遊び「モンヒロサクセス」β版がはじまりました!' && beta.releaseFlag === 'monheroSuccess'); }
 
+// 予告(開始前)の札は「開催予定」(2026-11-22 社長が本番で「開催前なのに開催中」を見つけた)。eventStartAt より前だけ。書いていない項目は今までどおり「開催中」
+{ const part = fs.readFileSync(path.join(web, 'src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  const m = part.match(/const changelogEventUpcoming = [\s\S]*?\n\};\n/);
+  check('本体の「開催予定」の判定(changelogEventUpcoming)が見つかる', !!m);
+  const up = m ? vm.runInNewContext(`${m[0]}; changelogEventUpcoming`) : () => false;
+  const teaser = CHANGELOG.find((e) => e && e.assistantNotice && e.assistantNotice.id === 'update_notice_flower3_2026_v1');
+  check('ハナウタ・ノートの予告は 11/23 10:00 より前だけ「開催予定」', !!teaser && up(teaser, at('2026-11-22T22:30:00+09:00')) === true && up(teaser, at('2026-11-23T10:00:00+09:00')) === false);
+  const app = fs.readFileSync(path.join(web, 'src/parts/60-app.jsx'), 'utf8');
+  check('固定の札は開始前なら「📅 開催予定」・それ以外は「開催中」', /changelogEventUpcoming\(c\)\?'📅 開催予定':`[^`]*開催中`/.test(app));
+  check('eventStartAt の無い項目は「開催予定」にならない', up({}, at('2026-01-01T00:00:00+09:00')) === false); }
+
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);

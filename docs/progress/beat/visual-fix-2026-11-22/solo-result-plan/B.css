@@ -1,0 +1,14 @@
+/* 案B: 経験値は上に細い1本(内訳と次のごほうびを畳む)、すぐ下に曲とスコア(ランクアップは重ねた画面の1回だけ)。主は「もう一度プレイ」 */
+@container (max-width: 679px) {
+[data-rhythm-result-scroll]{display:flex;flex-direction:column}
+[data-rhythm-result-scroll]>h2{order:-2}
+[data-rhythm-result-scroll]>[data-rhythm-result-summary]{order:-1}
+[data-rhythm-result-scroll]>[data-player-rank-gain]{order:-3;margin-bottom:8px;padding:6px 10px!important}
+}
+[data-rhythm-result-scroll] [data-player-rank-up]{display:none!important}
+[data-rhythm-result-scroll] [data-player-rank-gain-parts],[data-rhythm-result-scroll] [data-player-rank-gain-next]{display:none!important}
+[data-rhythm-result-scroll] [data-rhythm-result-score]{font-size:56px!important}
+[data-rhythm-result-actions] .grid > button:first-child, [data-rhythm-result-actions] .flex > button:first-child{flex:2 1 0;font-size:18px;min-height:56px;box-shadow:0 0 16px rgba(217,70,239,.6)}
+[data-rhythm-result-actions] .grid > button:last-child, [data-rhythm-result-actions] .flex > button:last-child{flex:1 1 0;background:#334155!important;font-size:14px}
+[data-rhythm-result-actions] .grid{grid-template-columns:2fr 1fr!important}
+[data-rhythm-result-scroll] .mh-prxb-up{display:none!important} /* 撮るときだけ: 重ねたランクアップの画面を消して後ろを撮る */ [data-player-rank-up-fx]{display:none!important}
