@@ -124,6 +124,8 @@ function alwaysChecks() {
   catch { return []; }
 }
 const FORCE_CHECKS = [
+  // 撮り比べ(2026-11-22 r1119-093 社長「点検して表示とか見てるのに逆に壊してまわってるの？」)。画面に関わるファイルを変えたら、主な画面を main と枝で撮って比べ、直していない画面の違いで止める
+  { re: /^monster-hero\/(src\/parts\/|index\.html$|tailwind\.css$)|^tools\/browser\/(visual-compare-check|compare-scenes|stable-shot)\.js$/, checks: ['browser/visual-compare-check.js'], why: '主な画面を main と枝で撮り比べ、直していない画面が変わっていないか' },
   // フルコンボ等の音が設定ごとに1回だけ鳴る(2026-11-20 社長「フルコンボのとき鳴っていた SE が無くなっている」)
   { re: /^monster-hero\/src\/parts\/30-rhythm-play\.jsx$|^tools\/mode\/rhythm-fullcombo-se-check\.js$/, checks: ['mode/rhythm-fullcombo-se-check.js'], why: 'フルコンボ等の音が設定ごとに1回だけ鳴る' },
   { re: /^monster-hero\/src\/parts\/(30-rhythm-play|77-screen-rhythm-multi|43-player-rank-ui|14-audio)\.jsx$|^tools\/mode\/rhythm-scene-se-check\.js$/, checks: ['mode/rhythm-scene-se-check.js'], why: 'モンヒロビートの場面の音(3・2・1・新記録・入室・MVP・数え上げ)が何回・いつ鳴るか' },
@@ -743,7 +745,7 @@ async function main() {
   // 確認の段数(2026-11-11): ミハリ(検査部)の確認が要る変更かを、変えたファイルと差分から出す。
   // 出すだけで、検査の結果・終了コードは変えない(tools/team/review-gate.js)
   if (opts.changed) {
-    try { const gate = require('./team/review-gate.js'); console.log('\n' + gate.format(gate.judge({ base: opts.base || undefined }))); } catch (e) { /* 判定が出せなくても検査の結果はそのまま */ }
+    try { const gate = require('./team/review-gate.js'); console.log('\n' + gate.format(gate.judge({ base: opts.base || undefined }))); const c = gate.compareLine && gate.compareLine(); if (c) console.log(c); } catch (e) { /* 判定が出せなくても検査の結果はそのまま */ }
   }
   process.exit(bad.length ? 1 : 0);
 }

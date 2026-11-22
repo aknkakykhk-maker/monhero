@@ -409,6 +409,9 @@ const LEVEL_OVERRIDES=Object.freeze({
   // 帯の外へ置き直した(時刻・幅・ノーツ数は同じ)。帯から外すと横の動きが少し増え、EXPERT の式の値が 22.44→22.58 で丸めると 23 になる。
   // どこへ置いても 22.5 を越える(1か所ずつ候補を比べても 22.53)。直したのは押せなかった所なので、表示は前の Lv.22 のまま(社長「Lv. は変えない」)
   against_my_own_shadow:Object.freeze({EXPERT:22}),
+  // 2026-11-22 r1119-096 社長「クロスが多すぎていやらしい」→ 押さえ中の交差を位置だけ直した(時刻・種類・ノーツ数は同じ)。帯をまたぐ横の動きが減り、
+  //   式の値が 35→34 に下がったが、譜面の量は変わらないので表示は前の Lv.35 のまま(社長「難易度が大きく下がりすぎないように」・上の Against My Own Shadow と同じ扱い)
+  beyond_the_same_sky_short:Object.freeze({MASTER:35}),
   // デバッグの試作の枠の HELL も、曲の名前(試作の枠の songId)で書ける(2026-10-11 社長「ヘル2つの難易度は、両方デバッグしてみたときにまた数値の調整はすると思う」)。
   // 書いた値が表示に出る(rhythm-hell-mix.js が譜面の Lv. に書く)。式の値(空中を地上と見なした Lv. の SKY_LEVEL_FACTOR 倍)は消えずに検査で並べて出る。
   // 例: sheriruth_hell_debug:Object.freeze({HELL:50}), grievous_lady_hell:Object.freeze({MASTER:55}),
