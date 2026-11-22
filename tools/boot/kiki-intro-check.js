@@ -195,11 +195,11 @@ check('曲はBGMアレンジの設定から引く(直接ファイル名を書か
 
 // --- みゅあはききを「ひめちん」と呼ぶ(2026-10-05・ユーザー指摘「みゅあのききの呼び方が変わってた」) ---
 // みゅあが話しているセリフ(who:'mua')に、「きき」「ききちゃん」など別の呼び方が混ざっていないこと。
-// 告知のセリフ(助手ごとに分かれた台本の mua: [ ... ])も同じ。
+// 告知のセリフ(助手ごとに分かれた台本の mua: [ ... ])も同じ。地の文(fxText)は台詞ではないので見ない(2026-11-23)。
 {
   const lines = assistantsSrc.split('\n');
   const bad = [];
-  lines.forEach((line, i) => { if (/who:\s*'mua'/.test(line) && /き き|きき|キキ/.test(line.replace(/ひめちん/g, ''))) bad.push(`${i + 1}行目`); });
+  lines.forEach((line, i) => { if (/who:\s*'mua'/.test(line) && /き き|きき|キキ/.test(line.replace(/fxText:\s*'[^']*'/g, '').replace(/ひめちん/g, ''))) bad.push(`${i + 1}行目`); });
   check('みゅあが話すセリフに「きき」の呼び方が混ざっていない(「ひめちん」にする)', bad.length === 0, bad.join(', '));
   // 告知の台本: mua: [ ... ] の中(次の助手の台本が始まるまで)
   const noticeBad = [];

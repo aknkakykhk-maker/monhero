@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fab5ee084d9c0d46
+// source-sha256: 11da0c39e01bdd2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38614,6 +38614,19 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const [viewWide, setViewWide] = React.useState(() => orientationIsLandscape());
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(orientation: landscape)');
+    const onChange = () => setViewWide(orientationIsLandscape());
+    onChange();
+    const unsubscribeRotation = RHYTHM_VIEW_ROTATION.subscribe(onChange);
+    if (mql.addEventListener) mql.addEventListener('change', onChange);else mql.addListener?.(onChange);
+    return () => {
+      unsubscribeRotation();
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange);else mql.removeListener?.(onChange);
+    };
+  }, []);
   const [artPage, setArtPage] = React.useState(0);
   const [lyricFull, setLyricFull] = React.useState(null);
   const artPagesRef = React.useRef(null);
@@ -38875,6 +38888,30 @@ const RhythmSongSelect = ({
     return () => clearTimeout(id);
   }, [loopEnabled]);
   const blocks = loopEnabled ? [0, 1, 2] : [1];
+  const versionTabs = !song ? null : (() => {
+    const versions = versionsOf(song);
+    if (versions.length < 2) return null;
+    return React.createElement("div", {
+      "data-rhythm-song-versions": true,
+      "data-rhythm-song-versions-inline": viewWide ? '1' : undefined,
+      className: viewWide ? "flex shrink-0 gap-1" : "mb-1 flex gap-1"
+    }, versions.map(item => {
+      const on = item.songId === song.songId,
+        eventVersion = eventSongIds.has(item.songId);
+      return React.createElement("button", {
+        key: item.songId,
+        type: "button",
+        "data-rhythm-song-version": item.songId,
+        "aria-pressed": on,
+        onClick: () => setSongId(item.songId),
+        className: `flex min-h-[36px] min-w-0 ${viewWide ? 'max-w-[6.5rem] px-2 text-[11px]' : 'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "truncate"
+      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
+        "aria-label": "イベント対象"
+      }, "🏆"));
+    }));
+  })();
   return React.createElement("div", {
     "data-rhythm-song-select": true,
     "data-rhythm-song-genre": genre ? genre.id : 'all',
@@ -39134,11 +39171,11 @@ const RhythmSongSelect = ({
     "data-rhythm-song-title": true,
     className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]",
     style: {
-      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, 44)
+      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, viewWide && versionsOf(song).length > 1 ? 44 + 76 * versionsOf(song).length : 44)
     }
   }, React.createElement(RhythmSongName, {
     song: song
-  })), React.createElement("button", {
+  })), viewWide && versionTabs, React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
     "aria-pressed": favoriteIds.has(song.songId),
@@ -39193,29 +39230,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'diff'
     }
-  }, (() => {
-    const versions = versionsOf(song);
-    if (versions.length < 2) return null;
-    return React.createElement("div", {
-      "data-rhythm-song-versions": true,
-      className: "mb-1 flex gap-1"
-    }, versions.map(item => {
-      const on = item.songId === song.songId,
-        eventVersion = eventSongIds.has(item.songId);
-      return React.createElement("button", {
-        key: item.songId,
-        type: "button",
-        "data-rhythm-song-version": item.songId,
-        "aria-pressed": on,
-        onClick: () => setSongId(item.songId),
-        className: `flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-      }, React.createElement("span", {
-        className: "truncate"
-      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
-        "aria-label": "イベント対象"
-      }, "🏆"));
-    }));
-  })(), React.createElement("div", {
+  }, !viewWide && versionTabs, React.createElement("div", {
     "data-rhythm-difficulty-row": true,
     className: `flex gap-1${spot('difficulty')}`
   }, available.map(item => {
@@ -118848,10 +118863,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.758
     },
     kyuko: {
-      top: 0.0341,
-      eye: 0.3098,
-      chin: 0.4304,
-      m: 0.897
+      top: 0.0589,
+      eye: 0.3171,
+      chin: 0.43,
+      m: 0.84
     },
     sorashido: {
       top: 0.0331,

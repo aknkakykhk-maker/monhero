@@ -94,6 +94,9 @@ const SCENES = [
   // ---- モンヒロビート ----
   { id: 'beat-top', area: 'モンヒロビート', name: 'モンヒロビート(入口)', kind: 'walk' },
   { id: 'beat-songs', area: 'モンヒロビート', name: '曲えらび', kind: 'walk' },
+  // 版がある曲(原曲・short ver.)を選んだ曲えらび。版の切り替えの段で難易度が押しつぶされたのを撮り逃した(2026-11-22 社長の写真)
+  { id: 'beat-songs-versions', area: 'モンヒロビート', name: '曲えらび(版がある曲)', kind: 'walk' },
+  { id: 'beat-songs-versions-rot', area: 'モンヒロビート', name: '曲えらび(版がある曲・🔄横)', kind: 'walk', sizes: ['tate'] },
   { id: 'beat-play', area: 'モンヒロビート', name: '演奏中', kind: 'beat', step: 'play', sizes: BEAT_SIZES },
   { id: 'beat-result', area: 'モンヒロビート', name: '結果', kind: 'beat', step: 'result', state: 'plain', sizes: BEAT_SIZES },
   { id: 'beat-result-record', area: 'モンヒロビート', name: '結果(新記録・JUST MARVELOUS あり)', kind: 'beat', step: 'result', state: 'record', sizes: BEAT_SIZES },
