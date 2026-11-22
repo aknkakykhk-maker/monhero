@@ -87,7 +87,9 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   desert_crown:{marker:'desert-crown-v3',zero:2392,beat:600.12,levelRe:/const desertCrownHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.6},
   // BRAND NEW SKY(2026-11-22・みゅあの曲・花の女3人のイベント)。段変えの上限(r1119-090)を守るため levelSettle を付ける
   brand_new_sky:{marker:'brand-new-sky-v3',zero:438.1,beat:410.558,levelRe:/const brandNewSkyHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,levelSettle:true},
-  zenbu_hissatsuwaza:{marker:'zenbu-hissatsuwaza-v3',zero:1236.1,beat:310.29,levelRe:/const zenbuHissatsuwazaHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  // 全部必殺技でつ: HELL は空(スカイ)なし(2026-11-22 社長・台帳 r1119-109)。この道具で書いたあと空のノーツを同じ時刻・位置の地上へ下ろし、押さえ中の交差を位置だけで0に直した。
+  //   --write し直すと空が戻るので、作り直すときは地上へ下ろす手順も通す(歯ごたえは曲の一覧の chartIntensityByDifficulty HELL:extreme)
+  zenbu_hissatsuwaza:{marker:'zenbu-hissatsuwaza-v3',zero:1236.1,beat:310.29,levelRe:/const zenbuHissatsuwazaHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['ground']},
   walkure:{marker:'walkure-v3',zero:70,beat:277.743,levelRe:/const walkureHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['ground','L','ground','R'],levelSettle:true},
   walkure_short:{marker:'walkure-short-v3',zero:23,beat:277.743,levelRe:/const walkureShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   kimimachi_loop:{marker:'kimimachi-loop-v3',zero:764.8,beat:360.038,levelRe:/const kimimachiLoopHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,levelSettle:true},

@@ -2099,6 +2099,13 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"
+   },
+   "chartIntensity": "mild",
+   "sustainScale": {
+    "EXPERT": 0.2
+   },
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
    }
   },
   "kimimachi_loop": {
