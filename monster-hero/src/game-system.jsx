@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5197f5115c59754d
+// generated-sha256: f1524a4ef9faa706
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4933,8 +4933,16 @@ const BGM_TRACKS = [
 const BGM_PROTO_TRACKS = Object.freeze([
   { id:'melo_sheriruth_proto', name:'Sheriruth 試作', creator:'Team Grimoire', src:'audio/bgm-sheriruth-proto.mp3', gain:1, loop:true },
 ]);
+// 公開を止めている曲の音源(2026-11-23 社長決定・台帳 r1119-120)。試作曲と同じ扱いで、BGM_TRACKS へは
+// 入れない(BGMアレンジ・自動周回の選択肢に出てしまうため)。曲データ(rhythm-mode.js)から id で引ける
+// よう、BGM_TRACK_BY_ID にだけ足す。★解禁するときは、この2行を BGM_TRACKS へ移す
+const BGM_UNRELEASED_TRACKS = Object.freeze([
+  { id:'melo_battle_5', name:'Battle #5', creator:'オリジナル', src:'audio/bgm-battle-5.mp3', gain:1, loop:true },
+  { id:'melo_battle_5_short', name:'Battle #5 short ver.', creator:'オリジナル', src:'audio/bgm-battle-5-short.mp3', gain:1, loop:true },
+]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 BGM_PROTO_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
+BGM_UNRELEASED_TRACKS.forEach(track => { if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track; });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
@@ -6292,6 +6300,8 @@ const Audio_ = (() => {
     "audio/bgm-amakakeru-tsubasa.mp3": "2b283f9e6aea",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
+    "audio/bgm-battle-5-short.mp3": "7fc065210067",
+    "audio/bgm-battle-5.mp3": "a911ffe142ba",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-beyond-the-same-sky-short.mp3": "fc0c43a87755",
@@ -10292,6 +10302,11 @@ const QUICK_RUN_ANYWHERE_RELEASE = true;
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴・お話「話せるようになった日」がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  // 新曲「Battle #5」の告知(2026-11-23 社長決定・台帳 r1119-120)。曲のデータは入っているが公開は社長の
+  //   タイミングで別途行うため、偽のあいだは更新履歴と助手の告知に出さない。曲そのものの公開は
+  //   data/rhythm-mode.js の公開曲の一覧(RHYTHM_DEMO_SONG_IDS)が持つ(この印は告知だけの印)。
+  //   ★解禁するときは、ここを true にし、告知の date を解禁の日時に直す
+  battle5: false,
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
   //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
   //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
@@ -14788,7 +14803,10 @@ const helpDataRows = (id) => {
       return entry ? [['初めての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中で一番やさしい曲)`]] : [];
     }
     case 'rhythmHellSongs': {
-      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      // 公開している曲だけ出す(ほかのヘルプの曲一覧と同じく rhythmDemoSongs で絞る)。
+      // 公開を止めている曲(台帳 r1119-120 の Battle #5 など)を、名前・Lv. つきで出さないため
+      const allSongs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const songs = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(allSongs) : allSongs;
       const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
       return songs.map(song => {
         const chart = song && hell[song.songId];
@@ -33453,6 +33471,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
+    'listen:battle_5': [['excited', '3:12からいちばん強いの来るぢゃん！ そこから最後までアガりっぱなし♪']],
     'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:brand_new_sky': [['excited', '1:19からいちばん強いところ、みんなで一緒に跳んでほしいの！']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
@@ -33551,6 +33570,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
+    'listen:battle_5': [['normal', '最初の19秒は静かで、音が少しずつ入ってくる所がきれいです♪']],
     'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:brand_new_sky': [['happy', 'BPM146で、ずっと前へ前へ走っていく感じでつ']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
@@ -33649,6 +33669,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
+    'listen:battle_5': [['excited', '1:04も2:53も強め！ 何度も盛り上がるの、ももは大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:brand_new_sky': [['excited', '2:20でもう一回いちばん強くなるの、最後まで最高潮だよ♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
@@ -33747,6 +33768,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
+    'listen:battle_5': [['normal', '4分12秒の長い戦いだな。BPM170で一気に駆け抜けるぞ']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:brand_new_sky': [['happy', '強く打つ音が多いな。2分半、走り切るぞ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
@@ -33845,6 +33867,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
+    'listen:battle_5': [['happy', '4:00までいちばん強いまま押して、4:06で静かに締めるのいいよね笑']],
     'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:brand_new_sky': [['happy', '0:46で強めに上がってから、1:19で一気にひらける流れがいいね']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
@@ -33943,6 +33966,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
+    'listen:battle_5': [['happy', '静かと強めを繰り返して、最後にいちばん強い所を持ってくる構成なんだよね〜']],
     'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:brand_new_sky': [['happy', '静か→ふつう→強め→いちばん強いって、きれいに上がっていく構成なんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
@@ -34041,6 +34065,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
+    'listen:battle_5': [['normal', 'BPM170で912ノーツ。強い音55%・軽い音5%、数字でも力押しだぜ・・・！']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:brand_new_sky': [['normal', 'BPM146です。強く打つ音が48%・・・！ 元気な音です']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
@@ -34139,6 +34164,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
+    'listen:battle_5': [['normal', '0:47の静かな所は落ち着くね。戦いの前のひと息って感じかな']],
     'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:brand_new_sky': [['normal', '2:07で少し落ち着いてから最後に戻ってくるところ、ぐっとくるね']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
@@ -38431,6 +38457,9 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
+// ★Battle #5 は公開を止めている間(2026-11-23 社長決定・台帳 r1119-120)、ここと下の組の表のどちらにも入れない。
+//   解禁するときに battle_5: 500 と battle_5_short: 'battle_5' を、公開曲の一覧(RHYTHM_DEMO_SONG_IDS)と必ず同じ変更で戻す
+//   (一覧だけ戻して値段が無いと、印の無い曲=無料の曲として出てしまう)
 const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500, walkure: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
