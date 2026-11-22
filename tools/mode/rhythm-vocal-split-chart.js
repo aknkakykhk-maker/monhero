@@ -40,12 +40,12 @@ const DIFFS={
 // 曲ごとの上書き(Lv. を今の本番に近づけるための密度の調整)
 const TUNE={
   beyond_the_same_sky:{
-    HELL:{hot:0.75,vocalMin:0.25,skyMin:0.25,skyHot:0.45},
-    MASTER:{hot:0.3,snapHot:1,vocalMin:0.1,gapMs:200,gapHot:165,hotGap:0.75,wide:3},
+    HELL:{hot:0.75,vocalMin:0.25,skyMin:0.15,skyHot:0.3},
+    MASTER:{hot:0.3,snapHot:1,vocalMin:0.1,gapMs:200,gapHot:165,hotGap:0.75},
   },
   beyond_the_same_sky_short:{
-    HELL:{hot:0.65,vocalMin:0.25,skyMin:0.25,skyHot:0.4,holdMin:240},
-    MASTER:{hot:0.35,snapHot:1,vocalMin:0.1,gapMs:190,holdMin:280,wide:3,lineEnd:0.5},
+    HELL:{hot:0.65,vocalMin:0.25,skyMin:0.55,skyHot:0.6,holdMin:240},
+    MASTER:{hot:0.35,snapHot:1,vocalMin:0.1,gapMs:190,holdMin:280,lineEnd:0.5},
   },
 };
 const VOICE={'女声':'R','男声':'L','女声(男声の低い重ね)':'R+','2人':'B','間奏':'I'};
@@ -207,9 +207,31 @@ const compose=(songId,diff)=>{
       const s=other==='L'?4:6;put(other,{type:'TAP',timeMs:v.t,subLane:s,subLaneWidth:2});bump(p,'受け渡し');}
   }
   notes.sort((a,b)=>a.timeMs-b.timeMs||(a.subLane-b.subLane));
-  // 幅: wide を書いた難易度は、地上のタップ・フリック・ホールドをその手の半分の中で幅 wide にする(半分の外へ出さない=交差は増えない)
-  if(D.wide)for(const n of notes){if(n.type==='SLIDE'||n.skyHeight)continue;const w=D.wide;
-    n.subLane=n.hand==='R'?Math.max(6,Math.min(12-w,n.subLane)):Math.max(0,Math.min(6-w,n.subLane-(w-2)));n.subLaneWidth=w;}
+  // 段変え(r1119-090): 同じ手が1.5拍未満で地上⇔空中を持ち替えない。サビ・盛り上がりではタップを空中へそろえてフレーズにし、
+  //   それ以外は空中のタップを地上へ戻す。帯は動かさない(前の空中タップを地上へ戻す)
+  if(D.sky){const WIN=BEAT*1.5-2,lvS=n=>n.type==='SLIDE'?(n.sky?1:0):(n.skyHeight?1:0),lvE=lvS;
+    const isTap=n=>n.type==='TAP'||n.type==='FLICK';
+    const skyOK=n=>{const p=secOf(n.timeMs);return p&&(isChorus(p)||intensityAt(n.timeMs)>=D.skyHot);};
+    const setLv=(n,l)=>{if(l)n.skyHeight=1;else delete n.skyHeight;};
+    for(let pass=0;pass<6;pass++){let changed=0;
+      for(const h of ['L','R']){const a=notes.filter(n=>n.hand===h).sort((x,y)=>x.timeMs-y.timeMs);
+        for(let i=1;i<a.length;i++){const pv=a[i-1],n=a[i];if(lvS(n)===lvE(pv))continue;
+          if(n.timeMs-(pv.endTimeMs||pv.timeMs)>=WIN)continue;
+          if(isTap(n)&&lvE(pv)===1&&skyOK(n)){setLv(n,1);changed++;}
+          else if(isTap(n)&&lvS(n)===1){setLv(n,0);changed++;}
+          else if(isTap(pv)&&lvE(pv)===1){setLv(pv,0);changed++;}}}
+      if(!changed)break;}}
+  // 幅(2026-11-22 社長「全部ノーツが小さい」): 拍の強さで混ぜる。区間の始まりの小節の頭=5・小節の頭=4・拍の頭=3・
+  //   半小節の頭=4・ほか=3・同じ手が16分で続く所=2。真ん中の位置はそのままで、その手の半分の外へは出さない(交差は増えない)。スライドは幅2のまま
+  {const byHand={L:[],R:[]};for(const n of notes)byHand[n.hand].push(n);
+    const secStart=new Set(parts.map(p=>Math.round(gOf(p.start*1000)/16)*16));
+    for(const h of ['L','R']){const a=byHand[h];
+      for(let i=0;i<a.length;i++){const n=a[i];if(n.type==='SLIDE')continue;const g=gOf(n.timeMs);
+        const fast=(i>0&&n.timeMs-a[i-1].timeMs<130&&n.timeMs!==a[i-1].timeMs)||(i+1<a.length&&a[i+1].timeMs-n.timeMs<130&&a[i+1].timeMs!==n.timeMs);
+        let w=fast?2:g%16===0?(secStart.has(g)?5:4):g%8===0?4:3;
+        if(n.skyHeight)w=Math.min(w,3);
+        const c=n.subLane+n.subLaneWidth/2;let st=Math.round(c-w/2);
+        st=h==='R'?Math.max(6,Math.min(12-w,st)):Math.max(0,Math.min(6-w,st));n.subLane=st;n.subLaneWidth=w;}}}
   // モンスターノーツ4個: 曲の 1/5・2/5・3/5・4/5 あたりの、拍の頭の地上タップ(強い所)
   const dur=audio.durationMs;
   for(let k=1;k<=4;k++){const at=dur*k/5;
