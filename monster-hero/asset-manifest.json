@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "8f687cd5ac81",
-  "packs": {"beat":{"bytes":286917108,"count":156},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":727590063,"count":2762},"core":{"bytes":25338617,"count":25}},
+  "id": "8ff0f53e62ac",
+  "packs": {"beat":{"bytes":290351313,"count":158},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":731024268,"count":2764},"core":{"bytes":25393814,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -122,6 +122,7 @@
     "audio/bgm-walkure-short.mp3": {"v":"4ac3e2f2af3e","size":4330266,"pack":"beat"},
     "audio/bgm-walkure.mp3": {"v":"c0643f725dff","size":16606354,"pack":"beat"},
     "audio/bgm-wrath-of-the-thorn-king.mp3": {"v":"d1ea326a4ee2","size":1157328,"pack":"beat"},
+    "audio/bgm-zenbu-hissatsuwaza.mp3": {"v":"5b91503c1743","size":2832768,"pack":"beat"},
     "audio/jingle-victory.mp3": {"v":"689c9715a824","size":78273,"pack":"battle"},
     "audio/se-awakened-moo-apocalypse.mp3": {"v":"3ed18e30e8e7","size":82124,"pack":"battle"},
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": {"v":"099d201c53b1","size":6083756,"pack":"beat"},
@@ -2311,6 +2312,7 @@
     "images/song-art/tsuki-ga-michiru-mae-ni.jpg": {"v":"cc3224d7112f","size":32682,"pack":"beat"},
     "images/song-art/walkure.jpg": {"v":"25ed534ed26b","size":437973,"pack":"beat"},
     "images/song-art/wrath-of-the-thorn-king.jpg": {"v":"e65c5105b221","size":65936,"pack":"beat"},
+    "images/song-art/zenbu-hissatsuwaza.jpg": {"v":"2c04543878e2","size":601437,"pack":"beat"},
     "images/song-lyrics/rebellion-1.jpg": {"v":"91279274a51d","size":409595,"pack":"battle"},
     "images/song-lyrics/stay_with_me-1.jpg": {"v":"0a877cbeae9b","size":217724,"pack":"battle"},
     "images/story-bg/dark_void.jpg": {"v":"6c4987dd8307","size":29612,"pack":"battle"},
@@ -2767,7 +2769,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"736b0fad8a91","size":314362,"pack":"core"},
+    "tailwind.css": {"v":"b49db372c4b0","size":314362,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2775,12 +2777,12 @@
     "data/breeder.js": {"v":"94e44f8d7df0","size":145296,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"4cbac821afd9","size":6454520,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"e31af3425566","size":6507267,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
-    "data/rhythm-event.js": {"v":"1a4f72d52db2","size":108543,"pack":"core"},
-    "data/changelog.js": {"v":"883a8f4c3d49","size":1986099,"pack":"core"},
+    "data/rhythm-event.js": {"v":"cbaf7b3a9ecd","size":108544,"pack":"core"},
+    "data/changelog.js": {"v":"9ee96724546d","size":1987230,"pack":"core"},
     "data/help.js": {"v":"0d04d5089bec","size":906682,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2789,6 +2791,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"172b43434f62","size":12313309,"pack":"core"}
+    "game-system.compiled.js": {"v":"a26e34e1a896","size":12314627,"pack":"core"}
   }
 }

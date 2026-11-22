@@ -335,6 +335,10 @@
   "beyond_the_same_sky_short/MASTER/portrait": 0,
   "beyond_the_same_sky_short/HELL/landscape": 0,
   "beyond_the_same_sky_short/HELL/portrait": 2,
+  "zenbu_hissatsuwaza/MASTER/landscape": 0,
+  "zenbu_hissatsuwaza/MASTER/portrait": 0,
+  "zenbu_hissatsuwaza/HELL/landscape": 0,
+  "zenbu_hissatsuwaza/HELL/portrait": 0,
   "desert_crown/MASTER/landscape": 0,
   "desert_crown/MASTER/portrait": 0,
   "desert_crown/HELL/landscape": 0,
@@ -363,6 +367,11 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 8
+  },
+  {
+   "at": "2026-11-22T11:33",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 4
   }
  ]
 }
