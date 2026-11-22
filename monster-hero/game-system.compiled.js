@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 346e9f04ee377fa4
+// source-sha256: cc2e895667dc87e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123103,8 +123103,9 @@ function AssistantLifeRoomBed({
     const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
     const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
     const imgLeft = r.left + cw / 2;
+    const fullBody = (box.b - box.t) * r.height > 2.2 * (box.r - box.l) * r.width;
     const visH = r.height * (box.b - box.t),
-      k = Math.min(1, 2.0 * U / Math.max(1, visH));
+      k = fullBody ? 1 : Math.min(1, 2.0 * U / Math.max(1, visH));
     const eyeOrigin = `${((box.l + box.r) / 2 * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
     const shrink = k < 0.999 ? {
       transform: `scale(${k.toFixed(3)})`,
