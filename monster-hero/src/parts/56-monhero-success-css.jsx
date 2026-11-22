@@ -129,6 +129,8 @@ const MSX_CSS = `
 .msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
 .msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx button.v-pow{color:inherit;font:inherit;cursor:pointer;min-height:44px;text-align:left}.msx button.v-pow:active{transform:translateY(1px)}
+.msx .msx-stsh-pow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:900;margin:4px 0 8px}.msx .msx-stsh-pow b{font-size:22px;color:#fde047}
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
