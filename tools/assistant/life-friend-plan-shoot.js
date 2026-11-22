@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 助手ライフの作り直し 段10(友情を型に載せる)の案の止め絵を撮る。ゲーム本体は変えない・読むだけ。
 //   node tools/assistant/life-friend-plan-shoot.js
+//   node tools/assistant/life-friend-plan-shoot.js --after   作った後の友情タブ(型・案A)を切り欠きありの縦 390×844・横 844×390 で撮って測る(after-tate.png・after-yoko.png)
 //   出す物: docs/progress/assistant-life/step10-friendship/ の before-1.png・before-2.png(いまの友情タブ・本物の画面)・
 //           pairs.json(見本に使う28組の友情Lv・あと◯・いる場所)・plan-a/b/c.png(案の見本 mock.html)
 // 前は本物の画面(偽のデータ・15:00)。案は mock.html(本物の型の見た目 ALU_CSS・顔の絵・字の4段)を 390×844 で撮る。
@@ -33,9 +34,10 @@ const BOND = {
   const MIX = { groups: [{ ids: ['mua', 'kiki'], place: 'cafe', doing: 'cafe' }, { ids: ['dra', 'sorashido', 'erubin'], place: 'cardroom', doing: 'card' }],
     solo: { momosuke: { doing: 'battle', place: 'battle' }, atsu: { doing: 'idle', place: 'home' }, kyuko: { doing: 'read', place: 'library' } } };
   const errs = [];
-  const notch = () => { const set = () => { const r = document.documentElement; r.style.setProperty('--mh-safe-top', '47px'); r.style.setProperty('--mh-safe-bottom', '34px'); r.style.setProperty('--mh-safe-left', '0px'); r.style.setProperty('--mh-safe-right', '0px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); };
-  {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  const notch = () => { const set = () => { const r = document.documentElement; const land = window.innerWidth > window.innerHeight; r.style.setProperty('--mh-safe-top', land ? '0px' : '47px'); r.style.setProperty('--mh-safe-bottom', land ? '21px' : '34px'); r.style.setProperty('--mh-safe-left', land ? '47px' : '0px'); r.style.setProperty('--mh-safe-right', land ? '47px' : '0px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); };
+  const AFTER = process.argv.includes('--after');
+  for (const vp of AFTER ? [{ width: 390, height: 844, name: 'tate' }, { width: 844, height: 390, name: 'yoko' }] : [{ width: 390, height: 844, name: '' }]) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(15, 0, 0, 0);
     await page.clock.setFixedTime(new Date(jst.getTime() - 9 * 3600000));
@@ -55,6 +57,52 @@ const BOND = {
       await page.locator('[data-assistant-life-typed-house]').waitFor({ timeout: 15000 });
       await page.locator('[data-alu-tab="friends"], [data-assistant-life-tabs] button:has-text("友情"), button[role="tab"]:has-text("友情")').first().click({ timeout: 5000 });
       await page.waitForTimeout(1500);
+      if (AFTER) {
+        await page.locator('[data-assistant-life-typed-friends]').waitFor({ timeout: 10000 });
+        await page.screenshot({ path: path.join(OUT, `after-${vp.name}.png`) });
+        const m = await page.evaluate(({ w, h, land }) => {
+          const R = (sel) => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom), w: Math.round(r.width), h: Math.round(r.height) }; };
+          const root = document.querySelector('[data-assistant-life-typed-friends]');
+          const sizes = new Set(); const wraps = [];
+          const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+          for (let n = tw.nextNode(); n; n = tw.nextNode()) { if (!n.textContent.trim()) continue; const el = n.parentElement; if (!el.getClientRects().length) continue; sizes.add(Math.round(parseFloat(getComputedStyle(el).fontSize))); }
+          for (const el of root.querySelectorAll('.alu-nw')) if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).display === 'block') wraps.push(`切れる: ${el.textContent.trim().slice(0, 30)}`);
+          for (const el of root.querySelectorAll('.alu-nw, .alu-t, .alu-n, .alu-btn, .alu-go span, .alu-h')) {
+            if (el.querySelector('.alu-nw, div') || !el.getClientRects().length) continue;
+            const rg = document.createRange(); rg.selectNodeContents(el);
+            const tops = new Set([...rg.getClientRects()].filter(r => r.width > 1).map(r => Math.round(r.top / 4)));
+            if (tops.size > 1) wraps.push(el.textContent.trim().slice(0, 30));
+          }
+          const outs = [...root.querySelectorAll('button')].filter(b => { const r = b.getBoundingClientRect(); return r.width && (r.left < (land ? 47 : 0) - 1 || r.right > w - (land ? 47 : 0) + 1); }).map(b => b.textContent.trim().slice(0, 16));
+          return { back: R('[data-alu-back]'), clock: R('[data-alu-clock]'), tabs: (() => { const bs = [...document.querySelectorAll('[data-alu-tabs] button')].map(b => b.getBoundingClientRect()); return bs.length ? { t: Math.round(Math.min(...bs.map(r => r.top))), b: Math.round(Math.max(...bs.map(r => r.bottom))) } : null; })(), go: R('[data-assistant-life-friends-go]'), graph: R('[data-assistant-life-friend-graph]'), sizes: [...sizes].sort((a, b) => a - b), wraps, outs };
+        }, { w: vp.width, h: vp.height, land: vp.width > vp.height });
+        const land = vp.width > vp.height;
+        const top = land ? 0 : 47, bottom = vp.height - (land ? 21 : 34);
+        const bad = [];
+        if (!m.back || m.back.t < top) bad.push(`戻るが上の切り欠きに入る(${m.back && m.back.t})`);
+        if (land && m.back && m.back.l < 47) bad.push(`戻るが左の切り欠きに入る(${m.back.l})`);
+        if (m.back && m.clock && m.back.r > m.clock.l) bad.push('戻ると時刻が重なる');
+        if (!m.tabs || m.tabs.b > bottom) bad.push(`下のタブが下の切り欠きに入る(${m.tabs && m.tabs.b} > ${bottom})`);
+        if (!m.go || m.go.w < 120 || m.go.h < 44 || m.go.b > (m.tabs ? m.tabs.t : vp.height)) bad.push(`主なボタンが最初の画面に無い・小さい(${JSON.stringify(m.go)})`);
+        if (m.sizes.some(x => x < 11)) bad.push(`11px 未満の字 ${m.sizes.join('/')}`);
+        if (m.wraps.length) bad.push(`途中で折れる字 ${m.wraps.slice(0, 3).join(' / ')}`);
+        if (m.outs.length) bad.push(`切り欠き・画面の外に出るボタン ${m.outs.slice(0, 3).join(' / ')}`);
+        console.log(`${bad.length ? 'NG' : 'OK'}: 作った後(${vp.name} ${vp.width}×${vp.height}・切り欠きあり) 字 ${m.sizes.join('/')}px・主なボタン ${m.go ? `${m.go.w}×${m.go.h} 上${m.go.t}` : '無い'}・関係図 ${m.graph ? `${m.graph.w}×${m.graph.h}` : '無い'}${bad.length ? ` — ${bad.join(' / ')}` : ''}`);
+        if (bad.length) errs.push(`after-${vp.name}`);
+        if (vp.name === 'tate') {
+          // 押したときの動き: 線 → その2人の思い出アルバム / 窓3つ / 主なボタン → 掛け合いの場面
+          const acts = [];
+          try { await page.locator('[data-assistant-life-friend-line]').first().click({ timeout: 3000, force: true }); await page.locator('[data-assistant-peer-album]').waitFor({ timeout: 3000 }); acts.push('線→アルバム'); await page.locator('[data-assistant-peer-album-close]').click(); await page.waitForTimeout(300); } catch (e) { bad.push('線を押してもアルバムが開かない'); }
+          for (const k of ['intro', 'road', 'all']) {
+            try { await page.locator(`[data-assistant-life-friends-${k}]`).click({ timeout: 3000 }); await page.locator('[data-alu-mask]').waitFor({ timeout: 3000 }); await page.screenshot({ path: path.join(OUT, `after-sheet-${k}.png`) }); acts.push(`窓 ${k}`); await page.locator('[data-alu-mask] button[aria-label="閉じる"], [data-alu-mask] [data-alu-close]').first().click({ timeout: 3000 }); await page.waitForTimeout(300); } catch (e) { bad.push(`窓 ${k} が開かない・閉じない`); }
+          }
+          try { await page.locator('[data-assistant-life-friends-go]').click({ timeout: 3000 }); await page.locator('[data-assistant-life-scene-stand]').first().waitFor({ timeout: 8000 }); acts.push('見る→場面'); } catch (e) { bad.push('主なボタンで場面が出ない'); }
+          console.log(`${bad.length ? 'NG' : 'OK'}: 押したときの動き ${acts.join('・')}${bad.length ? ` — ${bad.join(' / ')}` : ''}`);
+          if (bad.length) errs.push('after-acts');
+        }
+        await ctx.close();
+        continue;
+      }
       await page.screenshot({ path: path.join(OUT, 'before-1.png') });
       // 送った先(中身の続き)
       await page.evaluate(() => { const els = [...document.querySelectorAll('[data-assistant-life-screen] *')].filter(e => e.scrollHeight > e.clientHeight + 40 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)); const el = els.sort((a, b) => b.scrollHeight - a.scrollHeight)[0]; if (el) el.scrollTop = Math.round(el.clientHeight * 0.9); });
@@ -79,7 +127,7 @@ const BOND = {
     } catch (e) { errs.push(`前: ${String(e.message || e).split('\n')[0].slice(0, 160)}`); }
     await ctx.close();
   }
-  if (fs.existsSync(path.join(OUT, 'mock.html'))) {
+  if (!AFTER && fs.existsSync(path.join(OUT, 'mock.html'))) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     for (const p of ['a', 'b', 'c']) {
