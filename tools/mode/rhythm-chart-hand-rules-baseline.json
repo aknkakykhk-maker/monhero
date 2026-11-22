@@ -3368,6 +3368,76 @@
    "fastSameSide": 2,
    "heldHandSwitch": 0
   },
+  "battle_5/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "battle_5/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "battle_5/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 19,
+   "heldHandSwitch": 0
+  },
+  "battle_5/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 7,
+   "heldHandSwitch": 0
+  },
+  "battle_5/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 26,
+   "heldHandSwitch": 0
+  },
+  "battle_5_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "battle_5_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "battle_5_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 7,
+   "heldHandSwitch": 0
+  },
+  "battle_5_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 6,
+   "heldHandSwitch": 0
+  },
+  "battle_5_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
   "kimimachi_loop/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3629,6 +3699,11 @@
    "at": "2026-11-22T16:21",
    "reason": "Beyond the Same Sky(原曲・short)の MASTER・HELL のノーツの幅を混ぜ、HELL の段変えを上限の内側へ(台帳 r1119-105 の続き・社長「全部ノーツが小さい」)",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T17:57",
+   "reason": "main取り込みに伴う再生成(台帳 r1119-119/120・Battle #5 非表示マージ)",
+   "changed": 10
   }
  ]
 }
