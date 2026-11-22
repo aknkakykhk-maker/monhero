@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6d7fd1245a6d737c
+// generated-sha256: 0c2003f193f130c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15490,7 +15490,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
             style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
-          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
+          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
         {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
@@ -43214,7 +43214,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
@@ -149907,7 +149907,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
-          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:eventReplay.ending?'none':'auto',zIndex:1,...(eventReplay.ending?{opacity:0,transition:'opacity .5s ease-out'}:{})}}>
+          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1,...(eventReplay.ending?{opacity:0,visibility:'hidden',transition:'opacity .5s ease-out, visibility 0s linear .5s'}:{})}}>
             {/* 締め(終わりの札)のあいだは台詞の窓を消す(2026-11-22 点検 #7059: 半透明の幕ごしに窓の「閉じる」と題が透けて二重に見えた・r1119-080) */}
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>

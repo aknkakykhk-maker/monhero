@@ -564,7 +564,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
             style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
-          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black" style={{ color, ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
+          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
         {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
