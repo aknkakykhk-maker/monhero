@@ -37,6 +37,7 @@ const load = (rel) => {
   vm.runInContext(code, ctx);
 };
 load('monster-hero/data/assistants.js');
+load('monster-hero/data/assistant-life-rel-talks.js'); // 関係の出来事の台本(段10で data/ へ)
 // 2人にあげる道具の検査用に、持ち物(breeder.js)と交換所(rhythm-event.js)から2品の行だけを切り出して読む(ファイル丸ごとはほかの定義に頼っているため)
 {
   const pick = (rel, re) => fs.readFileSync(path.join(root, rel), 'utf8').split('\n').filter(l => re.test(l));
@@ -49,6 +50,7 @@ vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDay
 load('monster-hero/src/parts/56-assistant-peer.jsx');
 load('monster-hero/src/parts/56-assistant-life.jsx');
 load('monster-hero/src/parts/56-assistant-life-gifts.jsx');
+load('monster-hero/src/parts/56-assistant-life-rel.jsx'); // けんか・仲直りの台本の1つの表(段10)
 const G = (expr) => vm.runInContext(expr, ctx);
 
 const PREFS = G('ASSISTANT_LIFE_PREFS');
@@ -461,9 +463,10 @@ if (process.argv.includes('--stats')) {
       else if (!got.anyTrio) hitFixed++;
     }
     check('⑧ 決まった3人がそろうと、その3人の台本が先に出る', badTrio === 0 && hitFixed === T.trio.length, `${hitFixed}/${T.trio.length}`);
-    const lq = T.quarrel.filter(t => t.kind === 'quarrel');
+    const lqAll = G('assistantLifeRelLifeQuarrels()'); // 段10: 言い合いは rel の1つの表へ移した
+    const lq = lqAll.filter(t => t.kind === 'quarrel');
     const lifeQ = G('assistantPeerExtraTalks()').quarrels.filter(t => t.kind === 'quarrel' && /^life-/.test(t.id));
-    check('⑧ 言い合い(言い合い・距離・仲直り)が仲直りの流れに乗る', lq.length > 0 && lifeQ.length === lq.length && lq.every(q => q.distance.length && T.quarrel.some(m => m.kind === 'makeup' && m.quarrelId === q.id)), `${lq.length}本`);
+    check('⑧ 言い合い(言い合い・距離・仲直り)が仲直りの流れに乗る', lq.length > 0 && lifeQ.length === lq.length && lq.every(q => q.distance.length && lqAll.some(m => m.kind === 'makeup' && m.quarrelId === q.id)), `${lq.length}本`);
     // 気分がすぐれない2人はたまに言い合い(Lv2 から)
     lstore.set({ seen: {} });
     let qn = 0;

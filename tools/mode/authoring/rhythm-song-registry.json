@@ -2036,6 +2036,56 @@
    "chartIntensityByDifficulty": {
     "HELL": "extreme"
    }
+  },
+  "walkure": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-walkure.mp3",
+   "chartRevision": 40,
+   "audioSha256": "c0643f725dff7f3495722cd92320beeb7e0c03a73cd733e77e28c59b0fe1a173",
+   "durationMs": 691931,
+   "analyzedTiming": {
+    "bpm": 216.03,
+    "beatZeroMs": 70,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   },
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   }
+  },
+  "walkure_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-walkure-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "4ac3e2f2af3e4ccf29c9f83eb9295a21357befd38663b182838c13c4a46313f8",
+   "durationMs": 180428,
+   "analyzedTiming": {
+    "bpm": 216.03,
+    "beatZeroMs": 23,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild",
+    "MASTER": "extreme"
+   },
+   "sustainScale": {
+    "MASTER": 0.2
+   },
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   }
   }
  }
 }

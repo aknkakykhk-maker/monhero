@@ -659,7 +659,7 @@ const assistantLifePlaceLabel = (p) => (typeof assistantLifePlaceShow === 'funct
 const assistantLifeTalkSet = () => {
   if (assistantLifeTalkCache) return assistantLifeTalkCache;
   const raw = (typeof ASSISTANT_LIFE_TALKS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_TALKS)) ? ASSISTANT_LIFE_TALKS : [];
-  const out = { solo: [], breeder: [], invite: [], pair: [], trio: [], anyTrio: [], quarrel: [] };
+  const out = { solo: [], breeder: [], invite: [], pair: [], trio: [], anyTrio: [] };
   const okLines = (a) => Array.isArray(a) && a.length > 0 && a.every(l => l && typeof l.who === 'string' && typeof l.t === 'string');
   for (const t of raw) {
     if (!t || typeof t.id !== 'string' || !okLines(t.lines)) continue;
@@ -671,16 +671,12 @@ const assistantLifeTalkSet = () => {
     else if (t.kind === 'pair' && Array.isArray(t.pair)) out.pair.push({ ...base, pair: [...t.pair].sort() });
     else if (t.kind === 'trio' && t.any && Array.isArray(t.pair)) out.anyTrio.push({ ...base, pair: [...t.pair].sort(), anyTrio: true });
     else if (t.kind === 'trio' && Array.isArray(t.trio)) out.trio.push({ ...base, kind: 'trio', trio: [...t.trio].sort() });
-    else if (t.kind === 'quarrel' && Array.isArray(t.pair)) {
-      const pair = [...t.pair].sort();
-      out.quarrel.push({ ...base, pair, kind: 'quarrel', lv: 2, scene: 'home', makeupId: `${t.id}m`, distance: okLines(t.distance) ? t.distance : [] });
-      if (okLines(t.makeup)) out.quarrel.push({ ...base, id: `${t.id}m`, pair, kind: 'makeup', lv: 2, scene: 'home', quarrelId: t.id, lines: t.makeup });
-    }
+    // 言い合い(kind 'quarrel')は 56-assistant-life-rel.jsx の assistantLifeRelQuarrels が、ほかのけんかといっしょに1つの表にする(段10)
   }
   assistantLifeTalkCache = out;
   return out;
 };
-const assistantLifeQuarrelTalks = () => [...assistantLifeTalkSet().quarrel, ...(typeof assistantLifeRelQuarrelTalks === 'function' ? assistantLifeRelQuarrelTalks() : [])]; // 原因つきのけんか(rel.jsx)も
+// けんかの台本(言い合い → 距離をおく → 仲直り)は 56-assistant-life-rel.jsx の assistantLifeRelQuarrels にまとめた(段10)
 // 思い出アルバムに入るもの(2人・3人)
 const assistantLifeAlbumTalks = () => { const x = assistantLifeTalkSet(); return [...x.pair, ...x.anyTrio, ...x.trio, ...(typeof assistantLifeDailyAlbumTalks === 'function' ? assistantLifeDailyAlbumTalks() : []), ...(typeof assistantLifeFurnAlbumTalks === 'function' ? assistantLifeFurnAlbumTalks() : []), ...(typeof assistantLifeRelAlbumTalks === 'function' ? assistantLifeRelAlbumTalks() : [])]; };
 // 台本の穴 {place}・{doing}・{doing_te}。いまの様子(talk.ctx)→ 台本の鍵 → していることの場所 の順で決める
@@ -739,7 +735,7 @@ const assistantLifePickPairTalk = (pair, group, peerSt, life, seen, rand = Math.
   const key = assistantLifePairKey(a, b);
   const lv = assistantLifeLevelOf(peerSt, a, b);
   const ctx = { place: group.place, doing: group.doing };
-  const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : assistantLifeQuarrelTalks();
+  const quarrels = typeof assistantPeerExtraTalks === 'function' ? assistantPeerExtraTalks().quarrels : (typeof assistantLifeRelQuarrels === 'function' ? assistantLifeRelQuarrels(true) : []);
   const q = (peerSt && peerSt.quarrel) || { pending: null, done: [] };
   if (q.pending && q.pending.pair === key) {
     // 仲直りの形を選ぶ(謝る・間に入る。56-assistant-life-rel.jsx)。無ければけんか自身の仲直り
