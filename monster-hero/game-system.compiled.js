@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e91ee1bb33df081
+// source-sha256: 0cbc3df84b071747
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -712,6 +712,12 @@ const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT
 const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
+  id: 'flower3',
+  emoji: '🌸',
+  label: '花の女3人の新曲',
+  note: 'みゅあ・きき・ももの曲作りのお話',
+  color: '#f9a8d4'
+}, {
   id: 'pandora_wings',
   emoji: '🗝️',
   label: '鍵の向こう側へ',
@@ -37001,6 +37007,9 @@ const RhythmOrientationButton = ({
       setBusy(false);
     }
   };
+  const pcLike = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches && Math.min(window.innerWidth || 0, window.innerHeight || 0) >= 600;
+  const rotatedNow = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  if (pcLike && !rotatedNow && note === '') return null;
   return React.createElement("div", {
     className: `relative shrink-0 ${className}`
   }, React.createElement("button", {
@@ -37019,11 +37028,15 @@ const RhythmOrientationButton = ({
     className: "text-[9px] font-black leading-none"
   }, landscape ? '縦' : '横')), note !== '' && React.createElement("p", {
     "data-rhythm-orientation-note": true,
+    role: "status",
     onClick: () => setNote(''),
     style: {
-      whiteSpace: 'pre-line'
+      whiteSpace: 'pre-line',
+      top: 'calc(var(--mh-sa-top, 0px) + 4px)',
+      left: 'calc(var(--mh-sa-left, 0px) + 8px)',
+      right: 'calc(var(--mh-sa-right, 0px) + 8px)'
     },
-    className: "absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg"
+    className: "fixed z-[90000] mx-auto max-w-lg rounded-xl border border-amber-300/60 bg-slate-950/95 px-3 py-1.5 text-[10px] font-bold leading-snug text-amber-100 shadow-lg"
   }, note, React.createElement("span", {
     className: "mt-1 block text-[8px] font-black text-amber-300/80"
   }, "タップで閉じる")));
@@ -40816,7 +40829,7 @@ function RhythmSkyStage({
       steps = 8,
       ys = [];
     for (let i = 0; i <= steps; i++) ys.push(line - SKY_LANE_DEPTH + SKY_LANE_DEPTH * i / steps);
-    const lift = y => (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100;
+    const lift = y => (y - rhythmSkyLiftRatio(y)) * 100;
     const at = (k, y) => `${f(rhythmProjectBoundary(k, y) * 100)},${f(lift(y))}`;
     const surface = [...ys.map(y => at(0, y)), ...ys.slice().reverse().map(y => at(RHYTHM_LANE_COUNT, y))].join(' ');
     const dividers = Array.from({
@@ -42756,7 +42769,7 @@ const RhythmTapTest = ({
     for (let i = 0; i <= steps; i++) {
       const y = top + (line - top) * i / steps;
       pts.push({
-        y: (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100,
+        y: (y - rhythmSkyLiftRatio(y)) * 100,
         l: rhythmProjectBoundary(0, y) * 100,
         r: rhythmProjectBoundary(RHYTHM_LANE_COUNT, y) * 100,
         gy: y * 100
@@ -43648,7 +43661,7 @@ const RhythmTapTest = ({
         hi = line;
       for (let k = 0; k < 18; k++) {
         const m = (lo + hi) / 2;
-        if (m - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(m) / base < y) lo = m;else hi = m;
+        if (m - rhythmSkyLiftRatio(m) < y) lo = m;else hi = m;
       }
       return rhythmProjectionScale(lo);
     };
@@ -47208,7 +47221,7 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[9px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", result.eventPointAward.multiScale), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
+    }, "イベント対象曲 ", result.eventPointAward.targetBoost > 0 ? `いつもの${result.eventPointAward.targetBoost}倍` : '1.5倍'), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
       "data-rhythm-result-beat-points-length": true,
       className: "mt-1 block text-[10px] font-black text-sky-200"
     }, "曲の長さ +", result.eventPointAward.lengthBonusPercent, "%"), result.eventPointAward.campaign && React.createElement("span", {
@@ -62105,8 +62118,15 @@ const rhythmSongBundleSongs = songId => {
   const owner = rhythmSongOwnerId(songId);
   return [owner, ...rhythmSongBundleIds(owner)].map(id => RHYTHM_SONGS.find(song => song && song.songId === id)).filter(Boolean);
 };
-const rhythmSongPrice = songId => {
-  const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
+const rhythmSongFreeUntilMs = songId => {
+  const ms = typeof rhythmEventFreeSongUntilMs === 'function' ? rhythmEventFreeSongUntilMs(rhythmSongOwnerId(songId)) : null;
+  return Number.isFinite(ms) ? ms : null;
+};
+const rhythmSongPrice = (songId, nowMs = Date.now()) => {
+  const freeUntil = rhythmSongFreeUntilMs(songId);
+  if (freeUntil !== null && Number(nowMs) < freeUntil) return 0;
+  const listed = RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)];
+  const n = Math.floor(Number(listed === undefined && freeUntil !== null ? RHYTHM_SONG_DEFAULT_PRICE : listed));
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 const rhythmSongIsPaid = songId => rhythmSongPrice(songId) > 0;
@@ -71144,7 +71164,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
+    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.targetBoost) > 0 ? `(イベント曲は${campaign.targetBoost}倍)` : ''}${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
   })(), legendPassLetterAvailable && typeof onReadLegendPassLetter === 'function' && (eventTab === 'item' || eventTab === 'material') && React.createElement("button", {
     type: "button",
     "data-legend-pass-letter": true,
@@ -73415,7 +73435,7 @@ function RhythmSongSelectScreen({
   const [debugSongFilter, setDebugSongFilter] = useState('all');
   const songs = debugAll ? rhythmDebugSelectSongs(debugSongFilter) : rhythmDemoSongs(RHYTHM_SONGS);
   const difficulties = debugAll ? RHYTHM_PLAY_DIFFICULTIES : rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
-  const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
+  const eventSongTitles = rhythmEventNotice ? rhythmEventDivisions(rhythmEventNotice, RHYTHM_SONGS).filter(division => division.songId).map(division => division.lockedText || rhythmSongFullName(division.song) || division.songId) : [];
   const beatPointReleased = !debugAll && RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && rhythmEventHasSong(beatPointEvent, rhythmSelectedSongId);
@@ -73445,7 +73465,7 @@ function RhythmSongSelectScreen({
   }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : jaWrap('公開曲なら獲得できます'))) : null;
+  }, beatPointTargetSong ? jaWrap(`選択中のイベント対象曲は${rhythmEventTargetPointLabel(beatPointEvent)}`) : jaWrap('公開曲なら獲得できます'))) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   const [eventNoticeOpen, setEventNoticeOpen] = React.useState(false);
   React.useEffect(() => {
@@ -73801,7 +73821,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap(`・選択中のイベント対象曲は${rhythmEventTargetPointLabel(beatPointEvent)}`) : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
     className: "text-amber-200"
   }, jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
@@ -74649,9 +74669,9 @@ function RhythmRankingScreen({
     "data-rhythm-event-division": division.id,
     onClick: () => openDivision(division.id),
     className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === eventDivisionId ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, division.songId ? rhythmSongFullName(division.song) ? React.createElement(RhythmSongName, {
+  }, division.songId ? division.lockedText || (rhythmSongFullName(division.song) ? React.createElement(RhythmSongName, {
     song: division.song
-  }) : division.songId : '総合'))), eventBoard.status === 'loading' && React.createElement("p", {
+  }) : division.songId) : '総合'))), eventBoard.status === 'loading' && React.createElement("p", {
     "data-rhythm-event-board-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), eventBoard.status === 'error' && React.createElement("p", {
@@ -74864,7 +74884,7 @@ function RhythmRankingScreen({
     className: "mb-3 text-[10px] leading-tight text-fuchsia-100"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
-  }, rhythmEventSongsLabel(eventDefinition)), "\u3000", eventDivisions.filter(division => division.songId).map(division => rhythmSongFullName(division.song) || division.songId).join(' ／ ')), eventRewardsByDivision.length > 0 && React.createElement("div", {
+  }, rhythmEventSongsLabel(eventDefinition)), "\u3000", eventDivisions.filter(division => division.songId).map(division => division.lockedText || rhythmSongFullName(division.song) || division.songId).join(' ／ ')), eventRewardsByDivision.length > 0 && React.createElement("div", {
     "data-rhythm-event-rewards": true,
     className: "space-y-2"
   }, React.createElement("p", {
@@ -74879,7 +74899,7 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
   }, React.createElement("p", {
     className: "mb-1 truncate text-[10px] font-black text-fuchsia-100"
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : eventWeekly ? 'その週の累計スコア' : '総合（対象曲の合計）'), React.createElement("ul", {
+  }, division.songId ? division.lockedText || rhythmSongFullName(division.song) || division.songId : eventWeekly ? 'その週の累計スコア' : '総合（対象曲の合計）'), React.createElement("ul", {
     className: "space-y-0.5"
   }, ranks.map(({
     rank,
@@ -162251,7 +162271,7 @@ function AssistantLifeFriendPage({
     className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
     style: JA_WRAP_STYLE,
     "data-alf-bond-note": true
-  }, jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
+  }, jaWrap('🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
     "data-alf-houses": true,
     style: hideIfEmpty
   }, houses.length ? houses.map(f => {
@@ -163118,7 +163138,7 @@ function AlfBondChip({
   return React.createElement("span", {
     className: "ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100",
     "data-alb-chip": id
-  }, "🌸 ご縁Lv", albLv(st), " ", albTitle(st));
+  }, "🏠 おなじみ度 Lv", albLv(st), " ", albTitle(st));
 }
 function AlfFavShelf({
   fv
@@ -163180,7 +163200,7 @@ function AlfBondBar({
   }, React.createElement("b", {
     className: `block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`,
     "data-alb-bar-title": true
-  }, compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
+  }, compact ? `🏠 おなじみ度 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🏠 おなじみ度 Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
     className: `truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`,
     "data-alb-bar-sub": true
   }, x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`, fresh ? ` ・ ✨ 見どころ ${fresh}` : '')), React.createElement("span", {
@@ -163240,7 +163260,7 @@ function AlfBondSheet({
   }, React.createElement("p", {
     className: "text-[16px] font-black text-pink-100",
     "data-alb-sheet-title": true
-  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🏠 ", friend.name, "さんとのおなじみ度 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, "「", albTitle(x.st), "」 ・ スタンプ ", x.st, "個", nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''), React.createElement("div", {
     className: "mt-1 h-2 overflow-hidden rounded-full bg-white/15"
@@ -163329,7 +163349,7 @@ function AlfBondView({
     "data-alf-bond-view-friend": true
   }, React.createElement("p", {
     className: "text-[15px] font-black text-pink-100"
-  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🏠 ", friend.name, "さんとのおなじみ度 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, React.createElement("span", {
     className: "whitespace-nowrap"
@@ -163456,7 +163476,7 @@ function AlfGuestBook({
     "data-alb-guests-none": true
   }, "この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。"), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。")));
+  }, "フレンドか、フレンドの助手が来てくれた日は、その人とのおなじみ度のスタンプが1個たまります(1人につき1日1個)。")));
 }
 function AlfFavEditor({
   s,
@@ -163552,7 +163572,7 @@ function AlfFavEditor({
     })
   })), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
+  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「おなじみ度」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
 const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
 const ALF_SENT_MAX = Object.freeze({
@@ -235419,16 +235439,25 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const FLOWER3_STORY_IDS = FLOWER3_STORIES.map(story => story.id);
+  const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
+  const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
-    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1'
+    [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1',
+    ...(rhythmEventStoryHasScript(FLOWER3_OPEN_STORY_ID) ? {
+      [FLOWER3_EVENT_ID]: FLOWER3_OPEN_STORY_ID
+    } : {})
   };
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID,
-    [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID
+    [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID,
+    ...(rhythmEventStoryHasScript(FLOWER3_THANKS_STORY_ID) ? {
+      [FLOWER3_EVENT_ID]: FLOWER3_THANKS_STORY_ID
+    } : {})
   };
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
@@ -236059,7 +236088,7 @@ function MonsterHeroGame() {
         }
       }
       const halloweenStoryId = RELEASE_FLAGS.rhythmEventPoints === true ? halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
-      const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true ? pandoraWingsStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null : null;
+      const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true ? [...pandoraWingsStoryIdsAt(Date.now()), ...flower3StoryIdsAt(Date.now())].find(id => notPlayedYet(id)) || null : null;
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);else if (raidRhythmStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_RHYTHM_STORY_ID);else if (raidProgressStoryId) setRhythmEventStoryPending(prev => prev || raidProgressStoryId);else if (halloweenStoryId) setRhythmEventStoryPending(prev => prev || halloweenStoryId);else if (pandoraWingsStoryId) setRhythmEventStoryPending(prev => prev || pandoraWingsStoryId);else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (masuCallStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MASU_CALL_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
@@ -239219,6 +239248,7 @@ function MonsterHeroGame() {
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
+    ...Object.fromEntries(FLOWER3_STORIES.map(story => [`flower3Ep${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
