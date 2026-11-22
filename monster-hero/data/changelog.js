@@ -35,11 +35,35 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-23 03:27", type:'update', group:'rhythm', status:'new',
+    title:'Beyond the Same Sky の MASTER と HELL が、スライドやホールドで歌を追える譜面になりました',
+    items:[
+      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL で、メロディに沿うスライドや伸ばしのホールドが増え、2人で歌う所では両手が左右に開いたり閉じたりします。',
+      'レベルは、原曲 MASTER Lv.37 ／ HELL Lv.56、short ver. MASTER Lv.34 ／ HELL Lv.63 です。これまでのスコアとランキングの記録はそのまま残ります。',
+    ],
+  },
+  {
+    date: "2026-11-23 02:40", type:'update', group:'ui', status:'new',
+    title:'iPhone を横にしたとき、画面の左右の端のボタンが切り欠きにかからないようになりました',
+    items:[
+      'iPhone を横にすると、HOME の「プロフィール」「設定」「更新履歴」「ミッション」「ギフト」や、各画面の「戻る」・「受け取る」が、画面の端の切り欠きの下に入って押しにくいことがありました。',
+      'HOME・プロフィール・ミッション・ギフト・神殿・マーケット・設定などで、横にしたときだけ左右の余白を切り欠きの分だけ広げました。縦のときの並びは変わりません。',
+    ],
+  },
+  {
+    date: "2026-11-23 01:44", type:'update', title:'曲を鑑賞できるようになりました', status:'new', group:'rhythm',
+    items:[
+      '曲選びのジャケットを押して開く画面に「🎧 この譜面を鑑賞する」を足しました。ノーツが自動で叩かれながら、曲が最後まで流れます。',
+      '遊べる難易度から選べます。演奏中は「-10秒」「+10秒」で前後へ移れて、Ⅱ で止められます。',
+      '鑑賞はスコア・自己ベスト・ランキング・ビートP・ミッションには載りません。',
+    ],
+  },
+  {
     date: "2026-11-23 01:20", type:'fix', group:'rhythm', status:'new',
     title:'Beyond the Same Sky の MASTER と HELL で、ノーツの幅がそろってしまっていたのを直しました',
     items:[
       'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL で、ノーツの幅がすべて同じになっていたのを直しました。',
-      'レベルは、原曲 HELL Lv.56、short ver. MASTER Lv.33 ／ HELL Lv.63 になりました。これまでのスコアとランキングの記録はそのまま残ります。',
+      'これまでのスコアとランキングの記録はそのまま残ります。',
     ],
   },
   {
@@ -114,6 +138,12 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-23 00:38", type:'update', group:'assistant', title:'助手ライフの家から、助手みんなの紹介を見られるようになりました', status:'new',
+    items:[
+      '助手ライフの家の一番上の右に「📖 紹介」を置きました。押すと助手みんなの紹介の一覧が開き、選んだ助手の紹介が見られます。',
+    ],
+  },
+  {
     date: "2026-11-22 23:47", type:'fix', title:'きゅうこのイラストが粗く見える不具合を直しました', status:'new', group:'assistant',
     items:[
       '助手「きゅうこ」（通常の服）の全身イラストが粗く、顔がおかしく見える不具合がありました。',
@@ -125,7 +155,7 @@ const CHANGELOG = [
     title:'Beyond the Same Sky の MASTER と HELL が、2人の歌い分けに合わせた譜面になりました',
     items:[
       'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL を、あつとみゅあの歌に合わせて作り直しました。',
-      'レベルは、原曲 MASTER Lv.36 ／ HELL Lv.56、short ver. MASTER Lv.33 ／ HELL Lv.63 です。',
+      'レベルは、原曲 MASTER Lv.37 ／ HELL Lv.56、short ver. MASTER Lv.34 ／ HELL Lv.63 です。',
       'これまでのスコアとランキングの記録はそのまま残ります。',
     ],
   },
@@ -410,10 +440,10 @@ const CHANGELOG = [
     image:'images/song-art/beyond-the-same-sky.jpg?v=ecf19c624394',
     items:[
       'モンヒロビートに「Beyond the Same Sky」を追加しました。あつとみゅあの曲で、ギルド「W.o.F」のころの思い出を歌っています。原曲（4分18秒・BPM 178）と short ver.（2分31秒・BPM 178）の、2バージョンの曲組です。',
-      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.36 ／ HELL Lv.56 です。',
-      '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1112 ／ 1227 です。',
-      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.33 ／ HELL Lv.63 です。',
-      'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 639 ／ 733 です。',
+      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.37 ／ HELL Lv.56 です。',
+      '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1155 ／ 1251 です。',
+      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.34 ／ HELL Lv.63 です。',
+      'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 618 ／ 712 です。',
       'ジャケットは版ごとに違う絵です。譜面も版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
       '更新のあとに初めて開くと、あつとみゅあのお話が流れます。',

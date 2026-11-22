@@ -1121,6 +1121,47 @@ const rhythmSetText=(el,text)=>{
   if(node&&node.nodeType===3&&!node.nextSibling){if(node.nodeValue!==value)node.nodeValue=value;return;}
   el.textContent=value;
 };
+// ===== 曲鑑賞の帯(2026-11-23 r1119-112 案B) =====
+// 鑑賞(lineAdjust.listen)では判定・スコア・コンボ・ライフを隠し、ノーツと曲だけを見せる。下に「-10秒・止める・+10秒」と進みぐあい。
+// 見た目と操作だけで、判定・譜面・音の同期は変えない(送る・戻すは listenSeek が音源の seek とノーツの作り直しで行う)
+const RHYTHM_LISTEN_HIDE_CSS='[data-rhythm-judgment-display],[data-rhythm-sky-judgment-display],[data-rhythm-combo],[data-rhythm-combo-box],[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]),[data-rhythm-ability-badge]{visibility:hidden!important}';
+const rhythmListenClock=ms=>{const t=Math.max(0,Math.floor((Number(ms)||0)/1000));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;};
+const RhythmListenBar=({runRef,song,difficulty,onSeek,onPause,onClose,isLandscape,paused=false})=>{
+  const [now,setNow]=useState({ms:0,total:0});
+  useEffect(()=>{const id=setInterval(()=>{const run=runRef.current;const a=run&&run.audio;if(!a)return;const ms=Number(a.songTimeMs&&a.songTimeMs())||0;const total=Number(a.durationMs)||0;setNow(p=>Math.abs(p.ms-ms)<120&&p.total===total?p:{ms,total});},250);return()=>clearInterval(id);},[runRef]);
+  const pct=now.total>0?Math.max(0,Math.min(100,now.ms/now.total*100)):0;
+  const btn='flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  return <>
+    <style>{RHYTHM_LISTEN_HIDE_CSS}</style>
+    {/* 一時停止の窓が開いているあいだは、帯と右上を出さない(窓の「再開」「リスタート」「曲選びへ戻る」に重なるため) */}
+    {!paused&&<>
+    <div data-rhythm-listen-top className="pointer-events-auto absolute z-[35] flex items-center gap-1.5" style={{top:'calc(var(--mh-safe-top,0px) + 8px)',right:'calc(var(--mh-safe-right,0px) + 10px)'}}>
+      <span className="max-w-[220px] truncate rounded-full border border-teal-700 bg-slate-900/85 px-2.5 py-1 text-[11px] font-black text-teal-200">🎧 鑑賞中・{difficulty&&difficulty.id}</span>
+      <button type="button" data-rhythm-listen-close onClick={onClose} aria-label="鑑賞をやめて曲選びへ戻る" className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white">✕</button>
+    </div>
+    {/* 横はレーンの下に判定ラインがあり、下の帯だと重なるので、右の空き(レーンの外)へ縦に並べる */}
+    {isLandscape?<div data-rhythm-listen-bar data-layout="side" className="pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5" style={{right:'calc(var(--mh-safe-right,0px) + 8px)',top:'50%',transform:'translateY(-62%)'}}>
+      <span data-rhythm-listen-time className="text-center text-[10px] font-black tabular-nums leading-tight text-slate-200">{rhythmListenClock(now.ms)}<br/><small className="text-[9px] text-slate-400">/ {rhythmListenClock(now.total)}</small></span>
+      <div className="relative h-1.5 rounded-full bg-slate-700"><div className="absolute inset-y-0 left-0 rounded-full bg-teal-400" style={{width:`${pct}%`}}/></div>
+      <button type="button" data-rhythm-listen-seek="-10000" onClick={()=>onSeek(-10000)} aria-label="10秒戻す" className={btn}>-10秒</button>
+      <button type="button" data-rhythm-listen-pause onClick={onPause} aria-label="止める" className="flex h-12 items-center justify-center rounded-xl border border-teal-300/60 text-lg font-black text-white" style={{background:'linear-gradient(180deg,#14b8a6,#0e7490)'}}>Ⅱ</button>
+      <button type="button" data-rhythm-listen-seek="10000" onClick={()=>onSeek(10000)} aria-label="10秒送る" className={btn}>+10秒</button>
+    </div>
+    :<div data-rhythm-listen-bar className="pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2" style={{left:'10px',right:'10px',bottom:'calc(var(--mh-safe-bottom,0px) + 8px)'}}>
+      <div className="flex items-center gap-2 text-[10px] font-black tabular-nums text-slate-200">
+        <span data-rhythm-listen-time>{rhythmListenClock(now.ms)}</span>
+        <div className="relative h-1.5 flex-1 rounded-full bg-slate-700"><div className="absolute inset-y-0 left-0 rounded-full bg-teal-400" style={{width:`${pct}%`}}/></div>
+        <span>{rhythmListenClock(now.total)}</span>
+      </div>
+      <div className="mt-1.5 flex items-center justify-center gap-3">
+        <button type="button" data-rhythm-listen-seek="-10000" onClick={()=>onSeek(-10000)} aria-label="10秒戻す" className={btn}>-10秒</button>
+        <button type="button" data-rhythm-listen-pause onClick={onPause} aria-label="止める" className="flex h-12 w-12 items-center justify-center rounded-full border border-teal-300/60 text-lg font-black text-white" style={{background:'linear-gradient(180deg,#14b8a6,#0e7490)'}}>Ⅱ</button>
+        <button type="button" data-rhythm-listen-seek="10000" onClick={()=>onSeek(10000)} aria-label="10秒送る" className={btn}>+10秒</button>
+      </div>
+    </div>}
+    </>}
+  </>;
+};
 const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   const read=()=>({ground:Number(adjust.ground),skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
   const [vals,setVals]=useState(read);
@@ -1190,7 +1231,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
   const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
   // オプションの「▶ 見てみる」の見本は、曲が流れはじめたら自動で叩く(30-rhythm-preview-hands.jsx。ふつうの指と同じ合図を送るだけ)
-  const previewHands=!!(lineAdjust&&lineAdjust.preview);
+  // 曲鑑賞(lineAdjust.listen・r1119-112)も同じ自動の手で叩く
+  const listenMode=!!(lineAdjust&&lineAdjust.listen);
+  const previewHands=!!(lineAdjust&&(lineAdjust.preview||lineAdjust.listen));
   const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -2305,7 +2348,7 @@ const paceEl=paceRef.current;
 if(paceEl&&settings.paceDisplay!==false&&!tutorial&&!calibrating&&Number(run.startBestScore)>0&&chart.totalNotes>0){const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0);const diff=Math.round(score-Number(run.startBestScore)*judged/chart.totalNotes);paceEl.hidden=false;paceEl.dataset.pace=diff>=0?'up':'down';rhythmSetText(paceEl,`ベスト比 ${diff>=0?'+':'−'}${Math.abs(diff).toLocaleString()}`);}
 // 叩いた場所の判定(オプション「叩いた場所に判定」・2026-09-29・参考動画から)。判定ラインのそのレーンの少し上に小さく出す。
 // 位置は叩いたときの光と同じ投影(判定ラインの高さ)。見た目だけで、判定・スコアには触らない
-if(settings.judgmentAtTap===true&&judgment!=='MISS'&&!calibrating){const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
+if(settings.judgmentAtTap===true&&judgment!=='MISS'&&!calibrating&&!(lineAdjustRef.current&&lineAdjustRef.current.listen)){const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
   const span=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,nowMs):rhythmNoteVisualSpan(note,note.lane,lineY,nowMs);
   rhythmSpawnTapJudgment(playAreaRef.current,{centerRatio:span&&span.center,judgment,side:rhythmFastSlow(deltaMs),sky:rhythmNoteSkyHeight(note)>0});}
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
@@ -2954,6 +2997,22 @@ scheduleTick();};
     document.addEventListener('visibilitychange',onVisibility);
     return()=>document.removeEventListener('visibilitychange',onVisibility);
   });
+  // 曲鑑賞の「-10秒・+10秒」(r1119-112)。鑑賞のときだけ使う。音源を移し、ノーツを作り直して、移した先より前のノーツは
+  // 判定せずに済んだことにする(MISS にしない)。自動の手は曲の時刻が跳んだのを見て、移した先から叩き直す(30-rhythm-preview-hands.jsx)
+  const listenSeek=async deltaMs=>{const run=runRef.current;
+    if(!listenMode||!run||run.finished||run.paused||!run.audio||typeof run.audio.seek!=='function')return;
+    if(countdownStep!==null||songIntroRef.current)return;
+    const nowMs=Number(run.audio.songTimeMs())||0;const lastNote=run.notes.reduce((m,n)=>Math.max(m,Number(n.endTimeMs)||0,Number(n.timeMs)||0),0);
+    const limit=Math.max(0,Math.min(Number(run.audio.durationMs)||lastNote+2000,lastNote+2000)-3000);
+    const target=Math.max(0,Math.min(limit,nowMs+deltaMs));
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();run.activePointerSkyFeedback?.clear();liveTouchSkySubLanesRef.current=[];setPressedLanes([]);
+    const notes=makeRuntimeNotes(run.tickRules);
+    notes.forEach(note=>{if((Number(note.timeMs)||0)<target-30){note.done=true;note._rhythmCanvasSettled=true;}});
+    run.notes=notes;run.scanFrom=0;run._stageNoteIndex=notes.findIndex(note=>!note.done);if(run._stageNoteIndex<0)run._stageNoteIndex=notes.length;
+    laneRefs.current.forEach?.(el=>{if(el)el._rhythmHidden=false;});
+    if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSlideBands(notes);
+    await run.audio.seek(target);
+  };
   const pause=()=>{const run=runRef.current;
     /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
        ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
@@ -3534,7 +3593,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 </div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':(hudSongLong?'5':'3'),WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)',fontSize:hudSongLong?'9px':undefined}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
-    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
+    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{listenMode?<RhythmListenBar runRef={runRef} song={song} difficulty={difficulty} onSeek={listenSeek} onPause={pause} onClose={onExit} isLandscape={isLandscape} paused={view.status==='paused'}/>:lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
       それまではHUDの右の列の右はしにあり、「🔄 横」で回した横画面では画面のいちばん端まで離れていた。
@@ -3660,8 +3719,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（初めの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorialProp&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{(song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{helpWrap((song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].text)}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
 {(()=>{const endMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;const ratio=endMs>0?Math.max(0,Math.min(1,pausedSongMs/endMs)):0;return <div data-rhythm-pause-info className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5">
   <b className="block truncate text-[12px] font-black text-slate-100">♪ {rhythmSongFullName(song)}</b>
-  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
+  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}{/* 曲鑑賞(r1119-112)はスコアを出さない決めごとなので、一時停止の窓にも SCORE・COMBO を出さない */}{!listenMode&&<><span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></>}</div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
-<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲選びへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲選びへ戻る'}</>}</button></div>}</div></main>;
+<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':listenMode?'鑑賞をやめて曲選びへ戻る':tutorial?'練習をやめて曲選びへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲選びへ戻る'}</>}</button></div>}</div></main>;
 };

@@ -257,7 +257,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy
 
 // 一覧(タブ「📖 紹介」の中身)
 // viewOnly … フレンドの家から見る専用で開くとき(2026-11-14 社長 r1115-019)。相手が会っている助手の「人となり」だけ。自分の仲良し度・好み・贈った記録・NEW の保存は使わない・書かない
-function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false, ownerName = '', tierOf = null }) {
+function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false, ownerName = '', tierOf = null, typed = false }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null); // 読めるまで null(NEW を出さない)
@@ -298,7 +298,7 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
     <div ref={boxRef} className="px-3 pb-3 pt-1" data-assistant-life-profile-list>
       <div className="mb-2 flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-black text-white">📖 助手紹介</p>
+          {typed ? null : <p className="text-[16px] font-black text-white">📖 助手紹介</p>}{/* typed … 新UIの家の「📖 紹介」の窓(r1119-114): 見出しは窓に任せ、字は型の4段(11/13/16/20px)にそろえる */}
           <p className="text-[11px] font-bold text-indigo-200">{viewOnly && ownerName ? <><span className="whitespace-nowrap">{ownerName}さんが会った助手です。</span> <span className="whitespace-nowrap">選ぶと人となりが分かります</span></> : '選ぶと、その助手のことが分かります'}</p>
         </div>
         <span data-assistant-life-profile-count={`${metList.length}/${roster.length}`} className="shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100">会った助手 {metList.length}/{roster.length}</span>
@@ -308,23 +308,23 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
           if (!met.has(w.id)) return (
             <div key={w.id} data-assistant-life-profile-card="unmet" aria-label="まだ会っていない助手" className="rounded-2xl border-2 border-slate-600 bg-slate-950/70 p-2">
               <div className="flex items-center justify-center rounded-full border-2 border-dashed border-slate-500 font-black text-slate-500" style={{ width: face, height: face, fontSize: face / 2 }}>？</div>
-              <p className="mt-1 text-[15px] font-black text-slate-400">？？？</p>
+              <p className={`mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-slate-400`}>？？？</p>
               <p className="text-[11px] font-bold text-slate-400">まだ会っていません</p>
             </div>);
           const b = viewOnly ? null : assistantLifeProfileBond(w.id, bondLevelOf);
           return (
             <button key={w.id} type="button" data-assistant-life-profile-card={w.id} onClick={() => open(w.id)} aria-label={`${w.name}の紹介を見る`}
               className="relative overflow-hidden rounded-2xl border-2 bg-slate-900/85 p-2 text-left active:scale-[.98]" style={{ borderColor: w.accent, backgroundImage: `linear-gradient(160deg, ${w.accent}44, transparent 65%)` }}>
-              {isNew(w.id) && <span data-assistant-life-profile-new className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950">NEW</span>}
+              {isNew(w.id) && <span data-assistant-life-profile-new className={`absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 ${typed ? 'text-[11px]' : 'text-[10px]'} font-black text-slate-950`}>NEW</span>}
               {typeof AssistantFace === 'function' && <AssistantFace who={w} size={face} accent={w.accent} expression="happy"/>}
-              <p className="mt-1 text-[15px] font-black text-white">{w.name}</p>
-              <p className="text-[10.5px] font-bold leading-snug text-slate-200" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
-              {b && <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>}
+              <p className={`mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-white`}>{w.name}</p>
+              <p className={`${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-200`} style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
+              {b && <span className={`mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-black text-pink-100`}>💗 Lv{b.lv}</span>}
               {viewOnly && typeof tierOf === 'function' && tierOf(w.id) && <span data-assistant-life-profile-tier={w.id} className="mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 {tierOf(w.id)}</span>}
             </button>);
         })}
       </div>
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-300">{viewOnly ? (metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '') : <>💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</>}</p>
+      <p className={`mt-2 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-300`}>{viewOnly ? (metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '') : <>💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</>}</p>
       {/* 紹介は家の画面のいちばん外の枠(data-assistant-life-screen)へ描く。見出しやタブの下に潜らないように(🔄横でも同じ枠の中) */}
       {openId && (() => {
         const sheet = <AssistantLifeProfileSheet id={openId} bondLevelOf={bondLevelOf} land={land} giftSt={giftSt} onMasmon={onMasmon} viewOnly={viewOnly} onClose={() => setOpenId(null)}/>;

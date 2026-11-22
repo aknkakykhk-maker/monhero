@@ -741,7 +741,7 @@ const RhythmSongName=({song,clip=false})=>{
   if(!sub)return <span style={chunk}>{title}</span>;
   return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
 };
-const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
+const RhythmSongArt=({song,large=false,marked=true,onZoom=null,listenMark=false})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
   const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
@@ -754,13 +754,16 @@ const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
     {/* 押せることが見て分かるように、右下に小さな虫めがねを出す */}
     {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
       style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
+    {/* 曲鑑賞(2026-11-23 r1119-112 案B)は、この拡大(曲の詳細)から始める。入口が見て分かるように左下に印を出す */}
+    {zoomable&&listenMark&&<i data-rhythm-song-art-listen-mark aria-hidden="true" className="absolute bottom-0.5 left-0.5 flex h-5 items-center gap-0.5 rounded-md border border-teal-300/70 px-1 text-[10px] font-black not-italic leading-none text-teal-50"
+      style={{backgroundColor:'rgba(15,61,58,.9)'}}>🎧 鑑賞</i>}
   </>;
   // 横の低い画面では大きい札のジャケットに上限を付ける。横の2列の右が広がり(2026-11-21 r1119-066③)、札のジャケットが
   // 押して開く拡大(画面の高さで頭打ち)と同じくらいの大きさになって、押しても大きくならなかった
   const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto':'w-12'}`;
   const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
   if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
-    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
+    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る${listenMark?'(曲の鑑賞もここから)':''}`}
     className={shape} style={box}>{inner}</button>;
   return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={shape} style={box}>{inner}</span>;
 };
@@ -864,7 +867,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -879,6 +882,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
+  // 曲鑑賞で流す難易度(詳細の窓の中だけで選ぶ。保存しない。開くたびに今の難易度から始める)
+  const [listenDiffId,setListenDiffId]=React.useState('');
   // 見えている向き(🔄横で絵を回しているときも横)。版の切り替えの置き場所を決める(2026-11-22 社長「曲が選べるやつのサイズを考えてない」)
   const [viewWide,setViewWide]=React.useState(()=>orientationIsLandscape());
   useEffect(()=>{
@@ -1321,7 +1326,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
             return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
-              <RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/>
+              <RhythmSongArt song={song} large listenMark={typeof onListen==='function'&&!lockedSong(song)} onZoom={()=>{setListenDiffId('');setArtZoom(true);}}/>
               {tier&&<span key={`${song.songId}:${difficulty.id}`} aria-label={tier.label}>
                 <i aria-hidden="true" data-rhythm-achieve-frame=""/>
                 <b data-rhythm-achieve-ribbon="">{tier.text}</b>
@@ -1528,6 +1533,24 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         style={{minHeight:'44px'}}>
         {(song.credit.link&&song.credit.link.label)||'詳しく見る'} ↗
       </a>}
+      {/* ===== 曲鑑賞(2026-11-23 r1119-112 案B・社長の選択) =====
+          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは遊べる譜面だけ(鍵のついた難易度・買っていない曲は出さない)。
+          スコア・ランキング・自己ベスト・ビートP・ミッション・日課には何も残さない(呼ぶ側が from:'listen' で記録を全部通さない) */}
+      {typeof onListen==='function'&&!lockedSong(song)&&openList.length>0&&(()=>{
+        const pick=openList.find(item=>item.id===listenDiffId)||(difficulty&&openList.includes(difficulty)?difficulty:openList[0]);
+        return <div data-rhythm-listen-panel onClick={e=>e.stopPropagation()} className="mt-3 w-full max-w-xs rounded-2xl border border-teal-300/50 bg-teal-950/60 p-2">
+          <p className="text-[11px] font-black text-teal-100">🎧 曲を鑑賞する(ノーツが自動で叩かれます)</p>
+          <div data-rhythm-listen-diffs className="mt-1.5 flex gap-1">
+            {openList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
+              return <button key={item.id} type="button" data-rhythm-listen-diff={item.id} aria-pressed={on} onClick={()=>setListenDiffId(item.id)}
+                className={`min-h-[44px] min-w-0 flex-1 rounded-lg border-2 px-0.5 text-center leading-none ${on?'border-amber-300 bg-amber-900/70 text-white':'border-slate-500 bg-slate-900/80 text-slate-100'}`}>
+                <b className="block text-sm font-black">{lv}</b><small className="mt-0.5 block text-[9px] font-black">{item.id}</small></button>;})}
+          </div>
+          <button type="button" data-rhythm-listen-start onClick={()=>{setArtZoom(false);onListen(song,pick);}}
+            className="mt-2 min-h-[52px] w-full rounded-xl text-sm font-black text-white"
+            style={{minHeight:'52px',background:'linear-gradient(90deg,#14b8a6,#0ea5e9)'}}>🎧 この譜面を鑑賞する</button>
+          <p style={JA_WRAP_STYLE} className="mt-1 text-center text-[10px] font-bold text-teal-100/80">{jaWrap('鑑賞はスコア・ランキング・ビートPに載りません')}</p>
+        </div>;})()}
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>閉じる</button>

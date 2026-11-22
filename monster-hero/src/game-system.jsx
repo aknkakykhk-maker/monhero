@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b4fe3064655a1faa
+// generated-sha256: 54810620f98bee03
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24100,7 +24100,7 @@ const RhythmSongName=({song,clip=false})=>{
   if(!sub)return <span style={chunk}>{title}</span>;
   return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
 };
-const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
+const RhythmSongArt=({song,large=false,marked=true,onZoom=null,listenMark=false})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
   const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
@@ -24113,13 +24113,16 @@ const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
     {/* 押せることが見て分かるように、右下に小さな虫めがねを出す */}
     {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
       style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
+    {/* 曲鑑賞(2026-11-23 r1119-112 案B)は、この拡大(曲の詳細)から始める。入口が見て分かるように左下に印を出す */}
+    {zoomable&&listenMark&&<i data-rhythm-song-art-listen-mark aria-hidden="true" className="absolute bottom-0.5 left-0.5 flex h-5 items-center gap-0.5 rounded-md border border-teal-300/70 px-1 text-[10px] font-black not-italic leading-none text-teal-50"
+      style={{backgroundColor:'rgba(15,61,58,.9)'}}>🎧 鑑賞</i>}
   </>;
   // 横の低い画面では大きい札のジャケットに上限を付ける。横の2列の右が広がり(2026-11-21 r1119-066③)、札のジャケットが
   // 押して開く拡大(画面の高さで頭打ち)と同じくらいの大きさになって、押しても大きくならなかった
   const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:mx-auto':'w-12'}`;
   const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
   if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
-    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
+    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る${listenMark?'(曲の鑑賞もここから)':''}`}
     className={shape} style={box}>{inner}</button>;
   return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={shape} style={box}>{inner}</span>;
 };
@@ -24223,7 +24226,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false,detailInfoPanel=false,onListen=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -24238,6 +24241,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
+  // 曲鑑賞で流す難易度(詳細の窓の中だけで選ぶ。保存しない。開くたびに今の難易度から始める)
+  const [listenDiffId,setListenDiffId]=React.useState('');
   // 見えている向き(🔄横で絵を回しているときも横)。版の切り替えの置き場所を決める(2026-11-22 社長「曲が選べるやつのサイズを考えてない」)
   const [viewWide,setViewWide]=React.useState(()=>orientationIsLandscape());
   useEffect(()=>{
@@ -24680,7 +24685,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
             return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
-              <RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/>
+              <RhythmSongArt song={song} large listenMark={typeof onListen==='function'&&!lockedSong(song)} onZoom={()=>{setListenDiffId('');setArtZoom(true);}}/>
               {tier&&<span key={`${song.songId}:${difficulty.id}`} aria-label={tier.label}>
                 <i aria-hidden="true" data-rhythm-achieve-frame=""/>
                 <b data-rhythm-achieve-ribbon="">{tier.text}</b>
@@ -24887,6 +24892,24 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         style={{minHeight:'44px'}}>
         {(song.credit.link&&song.credit.link.label)||'詳しく見る'} ↗
       </a>}
+      {/* ===== 曲鑑賞(2026-11-23 r1119-112 案B・社長の選択) =====
+          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは遊べる譜面だけ(鍵のついた難易度・買っていない曲は出さない)。
+          スコア・ランキング・自己ベスト・ビートP・ミッション・日課には何も残さない(呼ぶ側が from:'listen' で記録を全部通さない) */}
+      {typeof onListen==='function'&&!lockedSong(song)&&openList.length>0&&(()=>{
+        const pick=openList.find(item=>item.id===listenDiffId)||(difficulty&&openList.includes(difficulty)?difficulty:openList[0]);
+        return <div data-rhythm-listen-panel onClick={e=>e.stopPropagation()} className="mt-3 w-full max-w-xs rounded-2xl border border-teal-300/50 bg-teal-950/60 p-2">
+          <p className="text-[11px] font-black text-teal-100">🎧 曲を鑑賞する(ノーツが自動で叩かれます)</p>
+          <div data-rhythm-listen-diffs className="mt-1.5 flex gap-1">
+            {openList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
+              return <button key={item.id} type="button" data-rhythm-listen-diff={item.id} aria-pressed={on} onClick={()=>setListenDiffId(item.id)}
+                className={`min-h-[44px] min-w-0 flex-1 rounded-lg border-2 px-0.5 text-center leading-none ${on?'border-amber-300 bg-amber-900/70 text-white':'border-slate-500 bg-slate-900/80 text-slate-100'}`}>
+                <b className="block text-sm font-black">{lv}</b><small className="mt-0.5 block text-[9px] font-black">{item.id}</small></button>;})}
+          </div>
+          <button type="button" data-rhythm-listen-start onClick={()=>{setArtZoom(false);onListen(song,pick);}}
+            className="mt-2 min-h-[52px] w-full rounded-xl text-sm font-black text-white"
+            style={{minHeight:'52px',background:'linear-gradient(90deg,#14b8a6,#0ea5e9)'}}>🎧 この譜面を鑑賞する</button>
+          <p style={JA_WRAP_STYLE} className="mt-1 text-center text-[10px] font-bold text-teal-100/80">{jaWrap('鑑賞はスコア・ランキング・ビートPに載りません')}</p>
+        </div>;})()}
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>閉じる</button>
@@ -26220,6 +26243,47 @@ const rhythmSetText=(el,text)=>{
   if(node&&node.nodeType===3&&!node.nextSibling){if(node.nodeValue!==value)node.nodeValue=value;return;}
   el.textContent=value;
 };
+// ===== 曲鑑賞の帯(2026-11-23 r1119-112 案B) =====
+// 鑑賞(lineAdjust.listen)では判定・スコア・コンボ・ライフを隠し、ノーツと曲だけを見せる。下に「-10秒・止める・+10秒」と進みぐあい。
+// 見た目と操作だけで、判定・譜面・音の同期は変えない(送る・戻すは listenSeek が音源の seek とノーツの作り直しで行う)
+const RHYTHM_LISTEN_HIDE_CSS='[data-rhythm-judgment-display],[data-rhythm-sky-judgment-display],[data-rhythm-combo],[data-rhythm-combo-box],[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]),[data-rhythm-ability-badge]{visibility:hidden!important}';
+const rhythmListenClock=ms=>{const t=Math.max(0,Math.floor((Number(ms)||0)/1000));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;};
+const RhythmListenBar=({runRef,song,difficulty,onSeek,onPause,onClose,isLandscape,paused=false})=>{
+  const [now,setNow]=useState({ms:0,total:0});
+  useEffect(()=>{const id=setInterval(()=>{const run=runRef.current;const a=run&&run.audio;if(!a)return;const ms=Number(a.songTimeMs&&a.songTimeMs())||0;const total=Number(a.durationMs)||0;setNow(p=>Math.abs(p.ms-ms)<120&&p.total===total?p:{ms,total});},250);return()=>clearInterval(id);},[runRef]);
+  const pct=now.total>0?Math.max(0,Math.min(100,now.ms/now.total*100)):0;
+  const btn='flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  return <>
+    <style>{RHYTHM_LISTEN_HIDE_CSS}</style>
+    {/* 一時停止の窓が開いているあいだは、帯と右上を出さない(窓の「再開」「リスタート」「曲選びへ戻る」に重なるため) */}
+    {!paused&&<>
+    <div data-rhythm-listen-top className="pointer-events-auto absolute z-[35] flex items-center gap-1.5" style={{top:'calc(var(--mh-safe-top,0px) + 8px)',right:'calc(var(--mh-safe-right,0px) + 10px)'}}>
+      <span className="max-w-[220px] truncate rounded-full border border-teal-700 bg-slate-900/85 px-2.5 py-1 text-[11px] font-black text-teal-200">🎧 鑑賞中・{difficulty&&difficulty.id}</span>
+      <button type="button" data-rhythm-listen-close onClick={onClose} aria-label="鑑賞をやめて曲選びへ戻る" className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white">✕</button>
+    </div>
+    {/* 横はレーンの下に判定ラインがあり、下の帯だと重なるので、右の空き(レーンの外)へ縦に並べる */}
+    {isLandscape?<div data-rhythm-listen-bar data-layout="side" className="pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5" style={{right:'calc(var(--mh-safe-right,0px) + 8px)',top:'50%',transform:'translateY(-62%)'}}>
+      <span data-rhythm-listen-time className="text-center text-[10px] font-black tabular-nums leading-tight text-slate-200">{rhythmListenClock(now.ms)}<br/><small className="text-[9px] text-slate-400">/ {rhythmListenClock(now.total)}</small></span>
+      <div className="relative h-1.5 rounded-full bg-slate-700"><div className="absolute inset-y-0 left-0 rounded-full bg-teal-400" style={{width:`${pct}%`}}/></div>
+      <button type="button" data-rhythm-listen-seek="-10000" onClick={()=>onSeek(-10000)} aria-label="10秒戻す" className={btn}>-10秒</button>
+      <button type="button" data-rhythm-listen-pause onClick={onPause} aria-label="止める" className="flex h-12 items-center justify-center rounded-xl border border-teal-300/60 text-lg font-black text-white" style={{background:'linear-gradient(180deg,#14b8a6,#0e7490)'}}>Ⅱ</button>
+      <button type="button" data-rhythm-listen-seek="10000" onClick={()=>onSeek(10000)} aria-label="10秒送る" className={btn}>+10秒</button>
+    </div>
+    :<div data-rhythm-listen-bar className="pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2" style={{left:'10px',right:'10px',bottom:'calc(var(--mh-safe-bottom,0px) + 8px)'}}>
+      <div className="flex items-center gap-2 text-[10px] font-black tabular-nums text-slate-200">
+        <span data-rhythm-listen-time>{rhythmListenClock(now.ms)}</span>
+        <div className="relative h-1.5 flex-1 rounded-full bg-slate-700"><div className="absolute inset-y-0 left-0 rounded-full bg-teal-400" style={{width:`${pct}%`}}/></div>
+        <span>{rhythmListenClock(now.total)}</span>
+      </div>
+      <div className="mt-1.5 flex items-center justify-center gap-3">
+        <button type="button" data-rhythm-listen-seek="-10000" onClick={()=>onSeek(-10000)} aria-label="10秒戻す" className={btn}>-10秒</button>
+        <button type="button" data-rhythm-listen-pause onClick={onPause} aria-label="止める" className="flex h-12 w-12 items-center justify-center rounded-full border border-teal-300/60 text-lg font-black text-white" style={{background:'linear-gradient(180deg,#14b8a6,#0e7490)'}}>Ⅱ</button>
+        <button type="button" data-rhythm-listen-seek="10000" onClick={()=>onSeek(10000)} aria-label="10秒送る" className={btn}>+10秒</button>
+      </div>
+    </div>}
+    </>}
+  </>;
+};
 const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   const read=()=>({ground:Number(adjust.ground),skyLine:RHYTHM_SKY_LINE_OFFSET.pct,groundW:RHYTHM_ACCEPT_WIDTH.ground,skyW:RHYTHM_ACCEPT_WIDTH.sky,skyTop:RHYTHM_ACCEPT_WIDTH.skyTop});
   const [vals,setVals]=useState(read);
@@ -26289,7 +26353,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
   const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
   // オプションの「▶ 見てみる」の見本は、曲が流れはじめたら自動で叩く(30-rhythm-preview-hands.jsx。ふつうの指と同じ合図を送るだけ)
-  const previewHands=!!(lineAdjust&&lineAdjust.preview);
+  // 曲鑑賞(lineAdjust.listen・r1119-112)も同じ自動の手で叩く
+  const listenMode=!!(lineAdjust&&lineAdjust.listen);
+  const previewHands=!!(lineAdjust&&(lineAdjust.preview||lineAdjust.listen));
   const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -27404,7 +27470,7 @@ const paceEl=paceRef.current;
 if(paceEl&&settings.paceDisplay!==false&&!tutorial&&!calibrating&&Number(run.startBestScore)>0&&chart.totalNotes>0){const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0);const diff=Math.round(score-Number(run.startBestScore)*judged/chart.totalNotes);paceEl.hidden=false;paceEl.dataset.pace=diff>=0?'up':'down';rhythmSetText(paceEl,`ベスト比 ${diff>=0?'+':'−'}${Math.abs(diff).toLocaleString()}`);}
 // 叩いた場所の判定(オプション「叩いた場所に判定」・2026-09-29・参考動画から)。判定ラインのそのレーンの少し上に小さく出す。
 // 位置は叩いたときの光と同じ投影(判定ラインの高さ)。見た目だけで、判定・スコアには触らない
-if(settings.judgmentAtTap===true&&judgment!=='MISS'&&!calibrating){const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
+if(settings.judgmentAtTap===true&&judgment!=='MISS'&&!calibrating&&!(lineAdjustRef.current&&lineAdjustRef.current.listen)){const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio,nowMs=run.audio?.songTimeMs?.()??note.timeMs;
   const span=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,nowMs):rhythmNoteVisualSpan(note,note.lane,lineY,nowMs);
   rhythmSpawnTapJudgment(playAreaRef.current,{centerRatio:span&&span.center,judgment,side:rhythmFastSlow(deltaMs),sky:rhythmNoteSkyHeight(note)>0});}
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
@@ -28053,6 +28119,22 @@ scheduleTick();};
     document.addEventListener('visibilitychange',onVisibility);
     return()=>document.removeEventListener('visibilitychange',onVisibility);
   });
+  // 曲鑑賞の「-10秒・+10秒」(r1119-112)。鑑賞のときだけ使う。音源を移し、ノーツを作り直して、移した先より前のノーツは
+  // 判定せずに済んだことにする(MISS にしない)。自動の手は曲の時刻が跳んだのを見て、移した先から叩き直す(30-rhythm-preview-hands.jsx)
+  const listenSeek=async deltaMs=>{const run=runRef.current;
+    if(!listenMode||!run||run.finished||run.paused||!run.audio||typeof run.audio.seek!=='function')return;
+    if(countdownStep!==null||songIntroRef.current)return;
+    const nowMs=Number(run.audio.songTimeMs())||0;const lastNote=run.notes.reduce((m,n)=>Math.max(m,Number(n.endTimeMs)||0,Number(n.timeMs)||0),0);
+    const limit=Math.max(0,Math.min(Number(run.audio.durationMs)||lastNote+2000,lastNote+2000)-3000);
+    const target=Math.max(0,Math.min(limit,nowMs+deltaMs));
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();run.activePointerSkyFeedback?.clear();liveTouchSkySubLanesRef.current=[];setPressedLanes([]);
+    const notes=makeRuntimeNotes(run.tickRules);
+    notes.forEach(note=>{if((Number(note.timeMs)||0)<target-30){note.done=true;note._rhythmCanvasSettled=true;}});
+    run.notes=notes;run.scanFrom=0;run._stageNoteIndex=notes.findIndex(note=>!note.done);if(run._stageNoteIndex<0)run._stageNoteIndex=notes.length;
+    laneRefs.current.forEach?.(el=>{if(el)el._rhythmHidden=false;});
+    if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSlideBands(notes);
+    await run.audio.seek(target);
+  };
   const pause=()=>{const run=runRef.current;
     /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
        ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
@@ -28633,7 +28715,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 </div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
 <div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':(hudSongLong?'5':'3'),WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)',fontSize:hudSongLong?'9px':undefined}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
-    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
+    ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{listenMode?<RhythmListenBar runRef={runRef} song={song} difficulty={difficulty} onSeek={listenSeek} onPause={pause} onClose={onExit} isLandscape={isLandscape} paused={view.status==='paused'}/>:lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
       それまではHUDの右の列の右はしにあり、「🔄 横」で回した横画面では画面のいちばん端まで離れていた。
@@ -28759,10 +28841,10 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（初めの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorialProp&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{(song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{helpWrap((song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].text)}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
 {(()=>{const endMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;const ratio=endMs>0?Math.max(0,Math.min(1,pausedSongMs/endMs)):0;return <div data-rhythm-pause-info className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5">
   <b className="block truncate text-[12px] font-black text-slate-100">♪ {rhythmSongFullName(song)}</b>
-  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
+  <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}{/* 曲鑑賞(r1119-112)はスコアを出さない決めごとなので、一時停止の窓にも SCORE・COMBO を出さない */}{!listenMode&&<><span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></>}</div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
-<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲選びへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲選びへ戻る'}</>}</button></div>}</div></main>;
+<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':listenMode?'鑑賞をやめて曲選びへ戻る':tutorial?'練習をやめて曲選びへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲選びへ戻る'}</>}</button></div>}</div></main>;
 };
 
 // ---- part: 30-rhythm-preview-hands.jsx ----
@@ -28826,9 +28908,20 @@ const rhythmPreviewHandsStart = (area) => {
     }
   }
   events.sort((a, b) => a.at - b.at);
+  // 曲鑑賞の「-10秒・+10秒」(2026-11-23 r1119-112)で曲の時刻が跳んだら、押さえている指を離し、移した先から叩き直す。
+  //   見本(オプションの「▶ 見てみる」)は跳ばないので、今までと同じ動き
+  let lastMs = null;
+  const jumpTo = (ms) => {
+    timers.forEach(clearTimeout); timers.clear();
+    for (const f of follows) if (f.on) { f.on = false; send('pointerup', f.id, posOf(f.n, f.from)); }
+    k = 0; while (k < events.length && events[k].at < ms - 30) k++;
+    // 移した先で押さえる途中のホールド・スライドは、押し始めを飛ばしたので叩かない(ノーツの側も済んだ扱いになっている)
+  };
   const tick = () => {
     if (stopped) return;
     const ms = hooks().rhythmSongMs ? hooks().rhythmSongMs() : null;
+    if (ms != null && lastMs != null && (ms < lastMs - 300 || ms > lastMs + 2000)) jumpTo(ms);
+    if (ms != null) lastMs = ms;
     if (ms != null) {
       while (k < events.length && events[k].at <= ms + 17) { const ev = events[k++]; const wait = ev.at - ms; if (wait > 1) later(wait, ev.f); else ev.f(); }
       for (const f of follows) if (f.on && ms > f.from && ms < f.until) send('pointermove', f.id, posOf(f.n, ms));
@@ -45199,7 +45292,7 @@ const rhythmDebugSelectRowCount=(filter)=>new Set(rhythmDebugSelectSongs(filter)
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
-  onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
+  onPlaySong, onListenSong=null, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
   rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
@@ -45586,6 +45679,7 @@ function RhythmSongSelectScreen({
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
           onPlay={onPlaySong}
+          onListen={debugAll||raidChallenge?null:onListenSong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
           playLabel={debugAll?'決定(記録しない)':undefined}
@@ -70556,7 +70650,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             planBand={typeof AssistantLifePlanBand === 'function' ? <AssistantLifePlanBand ids={ids} land={land} typed/> : null}
             onTalk={() => setCallPicker(true)} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }}
             onPlay={() => { const solo = Object.keys(life.solo || {}).find(id => !awayFriend(id) && partnerOk(id)); const id = beatIds[0] || solo || ids.find(partnerOk); if (id) setRoomId(id); }}
-            onRoom={setRoomId} onBoard={() => setBoardOpen(true)} onRelView={relView} result={aluResult} onResultClose={() => setAluResult(null)}/>
+            onRoom={setRoomId} onBoard={() => setBoardOpen(true)} onRelView={relView} result={aluResult} onResultClose={() => setAluResult(null)}
+            profileList={typeof AssistantLifeProfilePage === 'function' ? <AssistantLifeProfilePage metIds={metIds} bondLevelOf={bondLevelOf} land={land} onMasmon={setMasmonId} typed/> : null}/>
         ) : land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
@@ -70740,10 +70835,11 @@ const assistantLifeTypedGroupName = (g, nameOf) => {
 
 function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms, diary, peerSt, nameOf, tabs, tab = 'house', onTab, onBack,
   unwatched = [], onWatch, tier = null, note = '', top = null, guideOn = false, onGuide = null, onGuideClose = null, dailyCard = null, planBand = null,
-  onTalk, onGive, onPlay, onRoom, onBoard, onRelView, result = null, onResultClose }) {
+  onTalk, onGive, onPlay, onRoom, onBoard, onRelView, result = null, onResultClose, profileList = null }) {
   const [goal, setGoal] = React.useState(() => (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null));
   const [openDaily, setOpenDaily] = React.useState(false);
   const [openNow, setOpenNow] = React.useState(false);
+  const [openProfile, setOpenProfile] = React.useState(false); // 📖 助手紹介の一覧(r1119-114・保存しない)
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_GOAL_STORE === 'undefined') return undefined;
     const S = ASSISTANT_LIFE_GOAL_STORE;
@@ -70752,9 +70848,18 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
     return () => { S.subs.delete(f); };
   }, []);
   const near = typeof assistantLifeNearestReward === 'function' ? assistantLifeNearestReward(ids) : null;
-  const head = near
+  const reward = near
     ? <AluNextReward rest={near.remain} text={`${nameOf(near.id)}の 💗 仲良し度 Lv${near.nextLv}${near.opens.length ? ` → ${near.opens.join('・')}` : ''}`} />
     : <AluNextReward rest={null} text="見る・話す・贈るで 💗 仲良し度が上がると、ごほうびが届きます" />;
+  // 📖 紹介(r1119-114 社長「家の上に📖ボタン」): 次のごほうびの右に置き、押すと助手全員の紹介の一覧(前の「📖 紹介」のタブと同じ物)を窓で開く
+  const head = profileList ? (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flex: 'none' }} data-assistant-life-house-head>
+      <div style={{ flex: 1, minWidth: 0 }}>{reward}</div>
+      <button type="button" className="alu-btn" data-assistant-life-house-profile aria-label="助手の紹介を見る" onClick={() => setOpenProfile(true)}
+        style={{ flex: 'none', width: 64, height: 'auto', minHeight: 44, padding: '4px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0, lineHeight: 1.2, borderRadius: 14 }}>
+        <span style={{ fontSize: 20 }}>📖</span><span className="alu-nw" style={{ fontSize: 13 }}>紹介</span>
+      </button>
+    </div>) : reward;
   const scene = (box) => {
     const landArt = box.wide && land;
     const width = assistantLifeTypedArtWidth(box, landArt);
@@ -70798,6 +70903,13 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
         {g0 && onWatch ? <div style={{ marginTop: 10 }}><AluGo onClick={() => { if (onGuideClose) onGuideClose(); onWatch(); }} data-assistant-life-guide-watch>👀 見てみる — {assistantLifeTypedGroupName(g0, nameOf)}の話</AluGo></div> : null}
       </AluSheet>
     </div>) : null;
+  const profileNode = openProfile && profileList && !resultNode ? (
+    <div data-assistant-life-house-profile-list>
+      <AluSheet title="📖 助手紹介" onClose={() => setOpenProfile(false)}>
+        <div style={{ margin: '0 -12px' }}>{profileList}</div>
+        <AluBtn onClick={() => setOpenProfile(false)} data-assistant-life-house-profile-back style={{ width: '100%' }}>🏡 家に戻る</AluBtn>
+      </AluSheet>
+    </div>) : null;
   const goBtn = (
     <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
       {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
@@ -70806,7 +70918,7 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
   //   主なボタンを「次のごほうび」のすぐ下(家の絵の上)へ(家の絵を小さくすると部屋の札が切れる・2026-11-22)
   const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return (
-    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
+    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || profileNode || guideNode} data-assistant-life-typed-house="1">
       {top}
       {note ? <div className="alu-card alu-t" data-assistant-life-note>{note}</div> : null}
       {low ? null : goBtn}
@@ -73974,7 +74086,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy
 
 // 一覧(タブ「📖 紹介」の中身)
 // viewOnly … フレンドの家から見る専用で開くとき(2026-11-14 社長 r1115-019)。相手が会っている助手の「人となり」だけ。自分の仲良し度・好み・贈った記録・NEW の保存は使わない・書かない
-function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false, ownerName = '', tierOf = null }) {
+function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false, ownerName = '', tierOf = null, typed = false }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null); // 読めるまで null(NEW を出さない)
@@ -74015,7 +74127,7 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
     <div ref={boxRef} className="px-3 pb-3 pt-1" data-assistant-life-profile-list>
       <div className="mb-2 flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-black text-white">📖 助手紹介</p>
+          {typed ? null : <p className="text-[16px] font-black text-white">📖 助手紹介</p>}{/* typed … 新UIの家の「📖 紹介」の窓(r1119-114): 見出しは窓に任せ、字は型の4段(11/13/16/20px)にそろえる */}
           <p className="text-[11px] font-bold text-indigo-200">{viewOnly && ownerName ? <><span className="whitespace-nowrap">{ownerName}さんが会った助手です。</span> <span className="whitespace-nowrap">選ぶと人となりが分かります</span></> : '選ぶと、その助手のことが分かります'}</p>
         </div>
         <span data-assistant-life-profile-count={`${metList.length}/${roster.length}`} className="shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100">会った助手 {metList.length}/{roster.length}</span>
@@ -74025,23 +74137,23 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
           if (!met.has(w.id)) return (
             <div key={w.id} data-assistant-life-profile-card="unmet" aria-label="まだ会っていない助手" className="rounded-2xl border-2 border-slate-600 bg-slate-950/70 p-2">
               <div className="flex items-center justify-center rounded-full border-2 border-dashed border-slate-500 font-black text-slate-500" style={{ width: face, height: face, fontSize: face / 2 }}>？</div>
-              <p className="mt-1 text-[15px] font-black text-slate-400">？？？</p>
+              <p className={`mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-slate-400`}>？？？</p>
               <p className="text-[11px] font-bold text-slate-400">まだ会っていません</p>
             </div>);
           const b = viewOnly ? null : assistantLifeProfileBond(w.id, bondLevelOf);
           return (
             <button key={w.id} type="button" data-assistant-life-profile-card={w.id} onClick={() => open(w.id)} aria-label={`${w.name}の紹介を見る`}
               className="relative overflow-hidden rounded-2xl border-2 bg-slate-900/85 p-2 text-left active:scale-[.98]" style={{ borderColor: w.accent, backgroundImage: `linear-gradient(160deg, ${w.accent}44, transparent 65%)` }}>
-              {isNew(w.id) && <span data-assistant-life-profile-new className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950">NEW</span>}
+              {isNew(w.id) && <span data-assistant-life-profile-new className={`absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 ${typed ? 'text-[11px]' : 'text-[10px]'} font-black text-slate-950`}>NEW</span>}
               {typeof AssistantFace === 'function' && <AssistantFace who={w} size={face} accent={w.accent} expression="happy"/>}
-              <p className="mt-1 text-[15px] font-black text-white">{w.name}</p>
-              <p className="text-[10.5px] font-bold leading-snug text-slate-200" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
-              {b && <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>}
+              <p className={`mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-white`}>{w.name}</p>
+              <p className={`${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-200`} style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
+              {b && <span className={`mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-black text-pink-100`}>💗 Lv{b.lv}</span>}
               {viewOnly && typeof tierOf === 'function' && tierOf(w.id) && <span data-assistant-life-profile-tier={w.id} className="mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 {tierOf(w.id)}</span>}
             </button>);
         })}
       </div>
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-300">{viewOnly ? (metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '') : <>💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</>}</p>
+      <p className={`mt-2 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-300`}>{viewOnly ? (metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '') : <>💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</>}</p>
       {/* 紹介は家の画面のいちばん外の枠(data-assistant-life-screen)へ描く。見出しやタブの下に潜らないように(🔄横でも同じ枠の中) */}
       {openId && (() => {
         const sheet = <AssistantLifeProfileSheet id={openId} bondLevelOf={bondLevelOf} land={land} giftSt={giftSt} onMasmon={onMasmon} viewOnly={viewOnly} onClose={() => setOpenId(null)}/>;
@@ -85243,6 +85355,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
             {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
             <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
+          {/* いなくなる2体の注意は、下の決めるボタンの帯で切れていた(API 総点検① F2)。見通しのすぐ下に出し、送らなくても読めるようにする */}
+          <div className="mt-1 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
+            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
+            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
+          </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
             <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
             <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
@@ -85250,10 +85367,6 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
-          <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
-            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
-            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
-          </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
@@ -98679,6 +98792,13 @@ const MSX_MM_CSS = `
 .msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
 .msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
 .msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
+/* 詳細の下は「貸し出す」「お別れ」「閉じる」の3段で約170pxを使い、アシストの札や技の段が切れていた(API 総点検① 2026-11-23 X4・X9・X10・X12)。
+   貸し出すとお別れを1行に並べて2段にし、空いた高さを中身に回す。貸し出すは押せないボタンに見えない色の主ボタンにする */
+.msx .msx-md-foot:has(>.mm-acts){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-hint{grid-column:1/-1}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-acts{margin-top:4px}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-bye-row{margin-top:4px}
+.msx .mm-acts button{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff;box-shadow:0 2px 0 #9a3412}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
@@ -98889,7 +99009,7 @@ function MsxAssistCard({ a, n }) {
         <div className="tx">{short}</div>
         <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
           <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
-        {note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
+        {note ? <div className="sc" data-msx-assist-cap>上限: {(() => { /* 「編成の合/計」と言葉の途中で折れていた(API 総点検① X4)。「編成の合計 ◯%まで」はひとかたまりで折る */ const t = note.replace(/^[(（]|[)）]$/g, ''); const i = t.lastIndexOf('編成の合計'); return i >= 0 ? <>{t.slice(0, i)}<span style={{ whiteSpace: 'nowrap' }}>{t.slice(i)}</span></> : t; })()}</div> : null}
         {scene ? <div className="sc">効く場面: {scene}</div> : null}
         {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>
@@ -137472,6 +137592,20 @@ function MonsterHeroGame() {
     onEnd: leaveRhythmOptionPreview, onFix: leaveRhythmOptionPreview,
     onLoop: () => setRhythmPreview(p => p ? { ...p, key:p.key + 1 } : p),
   } : null;
+  // ===== 曲鑑賞(2026-11-23 r1119-112 案B・社長の選択「詳細の窓から」) =====
+  // 曲えらびのジャケットの拡大(曲の詳細)から、選んだ譜面を自動で叩きながら最後まで流す。オプションの「▶ 見てみる」と同じ自動の手を使う。
+  //   from:'listen' は記録を何も残さない: スコア・自己ベスト・全国ランキング・ビートP・周回・ミッション・日課・実績・相棒のどれにも入れない
+  //   (曲の終わりは結果の画面へ行かず曲えらびへ戻る。onComplete も呼ばれないが、念のため受け口でも弾く)。保存するキーは増やさない
+  const startRhythmListen = (song, difficulty) => {
+    if (!song || !difficulty) return;
+    if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return; // 買っていない曲は流さない
+    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return; // 鍵のついた譜面は流さない
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({ song, difficulty, from:'listen' });
+    setGameState('RHYTHM_PLAY');
+  };
+  const leaveRhythmListen = () => { setRhythmPlay(null); setGameState('RHYTHM_DEMO_HOME'); };
+  const rhythmListenProps = { phase:'try', listen:true, onEnd: leaveRhythmListen, onFix: leaveRhythmListen, onLoop: leaveRhythmListen };
   const saveAndTryRhythmLineAdjust = async () => {
     const cur = rhythmLineAdjust;
     if (!cur) return;
@@ -146936,6 +147070,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(rhythmPlay.from==='lineAdjust')return;
           // オプションの「▶ 見てみる」の見本も、何も残さない
           if(rhythmPlay.from==='preview')return;
+          // 曲鑑賞(r1119-112)も、何も残さない(スコア・自己ベスト・ランキング・ビートP・周回・ミッション・日課)
+          if(rhythmPlay.from==='listen')return;
           // レイドバトルのモンヒロビート挑戦: ジャックへのダメージの処理を始めたうえで、ふつうの演奏と同じく
           // 周回の報酬・自己ベスト・クリア回数・実績・全国ランキングにも入れる(2026-10-07・ユーザー指示「両方つなげる」)。
           // 下の共通の処理へそのまま進む(アシストモードは、共通の処理が記録も送信もしない)
@@ -147040,7 +147176,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(RHYTHM_HELL_STORY_TRIGGER==='after-result')rhythmHellStoryAfterResultRef.current=true;
             else if(RHYTHM_HELL_STORY_TRIGGER==='home'||RHYTHM_HELL_STORY_TRIGGER==='release')setRhythmEventStoryPending(prev=>prev||RHYTHM_HELL_STORY_ID);
           }
-          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}if(rhythmPlay.from==='preview')setRhythmPreview(null);const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'||rhythmPlay.from==='preview'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:rhythmPlay.from==='preview'?rhythmPreviewProps:null} onApplyCalibration={async measured=>{
+          void recordRhythmAchievements(records,{initialRecords:rhythmBestRecords});if(rhythmPlay.from==='demo'||rhythmPlay.from==='multi'||rhythmPlay.from==='raid')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='raid'){exitRaidJackRhythmPlay();return;}if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true,{diffId:rhythmPlay.difficulty.id});if(rhythmPlay.from==='lineAdjust'){rhythmLineAdjustRestore(rhythmLineAdjust?.orig);setRhythmLineAdjust(null);}if(rhythmPlay.from==='preview')setRhythmPreview(null);const back=rhythmPlay.from==='multi'?'RHYTHM_MULTI':rhythmPlay.from==='calibration'||rhythmPlay.from==='lineAdjust'||rhythmPlay.from==='preview'?'RHYTHM_OPTIONS':rhythmPlay.backTo==='RHYTHM_DEBUG_SELECT'?'RHYTHM_DEBUG_SELECT':rhythmPlay.backTo==='RHYTHM_NOTE_DEX'?'RHYTHM_NOTE_DEX':rhythmPlay.from==='debug'||rhythmPlay.from==='proto'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);if(rhythmHellStoryAfterResultRef.current){rhythmHellStoryAfterResultRef.current=false;setEventReplay({id:RHYTHM_HELL_STORY_ID,step:0,live:true});}}} debugPlay={rhythmPlay.from==='debug'||rhythmPlay.from==='proto'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'} calibrating={rhythmPlay.from==='calibration'} lineAdjust={rhythmPlay.from==='lineAdjust'?rhythmLineAdjustProps:rhythmPlay.from==='preview'?rhythmPreviewProps:rhythmPlay.from==='listen'?rhythmListenProps:null} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -147171,6 +147307,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
+            onListenSong={startRhythmListen}
             onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSongLocked(song.songId,RHYTHM_SONG_OWNED.get()))return;/* 買っていない有料の曲は始めない(画面でも止めているが、ここでも止める) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();if(raidRhythm){void startRaidJackRhythmPlay(song,difficulty);return;}setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
             quickClearCounts={quickClearCounts}
             quickRhythmBackgroundVisible={quickRhythmBackgroundVisible}
