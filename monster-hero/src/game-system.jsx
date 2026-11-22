@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 222632d90b49da96
+// generated-sha256: fd2b3af3bada8139
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70116,6 +70116,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 段10: 新UIの友情のタブを型に載せる(56-assistant-life-house-typed.jsx の AssistantLifeFriendsTyped・社長 r1119-099 案A)。検査だけ window.__mhAssistantLifeUntypedFriends で前の友情を開く
   const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
+  // 段11: 新UIのフレンドのタブを型に載せる(56-assistant-life-friend.jsx の AssistantLifeVisitTyped・2026-11-22 案A)。検査だけ window.__mhAssistantLifeUntypedVisit で前のページを開く
+  const typedVisit = uiV2 && tab === 'visit' && typeof AssistantLifeVisitTyped === 'function' && typeof AluFrame === 'function'
+    && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedVisit);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
   // 掛け合いを、家を閉じずに場面で流す
   const showFollow = () => {
@@ -70397,7 +70400,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
       {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
-      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
@@ -70415,6 +70418,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
               <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
             </>}/>
+        ) : typedVisit ? (
+          <AssistantLifeVisitTyped life={life} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}/>
         ) : typedFriends ? (
           <AssistantLifeFriendsTyped life={life} ids={ids.filter(partnerOk)} metIds={metIds} peerSt={peerSt} nameOf={nameOf}
             tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
@@ -72958,13 +72964,14 @@ const ALU_CSS = `
 .alu-goal span.on,.alu .alu-goal button.on{background:#064e3b;border-color:#34d399;color:#fff}
 .alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
 .alu[data-alu-wide="1"] .alu-mask{align-items:center}
+.alu[data-alu-wide="1"] .alu-sheet .sb{padding-bottom:14px}
 .alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
 .alu[data-alu-wide="1"] .alu-sheet{border-radius:18px;max-height:92%}
 .alu-sheet .sh{flex:none;display:flex;align-items:flex-start;gap:8px;padding:12px 6px 8px 14px;border-bottom:1px solid #3b3566}
 .alu-sheet .sh .tt{flex:1;min-width:0}
 .alu-sheet .x{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:20px;font-weight:900;color:#e2e8f0}
 .alu-sheet .q{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:16px;font-weight:900;color:#cbd5e1}
-.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px calc(14px + var(--alu-sab,var(--mh-sa-bottom,0px)));display:flex;flex-direction:column;gap:10px}
 .alu-sheet .help{background:#0f172a;border-radius:10px;padding:8px 10px}
 .alu-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .alu-gains>div{min-width:88px;padding:8px 10px;border-radius:12px;background:#0f172a;border:1px solid #475569;text-align:center}
@@ -89491,6 +89498,38 @@ function AssistantLifeFriendProfileVisit({ friendId, friendName }) {
         : <div className="fixed inset-0" style={{ zIndex: 70 }} data-alf-profile-layer><AlfFriendHouseView friend={house} onClose={() => setOpen(false)}/></div>)}
     </div>);
 }
+// 置き手紙の一覧と行き来の設定の中身(前のページと段11の型の窓で同じ物を使う)
+function AlfNotesBody({ s, notes }) {
+  return (<>
+    {notes.length ? notes.slice(0, 12).map(n => (
+      <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
+        <p className="text-[11px] leading-snug text-slate-100">
+          <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
+          {n.dir === 'away' ? <><span className="break-words">［助手］{n.ids.map(assistantLifeName).join('・')}</span>が<span className="break-words">［プレイヤー］{n.name}さんの家へ</span>遊びに行っていた</>
+            : n.kind === 'player' ? <><span className="break-words">［プレイヤー］{n.name}さん</span>が{n.noteTo ? <span className="break-words">［助手］{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="break-words">・［助手］{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
+            : <><span className="break-words">［プレイヤー］{n.name}さんの［助手］{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
+        </p>
+        {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
+          ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
+          : <p className="mt-0.5 text-[10px] text-slate-400" data-alf-note-hidden>✏️ (自由文を見ないようにしています)</p>) : null}
+        {n.dir === 'in' && n.note && s.settings.noteShow && <button type="button" className="mt-0.5 text-[10px] text-rose-200 underline" data-alf-note-off={n.who}
+          onClick={() => { const off = s.settings.noteOff.includes(n.who); assistantLifeFriendSetSettings({ noteOff: off ? s.settings.noteOff.filter(x => x !== n.who) : [...s.settings.noteOff, n.who] }); }}>{s.settings.noteOff.includes(n.who) ? `${n.name}さんの自由文を見る` : `${n.name}さんの自由文を見ない`}</button>}
+        {n.dir === 'in' && (n.thanks == null
+          ? <div className="mt-1 flex flex-wrap gap-1">{ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => <button key={k} type="button" className="rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100" data-alf-thanks={k} onClick={() => assistantLifeFriendThanks(n.id, k)}>{t}</button>)}</div>
+          : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
+      </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
+  </>);
+}
+function AlfSettingsBody({ s }) {
+  return (<>
+    {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
+      <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
+        <span>{label}</span>
+        <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
+      </label>))}
+    {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
+  </>);
+}
 // 家の画面のアイコン「🏘 フレンド」のページ(②いま・今日の行き来/置き手紙/③行ったことのある家/⑧設定)
 function AssistantLifeFriendPage({ life }) {
   const s = useAssistantLifeFriendState();
@@ -89577,38 +89616,145 @@ function AssistantLifeFriendPage({ life }) {
       {!alfEmpty && typeof AlfGuestBook === 'function' && <AlfGuestBook s={s} card={card} sec={sec} onVisit={setVisit}/>}
       <p className={sec} style={hideIfEmpty}>✉️ 置き手紙</p>
       <div className={card} data-alf-notes style={hideIfEmpty}>
-        {notes.length ? notes.slice(0, 12).map(n => (
-          <div key={n.id} className="border-b border-slate-700/60 py-1 last:border-0" data-alf-note={n.kind}>
-            <p className="text-[11px] leading-snug text-slate-100">
-              <span className="whitespace-nowrap text-slate-400">{alfAgoText(n.at)}</span>{' '}
-              {n.dir === 'away' ? <><span className="break-words">［助手］{n.ids.map(assistantLifeName).join('・')}</span>が<span className="break-words">［プレイヤー］{n.name}さんの家へ</span>遊びに行っていた</>
-                : n.kind === 'player' ? <><span className="break-words">［プレイヤー］{n.name}さん</span>が{n.noteTo ? <span className="break-words">［助手］{assistantLifeName(n.noteTo)}あてに</span> : '訪ねてくれた'}{alfWordQuote(n.word)}{n.ids.length ? <span className="break-words">・［助手］{n.ids.map(assistantLifeName).join('・')}と話した</span> : null}</>
-                : <><span className="break-words">［プレイヤー］{n.name}さんの［助手］{n.ids.map(assistantLifeName).join('・')}</span>が来た{alfWordQuote(n.word)}</>}
-            </p>
-            {n.dir === 'in' && n.note ? (s.settings.noteShow && !s.settings.noteOff.includes(n.who)
-              ? <p className="mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50" data-alf-note-text>✏️ {n.note}</p>
-              : <p className="mt-0.5 text-[10px] text-slate-400" data-alf-note-hidden>✏️ (自由文を見ないようにしています)</p>) : null}
-            {n.dir === 'in' && n.note && s.settings.noteShow && <button type="button" className="mt-0.5 text-[10px] text-rose-200 underline" data-alf-note-off={n.who}
-              onClick={() => { const off = s.settings.noteOff.includes(n.who); assistantLifeFriendSetSettings({ noteOff: off ? s.settings.noteOff.filter(x => x !== n.who) : [...s.settings.noteOff, n.who] }); }}>{s.settings.noteOff.includes(n.who) ? `${n.name}さんの自由文を見る` : `${n.name}さんの自由文を見ない`}</button>}
-            {n.dir === 'in' && (n.thanks == null
-              ? <div className="mt-1 flex flex-wrap gap-1">{ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => <button key={k} type="button" className="rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100" data-alf-thanks={k} onClick={() => assistantLifeFriendThanks(n.id, k)}>{t}</button>)}</div>
-              : <p className="text-[10px] text-slate-400">お礼「{ALF_THANKS_TEXTS[n.thanks]}」を返しました</p>)}
-          </div>)) : <p className="text-[11px] text-slate-400">まだ置き手紙はありません。</p>}
+        <AlfNotesBody s={s} notes={notes}/>
       </div>
       {!alfEmpty && typeof AlfSentNotes === 'function' && <AlfSentNotes s={s} card={card} sec={sec} onVisit={setVisit}/>}
       {!alfEmpty && typeof AlfFavEditor === 'function' && <AlfFavEditor s={s} card={card} sec={sec}/>}
       <p className={sec}>⚙️ 行き来の設定</p>
       <div className={card} data-alf-settings>
-        {[['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => (
-          <label key={k} className="flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100" data-alf-setting={k}>
-            <span>{label}</span>
-            <input type="checkbox" style={{ width: 22, height: 22 }} checked={!!s.settings[k]} onChange={(e) => assistantLifeFriendSetSettings({ [k]: e.target.checked })}/>
-          </label>))}
-        {s.settings.muted.length > 0 && <button type="button" className="mt-1 text-[10.5px] text-amber-200 underline" data-alf-unmute onClick={() => assistantLifeFriendSetSettings({ muted: [] })}>来ないようにした家({s.settings.muted.length}軒)を戻す</button>}
+        <AlfSettingsBody s={s}/>
       </div>
       <AlfSceneSheet scene={scene} onClose={() => setScene(null)}/>
       {visit && <AlfFriendHouseView friend={visit} onClose={() => setVisit(null)}/>}
     </div>);
+}
+// 段11: 新UIのフレンドのタブを型に載せる(社長 r1119-099 に続き 2026-11-22 案A「型どおり」・docs/progress/assistant-life/step11-friend/)
+//   並び: 来ている知らせ1行(迎える・おかえり・様子)→ 主なボタン「🚪 ◯◯さんの家を訪ねる — 🏠 おなじみ度 あと◯個で Lv◯」→ フレンドの家の行
+//   → 置き手紙1行(読む → 窓)→ もっと(お客さん帳・送った置き手紙・お気に入りの棚・行き来の設定 → 窓)。説明は「?」に畳む
+//   主なボタンの相手: 今日まだ訪ねていない家のうち、今日来てくれた人 → おなじみ度があと少ない人 → 家に人が多い家 の順
+//   中身(訪ねた家・置き手紙・お礼・設定)と保存は前のページと同じ部品。何も新しく保存しない。検査だけ window.__mhAssistantLifeUntypedVisit で前のページを開く
+function AssistantLifeVisitTyped({ life, tabs, tab = 'visit', onTab, onBack }) {
+  const s = useAssistantLifeFriendState();
+  const [scene, setScene] = React.useState(null);
+  const [visit, setVisit] = React.useState(null);
+  const [sheet, setSheet] = React.useState(null); // 'notes' | 'guests' | 'sent' | 'fav' | 'settings' | 'help'
+  const [menu, setMenu] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => { await ALF_STORE.load(); await assistantLifeFriendOnOpen(life); await alfFetchVisits(); if (alive) assistantLifeFriendMarkSeen(); })();
+    if (typeof albEnabled === 'function' && albEnabled() && typeof albLoad === 'function') void albLoad();
+    return () => { alive = false; };
+  }, []);
+  const frame = (children, overlay = null) => (
+    <AluFrame title="フレンド" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} overlay={overlay} data-assistant-life-typed-visit="1">{children}</AluFrame>);
+  if (!alfEnabled() || !s.ready || s.mode === 'off') {
+    return frame(<div className="alu-card alu-t" data-alf-page="off">{!alfEnabled() || s.mode === 'off' ? '🏘 フレンドの家との行き来は、いまお休み中です。' : '読み込み中…'}</div>);
+  }
+  const st = s.st;
+  const houses = alfOpenHouses('look');
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
+  const notes = assistantLifeFriendNotes(s);
+  const bondOn = typeof albEnabled === 'function' && albEnabled() && !!s.bond;
+  const bondOf = (id) => { if (!bondOn) return null; const x = albOne(s.bond, id); return { lv: albLv(x.st), title: albTitle(x.st), next: albNext(x.st) }; };
+  const today = alfDay();
+  const cameToday = (id) => (st.came || []).some(c => c && c.host === id) || notes.some(n => n.dir === 'in' && n.who === id && n.day === today);
+  const homeN = (h) => alfHomeIds(h.house).length;
+  const open = houses.filter(h => assistantLifeFriendCanLook(h.id) === 'ok');
+  const best = open.slice().sort((a, b) => (cameToday(b.id) - cameToday(a.id))
+    || (((bondOf(a.id) || {}).next || { need: 99 }).need - ((bondOf(b.id) || {}).next || { need: 99 }).need) || (homeN(b) - homeN(a)))[0] || null;
+  const openScene = async (kind, i) => {
+    if (kind === 'out') { setScene(assistantLifeFriendGoScene(st.out)); const r = await assistantLifeFriendSeeOuting('out'); if (r && r.beatP) setScene(x => x && { ...x, reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}` }); }
+    if (kind === 'back') { setScene(assistantLifeFriendBackScene(st.back)); const r = await assistantLifeFriendSeeOuting('back'); if (r && r.beatP) setScene(x => x && { ...x, reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}` }); }
+    if (kind === 'come') { setScene(assistantLifeFriendComeScene(st.came[i])); void assistantLifeFriendSeeCome(i); }
+  };
+  const faces = (ids, size = 22) => <div style={{ display: 'flex' }} aria-hidden="true">{ids.map((id, k) => <div key={id} style={{ marginLeft: k ? -6 : 0 }}><AlfFace id={id} size={size} /></div>)}</div>;
+  const nw = (t) => <span className="alu-nw" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</span>;
+  // 来ている知らせ(まだ見ていない物だけ・いちばん上に1つずつ)
+  const news = [];
+  (st.came || []).forEach((c, i) => { if (c && !c.seen) news.push({ k: `come${i}`, pic: faces([c.aid], 30), text: `${c.name}さんの${assistantLifeName(c.aid)}が遊びに来た`, note: 'いま家に来ています', btn: '迎える', act: 'come', on: () => openScene('come', i) }); });
+  if (st.back && !st.back.seen) news.push({ k: 'back', pic: faces(st.back.ids.slice(0, 2), 30), text: `${st.back.ids.map(assistantLifeName).join('・')}が帰ってきた`, note: 'おみやげがあるかも', btn: 'おかえり', act: 'back', on: () => openScene('back') });
+  else if (st.out) news.push({ k: 'out', pic: faces(st.out.ids.slice(0, 2), 30), text: `${st.out.ids.map(assistantLifeName).join('・')}が${st.out.name}さんの家へ`, note: '遊びに行っています', btn: '様子', act: 'out', on: () => openScene('out') });
+  const nb = best && bondOf(best.id);
+  const goSub = !best ? null : nb && nb.next ? `🏠 おなじみ度 あとスタンプ${nb.next.need}個で Lv${nb.lv + 1}` : cameToday(best.id) ? '来てくれたお返しに' : `家に${homeN(best)}人`;
+  const lookAll = houses.map(h => assistantLifeFriendCanLook(h.id));
+  const goWhy = best ? '' : !houses.length ? 'フレンドが助手ライフを開くと、その人の家を訪ねられます' : lookAll.includes('max') ? '今日はもう3軒訪ねました' : '今日訪ねられる家は、もう全部訪ねました';
+  const lastIn = notes.find(n => n.dir === 'in');
+  const houseRow = (f) => {
+    const can = assistantLifeFriendCanLook(f.id); const b = bondOf(f.id);
+    const sum = [`家に${homeN(f)}人`, f.house.ac1 ? `${ALF_ACT_ICON[f.house.ac1.k] || '✨'} ${f.house.ac1.x}` : ''].filter(Boolean).join(' · ');
+    return (
+      <div key={f.id} data-alf-house={f.id}>
+        <AluRow pic={faces(alfHomeIds(f.house).slice(0, 3))}
+          text={<span className="alu-nw" style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}さんの家</span>{b ? <span className="alu-chip" data-alb-chip={f.id}>🏠 Lv{b.lv}</span> : null}</span>}
+          note={nw(can === 'done' ? '今日は訪ねた' : sum)}
+          action={<span style={{ display: 'flex', gap: 4, flex: 'none' }}>
+            <AluBtn disabled={can === 'off'} data-alf-act="look" onClick={() => setVisit(f)}>🚪 訪ねる</AluBtn>
+            <AluBtn aria-label="その他" data-alf-act="menu" onClick={() => setMenu(menu === f.id ? null : f.id)} style={{ minWidth: 44, padding: '0 8px' }}>⋯</AluBtn>
+          </span>} />
+        {menu === f.id ? <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}><AluBtn data-alf-act="mute" onClick={() => { assistantLifeFriendMute(f.id, true); setMenu(null); }}>来ないようにする</AluBtn></div> : null}
+      </div>);
+  };
+  const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
+  const sheetNode = sheet === 'notes' ? (
+    <AluSheet title="✉️ 置き手紙" gain="お礼を返すと、相手のお客さん帳に残る" onClose={() => setSheet(null)}>
+      <div data-alf-notes><AlfNotesBody s={s} notes={notes} /></div>
+    </AluSheet>)
+    : sheet === 'guests' ? (
+      <AluSheet title="📖 お客さん帳(この7日)" gain="🏠 おなじみ度(来てくれた日にスタンプ1個)" onClose={() => setSheet(null)}>
+        {typeof AlfGuestBook === 'function' ? <AlfGuestBook s={s} card={card} sec={sec} onVisit={(h) => { setSheet(null); setVisit(h); }} /> : null}
+      </AluSheet>)
+    : sheet === 'sent' ? (
+      <AluSheet title="📮 残した置き手紙" onClose={() => setSheet(null)}>
+        {typeof AlfSentNotes === 'function' ? <AlfSentNotes s={s} card={card} sec={sec} onVisit={(h) => { setSheet(null); setVisit(h); }} /> : null}
+      </AluSheet>)
+    : sheet === 'fav' ? (
+      <AluSheet title="🏆 お気に入りの棚" gain="フレンドがあなたの家を訪ねたときに見せる物" onClose={() => setSheet(null)}>
+        {typeof AlfFavEditor === 'function' ? <AlfFavEditor s={s} card={card} sec={sec} /> : null}
+      </AluSheet>)
+    : sheet === 'settings' ? (
+      <AluSheet title="⚙️ 行き来の設定" onClose={() => setSheet(null)}>
+        <div data-alf-settings><AlfSettingsBody s={s} /></div>
+      </AluSheet>)
+    : sheet === 'help' ? (
+      <AluSheet title="🏘 フレンドの家との行き来" onClose={() => setSheet(null)}>
+        <div className="alu-t" data-alf-intro-text style={{ lineHeight: 1.6 }}>助手たちは、ときどき自分でフレンドの家へ遊びに行きます。フレンドの助手が遊びに来ることもあります。あなたも「🚪 訪ねる」でフレンドの家を見て回れます。</div>
+        {bondOn ? <div className="alu-n" data-alf-bond-note style={{ marginTop: 6, lineHeight: 1.6 }}>🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります(1軒につき1日1個)。来てくれた日にも1個たまります。</div> : null}
+      </AluSheet>)
+    : null;
+  const overlay = (<>{sheetNode}<AlfSceneSheet scene={scene} onClose={() => setScene(null)} />{visit ? <AlfFriendHouseView friend={visit} onClose={() => setVisit(null)} /> : null}</>);
+  return frame(<>
+    {news.length ? (
+      <div className="alu-card" data-alf-now style={{ borderLeft: '3px solid #f9a8d4' }}>
+        {news.slice(0, 2).map(x => <div key={x.k} data-alf-now-item={x.act}><AluRow pic={x.pic} text={nw(x.text)} note={nw(x.note)} action={<AluBtn data-alf-act={x.act} onClick={x.on}>{x.btn}</AluBtn>} /></div>)}
+      </div>) : null}
+    <AluGo data-assistant-life-visit-go disabled={!best} onClick={() => best && setVisit(best)}>
+      {best ? <span style={{ display: 'block', minWidth: 0 }}>{nw(`🚪 ${best.name}さんの家を訪ねる`)}<span className="alu-t alu-nw" style={{ display: 'block', color: 'inherit' }}>{goSub}</span></span> : '🚪 訪ねる'}
+    </AluGo>
+    {goWhy ? <div className="alu-n" style={{ marginTop: -4 }} data-assistant-life-visit-why>{goWhy}</div> : null}
+    <div className="alu-card" data-alf-houses>
+      <div className="alu-h">フレンドの家</div>
+      {houses.map(houseRow)}
+      {waiting.map(f => <div key={f.id} data-alf-house-waiting={f.id}><AluRow pic="🏚" text={nw(`${f.name}さんの家`)} note={nw(`${f.name}さんが助手ライフを開くと訪ねられます`)} /></div>)}
+      {!houses.length && !waiting.length ? <div className="alu-n">フレンドができると、ここにその人の家が並びます。</div> : null}
+      <div className="alu-n" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4 }}>
+        <span className="alu-nw" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{bondOn ? '🏠 おなじみ度 = その人との行き来の記録' : '訪ねると、その家の助手と話せます'}</span>
+        <AluBtn aria-label="説明" data-assistant-life-visit-open="help" onClick={() => setSheet('help')} style={{ minWidth: 44, padding: '0 8px' }}>?</AluBtn>
+      </div>
+    </div>
+    <div className="alu-card">
+      <AluRow pic="✉️" text={nw(`置き手紙 ${notes.length}通`)}
+        note={nw(lastIn ? `${lastIn.name}さん${lastIn.note && s.settings.noteShow && !s.settings.noteOff.includes(lastIn.who) ? `「${lastIn.note}」` : alfWordQuote(lastIn.word) || ''}` : 'まだ置き手紙はありません')}
+        action={<AluBtn data-assistant-life-visit-open="notes" onClick={() => setSheet('notes')}>読む</AluBtn>} />
+    </div>
+    <div className="alu-card">
+      <div className="alu-h">もっと</div>
+      {bondOn && typeof AlfGuestBook === 'function' ? <AluRow pic="📖" text="お客さん帳(この7日)" note={nw('来てくれた人と、返しに行く')} action={<AluBtn data-assistant-life-visit-open="guests" onClick={() => setSheet('guests')}>開く</AluBtn>} /> : null}
+      {typeof AlfSentNotes === 'function' ? <AluRow pic="📮" text="残した置き手紙" note={nw('あなたが残した置き手紙とお礼')} action={<AluBtn data-assistant-life-visit-open="sent" onClick={() => setSheet('sent')}>開く</AluBtn>} /> : null}
+      {bondOn && typeof AlfFavEditor === 'function' ? <AluRow pic="🏆" text="お気に入りの棚" note={nw('訪ねてきたフレンドに見せる物')} action={<AluBtn data-assistant-life-visit-open="fav" onClick={() => setSheet('fav')}>選ぶ</AluBtn>} /> : null}
+      <AluRow pic="⚙️" text="行き来の設定" note={nw('家を見せる・助手が遊びに来る ほか')} action={<AluBtn data-assistant-life-visit-open="settings" onClick={() => setSheet('settings')}>開く</AluBtn>} />
+    </div>
+  </>, overlay);
 }
 // 部屋の札: フレンドの家へ行っている助手は「🏘 〇〇さんの家へ」(家の中の組からは外さない。様子の保存 mh_assistant_life_v1 は変えない)
 const assistantLifeFriendDecorateRooms = (rooms) => {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cfb9d7e4b3f209d
+// source-sha256: 605fd44c1846b78b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119603,6 +119603,7 @@ function AssistantLifeHouse({
   const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
+  const typedVisit = uiV2 && tab === 'visit' && typeof AssistantLifeVisitTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedVisit);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
       setRoomId(null);
@@ -120335,7 +120336,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land || tab === 'where' || typedHouse || typedFriends ? 'none' : 480
+      maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -120423,6 +120424,22 @@ function AssistantLifeHouse({
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
       }
     }, icons))
+  }) : typedVisit ? React.createElement(AssistantLifeVisitTyped, {
+    life: life,
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2
   }) : typedFriends ? React.createElement(AssistantLifeFriendsTyped, {
     life: life,
     ids: ids.filter(partnerOk),
@@ -126848,13 +126865,14 @@ const ALU_CSS = `
 .alu-goal span.on,.alu .alu-goal button.on{background:#064e3b;border-color:#34d399;color:#fff}
 .alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
 .alu[data-alu-wide="1"] .alu-mask{align-items:center}
+.alu[data-alu-wide="1"] .alu-sheet .sb{padding-bottom:14px}
 .alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
 .alu[data-alu-wide="1"] .alu-sheet{border-radius:18px;max-height:92%}
 .alu-sheet .sh{flex:none;display:flex;align-items:flex-start;gap:8px;padding:12px 6px 8px 14px;border-bottom:1px solid #3b3566}
 .alu-sheet .sh .tt{flex:1;min-width:0}
 .alu-sheet .x{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:20px;font-weight:900;color:#e2e8f0}
 .alu-sheet .q{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:16px;font-weight:900;color:#cbd5e1}
-.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px calc(14px + var(--alu-sab,var(--mh-sa-bottom,0px)));display:flex;flex-direction:column;gap:10px}
 .alu-sheet .help{background:#0f172a;border-radius:10px;padding:8px 10px}
 .alu-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .alu-gains>div{min-width:88px;padding:8px 10px;border-radius:12px;background:#0f172a;border:1px solid #475569;text-align:center}
@@ -162169,6 +162187,86 @@ function AssistantLifeFriendProfileVisit({
     onClose: () => setOpen(false)
   }))));
 }
+function AlfNotesBody({
+  s,
+  notes
+}) {
+  return React.createElement(React.Fragment, null, notes.length ? notes.slice(0, 12).map(n => React.createElement("div", {
+    key: n.id,
+    className: "border-b border-slate-700/60 py-1 last:border-0",
+    "data-alf-note": n.kind
+  }, React.createElement("p", {
+    className: "text-[11px] leading-snug text-slate-100"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-slate-400"
+  }, alfAgoText(n.at)), ' ', n.dir === 'away' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "break-words"
+  }, "［助手］", n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
+    className: "break-words"
+  }, "［助手］", assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
+    className: "break-words"
+  }, "・［助手］", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "break-words"
+  }, "［プレイヤー］", n.name, "さんの［助手］", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
+    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
+    "data-alf-note-text": true
+  }, "✏️ ", n.note) : React.createElement("p", {
+    className: "mt-0.5 text-[10px] text-slate-400",
+    "data-alf-note-hidden": true
+  }, "✏️ (自由文を見ないようにしています)") : null, n.dir === 'in' && n.note && s.settings.noteShow && React.createElement("button", {
+    type: "button",
+    className: "mt-0.5 text-[10px] text-rose-200 underline",
+    "data-alf-note-off": n.who,
+    onClick: () => {
+      const off = s.settings.noteOff.includes(n.who);
+      assistantLifeFriendSetSettings({
+        noteOff: off ? s.settings.noteOff.filter(x => x !== n.who) : [...s.settings.noteOff, n.who]
+      });
+    }
+  }, s.settings.noteOff.includes(n.who) ? `${n.name}さんの自由文を見る` : `${n.name}さんの自由文を見ない`), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => React.createElement("button", {
+    key: k,
+    type: "button",
+    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100",
+    "data-alf-thanks": k,
+    onClick: () => assistantLifeFriendThanks(n.id, k)
+  }, t))) : React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
+    className: "text-[11px] text-slate-400"
+  }, "まだ置き手紙はありません。"));
+}
+function AlfSettingsBody({
+  s
+}) {
+  return React.createElement(React.Fragment, null, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
+    key: k,
+    className: "flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100",
+    "data-alf-setting": k
+  }, React.createElement("span", null, label), React.createElement("input", {
+    type: "checkbox",
+    style: {
+      width: 22,
+      height: 22
+    },
+    checked: !!s.settings[k],
+    onChange: e => assistantLifeFriendSetSettings({
+      [k]: e.target.checked
+    })
+  }))), s.settings.muted.length > 0 && React.createElement("button", {
+    type: "button",
+    className: "mt-1 text-[10.5px] text-amber-200 underline",
+    "data-alf-unmute": true,
+    onClick: () => assistantLifeFriendSetSettings({
+      muted: []
+    })
+  }, "来ないようにした家(", s.settings.muted.length, "軒)を戻す"));
+}
 function AssistantLifeFriendPage({
   life
 }) {
@@ -162434,55 +162532,10 @@ function AssistantLifeFriendPage({
     className: card,
     "data-alf-notes": true,
     style: hideIfEmpty
-  }, notes.length ? notes.slice(0, 12).map(n => React.createElement("div", {
-    key: n.id,
-    className: "border-b border-slate-700/60 py-1 last:border-0",
-    "data-alf-note": n.kind
-  }, React.createElement("p", {
-    className: "text-[11px] leading-snug text-slate-100"
-  }, React.createElement("span", {
-    className: "whitespace-nowrap text-slate-400"
-  }, alfAgoText(n.at)), ' ', n.dir === 'away' ? React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "break-words"
-  }, "［助手］", n.ids.map(assistantLifeName).join('・')), "が", React.createElement("span", {
-    className: "break-words"
-  }, "［プレイヤー］", n.name, "さんの家へ"), "遊びに行っていた") : n.kind === 'player' ? React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "break-words"
-  }, "［プレイヤー］", n.name, "さん"), "が", n.noteTo ? React.createElement("span", {
-    className: "break-words"
-  }, "［助手］", assistantLifeName(n.noteTo), "あてに") : '訪ねてくれた', alfWordQuote(n.word), n.ids.length ? React.createElement("span", {
-    className: "break-words"
-  }, "・［助手］", n.ids.map(assistantLifeName).join('・'), "と話した") : null) : React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "break-words"
-  }, "［プレイヤー］", n.name, "さんの［助手］", n.ids.map(assistantLifeName).join('・')), "が来た", alfWordQuote(n.word))), n.dir === 'in' && n.note ? s.settings.noteShow && !s.settings.noteOff.includes(n.who) ? React.createElement("p", {
-    className: "mt-0.5 rounded border-l-2 border-pink-300 bg-pink-950/30 px-1.5 py-0.5 text-[11px] text-pink-50",
-    "data-alf-note-text": true
-  }, "✏️ ", n.note) : React.createElement("p", {
-    className: "mt-0.5 text-[10px] text-slate-400",
-    "data-alf-note-hidden": true
-  }, "✏️ (自由文を見ないようにしています)") : null, n.dir === 'in' && n.note && s.settings.noteShow && React.createElement("button", {
-    type: "button",
-    className: "mt-0.5 text-[10px] text-rose-200 underline",
-    "data-alf-note-off": n.who,
-    onClick: () => {
-      const off = s.settings.noteOff.includes(n.who);
-      assistantLifeFriendSetSettings({
-        noteOff: off ? s.settings.noteOff.filter(x => x !== n.who) : [...s.settings.noteOff, n.who]
-      });
-    }
-  }, s.settings.noteOff.includes(n.who) ? `${n.name}さんの自由文を見る` : `${n.name}さんの自由文を見ない`), n.dir === 'in' && (n.thanks == null ? React.createElement("div", {
-    className: "mt-1 flex flex-wrap gap-1"
-  }, ALF_THANKS_TEXTS.slice(0, 3).map((t, k) => React.createElement("button", {
-    key: k,
-    type: "button",
-    className: "rounded-lg border border-amber-200/40 px-1.5 py-0.5 text-[10px] text-amber-100",
-    "data-alf-thanks": k,
-    onClick: () => assistantLifeFriendThanks(n.id, k)
-  }, t))) : React.createElement("p", {
-    className: "text-[10px] text-slate-400"
-  }, "お礼「", ALF_THANKS_TEXTS[n.thanks], "」を返しました")))) : React.createElement("p", {
-    className: "text-[11px] text-slate-400"
-  }, "まだ置き手紙はありません。")), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
+  }, React.createElement(AlfNotesBody, {
+    s: s,
+    notes: notes
+  })), !alfEmpty && typeof AlfSentNotes === 'function' && React.createElement(AlfSentNotes, {
     s: s,
     card: card,
     sec: sec,
@@ -162496,34 +162549,412 @@ function AssistantLifeFriendPage({
   }, "⚙️ 行き来の設定"), React.createElement("div", {
     className: card,
     "data-alf-settings": true
-  }, [['open', 'フレンドの家と行き来する'], ['show', '家の様子をフレンドに見せる'], ['come', 'フレンドの助手が遊びに来る'], ['act', '最近の遊びをフレンドに見せる'], ...(typeof alfMsSendOn === 'function' && alfMsSendOn() ? [['ms', '助手のマスモンのくわしい中身をフレンドに見せる']] : []), ['noteShow', '置き手紙の自由文を見る']].map(([k, label]) => React.createElement("label", {
-    key: k,
-    className: "flex min-h-[44px] items-center justify-between gap-2 py-1 text-[12px] text-slate-100",
-    "data-alf-setting": k
-  }, React.createElement("span", null, label), React.createElement("input", {
-    type: "checkbox",
-    style: {
-      width: 22,
-      height: 22
-    },
-    checked: !!s.settings[k],
-    onChange: e => assistantLifeFriendSetSettings({
-      [k]: e.target.checked
-    })
-  }))), s.settings.muted.length > 0 && React.createElement("button", {
-    type: "button",
-    className: "mt-1 text-[10.5px] text-amber-200 underline",
-    "data-alf-unmute": true,
-    onClick: () => assistantLifeFriendSetSettings({
-      muted: []
-    })
-  }, "来ないようにした家(", s.settings.muted.length, "軒)を戻す")), React.createElement(AlfSceneSheet, {
+  }, React.createElement(AlfSettingsBody, {
+    s: s
+  })), React.createElement(AlfSceneSheet, {
     scene: scene,
     onClose: () => setScene(null)
   }), visit && React.createElement(AlfFriendHouseView, {
     friend: visit,
     onClose: () => setVisit(null)
   }));
+}
+function AssistantLifeVisitTyped({
+  life,
+  tabs,
+  tab = 'visit',
+  onTab,
+  onBack
+}) {
+  const s = useAssistantLifeFriendState();
+  const [scene, setScene] = React.useState(null);
+  const [visit, setVisit] = React.useState(null);
+  const [sheet, setSheet] = React.useState(null);
+  const [menu, setMenu] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      await ALF_STORE.load();
+      await assistantLifeFriendOnOpen(life);
+      await alfFetchVisits();
+      if (alive) assistantLifeFriendMarkSeen();
+    })();
+    if (typeof albEnabled === 'function' && albEnabled() && typeof albLoad === 'function') void albLoad();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const frame = (children, overlay = null) => React.createElement(AluFrame, {
+    title: "フレンド",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    overlay: overlay,
+    "data-assistant-life-typed-visit": "1"
+  }, children);
+  if (!alfEnabled() || !s.ready || s.mode === 'off') {
+    return frame(React.createElement("div", {
+      className: "alu-card alu-t",
+      "data-alf-page": "off"
+    }, !alfEnabled() || s.mode === 'off' ? '🏘 フレンドの家との行き来は、いまお休み中です。' : '読み込み中…'));
+  }
+  const st = s.st;
+  const houses = alfOpenHouses('look');
+  const waiting = s.roster.filter(f => !houses.some(h => h.id === f.id) && !s.settings.muted.includes(f.id)).slice(0, 30);
+  const notes = assistantLifeFriendNotes(s);
+  const bondOn = typeof albEnabled === 'function' && albEnabled() && !!s.bond;
+  const bondOf = id => {
+    if (!bondOn) return null;
+    const x = albOne(s.bond, id);
+    return {
+      lv: albLv(x.st),
+      title: albTitle(x.st),
+      next: albNext(x.st)
+    };
+  };
+  const today = alfDay();
+  const cameToday = id => (st.came || []).some(c => c && c.host === id) || notes.some(n => n.dir === 'in' && n.who === id && n.day === today);
+  const homeN = h => alfHomeIds(h.house).length;
+  const open = houses.filter(h => assistantLifeFriendCanLook(h.id) === 'ok');
+  const best = open.slice().sort((a, b) => cameToday(b.id) - cameToday(a.id) || ((bondOf(a.id) || {}).next || {
+    need: 99
+  }).need - ((bondOf(b.id) || {}).next || {
+    need: 99
+  }).need || homeN(b) - homeN(a))[0] || null;
+  const openScene = async (kind, i) => {
+    if (kind === 'out') {
+      setScene(assistantLifeFriendGoScene(st.out));
+      const r = await assistantLifeFriendSeeOuting('out');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'back') {
+      setScene(assistantLifeFriendBackScene(st.back));
+      const r = await assistantLifeFriendSeeOuting('back');
+      if (r && r.beatP) setScene(x => x && {
+        ...x,
+        reward: `🎁 おみやげ ビートP ${r.beatP}${r.photo ? '・写真1枚' : ''}`
+      });
+    }
+    if (kind === 'come') {
+      setScene(assistantLifeFriendComeScene(st.came[i]));
+      void assistantLifeFriendSeeCome(i);
+    }
+  };
+  const faces = (ids, size = 22) => React.createElement("div", {
+    style: {
+      display: 'flex'
+    },
+    "aria-hidden": "true"
+  }, ids.map((id, k) => React.createElement("div", {
+    key: id,
+    style: {
+      marginLeft: k ? -6 : 0
+    }
+  }, React.createElement(AlfFace, {
+    id: id,
+    size: size
+  }))));
+  const nw = t => React.createElement("span", {
+    className: "alu-nw",
+    style: {
+      display: 'block',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, t);
+  const news = [];
+  (st.came || []).forEach((c, i) => {
+    if (c && !c.seen) news.push({
+      k: `come${i}`,
+      pic: faces([c.aid], 30),
+      text: `${c.name}さんの${assistantLifeName(c.aid)}が遊びに来た`,
+      note: 'いま家に来ています',
+      btn: '迎える',
+      act: 'come',
+      on: () => openScene('come', i)
+    });
+  });
+  if (st.back && !st.back.seen) news.push({
+    k: 'back',
+    pic: faces(st.back.ids.slice(0, 2), 30),
+    text: `${st.back.ids.map(assistantLifeName).join('・')}が帰ってきた`,
+    note: 'おみやげがあるかも',
+    btn: 'おかえり',
+    act: 'back',
+    on: () => openScene('back')
+  });else if (st.out) news.push({
+    k: 'out',
+    pic: faces(st.out.ids.slice(0, 2), 30),
+    text: `${st.out.ids.map(assistantLifeName).join('・')}が${st.out.name}さんの家へ`,
+    note: '遊びに行っています',
+    btn: '様子',
+    act: 'out',
+    on: () => openScene('out')
+  });
+  const nb = best && bondOf(best.id);
+  const goSub = !best ? null : nb && nb.next ? `🏠 おなじみ度 あとスタンプ${nb.next.need}個で Lv${nb.lv + 1}` : cameToday(best.id) ? '来てくれたお返しに' : `家に${homeN(best)}人`;
+  const lookAll = houses.map(h => assistantLifeFriendCanLook(h.id));
+  const goWhy = best ? '' : !houses.length ? 'フレンドが助手ライフを開くと、その人の家を訪ねられます' : lookAll.includes('max') ? '今日はもう3軒訪ねました' : '今日訪ねられる家は、もう全部訪ねました';
+  const lastIn = notes.find(n => n.dir === 'in');
+  const houseRow = f => {
+    const can = assistantLifeFriendCanLook(f.id);
+    const b = bondOf(f.id);
+    const sum = [`家に${homeN(f)}人`, f.house.ac1 ? `${ALF_ACT_ICON[f.house.ac1.k] || '✨'} ${f.house.ac1.x}` : ''].filter(Boolean).join(' · ');
+    return React.createElement("div", {
+      key: f.id,
+      "data-alf-house": f.id
+    }, React.createElement(AluRow, {
+      pic: faces(alfHomeIds(f.house).slice(0, 3)),
+      text: React.createElement("span", {
+        className: "alu-nw",
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          overflow: 'hidden'
+        }
+      }, React.createElement("span", {
+        style: {
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      }, f.name, "さんの家"), b ? React.createElement("span", {
+        className: "alu-chip",
+        "data-alb-chip": f.id
+      }, "🏠 Lv", b.lv) : null),
+      note: nw(can === 'done' ? '今日は訪ねた' : sum),
+      action: React.createElement("span", {
+        style: {
+          display: 'flex',
+          gap: 4,
+          flex: 'none'
+        }
+      }, React.createElement(AluBtn, {
+        disabled: can === 'off',
+        "data-alf-act": "look",
+        onClick: () => setVisit(f)
+      }, "🚪 訪ねる"), React.createElement(AluBtn, {
+        "aria-label": "その他",
+        "data-alf-act": "menu",
+        onClick: () => setMenu(menu === f.id ? null : f.id),
+        style: {
+          minWidth: 44,
+          padding: '0 8px'
+        }
+      }, "⋯"))
+    }), menu === f.id ? React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        marginTop: 4
+      }
+    }, React.createElement(AluBtn, {
+      "data-alf-act": "mute",
+      onClick: () => {
+        assistantLifeFriendMute(f.id, true);
+        setMenu(null);
+      }
+    }, "来ないようにする")) : null);
+  };
+  const card = 'mt-1.5 rounded-2xl border border-amber-300/25 bg-slate-900/85 p-2';
+  const sec = 'mt-3 inline-block rounded-full bg-slate-950/85 px-2.5 py-0.5 text-[12px] font-black text-amber-200 shadow';
+  const sheetNode = sheet === 'notes' ? React.createElement(AluSheet, {
+    title: "✉️ 置き手紙",
+    gain: "お礼を返すと、相手のお客さん帳に残る",
+    onClose: () => setSheet(null)
+  }, React.createElement("div", {
+    "data-alf-notes": true
+  }, React.createElement(AlfNotesBody, {
+    s: s,
+    notes: notes
+  }))) : sheet === 'guests' ? React.createElement(AluSheet, {
+    title: "📖 お客さん帳(この7日)",
+    gain: "🏠 おなじみ度(来てくれた日にスタンプ1個)",
+    onClose: () => setSheet(null)
+  }, typeof AlfGuestBook === 'function' ? React.createElement(AlfGuestBook, {
+    s: s,
+    card: card,
+    sec: sec,
+    onVisit: h => {
+      setSheet(null);
+      setVisit(h);
+    }
+  }) : null) : sheet === 'sent' ? React.createElement(AluSheet, {
+    title: "📮 残した置き手紙",
+    onClose: () => setSheet(null)
+  }, typeof AlfSentNotes === 'function' ? React.createElement(AlfSentNotes, {
+    s: s,
+    card: card,
+    sec: sec,
+    onVisit: h => {
+      setSheet(null);
+      setVisit(h);
+    }
+  }) : null) : sheet === 'fav' ? React.createElement(AluSheet, {
+    title: "🏆 お気に入りの棚",
+    gain: "フレンドがあなたの家を訪ねたときに見せる物",
+    onClose: () => setSheet(null)
+  }, typeof AlfFavEditor === 'function' ? React.createElement(AlfFavEditor, {
+    s: s,
+    card: card,
+    sec: sec
+  }) : null) : sheet === 'settings' ? React.createElement(AluSheet, {
+    title: "⚙️ 行き来の設定",
+    onClose: () => setSheet(null)
+  }, React.createElement("div", {
+    "data-alf-settings": true
+  }, React.createElement(AlfSettingsBody, {
+    s: s
+  }))) : sheet === 'help' ? React.createElement(AluSheet, {
+    title: "🏘 フレンドの家との行き来",
+    onClose: () => setSheet(null)
+  }, React.createElement("div", {
+    className: "alu-t",
+    "data-alf-intro-text": true,
+    style: {
+      lineHeight: 1.6
+    }
+  }, "助手たちは、ときどき自分でフレンドの家へ遊びに行きます。フレンドの助手が遊びに来ることもあります。あなたも「🚪 訪ねる」でフレンドの家を見て回れます。"), bondOn ? React.createElement("div", {
+    className: "alu-n",
+    "data-alf-bond-note": true,
+    style: {
+      marginTop: 6,
+      lineHeight: 1.6
+    }
+  }, "🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります(1軒につき1日1個)。来てくれた日にも1個たまります。") : null) : null;
+  const overlay = React.createElement(React.Fragment, null, sheetNode, React.createElement(AlfSceneSheet, {
+    scene: scene,
+    onClose: () => setScene(null)
+  }), visit ? React.createElement(AlfFriendHouseView, {
+    friend: visit,
+    onClose: () => setVisit(null)
+  }) : null);
+  return frame(React.createElement(React.Fragment, null, news.length ? React.createElement("div", {
+    className: "alu-card",
+    "data-alf-now": true,
+    style: {
+      borderLeft: '3px solid #f9a8d4'
+    }
+  }, news.slice(0, 2).map(x => React.createElement("div", {
+    key: x.k,
+    "data-alf-now-item": x.act
+  }, React.createElement(AluRow, {
+    pic: x.pic,
+    text: nw(x.text),
+    note: nw(x.note),
+    action: React.createElement(AluBtn, {
+      "data-alf-act": x.act,
+      onClick: x.on
+    }, x.btn)
+  })))) : null, React.createElement(AluGo, {
+    "data-assistant-life-visit-go": true,
+    disabled: !best,
+    onClick: () => best && setVisit(best)
+  }, best ? React.createElement("span", {
+    style: {
+      display: 'block',
+      minWidth: 0
+    }
+  }, nw(`🚪 ${best.name}さんの家を訪ねる`), React.createElement("span", {
+    className: "alu-t alu-nw",
+    style: {
+      display: 'block',
+      color: 'inherit'
+    }
+  }, goSub)) : '🚪 訪ねる'), goWhy ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: -4
+    },
+    "data-assistant-life-visit-why": true
+  }, goWhy) : null, React.createElement("div", {
+    className: "alu-card",
+    "data-alf-houses": true
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "フレンドの家"), houses.map(houseRow), waiting.map(f => React.createElement("div", {
+    key: f.id,
+    "data-alf-house-waiting": f.id
+  }, React.createElement(AluRow, {
+    pic: "🏚",
+    text: nw(`${f.name}さんの家`),
+    note: nw(`${f.name}さんが助手ライフを開くと訪ねられます`)
+  }))), !houses.length && !waiting.length ? React.createElement("div", {
+    className: "alu-n"
+  }, "フレンドができると、ここにその人の家が並びます。") : null, React.createElement("div", {
+    className: "alu-n",
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 4
+    }
+  }, React.createElement("span", {
+    className: "alu-nw",
+    style: {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, bondOn ? '🏠 おなじみ度 = その人との行き来の記録' : '訪ねると、その家の助手と話せます'), React.createElement(AluBtn, {
+    "aria-label": "説明",
+    "data-assistant-life-visit-open": "help",
+    onClick: () => setSheet('help'),
+    style: {
+      minWidth: 44,
+      padding: '0 8px'
+    }
+  }, "?"))), React.createElement("div", {
+    className: "alu-card"
+  }, React.createElement(AluRow, {
+    pic: "✉️",
+    text: nw(`置き手紙 ${notes.length}通`),
+    note: nw(lastIn ? `${lastIn.name}さん${lastIn.note && s.settings.noteShow && !s.settings.noteOff.includes(lastIn.who) ? `「${lastIn.note}」` : alfWordQuote(lastIn.word) || ''}` : 'まだ置き手紙はありません'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-visit-open": "notes",
+      onClick: () => setSheet('notes')
+    }, "読む")
+  })), React.createElement("div", {
+    className: "alu-card"
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "もっと"), bondOn && typeof AlfGuestBook === 'function' ? React.createElement(AluRow, {
+    pic: "📖",
+    text: "お客さん帳(この7日)",
+    note: nw('来てくれた人と、返しに行く'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-visit-open": "guests",
+      onClick: () => setSheet('guests')
+    }, "開く")
+  }) : null, typeof AlfSentNotes === 'function' ? React.createElement(AluRow, {
+    pic: "📮",
+    text: "残した置き手紙",
+    note: nw('あなたが残した置き手紙とお礼'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-visit-open": "sent",
+      onClick: () => setSheet('sent')
+    }, "開く")
+  }) : null, bondOn && typeof AlfFavEditor === 'function' ? React.createElement(AluRow, {
+    pic: "🏆",
+    text: "お気に入りの棚",
+    note: nw('訪ねてきたフレンドに見せる物'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-visit-open": "fav",
+      onClick: () => setSheet('fav')
+    }, "選ぶ")
+  }) : null, React.createElement(AluRow, {
+    pic: "⚙️",
+    text: "行き来の設定",
+    note: nw('家を見せる・助手が遊びに来る ほか'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-visit-open": "settings",
+      onClick: () => setSheet('settings')
+    }, "開く")
+  }))), overlay);
 }
 const assistantLifeFriendDecorateRooms = rooms => {
   if (!alfEnabled() || !rooms) return rooms;
