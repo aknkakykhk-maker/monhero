@@ -191,6 +191,7 @@
   "mode/rhythm-chart-draft-check.js",
   "mode/rhythm-chart-feel-report-check.js",
   "mode/rhythm-chart-hand-rules-check.js",
+  "mode/rhythm-width-variety-check.js",
   "mode/rhythm-chart-level-check.js",
   "mode/rhythm-chart-musical-tempo-check.js",
   "mode/rhythm-chart-rev26-check.js",
