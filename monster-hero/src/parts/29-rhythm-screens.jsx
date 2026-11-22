@@ -732,10 +732,12 @@ const rhythmTitleFitSize=(text,maxPx,minPx,reservePx=0)=>
 // その折り目も境目にしか来ない(「英雄の証 ミラクル☆ミルクティ版」が「ミラクテ/ィ版」と単語の途中で割れていた)。
 // かたまり自体が置き場所より長いときだけ、はみ出さないよう かたまりの中で折る(最後の手段。JA_WRAP_STYLE と同じ考え方)
 // ★文字としての曲名が要る所(aria-label・並べ替え・長さの判定)は rhythmSongFullName の文字列のまま使う。ここは描く専用
-const RhythmSongName=({song})=>{
+// clip … 副題のある曲で、題と副題をそれぞれ1行に収め、入らない分は「…」にする(曲えらびの一覧。2026-11-23 API総点検② V5・V35:
+//   副題が札の中で折れて「じゃな/い―」と言葉の途中で切れ、3行目が枠の上下で切れていた)
+const RhythmSongName=({song,clip=false})=>{
   const title=song&&song.displayName?String(song.displayName):'';
   const sub=song&&song.subtitle?String(song.subtitle):'';
-  const chunk={display:'inline-block',maxWidth:'100%',verticalAlign:'top'};
+  const chunk=clip&&sub?{display:'inline-block',maxWidth:'100%',verticalAlign:'top',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}:{display:'inline-block',maxWidth:'100%',verticalAlign:'top'};
   if(!sub)return <span style={chunk}>{title}</span>;
   return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
 };
@@ -924,10 +926,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const openList=available.filter(unlocked);
   // 鍵のかかった難易度の開け方を、難易度の札の下に1行で出す(2026-11-22 r1119-094・点検 N8・V14)。
   //   札の中の「HARDで解放」は6pxで読めなかったので札から外し、10px以上の1行にまとめる。いちばん手前の条件だけ出す
+  //   2026-11-23 API総点検② V10: HELL にも鍵があるのに EXPERT・MASTER の開け方しか書いていなかった。条件が2つ以上なら全部を並べる
   const lockHint=(()=>{if(!song)return '';const locked=available.filter(item=>!unlocked(item));if(!locked.length)return '';
-    const need=rhythmDifficultyUnlockRequirement(locked[0].id,song.songId);
-    const names=locked.filter(item=>rhythmDifficultyUnlockRequirement(item.id,song.songId)===need).map(item=>item.id);
-    return need?`🔒 ${need}をクリアすると ${names.join('・')} が遊べます`:'';})();
+    const groups=[];
+    for(const item of locked){const need=rhythmDifficultyUnlockRequirement(item.id,song.songId);if(!need)continue;
+      const group=groups.find(g=>g.need===need);if(group)group.names.push(item.id);else groups.push({need,names:[item.id]});}
+    if(!groups.length)return '';
+    if(groups.length===1)return `🔒 ${groups[0].need}をクリアすると ${groups[0].names.join('・')} が遊べます`;
+    return `🔒 ${groups.map(g=>`${g.need}クリアで${g.names.join('・')}`).join(' ／ ')}`;})();
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
@@ -1232,7 +1238,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   style={{display:'flex',alignItems:'center',overflow:'hidden',height:'36px'}}>
                   <b className="line-clamp-2 block font-black text-white"
                     style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',
-                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}><RhythmSongName song={entry}/></b>
+                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}><RhythmSongName song={entry} clip/></b>
                 </span>
                 <span className={`flex items-center gap-1${spot('achievement')}`}>
                   {/* 楽曲Lv.(いま選んでいる難易度のLv.)。札の色は、その難易度のボタンと同じ色にする
@@ -1271,7 +1277,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
                           <span className="shrink-0 whitespace-nowrap tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
                         // 「未プレイ」は縮めずに全部見せる。狭い行では「初めての1曲」の札を🔰だけにする(点検 V7: PC で「未プ…」「未」と切れていた)
-                        :<span className="shrink-0 whitespace-nowrap">未プレイ</span>}
+                        // 版の札がある行で列が細いとき(小さい横で121px)は「未プレイ」を外す。残すと「2つの版」の札が上に重なり「未プレ」と切れていた(2026-11-23 API総点検② V5・V35)
+                        :<span className={`shrink-0 whitespace-nowrap${row.versions>1?' [@container(max-width:180px)]:hidden':''}`}>未プレイ</span>}
                     </small>;
                   })()}
                   {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
@@ -1309,7 +1316,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             それでも余るぶんは難易度と助手の一言の間に入れる(決定の下を空けない)。
             欄の高さが540px以上(PC など)は、ジャケット・HIGH SCORE・切り替えを欄の幅いっぱいに縦へ積む。
             ★高さは @media ではなく欄そのもの(container)で測る。🔄横(絵だけ回す)は端末が縦のままで、高さの @media が逆に効くため */}
-        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
+        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 landscape:gap-y-1 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
@@ -1326,7 +1333,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
             {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
             <div className="flex items-start gap-1.5 [container-type:inline-size]">
-              <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]"
+              <b data-rhythm-song-title className={`line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white ${viewWide&&versionsOf(song).length>1?'landscape:line-clamp-2 landscape:h-auto landscape:max-h-[2.5em] landscape:text-[12px]':'landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]'}`}
                 style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,viewWide&&versionsOf(song).length>1?44+76*versionsOf(song).length:44)}}><RhythmSongName song={song}/></b>
               {viewWide&&versionTabs}
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
@@ -1336,22 +1343,25 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
+            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}{/* Lv. は難易度の札と一覧の行に出ているので、ここには書かない(2026-11-23 API総点検② V7・V31・V33: 同じ Lv. が3か所に出ていた)。
+                ノーツの数と刻みの数は、それぞれ途中で折り返さない1かたまりにする(「刻/み247」と切れていた) */}
+              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks className="ml-1 inline-block whitespace-nowrap text-slate-300">{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
-          <div data-rhythm-song-stats style={{gridArea:'stats'}} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5">
+          <div data-rhythm-song-stats style={{gridArea:'stats'}} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:[@container(max-height:300px)]:py-1">
             {/* スコアの字の大きさは、置ける幅と桁数から決める(2026-09-26・ユーザー報告「スコアの文字が切れてる」)。
                 端末の字(iPhone の太字の数字)は検査の端末より幅が広く、決め打ちの22pxでは「954,0…」と切れていた。
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
-              <small className="block text-[10px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
-              <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
-                style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
-                {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
+              <small className="block whitespace-nowrap text-[10px] font-black tracking-[.15em] text-slate-400 [@container(max-width:110px)]:tracking-normal">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
+              {/* まだ遊んでいない難易度は「—」だけにする。一覧の「未プレイ」と同じことを別の言葉で2か所に出していた
+                  (2026-11-23 API総点検② V8。前は「まだ遊んでいません」で、小さい横では2行に折れて札が高くなり、下の難易度の札が決定の段に隠れていた・V3・V4) */}
+              <b data-rhythm-demo-best data-unplayed={best&&best.played?undefined:'1'} aria-label={best&&best.played?undefined:'未プレイ'} className={`block font-black tabular-nums ${best&&best.played?'truncate text-[22px] leading-tight text-amber-100':'py-px text-[15px] leading-none text-slate-500'}`}
+                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
+                {best&&best.played?best.bestScore.toLocaleString():'—'}
               </b>
-              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[10px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
+              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[10px] font-black text-slate-400 landscape:[@container(max-height:300px)]:hidden"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
             <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
           </div>
@@ -1374,7 +1384,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
               {item.id==='HELL'
@@ -1393,7 +1403,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             </button>;
           })}
           </div>
-          {lockHint&&<p data-rhythm-difficulty-lock-hint className="mt-1 truncate text-[10px] font-black leading-tight text-slate-400">{lockHint}</p>}
+          {lockHint&&<p data-rhythm-difficulty-lock-hint title={lockHint} className="mt-1 truncate text-[10px] font-black leading-tight text-slate-400">{lockHint}</p>}
           </div>
           {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
@@ -1401,20 +1411,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           {/* 横の助手の一言は「決定」のすぐ上(欄の下のほう)に置く。決定より下に置くと、決定が欄の下端から浮いていた(2026-11-22 r1119-094) */}
           {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
           {/* 「決定」はいちばん強いボタンにする(高さ52px・幅は段の大半)。「ランダム」は細く・弱く(2026-11-22 r1119-094・点検 N2) */}
+          {/* 縦は高さ60px(2026-11-23 API総点検② V1・V27)。横は52pxのまま(高くすると、すぐ上の助手の一言がこの段に隠れる) */}
           <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom} aria-label="ランダムに選ぶ"
-              className="flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"><span aria-hidden="true" className="text-base leading-none">🎲</span>ランダム</button>}
+              className="flex min-h-[60px] w-[22%] shrink-0 flex-col landscape:min-h-[52px] landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"><span aria-hidden="true" className="text-base leading-none">🎲</span>ランダム</button>}
             {lockedSong(song)
               ?(()=>{const price=rhythmSongPrice(song.songId),balance=Number(songLock&&songLock.balance),short=Number.isFinite(balance)&&balance<price?price-balance:0;
                 // ビートPが足りないときは暗くして「あと◯ビートP」と出す(2026-11-22 r1119-094・点検 N9)。押すと今までどおり買う窓(足りないことの説明)が開く
                 return <button type="button" data-rhythm-song-buy={song.songId} data-rhythm-song-buy-short={short>0?'1':'0'} onClick={()=>{setBuyError('');setBuyAsk(song);}}
-                className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:[@container(min-height:540px)]:min-h-[64px] ${short>0?'border border-amber-300/40 bg-slate-900/80 text-amber-100/80':'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`}>
+                className={`flex min-h-[60px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:min-h-[52px] landscape:[@container(min-height:540px)]:min-h-[64px] ${short>0?'border border-amber-300/40 bg-slate-900/80 text-amber-100/80':'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`}>
                   <span className="whitespace-nowrap text-[15px]">🔒 {price.toLocaleString()}ビートPで買う</span>
                   {short>0&&<span data-rhythm-song-buy-need className="whitespace-nowrap text-[10px] text-amber-200/80">あと {short.toLocaleString()}ビートP</span>}
                 </button>;})()
               :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40">{playLabel}</button>}
+              className="min-h-[60px] min-w-0 flex-1 rounded-xl landscape:min-h-[52px] landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-xl font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40">{playLabel}</button>}
             {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
             {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>

@@ -149,7 +149,7 @@ ok('マスモンは出番のあとも動き続ける（歓声の指定を外し�
   &&read('monster-hero/data/rhythm-mode.js').includes('mhRhythmSideSway'));
 ok('自己ベストを出している',game.includes('data-rhythm-demo-best')&&game.includes('rhythmBestRecord(rhythmBestRecords'));
 ok('自己ベストにランクも出している',game.includes('rhythmRankForScore(best.bestScore)'));
-ok('未プレイのときは「まだ遊んでいません」と出す',/まだ遊んでいません/.test(game));
+ok('未プレイのときは「—」と出す(2026-11-23 API総点検② V8)',/data-unplayed=\{best&&best\.played\?undefined:'1'\}/.test(game));
 ok('音ゲー設定へ入れる',game.includes('data-rhythm-demo-options'));
 ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&game.includes("gameState==='RHYTHM_DEMO_MONSTERS'"));
 
