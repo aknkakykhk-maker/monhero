@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f0464655504a659
+// generated-sha256: b272678c4d31bdbd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4885,6 +4885,7 @@ const BGM_TRACKS = [
   { id:'melo_amakakeru_tsubasa', name:'天翔る翼', creator:'浜渦正志', src:'audio/bgm-amakakeru-tsubasa.mp3', gain:1, loop:true },
   { id:'melo_beyond_the_same_sky', name:'Beyond the Same Sky', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky.mp3', gain:1, loop:true },
   { id:'melo_beyond_the_same_sky_short', name:'Beyond the Same Sky short ver.', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky-short.mp3', gain:1, loop:true },
+  { id:'melo_desert_crown', name:'Desert Crown', creator:'えるびん', src:'audio/bgm-desert-crown.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6298,6 +6299,7 @@ const Audio_ = (() => {
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
+    "audio/bgm-desert-crown.mp3": "1a440c813bbb",
     "audio/bgm-dr-wily-stage-1-okkussenman.mp3": "1653c82ce75e",
     "audio/bgm-dr-wily-stage-1.mp3": "80f1ad0c564c",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
@@ -33272,6 +33274,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
     'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:desert_crown': [['excited', '1:07からいちばん強いの！ 最後までずっと全開なのー♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
     'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
@@ -33365,6 +33368,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
     'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:desert_crown': [['normal', '頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
     'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
@@ -33458,6 +33462,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:desert_crown': [['excited', '1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
     'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
@@ -33551,6 +33556,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:desert_crown': [['happy', 'BPM100でじっくり進む旅だな。2分半、砂漠を越えるぞ']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
@@ -33644,6 +33650,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
     'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:desert_crown': [['happy', '2:02からもう一回いちばん強くなって、そのまま締めるのいいね']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
     'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
@@ -33737,6 +33744,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
     'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:desert_crown': [['happy', '静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
@@ -33830,6 +33838,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:desert_crown': [['normal', 'BPM100です。強く打つ音が40%・・・！ どっしりした音です']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
     'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
@@ -33923,6 +33932,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
     'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:desert_crown': [['normal', '始まりの静かなところ、落ち着いて入っていけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
     'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
@@ -38208,7 +38218,7 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500, sparkling_pink_overture: 500, seasons_of_a_little_plaza: 500, eiyuu_no_akashi: 500, gourmet_race_64: 500, dr_wily_stage_1: 500, erfolg: 500, amakakeru_tsubasa: 500, beyond_the_same_sky: 500, desert_crown: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
 // 2026-11-19 英雄の証も同じ形にそろえた(ミラクル☆ミルクティ版 → 戦闘版。交換所で2枚に分かれて出ていたのを1枚・500Pで両版に)

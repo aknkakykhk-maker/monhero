@@ -146,6 +146,7 @@ const Audio_ = (() => {
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
+    "audio/bgm-desert-crown.mp3": "1a440c813bbb",
     "audio/bgm-dr-wily-stage-1-okkussenman.mp3": "1653c82ce75e",
     "audio/bgm-dr-wily-stage-1.mp3": "80f1ad0c564c",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",

@@ -492,7 +492,13 @@
   "beyond_the_same_sky/hell": "b08b806bee480ea4",
   "beyond_the_same_sky_short/hell": "04c2351152a32ab5",
   "megalovania_sans/hell": "b54acba215aae1da",
-  "megalovania_smash/hell": "2ba3b2a5cd05b394"
+  "megalovania_smash/hell": "2ba3b2a5cd05b394",
+  "desert_crown/easy": "78ff62f3f59453f5",
+  "desert_crown/normal": "8900d3fe0631d6e5",
+  "desert_crown/hard": "c751db1e76ca1edd",
+  "desert_crown/expert": "a17456272bd683d3",
+  "desert_crown/master": "ef80bc9a8a523fb5",
+  "desert_crown/hell": "145f323554154f66"
  },
  "history": [
   {
@@ -1066,6 +1072,18 @@
     "beyond_the_same_sky_short/master",
     "beyond_the_same_sky/hell",
     "beyond_the_same_sky_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 02:09",
+   "reason": "新曲 Desert Crown を公開",
+   "changed": [
+    "desert_crown/easy",
+    "desert_crown/normal",
+    "desert_crown/hard",
+    "desert_crown/expert",
+    "desert_crown/master",
+    "desert_crown/hell"
    ]
   }
  ]

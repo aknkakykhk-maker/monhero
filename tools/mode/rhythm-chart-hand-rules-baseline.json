@@ -3227,6 +3227,41 @@
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
+  },
+  "desert_crown/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
   }
  },
  "history": [
@@ -3369,6 +3404,11 @@
    "at": "2026-11-21T16:13",
    "reason": "新曲 Beyond the Same Sky(原曲・short ver.)を公開",
    "changed": 10
+  },
+  {
+   "at": "2026-11-21T16:57",
+   "reason": "新曲 Desert Crown を公開",
+   "changed": 5
   }
  ]
 }

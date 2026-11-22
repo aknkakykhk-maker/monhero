@@ -127,6 +127,7 @@ const BGM_TRACKS = [
   { id:'melo_amakakeru_tsubasa', name:'天翔る翼', creator:'浜渦正志', src:'audio/bgm-amakakeru-tsubasa.mp3', gain:1, loop:true },
   { id:'melo_beyond_the_same_sky', name:'Beyond the Same Sky', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky.mp3', gain:1, loop:true },
   { id:'melo_beyond_the_same_sky_short', name:'Beyond the Same Sky short ver.', creator:'あつ × みゅあ', src:'audio/bgm-beyond-the-same-sky-short.mp3', gain:1, loop:true },
+  { id:'melo_desert_crown', name:'Desert Crown', creator:'えるびん', src:'audio/bgm-desert-crown.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },

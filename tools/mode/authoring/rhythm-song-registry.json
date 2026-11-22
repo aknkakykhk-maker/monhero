@@ -2015,6 +2015,27 @@
    "chartIntensityByDifficulty": {
     "HELL": "extreme"
    }
+  },
+  "desert_crown": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-desert-crown.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1a440c813bbb8adb634a3c645e562a3c02e57a97a83151cd4d59440dd233048d",
+   "durationMs": 153624,
+   "analyzedTiming": {
+    "bpm": 99.98,
+    "beatZeroMs": 2392,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "sustainScale": {
+    "MASTER": 0.7
+   },
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
   }
  }
 }
