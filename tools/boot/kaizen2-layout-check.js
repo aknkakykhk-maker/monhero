@@ -38,7 +38,8 @@ const pick = P('67-screen-pick.jsx');
 check('M3 アシストカードの継承・強化の題名と説明は言葉の切れ目で折る', pick.includes("{jaWrap('アシストカードの継承・強化')}") && pick.includes("{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}"));
 check('M3 カードの効果(3行まで)と、選んだカードの段の説明も言葉の切れ目で折る', pick.includes('...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}') && pick.includes('style={JA_WRAP_STYLE}>{jaWrap(info.desc)}'));
 const play = P('30-rhythm-play.jsx');
-check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.includes("{jaWrap('ホールド・スライドの刻みもコンボに数えます')}"));
+// 2026-11-23 API総点検② V22: 中央そろえの2行で頭がずれたので、「…刻みも/コンボに数えます」の2つのかたまりに分けた
+check('M3 結果の「刻み」の説明は言葉の切れ目で折る', play.includes('<span className="inline-block">ホールド・スライドの刻みも</span><span className="inline-block">コンボに数えます</span>'));
 check('M3 MAX COMBO は1行のまま(狭い画面は字の間を詰める)', /whitespace-nowrap text-\[10px\] font-black tracking-\[\.2em\] max-\[359px\]:tracking-\[\.06em\][^>]*>MAX COMBO</.test(play));
 
 const home = P('69-screen-home.jsx');

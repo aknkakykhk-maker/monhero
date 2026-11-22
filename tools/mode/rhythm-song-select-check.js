@@ -332,7 +332,7 @@ const serve=()=>new Promise(resolve=>{
       &&!/data-rhythm-song-row-title[^>]*className="block truncate/.test(gameSource));
     ok('自己ベストの数字は置ける幅から字の大きさを決める',
       // 2026-10-26: 遊んでいないときの「まだ遊んでいません」も字の大きさを決めるので、遊んだときだけの条件つきの形になった
-      /data-rhythm-demo-best[\s\S]{0,300}fontSize:(?:best&&best\.played\?)?`min\(22px, calc\(100cqw/.test(gameSource));
+      /data-rhythm-demo-best[\s\S]{0,400}(?:best&&best\.played\?\{)?fontSize:(?:best&&best\.played\?)?`min\(22px, calc\(100cqw/.test(gameSource));
 
     // ---- 並べ替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
     const rowIdsNow=()=>page.evaluate(()=>[...document.getElementById('song-select-probe')
