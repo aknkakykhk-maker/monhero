@@ -131,6 +131,7 @@ const BGM_TRACKS = [
   { id:'melo_zenbu_hissatsuwaza', name:'全部必殺技でつ( `･ω･)', creator:'オリジナル', src:'audio/bgm-zenbu-hissatsuwaza.mp3', gain:1, loop:true },
   { id:'melo_walkure', name:'ワルキューレ', creator:'ALHAMBRA', src:'audio/bgm-walkure.mp3', gain:1, loop:true },
   { id:'melo_walkure_short', name:'ワルキューレ short ver.', creator:'ALHAMBRA', src:'audio/bgm-walkure-short.mp3', gain:1, loop:true },
+  { id:'melo_kimimachi_loop', name:'きみ待ち♡ループ', creator:'オリジナル', src:'audio/bgm-kimimachi-loop.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },

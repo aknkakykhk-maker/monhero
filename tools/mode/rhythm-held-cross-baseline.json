@@ -175,7 +175,9 @@
   "walkure/MASTER": 1,
   "walkure/HELL": 10,
   "walkure_short/MASTER": 0,
-  "walkure_short/HELL": 1
+  "walkure_short/HELL": 1,
+  "kimimachi_loop/MASTER": 0,
+  "kimimachi_loop/HELL": 0
  },
  "history": [
   {
@@ -196,6 +198,11 @@
   {
    "at": "2026-11-22T11:33",
    "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 2
+  },
+  {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
    "changed": 2
   }
  ]
