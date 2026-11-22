@@ -34,18 +34,18 @@ const SONGS={
 //   beatEvery 反対の手が伴奏を取る間隔(グリッド)
 //   holdMin   伸ばしを帯にする長さ(ms)
 const DIFFS={
-  HELL:{gapMs:160,snap:1,vocalMin:0.10,beatEvery:4,beatHot:4,hot:0.5,holdMin:280,bandMin:250,runMax:4,skyMin:0.45,skyHot:0.55,sky:true,borrow:true},
-  MASTER:{gapMs:245,snap:2,vocalMin:0.16,beatEvery:8,beatHot:4,hot:0.5,holdMin:360,bandMin:250,runMax:4,sky:false,borrow:true},
+  HELL:{fun:true,funMult:1.8,skyChainEvery:3,fill:{def:2},fillMin:0.15,gapMs:160,snap:1,vocalMin:0.10,beatEvery:4,beatHot:4,hot:0.5,holdMin:280,bandMin:250,runMax:4,skyMin:0.45,skyHot:0.55,sky:true,borrow:true},
+  MASTER:{fun:true,fill:{def:2,A:4,B:4,O:4},fillMin:0.2,funMult:0.6,holdScale:1.5,chainScale:1.45,gapMs:245,snap:2,vocalMin:0.16,beatEvery:8,beatHot:4,hot:0.5,holdMin:360,bandMin:250,runMax:4,sky:false,borrow:true},
 };
 // 曲ごとの上書き(Lv. を今の本番に近づけるための密度の調整)
 const TUNE={
   beyond_the_same_sky:{
     HELL:{hot:0.75,vocalMin:0.25,skyMin:0.15,skyHot:0.3},
-    MASTER:{hot:0.3,snapHot:1,vocalMin:0.1,gapMs:200,gapHot:165,hotGap:0.75},
+    MASTER:{hot:0.3,snapHot:1,vocalMin:0.1,gapMs:165,gapHot:160,hotGap:0.75,holdScale:2.2},// 2026-11-23 帯にしたぶんの密度を戻す(Lv. 36→37)
   },
   beyond_the_same_sky_short:{
     HELL:{hot:0.65,vocalMin:0.25,skyMin:0.55,skyHot:0.6,holdMin:240},
-    MASTER:{hot:0.35,snapHot:1,vocalMin:0.1,gapMs:190,holdMin:280,lineEnd:0.5},
+    MASTER:{hot:0.35,snapHot:1,vocalMin:0.1,gapMs:200,gapHot:140,hotGap:0.6,holdMin:280,lineEnd:0.5},// 2026-11-23 同上(Lv. 33→34)
   },
 };
 const VOICE={'女声':'R','男声':'L','女声(男声の低い重ね)':'R+','2人':'B','間奏':'I'};
@@ -69,6 +69,105 @@ const calibrate=(audio,vocal)=>{
   let best={shift:0,hit:-1};
   for(let s=-120;s<=120;s+=2){let hit=0;for(const t of vocal.mixOnsetsMs)if(near(t+s)<=16)hit++;if(hit>best.hit)best={shift:s,hit};}
   return best;
+};
+
+// ── 展開ごとの手触り(2026-11-23・台帳 r1119-116「同じようなノーツが同じように流れてくるだけ」「スライドやホールドもほとんどなし」) ──
+//   区間の役(秒の区切り): A=Aメロ(歌う手の階段+伸ばしのホールド) / B=掛け合い(1行ずつ左右の受け渡し・行末のフリック) /
+//   C=サビ(メロに沿う長いスライド・小節の頭の両手) / D=2人・ハモりの見せ場(両手のスライド・左右対称の帯・締めの両手フリック) /
+//   O=落ちサビ・静かな所(長いホールドとゆっくりのスライド) / I=間奏(伴奏の交互)
+//   どの形も歌っている手の側の半分の中だけで作る(反対の手の半分へ出ない → 押さえ中の交差が出ない)
+const FUN={
+  beyond_the_same_sky:[[3.4,'A'],[35.8,'B'],[51.9,'C'],[73.5,'D'],[89.7,'I'],[92.4,'A'],[113.9,'B'],[131.0,'O'],[164.1,'D'],[168.2,'C'],[209.4,'D'],[228.6,'I'],[236.0,'O'],[245.8,'D']],
+  beyond_the_same_sky_short:[[3.4,'A'],[35.8,'B'],[51.9,'C'],[73.5,'D'],[89.7,'I'],[92.4,'A'],[107.8,'D'],[108.5,'C'],[134.0,'I'],[135.5,'O'],[142.2,'D']],
+};
+// 役ごとの作り方(MASTER・HELL 共通。HELL は数を増やす)
+//   chain  なめらかなスライドにする言葉の続き [つなぐ最大の間(拍), 最少の数, 最多の数, 何本に1本スライドにするか(1=全部)]
+//   hold   次の同じ手まで何拍空けばホールドにするか / maxHold ホールドの最長(拍) / sw スライドの幅
+const ROLE={
+  A:{chain:[0.75,3,5,1],hold:1.5,maxHold:1.5,sw:2},
+  B:{chain:[0.6,3,4,2],hold:1.75,maxHold:1.0,sw:2},
+  C:{chain:[0.75,3,6,1],hold:1.25,maxHold:2.0,sw:3},
+  D:{chain:[1.0,3,6,1],hold:1.25,maxHold:2.0,sw:3},
+  O:{chain:[1.1,2,5,1],hold:1.0,maxHold:3.0,sw:3},
+  I:{chain:null,hold:null,sw:2},
+};
+const roleOf=songId=>{const r=FUN[songId];return t=>{let k='I';for(const [st,role] of r)if(t>=st*1000-60)k=role;return k;};};
+const funPass=(notes,{D,BEAT,GRID,gOf,tOf,roleAt,bump,secOf,onsets,skyZone})=>{
+  const half=(h,w,s)=>h==='R'?Math.max(6,Math.min(12-w,s)):Math.max(0,Math.min(6-w,s));
+  const byHand=h=>notes.filter(n=>n.hand===h).sort((a,b)=>a.timeMs-b.timeMs);
+  const isCand=n=>n.type==='TAP'&&n.vk==='v'&&!n.monsterSlot&&!n.dead;
+  const drop=new Set();const mult=D.funMult||1;let chainNo={};
+  // HELL の空中フレーズの近く(同じ手の1.5拍以内に空中)には地上の帯を作らない(段変えの仕上げで空中が地上へ戻されてしまう)
+  //   空中にしてよい所(サビ・盛り上がり)の言葉は、段変えの仕上げが空中のフレーズへそろえるので、HELL では地上の帯にしない
+  //   (2人・見せ場の区間は両手の帯が主役なので、空中のノーツの近くだけをよける)
+  const skyNear=(h,t0,t1)=>(roleAt(t0)!=='D'&&skyZone(t0))||D.sky&&notes.some(n=>n.hand===h&&!drop.has(n)&&(n.skyHeight||n.sky)&&(n.endTimeMs||n.timeMs)>=t0-BEAT*1.5&&n.timeMs<=t1+BEAT*1.5);
+  for(const h of ['L','R']){
+    const a=byHand(h);
+    // 1) メロディの上下に沿うスライド(2〜6音をつないだ1本)
+    for(let i=0;i<a.length;i++){
+      // 空中の言葉の並び(HELL のサビの空中フレーズ)は、skyChainEvery 本に1本だけ空中のスライドにする(ほかはタップのまま)
+      const n=a[i];if(!isCand(n)||(n.skyHeight&&!D.skyChainEvery))continue;const role=roleAt(n.timeMs),R=ROLE[role];if(!R.chain)continue;
+      const [stepB,minN,maxN,every]=R.chain;const ch=[n];
+      for(let j=i+1;j<a.length&&ch.length<maxN;j++){const m=a[j],pv=ch[ch.length-1];
+        if(!isCand(m)||roleAt(m.timeMs)!==role||!!m.skyHeight!==!!n.skyHeight)break;
+        if(m.timeMs-pv.timeMs>BEAT*stepB*(D.chainScale||1)+2||m.timeMs-pv.timeMs<GRID*0.9)break;ch.push(m);}
+      if(ch.length<minN||ch[ch.length-1].timeMs-n.timeMs<BEAT*0.9){continue;}
+      if(!n.skyHeight&&skyNear(h,n.timeMs,ch[ch.length-1].timeMs+BEAT))continue;
+      const semis=ch.map(x=>x.semi).filter(x=>x!=null);if(semis.length<ch.length-1)continue;
+      const ck=(n.skyHeight?'sky':'')+role,k=(chainNo[ck]=(chainNo[ck]||0)+1);if((k-1)%Math.max(1,Math.round(n.skyHeight?D.skyChainEvery:every/mult))!==0){i+=ch.length-1;continue;}
+      const w=R.sw,out=h==='R'?1:-1;const s0=half(h,w,n.subLane+(n.subLaneWidth-w)/2|0);
+      const base=ch[0].semi??semis[0];
+      const pts=ch.map(x=>[x.timeMs,half(h,w,s0+out*Math.max(-3,Math.min(3,Math.round(((x.semi??base)-base)/2))))]);
+      // 動かない並びは、外へ1つ払ってから戻す(止まったホールドにしない)
+      if(pts.every(p=>p[1]===pts[0][1])){for(let q=1;q<pts.length;q++)pts[q][1]=half(h,w,s0+out*(q%2));}
+      const last=ch[ch.length-1],nx=a[a.indexOf(last)+1];
+      // 空中のスライドのすぐ後(300ms 未満)に空中のノーツが来るなら作らない(通り道に空中のノーツ・r1022 の「指が同じ位置」)
+      if(n.skyHeight&&nx&&(nx.skyHeight||nx.sky)&&nx.timeMs-last.timeMs<300){i+=ch.length-1;continue;}
+      const lim=nx?nx.timeMs-Math.max(D.gapMs,BEAT*0.5,n.skyHeight?300:0):last.timeMs+BEAT;
+      let end=Math.min(last.timeMs+Math.max(last.vdur||0,GRID*2),lim);end=tOf(gOf(end));
+      if(end>last.timeMs+GRID*0.9)pts.push([end,pts[pts.length-1][1]]);else end=last.timeMs;
+      const sl={type:'SLIDE',timeMs:n.timeMs,endTimeMs:end,pts,subLane:pts[pts.length-1][1],subLaneWidth:w,sw:w,hand:h,vk:'v',
+        sky:D.sky?(n.skyHeight?1:0):undefined,fun:role};
+      for(const x of ch)drop.add(x);notes.push(sl);a.splice(i,ch.length,sl);bump(secOf(n.timeMs),'メロのスライド');
+    }
+    // 2) 次の言葉まで空く所は伸ばし(ホールド。声の高さが動けば2点のスライド)
+    for(let i=0;i<a.length;i++){
+      const n=a[i];if(!isCand(n)||n.skyHeight||drop.has(n))continue;const role=roleAt(n.timeMs),R=ROLE[role];if(!R.hold)continue;
+      const nx=a[i+1];const room=(nx?nx.timeMs:n.timeMs+BEAT*4)-n.timeMs;if(room<BEAT*R.hold/Math.sqrt(mult)*(D.holdScale||1))continue;
+      const want=Math.max(BEAT*0.75,Math.min(BEAT*R.maxHold,(n.vdur||0)*1.6));
+      let end=Math.min(n.timeMs+want,n.timeMs+room-Math.max(D.gapMs,BEAT*0.5));end=tOf(Math.floor(gOf(end)/2)*2);
+      if(end-n.timeMs<BEAT*0.5||skyNear(h,n.timeMs,end))continue;
+      const mv=(n.semi!=null&&n.semiEnd!=null)?Math.max(-2,Math.min(2,Math.round((n.semiEnd-n.semi)/2))):0;
+      if(mv!==0&&role!=='B'){const w=2,s0=half(h,w,n.subLane),se=half(h,w,s0+mv*(h==='R'?1:-1));
+        if(se!==s0){const sl={type:'SLIDE',timeMs:n.timeMs,endTimeMs:end,pts:[[n.timeMs,s0],[end,se]],subLane:se,subLaneWidth:w,sw:w,hand:h,vk:'v',sky:D.sky?0:undefined,fun:role};
+          drop.add(n);notes.push(sl);a[i]=sl;bump(secOf(n.timeMs),'伸ばしのスライド');continue;}}
+      n.type='HOLD';n.endTimeMs=end;bump(secOf(n.timeMs),'伸ばしのホールド');
+    }
+  }
+  for(let i=notes.length-1;i>=0;i--)if(drop.has(notes[i]))notes.splice(i,1);drop.clear();
+  // 3) 帯+刻み: 歌う手が帯を押さえている間、反対の手が自分の側で伴奏を刻む(8分。MASTER の A・B・O は4分)
+  if(D.fill){const on=new Map();for(const o of onsets){const g=gOf(o.timeMs);on.set(g,Math.max(on.get(g)||0,o.strength));}
+    const bands=notes.filter(n=>(n.type==='HOLD'||n.type==='SLIDE')&&n.endTimeMs-n.timeMs>=BEAT*0.9);
+    for(const b of bands){const h=b.hand,o=OTHER[h],role=roleAt(b.timeMs);if(role==='I')continue;
+      const every=(D.fill[role]||D.fill.def);if(!every)continue;
+      const mine=()=>notes.filter(n=>n.hand===o);
+      for(let g=gOf(b.timeMs)+every;tOf(g)<b.endTimeMs-GRID*0.5;g+=every){const t=tOf(g);
+        if(!(g%4===0||(on.get(g)||0)>=D.fillMin)||(D.sky&&notes.some(n=>n.hand===o&&(n.skyHeight||n.sky)&&Math.abs(n.timeMs-t)<BEAT*1.5)))continue;
+        const near=mine().some(n=>Math.abs(n.timeMs-t)<D.gapMs||(n.endTimeMs&&t>=n.timeMs-D.gapMs&&t<=n.endTimeMs+D.gapMs));if(near)continue;
+        const k=Math.round(g/every)%2;const sub=o==='L'?(k?1:2):(k?9:8);
+        notes.push({type:'TAP',timeMs:t,subLane:sub,subLaneWidth:2,hand:o,vk:'b',semi:null,vdur:0});bump(secOf(t),'帯+刻み');}}}
+  // 4) 2人・見せ場: 左右対称のホールド(同時に始まり同時に終わる対)を、左右へ開く・閉じる鏡写しのスライドにする(開く・閉じるを交互に)
+  {let k=0;const hs=notes.filter(n=>n.type==='HOLD'&&roleAt(n.timeMs)==='D'&&n.endTimeMs-n.timeMs>=BEAT*0.75);
+    for(const r of hs.filter(n=>n.hand==='R')){const l=hs.find(n=>n.hand==='L'&&n.timeMs===r.timeMs&&n.endTimeMs===r.endTimeMs);if(!l)continue;
+      const open=k++%2===0;const [r0,r1]=open?[6,8]:[8,6],[l0,l1]=open?[3,1]:[1,3];
+      for(const [n,a0,a1] of [[r,r0,r1],[l,l0,l1]]){Object.assign(n,{type:'SLIDE',pts:[[n.timeMs,a0],[n.endTimeMs,a1]],subLane:a1,subLaneWidth:3,sw:3,sky:D.sky?0:undefined,fun:'D'});}
+      bump(secOf(r.timeMs),open?'左右に開くスライド':'左右から閉じるスライド');}}
+  // 5) 2人・ハモりの区間の締め: 最後の言葉を両手の外向きフリックに(左右とも空いているときだけ)
+  const ends=new Map();for(const n of notes){if(drop.has(n)||n.vk!=='v')continue;const p=secOf(n.timeMs);if(p&&roleAt(n.timeMs)==='D')ends.set(p,n.timeMs);}
+  for(const [p,t] of ends){const pair=notes.filter(n=>!drop.has(n)&&n.timeMs===t&&n.type==='TAP'&&!n.monsterSlot);
+    if(pair.length===2&&pair[0].hand!==pair[1].hand){for(const n of pair){n.type='FLICK';n.dir=n.hand==='R'?2:1;}bump(p,'締めの両手フリック');}}
+  for(let i=notes.length-1;i>=0;i--)if(drop.has(notes[i]))notes.splice(i,1);
+  notes.sort((a,b)=>a.timeMs-b.timeMs||(a.subLane-b.subLane));
 };
 
 const compose=(songId,diff)=>{
@@ -123,7 +222,8 @@ const compose=(songId,diff)=>{
   const step=(h,want)=>{const p=last[h].pos;if(p==null)return want;const d=Math.max(-2,Math.min(2,want-p));return p+d;};
   const clampHalf=(h,s)=>h==='R'?Math.max(6,Math.min(9,s)):Math.max(1,Math.min(4,s));
   const run={L:0,R:0};
-  const put=(h,n)=>{notes.push({...n,hand:h});run[h]=n.timeMs===last[OTHER[h]].t?run[h]:run[h]+1;run[OTHER[h]]=0;last[h].t=n.timeMs;last[h].end=Math.max(last[h].end,n.endTimeMs||n.timeMs);
+  let cur=null;// いま並べている言葉(声の高さ・長さを帯の作り直しで使う)
+  const put=(h,n)=>{notes.push({...n,hand:h,vk:cur?'v':'b',semi:cur?cur.semi:null,semiEnd:cur?cur.semiEnd:null,vdur:cur?cur.dur:0});run[h]=n.timeMs===last[OTHER[h]].t?run[h]:run[h]+1;run[OTHER[h]]=0;last[h].t=n.timeMs;last[h].end=Math.max(last[h].end,n.endTimeMs||n.timeMs);
     if(!n.skyHeight)last[h].ground=n.endTimeMs||n.timeMs;last[h].pos=n.subLane??last[h].pos;};
   const stats=new Map();const bump=(p,k)=>{if(!p)return;if(!stats.has(p))stats.set(p,{});const s=stats.get(p);s[k]=(s[k]||0)+1;};
 
@@ -139,7 +239,7 @@ const compose=(songId,diff)=>{
   const bandEnd=(v,limit)=>{let e=v.t+v.dur;e=Math.min(e,limit-D.gapMs);const g=Math.floor(gOf(e)/2)*2;return tOf(g);};
 
   for(const e of events){
-    const p=secOf(e.t);if(!p)continue;const mode=VOICE[p.voice]||'I';
+    const p=secOf(e.t);if(!p)continue;const mode=VOICE[p.voice]||'I';cur=e.kind==='v'?e:null;
     if(e.kind==='b'){
       // 伴奏: 歌の無い所は左右交互・歌のある所は反対の手(2人の所は小節の頭だけ・空いている手)
       if(mode==='I'){const k=Math.round(e.g/2);const h=k%2?'R':'L';if(!free(h,e.t))continue;
@@ -207,6 +307,7 @@ const compose=(songId,diff)=>{
       const s=other==='L'?4:6;put(other,{type:'TAP',timeMs:v.t,subLane:s,subLaneWidth:2});bump(p,'受け渡し');}
   }
   notes.sort((a,b)=>a.timeMs-b.timeMs||(a.subLane-b.subLane));
+  if(D.fun&&FUN[songId])funPass(notes,{D,BEAT,GRID,gOf,tOf,secOf,roleAt:roleOf(songId),stats,bump,diff,onsets:audio.onsets,skyZone:t=>!!D.sky&&(isChorus(secOf(t))||intensityAt(t)>=D.skyHot)});
   // 段変え(r1119-090): 同じ手が1.5拍未満で地上⇔空中を持ち替えない。サビ・盛り上がりではタップを空中へそろえてフレーズにし、
   //   それ以外は空中のタップを地上へ戻す。帯は動かさない(前の空中タップを地上へ戻す)
   if(D.sky){const WIN=BEAT*1.5-2,lvS=n=>n.type==='SLIDE'?(n.sky?1:0):(n.skyHeight?1:0),lvE=lvS;
@@ -243,9 +344,12 @@ const compose=(songId,diff)=>{
 
 // ── ランタイムの形へ(検査に通すため) ──
 const laneOfSub=(s,w)=>(s+w/2-1)/2;
+// スライドの点のレーン。幅3は0.5刻みにそろえ(押し始めを受け付けるのは0.5刻みだけ・rhythm-slide-start-lane-check)、手の半分の中に収める
+const slideLane=(n,s)=>{const w=n.sw||2;if(w!==3)return laneOfSub(s,w);const v=laneOfSub(s,w);
+  return n.hand==='R'?Math.max(3.5,Math.min(4.5,Math.ceil(v*2)/2)):Math.max(0.5,Math.min(1.5,Math.floor(v*2)/2));};
 const toRuntime=(n)=>{
-  if(n.type==='SLIDE'){const pts=n.pts.map(([t,s])=>({timeMs:t,lane:laneOfSub(s,2),subLaneWidth:2,...(n.sky!=null?{sky:n.sky}:{})}));
-    return {type:'SLIDE',timeMs:n.timeMs,endTimeMs:n.endTimeMs,lane:pts[0].lane,endLane:pts[pts.length-1].lane,subLaneWidth:2,slidePoints:pts,...(n.sky!=null?{hand:n.hand}:{})};}
+  if(n.type==='SLIDE'){const w=n.sw||2;const pts=n.pts.map(([t,s])=>({timeMs:t,lane:slideLane(n,s),subLaneWidth:w,...(n.sky!=null?{sky:n.sky}:{})}));
+    return {type:'SLIDE',timeMs:n.timeMs,endTimeMs:n.endTimeMs,lane:pts[0].lane,endLane:pts[pts.length-1].lane,subLaneWidth:w,slidePoints:pts,...(n.sky!=null?{hand:n.hand}:{})};}
   const base={type:n.type,timeMs:n.timeMs,lane:Math.floor(n.subLane/2),subLane:n.subLane,subLaneWidth:n.subLaneWidth};
   if(n.type==='HOLD')base.endTimeMs=n.endTimeMs;
   if(n.monsterSlot)base.monsterSlot=n.monsterSlot;
@@ -260,8 +364,9 @@ const callOf=(n,diff)=>{
   if(n.type==='FLICK')return n.skyHeight?`F(${n.timeMs},${n.subLane},${n.subLaneWidth},${n.dir||0},1)`:`f(${n.timeMs},${n.subLane},${n.subLaneWidth},${n.dir||0})`;
   if(n.type==='HOLD')return `h(${n.timeMs},${n.subLane},${n.subLaneWidth},${n.endTimeMs})`;
   const fmt=x=>String(Math.round(x*1000)/1000);
-  if(hell)return `S(${n.timeMs},${n.endTimeMs},[${n.pts.map(([t,s],i)=>`[${t},${fmt(laneOfSub(s,2))},2,${n.sky||0},${i===0?3:0}]`).join(',')}],0,'${n.hand}')`;
-  return `s(${n.timeMs},${n.endTimeMs},[${n.pts.map(([t,s],i)=>`[${t},${fmt(laneOfSub(s,2))},2${i===0?',3':''}]`).join(',')}])`;
+  const w=n.sw||2;
+  if(hell)return `S(${n.timeMs},${n.endTimeMs},[${n.pts.map(([t,s],i)=>`[${t},${fmt(slideLane(n,s))},${w},${n.sky||0},${i===0?3:0}]`).join(',')}],0,'${n.hand}')`;
+  return `s(${n.timeMs},${n.endTimeMs},[${n.pts.map(([t,s],i)=>`[${t},${fmt(slideLane(n,s))},${w}${i===0?',3':''}]`).join(',')}])`;
 };
 const writeMarker=(songId,diff,notes)=>{
   const src=fs.readFileSync(MODE,'utf8');const m=`${SONGS[songId].marker}-${diff==='HELL'?'hell':diff.toLowerCase()}-notes`;
@@ -272,11 +377,13 @@ const writeMarker=(songId,diff,notes)=>{
 };
 
 const tableOf=(songId,diff,r)=>{
-  const rows=[`| 秒 | 声 | 手 | 置いた物 | 歌詞 |`,`| --- | --- | --- | --- | --- |`];
+  const RN={A:'Aメロ',B:'掛け合い',C:'サビ',D:'2人・見せ場',O:'落ちサビ',I:'間奏'};const role=FUN[songId]?roleOf(songId):null;
+  const rows=[`| 秒 | 声 | 役 | 手 | 形(タップ・ホールド・スライド・フリック・空中) | 置いた物 | 歌詞 |`,`| --- | --- | --- | --- | --- | --- | --- |`];
   const hand={'R':'右手が歌・左手は伴奏','L':'左手が歌・右手は伴奏','R+':'右手が主旋律・左手が低い重ね','B':'両手','I':'左右交互(伴奏)'};
   for(const p of r.parts){const s=r.stats.get(p)||{};const m=VOICE[p.voice]||'I';
-    const ns=r.notes.filter(n=>n.timeMs>=p.start*1000-r.BEAT*0.4&&n.timeMs<p.end*1000-r.BEAT*0.4).length;
-    rows.push(`| ${p.start.toFixed(1)}–${p.end.toFixed(1)} | ${p.voice} | ${hand[m]} | ${ns}個(${Object.entries(s).map(([k,v])=>`${k}${v}`).join('・')}) | ${p.lyrics} |`);}
+    const inS=r.notes.filter(n=>n.timeMs>=p.start*1000-r.BEAT*0.4&&n.timeMs<p.end*1000-r.BEAT*0.4),ns=inS.length;
+    const c=k=>inS.filter(n=>n.type===k).length,sky=inS.filter(n=>n.skyHeight||n.sky).length;
+    rows.push(`| ${p.start.toFixed(1)}–${p.end.toFixed(1)} | ${p.voice} | ${role?RN[role(p.start*1000+100)]:''} | ${hand[m]} | ${c('TAP')}・${c('HOLD')}・${c('SLIDE')}・${c('FLICK')}・${sky} | ${ns}個(${Object.entries(s).map(([k,v])=>`${k}${v}`).join('・')}) | ${p.lyrics} |`);}
   return rows.join('\n');
 };
 
