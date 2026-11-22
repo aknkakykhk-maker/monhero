@@ -1017,7 +1017,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -1376,6 +1376,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 段10: 新UIの友情のタブを型に載せる(56-assistant-life-house-typed.jsx の AssistantLifeFriendsTyped・社長 r1119-099 案A)。検査だけ window.__mhAssistantLifeUntypedFriends で前の友情を開く
   const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
+  // 段11: 新UIのフレンドのタブを型に載せる(56-assistant-life-friend.jsx の AssistantLifeVisitTyped・2026-11-22 案A)。検査だけ window.__mhAssistantLifeUntypedVisit で前のページを開く
+  // 段12: 下のタブ5つ目「🐾 マスモン」(56-assistant-life-house-typed.jsx の AssistantLifeMasmonTyped・2026-11-22 案A)。前の画面は無い
+  const typedMasmon = uiV2 && tab === 'masmon' && typeof AssistantLifeMasmonTyped === 'function' && typeof AluFrame === 'function';
+  const typedVisit = uiV2 && tab === 'visit' && typeof AssistantLifeVisitTyped === 'function' && typeof AluFrame === 'function'
+    && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedVisit);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
   // 掛け合いを、家を閉じずに場面で流す
   const showFollow = () => {
@@ -1657,7 +1662,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
       {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
-      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit || typedMasmon ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
@@ -1675,6 +1680,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
               <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
             </>}/>
+        ) : typedMasmon ? (
+          <AssistantLifeMasmonTyped ids={ids.filter(id => metSet.has(id))} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            bondLvOf={(id) => (typeof bondLevelOf === 'function' ? bondLevelOf(id) : null)} onSheet={(id) => setMasmonId(id)}/>
+        ) : typedVisit ? (
+          <AssistantLifeVisitTyped life={life} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}/>
         ) : typedFriends ? (
           <AssistantLifeFriendsTyped life={life} ids={ids.filter(partnerOk)} metIds={metIds} peerSt={peerSt} nameOf={nameOf}
             tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}

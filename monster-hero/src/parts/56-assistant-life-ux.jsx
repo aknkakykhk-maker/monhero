@@ -224,7 +224,10 @@ function assistantLifeUiV2Tabs() {
   // 📖 紹介(助手紹介・56-assistant-life-profile.jsx)は公開の印 assistantLifeProfile が真のときだけ。きずなの次(2026-11-11 社長 Q6 A)
   const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
   // 並びは型の下のタブ(ASSISTANT_LIFE_UI.md)と同じ: 家・町・友情・フレンド・5つ目(段12 までは 📖 紹介・r1119-075 ①)
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', '友情'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏠', 'フレンド']] : []), ...profile];
+  // 段12(2026-11-22 社長 案A): 5つ目を「🐾 マスモン」に替える。紹介はマスモンの画面の「📖 ◯◯のこと」(その助手の紹介の窓)から開く
+  //   検査だけ window.__mhAssistantLifeProfileTab で前の「📖 紹介」のタブを出す(life-profile-browser-check が紹介の一覧を開くため・段13で片づけ)
+  const masmon = typeof AssistantLifeMasmonTyped === 'function' && typeof assistantMasmonPlanOf === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeProfileTab) ? [['masmon', '🐾', 'マスモン']] : null;
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', '友情'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏠', 'フレンド']] : []), ...(masmon || profile)];
 }
 
 // 引き合わせる(「きずな」の上)。2人を選ぶと、次の時間に一緒に過ごしやすくなる。決まりは今までと同じ(assistantLifeNudge('introduce'))

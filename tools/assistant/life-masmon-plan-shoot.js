@@ -77,7 +77,7 @@ const route = (posted) => async (r) => {
     const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
     const back = scope && [...scope.querySelectorAll('button')].find(b => /戻る/.test(b.textContent || ''));
     if (back) { const r = back.getBoundingClientRect(); out.back = Math.round(r.top); if (r.top < n.top - 1) out.ng.push(`「戻る」が上${n.top}pxの切り欠きの中(上${Math.round(r.top)})`); if (r.left < n.left - 1) out.ng.push('「戻る」が左の切り欠きの中'); }
-    const tabs = scope && scope.querySelector('.alu-tabs'); if (tabs) { const r = tabs.getBoundingClientRect(); out.tabsBottom = Math.round(r.bottom); if (r.bottom > H - n.bottom + 1) out.ng.push(`下のタブが下${n.bottom}pxの切り欠きに入る(${Math.round(r.bottom)})`); }
+    const tabs = scope && scope.querySelector('.alu-tabs'); if (tabs) { const bs = [...tabs.querySelectorAll('button')].map(x => x.getBoundingClientRect()); const r = bs.length ? bs.reduce((m, q) => (q.bottom > m.bottom ? q : m)) : tabs.getBoundingClientRect(); /* 帯の地は切り欠きまで伸ばす作り。押せるボタンの下端を見る */ out.tabsBottom = Math.round(r.bottom); if (r.bottom > H - n.bottom + 1) out.ng.push(`下のタブが下${n.bottom}pxの切り欠きに入る(${Math.round(r.bottom)})`); }
     const go = scope && scope.querySelector('.alu-go'); if (go) { const r = go.getBoundingClientRect(); out.go = `${Math.round(r.width)}×${Math.round(r.height)} 上${Math.round(r.top)}`; if (r.width < 120 || r.height < 44) out.ng.push('主なボタンが 120×44 より小さい'); if (tabs && r.bottom > tabs.getBoundingClientRect().top + 1) out.ng.push('主なボタンが最初の画面に入らない'); }
     for (const el of (scope ? scope.querySelectorAll('.alu-nw,.whitespace-nowrap') : [])) { if (!el.offsetParent) continue; const rs = [...el.getClientRects()].filter(q => q.width > 0); if (new Set(rs.map(q => Math.round(q.top / 4))).size > 1) out.ng.push(`折れる: ${(el.textContent || '').trim().slice(0, 16)}`); }
     if (out.sizes.some(x => x < 11)) out.ng.push(`11px 未満の字 ${out.sizes.filter(x => x < 11).join('/')}`);
@@ -90,6 +90,7 @@ const route = (posted) => async (r) => {
     const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(15, 0, 0, 0);
     await page.clock.setFixedTime(new Date(jst.getTime() - 9 * 3600000));
     page.on('pageerror', e => errs.push(`${v.id}: ${String(e.message || e).slice(0, 160)}`));
+    page.on('console', m => { if (m.type() === 'error' && /Error|undefined|null/.test(m.text())) errs.push(`${v.id}: console ${m.text().slice(0, 200)}`); });
     await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false });
@@ -120,6 +121,34 @@ const route = (posted) => async (r) => {
         await page.evaluate(() => { const els = [...document.querySelectorAll('[data-assistant-life-screen] *')].filter(e => e.scrollHeight > e.clientHeight + 40 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)); const el = els.sort((a, b) => b.scrollHeight - a.scrollHeight)[0]; if (el) el.scrollTop = Math.round(el.clientHeight * 0.9); });
         await page.waitForTimeout(400);
         await page.screenshot({ path: path.join(OUT, 'before-tate-2.png') });
+      }
+      if (AFTER && !v.land) {
+        // 押したときの動き: 主なボタン(見る/応援)・育成ノート・紹介
+        for (const [sel, name, want, close] of [['[data-assistant-life-masmon-go]', 'go', '[data-assistant-masmon-sheet], [data-assistant-life-masmon-result]', '[data-assistant-masmon-close], [data-alu-sheet-close]'],
+          ['[data-assistant-life-masmon-open="note"]', 'note', '[data-amgp-note]', 'button:has-text("✕"):visible'],
+          ['[data-assistant-life-masmon-open="profile"]', 'profile', '[data-assistant-life-profile-close]', '[data-assistant-life-profile-close]']]) {
+          const b = page.locator(sel).first();
+          if (!(await b.count())) { errs.push(`押す物が無い: ${name}`); continue; }
+          await b.click({ timeout: 4000 }); await page.waitForTimeout(1200);
+          const ok = await page.locator(want).first().isVisible().catch(() => false);
+          await page.screenshot({ path: path.join(OUT, `after-${name}.png`) });
+          console.log(`押す ${name}: ${ok ? '開いた' : 'NG 開かない'}`); if (!ok) errs.push(`${name} が開かない`);
+          if (close) { const x = page.locator(close).last(); if (await x.count()) await x.click({ timeout: 2000 }).catch(e => console.log(`閉じられない ${name}: ${String(e.message).split('\n')[0].slice(0, 90)}`)); else console.log(`閉じる物が無い ${name}`); await page.waitForTimeout(500); }
+        }
+        // 応援: いま選んでいる助手をモンヒロバトルにいる状態にして「📣 応援する」→ 結果の1枚
+        const aid = await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-masmon-pick][aria-pressed="true"]'); const id = b && b.getAttribute('data-assistant-life-masmon-pick');
+          const l = ASSISTANT_LIFE_STORE.state.life; const solo = { ...(l.solo || {}) }; solo[id] = { doing: 'battle', place: AMGT_PLACE };
+          const groups = (l.groups || []).map(g => ({ ...g, ids: g.ids.filter(x => x !== id) })).filter(g => g.ids.length > 1);
+          ASSISTANT_LIFE_STORE.set({ life: { ...l, solo, groups } }); return id; });
+        await page.waitForTimeout(800);
+        const lbl = await page.locator('[data-assistant-life-masmon-go]').innerText().catch(() => '');
+        await page.screenshot({ path: path.join(OUT, 'after-cheer-btn.png') });
+        if (/応援する/.test(lbl)) {
+          await page.locator('[data-assistant-life-masmon-go]').click(); await page.waitForTimeout(800);
+          const ok = await page.locator('[data-assistant-life-masmon-result] [data-alu-sheet], [data-assistant-life-masmon-result] .alu-sheet, [data-assistant-life-masmon-result] button').first().isVisible().catch(() => false);
+          await page.screenshot({ path: path.join(OUT, 'after-cheer.png') });
+          console.log(`応援(${aid}): ${ok ? '結果の1枚が出た' : 'NG 結果が出ない'}`); if (!ok) errs.push('応援の結果が出ない');
+        } else { console.log(`応援(${aid}): NG 主なボタンが応援にならない「${lbl.replace(/\n/g, ' ')}」`); errs.push('応援にならない'); }
       }
     } catch (e) { errs.push(`${v.id}: ${String(e.message || e).split('\n')[0].slice(0, 160)}`); }
     await ctx.close();
