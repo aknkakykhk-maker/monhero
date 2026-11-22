@@ -11,7 +11,7 @@ OK tate: 自己ベスト・ビートP・ミッション等の保存値が変わ�
 OK tate: JSのエラーなし
 OK yoko: 詳細の窓に鑑賞の欄が出る
 OK yoko: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
-OK yoko: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK yoko: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":60,"MISS":2})
 OK yoko: +10秒で進む(30秒 → 46秒・6秒待ち)
 OK yoko: +10秒のあとも MISS なし({"(判定なし)":81,"MARVELOUS":5})
 OK yoko: -10秒で戻る(41秒)

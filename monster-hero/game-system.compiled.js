@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fcca4d20f01c6c36
+// source-sha256: 01ddb4a3bf501214
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42565,7 +42565,7 @@ const RhythmListenBar = ({
     type: "button",
     "data-rhythm-listen-close": true,
     onClick: onClose,
-    "aria-label": "鑑賞をやめて曲えらびへ戻る",
+    "aria-label": "鑑賞をやめて曲選びへ戻る",
     className: "flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white"
   }, "✕")), isLandscape ? React.createElement("div", {
     "data-rhythm-listen-bar": true,

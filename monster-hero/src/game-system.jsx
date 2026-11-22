@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14a34428144b1c23
+// generated-sha256: 752199bfa9e23a99
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -26243,7 +26243,7 @@ const RhythmListenBar=({runRef,song,difficulty,onSeek,onPause,onClose,isLandscap
     <style>{RHYTHM_LISTEN_HIDE_CSS}</style>
     <div data-rhythm-listen-top className="pointer-events-auto absolute z-[35] flex items-center gap-1.5" style={{top:'calc(var(--mh-safe-top,0px) + 8px)',right:'calc(var(--mh-safe-right,0px) + 10px)'}}>
       <span className="max-w-[220px] truncate rounded-full border border-teal-700 bg-slate-900/85 px-2.5 py-1 text-[11px] font-black text-teal-200">🎧 鑑賞中・{difficulty&&difficulty.id}</span>
-      <button type="button" data-rhythm-listen-close onClick={onClose} aria-label="鑑賞をやめて曲えらびへ戻る" className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white">✕</button>
+      <button type="button" data-rhythm-listen-close onClick={onClose} aria-label="鑑賞をやめて曲選びへ戻る" className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-500 bg-slate-900/85 text-base font-black text-white">✕</button>
     </div>
     {/* 横はレーンの下に判定ラインがあり、下の帯だと重なるので、右の空き(レーンの外)へ縦に並べる */}
     {isLandscape?<div data-rhythm-listen-bar data-layout="side" className="pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5" style={{right:'calc(var(--mh-safe-right,0px) + 8px)',top:'50%',transform:'translateY(-62%)'}}>
