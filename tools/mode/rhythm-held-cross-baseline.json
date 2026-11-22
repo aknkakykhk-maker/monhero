@@ -173,7 +173,9 @@
   "walkure/MASTER": 1,
   "walkure/HELL": 10,
   "walkure_short/MASTER": 0,
-  "walkure_short/HELL": 1
+  "walkure_short/HELL": 1,
+  "kimimachi_loop/MASTER": 0,
+  "kimimachi_loop/HELL": 0
  },
  "history": [
   {
@@ -190,6 +192,11 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 4
+  },
+  {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
+   "changed": 2
   }
  ]
 }

@@ -256,6 +256,7 @@ const RELEASED_MARKERS=Object.freeze({
   beyond_the_same_sky:'beyond-the-same-sky-v3',
   beyond_the_same_sky_short:'beyond-the-same-sky-short-v3',
   desert_crown:'desert-crown-v3',
+  kimimachi_loop:'kimimachi-loop-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -347,6 +348,7 @@ const RELEASED_TRACKS=Object.freeze({
   beyond_the_same_sky:'beyond_the_same_sky',
   beyond_the_same_sky_short:'beyond_the_same_sky_short',
   desert_crown:'desert_crown',
+  kimimachi_loop:'kimimachi_loop',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

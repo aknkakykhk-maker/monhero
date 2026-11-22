@@ -416,6 +416,11 @@
   "desert_crown/hard": "c751db1e76ca1edd",
   "desert_crown/expert": "a17456272bd683d3",
   "desert_crown/master": "ef80bc9a8a523fb5",
+  "kimimachi_loop/easy": "618f22d9de8ce9f9",
+  "kimimachi_loop/normal": "4e7604d5769eb347",
+  "kimimachi_loop/hard": "5f8316826b8fc0e6",
+  "kimimachi_loop/expert": "a590f649d59c759a",
+  "kimimachi_loop/master": "804001a10a1ec514",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -509,6 +514,7 @@
   "beyond_the_same_sky/hell": "3a4e1897374ef048",
   "beyond_the_same_sky_short/hell": "ddf78efbca21f9eb",
   "desert_crown/hell": "662c4a0b30060ef2",
+  "kimimachi_loop/hell": "c58629c2c246d6f1",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -1136,6 +1142,18 @@
     "beyond_the_same_sky/hell",
     "beyond_the_same_sky_short/hell",
     "desert_crown/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 20:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
+   "changed": [
+    "kimimachi_loop/easy",
+    "kimimachi_loop/normal",
+    "kimimachi_loop/hard",
+    "kimimachi_loop/expert",
+    "kimimachi_loop/master",
+    "kimimachi_loop/hell"
    ]
   }
  ]

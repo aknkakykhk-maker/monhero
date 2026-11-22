@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-22 20:42", type:'update', group:'rhythm', status:'new',
+    title:'新曲「きみ待ち♡ループ」を追加しました',
+    image:'images/song-art/kimimachi-loop.jpg?v=78bf05050de5',
+    items:[
+      'モンヒロビートに「きみ待ち♡ループ」を追加しました。ももすけの曲（2分42秒・BPM 167）です。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.26 ／ HELL Lv.37 です。',
+      'ノーツ数は 207 ／ 237 ／ 361 ／ 483 ／ 541 ／ 501 です。',
+      'この曲はビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_kimimachi_loop_v1', type:'content' },
+  },
+  {
     date: "2026-11-22 19:44", type:'update', title:'助手ライフの友情で、次に見る2人がすぐ分かるようになりました', status:'new', group:'assistant',
     items:[
       '「🤝 友情」のタブの一番上に関係図、その下に、一番友情Lvが上がりそうな2人がいる組を見るボタンが出るようになりました。',
