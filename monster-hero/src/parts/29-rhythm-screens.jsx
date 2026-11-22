@@ -917,6 +917,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
+  // 曲名の下の行に出す BPM(2026-11-22 r1119-094。横の「曲の情報」の帯から移した)。拍の目盛りが無い曲は出さない
+  const detailBpm=(()=>{const grid=song&&typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
+    return grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;})();
   const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
   // 行ごとに「どの難易度の話か」を1か所で決める。楽曲Lv.も、行の自己ベストのランクもこれを見る
@@ -1263,7 +1266,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail
-      className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2"
+      className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
       style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
@@ -1273,11 +1276,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               縦: ジャケット(左・2段ぶち抜き) | 曲名 / 自己ベスト → 難易度 → ランダム・決定 → アシスト・ミラー・ランキング
               横: ジャケット(左・2段ぶち抜き) | 自己ベスト / アシスト・ミラー・ランキング(小さな絵のボタン) → 曲名 → 難易度 → ランダム・決定
             横は高さが390pxしかないので、曲名を1行・ボタンを低めにして、スクロールせずに「決定」まで届くようにする */}
-        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]">
+        {/* 2026-11-22 r1119-094(社長「右側の決定の押しにくさとか空きスペースとか」・点検 N1〜N5・N14・N15):
+            横は欄の高さいっぱいに格子を伸ばし、「決定」の段を欄の下端に置く。余った高さはジャケットを大きくするのに使い、
+            それでも余るぶんは難易度と助手の一言の間に入れる(決定の下を空けない)。
+            欄の高さが540px以上(PC など)は、ジャケット・HIGH SCORE・切り替えを欄の幅いっぱいに縦へ積む。
+            ★高さは @media ではなく欄そのもの(container)で測る。🔄横(絵だけ回す)は端末が縦のままで、高さの @media が逆に効くため */}
+        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
-            return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
+            return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
               <RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/>
               {tier&&<span key={`${song.songId}:${difficulty.id}`} aria-label={tier.label}>
                 <i aria-hidden="true" data-rhythm-achieve-frame=""/>
@@ -1299,7 +1307,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
+            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -1368,38 +1376,26 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
               上下の余白は付けない(付けると欄が8px伸び、小さい横画面で下の助手の吹き出しがはみ出した・rhythm-song-notice-landscape-check) */}
-          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95" style={{gridArea:'act'}}>
-            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
-              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
+          {/* 横の助手の一言は「決定」のすぐ上(欄の下のほう)に置く。決定より下に置くと、決定が欄の下端から浮いていた(2026-11-22 r1119-094) */}
+          {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+          {/* 「決定」はいちばん強いボタンにする(高さ52px・幅は段の大半)。「ランダム」は細く・弱く(2026-11-22 r1119-094・点検 N2) */}
+          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95" style={{gridArea:'act'}}>
+            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom} aria-label="ランダムに選ぶ"
+              className="flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"><span aria-hidden="true" className="text-base leading-none">🎲</span>ランダム</button>}
             {lockedSong(song)
               ?<button type="button" data-rhythm-song-buy={song.songId} onClick={()=>{setBuyError('');setBuyAsk(song);}}
-                className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
+                className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
               :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>}
+              className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40">{playLabel}</button>}
             {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
             {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>
           {footer&&<div data-rhythm-song-footer className="min-w-0" style={{gridArea:'foot'}}>{typeof footer==='function'?footer(song,difficulty):footer}</div>}
         </div>
         </>}
-      {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
-      {/* ソロの曲えらび・横画面だけ、詳しい欄の下に残る空きへ「曲の情報」を出す
-          (2026-11-18・社長「モンビーのソロで縦横ボタンで横にした場合、右下の空きが気になる。何か有効活用できないかな？」)。
-          縦画面では出さない(landscape: でだけ出す。回して横にした場合も、ビルド時に回転用の規則へ
-          写されるので同じに出る)。マルチは detailInfoPanel を渡さないので、配置には一切触らない。
-          当初は難易度ごとの記録も並べていたが、選曲画面の既存の表示と重なるため廃止し、曲の情報だけにした
-          (2026-11-18・社長指示「難易度ごとの記録は上にもあるからいらない」) */}
-      {detailInfoPanel&&song&&difficulty&&chart&&(()=>{
-        const grid=typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
-        const bpm=grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;
-        const info=[bpm?`BPM ${bpm}`:'',rhythmSongLengthLabel(song,chart),
-          chart.totalNotes?`${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ`:''].filter(Boolean).join(' ・ ');
-        return <div data-rhythm-song-info-panel className="mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block">
-          {info&&<p data-rhythm-song-info-line className="whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200">{info}</p>}
-        </div>;
-      })()}
+      {/* 横の「曲の情報」の帯(2026-11-18)は、曲名の下の行(BPM・長さ・ノーツ数)と同じ中身の二重だったので外し、
+          曲名の下の行へ BPM をまとめた(2026-11-22 r1119-094・点検 N5)。空いた高さはジャケットと「決定」に回す */}
     </aside>
 
     {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}

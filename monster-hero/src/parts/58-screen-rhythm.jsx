@@ -443,7 +443,6 @@ function RhythmSongSelectScreen({
           onSongId={setRhythmSelectedSongId}
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
-          detailInfoPanel
           onPlay={onPlaySong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
@@ -475,10 +474,12 @@ function RhythmSongSelectScreen({
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
-                  className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
+                  className={`flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight [container-type:inline-size] ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+                  {/* 横でも何のボタンか分かるよう、名前を小さく添える(2026-11-22 r1119-094・点検 N10・V13。前は絵と OFF だけ) */}
+                  <span className="flex items-center gap-1"><span aria-hidden="true">{icon}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></span><span className="max-w-full truncate text-[9px] leading-none opacity-80 [@container(max-width:60px)]:hidden">{name==='ミラー譜面'?'ミラー':name}</span></button>;
               })}
               {!debugAll&&<button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
-                className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>}
+                className="flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="text-[9px] leading-none">順位</span></button>}
             </div>
             {rhythmSettings&&rhythmSettings.assistMode&&<p style={JA_WRAP_STYLE} data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">{jaWrap('アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。')}</p>}
           </>}/>
