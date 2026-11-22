@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "e2a24fff1c26",
-  "packs": {"beat":{"bytes":290857272,"count":158},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":731530227,"count":2764},"core":{"bytes":25375739,"count":25}},
+  "id": "78a796c09144",
+  "packs": {"beat":{"bytes":290857272,"count":158},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":731530227,"count":2764},"core":{"bytes":25375850,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -2769,7 +2769,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"afd612f2e13b","size":314362,"pack":"core"},
+    "tailwind.css": {"v":"b611492e98a2","size":314362,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2782,7 +2782,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"a010390f7b8c","size":108295,"pack":"core"},
-    "data/changelog.js": {"v":"f9ab7d6c3520","size":1986881,"pack":"core"},
+    "data/changelog.js": {"v":"57507155d90c","size":1986992,"pack":"core"},
     "data/help.js": {"v":"0d04d5089bec","size":906682,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},

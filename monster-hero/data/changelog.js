@@ -60,6 +60,19 @@ const CHANGELOG = [
   // 咲かせて！ハナウタ・ノートの予告(2026-11-22 社長「イベント予告を更新して」)。出しはじめる時刻(いま)を date・visibleFrom・notifyFrom にそろえる。
   //   開始(11/23 10:00)からは上の「開催中」の項目だけを札にする(pinUntil)。お話の中身は書かない。キービジュアルは作り直しが届いたら image へ
   {
+    date: "2026-11-22 21:42", type:'update', status:'new', group:'rhythm',
+    title:'新曲「BRAND NEW SKY」を追加しました',
+    image:'images/song-art/brand-new-sky.jpg?v=884148fad43e',
+    visibleFrom:'2026-11-23T10:00:00+09:00',
+    items:[
+      'モンヒロビートに「BRAND NEW SKY」を追加しました。みゅあの曲（2分30秒・BPM 146）です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.24 ／ MASTER Lv.35 ／ HELL Lv.44 です。',
+      'ノーツ数は 218 ／ 268 ／ 366 ／ 458 ／ 610 ／ 567 です。',
+      'イベント「咲かせて！ハナウタ・ノート」の間は無料で遊べます。イベントが終わったあとは、ビートP500で買って遊べます。',
+    ],
+    assistantNotice:{ id:'update_notice_brand_new_sky_v1', type:'content', notifyFrom:'2026-11-23T10:00:00+09:00' },
+  },
+  {
     date: "2026-11-22 20:34", type:'event', group:'rhythm', title:'【期間限定】咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～ を開催します', status:'new',
     visibleFrom:'2026-11-22T20:34:00+09:00',
     pinUntil:'2026-11-23T10:00:00+09:00',
@@ -110,18 +123,6 @@ const CHANGELOG = [
       '「🔄」で切り替えたあとの案内を、画面の上の端に細く出すようにしました。ボタンやメンバーの枠に重なりません。押すと閉じます。',
       'パソコンでは、モニターを回せないので「🔄」のボタンを出さないようにしました。',
     ],
-  },
-  {
-    date: "2026-11-22 20:32", type:'update', status:'new', group:'rhythm',
-    title:'新曲「BRAND NEW SKY」を追加しました',
-    image:'images/song-art/brand-new-sky.jpg?v=884148fad43e',
-    items:[
-      'モンヒロビートに「BRAND NEW SKY」を追加しました。みゅあの曲（2分30秒・BPM 146）です。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.24 ／ MASTER Lv.35 ／ HELL Lv.44 です。',
-      'ノーツ数は 218 ／ 268 ／ 366 ／ 458 ／ 610 ／ 567 です。',
-      '11月23日からのイベントの間は無料で遊べます。イベントが終わったあとは、ビートP500で買って遊べます。',
-    ],
-    assistantNotice:{ id:'update_notice_brand_new_sky_v1', type:'content' },
   },
   {
     date: "2026-11-22 19:44", type:'update', title:'助手ライフの友情で、次に見る2人がすぐ分かるようになりました', status:'new', group:'assistant',
