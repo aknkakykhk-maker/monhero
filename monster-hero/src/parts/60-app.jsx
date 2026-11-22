@@ -2401,7 +2401,8 @@ function MonsterHeroGame() {
       // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
       const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
       const fxGains = [
-        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: '上がったランク ×100' }] : []),
+        // 「上がったランク ×100」は、ランクの数×100なのか上がった段数×100なのか分からなかったので、例を添える(2026-11-23 API総点検② V26)
+        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計` }] : []),
         ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
         ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
         ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),
