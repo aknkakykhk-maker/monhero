@@ -57,12 +57,12 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
     const ready=await page.evaluate(()=>typeof RHYTHM_CANVAS_RENDERER==='object'&&typeof rhythmCreateGpuSlideBand==='function'&&typeof rhythmCreateGL2D==='function');
     check('帯を GPU に置く部品と canvas の描画部品が使える',ready);
     if(!ready)throw new Error('部品が無い');
-    await page.evaluate(extra=>{window.__EXTRA_SONGS=extra;},EXTRA);
+    await page.evaluate(([extra,only])=>{window.__EXTRA_SONGS=extra;window.__GPU_BAND_ONLY=only;},[EXTRA,process.env.GPU_BAND_ONLY||'']);
     // 譜面の一覧(曲・難易度)
     const charts=await page.evaluate(only=>{
       const list=[];
-      const add=(song,proto)=>{for(const [id,chart] of Object.entries(song.difficulties||{})){const notes=(chart&&chart.notes)||[];if(!notes.some(n=>rhythmNoteIsSlide(n)))continue;if(only&&song.songId!==only)continue;list.push({songId:song.songId,id,proto});}};
-      RHYTHM_SONGS.forEach(s=>add(s,false));(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[]).forEach(s=>add(s,true));(window.__EXTRA_SONGS||[]).forEach(s=>add(s,true));
+      let add=(song,proto)=>{for(const [id,chart] of Object.entries(song.difficulties||{})){const notes=(chart&&chart.notes)||[];if(!notes.some(n=>rhythmNoteIsSlide(n)))continue;if(only&&song.songId!==only)continue;list.push({songId:song.songId,id,proto});}};
+      /* GPU_BAND_ONLY=<songId の一部> で曲を絞る(原因を調べるとき) */const bandOnly=window.__GPU_BAND_ONLY||'';const add0=add;add=(s,p)=>{if(!bandOnly||String(s.songId).includes(bandOnly))add0(s,p);};RHYTHM_SONGS.forEach(s=>add(s,false));(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[]).forEach(s=>add(s,true));(window.__EXTRA_SONGS||[]).forEach(s=>add(s,true));
       return list;
     },ONLY);
     console.log(`      スライドのある譜面 ${charts.length}本`);

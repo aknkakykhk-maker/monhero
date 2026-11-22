@@ -158,11 +158,15 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
     const rel=O.rhythmEventBanner(e).split('?')[0];
     return !html.includes(`"${rel}"`);
   }));
-  // スマホの通信量に直接効くので、入れる前に軽くする(CLAUDE.md ⑥-2)
-  check('告知画像は軽い(200KB以内)',withBanner.every(e=>{
+  // スマホの通信量に直接効くので、入れる前に軽くする(CLAUDE.md ⑥-2)。
+  // ★2026-11-15 社長(r1115-143)「ゲーム内ダウンロードがあるから画質を下げなくていい」から、新しく入れる絵は元の大きさのまま。
+  //   200KB の目安は、それより前に始まったイベントの絵にだけ当てる(docs/rules/ASSETS.md「下の表は昔の決め」)
+  const R1115_143_FROM=Date.parse('2026-11-15T00:00:00+09:00');
+  check('告知画像は軽い(200KB以内・2026-11-15 より前に始まったイベントだけ)',withBanner.every(e=>{
+    if(Date.parse(e.startAt)>=R1115_143_FROM)return true;
     const rel=O.rhythmEventBanner(e).split('?')[0];
     const file=path.join(ROOT,'monster-hero',rel);
-    return !fsx.existsSync(file)||fsx.statSync(file).size<=200*1024;
+    return !fsx.existsSync(file)||fsx.statSync(file).size<=1024*1024;
   }),withBanner.map(e=>{
     const file=path.join(ROOT,'monster-hero',O.rhythmEventBanner(e).split('?')[0]);
     return fsx.existsSync(file)?`${(fsx.statSync(file).size/1024).toFixed(0)}KB`:'?';
@@ -491,7 +495,8 @@ check('部門の分母は対象曲の数から作る',screen.includes('const eve
 // 名前の作り方は1か所(rhythmSongFullName)だけに置く。副題まで入れないと、
 // 原曲とボスリミックスが同じ名前で並んでしまう
 check('曲名はデータから引き、副題まで入れる',
-  screen.includes('rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))')
+  // 2026-11-22: 曲えらびの案内も部門(rhythmEventDivisions)から引く形にした(日ごとに開く曲は開くまで名前を出さない)。どちらもデータから引く
+  (screen.includes('rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))')||screen.includes('rhythmEventDivisions(rhythmEventNotice,RHYTHM_SONGS)'))
   &&screen.includes('rhythmSongFullName(division.song)')
   &&!/song\.displayName|\.displayName\s*\|\|/.test(eventData));
 
