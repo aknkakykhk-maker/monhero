@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 84c24bb88b9ae5a5
+// generated-sha256: 964bea8402c939fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86594,6 +86594,8 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
   const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
   const shown = b >= 5 ? s.stats : (ups ? { ...s.stats, [e.d.stat]: s.stats[e.d.stat] - e.d.up } : s.stats);
   const palOn = b >= 3; const pair = b >= 3;
+  // ピーク中はモンスターの後ろに炎が出る。状態だと分かるよう、名札の下に「ピーク中」の札を付ける(育-207)
+  const peakOn = !!(msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && run.s && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in');
   const nx = msxTevNextText(run, o);
   const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
@@ -86606,6 +86608,7 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className={`tev-who me${pair ? ' pair' : ''}`}><div className="gr"/><MsxMonArt run={run} className="tev-art" style={{}} live/>{surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? <span className="tev-bang" aria-hidden="true">!!</span> : null}{b === 2 && surprise ? <span className="tev-q" aria-hidden="true">?</span> : null}</div>
       {m ? <div className={`tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`}><div className="gr"/><div className="tev-art">{palImg}</div></div> : null}
+      {peakOn && b >= 2 && b !== 6 ? <span className={`tev-pk${pair ? ' pair' : ''}`} data-msx-tev-peak>🔥 ピーク中</span> : null}
       {pair && b !== 6 ? <><span className="tev-nm me">{run.nick || ''}</span>{m ? <span className={`tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`}>{name}</span> : null}</> : null}
       {b === 5 && !bk && !calm ? <div className="tev-dust" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ animationDelay: `${k * 0.07}s`, top: `${44 + (k % 3) * 6}%` }}/>)}</div> : null}
       {b >= 2 ? <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={title}/> : null}
@@ -86716,6 +86719,8 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
 .msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
 .msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-pk{position:absolute;left:50%;bottom:calc(24% - 30px);transform:translateX(-50%);z-index:3;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#c2410c,#f97316);color:#fff;border:1.5px solid #fde047;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 #0006}
+.msx .msx-tev .tev-pk.pair{left:29%;bottom:calc(24% - 56px)}
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
