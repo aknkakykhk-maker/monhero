@@ -29,7 +29,8 @@ const measure = (o = {}) => {
   // o.withScene … 場面の絵の中の字も数える(段7の残り: 家の絵の札を4段に載せた・2026-11-22)
   const inScene = (el) => !o.withScene && !!(el && el.closest && el.closest('[data-alu-scene]'));
   const badAt = [];
-  const frame = document.querySelector('[data-alu-frame]');
+  // o.frame … 測る型の目印(部屋は家の型の上に重なるので '[data-assistant-life-typed-room]')
+  const frame = document.querySelector(o.frame || '[data-alu-frame]');
   if (!frame) return { ng: ['型(.alu)が描かれていない'] };
   const F = frame.getBoundingClientRect();
   const H = F.height, W = F.width;

@@ -668,7 +668,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 
 // 部屋を押したとき(その助手のこと・その場でできること)
 const ASSISTANT_LIFE_ROOM_MORE = { open: false }; // 部屋の「もっと見る」を開いたままにするか(ページの中だけ)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, onRelView = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, onRelView = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null , typed = null}) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false); // 模様替え(56-assistant-life-roomedit.jsx・公開の印 assistantLifeRoomEdit)
   const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
@@ -797,6 +797,87 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       </div>}
       <p className="mt-3 text-[11px] font-black text-slate-300">詳しく</p>
     </div>) : null;
+  // 段8: 新UIの部屋は型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx の AssistantLifeRoomTyped)。行動の関数は上と同じ物を渡す
+  if (uiV2 && typed && typeof AssistantLifeRoomTyped === 'function' && typeof assistantLifeTypedRoomOn === 'function' && assistantLifeTypedRoomOn()) {
+    const groupIds = w && w.group ? w.group.ids : [id];
+    const giveSolo = soloOn && canGiveSolo, giveGroup = !!(w && w.group && canGive);
+    const give = giveSolo ? { k: 'give-solo', on: () => onGiveSolo(id, groupIds) }
+      : giveGroup ? { k: 'give', on: () => onGive(w.group) }
+      : { k: soloOn ? 'give-solo' : 'give', disabled: true, why: soloOn || (w && w.group) ? '今日はもう贈れません' : '一緒にいる2人に贈れます(いまはひとり)' };
+    const distant = !!(w && w.reason === 'distance');
+    const talk = { label: asleep ? '💤 そっと話しかける' : `💬 ${who.name}と話す`, on: () => onInvite(id), disabled: distant, why: distant ? 'いまは遠くにいて声が届きません' : '' };
+    const beatOn = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function';
+    let battleInfo = null; try { battleInfo = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { battleInfo = null; }
+    let succInfo = null; try { succInfo = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { succInfo = null; }
+    const play = [
+      ...(beatOn ? [{ k: 'beat', icon: '🎵', label: atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う', sub: atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)', go: '誘う', gain: '💗+', on: () => onBeat(id) }] : []),
+      ...(canCardNow ? [{ k: cardSpent ? 'card-spent' : 'card', icon: '🃏', label: 'MFバトルカードで対戦する', sub: 'MFバトルカードにいる助手と対戦すると、ごほうびアップ', go: '誘う', gain: 'アップ', on: () => onCard(id), disabled: !!cardSpent, why: cardSpent ? (typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました') : '' }] : []),
+      ...(battleInfo ? [{ k: 'masmon-battle', icon: '⚔', label: (battleInfo.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''), sub: battleInfo.sub || '', go: '誘う', on: () => { try { assistantMasmonBattleOpen({ assistantId: id, from: 'room' }); } catch (_) {} }, disabled: !!battleInfo.disabled, why: battleInfo.why || '' }] : []),
+      ...(succInfo ? [{ k: 'monhero-success', icon: '🌱', label: succInfo.label.replace(/^🌱\s*/, ''), sub: succInfo.sub, go: '誘う', on: () => { try { assistantLifeSuccessOpen({ assistantId: id, from: 'room' }); } catch (_) {} } }] : []),
+    ];
+    let planInfo = null; try { planInfo = typeof assistantLifePlanRowInfo === 'function' ? assistantLifePlanRowInfo(id) : null; } catch (_) { planInfo = null; }
+    const more = [
+      w && w.group
+        ? { k: 'watch', icon: '👀', label: home ? '見守る' : '見守りに行く', short: '見守る', sub: '組のおしゃべりを見る(同じ組は時間帯に1回)', go: '見る', gain: '🤝💗+', on: () => onWatch(w.group), disabled: !canWatch, why: 'この時間帯はもう見守りました' }
+        : { k: 'peek', icon: '👀', label: 'ようすを見る', short: 'ようす', sub: 'ひとりごとや、あなたへのひとこと(時間帯に1回)', go: '見る', on: () => onPeek(id), disabled: !canWatch, why: 'この時間帯はもう見ました' },
+      ...(onChat && !follow ? [{ k: 'chat', icon: asleep ? '💤' : '💬', label: asleep ? '起こしておしゃべりする' : 'おしゃべりする', short: 'おしゃべり', sub: '話すと仲良し度が少し上がる(1日の上限あり)', go: '話す', gain: '💗+', on: () => onChat(id, null) }] : []),
+      { k: 'masmon', icon: '🐾', label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`, short: 'マスモン', sub: '育ち方・編成を見る', go: '見る', on: onMasmon ? () => onMasmon(id) : null, why: 'まだ見られません' },
+      ...(planInfo ? [{ k: 'plan', icon: '📅', label: '次の行き先を決める', short: '予定', sub: planInfo.sub, go: '決める', on: () => assistantLifePlanOpen({ who: id }) }] : []),
+      ...(furnOn ? [{ k: 'furn', icon: '🪑', label: '部屋の家具', short: '家具', sub: `置いてある家具 ${rvFurn.length}個`, go: '開く', on: () => setFurnOpen(true) }] : []),
+    ];
+    // その場所ならではの得(施設の得・修行の観戦と応援)。カード・ビートは「🎉 誘う」の中
+    let trainInfo = null; try { trainInfo = w && w.place === 'battle' && typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { trainInfo = null; }
+    const perk = typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['home', 'cardroom', 'studio'].includes(w.place) ? <AssistantLifePlacePerk life={life} ids={[id]} place={w.place} land={land} onGo={onGoPlace}/> : null;
+    const hot = trainInfo || perk || (atBeat && beatFree && !asleep) ? (<>
+      {atBeat && beatFree && !asleep && <AssistantLifeRoomTypedRow k="beat-free" icon="🎵" label="モンヒロビートで会う" sub="いまモンヒロビートにいるので、券なしで一緒に遊べる" go="会う" gain="券なし" on={() => onBeat(id)}/>}
+      {trainInfo && <div data-assistant-life-room-train={id}>
+        <AssistantLifeRoomTypedRow k="train-watch" icon="👀" label="修行を見る" sub="マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)" go="見る" on={typeof assistantMasmonTrainWatchOpen === 'function' ? () => { try { assistantMasmonTrainWatchOpen(id); } catch (_) {} } : null}/>
+        <AssistantLifeRoomTypedRow k="cheer" icon="📣" label={`応援する(今日${trainInfo.perDay - trainInfo.left}/${trainInfo.perDay})`} sub="修行が少し進み、仲良し度も上がる(時間帯に1回)" go="応援" gain="💗+" disabled={!trainInfo.canCheer} why={trainInfo.why || ''}
+          on={typeof assistantMasmonCheer === 'function' ? () => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : ((r && r.why) || '')); } : null}/>
+        {cheerNote && <div className="alu-n" data-assistant-life-room-cheer-msg={id}>{cheerNote}</div>}
+      </div>}
+      {perk}
+    </>) : null;
+    const followNode = follow && onChat ? (
+      <div className="alu-card" data-assistant-life-room-follow={follow.kind}>
+        <div className="alu-t">{who.name}「{follow.text}」</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <AluBtn onClick={() => onChat(id, follow)} data-assistant-life-room-follow-chat>💬 おしゃべりする</AluBtn>
+          <AluBtn onClick={() => onFollowDone && onFollowDone()} data-assistant-life-room-follow-bye>またね</AluBtn>
+        </div>
+      </div>) : null;
+    const rhythm = (() => { try { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return rh ? `🕰 生活のリズム: ${rh.label}${Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}` : ''; } catch (_) { return ''; } })();
+    const feel = asleep ? '💤 ぐっすり寝ている' : (w && w.reason === 'lonely') ? '💭 さみしそう(だれか来てほしい)' : mood ? `気分: ${mood}` : '';
+    const statusLine = [`${where}${groupNames ? `(${groupNames})` : ''}`, !home && slotDef ? `⏱ ${slotDef.to % 24}時までいる` : '', feel].filter(Boolean).join(' · ');
+    const details = (
+      <div data-assistant-life-room-details style={{ marginTop: 8 }}>
+        <div className="alu-n">詳しく</div>
+        <AluRow pic="🤝" text={`友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`} note="一番仲のいい3人" />
+        {sess ? <AluRow pic="🎵" text={`セッションLv${sess.level}`} note={`一緒に ${sess.lives}回`} /> : null}
+        {rhythm ? <AluRow pic="🕰" text={rhythm.replace(/^🕰 /, '')} note="" /> : null}
+        {typeof AssistantLifeRoomTypedLikes === 'function' && <AssistantLifeRoomTypedLikes id={id}/>}
+        {typeof amgpOn === 'function' && amgpOn() && typeof assistantMasmonNoteOpen === 'function' && <AluRow pic="📒" text="育成ノート" note="予定を組む・疲れとストレスを見る" action={<AluBtn onClick={() => assistantMasmonNoteOpen(id)} data-amgp-room-link>開く</AluBtn>} />}
+        {soloOn && typeof AssistantLifeRoomTypedCheki === 'function' && <AssistantLifeRoomTypedCheki id={id}/>}
+        <div className="alu-n" style={{ marginTop: 6 }}>今日あったこと</div>
+        {items.length ? items.map((x, i) => <AluRow key={i} pic="📝" text={x.text} note={x.t} />) : <div className="alu-n">まだありません</div>}
+      </div>);
+    const typedScene = typeof AssistantLifeRoomScene === 'function' ? (
+      <AssistantLifeRoomScene id={id} look={typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon'} land={land} people={people} sleepIds={sleepIds} away={away} team={rvTeam} furn={rvFurn}
+        bubble={follow && follow.text ? follow.text : ''} title="" sub="" onPerson={null} onMasmon={onMasmon ? () => onMasmon(id) : null} dock={null} layoutWho={layoutOn ? id : null}/>) : null;
+    const canGiveAny = !give.disabled;
+    return (
+      <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
+        <AssistantLifeRoomTyped id={id} who={who} land={land} tabs={typed.tabs} tab={typed.tab} onTab={typed.onTab} onBack={onClose} scene={typedScene} lv={lv} sleeping={asleep}
+          statusLine={statusLine} talk={talk} give={give} play={play} hot={hot} follow={followNode}
+          rel={typeof AssistantLifeRelSheetRow === 'function' ? <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate} onView={onRelView}/> : null}
+          more={more} details={details} moreOpen={moreOpen} onMore={() => { ASSISTANT_LIFE_ROOM_MORE.open = !moreOpen; setMoreOpen(!moreOpen); }}
+          result={typed.result} onResultClose={typed.onResultClose} nextAfter={canGiveAny ? { label: '🎁 贈る', on: give.on } : null}/>
+        {furnOpen && typeof AssistantLifeFurnSheet === 'function' && <AssistantLifeFurnSheet id={id} furnItems={furnItems || {}} onGiveFurn={onGiveFurn} land={land}
+          onClose={() => setFurnOpen(false)} onTalk={(talk2, text) => { setFurnOpen(false); if (onFurnTalk) onFurnTalk(talk2, text); }} onLayout={layoutOn ? () => { setFurnOpen(false); setLayoutOpen(true); } : null}/>}
+        {layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && <AssistantLifeRoomEditor id={id} land={land} onClose={() => setLayoutOpen(false)}
+          room={{ look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon', people, sleepIds, away, team: rvTeam }}/>}
+      </div>);
+  }
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
       {/* 家具・模様替えを開いている間は出さない(2026-11-19 r1119-013 ⑥ A-2)。シートの上に残って、押すと部屋ごと閉じていた。閉じるのはシート自身の「閉じる」 */}
@@ -1633,7 +1714,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
           </div>)}
         {/* 👀 修行を見るの入れ物。地図が出ているときは地図の中のものを使う(2つ重ねない) */}
         {roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
-        {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
+        {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} typed={uiV2 ? { tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label })), tab, onTab: (k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); setFollow(null); setFurnBack(null); }, result: aluResult, onResultClose: () => setAluResult(null) } : null} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
           land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} onRelView={relView} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {typeof AssistantMasmonNoteHost === 'function' && <AssistantMasmonNoteHost land={land}/>}
@@ -1650,7 +1731,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
-        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} noResult={typedHouse} onClose={() => { const sc = scene; setScene(null); const following = !!followAfterRef.current; showFollow(); if (typedHouse && sc && sc.before && !following) setAluResult({ ids: sc.ids, before: sc.before, title: sc.resultTitle }); }} onGive={openGive}/>}
+        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} noResult={typedHouse} onClose={() => { const sc = scene; setScene(null); const following = !!followAfterRef.current; showFollow(); if ((typedHouse || (uiV2 && roomId)) && sc && sc.before && !following) setAluResult({ ids: sc.ids, before: sc.before, title: sc.resultTitle }); }} onGive={openGive}/>}
         {dailyScene && typeof AssistantLifeDailySceneView === 'function' && <AssistantLifeDailySceneView plan={dailyScene.plan} place={dailyScene.place} look={look} slotId={dailyScene.slotId} slotLabel={dailyScene.slotLabel} onClose={() => { setDailyScene(null); setDailyKey(k => k + 1); }}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">

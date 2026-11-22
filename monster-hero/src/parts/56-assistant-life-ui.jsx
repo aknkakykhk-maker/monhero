@@ -15,7 +15,7 @@ const ALU_CSS = `
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
 .alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
-.alu-top .bk{flex:none;min-width:72px;height:36px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
@@ -95,11 +95,12 @@ const useAluWide = () => {
   return [ref, box.wide, box.h, box.w];
 };
 
-const AluTopBar = ({ title, onBack, now }) => {
+// backProps … 戻るボタンに足す目印(部屋は「部屋を閉じる」目印にして、助手ライフを閉じる目印 data-assistant-life-close は外す・段8)
+const AluTopBar = ({ title, onBack, now, backProps = null }) => {
   const c = aluClock(now);
   return (
     <div className="alu-top" data-alu-top>
-      <button type="button" className="bk" data-alu-back data-assistant-life-close aria-label="戻る" onClick={onBack}>← 戻る</button>
+      <button type="button" className="bk" data-alu-back data-assistant-life-close aria-label="戻る" onClick={onBack} {...(backProps || {})}>← 戻る</button>
       <div className="ti" data-alu-title>{title}</div>
       <div className="ck" data-alu-clock><b>{c.clock} {c.label}</b><small>次に動く {c.next}</small></div>
     </div>);
@@ -118,7 +119,7 @@ const AluTabBar = ({ tab, onTab, tabs = ALU_TABS }) => (
 //   縦: head → 場面の絵 → 中身。場面の絵は画面の高さの3割まで(小さい画面でも主なボタンが最初から見える)
 //   2段組(PC・横): 左に場面の絵、右に head → 中身
 //   scene に関数を渡すと、枠の大きさ { wide, w, h }(縦の h は使ってよい高さの上限=画面の4割)を受け取って絵を返す(家の絵の幅を高さから決める)
-const AluFrame = ({ title, onBack, tab, onTab, tabs, now, head, scene, sceneH = 300, children, overlay, ...rest }) => {
+const AluFrame = ({ title, onBack, backProps, tab, onTab, tabs, now, head, scene, sceneH = 300, children, overlay, ...rest }) => {
   const [ref, wide, frameH, frameW] = useAluWide();
   const fit = typeof scene === 'function';
   const sceneHeight = frameH ? Math.max(140, Math.min(sceneH, Math.round(frameH * 0.3))) : sceneH;
@@ -130,7 +131,7 @@ const AluFrame = ({ title, onBack, tab, onTab, tabs, now, head, scene, sceneH = 
   return (
     <div className="alu" ref={ref} data-alu-frame data-alu-wide={wide ? '1' : undefined} {...rest}>
       <style>{ALU_CSS}</style>
-      <AluTopBar title={title} onBack={onBack} now={now} />
+      <AluTopBar title={title} onBack={onBack} now={now} backProps={backProps} />
       <div className="alu-body">
         {wide && scene ? <div className="alu-scene" data-alu-scene>{frameW ? sceneNode : null}</div> : null}
         <div className="alu-main" data-alu-main>

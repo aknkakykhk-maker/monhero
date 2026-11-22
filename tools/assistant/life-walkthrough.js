@@ -199,7 +199,7 @@ const problemsOf = (key, label, m, view, who) => {
       await step('room-pair', '部屋(だれかと一緒・みゅあ)', () => click(sel.room('mua')), closeRoom);
       await step('room-solo', '部屋(家にひとり・あつ)', () => click(sel.room('atsu')), closeRoom);
       await step('room-away', '部屋(出かけている・ドラ)', () => click(sel.room('dra')), async () => {});
-      await step('masmon', '部屋 → マスモン', async () => { if (!(await page.locator(sel.roomClose).count())) await click(sel.room('dra')); await click('[data-assistant-life-room-do="masmon"]'); await page.locator('[data-assistant-masmon-sheet]').waitFor({ timeout: 4000 }); },
+      await step('masmon', '部屋 → マスモン', async () => { if (!(await page.locator(sel.roomClose).count())) await click(sel.room('dra')); { const mb = page.locator('[data-assistant-life-typed-room] [data-assistant-life-room-more]').first(); if (await mb.count() && (await mb.getAttribute('aria-expanded')) !== 'true') await mb.click(); } /* 段8: マスモンは「もっと見る」の中 */ await click('[data-assistant-life-room-do="masmon"]'); await page.locator('[data-assistant-masmon-sheet]').waitFor({ timeout: 4000 }); },
         async () => { await closeSheets(); await page.evaluate(() => { const s = document.querySelector('[data-assistant-masmon-sheet]'); const b = s && [...s.querySelectorAll('button')].find(x => /閉じる|✕|←/.test(x.innerText || x.getAttribute('aria-label') || '')); if (b) b.click(); }); await page.waitForTimeout(300); await closeRoom(); });
       await closeRoom();
       await step('where', '居場所(地図)', () => click(sel.icon('where')));

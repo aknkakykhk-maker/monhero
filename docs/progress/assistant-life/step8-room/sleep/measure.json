@@ -1,0 +1,46 @@
+{
+ "shots": {
+  "tate-house.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る話は、次の時間に",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -152,
+   "ng": []
+  },
+  "s320-house.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る話は、次の時間に",
+    "w": 296,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -388,
+   "ng": []
+  }
+ },
+ "errors": [],
+ "miss": []
+}

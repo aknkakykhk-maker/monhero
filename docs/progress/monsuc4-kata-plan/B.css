@@ -1,0 +1,6 @@
+.msx .msx-peakfx.back{opacity:.7}
+.msx .v-scene .mon{height:50%!important;bottom:16%!important;left:36%!important}
+.msx .v-scene.home .mon{left:50%!important}
+.msx .v-scene:has(.v-talk) .mon{height:50%!important;bottom:32%!important;left:30%!important}
+.msx-md-top{grid-template-columns:minmax(0,30%) minmax(0,1fr)!important}
+.msx-md-st .cap,.msx-md-st small{display:none!important}

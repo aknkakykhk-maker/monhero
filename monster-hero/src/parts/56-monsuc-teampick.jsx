@@ -204,6 +204,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         </div>
         {/* 札の帯「同じ種類」「育てる種」の意味(選べないのか分からなかった・育-89) */}
         {items.some((x) => { const mk = markOf(x); return mk && mk.c !== 'in'; }) ? <div className="msx-tp-note msx-kp" data-msx-tp-marknote>「同じ種類」は編成にもういる種類、{'\u200b'}「育てる種」は育てるモンスターと同じ種類の印です。{'\u200b'}どちらも入れられます</div> : null}
+        {/* 右上の札(A1・C6 など)と枠の色の意味(育-132) */}
+        {tab !== 'base' && items.some((x) => msxTpCardM(x.rec, x.mem, x.species).grade) ? <div className="msx-tp-note msx-kp" data-msx-tp-ranknote>右上のバッジはランク。{'\u200b'}英字は総合力の大きさ・数字はその中の段(500ごと)で、{'\u200b'}枠の色もランクの色です</div> : null}
         {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
