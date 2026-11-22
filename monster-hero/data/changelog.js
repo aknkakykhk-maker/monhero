@@ -57,6 +57,19 @@ const CHANGELOG = [
       'イベントのお話は全8話です。第1話はもう見られます。第2話からは毎日10:00に1話ずつ公開され、最終話はイベントの終わりに流れます。見のがしても、プロフィールの「イベント回想」から見返せます。',
     ],
   },
+  {
+    date: "2026-11-23 10:00", type:'update', group:'rhythm', status:'new',
+    title:'新曲「きみ待ち♡ループ」を追加しました',
+    visibleFrom:'2026-11-23T10:00:00+09:00',
+    image:'images/song-art/kimimachi-loop.jpg?v=78bf05050de5',
+    items:[
+      'モンヒロビートに「きみ待ち♡ループ」を追加しました。ももすけの曲（2分42秒・BPM 167）です。',
+      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.26 ／ HELL Lv.37 です。',
+      'ノーツ数は 207 ／ 237 ／ 361 ／ 483 ／ 541 ／ 501 です。',
+      'イベント「咲かせて！ハナウタ・ノート」のあいだは無料で遊べます。イベントが終わったあとは、ビートP500で買って遊ぶ曲になります。',
+    ],
+    assistantNotice:{ id:'update_notice_kimimachi_loop_v1', type:'content', notifyFrom:'2026-11-23T10:00:00+09:00' },
+  },
   // 咲かせて！ハナウタ・ノートの予告(2026-11-22 社長「イベント予告を更新して」)。出しはじめる時刻(いま)を date・visibleFrom・notifyFrom にそろえる。
   //   開始(11/23 10:00)からは上の「開催中」の項目だけを札にする(pinUntil)。お話の中身は書かない。キービジュアルは作り直しが届いたら image へ
   {
@@ -95,18 +108,6 @@ const CHANGELOG = [
       'これまで横持ちでは、空のノーツだけが少し遅れて、画面の上から急に現れていました。見え始める早さが地上のノーツとそろいます。',
       '叩くタイミングは変わりません。',
     ],
-  },
-  {
-    date: "2026-11-22 20:42", type:'update', group:'rhythm', status:'new',
-    title:'新曲「きみ待ち♡ループ」を追加しました',
-    image:'images/song-art/kimimachi-loop.jpg?v=78bf05050de5',
-    items:[
-      'モンヒロビートに「きみ待ち♡ループ」を追加しました。ももすけの曲（2分42秒・BPM 167）です。',
-      'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.26 ／ HELL Lv.37 です。',
-      'ノーツ数は 207 ／ 237 ／ 361 ／ 483 ／ 541 ／ 501 です。',
-      'この曲はビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
-    ],
-    assistantNotice:{ id:'update_notice_kimimachi_loop_v1', type:'content' },
   },
   {
     date: "2026-11-22 20:01", type:'update', group:'assistant', status:'new',
