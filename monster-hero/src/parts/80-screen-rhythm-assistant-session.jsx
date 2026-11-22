@@ -401,8 +401,9 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
   if (!shown || !assistantId) return null;
   const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
   return (
-    <p data-rhythm-assist-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100">
-      <span className="max-w-full truncate">🎤 {rhythmAssistSessionName(assistantId)}</span>
+    // だれに何が入ったかを「◯◯に」で分けて書き、縦では字を大きくする(点検 N43: 字10px・高さ18pxの帯で、自分に入ったように読めた)
+    <p data-rhythm-assist-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]">
+      <span className="max-w-full truncate">🎤 {rhythmAssistSessionName(assistantId)}に</span>
       <span className="text-pink-200">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-assist-levelup className="rounded bg-amber-300 px-1 text-slate-950">セッションLv.UP! Lv.{level}</span>}
       {shown.likeUp > 0 && <span className="text-amber-200">好み度+{shown.likeUp}</span>}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f83be47ffb3a7c26
+// generated-sha256: 9866139f821d53c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58802,7 +58802,7 @@ function RhythmMultiResultBubble({ text: raw }) {
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
       <span className="relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs" style={JA_WRAP_STYLE}>
         {/* 言葉の切れ目で折る(「セッションL / vが上が…」と途中で折れていた・2026-11-08 ミハリ) */}
-        <span className="line-clamp-2">{jaWrap(text)}</span>
+        <span className="line-clamp-2 [@media(orientation:portrait)_and_(min-height:700px)]:line-clamp-3">{jaWrap(text)}</span>
         <i aria-hidden="true" className="absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white" />
       </span>
     </span>
@@ -61167,9 +61167,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     setRankHubTab(tab === 'buddy' ? 'buddy' : 'national');
     setRankHubOpen(true);
   };
+  // 字を添える(点検 N48: 🏆だけで何のボタンか分からなかった)
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
-      className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
+      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`}><span className="text-lg">🏆</span><span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100">ランキング</span></button>
   );
   // 曲の側に置く 🏆 ランキング(字つき)。上の帯の 🏆 は外した
   const rankingWideButton = (extra = '') => rankingSupport && (
@@ -61183,8 +61184,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </div>
   );
   // 最新の発言を添えた💬(結果画面用)。押すとチャット欄が開く
-  const chatLatestButton = (extra = '') => {
-    const last = chatList.length ? chatList[chatList.length - 1] : null;
+  // plain: 結果画面では最新の発言を札に出さない(カードの上の吹き出しと同じ文が2か所に出て、どちらも「…」で切れた・点検 N47)
+  const chatLatestButton = (extra = '', plain = false) => {
+    const last = !plain && chatList.length ? chatList[chatList.length - 1] : null;
     return (
       <button data-rhythm-multi-chat-open type="button" onClick={() => setChatOpen(true)} aria-label={chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット'}
         className={`relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left landscape:w-[22%] landscape:max-w-[160px] ${extra}`}>
@@ -61727,9 +61729,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             横向き(🔄横も)は送らない: カードの上の吹き出しが欄の上で切れるため。横は育ちの札の欄が中で送る */}
         <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible">
         {/* カードに最低の高さを持たせる。下の育ちの札・友情Lv の欄やあいさつの段に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長・🔄横。320幅の縦ではカードがほぼ消えていた) */}
-        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 [@media(orientation:portrait)_and_(min-height:700px)]:pt-[58px] landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+          {/* 吹き出しの段は高い縦(700px以上)で3行まで入る高さ(58px)にする(全文を出す・点検 N47) */}
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
-          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
+          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
             {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
               return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
@@ -61750,8 +61753,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                   <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11" />
                 </span>
                 <span className={`relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`}>{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
-                <small className="block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
-                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
+                <small className="block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
+                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString()) : r.m.gone ? '—' : 'ライブ中…'}</b>
                 {r.res && !r.res.quit && <>
                   <small className="mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
                   {!r.res.cleared && <small className="text-[8px] font-black text-rose-300">失敗</small>}
@@ -61771,7 +61774,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap" />
           {/* 横向きは🏆とチャットも少し低く(この段の高さが育ちの札・友情Lv の欄を削っていた・2026-11-08) */}
           {rankingButton('landscape:min-h-[34px]')}
-          {chatLatestButton('landscape:min-h-[34px]')}
+          {chatLatestButton('landscape:min-h-[34px]', true)}
         </div>
         {(() => {
           // 自分が呼んだマスモンがこのライブに出ていたら、1体ずつ育てて見せる(全員の結果がそろってから)
@@ -63085,8 +63088,9 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
   const level = rhythmBuddyLevelInfo(shown.mon.exp).level;
   const trait = shown.traitNew ? rhythmBuddyTraitOf(shown.traitNew) : null;
   return (
-    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
-      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
+    // だれに入ったかを「◯◯に」で書き、縦では字を大きくする(点検 N43)
+    <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]">
+      <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}に</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
@@ -63640,8 +63644,9 @@ function RhythmAssistSessionGrowth({ assistantId, round, songId, diffId, duratio
   if (!shown || !assistantId) return null;
   const level = rhythmBuddyLevelInfo((shown.next.mons[assistantId] || {}).exp).level;
   return (
-    <p data-rhythm-assist-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100">
-      <span className="max-w-full truncate">🎤 {rhythmAssistSessionName(assistantId)}</span>
+    // だれに何が入ったかを「◯◯に」で分けて書き、縦では字を大きくする(点検 N43: 字10px・高さ18pxの帯で、自分に入ったように読めた)
+    <p data-rhythm-assist-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-pink-300/50 bg-pink-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-pink-100 [@media(orientation:portrait)_and_(min-height:700px)]:px-2.5 [@media(orientation:portrait)_and_(min-height:700px)]:py-1.5 [@media(orientation:portrait)_and_(min-height:700px)]:text-[12px] [[data-mh-view-rotation=true]_&]:px-2 [[data-mh-view-rotation=true]_&]:py-0.5 [[data-mh-view-rotation=true]_&]:text-[10px]">
+      <span className="max-w-full truncate">🎤 {rhythmAssistSessionName(assistantId)}に</span>
       <span className="text-pink-200">経験値+{shown.gain}</span>
       {shown.levelUp > 0 && <span data-rhythm-assist-levelup className="rounded bg-amber-300 px-1 text-slate-950">セッションLv.UP! Lv.{level}</span>}
       {shown.likeUp > 0 && <span className="text-amber-200">好み度+{shown.likeUp}</span>}
