@@ -6,7 +6,7 @@
 // 社長「(本オープン記念のお知らせに)本オープンの画像つけて。あと上部に固定も」。
 // 固定はもともと「開催中の期間限定イベント(type:'event')」だけのしくみだった。イベント以外のお知らせでも、
 // pinTop:{ until } を書けば、出はじめ(visibleFrom)から until まで一番上に固定する。見張るのは:
-//   ・本オープン記念のお知らせは 11/9 10:00 から 11/23 3:59 まで固定され、その前後は固定されない
+//   ・本オープン記念のお知らせは 11/9 10:00 から 11/29 23:59 まで固定され、その前後は固定されない(11-22 社長 r1119-103 で 11/23 3:59 から延長)
 //   ・本オープン記念のお知らせに絵が付いていて、その絵のファイルがある
 //   ・pinTop を書いていないイベント以外のお知らせは、今までどおり固定されない
 //   ・イベントの固定(assistantNotice の期間・pinUntil)の決めごとは変わらない
@@ -43,17 +43,17 @@ if (grand) {
   check('固定の札の題は「モンヒロビート本オープン記念」', grand.pinTitle === 'モンヒロビート本オープン記念', String(grand.pinTitle));
   const app = fs.readFileSync(path.join(web, 'src/parts/60-app.jsx'), 'utf8');
   check('固定の札は pinTitle があればそれを出す', /data-changelog-pinned-title[^>]*>\{typeof c\.pinTitle==='string'&&c\.pinTitle\?c\.pinTitle:/.test(app));
-  check('固定は 11/23 3:59 まで(周回5倍の終わり)', grand.pinTop && grand.pinTop.until === '2026-11-23T03:59:00+09:00', JSON.stringify(grand.pinTop));
+  check('固定は 11/29 23:59 まで(周回5倍の終わり)', grand.pinTop && grand.pinTop.until === '2026-11-29T23:59:00+09:00', JSON.stringify(grand.pinTop));
   const cases = [
     ['2026-11-09T09:59:00+09:00', false, '出はじめの前'],
     ['2026-11-09T10:00:00+09:00', true, '出はじめ'],
     ['2026-11-15T12:00:00+09:00', true, '期間中'],
-    ['2026-11-23T03:58:59+09:00', true, '終わる直前'],
-    ['2026-11-23T03:59:00+09:00', false, '終わった時刻'],
+    ['2026-11-29T23:58:59+09:00', true, '終わる直前'],
+    ['2026-11-29T23:59:00+09:00', false, '終わった時刻'],
     ['2026-12-01T00:00:00+09:00', false, '終わったあと'],
   ];
   const bad = cases.filter(([t, want]) => changelogEventLive(grand, at(t)) !== want).map(([t, want, label]) => `${label}(${t})で${want ? '固定されない' : '固定される'}`);
-  check('本オープン記念のお知らせは 11/9 10:00〜11/23 3:59 だけ一番上に固定される', bad.length === 0, bad.join(' / '));
+  check('本オープン記念のお知らせは 11/9 10:00〜11/29 23:59 だけ一番上に固定される', bad.length === 0, bad.join(' / '));
 }
 
 // pinTop を書いていないイベント以外のお知らせは固定しない
