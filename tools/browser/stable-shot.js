@@ -55,4 +55,51 @@ const stableShot = async (page, file, n = 0) => {
   if (any) fs.writeFileSync(mf, Buffer.from(move)); else fs.rmSync(mf, { force: true });
 };
 
-module.exports = { PIXEL_DIFF, FREEZE, stableInit, toRaw, diffMask, stableShot };
+// iPhone の切り欠きの余白をブラウザに効かせる(env(safe-area-inset-*) が sa の値になる)
+// ★CDP のつなぎを切ると余白が元に戻るので、ページごとに1本つないだままにする
+const SA_CDP = new WeakMap();
+const setSafeArea = async (context, page, sa) => {
+  try {
+    let cdp = SA_CDP.get(page);
+    if (!cdp) { cdp = await context.newCDPSession(page); SA_CDP.set(page, cdp); }
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: sa.top || 0, bottom: sa.bottom || 0, left: sa.left || 0, right: sa.right || 0 } });
+    return true;
+  } catch (e) { return false; }
+};
+
+// ページの中で: 押す物(ボタン・リンク・タブ・入力)が切り欠きの範囲に入っていないかを測る。
+//   上: 時刻・電池と重なる帯 / 下: ホームの棒の帯 / 左右(横持ち): 切り欠きの帯。上に見えていて、送っても(スクロールしても)逃がせない物だけ数える
+const measureSafeArea = (sa) => {
+  const W = innerWidth, H = innerHeight, out = [], TOL = 4;
+  const scrollable = (el, dir) => {
+    for (let e = el.parentElement; e; e = e.parentElement) {
+      const st = getComputedStyle(e);
+      if (dir === 'x') { if (/auto|scroll/.test(st.overflowX) && e.scrollWidth > e.clientWidth + 2) return true; continue; }
+      if (!/auto|scroll/.test(st.overflowY) || e.scrollHeight <= e.clientHeight + 2) continue;
+      if (dir === 'down' && e.scrollTop < e.scrollHeight - e.clientHeight - 2) return true;
+      if (dir === 'up' && e.scrollTop > 2) return true;
+    }
+    const d = document.scrollingElement; if (!d || dir === 'x') return false;
+    return dir === 'down' ? d.scrollTop < d.scrollHeight - d.clientHeight - 2 : d.scrollTop > 2;
+  };
+  for (const el of document.querySelectorAll('button,a[href],[role="button"],[role="tab"],input,select,textarea')) {
+    if (el.disabled) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8 || r.bottom <= 0 || r.top >= H || r.right <= 0 || r.left >= W) continue;
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.pointerEvents === 'none' || Number(st.opacity) === 0) continue;
+    const cx = Math.min(W - 1, Math.max(0, (r.left + r.right) / 2)), cy = Math.min(H - 1, Math.max(0, (r.top + r.bottom) / 2));
+    const t = document.elementFromPoint(cx, cy);
+    if (!t || !(t === el || el.contains(t))) continue;
+    const hit = [];
+    if (sa.top && r.top < sa.top - TOL && !scrollable(el, 'up')) hit.push(['上', Math.round(sa.top - r.top)]);
+    if (sa.bottom && r.bottom > H - sa.bottom + TOL && !scrollable(el, 'down')) hit.push(['下', Math.round(r.bottom - (H - sa.bottom))]);
+    if (sa.left && r.left < sa.left - TOL && !scrollable(el, 'x')) hit.push(['左', Math.round(sa.left - r.left)]);
+    if (sa.right && r.right > W - sa.right + TOL && !scrollable(el, 'x')) hit.push(['右', Math.round(r.right - (W - sa.right))]);
+    const label = (el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || el.tagName).replace(/\s+/g, ' ').trim().slice(0, 24);
+    for (const [edge, px] of hit) out.push({ label, edge, px });
+  }
+  return out;
+};
+
+module.exports = { setSafeArea, measureSafeArea, PIXEL_DIFF, FREEZE, stableInit, toRaw, diffMask, stableShot };
