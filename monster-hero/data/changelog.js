@@ -34,6 +34,23 @@
 //   ・作っている途中の調整・内部の作り直し・見たこともない不具合の修正 → dev:true も付ける
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
+  // 新曲「Beyond the Same Sky」(2026-11-21 台帳 r1119-076。原曲+short ver. の2つの版の曲組・ビートP500で両方の版が付く。お知らせは曲組で1件)
+  {
+    date: "2026-11-22 00:59", type:'update', group:'rhythm', status:'new',
+    title:'新曲「Beyond the Same Sky」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/beyond-the-same-sky.jpg?v=ecf19c624394',
+    items:[
+      'モンヒロビートに「Beyond the Same Sky」を追加しました。あつとみゅあの曲で、ギルド「W.o.F」のころの思い出を歌っています。原曲（4分18秒・BPM 178）と short ver.（2分31秒・BPM 178）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.33 ／ HELL Lv.55 です。',
+      '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1060 ／ 1229 です。',
+      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.35 ／ HELL Lv.58 です。',
+      'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 634 ／ 715 です。',
+      'ジャケットは版ごとに違う絵です。譜面も版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      '更新のあとに初めて開くと、あつとみゅあのお話が流れます。',
+    ],
+    assistantNotice:{ id:'update_notice_beyond_the_same_sky_v1', type:'content' },
+  },
   {
     date: "2026-11-22 02:54", type:'update', title:'試合の場のモンスターが、姿に合った大きさになりました', status:'new', group:'success',
     items:[

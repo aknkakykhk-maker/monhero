@@ -101,6 +101,7 @@ function main() {
   console.log('# create_session に渡すもの');
   console.log(`title: ${s.title}`);
   console.log(`model: ${s.model}    ← ${s.kind['名前']}(${s.why})`);
+  console.log('permission_mode: auto    ← 必ず付ける(r1119-086・部の会話も自動で作り、社長に許可の画面を出さない)');
   if (s.model === 'claude-fable-5-2') {
     // 2026-11-11 社長「Fable を使うときは、決まりから外れている場合は俺に聞いてね」
     console.log('★ claude-fable-5-2 を使ってよいのは次の3つだけ。どれに当たるかを確かめてから作る:');

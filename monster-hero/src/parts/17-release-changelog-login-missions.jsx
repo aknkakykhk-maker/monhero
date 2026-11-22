@@ -607,6 +607,9 @@ const KYUKO_WINTER_STORY_ID = 'kyuko_winter_2026_11';
 // ききのツインテールのお話「イメチェン ～ききのツインテール～」(2026-11-20 社長)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
 const KIKI_TWINTAIL_STORY_ID = 'kiki_twintail_2026_11';
+// あつとみゅあの歌のお話「同じ空の先へ ～Beyond the Same Sky～」(2026-11-22 社長 r1119-076)。新曲 Beyond the Same Sky と一緒に出る。id は data/assistants.js の EVENT_REPLAYS と同じ。
+// 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
+const BEYOND_SAME_SKY_STORY_ID = 'beyond_same_sky_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
 // ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。

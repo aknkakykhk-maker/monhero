@@ -3123,39 +3123,74 @@
    "fastSameSide": 23,
    "heldHandSwitch": 0
   },
-  "desert_crown/EASY": {
+  "beyond_the_same_sky/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
-  "desert_crown/NORMAL": {
+  "beyond_the_same_sky/NORMAL": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
-  "desert_crown/HARD": {
+  "beyond_the_same_sky/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
+  "beyond_the_same_sky/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 6,
+   "heldHandSwitch": 0
+  },
+  "beyond_the_same_sky/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 3,
+   "heldHandSwitch": 0
+  },
+  "beyond_the_same_sky_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
-  "desert_crown/EXPERT": {
+  "beyond_the_same_sky_short/NORMAL": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
-  "desert_crown/MASTER": {
+  "beyond_the_same_sky_short/HARD": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 0,
+   "fastSameSide": 15,
+   "heldHandSwitch": 0
+  },
+  "beyond_the_same_sky_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 18,
+   "heldHandSwitch": 0
+  },
+  "beyond_the_same_sky_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 56,
    "heldHandSwitch": 0
   },
   "atsu_cup_theme_debug_short/EASY": {
@@ -3187,6 +3222,41 @@
    "heldHandSwitch": 0
   },
   "atsu_cup_theme_debug_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "desert_crown/MASTER": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
@@ -3329,6 +3399,11 @@
    "at": "2026-11-20T00:43",
    "reason": "天翔る翼の譜面を作り直し(密度増に伴う件数の増加を確認)",
    "changed": 3
+  },
+  {
+   "at": "2026-11-21T16:13",
+   "reason": "新曲 Beyond the Same Sky(原曲・short ver.)を公開",
+   "changed": 10
   },
   {
    "at": "2026-11-21T16:57",
