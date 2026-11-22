@@ -112,3 +112,29 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 - `tools/run-checks-select-check.js` が、名指しで読む検査の漏れ・どの領域にも入らない検査(`playbot/sim/hate-sim-check.js` が
   一度も回っていなかった)・一覧に書いた検査の在り無しを見張る。選び方を変えたら必ず通る
 - 検査の棚卸しは `node tools/checks-inventory.js --json <全部回した結果>` → [`docs/ops/checks/INVENTORY.md`](../ops/checks/INVENTORY.md)
+
+### 撮り比べ: 直していない画面が変わっていないかを、公開の前に見る(2026-11-22)
+
+社長「点検して表示とか見てるのに逆に壊してまわってるの？」(r1119-093)。直した画面だけを撮って確かめていたので、
+直していない画面が崩れても気づけなかった(きっかけ: モンヒロビートの結果の画面の🔄横)。
+
+```
+node tools/browser/visual-compare-check.js            主な画面を main と今の枝で撮って比べる(約5分・4つ同時)
+node tools/browser/visual-compare-check.js --intended "<理由>"   止め絵を見て、意図した違いとして控える
+node tools/browser/visual-compare-check.js --self     両方とも今の枝で撮る(違い0件になるかの確かめ)
+```
+
+- **呼ばれ方**: 画面に関わるファイル(`src/parts/`・`index.html`・`tailwind.css`)を変えると `run-checks.js --changed` に入る。
+  `node tools/ctx.js gate` にも「撮り比べ: 違い n 画面」と出る(gate は前の結果を読むだけで、撮らない)。
+  配るファイルが main と同じなら、撮らずに 0 件で終わる
+- **画面の組**: `tools/browser/compare-scenes.js` の1ファイル(HOME・マーケット・カードバトル・設定・ヘルプ・助手ライフの家と部屋・
+  モンヒロビートの曲えらび/演奏中/結果(そのまま・新記録と JUST MARVELOUS あり・フルコンボ)・モンサクのホーム/育成ホーム/トレーニング)。
+  大きさは縦 390×844・横 844×390・PC 1280×800。モンヒロビートの演奏中と結果は🔄横(ゲームが自分で回す表示)も撮る
+- **違いが出たら**: `tools/out/visual-compare/diff/<大きさ>-<画面>.png`(左 main・右 枝・赤い枠が違う所)を**自分の目で見る**。
+  直したつもりの画面の違いなら `--intended "<理由>"` で控え、出た1行(「撮り比べ: 違い n 画面(意図した違い: …)」)を PR の本文に書く。
+  直していない画面の違いは、崩している。直す。控えたあとで絵がまた変わったら、もう一度止まる
+- **毎回変わる所の止め方**: 時計は今日の15時から・乱数は種を固定・CSS の動きは止める・動画は隠す・それでも動く所は続けて撮って
+  変わった画素を外す(`tools/browser/stable-shot.js`)。歩き回る絵だけは画面の組の `hide` で隠す。違いが出た画面は撮り直して、2回とも違うときだけ残す
+- **限り**: 撮るのは Chromium。iPhone の Safari だけで起きる崩れは写らない(実機の写真が頼り)。画面の組に無い画面の崩れも写らない
+- 画面の組を足したら `--self` で違い0件を確かめる(0件にならない画面を入れると、誤って止める道具になる)
+

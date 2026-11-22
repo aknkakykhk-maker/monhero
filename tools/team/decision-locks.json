@@ -1023,6 +1023,35 @@
           "語": "permission_mode: auto"
         }
       ]
+    },
+    {
+      "id": "visual-compare",
+      "台帳": {
+        "日付": "2026-11-22",
+        "ことば": "直していない画面の崩れを公開の前に止める道具を作る"
+      },
+      "決めごと": "公開の前に、主な画面を main と直した枝で撮り比べ、違いが出たら止めて見せる(意図した違いは止め絵を見て控え、PR に書く)",
+      "守らせ方": "道具",
+      "仕組み": [
+        "tools/browser/visual-compare-check.js",
+        "tools/browser/compare-scenes.js",
+        "tools/run-checks.js",
+        "tools/team/review-gate.js"
+      ],
+      "要る": [
+        {
+          "どこ": "docs/rules/BUILD_CHECKS.md",
+          "語": "撮り比べ"
+        },
+        {
+          "どこ": "docs/depts/README.md",
+          "語": "公開の前に撮り比べの違いを見る"
+        },
+        {
+          "どこ": "tools/run-checks.js",
+          "語": "browser/visual-compare-check.js"
+        }
+      ]
     }
   ]
 }
