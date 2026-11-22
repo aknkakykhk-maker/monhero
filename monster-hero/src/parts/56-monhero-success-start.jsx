@@ -420,7 +420,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
             const rows = members.map((m) => ({ m, j: Array.isArray(m.top) ? m.top.indexOf(k) : -1 })).filter((x) => x.j >= 0 && x.j < 3).sort((a, b) => a.j - b.j);
             return (
               <div key={k} className="msx-gt-row" data-msx-gather-row={k}>
-                <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{msxTrainName(k, 1)}</b><span className="st">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="n">{rows.length}体</span></div>
+                {/* 見出しは下の欄と同じ能力名を主にし、トレーニング名を添える(名前のそろえ・育-125) */}
+                <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</b><span className="st">{msxTrainName(k, 1)}</span><span className="n">{rows.length}体</span></div>
                 {/* 「得意・来やすさ・伸び」は列の見出しに1回だけ出し、行には数字だけを並べる(同じ文のくり返しをやめた・育-243) */}
                 {rows.length ? <div className="msx-gt-cols" aria-hidden="true"><span/><span/><span>得意</span><span>来やすさ</span><span>伸び</span></div> : null}
                 {rows.length ? rows.map(({ m, j }, i) => { const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null; return (
