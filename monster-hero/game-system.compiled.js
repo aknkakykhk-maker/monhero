@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c838db45411a56ef
+// source-sha256: 346e9f04ee377fa4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16652,7 +16652,7 @@ const missionWithComplete = (type, normal, complete, now) => {
 const missionDailyDefinitions = (now = Date.now()) => missionWithComplete('daily', [{
   id: 'daily_login',
   name: '今日もMonster Hero！',
-  condition: 'その期間中にログインする',
+  condition: '今日ログインする',
   key: 'login',
   target: 1,
   rewards: [{
@@ -69890,7 +69890,7 @@ function MissionsScreen({
       disabled: !total,
       onClick: () => onClaimAll(),
       className: `shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`
-    }, "全て受け取る", total > 0 && ` (${total})`);
+    }, total > 0 ? `${total}件まとめて受け取る` : '全て受け取る');
   })(), React.createElement("div", {
     className: "mb-2 flex shrink-0 justify-center"
   }, React.createElement("span", {
@@ -69907,7 +69907,13 @@ function MissionsScreen({
   }, defs.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🗒️",
     lines: ['このタブのミッションはありません', 'ほかのタブに受け取れるものがあるかもしれません']
-  }) : defs.map(m => {
+  }) : [...defs].map((m, i) => ({
+    m,
+    i,
+    rank: missionValue(state, missionTab, m) >= m.target && !sent.includes(m.id) ? 0 : 1
+  })).sort((a, b) => a.rank - b.rank || a.i - b.i).map(({
+    m
+  }) => {
     const shownRewards = missionRewardsFor(m.rewards, {
         ownedItems,
         room
@@ -69932,8 +69938,9 @@ function MissionsScreen({
     }, m.tag), React.createElement("span", {
       className: "min-w-0"
     }, m.name)), React.createElement("p", {
-      className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words"
-    }, m.condition)), React.createElement("b", {
+      className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap(m.condition))), React.createElement("b", {
       className: "shrink-0 text-[12px] text-amber-200"
     }, Math.min(value, m.target), " / ", m.target)), React.createElement("div", {
       className: "h-2 my-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5"
@@ -69966,9 +69973,7 @@ function MissionsScreen({
       type: "button",
       onClick: () => onClaim(missionTab, m),
       className: "shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95"
-    }, "受け取る") : React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black text-slate-400"
-    }, "進行中 ", pct, "%")));
+    }, "受け取る") : null));
   })));
 }
 function GiftBoxScreen({
@@ -70007,7 +70012,7 @@ function GiftBoxScreen({
     items: [{
       id: 'unclaimed',
       color: '#0891b2',
-      label: React.createElement(React.Fragment, null, "未受取 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length))
+      label: React.createElement(React.Fragment, null, "未受取", tabCountBadge(claimable.length))
     }, {
       id: 'history',
       color: '#4f46e5',
@@ -70039,9 +70044,20 @@ function GiftBoxScreen({
       className: "mh-gift-heading"
     }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", {
       style: JA_WRAP_STYLE
-    }, jaWrap(display.title))), React.createElement("em", {
-      className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
-    }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), React.createElement("div", {
+    }, jaWrap(display.title))), (() => {
+      if (!g.claimedAt && !expired && valid) {
+        const left = (g.expiresAt ? new Date(g.expiresAt).getTime() : NaN) - now;
+        if (!Number.isFinite(left) || left <= 0 || left > 3 * 86400000) return null;
+        const hours = Math.ceil(left / 3600000);
+        return React.createElement("em", {
+          "data-gift-deadline-soon": true,
+          className: "bg-red-700 text-white"
+        }, hours < 24 ? `あと${hours}時間` : `あと${Math.ceil(left / 86400000)}日`);
+      }
+      return React.createElement("em", {
+        className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : 'bg-amber-900 text-amber-200'}`
+      }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : '要確認');
+    })()), React.createElement("div", {
       className: "mh-gift-main"
     }, React.createElement("div", {
       className: "mh-gift-rewards"
