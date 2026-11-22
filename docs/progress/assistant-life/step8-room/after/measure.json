@@ -1,0 +1,377 @@
+{
+ "shots": {
+  "tate-house.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -152,
+   "ng": []
+  },
+  "tate-house-bottom.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 12,
+   "ng": []
+  },
+  "tate-result.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "次は 💬 話す",
+    "w": 360,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "tate-room.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16
+   ],
+   "main": {
+    "label": "💬 あつと話す · 💗+",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 46,
+   "ng": []
+  },
+  "tate-room-more.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  },
+  "s320-house.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 296,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -388,
+   "ng": []
+  },
+  "s320-house-bottom.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 296,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 12,
+   "ng": []
+  },
+  "s320-result.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "次は 💬 話す",
+    "w": 290,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "s320-room.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16
+   ],
+   "main": {
+    "label": "💬 あつと話す · 💗+",
+    "w": 296,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -94,
+   "ng": []
+  },
+  "s320-room-more.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  },
+  "yoko-house.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 343,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -270,
+   "ng": []
+  },
+  "yoko-house-bottom.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16
+   ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  },
+  "yoko-result.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "次は 💬 話す",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "yoko-room.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16
+   ],
+   "main": {
+    "label": "💬 あつと話す · 💗+",
+    "w": 343,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 23,
+   "ng": []
+  },
+  "yoko-room-more.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  },
+  "pc-house.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 529,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 156,
+   "ng": []
+  },
+  "pc-house-bottom.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 529,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 156,
+   "ng": []
+  },
+  "pc-result.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "次は 💬 話す",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
+   "ng": []
+  },
+  "pc-room.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "💬 あつと話す · 💗+",
+    "w": 529,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -238,
+   "ng": []
+  },
+  "pc-room-more.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  }
+ },
+ "errors": [],
+ "miss": []
+}

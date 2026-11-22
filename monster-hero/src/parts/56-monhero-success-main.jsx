@@ -130,6 +130,7 @@ const msxBandMem = { id: null, loy: 0, pop: 0, dl: 0, dp: 0, tl: 0, tp: 0 };
 const MSX_BAND_DELTA_MS = 2600;
 // hpFrom / stFrom … 休む・遊ぶ・通院の結果で、体力・ストレスの棒を前の値から伸び縮みさせる(2026-11-14 社長「休んだときのゲージの変動がない」)
 function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, gainTag = true }) {
+  const [stOpen, setStOpen] = useState(false); // 総合力の札を押すと6つの能力の窓(育-215: トレーニング以外の画面で今の能力を確かめられなかった)
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax); const hp = Math.max(0, Math.min(max, s.hp));
   const after = Math.max(0, hp - use);
@@ -158,7 +159,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
           <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
             <div className="n">残り<b>{v.period.left}</b>ターン</div></div>
         )}
-        <div className="v-pow"><div><small>総合力</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
+        <button type="button" className="v-pow" onClick={() => setStOpen(true)} aria-label="6つの能力を見る" data-msx-band-pow><div><small>総合力 ▸</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></button>
       </div>
       <div className="v-b2">
         <div className={`v-ga hp${after < max * 0.3 ? ' low' : ''}`}><span>❤️ 体力</span>
@@ -170,6 +171,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
       </div>
       <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span>
         {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}><small>{(Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : ''}{msxLwWhy(x.w)}で </small>{msxLwAmt(x)}{l.length > 1 ? <small>{` ほか${l.length - 1}`}</small> : null}</span>; })()}</div>
+      {stOpen ? <MsxStatSheet s={s} ev={ev} onClose={() => setStOpen(false)}/> : null}
     </div>
   );
 }
@@ -279,6 +281,19 @@ function MsxPartySheet({ s, tagAt, onClose }) {
           {row('aid', <img src={msxFace(s.aid, 'happy')} alt=""/>, msxAidName(s.aid), '助手', Number(s.aidBond) || 0)}
         </div>
         <button type="button" className="msx-dt-close" data-msx-party-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
+// 6つの能力の窓(上の帯の総合力の札から開く・育-215)。数と素質の切り替えは毎ターンの能力の札と同じ部品
+function MsxStatSheet({ s, ev, onClose }) {
+  return (
+    <div className="msx-ov msx-fade" data-msx-stat-sheet onClick={onClose}>
+      <div className="msx-sheet msx-dt msx-stsh" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <h3>いまの能力</h3>
+        <div className="msx-stsh-pow">総合力 <b>{msxFmt(ev.power)}</b><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
+        <MsxStRow who={s} stats={s.stats}/>
+        <button type="button" className="msx-dt-close" data-msx-stat-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );

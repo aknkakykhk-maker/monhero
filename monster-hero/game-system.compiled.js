@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4319cb39a2092b14
+// source-sha256: 606363a3b56867a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62167,17 +62167,72 @@ function RhythmSongShopList({
   const songs = rhythmPaidSongList();
   const [playingId, setPlayingId] = React.useState('');
   const [frontBySong, setFrontBySong] = React.useState({});
+  const handleRef = React.useRef(null),
+    resumeKeyRef = React.useRef(null),
+    reqRef = React.useRef(0);
+  const stopListen = () => {
+    ++reqRef.current;
+    const h = handleRef.current;
+    handleRef.current = null;
+    if (h) {
+      try {
+        h.stop();
+      } catch (_) {}
+    }
+    const key = resumeKeyRef.current;
+    resumeKeyRef.current = null;
+    if (key) {
+      try {
+        Audio_.playBGM(key);
+      } catch (_) {}
+    }
+  };
   React.useEffect(() => () => {
     try {
+      stopListen();
       Audio_.stopPreview();
     } catch (_) {}
   }, []);
   if (!songs.length) return null;
   const toggleListen = async song => {
     try {
+      if (playingId === song.songId) {
+        stopListen();
+        setPlayingId('');
+        return;
+      }
+      const hadHandle = !!handleRef.current;
+      const prevKey = resumeKeyRef.current || (Audio_.currentBgmKey ? Audio_.currentBgmKey() : null);
+      if (hadHandle) {
+        const h = handleRef.current;
+        handleRef.current = null;
+        try {
+          h.stop();
+        } catch (_) {}
+      }
+      const req = ++reqRef.current;
+      resumeKeyRef.current = prevKey || null;
       await Audio_.unlock();
-      const started = await Audio_.previewBGM(song.bgmTrackId);
-      setPlayingId(started ? song.songId : '');
+      const saved = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
+      const audio = await Audio_.startRhythmTrack(song.bgmTrackId, saved.bgmVolume, {
+        loop: true
+      });
+      if (req !== reqRef.current || !audio) {
+        if (audio) {
+          try {
+            audio.stop();
+          } catch (_) {}
+        }
+        if (req === reqRef.current) {
+          const key = resumeKeyRef.current;
+          resumeKeyRef.current = null;
+          if (key) Audio_.playBGM(key);
+          setPlayingId('');
+        }
+        return;
+      }
+      handleRef.current = audio;
+      setPlayingId(song.songId);
     } catch (_) {
       setPlayingId('');
     }
@@ -117475,7 +117530,8 @@ function AssistantLifeRoomSheet({
   canGiveSolo = false,
   returnToMap = false,
   uiV2 = false,
-  onGoPlace = null
+  onGoPlace = null,
+  typed = null
 }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false);
@@ -117828,6 +117884,371 @@ function AssistantLifeRoomSheet({
   })), React.createElement("p", {
     className: "mt-3 text-[11px] font-black text-slate-300"
   }, "詳しく")) : null;
+  if (uiV2 && typed && typeof AssistantLifeRoomTyped === 'function' && typeof assistantLifeTypedRoomOn === 'function' && assistantLifeTypedRoomOn()) {
+    const groupIds = w && w.group ? w.group.ids : [id];
+    const giveSolo = soloOn && canGiveSolo,
+      giveGroup = !!(w && w.group && canGive);
+    const give = giveSolo ? {
+      k: 'give-solo',
+      on: () => onGiveSolo(id, groupIds)
+    } : giveGroup ? {
+      k: 'give',
+      on: () => onGive(w.group)
+    } : {
+      k: soloOn ? 'give-solo' : 'give',
+      disabled: true,
+      why: soloOn || w && w.group ? '今日はもう贈れません' : '一緒にいる2人に贈れます(いまはひとり)'
+    };
+    const distant = !!(w && w.reason === 'distance');
+    const talk = {
+      label: asleep ? '💤 そっと話しかける' : `💬 ${who.name}と話す`,
+      on: () => onInvite(id),
+      disabled: distant,
+      why: distant ? 'いまは遠くにいて声が届きません' : ''
+    };
+    const beatOn = typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function';
+    let battleInfo = null;
+    try {
+      battleInfo = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null;
+    } catch (_) {
+      battleInfo = null;
+    }
+    let succInfo = null;
+    try {
+      succInfo = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+    } catch (_) {
+      succInfo = null;
+    }
+    const play = [...(beatOn ? [{
+      k: 'beat',
+      icon: '🎵',
+      label: atBeat ? 'モンヒロビートで会う' : 'モンヒロビートに誘う',
+      sub: atBeat && beatFree ? 'いまモンヒロビートにいるので、券なしで一緒に遊べる' : '一緒に演奏する(セッション券を使う)',
+      go: '誘う',
+      gain: '💗+',
+      on: () => onBeat(id)
+    }] : []), ...(canCardNow ? [{
+      k: cardSpent ? 'card-spent' : 'card',
+      icon: '🃏',
+      label: 'MFバトルカードで対戦する',
+      sub: 'MFバトルカードにいる助手と対戦すると、ごほうびアップ',
+      go: '誘う',
+      gain: 'アップ',
+      on: () => onCard(id),
+      disabled: !!cardSpent,
+      why: cardSpent ? typeof cardLifeSpentText === 'function' ? cardLifeSpentText(cardSpent) : 'ごほうびアップは使い切りました' : ''
+    }] : []), ...(battleInfo ? [{
+      k: 'masmon-battle',
+      icon: '⚔',
+      label: (battleInfo.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, ''),
+      sub: battleInfo.sub || '',
+      go: '誘う',
+      on: () => {
+        try {
+          assistantMasmonBattleOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      },
+      disabled: !!battleInfo.disabled,
+      why: battleInfo.why || ''
+    }] : []), ...(succInfo ? [{
+      k: 'monhero-success',
+      icon: '🌱',
+      label: succInfo.label.replace(/^🌱\s*/, ''),
+      sub: succInfo.sub,
+      go: '誘う',
+      on: () => {
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      }
+    }] : [])];
+    let planInfo = null;
+    try {
+      planInfo = typeof assistantLifePlanRowInfo === 'function' ? assistantLifePlanRowInfo(id) : null;
+    } catch (_) {
+      planInfo = null;
+    }
+    const more = [w && w.group ? {
+      k: 'watch',
+      icon: '👀',
+      label: home ? '見守る' : '見守りに行く',
+      short: '見守る',
+      sub: '組のおしゃべりを見る(同じ組は時間帯に1回)',
+      go: '見る',
+      gain: '🤝💗+',
+      on: () => onWatch(w.group),
+      disabled: !canWatch,
+      why: 'この時間帯はもう見守りました'
+    } : {
+      k: 'peek',
+      icon: '👀',
+      label: 'ようすを見る',
+      short: 'ようす',
+      sub: 'ひとりごとや、あなたへのひとこと(時間帯に1回)',
+      go: '見る',
+      on: () => onPeek(id),
+      disabled: !canWatch,
+      why: 'この時間帯はもう見ました'
+    }, ...(onChat && !follow ? [{
+      k: 'chat',
+      icon: asleep ? '💤' : '💬',
+      label: asleep ? '起こしておしゃべりする' : 'おしゃべりする',
+      short: 'おしゃべり',
+      sub: '話すと仲良し度が少し上がる(1日の上限あり)',
+      go: '話す',
+      gain: '💗+',
+      on: () => onChat(id, null)
+    }] : []), {
+      k: 'masmon',
+      icon: '🐾',
+      label: `${who.name}のマスモン${allTeamN ? ` ${allTeamN}体` : ''}`,
+      short: 'マスモン',
+      sub: '育ち方・編成を見る',
+      go: '見る',
+      on: onMasmon ? () => onMasmon(id) : null,
+      why: 'まだ見られません'
+    }, ...(planInfo ? [{
+      k: 'plan',
+      icon: '📅',
+      label: '次の行き先を決める',
+      short: '予定',
+      sub: planInfo.sub,
+      go: '決める',
+      on: () => assistantLifePlanOpen({
+        who: id
+      })
+    }] : []), ...(furnOn ? [{
+      k: 'furn',
+      icon: '🪑',
+      label: '部屋の家具',
+      short: '家具',
+      sub: `置いてある家具 ${rvFurn.length}個`,
+      go: '開く',
+      on: () => setFurnOpen(true)
+    }] : [])];
+    let trainInfo = null;
+    try {
+      trainInfo = w && w.place === 'battle' && typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+    } catch (_) {
+      trainInfo = null;
+    }
+    const perk = typeof AssistantLifePlacePerk === 'function' && w && !asleep && !['home', 'cardroom', 'studio'].includes(w.place) ? React.createElement(AssistantLifePlacePerk, {
+      life: life,
+      ids: [id],
+      place: w.place,
+      land: land,
+      onGo: onGoPlace
+    }) : null;
+    const hot = trainInfo || perk || atBeat && beatFree && !asleep ? React.createElement(React.Fragment, null, atBeat && beatFree && !asleep && React.createElement(AssistantLifeRoomTypedRow, {
+      k: "beat-free",
+      icon: "🎵",
+      label: "モンヒロビートで会う",
+      sub: "いまモンヒロビートにいるので、券なしで一緒に遊べる",
+      go: "会う",
+      gain: "券なし",
+      on: () => onBeat(id)
+    }), trainInfo && React.createElement("div", {
+      "data-assistant-life-room-train": id
+    }, React.createElement(AssistantLifeRoomTypedRow, {
+      k: "train-watch",
+      icon: "👀",
+      label: "修行を見る",
+      sub: "マスモンの練習試合を見る(今日覚えた技・熟練の伸びが分かる)",
+      go: "見る",
+      on: typeof assistantMasmonTrainWatchOpen === 'function' ? () => {
+        try {
+          assistantMasmonTrainWatchOpen(id);
+        } catch (_) {}
+      } : null
+    }), React.createElement(AssistantLifeRoomTypedRow, {
+      k: "cheer",
+      icon: "📣",
+      label: `応援する(今日${trainInfo.perDay - trainInfo.left}/${trainInfo.perDay})`,
+      sub: "修行が少し進み、仲良し度も上がる(時間帯に1回)",
+      go: "応援",
+      gain: "💗+",
+      disabled: !trainInfo.canCheer,
+      why: trainInfo.why || '',
+      on: typeof assistantMasmonCheer === 'function' ? () => {
+        let r = null;
+        try {
+          r = assistantMasmonCheer(id);
+        } catch (_) {
+          r = null;
+        }
+        setCheerNote(r && r.ok ? `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` : r && r.why || '');
+      } : null
+    }), cheerNote && React.createElement("div", {
+      className: "alu-n",
+      "data-assistant-life-room-cheer-msg": id
+    }, cheerNote)), perk) : null;
+    const followNode = follow && onChat ? React.createElement("div", {
+      className: "alu-card",
+      "data-assistant-life-room-follow": follow.kind
+    }, React.createElement("div", {
+      className: "alu-t"
+    }, who.name, "「", follow.text, "」"), React.createElement("div", {
+      style: {
+        display: 'flex',
+        gap: 8,
+        marginTop: 8
+      }
+    }, React.createElement(AluBtn, {
+      onClick: () => onChat(id, follow),
+      "data-assistant-life-room-follow-chat": true
+    }, "💬 おしゃべりする"), React.createElement(AluBtn, {
+      onClick: () => onFollowDone && onFollowDone(),
+      "data-assistant-life-room-follow-bye": true
+    }, "またね"))) : null;
+    const rhythm = (() => {
+      try {
+        const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
+        const rh = ASSISTANT_LIFE_RHYTHM[id];
+        return rh ? `🕰 生活のリズム: ${rh.label}${Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}` : '';
+      } catch (_) {
+        return '';
+      }
+    })();
+    const feel = asleep ? '💤 ぐっすり寝ている' : w && w.reason === 'lonely' ? '💭 さみしそう(だれか来てほしい)' : mood ? `気分: ${mood}` : '';
+    const statusLine = [`${where}${groupNames ? `(${groupNames})` : ''}`, !home && slotDef ? `⏱ ${slotDef.to % 24}時までいる` : '', feel].filter(Boolean).join(' · ');
+    const details = React.createElement("div", {
+      "data-assistant-life-room-details": true,
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement("div", {
+      className: "alu-n"
+    }, "詳しく"), React.createElement(AluRow, {
+      pic: "🤝",
+      text: `友情Lv ${friends.map(f => `${assistantLifeName(f.id)} Lv${f.lv}`).join('・')}`,
+      note: "一番仲のいい3人"
+    }), sess ? React.createElement(AluRow, {
+      pic: "🎵",
+      text: `セッションLv${sess.level}`,
+      note: `一緒に ${sess.lives}回`
+    }) : null, rhythm ? React.createElement(AluRow, {
+      pic: "🕰",
+      text: rhythm.replace(/^🕰 /, ''),
+      note: ""
+    }) : null, typeof AssistantLifeRoomTypedLikes === 'function' && React.createElement(AssistantLifeRoomTypedLikes, {
+      id: id
+    }), typeof amgpOn === 'function' && amgpOn() && typeof assistantMasmonNoteOpen === 'function' && React.createElement(AluRow, {
+      pic: "📒",
+      text: "育成ノート",
+      note: "予定を組む・疲れとストレスを見る",
+      action: React.createElement(AluBtn, {
+        onClick: () => assistantMasmonNoteOpen(id),
+        "data-amgp-room-link": true
+      }, "開く")
+    }), soloOn && typeof AssistantLifeRoomTypedCheki === 'function' && React.createElement(AssistantLifeRoomTypedCheki, {
+      id: id
+    }), React.createElement("div", {
+      className: "alu-n",
+      style: {
+        marginTop: 6
+      }
+    }, "今日あったこと"), items.length ? items.map((x, i) => React.createElement(AluRow, {
+      key: i,
+      pic: "📝",
+      text: x.text,
+      note: x.t
+    })) : React.createElement("div", {
+      className: "alu-n"
+    }, "まだありません"));
+    const typedScene = typeof AssistantLifeRoomScene === 'function' ? React.createElement(AssistantLifeRoomScene, {
+      id: id,
+      look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+      land: land,
+      people: people,
+      sleepIds: sleepIds,
+      away: away,
+      team: rvTeam,
+      furn: rvFurn,
+      bubble: follow && follow.text ? follow.text : '',
+      title: "",
+      sub: "",
+      onPerson: null,
+      onMasmon: onMasmon ? () => onMasmon(id) : null,
+      dock: null,
+      layoutWho: layoutOn ? id : null
+    }) : null;
+    const canGiveAny = !give.disabled;
+    return React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        zIndex: 25
+      },
+      "data-assistant-life-room-sheet": id
+    }, React.createElement(AssistantLifeRoomTyped, {
+      id: id,
+      who: who,
+      land: land,
+      tabs: typed.tabs,
+      tab: typed.tab,
+      onTab: typed.onTab,
+      onBack: onClose,
+      scene: typedScene,
+      lv: lv,
+      sleeping: asleep,
+      statusLine: statusLine,
+      talk: talk,
+      give: give,
+      play: play,
+      hot: hot,
+      follow: followNode,
+      rel: typeof AssistantLifeRelSheetRow === 'function' ? React.createElement(AssistantLifeRelSheetRow, {
+        id: id,
+        state: roomState,
+        peerSt: peerSt,
+        onMediate: onMediate,
+        onView: onRelView
+      }) : null,
+      more: more,
+      details: details,
+      moreOpen: moreOpen,
+      onMore: () => {
+        ASSISTANT_LIFE_ROOM_MORE.open = !moreOpen;
+        setMoreOpen(!moreOpen);
+      },
+      result: typed.result,
+      onResultClose: typed.onResultClose,
+      nextAfter: canGiveAny ? {
+        label: '🎁 贈る',
+        on: give.on
+      } : null
+    }), furnOpen && typeof AssistantLifeFurnSheet === 'function' && React.createElement(AssistantLifeFurnSheet, {
+      id: id,
+      furnItems: furnItems || {},
+      onGiveFurn: onGiveFurn,
+      land: land,
+      onClose: () => setFurnOpen(false),
+      onTalk: (talk2, text) => {
+        setFurnOpen(false);
+        if (onFurnTalk) onFurnTalk(talk2, text);
+      },
+      onLayout: layoutOn ? () => {
+        setFurnOpen(false);
+        setLayoutOpen(true);
+      } : null
+    }), layoutOpen && layoutOn && typeof AssistantLifeRoomEditor === 'function' && React.createElement(AssistantLifeRoomEditor, {
+      id: id,
+      land: land,
+      onClose: () => setLayoutOpen(false),
+      room: {
+        look: typeof assistantLifeTimeLook === 'function' ? assistantLifeTimeLook() : 'noon',
+        people,
+        sleepIds,
+        away,
+        team: rvTeam
+      }
+    }));
+  }
   return React.createElement("div", {
     className: "absolute inset-0",
     style: {
@@ -120150,6 +120571,25 @@ function AssistantLifeHouse({
     className: "-mx-3"
   }, itemsBody))), roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), roomId && partnerOk(roomId) && React.createElement(AssistantLifeRoomSheet, {
     key: roomId,
+    typed: uiV2 ? {
+      tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+        key,
+        icon,
+        label
+      })),
+      tab,
+      onTab: k => {
+        setMapFocusPlace(null);
+        setMapFocusAssistantId(null);
+        setGiftOpen(false);
+        setTab(k);
+        setRoomId(null);
+        setFollow(null);
+        setFurnBack(null);
+      },
+      result: aluResult,
+      onResultClose: () => setAluResult(null)
+    } : null,
     onGoPlace: fn => {
       try {
         close();
@@ -120293,7 +120733,7 @@ function AssistantLifeHouse({
       setScene(null);
       const following = !!followAfterRef.current;
       showFollow();
-      if (typedHouse && sc && sc.before && !following) setAluResult({
+      if ((typedHouse || uiV2 && roomId) && sc && sc.before && !following) setAluResult({
         ids: sc.ids,
         before: sc.before,
         title: sc.resultTitle
@@ -120776,6 +121216,290 @@ function AssistantLifeHouseTyped({
       }, "部屋へ")
     });
   }) : null));
+}
+const assistantLifeTypedRoomOn = () => typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedRoom);
+const AssistantLifeRoomTypedRow = ({
+  k,
+  icon,
+  label,
+  sub = '',
+  go = '開く',
+  gain = '',
+  on = null,
+  disabled = false,
+  why = ''
+}) => {
+  const off = disabled || typeof on !== 'function';
+  return React.createElement(AluRow, {
+    pic: icon,
+    text: label,
+    note: off && why ? why : sub,
+    action: React.createElement(AluBtn, {
+      onClick: off ? undefined : on,
+      disabled: off,
+      "data-assistant-life-room-act": k,
+      "data-assistant-life-room-do": k
+    }, go, gain && !off ? ` ${gain}` : '')
+  });
+};
+function AssistantLifeRoomTyped({
+  id,
+  who,
+  land = false,
+  tabs,
+  tab = 'house',
+  onTab,
+  onBack,
+  scene,
+  lv = null,
+  sleeping = false,
+  statusLine = '',
+  talk,
+  give,
+  play = [],
+  hot = null,
+  follow = null,
+  rel = null,
+  more = [],
+  details = null,
+  moreOpen = false,
+  onMore,
+  overlay = null,
+  result = null,
+  onResultClose,
+  nextAfter = null
+}) {
+  const [playOpen, setPlayOpen] = React.useState(false);
+  const [wideOpen, setWideOpen] = React.useState(() => typeof window !== 'undefined' && window.innerWidth >= ALU_WIDE_MIN && window.innerWidth > window.innerHeight * 1.15 && window.innerHeight >= 600);
+  const open = moreOpen || wideOpen;
+  const toggleMore = () => {
+    if (open) {
+      setWideOpen(false);
+      if (moreOpen) onMore();
+    } else onMore();
+  };
+  const pts = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(id) : null;
+  const next = Number.isFinite(pts) && typeof assistantBondNext === 'function' ? assistantBondNext(pts) : null;
+  const hour = typeof timeOfDayJstParts === 'function' ? timeOfDayJstParts(Date.now()).h : new Date().getHours();
+  const head = React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-head": true,
+    "data-assistant-life-bond-road": lv != null ? lv : undefined
+  }, React.createElement("div", {
+    className: "alu-t",
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: '2px 8px'
+    }
+  }, lv != null ? React.createElement("span", {
+    className: "alu-nw"
+  }, "💗 仲良し度 ", React.createElement("b", null, "Lv", lv)) : null, lv != null ? React.createElement("span", {
+    className: "alu-n alu-nw",
+    "data-assistant-life-bond-road-remain": next ? next.remain : undefined
+  }, next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました') : null, React.createElement(AluCond, {
+    id: id,
+    sleeping: sleeping,
+    hour: hour
+  })), statusLine ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: 2
+    },
+    "data-assistant-life-room-where": true
+  }, statusLine) : null);
+  const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
+  let resultNode = null;
+  if (result) {
+    const now = typeof assistantLifeSceneSnap === 'function' ? assistantLifeSceneSnap(result.ids) : {
+      peer: 0,
+      me: null
+    };
+    const b = result.before || {
+      peer: 0,
+      me: null
+    };
+    const dPeer = Math.max(0, Math.round(now.peer - b.peer));
+    const dMe = now.me != null && b.me != null ? Math.max(0, Math.round(now.me - b.me)) : 0;
+    const gains = [...(dMe > 0 ? [{
+      icon: '💗',
+      label: '仲良し度',
+      v: dMe
+    }] : []), ...(dPeer > 0 ? [{
+      icon: '🤝',
+      label: '友情',
+      v: dPeer
+    }] : [])];
+    const nx = nextAfter ? {
+      label: nextAfter.label,
+      onClick: () => {
+        onResultClose();
+        nextAfter.on();
+      }
+    } : {
+      label: '🏡 部屋に戻る',
+      onClick: onResultClose
+    };
+    resultNode = React.createElement("div", {
+      "data-assistant-life-room-result": true
+    }, React.createElement(AluResult, {
+      title: result.title || '結果',
+      line: `${(result.ids || []).map(x => typeof assistantLifeName === 'function' ? assistantLifeName(x) : x).join('・')}${gains.length ? '' : ' · 今日はもう上がりきっています'}`,
+      gains: gains,
+      next: nx,
+      onClose: onResultClose
+    }));
+  }
+  const playSheet = playOpen ? React.createElement(AluSheet, {
+    title: `🎉 ${who.name}を誘う`,
+    gain: "💗 仲良し度 · ごほうび",
+    onClose: () => setPlayOpen(false)
+  }, play.map(p => React.createElement(AssistantLifeRoomTypedRow, _extends({
+    key: p.k
+  }, p, {
+    on: p.on ? () => {
+      setPlayOpen(false);
+      p.on();
+    } : null
+  })))) : null;
+  const sceneFn = box => React.createElement("div", {
+    style: {
+      position: 'relative',
+      height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5))
+    },
+    "data-assistant-life-roomview-typed-scene": true
+  }, scene);
+  return React.createElement(AluFrame, {
+    title: `${who.name}の部屋`,
+    onBack: onBack,
+    backProps: {
+      'data-assistant-life-close': undefined,
+      'data-assistant-life-roomview-close': '',
+      'data-assistant-life-room-close': ''
+    },
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    head: head,
+    scene: sceneFn,
+    overlay: resultNode || playSheet || overlay,
+    "data-assistant-life-typed-room": id
+  }, rel, follow, React.createElement(AluGo, {
+    onClick: talk.on,
+    disabled: !!talk.disabled,
+    "data-assistant-life-room-act": "invite",
+    "data-assistant-life-room-do": "invite"
+  }, talk.label, talk.disabled ? '' : ' · 💗+'), talk.disabled && talk.why ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: -4
+    }
+  }, talk.why) : null, React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 8
+    },
+    "data-assistant-life-room-acts": true
+  }, React.createElement(AluBtn, {
+    onClick: give.on,
+    disabled: !!give.disabled,
+    "data-assistant-life-room-act": give.k,
+    "data-assistant-life-room-do": give.k,
+    style: {
+      width: '100%'
+    }
+  }, "🎁 贈る", give.disabled ? '' : ' 💗+'), React.createElement(AluBtn, {
+    onClick: () => setPlayOpen(true),
+    disabled: !playable.length,
+    "data-assistant-life-room-act": "play",
+    "data-assistant-life-room-do": "play",
+    style: {
+      width: '100%'
+    }
+  }, "🎉 誘う", playable.length ? ' ごほうび' : '')), give.disabled && give.why ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginTop: -4
+    }
+  }, "🎁 ", give.why) : null, hot ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-hot": true
+  }, hot) : null, React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-room-do-list": true
+  }, React.createElement(AluBtn, {
+    onClick: toggleMore,
+    "aria-expanded": open,
+    "data-assistant-life-room-more": true,
+    style: {
+      width: '100%'
+    }
+  }, open ? 'もっと見る ▲' : `もっと見る ▼ ${more.map(m => m.short).filter(Boolean).join('・')}`), open ? React.createElement("div", {
+    "data-assistant-life-room-more-list": true
+  }, more.map(m => React.createElement(AssistantLifeRoomTypedRow, _extends({
+    key: m.k
+  }, m))), details) : null));
+}
+function AssistantLifeRoomTypedLikes({
+  id
+}) {
+  const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  if (!st || typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
+  const told = (st.likes && st.likes.told || []).filter(x => x.who === id).slice(-1)[0] || null;
+  const hint = told ? assistantLifeGiftHintLine(id, told.key) : null;
+  const mark = {
+    like: '💗',
+    bad: '💧',
+    unknown: '?'
+  };
+  return React.createElement("div", {
+    "data-assistant-life-gift-likes": id
+  }, React.createElement(AluRow, {
+    pic: "🎁",
+    text: "贈り物の好み",
+    note: `${gifts.length}種類のうち ${known} 分かった`,
+    action: hint ? React.createElement(AluBtn, {
+      onClick: () => assistantLifeGiftToldSeen(id),
+      "data-assistant-life-gift-told": told.key
+    }, "閉じる") : null
+  }), hint ? React.createElement("div", {
+    className: "alu-n",
+    style: {
+      marginBottom: 4
+    }
+  }, "💡 ", hint.t) : null, React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 4
+    }
+  }, gifts.map(g => {
+    const s = assistantLifeGiftShownLike(id, g.key, st);
+    return React.createElement("span", {
+      key: g.key,
+      className: `alu-chip${s === 'like' ? ' ok' : ''}`,
+      "data-assistant-life-gift-like": `${g.key}:${s}`,
+      title: `${g.name} ${ASSISTANT_LIFE_GIFT_LABEL[s]}`
+    }, g.emoji, mark[s] || '');
+  })));
+}
+function AssistantLifeRoomTypedCheki({
+  id
+}) {
+  const st = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const days = st && st.cheki && st.cheki[String(id)] || [];
+  if (!days.length) return null;
+  return React.createElement("div", {
+    "data-assistant-life-cheki": id
+  }, React.createElement(AluRow, {
+    pic: "📸",
+    text: `チェキ ${days.length}枚`,
+    note: `一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`
+  }));
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
@@ -123834,7 +124558,7 @@ function AssistantLifeRoomScene({
       wordBreak: 'auto-phrase'
     },
     "data-assistant-life-roomview-bubble": true
-  }, bubble), React.createElement("div", {
+  }, bubble), (title || sub || onBack) && React.createElement("div", {
     className: "absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-[#0b1020f0] to-transparent px-3 pb-4",
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))',
@@ -125225,7 +125949,7 @@ const ALU_CSS = `
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
 .alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
-.alu-top .bk{flex:none;min-width:72px;height:36px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
+.alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
@@ -125342,20 +126066,21 @@ const useAluWide = () => {
 const AluTopBar = ({
   title,
   onBack,
-  now
+  now,
+  backProps = null
 }) => {
   const c = aluClock(now);
   return React.createElement("div", {
     className: "alu-top",
     "data-alu-top": true
-  }, React.createElement("button", {
+  }, React.createElement("button", _extends({
     type: "button",
     className: "bk",
     "data-alu-back": true,
     "data-assistant-life-close": true,
     "aria-label": "戻る",
     onClick: onBack
-  }, "← 戻る"), React.createElement("div", {
+  }, backProps || {}), "← 戻る"), React.createElement("div", {
     className: "ti",
     "data-alu-title": true
   }, title), React.createElement("div", {
@@ -125385,6 +126110,7 @@ const AluTabBar = ({
 const AluFrame = ({
   title,
   onBack,
+  backProps,
   tab,
   onTab,
   tabs,
@@ -125418,7 +126144,8 @@ const AluFrame = ({
   }, rest), React.createElement("style", null, ALU_CSS), React.createElement(AluTopBar, {
     title: title,
     onBack: onBack,
-    now: now
+    now: now,
+    backProps: backProps
   }), React.createElement("div", {
     className: "alu-body"
   }, wide && scene ? React.createElement("div", {
@@ -174390,6 +175117,8 @@ const MSX_CSS = `
 .msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
 .msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx button.v-pow{color:inherit;font:inherit;cursor:pointer;min-height:44px;text-align:left}.msx button.v-pow:active{transform:translateY(1px)}
+.msx .msx-stsh-pow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:900;margin:4px 0 8px}.msx .msx-stsh-pow b{font-size:22px;color:#fde047}
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
@@ -181171,6 +181900,7 @@ function MsxBand({
   stFrom = null,
   gainTag = true
 }) {
+  const [stOpen, setStOpen] = useState(false);
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax);
   const hp = Math.max(0, Math.min(max, s.hp));
@@ -181233,9 +181963,13 @@ function MsxBand({
     className: "ph"
   }, v.period.name, React.createElement("small", null, cal.year, "年目 ", cal.month, "月")), React.createElement("div", {
     className: "n"
-  }, "残り", React.createElement("b", null, v.period.left), "ターン")), React.createElement("div", {
-    className: "v-pow"
-  }, React.createElement("div", null, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power))), React.createElement("i", {
+  }, "残り", React.createElement("b", null, v.period.left), "ターン")), React.createElement("button", {
+    type: "button",
+    className: "v-pow",
+    onClick: () => setStOpen(true),
+    "aria-label": "6つの能力を見る",
+    "data-msx-band-pow": true
+  }, React.createElement("div", null, React.createElement("small", null, "総合力 ▸"), React.createElement("b", null, msxFmt(ev.power))), React.createElement("i", {
     className: `${msxRankCls(ev.rank)} big`
   }, ev.rank))), React.createElement("div", {
     className: "v-b2"
@@ -181293,7 +182027,11 @@ function MsxBand({
       "data-msx-band-lw": true,
       title: l.map(y => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')
     }, React.createElement("small", null, (Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : '', msxLwWhy(x.w), "で "), msxLwAmt(x), l.length > 1 ? React.createElement("small", null, ` ほか${l.length - 1}`) : null);
-  })()));
+  })()), stOpen ? React.createElement(MsxStatSheet, {
+    s: s,
+    ev: ev,
+    onClose: () => setStOpen(false)
+  }) : null);
 }
 const MSX_YOSU_NAME = {
   sabori: 'サボりグセ',
@@ -181533,6 +182271,34 @@ function MsxPartySheet({
     type: "button",
     className: "msx-dt-close",
     "data-msx-party-close": true,
+    onClick: onClose
+  }, "閉じる")));
+}
+function MsxStatSheet({
+  s,
+  ev,
+  onClose
+}) {
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-stat-sheet": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt msx-stsh",
+    onClick: e => e.stopPropagation(),
+    role: "dialog",
+    "aria-modal": "true"
+  }, React.createElement("h3", null, "いまの能力"), React.createElement("div", {
+    className: "msx-stsh-pow"
+  }, "総合力 ", React.createElement("b", null, msxFmt(ev.power)), React.createElement("i", {
+    className: `${msxRankCls(ev.rank)} big`
+  }, ev.rank)), React.createElement(MsxStRow, {
+    who: s,
+    stats: s.stats
+  }), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-stat-close": true,
     onClick: onClose
   }, "閉じる")));
 }
@@ -191299,7 +192065,9 @@ function MsxR3Box({
     }, React.createElement("span", {
       className: "e",
       "aria-hidden": "true"
-    }, "🐾"), React.createElement("b", null, "マスモンボックス"), React.createElement("small", null, box.mons.length, " / ", box.cap, "体")), typeof MonsucFuseSheet === 'function' ? React.createElement("button", {
+    }, "🐾"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "マスモンボックス"), React.createElement("small", null, box.mons.length, " / ", box.cap, "体"))), typeof MonsucFuseSheet === 'function' ? React.createElement("button", {
       type: "button",
       className: "mm-card",
       onClick: () => setPage('fuse'),
@@ -191308,7 +192076,9 @@ function MsxR3Box({
     }, React.createElement("span", {
       className: "e",
       "aria-hidden": "true"
-    }, "🧬"), React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン')) : null), React.createElement("button", {
+    }, "🧬"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'))) : null, React.createElement("button", {
       type: "button",
       className: "mm-card mm-asb",
       onClick: () => {
@@ -191317,7 +192087,12 @@ function MsxR3Box({
         setMsg('');
       },
       "data-msx-mm-open-assist": true
-    }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体(合体・お別れしたモンスター。編成にだけ入れられる)")), box.memory.length ? React.createElement("div", {
+    }, React.createElement("span", {
+      className: "e",
+      "aria-hidden": "true"
+    }, "💠"), React.createElement("span", {
+      className: "tx"
+    }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体")))), box.memory.length ? React.createElement("div", {
       className: "mm-memo"
     }, "思い出: ", box.memory.slice(-5).map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
     foot = null;
@@ -191836,6 +192611,13 @@ const MSX_MM_CSS = `
 .msx .mm-asb{grid-column:1/-1;min-height:46px;margin-top:6px;width:100%;flex-direction:column}
 .msx .mm-keep{margin-top:4px;font-size:11px;font-weight:800;color:#c7d2fe;line-height:1.5}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
+/* 入口(育-159): 絵は上に収め、3つのボタンを同じ大きさで縦に(絵文字は左・名前と数は右) */
+.msx .mm-gate .mm-desk{flex:1 1 0;min-height:150px;max-height:52%}
+.msx .mm-gate .mm-cards{grid-template-columns:1fr;gap:8px}
+.msx .mm-gate .mm-card{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:8px 16px;text-align:left}
+.msx .mm-gate .mm-card .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.msx .mm-gate .mm-card small{font-size:12px}
+.msx .mm-gate .mm-asb{margin-top:0}
 .msx .mm-memo{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx .mm-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-tabs button{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #4a4380;font-size:13px;font-weight:900;text-align:center}
