@@ -198,9 +198,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
-        <button type="button" className="chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
-        <button type="button" className="chip" onClick={() => preset('low')}>おまかせで振る</button>
-        <button type="button" className="chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('low')}>おまかせで振る</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>

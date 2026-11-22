@@ -1448,6 +1448,19 @@ const MSX_CSS = `
 /* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
 .msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+/* 振り分けの3段は形を分ける(育-178・245): 行き先=下線のタブ / 刻み=1本につながった区切り / まとめて振る=枠だけの四角いボタン(押すとすぐ振る・選ばれた色で光らせない) */
+.msx .msx-pttabs{display:flex;margin:6px 0 4px;border-bottom:2px solid #475569}
+.msx .msx-pttabs .chip{flex:1;min-height:44px;border:0;border-radius:0;background:transparent;color:#94a3b8;font-size:14px;font-weight:900;margin-bottom:-2px;border-bottom:3px solid transparent}
+.msx .msx-pttabs .chip.on{background:transparent;color:#fde047;border-bottom-color:#fde047}
+.msx .msx-ptunit{display:flex;align-items:center;gap:0;margin:6px 0}
+.msx .msx-ptunit .msx-ptunit-k{flex:none;font-size:11px;font-weight:800;color:#cbd5e1;margin-right:6px;white-space:nowrap}
+.msx .msx-ptunit .msx-ptseg{flex:1;display:flex;min-width:0;border:1px solid #64748b;border-radius:10px;overflow:hidden}
+.msx .msx-ptunit .chip{flex:1;min-width:0;min-height:36px;border-radius:0;border:0;border-left:1px solid #64748b;background:#1e293b;color:#e2e8f0}
+.msx .msx-ptunit .chip:first-child{border-left:0}
+.msx .msx-ptunit .chip.on{background:#fde047;color:#422006}
+.msx .chip.msx-ptact{min-height:36px;border-radius:9px;background:transparent;border:1.5px solid #94a3b8;color:#f1f5f9;padding:0 10px}
+.msx .chip.msx-ptact:active{background:#334155}
+.msx .chip.msx-ptact:disabled{opacity:.45}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
 /* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
