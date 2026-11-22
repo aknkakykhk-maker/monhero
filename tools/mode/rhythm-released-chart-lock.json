@@ -1252,6 +1252,11 @@
     "beyond_the_same_sky/hell",
     "beyond_the_same_sky_short/hell"
    ]
+  },
+  {
+   "at": "2026-11-23 02:56",
+   "reason": "main取り込みに伴う再生成(台帳 r1119-119/120・Battle #5 非表示マージ)",
+   "changed": []
   }
  ]
 }
