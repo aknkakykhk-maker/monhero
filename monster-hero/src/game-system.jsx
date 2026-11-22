@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 964bea8402c939fa
+// generated-sha256: 268942a34dd1903a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91283,7 +91283,9 @@ const MSX_CSS = `
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
-.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+/* なぞった線は丸の後ろに薄く引く(育-223: 丸の絵や「Lv.2」の札の上を白い線が走り、壊れた表示に見えた) */
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:0;opacity:.4}
+.msx .v-trs > .v-tr{z-index:1}
 .msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
@@ -93646,7 +93648,9 @@ const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : 
 // カードの下の伸びの表示。絵文字だけでは能力が分からないので名前を添え、1つずつ折れないようにする(育-234・前は「🛡️+4% 🎯 ⏎ +3%」と数だけ次の行へ落ちていた)
 const msxTpBonusText = (mem) => {
   if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
-  return mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>);
+  // 3つ目からは「ほか◯つ」の印だけ(詳細の窓には全部出る。カードと詳細が食い違って見えないように・育-126)
+  const more = mem.top.length - 2;
+  return [...mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>), more > 0 ? <React.Fragment key="more"> <span className="msx-tp-more">ほか{more}つ</span></React.Fragment> : null];
 };
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
@@ -98221,6 +98225,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-more{display:inline-block;white-space:nowrap;color:#cbd5e1;font-weight:800}
 .mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}

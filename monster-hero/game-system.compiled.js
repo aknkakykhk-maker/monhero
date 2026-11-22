@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ec98e5ba103a891
+// source-sha256: 1da1be5c724f0b83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175102,7 +175102,9 @@ const MSX_CSS = `
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
-.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+/* なぞった線は丸の後ろに薄く引く(育-223: 丸の絵や「Lv.2」の札の上を白い線が走り、壊れた表示に見えた) */
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:0;opacity:.4}
+.msx .v-trs > .v-tr{z-index:1}
 .msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
@@ -179825,13 +179827,18 @@ const msxTpCardM = (rec, mem, species) => ({
 const msxTpPow = (rec, mem) => rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null;
 const msxTpBonusText = mem => {
   if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
-  return mem.top.slice(0, 2).map((k, i) => React.createElement(React.Fragment, {
+  const more = mem.top.length - 2;
+  return [...mem.top.slice(0, 2).map((k, i) => React.createElement(React.Fragment, {
     key: k
   }, i ? ' ' : null, React.createElement("span", {
     className: "msx-tp-bn"
   }, MSX_STAT_ICON[k], React.createElement("span", {
     className: "n"
-  }, MSX_STAT_NAME[k]), "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%")));
+  }, MSX_STAT_NAME[k]), "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), more > 0 ? React.createElement(React.Fragment, {
+    key: "more"
+  }, " ", React.createElement("span", {
+    className: "msx-tp-more"
+  }, "ほか", more, "つ")) : null];
 };
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
@@ -192146,6 +192153,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-more{display:inline-block;white-space:nowrap;color:#cbd5e1;font-weight:800}
 .mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
