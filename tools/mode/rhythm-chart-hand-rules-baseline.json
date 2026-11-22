@@ -3228,6 +3228,76 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
+  "walkure/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 293,
+   "heldHandSwitch": 0
+  },
+  "walkure/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
+  "walkure/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 64,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 2,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 2,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3414,6 +3484,11 @@
    "at": "2026-11-22T05:48",
    "reason": "r1119-096 Beyond the Same Sky(原曲・short)MASTER・HELL と Desert Crown HELL の押さえ中の交差を位置だけ直した。押さえ中の交差の控えを新しく作った",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T08:28",
+   "reason": "新曲 ワルキューレ(原曲・short ver.)を公開",
+   "changed": 10
   }
  ]
 }
