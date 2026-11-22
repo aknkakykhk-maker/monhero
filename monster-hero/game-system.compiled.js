@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76a72f4400866c97
+// source-sha256: 9f9f044b1536e256
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37050,7 +37050,7 @@ const RhythmOrientationButton = ({
       if (how === 'device') return;
       if (how === 'already') return;
       if (how === 'forced') {
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
+        setNote(`代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてください`);
         return;
       }
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
@@ -39251,6 +39251,7 @@ const RhythmSongSelect = ({
     className: "ml-1.5 inline-block whitespace-nowrap text-slate-300"
   }, chart.totalNotes, "ノーツ"), rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? React.createElement("span", {
     "data-rhythm-demo-ticks": true,
+    title: "ホールド・スライドを押さえている途中で入る判定の数",
     className: "ml-1 inline-block whitespace-nowrap text-slate-300"
   }, `+ 刻み${rhythmChartTickCount(song, chart, difficulty.id)}`) : null)), React.createElement("div", {
     "data-rhythm-song-stats": true,
@@ -66137,7 +66138,7 @@ function PlayerRankStrip({
     }
   })), React.createElement("small", {
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
-  }, `次まで ${(info.need - info.into).toLocaleString()}`));
+  }, `次のランクまで あと${(info.need - info.into).toLocaleString()}`));
 }
 const PLAYER_RANK_REWARDS_STEP = 30;
 function PlayerRankRewards({
@@ -66770,7 +66771,7 @@ function PlayerRankXpBar({
     className: "mh-prxb-add"
   }, `経験値 +${view.shown.toLocaleString()}`), React.createElement("span", {
     className: "text-[12px] font-black text-white tabular-nums"
-  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 0 && React.createElement("div", {
+  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 1 && React.createElement("div", {
     "data-player-rank-gain-parts": true,
     className: "mb-3 mt-1.5 flex flex-wrap gap-1.5"
   }, parts.map((p, i) => React.createElement("span", {
@@ -66803,8 +66804,9 @@ function PlayerRankXpBar({
     className: "mh-prxb-up",
     "aria-hidden": "true"
   }, "RANK UP!")), React.createElement("div", {
-    className: "mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums"
-  }, React.createElement("span", null, `${view.into.toLocaleString()} / ${need.toLocaleString()}`), React.createElement("span", null, `次まで ${(need - view.into).toLocaleString()}`)), React.createElement("div", {
+    "data-player-rank-xp-left": true,
+    className: "mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums"
+  }, `次のランクまで あと ${(need - view.into).toLocaleString()}`), React.createElement("div", {
     ref: fxRef,
     className: "mh-prxb-fx",
     "aria-hidden": "true"
@@ -66836,9 +66838,11 @@ function PlayerRankGain({
     }
   }), next && React.createElement("p", {
     "data-player-rank-gain-next": true,
-    className: "text-[10px] font-bold text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`次は ${next}`)), up && done && React.createElement(PlayerRankUp, {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "次は ", String(next).split('・').map((part, i) => React.createElement("span", {
+    key: i,
+    className: "inline-block whitespace-nowrap"
+  }, `${i ? '・' : ''}${part}`))), up && done && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
@@ -233483,7 +233487,7 @@ function MonsterHeroGame() {
       const fxGains = [...(basePoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${basePoints.toLocaleString()}`,
-        note: '上がったランク ×100'
+        note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計`
       }] : []), ...(gain.bonusPoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${gain.bonusPoints.toLocaleString()}`,

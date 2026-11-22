@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7bb3e4483843178b
+// generated-sha256: 82e7af7e88a2ddf4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23173,7 +23173,9 @@ const RhythmOrientationButton=({className=''})=>{
       if(how==='forced'){
         // 端末は回ってくれなかったので、絵のほうを回した。
         // 本体の向きはそのままなので、**持ち替えてもらう**必要がある。ここは必ず伝える。
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
+        // 端末の向き・角度などの開発用の1行は出さない(2026-11-23 API総点検② V6: 見出しの上に3行の箱で重なっていた)。
+        //   その1行は、回せなかったとき(下)だけに残す。そちらは原因を追う手がかり。案内は時間では消さない(下の検査の決まり・2026-09-06)
+        setNote(`代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてください`);
         return;
       }
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
@@ -24727,7 +24729,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             </div>
             <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}{/* Lv. は難易度の札と一覧の行に出ているので、ここには書かない(2026-11-23 API総点検② V7・V31・V33: 同じ Lv. が3か所に出ていた)。
                 ノーツの数と刻みの数は、それぞれ途中で折り返さない1かたまりにする(「刻/み247」と切れていた) */}
-              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks className="ml-1 inline-block whitespace-nowrap text-slate-300">{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
+              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks title="ホールド・スライドを押さえている途中で入る判定の数" className="ml-1 inline-block whitespace-nowrap text-slate-300">{/* 「長押しの刻み」と書くと縦で2行目に落ち、一覧が1行ぶん狭くなったので「刻み」のまま(2026-11-23 API総点検② V34 は見送り) */}{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -40856,7 +40858,7 @@ function PlayerRankStrip({ kind = 'beat', xp = 0, size = 'sm' }) {
       <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
         <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
       </div>
-      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+      {/* 「次まで 23」では何の23か分からなかった(2026-11-23 API総点検② V14) */}<small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次のランクまで あと${(info.need - info.into).toLocaleString()}`}</small>
     </div>
   );
 }
@@ -41151,7 +41153,8 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
         <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
       </div>
-      {parts.length > 0 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
+      {/* 内訳が1つだけのときは、上の「経験値 +◯」と同じ数字をもう一度読ませるだけなので出さない(2026-11-23 API総点検② V18) */}
+      {parts.length > 1 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
         {parts.map((p, i) => <span key={i} ref={(el) => { chipRefs.current[i] = el; }} className={`mh-prxb-chip${i < view.chips ? ' on' : ''}`}>{p.label} <b>{`+${p.xp}`}</b></span>)}
       </div>}
       <div ref={trackRef} className="mh-prxb-track">
@@ -41161,9 +41164,9 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <i className={`mh-prxb-tip${view.tip ? ' on' : ''}`} style={{ left: w }}/>
         {view.up && <span className="mh-prxb-up" aria-hidden="true">RANK UP!</span>}
       </div>
-      <div className="mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums">
-        <span>{`${view.into.toLocaleString()} / ${need.toLocaleString()}`}</span>
-        <span>{`次まで ${(need - view.into).toLocaleString()}`}</span>
+      {/* 「15 / 29」と「次まで 14」が同じ残りを2通りで言っていたので1つにする(2026-11-23 API総点検② V21) */}
+      <div data-player-rank-xp-left className="mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums">
+        {`次のランクまで あと ${(need - view.into).toLocaleString()}`}
       </div>
       <div ref={fxRef} className="mh-prxb-fx" aria-hidden="true"/>
     </div>
@@ -41181,7 +41184,8 @@ function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
       <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
-      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
+      {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );
@@ -127482,7 +127486,8 @@ function MonsterHeroGame() {
       // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
       const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
       const fxGains = [
-        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: '上がったランク ×100' }] : []),
+        // 「上がったランク ×100」は、ランクの数×100なのか上がった段数×100なのか分からなかったので、例を添える(2026-11-23 API総点検② V26)
+        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計` }] : []),
         ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
         ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
         ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),

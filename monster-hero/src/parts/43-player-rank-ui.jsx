@@ -118,7 +118,7 @@ function PlayerRankStrip({ kind = 'beat', xp = 0, size = 'sm' }) {
       <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
         <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
       </div>
-      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+      {/* 「次まで 23」では何の23か分からなかった(2026-11-23 API総点検② V14) */}<small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次のランクまで あと${(info.need - info.into).toLocaleString()}`}</small>
     </div>
   );
 }
@@ -413,7 +413,8 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
         <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
       </div>
-      {parts.length > 0 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
+      {/* 内訳が1つだけのときは、上の「経験値 +◯」と同じ数字をもう一度読ませるだけなので出さない(2026-11-23 API総点検② V18) */}
+      {parts.length > 1 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
         {parts.map((p, i) => <span key={i} ref={(el) => { chipRefs.current[i] = el; }} className={`mh-prxb-chip${i < view.chips ? ' on' : ''}`}>{p.label} <b>{`+${p.xp}`}</b></span>)}
       </div>}
       <div ref={trackRef} className="mh-prxb-track">
@@ -423,9 +424,9 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <i className={`mh-prxb-tip${view.tip ? ' on' : ''}`} style={{ left: w }}/>
         {view.up && <span className="mh-prxb-up" aria-hidden="true">RANK UP!</span>}
       </div>
-      <div className="mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums">
-        <span>{`${view.into.toLocaleString()} / ${need.toLocaleString()}`}</span>
-        <span>{`次まで ${(need - view.into).toLocaleString()}`}</span>
+      {/* 「15 / 29」と「次まで 14」が同じ残りを2通りで言っていたので1つにする(2026-11-23 API総点検② V21) */}
+      <div data-player-rank-xp-left className="mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums">
+        {`次のランクまで あと ${(need - view.into).toLocaleString()}`}
       </div>
       <div ref={fxRef} className="mh-prxb-fx" aria-hidden="true"/>
     </div>
@@ -443,7 +444,8 @@ function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
       <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
-      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
+      {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );
