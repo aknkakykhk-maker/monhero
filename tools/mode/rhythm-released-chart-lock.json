@@ -389,7 +389,7 @@
   "walkure/easy": "8cf9cb33f2bcc1fe",
   "walkure/normal": "e4290dd16a98677d",
   "walkure/hard": "fb356d5b9e5f6f16",
-  "walkure/expert": "641b37828b789620",
+  "walkure/expert": "8269e31419679c2b",
   "walkure/master": "a644d495b9894772",
   "walkure_short/easy": "a95380f2dfb4e0d7",
   "walkure_short/normal": "954e7a24c285ace1",
@@ -1114,6 +1114,13 @@
     "walkure_short/master",
     "walkure/hell",
     "walkure_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 17:27",
+   "reason": "ワルキューレ原曲 EXPERT 142.41秒の帯の中を、HOLD 1つの幅と位置で直す(社長決定 r1119-095)",
+   "changed": [
+    "walkure/expert"
    ]
   }
  ]

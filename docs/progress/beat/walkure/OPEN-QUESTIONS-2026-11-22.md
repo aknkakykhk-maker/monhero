@@ -21,3 +21,8 @@ expert-master-order・新曲向け検査 / 更新履歴 / 助手の聞きどこ�
 ## 検査で残る NG(ワルキューレに関わらない)
 
 changelog-order(main でも7か所の逆転)・rhythm-hell-level(seasons)・rhythm-chart-v3(seasons)・助手の顔・追跡表・索引・ブラウザの数本(試し聴き・曲えらびを開く・文の折り返し)
+
+## 決まったこと(2026-11-22 社長・窓口経由・台帳 r1119-095 に追記)
+
+- ① その1つだけ直す: HOLD(grid 2043)を subLane2 幅5 → subLane4 幅3。帯の中0・Lv.36 のまま(authoring の fixed-expert と配信データの両方)
+- ② (a) 例外に足して最後まで遊ぶ(`LONG_PLAY_ALLOWED` に walkure)。短く遊びたい人は short ver.

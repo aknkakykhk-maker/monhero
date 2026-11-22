@@ -22456,9 +22456,9 @@
   {
    "type": "HOLD",
    "grid": 2043,
-   "lane": 1,
-   "subLane": 2,
-   "subLaneWidth": 5,
+   "lane": 2,
+   "subLane": 4,
+   "subLaneWidth": 3,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": -13.3,
    "sourceCharacter": "FULL",
