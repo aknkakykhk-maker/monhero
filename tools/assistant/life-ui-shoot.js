@@ -64,7 +64,11 @@ const measure = (o = {}) => {
   // ③ 上の帯・下のタブ
   const top = frame.querySelector('[data-alu-top]').getBoundingClientRect();
   const tabs = frame.querySelector('[data-alu-tabs]'); const T = tabs.getBoundingClientRect();
-  if (Math.round(top.height) !== 48 || Math.round(top.top - F.top) !== 0) ng.push(`③ 上の帯が 高さ${Math.round(top.height)}px・上から${Math.round(top.top - F.top)}px`);
+  // 切り欠きの余白(--mh-sa-top)は帯の上に足す。中身(戻る・題・時刻)は余白の下の 48px に入る(2026-11-22 r1119-098)
+  const topEl = frame.querySelector('[data-alu-top]'); const sa = topEl ? parseFloat(getComputedStyle(topEl).paddingTop) || 0 : 0;
+  const bk = topEl && topEl.querySelector('[data-alu-back]'); const bkTop = bk ? Math.round(bk.getBoundingClientRect().top - F.top) : 0;
+  if (Math.abs(Math.round(top.height) - 48 - sa) > 1.5 || Math.round(top.top - F.top) !== 0) ng.push(`③ 上の帯が 高さ${Math.round(top.height)}px・上から${Math.round(top.top - F.top)}px(切り欠き ${sa}px)`);
+  if (bk && bkTop < sa) ng.push(`③ 「戻る」が切り欠き(上 ${sa}px)にかかる(上から ${bkTop}px)`);
   if (tabs.querySelectorAll('[data-alu-tab]').length !== 5) ng.push('③ 下のタブが5つでない');
   if (Math.abs(T.bottom - F.bottom) > 1) ng.push(`③ 下のタブが いちばん下にない(${Math.round(F.bottom - T.bottom)}px 上)`);
   // ④ 横のはみ出し

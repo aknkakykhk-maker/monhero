@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c08a13b13f75236
+// source-sha256: fff16b67cab6a866
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126059,7 +126059,7 @@ const ALU_CSS = `
 .alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
-.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top{flex:none;box-sizing:content-box!important;height:48px;display:flex;align-items:center;gap:8px;padding:var(--mh-sa-top,0px) calc(10px + var(--mh-sa-right,0px)) 0 calc(10px + var(--mh-sa-left,0px));background:#151130;border-bottom:1px solid #3b3566}
 .alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
