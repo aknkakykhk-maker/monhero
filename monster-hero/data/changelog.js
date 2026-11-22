@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-22 14:48", type:'fix', title:'Beyond the Same Sky と Desert Crown の譜面を押しやすくしました', status:'new', group:'rhythm',
+    date: "2026-11-22 16:07", type:'fix', title:'Beyond the Same Sky と Desert Crown の譜面を押しやすくしました', status:'new', group:'rhythm',
     items:[
       'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL で、片手でホールドやスライドを押さえている間に、もう片方の手がその上をまたいで叩くことになる所を減らしました。',
       'Desert Crown の HELL で、ホールドやスライドを押さえたまま、親指2本では届かない所に出ていたタップを、押していない手の側へ移しました。',
