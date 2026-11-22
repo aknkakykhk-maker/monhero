@@ -551,6 +551,8 @@ const EVENT_REPLAY_GROUPS = Object.freeze([
   // ききが初めて作った曲のお話(2026-11-15 社長 r1115-102。新曲 Sparkling Pink Overture と一緒に出る)
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076。新曲 Beyond the Same Sky と一緒に出る)
   { id:'wof_song', emoji:'🌌', label:'あつとみゅあの歌', note:'W.o.F のころの思い出の歌のお話', color:'#a78bfa' },
+  // えるびんの歌のお話(2026-11-21 社長 r1119-079。新曲 Desert Crown と一緒に出る)
+  { id:'erubin_song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
   { id:'kiki_song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
   { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
