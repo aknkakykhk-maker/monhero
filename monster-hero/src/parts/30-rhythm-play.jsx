@@ -3492,7 +3492,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} {...rhythmFxAttrs(settings)} style={{touchAction:'none'}}>{/* ===== 曲が始まる前の幕(2026-10-10・社長の依頼。2026-10-11 並びと長さを見直し) =====
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-effect={settings.effectAmount} {...rhythmFxAttrs(settings)} style={{touchAction:'none'}}>{/* ===== 曲が始まる前の幕(2026-10-10・社長の依頼。2026-10-11 並びと長さを見直し) =====
     ジャケット・曲名・作曲者(または紹介文)・難易度とレベル。HUDもレーンも覆う(z-45)。
     2026-10-11 社長「ジャケット自体をもう少し上にして、その下に曲名のほうが見栄えがいい」。縦持ちも横持ちも、上にジャケット・下に文字を積む。
     ジャケットの大きさは画面の高さから決める(横持ち・360×640 でも文字まで収まる)。

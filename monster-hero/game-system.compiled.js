@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f53e722b85eb42b
+// source-sha256: 236f12f1261407dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -47190,6 +47190,7 @@ const RhythmTapTest = ({
     "data-rhythm-tap-test": true,
     className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+    "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
     "data-rhythm-effect": settings.effectAmount
   }, rhythmFxAttrs(settings), {
     style: {
