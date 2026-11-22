@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e28e55e0cb2e285
+// generated-sha256: a65f0b01ea71b287
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24716,7 +24716,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
               上下の余白は付けない(付けると欄が8px伸び、小さい横画面で下の助手の吹き出しがはみ出した・rhythm-song-notice-landscape-check) */}
           {/* 横の助手の一言は「決定」のすぐ上(欄の下のほう)に置く。決定より下に置くと、決定が欄の下端から浮いていた(2026-11-22 r1119-094) */}
-          {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:290px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+          {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
           {/* 「決定」はいちばん強いボタンにする(高さ52px・幅は段の大半)。「ランダム」は細く・弱く(2026-11-22 r1119-094・点検 N2) */}
           <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom} aria-label="ランダムに選ぶ"
