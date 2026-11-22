@@ -2,7 +2,7 @@
 // 助手ライフの作り直し 段7: 型に載せた家(56-assistant-life-house-typed.jsx)を本物の画面で撮って、型の決まりを測る。ゲーム本体は変えない・読むだけ。
 //   node tools/assistant/life-house-typed-shoot.js [--out <置き場>] [--2x]
 //   置き場の既定: docs/progress/assistant-life/step7-house/(<大きさ>-<場面>.png と measure.json)
-// 場面: house(開いたところ)・house-bottom(下まで送った)・result(👀 見る → 場面の終わり → 結果の1枚)
+// 場面: house(開いたところ)・house-bottom(下まで送った)・daily(7日のごほうびを開いた)・guide(❓ 見かたの窓)・result(👀 見る → 場面の終わり → 結果の1枚)
 //       room(段8: 部屋を開いたところ。--room <id> 既定 atsu)・room-more(「もっと見る」を開いて下まで送った)
 // 測る決まりは tools/assistant/life-ui-shoot.js の measure(字の4段・主なボタン1つ・帯とタブ・はみ出し・下の空き・窓・段組み)。
 // 偽のデータでページの中だけ(Supabase は偽物)。時刻は 15:00 に固定。最後の1行が OK / NG。
@@ -59,7 +59,7 @@ fs.mkdirSync(OUT, { recursive: true });
       await page.waitForTimeout(700);
       const file = `${sizeId}-${name}.png`;
       await page.screenshot({ path: path.join(OUT, file) });
-      const m = await page.evaluate(measure, mo);
+      const m = await page.evaluate(measure, { withScene: true, badMax: Number(process.env.BAD_MAX) || 0, ...mo });
       const wantTwo = sizeId === 'pc' || sizeId === 'yoko';
       if (m.twoCol !== undefined && m.twoCol !== wantTwo) m.ng = [...(m.ng || []), `⑦ ${wantTwo ? '2段組になっていない' : '縦なのに2段組'}`];
       result.shots[file] = m;
@@ -87,6 +87,16 @@ fs.mkdirSync(OUT, { recursive: true });
       }
       await page.evaluate(() => { const m = document.querySelector('[data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
       await shot('house-bottom', { skipMain: true });
+      // 段7の残り(2026-11-22): 7日のごほうびを開いた中身・予定の行・「❓ 見かた」の窓も型で測る
+      await page.locator('[data-assistant-life-typed-daily] > button').first().click({ timeout: 5000 });
+      await page.waitForTimeout(300);
+      await page.evaluate(() => { const d = document.querySelector('[data-assistant-life-daily-typed]'); if (d) d.scrollIntoView({ block: 'center' }); });
+      await shot('daily', { skipMain: true });
+      await page.locator('[data-assistant-life-typed-daily] > button').first().click({ timeout: 5000 });
+      await page.locator('[data-assistant-life-guide-open]').click({ timeout: 5000 });
+      await page.locator('[data-assistant-life-typed-guide] [data-alu-sheet]').waitFor({ timeout: 5000 });
+      await shot('guide');
+      await page.locator('[data-assistant-life-typed-guide] [data-alu-sheet-close]').click({ timeout: 5000 });
       await page.evaluate(() => { const m = document.querySelector('[data-alu-main]'); if (m) m.scrollTop = 0; });
       await page.locator('[data-assistant-life-typed-house] [data-assistant-life-today-act="watch"]').click({ timeout: 5000 });
       for (let i = 0; i < 30 && !(await page.locator('[data-assistant-life-scene-done]').count()); i++) { await finishTalk(page); await page.waitForTimeout(300); }
@@ -101,11 +111,11 @@ fs.mkdirSync(OUT, { recursive: true });
       await page.locator(`[data-assistant-life-room-sheet="${RID}"]`).waitFor({ timeout: 5000 });
       const typedRoom = await page.locator('[data-assistant-life-typed-room]').count();
       if (typedRoom) {
-        await shot('room', { frame: '[data-assistant-life-typed-room]' });
+        await shot('room', { frame: '[data-assistant-life-typed-room]', withScene: false });
         const moreBtn = page.locator('[data-assistant-life-typed-room] [data-assistant-life-room-more]').first();
         if ((await moreBtn.getAttribute('aria-expanded')) !== 'true') await moreBtn.click({ timeout: 3000 });
         await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-typed-room] [data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
-        await shot('room-more', { frame: '[data-assistant-life-typed-room]', skipMain: true });
+        await shot('room-more', { frame: '[data-assistant-life-typed-room]', skipMain: true, withScene: false });
       } else {
         await page.waitForTimeout(900); await page.screenshot({ path: path.join(OUT, `${sizeId}-room.png`) });
         await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-roomview-scroll]'); if (m) m.scrollTop = m.scrollHeight; });
