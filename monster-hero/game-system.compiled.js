@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 398e26c60e76a252
+// source-sha256: 6bb90d36d3c115f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84113,7 +84113,51 @@ function HomeScreen({
         'data-home-assistant-chat': ''
       }
     }] : null
+  }), React.createElement(HomeAssistantCommentToggle, {
+    on: true
+  })), !homeComment.on && React.createElement("div", {
+    className: `mh-home-assistant-fold${spotClass('assistant')}`
+  }, React.createElement(HomeAssistantCommentToggle, {
+    on: false
   })));
+}
+function HomeAssistantCommentToggle({
+  on
+}) {
+  const bond = useAssistantBond();
+  const who = assistantById(assistantSceneById('home')?.assistantId || bond.assistantId || null);
+  const color = who.accent || ASSISTANT_FALLBACK.accent;
+  if (on) {
+    return React.createElement("button", {
+      type: "button",
+      "data-home-assistant-toggle": "hide",
+      onClick: () => HOME_ASSISTANT_COMMENT_STORE.setOn(false),
+      "aria-label": `${who.name}のコメントを隠す`,
+      className: "mh-home-assistant-hide active:scale-95"
+    }, React.createElement("span", {
+      style: {
+        borderColor: color,
+        color
+      }
+    }, "隠す"));
+  }
+  return React.createElement("button", {
+    type: "button",
+    "data-home-assistant-toggle": "show",
+    onClick: () => HOME_ASSISTANT_COMMENT_STORE.setOn(true),
+    "aria-label": `${who.name}のコメントを出す`,
+    className: "mh-home-assistant-show active:scale-95"
+  }, React.createElement(AssistantFace, {
+    who: who,
+    size: 40,
+    accent: color
+  }), React.createElement("span", {
+    className: "mh-home-assistant-show-mark",
+    style: {
+      borderColor: color
+    },
+    "aria-hidden": "true"
+  }, "💬"));
 }
 function KikiIntroOverlay({
   kikiIntroStep,
@@ -283703,7 +283747,7 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-home-nextstep{animation:none}}
     @media(orientation:landscape) and (max-height:600px){.mh-home-nextstep{min-height:44px;padding:5px 10px}.mh-home-nextstep-body small{display:none}.mh-home-nextstep-body b{font-size:12px}}
     /* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
-   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:3px 0 0 3%;pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
+   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-dock-card.is-tutorial-spot,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-dock-card.is-tutorial-spot::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:relative;z-index:5;width:70%;margin:3px 0 0 3%;pointer-events:auto}.mh-home-assistant-hide{position:absolute;left:0;top:100%;width:48px;min-height:44px;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;background:transparent;border:0;pointer-events:auto}.mh-home-assistant-hide>span{display:block;border:1.5px solid;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:900;line-height:1.4;background:var(--mh-bubble-bg,rgba(15,23,42,.92));white-space:nowrap}.mh-home-assistant-fold{position:relative;z-index:5;width:max-content;margin:3px 0 0 3%;pointer-events:auto}.mh-home-assistant-show{position:relative;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:transparent;border:0;opacity:.92}.mh-home-assistant-show-mark{position:absolute;right:-4px;bottom:-2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:999px;border:1.5px solid;background:var(--mh-bubble-bg,rgba(15,23,42,.92));font-size:11px;line-height:1}@media(max-width:350px){.mh-home-assistant{width:68%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-masumon-layer{bottom:38%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
