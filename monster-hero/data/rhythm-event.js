@@ -99,15 +99,22 @@ const rhythmWeekId = (nowMs) => {
 //   曲が増えたら部門・参加報酬の曲数も自動で増える
 // id はイベント会話の既読・受取フラグに使うので、あとから変えない
 const FLOWER3_EVENT_ID = 'flower3_2026_11_23';
-const FLOWER3_START_AT = '2026-11-23T12:00:00+09:00';
-const FLOWER3_END_AT = '2026-11-30T04:00:00+09:00';
-const FLOWER3_DISPLAY_END_AT = '2026-11-30T03:59:00+09:00';
-// 仮の名前(社長の決定待ち)。画面に出るので決まったら差し替える
-const FLOWER3_EVENT_NAME = '花の女3人のモンヒロビートイベント';
+// 期間は 2026-11-23 10:00 〜 11-30 0:00(社長・台帳 r1119-101 追記)。週(11/23 4:00〜11/30 4:00)の中に収まるので週をまたがない
+const FLOWER3_START_AT = '2026-11-23T10:00:00+09:00';
+const FLOWER3_END_AT = '2026-11-30T00:00:00+09:00';
+const FLOWER3_DISPLAY_END_AT = '2026-11-29T23:59:00+09:00';
+// 名前(台帳 r1119-101 追記・窓口が決めた)。札は2行(FLOWER3_EVENT_TITLE / FLOWER3_EVENT_SUBTITLE)
+const FLOWER3_EVENT_TITLE = '咲かせて！ハナウタ・ノート';
+const FLOWER3_EVENT_SUBTITLE = '花の3人とはじめての曲づくり';
+const FLOWER3_EVENT_NAME = `${FLOWER3_EVENT_TITLE} ～${FLOWER3_EVENT_SUBTITLE}～`;
+// イベント曲を遊んだときのビートP(台帳 r1119-103「イベント曲だけ7倍」)。イベントの無い日の貯まり方(0.2)の7倍。
+// ほかの公開曲はランキングイベントの計算どおり(1.0=いつもの5倍)。クイック周回は5倍のまま
+const FLOWER3_TARGET_POINT_BOOST = 7;
 const FLOWER3_SONG_SLOTS = Object.freeze([
+  // 曲名は窓口から(BRAND NEW SKY / 全部必殺技でつ( `･ω･) / きみ待ち♡ループ)。id は曲を入れる会話の報告が届いたら差し替える
   Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT }),
-  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: '2026-11-24T04:00:00+09:00' }),
-  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: '2026-11-25T04:00:00+09:00' }),
+  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: '2026-11-24T10:00:00+09:00' }),
+  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: '2026-11-25T10:00:00+09:00' }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});
 // 受け口の曲のうち、公開曲の一覧(rhythm-mode.js・先に読み込まれる)に入っているもの
@@ -145,6 +152,8 @@ const flower3RhythmEvent = (() => {
     rewardLineageBySongId: Object.freeze(Object.fromEntries(songIds.map(id => [id, 'pixie']))),
     totalReward: 'heroProof',
     playBonus: true,
+    // 対象曲のビートPの倍率(イベントの無い日の何倍か)。書かないイベントは今までどおり1.5(=7.5倍)
+    targetPointBoost: FLOWER3_TARGET_POINT_BOOST,
     // 参加報酬は「対象曲をすべて遊ぶ」。曲数は入っている曲の数(3曲そろえば3)
     participationReward: Object.freeze({ songs: songIds.length, gold: 3000, psyche: 50 }),
   });
@@ -372,15 +381,18 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     id: 'grand_open_2026',
     name: '本オープン記念キャンペーン',
     startAt: '2026-11-09T10:00:00+09:00',
-    endAt: '2026-11-23T04:00:00+09:00',
-    displayEndAt: '2026-11-23T03:59:00+09:00',
+    // 2026-11-22 社長(台帳 r1119-103): 咲かせて！ハナウタ・ノートの終わり(11/30 0:00)まで延ばす。ほかの曲の5倍・周回5倍がそのまま続く
+    //   (イベントの帯 flower3_2026 があとから始まるので、重なっているあいだの札はそちら。ビートPはランキングイベントの計算が先に効く)
+    endAt: '2026-11-30T00:00:00+09:00',
+    displayEndAt: '2026-11-29T23:59:00+09:00',
     boost: 5,
     loopScale: 10,
     loopBoost: 5,
     // 札の題は2行(2026-11-14 社長「本オープン記念だけだと何の本オープンか分からない」→ 案B)
-    banner: Object.freeze({ emoji: '🎉', title: 'モンヒロビート', title2: '本オープン記念', sub: '開催中 〜11/23 3:59' }),
+    banner: Object.freeze({ emoji: '🎉', title: 'モンヒロビート', title2: '本オープン記念', sub: '開催中 〜11/29 23:59' }),
   }),
-  // 花の女3人のイベント(2026-11-23 12:00〜11-30 3:59)。パンドラと同じ形: 周回5倍・ビートP5倍(ランキングイベントの計算が先に効く)・HOMEの帯。
+  // 咲かせて！ハナウタ・ノート(2026-11-23 10:00〜11-29 23:59)。パンドラと同じ形: 周回5倍・HOMEの帯。ビートPはランキングイベントの計算が先に効く
+  // (公開曲5倍・イベント曲7倍 = targetPointBoost)。
   // ランキングは RHYTHM_EVENTS の flower3_2026_11_23。イベントが入っていない(曲がまだ無い)あいだは帯も出さない
   ...(flower3RhythmEvent ? [Object.freeze({
     id: 'flower3_2026',
@@ -391,7 +403,8 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     boost: 5,
     loopScale: 10,
     loopBoost: 5,
-    banner: Object.freeze({ emoji: '🌸', title: FLOWER3_EVENT_NAME, sub: '開催中 〜11/30 3:59' }),
+    targetBoost: FLOWER3_TARGET_POINT_BOOST,
+    banner: Object.freeze({ emoji: '🌸', title: FLOWER3_EVENT_TITLE, title2: FLOWER3_EVENT_SUBTITLE, sub: '開催中 〜11/29 23:59' }),
   })] : []),
 ]);
 // ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
@@ -426,12 +439,12 @@ const PANDORA_WINGS_STORIES = Object.freeze([
 //   (入っていない話は流れない)
 const FLOWER3_STORIES = Object.freeze([
   Object.freeze({ id: 'flower3_2026_ep1', part: 1, at: FLOWER3_START_AT }),
-  Object.freeze({ id: 'flower3_2026_ep2', part: 2, at: '2026-11-24T04:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep3', part: 3, at: '2026-11-25T04:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep4', part: 4, at: '2026-11-26T04:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep5', part: 5, at: '2026-11-27T04:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep6', part: 6, at: '2026-11-28T04:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep7', part: 7, at: '2026-11-29T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep2', part: 2, at: '2026-11-24T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep3', part: 3, at: '2026-11-25T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep4', part: 4, at: '2026-11-26T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep5', part: 5, at: '2026-11-27T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep6', part: 6, at: '2026-11-28T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep7', part: 7, at: '2026-11-29T10:00:00+09:00' }),
   Object.freeze({ id: 'flower3_2026_ep8', part: 8, at: FLOWER3_END_AT }),
 ]);
 // 本文が回想の一覧に入っているお話か(静的なデータ。時刻ではない)
@@ -481,6 +494,11 @@ const rhythmEventPointCampaignAt = (nowMs) => {
 };
 // ビートPが「いつもの1/5」ではなく満額で貯まる時間か(ランキングイベント開催中か、キャンペーン中か)。
 // ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
+// 対象曲のビートPの倍率の言い方(画面の札・リザルト)。targetPointBoost を持つイベントは「いつもの◯倍」、ほかは今までどおり「1.5倍」
+const rhythmEventTargetPointLabel = (event) => {
+  const boost = Number(event && event.targetPointBoost);
+  return Number.isFinite(boost) && boost > 0 ? `いつもの${boost}倍` : '1.5倍';
+};
 const rhythmEventPointFullRateAt = (nowMs) => !!(rhythmLimitedEventAt(nowMs) || rhythmEventPointCampaignAt(nowMs));
 
 // ===== 曲の長さの補正(2026-09-28・ユーザー指示「2分以上の曲は10秒毎に10%の補正が掛かるようにして」) =====
@@ -524,6 +542,12 @@ const rhythmEventPointAwardAt = (nowMs, songId, score, durationMs = 0) => {
   }
   // ショート版も対象曲として数える(songVersions・2026-11-01)
   const target = rhythmEventHasSong(event, id);
+  // 対象曲の倍率をイベントが持っていれば、イベントの無い日の貯まり方(0.2)の boost 倍(キャンペーンと同じ式: floor(base × boost × L ÷ 50))
+  const targetBoost = Number(event.targetPointBoost);
+  if (target && Number.isFinite(targetBoost) && targetBoost > 0) {
+    return Object.freeze({ eventId:event.id, base, target, targetBoost, offEvent:false, ...length,
+      multiplier:RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER * targetBoost, amount:Math.floor(base * targetBoost * L / 50 + 1e-9) });
+  }
   const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
   // 対象曲1.5倍は 3/2 として整数で掛ける: floor(base × (3 or 2) × L ÷ 20)
   return Object.freeze({ eventId:event.id, base, target, offEvent:false, ...length, multiplier, amount:Math.floor(base * (target ? 3 : 2) * L / 20) });

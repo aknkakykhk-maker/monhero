@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f4e4d511f004408a
+// source-sha256: cbc22c92d234b173
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -47206,7 +47206,7 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[9px] font-black text-cyan-200"
     }, "👥 みんなで対戦のボーナス(人数・連続) ×", result.eventPointAward.multiScale), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
+    }, "イベント対象曲 ", result.eventPointAward.targetBoost > 0 ? `いつもの${result.eventPointAward.targetBoost}倍` : '1.5倍'), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
       "data-rhythm-result-beat-points-length": true,
       className: "mt-1 block text-[10px] font-black text-sky-200"
     }, "曲の長さ +", result.eventPointAward.lengthBonusPercent, "%"), result.eventPointAward.campaign && React.createElement("span", {
@@ -71140,7 +71140,7 @@ function BreederMarketScreen({
     return campaign ? React.createElement(MarketNotice, {
       tone: "info",
       "data-event-point-campaign": true
-    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
+    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.targetBoost) > 0 ? `(イベント曲は${campaign.targetBoost}倍)` : ''}${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
   })(), legendPassLetterAvailable && typeof onReadLegendPassLetter === 'function' && (eventTab === 'item' || eventTab === 'material') && React.createElement("button", {
     type: "button",
     "data-legend-pass-letter": true,
@@ -73441,7 +73441,7 @@ function RhythmSongSelectScreen({
   }, "周回 ", eventLoopCampaign.loopBoost, "倍"), React.createElement("span", {
     style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : jaWrap('公開曲なら獲得できます'))) : null;
+  }, beatPointTargetSong ? jaWrap(`選択中のイベント対象曲は${rhythmEventTargetPointLabel(beatPointEvent)}`) : jaWrap('公開曲なら獲得できます'))) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   const [eventNoticeOpen, setEventNoticeOpen] = React.useState(false);
   React.useEffect(() => {
@@ -73797,7 +73797,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap(`・選択中のイベント対象曲は${rhythmEventTargetPointLabel(beatPointEvent)}`) : jaWrap('・公開曲なら獲得できます'), eventLoopCampaign && React.createElement("span", {
     className: "text-amber-200"
   }, jaWrap(`・周回 ${eventLoopCampaign.loopBoost}倍`)))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
