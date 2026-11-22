@@ -46,13 +46,14 @@ const ALU_CSS = `
 .alu-goal span.on,.alu .alu-goal button.on{background:#064e3b;border-color:#34d399;color:#fff}
 .alu-mask{position:absolute;inset:0;z-index:30;background:rgba(8,6,20,.72);display:flex;align-items:flex-end;justify-content:center}
 .alu[data-alu-wide="1"] .alu-mask{align-items:center}
+.alu[data-alu-wide="1"] .alu-sheet .sb{padding-bottom:14px}
 .alu-sheet{position:relative;width:100%;max-width:560px;max-height:88%;display:flex;flex-direction:column;background:#1e1a36;border:1px solid #f472b6aa;border-radius:18px 18px 0 0;box-shadow:0 -8px 24px #0009}
 .alu[data-alu-wide="1"] .alu-sheet{border-radius:18px;max-height:92%}
 .alu-sheet .sh{flex:none;display:flex;align-items:flex-start;gap:8px;padding:12px 6px 8px 14px;border-bottom:1px solid #3b3566}
 .alu-sheet .sh .tt{flex:1;min-width:0}
 .alu-sheet .x{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:20px;font-weight:900;color:#e2e8f0}
 .alu-sheet .q{flex:none;width:44px;height:44px;margin-top:-6px;border-radius:999px;background:none;border:0;font-size:16px;font-weight:900;color:#cbd5e1}
-.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.alu-sheet .sb{flex:1;min-height:0;overflow-y:auto;padding:10px 14px calc(14px + var(--alu-sab,var(--mh-sa-bottom,0px)));display:flex;flex-direction:column;gap:10px}
 .alu-sheet .help{background:#0f172a;border-radius:10px;padding:8px 10px}
 .alu-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .alu-gains>div{min-width:88px;padding:8px 10px;border-radius:12px;background:#0f172a;border:1px solid #475569;text-align:center}

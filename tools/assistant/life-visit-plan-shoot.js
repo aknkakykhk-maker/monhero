@@ -77,7 +77,7 @@ const route = (posted) => async (r) => {
     const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
     const back = scope && [...scope.querySelectorAll('button')].find(b => /戻る/.test(b.textContent || ''));
     if (back) { const r = back.getBoundingClientRect(); out.back = Math.round(r.top); if (r.top < n.top - 1) out.ng.push(`「戻る」が上${n.top}pxの切り欠きの中(上${Math.round(r.top)})`); if (r.left < n.left - 1) out.ng.push('「戻る」が左の切り欠きの中'); }
-    const tabs = scope && scope.querySelector('.alu-tabs'); if (tabs) { const r = tabs.getBoundingClientRect(); out.tabsBottom = Math.round(r.bottom); if (r.bottom > H - n.bottom + 1) out.ng.push(`下のタブが下${n.bottom}pxの切り欠きに入る(${Math.round(r.bottom)})`); }
+    const tabs = scope && scope.querySelector('.alu-tabs'); if (tabs) { const bs = [...tabs.querySelectorAll('button')].map(x => x.getBoundingClientRect()); const r = bs.length ? bs.reduce((m, q) => (q.bottom > m.bottom ? q : m)) : tabs.getBoundingClientRect(); /* 帯の地は切り欠きまで伸ばす作り。押せるボタンの下端を見る */ out.tabsBottom = Math.round(r.bottom); if (r.bottom > H - n.bottom + 1) out.ng.push(`下のタブが下${n.bottom}pxの切り欠きに入る(${Math.round(r.bottom)})`); }
     const go = scope && scope.querySelector('.alu-go'); if (go) { const r = go.getBoundingClientRect(); out.go = `${Math.round(r.width)}×${Math.round(r.height)} 上${Math.round(r.top)}`; if (r.width < 120 || r.height < 44) out.ng.push('主なボタンが 120×44 より小さい'); if (tabs && r.bottom > tabs.getBoundingClientRect().top + 1) out.ng.push('主なボタンが最初の画面に入らない'); }
     for (const el of (scope ? scope.querySelectorAll('.alu-nw,.whitespace-nowrap') : [])) { if (!el.offsetParent) continue; const rs = [...el.getClientRects()].filter(q => q.width > 0); if (new Set(rs.map(q => Math.round(q.top / 4))).size > 1) out.ng.push(`折れる: ${(el.textContent || '').trim().slice(0, 16)}`); }
     if (out.sizes.some(x => x < 11)) out.ng.push(`11px 未満の字 ${out.sizes.filter(x => x < 11).join('/')}`);
@@ -123,6 +123,7 @@ const route = (posted) => async (r) => {
           if (!(await b.count())) { errs.push(`押す物が無い: ${name}`); continue; }
           await b.click({ timeout: 4000 }); await page.waitForTimeout(700);
           const ok = await page.locator(want).first().isVisible().catch(() => false);
+          await page.evaluate(() => { const b = document.querySelector('.alu-sheet .sb'); if (b) b.scrollTop = b.scrollHeight; }); await page.waitForTimeout(200);
           await page.screenshot({ path: path.join(OUT, `after-${name}.png`) });
           console.log(`押す ${name}: ${ok ? '開いた' : 'NG 開かない'}`); if (!ok) errs.push(`${name} が開かない`);
           await page.keyboard.press('Escape').catch(() => {});
