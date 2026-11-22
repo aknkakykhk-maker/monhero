@@ -1234,6 +1234,9 @@ const MSX_CSS = `
 .msx .v-hd{height:auto;min-height:32px}
 /* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
 .msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
+/* お話の文・説明・名札も「走っ/てきた」「総合/力」「イッサ/博士」と言葉の途中で折れていた(API 総点検① 2026-11-23 高41件)。
+   モンサクの画面全体に広げる(受け継がれるので中の文すべてに効く。keep-all などを個別に書いた所はそのまま) */
+.msx,.msx-ov{word-break:auto-phrase}
 /* 能力の列を押すと素質(A〜E)に切り替わる(2026-11-14 社長)。右上の小さな札が押せる印 */
 .msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:4px;row-gap:2px;-webkit-tap-highlight-color:transparent}
 .msx .v-st.tg:active{transform:translateY(1px)}

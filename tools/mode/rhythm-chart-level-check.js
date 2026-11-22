@@ -208,6 +208,8 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   REWORKED_V3.push('desert_crown','desert_crown_hell_debug');
   // 2026-11-22 に足した新曲 ワルキューレ(原曲と short ver.・5難易度と HELL・v3 で測る)
   REWORKED_V3.push('walkure','walkure_hell_debug','walkure_short','walkure_short_hell_debug');
+  // 2026-11-22 に足した新曲 Battle #5(原曲と short ver.・5難易度と HELL・v3 で測る。公開は社長のタイミングで別途・台帳 r1119-120)
+  REWORKED_V3.push('battle_5','battle_5_hell_debug','battle_5_short','battle_5_short_hell_debug');
   // 2026-11-22 に足した新曲 BRAND NEW SKY(5難易度と HELL・v3 で測る)
   REWORKED_V3.push('brand_new_sky','brand_new_sky_hell_debug');
   // 2026-11-22 に足した新曲 きみ待ち♡ループ(5難易度と HELL・v3 で測る)

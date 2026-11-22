@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d68ca9b4c0d47935
+// source-sha256: 9f9f044b1536e256
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6703,8 +6703,26 @@ const BGM_PROTO_TRACKS = Object.freeze([{
   gain: 1,
   loop: true
 }]);
+const BGM_UNRELEASED_TRACKS = Object.freeze([{
+  id: 'melo_battle_5',
+  name: 'Battle #5',
+  creator: 'オリジナル',
+  src: 'audio/bgm-battle-5.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_battle_5_short',
+  name: 'Battle #5 short ver.',
+  creator: 'オリジナル',
+  src: 'audio/bgm-battle-5-short.mp3',
+  gain: 1,
+  loop: true
+}]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 BGM_PROTO_TRACKS.forEach(track => {
+  if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track;
+});
+BGM_UNRELEASED_TRACKS.forEach(track => {
   if (!BGM_TRACK_BY_ID[track.id]) BGM_TRACK_BY_ID[track.id] = track;
 });
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -8356,6 +8374,8 @@ const Audio_ = (() => {
     "audio/bgm-amakakeru-tsubasa.mp3": "2b283f9e6aea",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
+    "audio/bgm-battle-5-short.mp3": "7fc065210067",
+    "audio/bgm-battle-5.mp3": "a911ffe142ba",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-beyond-the-same-sky-short.mp3": "fc0c43a87755",
@@ -14971,6 +14991,7 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  battle5: false,
   battleLog: true,
   battleCardArt: true,
   assistantChat: true,
@@ -21386,7 +21407,8 @@ const helpDataRows = id => {
       }
     case 'rhythmHellSongs':
       {
-        const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const allSongs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const songs = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(allSongs) : allSongs;
         const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
         return songs.map(song => {
           const chart = song && hell[song.songId];
@@ -37028,7 +37050,7 @@ const RhythmOrientationButton = ({
       if (how === 'device') return;
       if (how === 'already') return;
       if (how === 'forced') {
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
+        setNote(`代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてください`);
         return;
       }
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
@@ -39229,6 +39251,7 @@ const RhythmSongSelect = ({
     className: "ml-1.5 inline-block whitespace-nowrap text-slate-300"
   }, chart.totalNotes, "ノーツ"), rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? React.createElement("span", {
     "data-rhythm-demo-ticks": true,
+    title: "ホールド・スライドを押さえている途中で入る判定の数",
     className: "ml-1 inline-block whitespace-nowrap text-slate-300"
   }, `+ 刻み${rhythmChartTickCount(song, chart, difficulty.id)}`) : null)), React.createElement("div", {
     "data-rhythm-song-stats": true,
@@ -54647,6 +54670,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
+    'listen:battle_5': [['excited', '3:12からいちばん強いの来るぢゃん！ そこから最後までアガりっぱなし♪']],
     'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:brand_new_sky': [['excited', '1:19からいちばん強いところ、みんなで一緒に跳んでほしいの！']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
@@ -54745,6 +54769,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
+    'listen:battle_5': [['normal', '最初の19秒は静かで、音が少しずつ入ってくる所がきれいです♪']],
     'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:brand_new_sky': [['happy', 'BPM146で、ずっと前へ前へ走っていく感じでつ']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
@@ -54843,6 +54868,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
+    'listen:battle_5': [['excited', '1:04も2:53も強め！ 何度も盛り上がるの、ももは大好き♡']],
     'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:brand_new_sky': [['excited', '2:20でもう一回いちばん強くなるの、最後まで最高潮だよ♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
@@ -54941,6 +54967,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
+    'listen:battle_5': [['normal', '4分12秒の長い戦いだな。BPM170で一気に駆け抜けるぞ']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:brand_new_sky': [['happy', '強く打つ音が多いな。2分半、走り切るぞ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
@@ -55039,6 +55066,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
+    'listen:battle_5': [['happy', '4:00までいちばん強いまま押して、4:06で静かに締めるのいいよね笑']],
     'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:brand_new_sky': [['happy', '0:46で強めに上がってから、1:19で一気にひらける流れがいいね']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
@@ -55137,6 +55165,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
+    'listen:battle_5': [['happy', '静かと強めを繰り返して、最後にいちばん強い所を持ってくる構成なんだよね〜']],
     'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:brand_new_sky': [['happy', '静か→ふつう→強め→いちばん強いって、きれいに上がっていく構成なんだよね〜']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
@@ -55235,6 +55264,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
+    'listen:battle_5': [['normal', 'BPM170で912ノーツ。強い音55%・軽い音5%、数字でも力押しだぜ・・・！']],
     'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:brand_new_sky': [['normal', 'BPM146です。強く打つ音が48%・・・！ 元気な音です']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
@@ -55333,6 +55363,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
+    'listen:battle_5': [['normal', '0:47の静かな所は落ち着くね。戦いの前のひと息って感じかな']],
     'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:brand_new_sky': [['normal', '2:07で少し落ち着いてから最後に戻ってくるところ、ぐっとくるね']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
@@ -66107,7 +66138,7 @@ function PlayerRankStrip({
     }
   })), React.createElement("small", {
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
-  }, `次まで ${(info.need - info.into).toLocaleString()}`));
+  }, `次のランクまで あと${(info.need - info.into).toLocaleString()}`));
 }
 const PLAYER_RANK_REWARDS_STEP = 30;
 function PlayerRankRewards({
@@ -66740,7 +66771,7 @@ function PlayerRankXpBar({
     className: "mh-prxb-add"
   }, `経験値 +${view.shown.toLocaleString()}`), React.createElement("span", {
     className: "text-[12px] font-black text-white tabular-nums"
-  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 0 && React.createElement("div", {
+  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 1 && React.createElement("div", {
     "data-player-rank-gain-parts": true,
     className: "mb-3 mt-1.5 flex flex-wrap gap-1.5"
   }, parts.map((p, i) => React.createElement("span", {
@@ -66773,8 +66804,9 @@ function PlayerRankXpBar({
     className: "mh-prxb-up",
     "aria-hidden": "true"
   }, "RANK UP!")), React.createElement("div", {
-    className: "mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums"
-  }, React.createElement("span", null, `${view.into.toLocaleString()} / ${need.toLocaleString()}`), React.createElement("span", null, `次まで ${(need - view.into).toLocaleString()}`)), React.createElement("div", {
+    "data-player-rank-xp-left": true,
+    className: "mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums"
+  }, `次のランクまで あと ${(need - view.into).toLocaleString()}`), React.createElement("div", {
     ref: fxRef,
     className: "mh-prxb-fx",
     "aria-hidden": "true"
@@ -66806,9 +66838,11 @@ function PlayerRankGain({
     }
   }), next && React.createElement("p", {
     "data-player-rank-gain-next": true,
-    className: "text-[10px] font-bold text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`次は ${next}`)), up && done && React.createElement(PlayerRankUp, {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "次は ", String(next).split('・').map((part, i) => React.createElement("span", {
+    key: i,
+    className: "inline-block whitespace-nowrap"
+  }, `${i ? '・' : ''}${part}`))), up && done && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
@@ -81557,7 +81591,7 @@ function PickHeroAllyScreen({
     }, pickMode === 'hero' ? '勇者モンを選ぶ' : '供モンを選ぶ'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
-    }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。このモンスターの勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
+    }, helpWrap(pickMode === 'hero' ? '勇者モン＝主役。勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-[76px]"
     })), pickMode === 'ally' && React.createElement("div", {
       className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
@@ -89301,7 +89335,7 @@ function BattleScreen({
   }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
-    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
+    className: "min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
     style: {
       color: battleModeInfo(runMode).color,
       borderColor: `${battleModeInfo(runMode).color}66`,
@@ -89707,7 +89741,7 @@ function BattleScreen({
     className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95"
   }, "閉じる"))), React.createElement("main", {
     "data-battle-stage": true,
-    className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
+    className: "flex-1 relative flex flex-col items-center justify-start pt-3 [@media(orientation:landscape)_and_(max-height:520px)]:pt-0.5 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
     style: {
       justifyContent: 'safe center',
       ...(enemyImageOnlyAttack ? {
@@ -89859,7 +89893,7 @@ function BattleScreen({
     "data-soul-battle-start-summary": true,
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "魂格効果 発動中", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), React.createElement("div", {
-    className: "mt-1 relative flex flex-col items-center"
+    className: "mt-1 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 relative flex flex-col items-center"
   }, React.createElement(BossMovieLayer, {
     shake: battleFx.shake !== 'OFF'
   }), enemyMotion && React.createElement(TacticsEnemyStageFx, {
@@ -90064,7 +90098,7 @@ function BattleScreen({
     "data-em-fx": !enemyIsMoo && emSpec?.[1] || undefined,
     "data-em-emo": !enemyIsMoo && emSpec?.[3] || undefined,
     "data-enemy-hurt": !enemyIsMoo && enemyHurtNow ? 'true' : undefined,
-    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
+    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} [@media(orientation:landscape)_and_(max-height:520px)]:!p-[3px] ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
     onClick: () => {
       if (isBusy || autoBattle || battleTutorialStep != null || !enemy) return;
@@ -91776,7 +91810,7 @@ function BattleScreen({
     "data-battle-hand": true,
     className: "shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm",
     style: {
-      height: 'clamp(172px,23dvh,196px)',
+      height: 'clamp(172px,24.5dvh,200px)',
       backgroundImage: 'linear-gradient(180deg, rgba(20,29,52,.94) 0%, rgba(12,18,34,.97) 52%, rgba(7,11,22,.99) 100%)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07), 0 -10px 28px rgba(0,0,0,.16)'
     }
@@ -166971,6 +167005,9 @@ const MSX_CSS = `
 .msx .v-hd{height:auto;min-height:32px}
 /* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
 .msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
+/* お話の文・説明・名札も「走っ/てきた」「総合/力」「イッサ/博士」と言葉の途中で折れていた(API 総点検① 2026-11-23 高41件)。
+   モンサクの画面全体に広げる(受け継がれるので中の文すべてに効く。keep-all などを個別に書いた所はそのまま) */
+.msx,.msx-ov{word-break:auto-phrase}
 /* 能力の列を押すと素質(A〜E)に切り替わる(2026-11-14 社長)。右上の小さな札が押せる印 */
 .msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:4px;row-gap:2px;-webkit-tap-highlight-color:transparent}
 .msx .v-st.tg:active{transform:translateY(1px)}
@@ -233450,7 +233487,7 @@ function MonsterHeroGame() {
       const fxGains = [...(basePoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${basePoints.toLocaleString()}`,
-        note: '上がったランク ×100'
+        note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計`
       }] : []), ...(gain.bonusPoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${gain.bonusPoints.toLocaleString()}`,
@@ -258478,7 +258515,7 @@ function MonsterHeroGame() {
         ranked = modeHasRanking(battleMode);
       const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
       const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
@@ -258645,8 +258682,9 @@ function MonsterHeroGame() {
           className: "mhbt-score"
         }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
           className: "mhbt-cells"
-        }, rateCells(setting).map(([label, value, boosted]) => React.createElement("div", {
-          key: label
+        }, rateCells(setting).map(([label, value, boosted], _i, all) => React.createElement("div", {
+          key: label,
+          className: all.length === 1 ? 'col-span-3' : undefined
         }, label, React.createElement("b", {
           className: boosted ? 'underline decoration-2' : ''
         }, value)))), React.createElement("div", {
