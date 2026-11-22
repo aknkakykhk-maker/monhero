@@ -41,6 +41,20 @@ const CHANGELOG = [
       '横画面では版の切り替えを曲名の右に並べ、難易度のボタンは版が1つの曲と同じ大きさで出るようにしました。',
     ],
   },
+  {
+    date: "2026-11-22 23:21", type:'update', title:'パソコンの曲選びで「未プレイ」が切れないようになりました', status:'new', group:'rhythm',
+    items:[
+      'パソコンの曲の一覧で、「未プレイ」が切れずに全部出るようにしました。',
+    ],
+  },
+  {
+    date: "2026-11-22 23:14", type:'update', title:'曲の結果で、今回のスコアがいちばん上に出るようになりました', status:'new', group:'rhythm',
+    items:[
+      'ひとりで遊んだ曲の結果は、曲名・ランクとスコアをいちばん上に出し、ビートランクの経験値はスコアと内訳の下に出るようにしました。',
+      'ランクが上がったときは、画面いっぱいのお祝いで1回だけ知らせます。',
+      '下のボタンは「曲選びへ戻る」を大きく、「もう一度プレイ」を小さくしました。',
+    ],
+  },
   // 咲かせて！ハナウタ・ノート(台帳 r1119-101/103)。開始の 11/23 10:00 から一覧に出す(date・visibleFrom・notifyFrom を出はじめる時刻にそろえる)。
   //   2曲目・3曲目の曲名と、お話の中身は書かない(先の日のネタバレ)。期間・倍率・ランキングは data/rhythm-event.js の FLOWER3_*
   {
@@ -121,6 +135,24 @@ const CHANGELOG = [
       'イベント「咲かせて！ハナウタ・ノート」の間は無料で遊べます。イベントが終わったあとは、ビートP500で買って遊べます。',
     ],
     assistantNotice:{ id:'update_notice_brand_new_sky_v1', type:'content', notifyFrom:'2026-11-23T10:00:00+09:00' },
+  },
+  // 新曲「Battle #5」(2026-11-22 社長決定。原曲+short ver. の2つの版の曲組・ビートP500で両方の版が付く・作者クレジットなし・ジャケットは版ごとに違う絵。お知らせは曲組で1件)
+  // ★公開は 2026-11-23 の社長決定(台帳 r1119-118)で止めている。releaseFlag:'battle5' が偽のあいだは、この項目も助手の告知も出ない。解禁するときは RELEASE_FLAGS.battle5 を真にし、date を解禁の日時へ直す
+  {
+    date: "2026-11-23 01:20", type:'update', group:'rhythm', status:'new', releaseFlag:'battle5',
+    title:'新曲「Battle #5」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/battle-5.jpg',
+    items:[
+      'モンヒロビートに「Battle #5」を追加しました。原曲（4分12秒・BPM 170）と short ver.（2分27秒・BPM 170）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.24 ／ MASTER Lv.31 ／ HELL Lv.49 です。',
+      '原曲のノーツ数は 416 ／ 479 ／ 646 ／ 791 ／ 912 ／ 1032 です。',
+      'short ver. のレベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.25 ／ MASTER Lv.30 ／ HELL Lv.48 です。',
+      'short ver. のノーツ数は 246 ／ 288 ／ 382 ／ 474 ／ 545 ／ 615 です。',
+      '譜面は版ごとに違います。曲えらびの版タブで切り替えて遊べます。ジャケットの絵も版ごとに違います。',
+      '原曲には歌詞カードがあります。ジャケットを大きく開くと、歌詞カードのページも見られます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_battle_5_v1', type:'content' },
   },
   {
     date: "2026-11-22 20:34", type:'event', group:'rhythm', title:'【期間限定】咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～ を開催します', status:'new',
