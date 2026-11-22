@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41ea570209a21d84
+// generated-sha256: dea32ed430861c24
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59528,7 +59528,8 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {m.cpu && tall && (m.as
                 ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mx-auto mb-0.5 block w-fit rounded bg-pink-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">助手</b>
                 : <b data-rhythm-multi-cpu-mark className="mx-auto mb-0.5 block w-fit rounded bg-lime-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">CPU</b>)}
-              <span data-rhythm-multi-member-name className={`block font-black leading-tight ${tall ? (m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : 'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}`}>{m.cpu && !tall && (m.as
+              {/* 人の名前は2行に折らず1行に(2026-11-22 r1119-094・点検 N25「モンヒロく/ん*」と途中で折れた)。長い名前は字を小さくし、それでも入らなければ「…」 */}
+              <span data-rhythm-multi-member-name className={`block font-black leading-tight ${tall ? (m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : `truncate whitespace-nowrap ${[...String(m.name || '')].length + (self ? 1 : 0) > 7 ? 'text-[9px] tracking-[-0.04em]' : [...String(m.name || '')].length + (self ? 1 : 0) > 5 ? 'text-[10px]' : 'text-[11px]'} landscape:text-sm`) : 'truncate text-[10px]'}`}>{m.cpu && !tall && (m.as
                 ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950">助手</b>
                 : <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>)}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
@@ -61061,7 +61062,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <div className="min-w-[7.5rem] flex-1 leading-none">
         <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
         {/* 折れるときは「・」の手前で折る(「・」で行が終わらないように・2026-11-07 ミハリ B3) */}
-        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"><span className="whitespace-nowrap">▶ {step}</span>{view ? <> <span className="whitespace-nowrap">・{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} {view.code}</span></> : ''}</small>
+        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"><span className="whitespace-nowrap">▶ {step}</span>{view ? <> <span className="whitespace-nowrap">・{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]}{opts.noCode ? '' : ` ${view.code}`}</span></> : ''}</small>
         {/* 回数ボーナス(連続ボーナス)を部屋の中でも(2026-11-07 社長「回数ボーナスの表示がクリアにしか見れないから不便」)。
             同じメンバーで続けると、次の曲のごほうびが上がる。結果画面の「🔥 連続◯曲目」と同じ数え方 */}
         {view && room && room.round && <small data-rhythm-multi-streak-next className="mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white">🔥 {rhythmMultiStreakNextText(view.streak)}</small>}
@@ -61199,7 +61200,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const buddySheetWasOpen = React.useRef(false);
   React.useEffect(() => { if (buddySheet) buddySheetWasOpen.current = true; else if (buddySheetWasOpen.current) { buddySheetWasOpen.current = false; setCallPreselect(''); } }, [buddySheet]);
   const inviteButton = (extra = '') => friendsOn && view && (
-    <button data-rhythm-multi-invite-open type="button" aria-label="フレンドを招待する" onClick={openInviteSheet}
+    <button data-rhythm-multi-invite-open type="button" aria-label="フレンド一覧から呼ぶ" onClick={openInviteSheet}
       className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-pink-400/50 bg-pink-950/40 text-lg ${extra}`}>💌</button>
   );
   const inviteSheetLayer = inviteSheet && friendsOn && view && (
@@ -61208,7 +61209,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <div data-rhythm-multi-invite-sheet className="absolute inset-x-0 bottom-0 flex max-h-[80%] flex-col gap-2 overflow-y-auto rounded-t-2xl border-t border-pink-400/40 bg-slate-900 p-3 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(420px,55%)] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">💌</span>
-          <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンドを招待する</b>
+          <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンド一覧から呼ぶ</b>
           <button type="button" onClick={() => setInviteSheet(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {inviteListBody}
@@ -61539,7 +61540,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const publicRoom = !!view && view.mode !== 'private';
     return (
       <main data-rhythm-multi data-rhythm-multi-step="matching" className={shell}>
-        {header('マッチング', leaveRoom, { buddy: true })}
+        {/* 部屋の画面は下の箱に大きくコードが出るので、見出しには出さない(2026-11-22 r1119-094・点検 N23「2か所に出る」) */}
+        {header('マッチング', leaveRoom, { buddy: true, noCode: true })}
         {view && view.full
           ? <div className="min-h-0 flex-1 overflow-y-auto p-3"><section data-rhythm-multi-full className={card}>
             <p className="text-sm font-black text-rose-300">このルームは満員です(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
@@ -61553,7 +61555,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             {/* 下の欄は、上のメンバーの札の残りに縮む(2026-11-08 社長「下が少し切れてる」。札と欄の7割を足すと画面より高くなり、「ルームを出る」が下で切れていた)。入りきらないぶんは中で送る */}
             <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
-                <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : 'メンバーを待っています…'}</p>
+                {/* 2人以上そろったら「待っています…」のままにしない(2026-11-22 r1119-094・点検 N21) */}
+                <p data-rhythm-multi-matching-title className={`text-sm font-black ${view && members.length >= 2 ? 'text-lime-200' : 'animate-pulse text-amber-200'}`}>{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : members.length < 2 ? 'メンバーを待っています…' : isHost ? (view.mode === 'private' ? '「メンバー確定」で始められます' : '「このメンバーで始める」で始められます') : 'メンバーがそろいました'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
                   {!view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'}
                 </p>
@@ -61564,7 +61567,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                     <b data-rhythm-multi-room-code className="block text-2xl font-black leading-none tracking-[0.3em] text-cyan-200">{view.code}</b>
                     {view.status !== 'open' && <small className="block text-[9px] font-black text-amber-300">{view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…'}</small>}
                   </div>
-                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : 'フレンドに送る'}</button>
+                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : 'コードを送る'}</button>
                 </div>}
                 {view && <button data-rhythm-multi-watch-allow type="button" aria-pressed={watchAllowUi} onClick={toggleWatchAllow}
                   className={`mt-1.5 min-h-[40px] rounded-xl border px-3 text-[11px] font-black ${watchAllowUi ? 'border-amber-300/60 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-800 text-slate-300'}`}>
@@ -61585,20 +61588,21 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                     className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40">このメンバーで始める<small className="block text-[9px] font-bold opacity-80">待たずにメンバーを確定</small></button>
                 )}
                 {view && isHost && view.mode === 'private' && me && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
-                      className={`min-h-[48px] rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`}>
-                      {me.open ? 'ルーム解放中' : 'ルーム解放'}<small className="block text-[9px] font-bold opacity-80">{me.open ? 'タップでやめる' : '知らない人も呼ぶ'}</small>
-                    </button>
+                  // 次に押す「メンバー確定」を全幅・いちばん大きく。「ルーム解放」はその下に小さく(2026-11-22 r1119-094・点検 N20「同じ半分幅」)
+                  <div className="space-y-1.5">
                     <button data-rhythm-multi-confirm type="button" disabled={members.length < 2} onClick={() => RHYTHM_MULTI.confirmMembers()}
-                      className="min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40">メンバー確定</button>
+                      className={`min-h-[52px] w-full rounded-xl bg-fuchsia-600 px-2 text-base font-black disabled:opacity-40 ${members.length >= 2 ? 'shadow-[0_0_14px_rgba(217,70,239,.45)]' : ''}`}>メンバー確定</button>
+                    <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
+                      className={`flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'border border-white/15 bg-slate-800'}`}>
+                      {me.open ? 'ルーム解放中' : 'ルーム解放'}<small className="text-[10px] font-bold opacity-80">{me.open ? 'タップでやめる' : '知らない人も呼ぶ'}</small>
+                    </button>
                   </div>
                 )}
               {/* 招待はプライベートでもフリーでも(2026-11-07 社長「フリーマッチでも招待できるように」) */}
               {/* 横・🔄横では、上の帯の 💌 と同じなので隠す(右の欄に「ルームを出る」を収めるため・2026-11-07 ミハリ B1) */}
               {friendsOn && view && (
                 <section data-rhythm-multi-friend-invite className={`${card} landscape:hidden`}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className="min-h-[44px] w-full rounded-xl border border-pink-400/40 bg-pink-950/50 px-3 text-xs font-black text-pink-100" onClick={openInvitePanel}>{invitePanel ? 'フレンド一覧を閉じる' : '💌 フレンド一覧から呼ぶ'}</button>
                   {invitePanel && inviteListBody}
                 </section>
               )}
@@ -61626,6 +61630,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const fill = Math.min(1, Math.max(0, team.average / 1000000));
     const marks = ['C', 'B', 'A', 'S', 'SS'].map((id) => ({ id, pos: (RHYTHM_RANKS.find((r) => r.id === id) || { min: 0 }).min / 1000000 }));
     const drawnLevel = (diffId) => (drawnSong && drawnSong.difficulties && drawnSong.difficulties[diffId] ? Number(drawnSong.difficulties[diffId].level) || 0 : 0);
+    // 列は「いる人数」だけ出す(2026-11-22 r1119-094・点検 N41)。3人でも5人分の列が並び、空き枠2つが幅の約4割を取って名前が「モンヒロ…」と切れていた。
+    // 1列は広がりすぎないよう 200px までにし、まん中へ寄せる
+    const resultCols = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, team.rows.length || 1));
+    const resultGridStyle = { gridTemplateColumns: `repeat(${resultCols}, minmax(0, 1fr))` };
+    const resultWidthStyle = { maxWidth: `${resultCols * 200}px` };
     return (
       <main data-rhythm-multi data-rhythm-multi-step="result" className={`${shell} bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950`}>
         <b aria-hidden="true" className="pointer-events-none absolute left-2 top-0 text-6xl font-black italic tracking-widest text-white/[0.06]" style={{ top: 'var(--mh-sa-top)' }}>RESULT</b>
@@ -61652,9 +61661,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               結果画面には見出しが無いので、いちばん上の帯の右(部屋と同じ右上)へ置く。向きは RHYTHM_VIEW_ROTATION が画面をまたいで持つので、
               部屋で横 → 演奏 → 結果でも横のまま。結果で変えた向きも、部屋へ戻ればそのまま */}
           <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
-          <div className="flex w-16 shrink-0 flex-col items-center">
+          <div className="flex w-16 shrink-0 flex-col items-center landscape:flex-col-reverse">
+            {/* 横は下の端に吹き出しが重なるので、「チームのランク」を上に出す */}
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
-            <small className="text-[8px] font-black tracking-widest text-slate-400">SCORE RANK</small>
+            {/* だれのランクか分かるように「チーム」と書く(MVP がフルコンボでも D と出て、自分が D だと思った・点検 N42) */}
+            <small data-rhythm-multi-team-rank-label className="whitespace-nowrap text-[9px] font-black leading-none text-slate-300">チームのランク</small>
           </div>
         </section>
         {/* 縦画面ではゲージを曲の下へ1段で出す(横画面では上の帯の中) */}
@@ -61672,15 +61683,15 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             横向き(🔄横も)は送らない: カードの上の吹き出しが欄の上で切れるため。横は育ちの札の欄が中で送る */}
         <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible">
         {/* カードに最低の高さを持たせる。下の育ちの札・友情Lv の欄やあいさつの段に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長・🔄横。320幅の縦ではカードがほぼ消えていた) */}
-        <ul className="relative grid max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
-          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2">
-            {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
+            {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
               return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
             })}
           </li>
-          {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+          {Array.from({ length: resultCols }).map((_, i) => {
             const r = team.rows[i];
             if (!r) return <li key={`empty${i}`} aria-hidden="true" className="rounded-xl border border-dashed border-white/5" />;
             const isMvp = r.m.id === team.mvpId && !team.waiting;
@@ -61753,9 +61764,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         </div>
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1 [[data-mh-view-rotation=true]_&]:pt-1" style={{ paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
-            className="min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">メンバーの成績</button>
+            className="min-h-[46px] shrink-0 rounded-full border border-white/20 bg-slate-800/80 px-3 text-xs font-black text-slate-200 landscape:w-36 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">📋 メンバーの成績</button>
           <button data-rhythm-multi-result-next type="button" onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
-            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
+            className="min-h-[52px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 text-lg font-black text-slate-950 shadow-[0_0_14px_rgba(45,212,191,.4)] landscape:w-64 landscape:flex-none [@media(max-height:440px)]:min-h-[40px] [[data-mh-view-rotation=true]_&]:min-h-[40px]">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
         </div>
         {/* 結果が出たら対戦の記録へ足す(自分が参加して、全員の結果がそろってから) */}
         {(() => {
@@ -61867,30 +61878,32 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const shownDiffId = (drawnOpenDiffs.find((d) => d.id === myDiffId) || pickPlayDifficulty() || {}).id;
     return (
       <main data-rhythm-multi data-rhythm-multi-step="ready" className={shell}>
-        {header('難易度選択', leaveRoom, { timer: room.left, advance: 'すぐ開始', gesture: true })}
+        {/* 部屋主の「すぐ開始」は下の準備完了のボタンへまとめた(2026-11-22 r1119-094・点検 N36「次に押す物が2つ」) */}
+        {header('難易度選択', leaveRoom, { timer: room.left })}
         <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.readyRound === room.round ? { text: '準備完了', cls: 'bg-emerald-400 text-slate-950', sub: m.diff } : { text: '準備中', cls: 'bg-slate-600 text-white', sub: m.diff })} />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           {drawnSong && (
-            <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-900/90 p-1.5 landscape:w-[32%]">
-              <span className="h-12 w-12 shrink-0"><RhythmSongArt song={drawnSong} marked={false} /></span>
+            // 縦は札の下が約250px空いていたので、これから遊ぶ曲を大きく出す(ジャケット120px・2026-11-22 r1119-094・点検 N34)。横・🔄横は今までの大きさ。高さの低い縦(SE)は少し小さく
+            <div data-rhythm-multi-drawn-box className="flex min-w-0 items-center gap-3 rounded-xl bg-slate-900/90 p-2 [@media(max-height:620px)]:gap-2 [@media(max-height:620px)]:p-1.5 landscape:gap-2 landscape:p-1.5 landscape:w-[32%]">
+              <span className="h-[120px] w-[120px] shrink-0 [@media(max-height:760px)]:h-20 [@media(max-height:760px)]:w-20 [@media(max-height:620px)]:!h-12 [@media(max-height:620px)]:!w-12 landscape:!h-12 landscape:!w-12"><RhythmSongArt song={drawnSong} large marked={false} /></span>
               <div className="min-w-0 flex-1">
-                <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
-                <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
+                <small className="block text-[10px] font-black text-slate-400 landscape:text-[9px]">ライブする曲</small>
+                <b data-rhythm-multi-drawn className="line-clamp-2 text-lg font-black leading-tight [@media(max-height:760px)]:text-base [@media(max-height:620px)]:line-clamp-1 [@media(max-height:620px)]:text-sm landscape:block landscape:truncate landscape:text-sm">{rhythmSongFullName(drawnSong)}</b>
                 {/* おまかせで、助手・マスモンの希望から決まったとき(2026-11-10) */}
                 {(() => { const w = room.wishBy ? members.find((m) => m.id === room.wishBy) : null; return w ? <small data-rhythm-multi-wish={w.as ? 'assistant' : 'masmon'} className="mt-0.5 block truncate text-[10px] font-black text-lime-200">🎵 {w.name}の希望の曲にしたよ</small> : null; })()}
                 {/* 演出の段階(2026-10-03・ユーザー指示「完全に軽くじゃないやつも切り替えられるように」)。
                     軽め・標準・華やか は見た目のおまかせを対戦のあいだだけ重ねる。いつもの は自分の設定のまま */}
-                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex items-center gap-0.5">
+                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex flex-wrap items-center gap-0.5">
                   <small className="mr-0.5 shrink-0 text-[9px] font-black text-slate-400">演出</small>
                   {RHYTHM_MULTI_LOOK_CHOICES.map((c) => (
                     <button key={c.id} type="button" data-rhythm-multi-look={c.id} aria-pressed={multiLook === c.id} onClick={() => onChangeMultiLook(c.id)}
-                      className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
+                      className={`min-h-[26px] whitespace-nowrap rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
                   ))}
                 </div>}
                 {/* 演奏中の札(ほかの人の順位・スコア・コンボ)の出し入れ(2026-11-11 社長「消せる・はじめは入」) */}
                 {onChangeMultiLiveBoard && <button type="button" data-rhythm-multi-live-toggle aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
-                  className={`mt-1 flex min-h-[26px] items-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
+                  className={`mt-1 flex min-h-[26px] items-center gap-1 whitespace-nowrap rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
                   <span>演奏中のみんなのスコア</span><b>{multiLiveBoard ? 'ON' : 'OFF'}</b>
                 </button>}
               </div>
@@ -61915,8 +61928,14 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               );
             })}
           </div>
-          <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
-            className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]">{iAmReady ? '準備完了!' : '準備完了'}{iAmReady && <small className="block text-[9px] font-bold">ほかのメンバーを待っています</small>}</button>
+          {/* 押す前は「準備完了」。押した後は、部屋主は「待たずに始める」(前の上の帯の「すぐ開始」)、ほかの人は押せない札で「✓ 準備OK」と出す(押せるのか分からなかった・N36) */}
+          {iAmReady && isHost
+            ? <button data-rhythm-multi-advance type="button" onClick={() => { if (onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
+                className="min-h-[52px] rounded-xl bg-fuchsia-600 px-3 text-base font-black text-white shadow-[0_0_14px_rgba(217,70,239,.45)] landscape:w-[22%]">待たずに始める<small className="block text-[9px] font-bold opacity-90">✓ 準備OK・準備中の人もいまの難易度で</small></button>
+            : iAmReady
+              ? <p data-rhythm-multi-ready-done role="status" className="flex min-h-[52px] flex-col items-center justify-center rounded-xl border border-emerald-300/50 bg-emerald-950/60 px-3 text-center text-sm font-black text-emerald-200 landscape:w-[22%]">✓ 準備OK<small className="block text-[9px] font-bold text-emerald-100/80">ほかのメンバーを待っています</small></p>
+              : <button data-rhythm-multi-ready type="button" onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
+                  className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 landscape:w-[22%]">準備完了</button>}
         </div>
         {chatSheet}{inviteSheetLayer}{rankingLayer}{buddyInfoLayer}
         {countdownLayer}
@@ -70102,6 +70121,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
+  // 段10: 新UIの友情のタブを型に載せる(56-assistant-life-house-typed.jsx の AssistantLifeFriendsTyped・社長 r1119-099 案A)。検査だけ window.__mhAssistantLifeUntypedFriends で前の友情を開く
+  const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function'
+    && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
   // 掛け合いを、家を閉じずに場面で流す
   const showFollow = () => {
@@ -70383,7 +70405,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
       {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
-      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse ? 'none' : 480 }}>
+      <div className="mhl-page" style={{ maxWidth: land || tab === 'where' || typedHouse || typedFriends ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
@@ -70401,6 +70423,12 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <div className="px-3 pb-2"><AssistantLifeScreenBody metIds={metIds} onReplay={playTalk} peerItems={peerItems} onUseItem={onUseItem} embedded/></div>
               <div className="px-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>{icons}</div>
             </>}/>
+        ) : typedFriends ? (
+          <AssistantLifeFriendsTyped life={life} ids={ids.filter(partnerOk)} metIds={metIds} peerSt={peerSt} nameOf={nameOf}
+            tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            unwatched={unwatched} onWatch={(g) => { if (g) watch(g); }} onReplay={(t) => playTalk(t, null)} peerItems={peerItems} onUseItem={onUseItem}
+            onGivePair={canGive ? (pair) => openGive(pair) : null} onRoom={setRoomId} result={aluResult} onResultClose={() => setAluResult(null)}/>
         ) : typedHouse ? (
           <AssistantLifeHouseTyped land={land} life={life} ids={ids} metSet={metSet} look={look} rooms={rooms} diary={diary} peerSt={peerSt} nameOf={nameOf}
             tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
@@ -70468,7 +70496,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
-        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} noResult={typedHouse} onClose={() => { const sc = scene; setScene(null); const following = !!followAfterRef.current; showFollow(); if ((typedHouse || (uiV2 && roomId)) && sc && sc.before && !following) setAluResult({ ids: sc.ids, before: sc.before, title: sc.resultTitle }); }} onGive={openGive}/>}
+        {scene && <AssistantLifeScene key={scene.key} scene={scene} look={look} watchLeft={unwatched.length} nextSlot={(() => { try { return `${assistantLifeSlotAt().to % 24}:00`; } catch (_) { return ''; } })()} canGive={canGive && itemsLeft > 0} noResult={typedHouse || typedFriends} onClose={() => { const sc = scene; setScene(null); const following = !!followAfterRef.current; showFollow(); if ((typedHouse || typedFriends || (uiV2 && roomId)) && sc && sc.before && !following) setAluResult({ ids: sc.ids, before: sc.before, title: sc.resultTitle }); }} onGive={openGive}/>}
         {dailyScene && typeof AssistantLifeDailySceneView === 'function' && <AssistantLifeDailySceneView plan={dailyScene.plan} place={dailyScene.place} look={look} slotId={dailyScene.slotId} slotLabel={dailyScene.slotLabel} onClose={() => { setDailyScene(null); setDailyKey(k => k + 1); }}/>}
         {intro && (
           <button type="button" className="mhl-intro" data-assistant-life-intro={intro} onClick={() => setIntro(null)} aria-label="とばす">
@@ -70804,6 +70832,139 @@ function AssistantLifeRoomTypedCheki({ id }) {
   const days = (st && st.cheki && st.cheki[String(id)]) || [];
   if (!days.length) return null;
   return <div data-assistant-life-cheki={id}><AluRow pic="📸" text={`チェキ ${days.length}枚`} note={`一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`} /></div>;
+}
+
+// ===== 助手ライフの作り直し 段10: 友情を型に載せる(docs/progress/assistant-life/step10-friendship/・2026-11-22 社長 r1119-099 は案A 型どおり) =====
+// 新UI の「🤝 友情」のタブだけ。旧UI は今のまま(段13 で片づけ)。何も保存しない(見る・引き合わせるは家の部品と同じ関数)。
+// 並び: 関係図(場面の絵・画面の3割。線は Lv3 から・線を押すとその2人の思い出アルバム)→ 主なボタン(いちばん友情Lv が上がりそうな2人がいる組を 👀 見る)
+//   → もうすぐ Lv が上がるペア(4組・あと◯の棒・いっしょにいて見ていない組は「見る」、ほかは「会わせる」= 引き合わせる)
+//   → 🤝 引き合わせる(窓)→ 💗 ごほうびの道のり(窓)→ 🗺 全部のペアと思い出アルバム(窓・前の関係図の部品)
+// 「見る」は組ごとに1回(assistantLifeWatch は組の印で覚える)。組の中の2人だけを別に見ると同じ組を2回見られるので、主なボタンは2人がいる組を見る
+const ASSISTANT_LIFE_FRIEND_LINE = (lv) => (lv >= 9 ? '#fde68a' : lv >= 7 ? '#fcd34d' : lv >= 5 ? '#f9a8d4' : lv >= 4 ? '#c4b5fd' : '#93c5fd');
+// 友情Lv の次の段まで(読むだけ)。{ pts, lv, stage, next, nextLv, nextName, need, rate }
+const assistantLifeFriendStep = (st, a, b) => {
+  const pts = typeof assistantPeerPoints === 'function' ? assistantPeerPoints(st, a, b) : 0;
+  const lv = typeof assistantPeerLevelOf === 'function' ? assistantPeerLevelOf(pts) : 1;
+  const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const cur = levels.find(s => s.level === lv) || null;
+  const nx = levels.find(s => s.level === lv + 1) || null;
+  const stageName = (s) => (s ? (typeof assistantPeerStageName === 'function' ? assistantPeerStageName(s) : s.name) : '');
+  const from = cur ? cur.min : 0;
+  return { a, b, pk: assistantLifePairKey(a, b), pts, lv, stage: stageName(cur), nextLv: nx ? nx.level : null, nextName: stageName(nx), need: nx ? Math.max(1, nx.min - pts) : 0,
+    rate: nx ? Math.max(0, Math.min(1, (pts - from) / Math.max(1, nx.min - from))) : 1 };
+};
+// 関係図(場面の絵): 8人を輪に置き、Lv3 からの線(色・太さ = Lv)。hot の2人は黄色の縁。線を押すと onPair([a, b])
+function AssistantLifeFriendGraph({ ids, st, hot = null, onPair }) {
+  const n = ids.length;
+  const pos = Object.fromEntries(ids.map((id, i) => { const t = -Math.PI / 2 + (2 * Math.PI * i) / n; return [id, [50 + 38 * Math.cos(t), 50 + 37 * Math.sin(t)]]; }));
+  const lines = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = ids[i], b = ids[j]; const lv = assistantPeerLevel(st, a, b);
+    if (lv >= 3) lines.push({ a, b, lv, hot: !!(hot && hot.includes(a) && hot.includes(b)) });
+  }
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14, background: 'radial-gradient(circle at 50% 45%,#2b2552,#151130)', overflow: 'hidden' }}>
+    {/* 輪が横に伸びて顔が離れすぎないよう、図は 横:縦 = 1.4:1 までに収める(PC・横の広い枠) */}
+    <div data-assistant-life-friend-graph style={{ position: 'relative', height: '100%', maxHeight: 420, aspectRatio: '1.4 / 1', maxWidth: '100%' }}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        {lines.map(l => { const [x1, y1] = pos[l.a], [x2, y2] = pos[l.b]; return (
+          <g key={`${l.a}-${l.b}`} data-assistant-life-friend-line={assistantLifePairKey(l.a, l.b)} style={{ cursor: 'pointer' }} onClick={() => onPair && onPair([l.a, l.b])}>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth="22" vectorEffect="non-scaling-stroke" />
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={ASSISTANT_LIFE_FRIEND_LINE(l.lv)} strokeWidth={l.hot ? 5 : Math.min(5, 1.5 + (l.lv - 3) * 0.6)} strokeLinecap="round" vectorEffect="non-scaling-stroke" strokeDasharray={l.hot ? '2 6' : undefined} opacity={l.hot ? 1 : 0.85} />
+          </g>); })}
+      </svg>
+      {ids.map(id => { const on = !!(hot && hot.includes(id)); return (
+        <div key={id} aria-hidden="true" style={{ position: 'absolute', left: `${pos[id][0]}%`, top: `${pos[id][1]}%`, transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+          <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${on ? '#fde047' : '#fff'}`, boxShadow: on ? '0 0 0 3px #fde04766' : 'none', background: '#312e5a' }}>
+            {typeof AssistantFace === 'function' && assistantById(id) ? <AssistantFace who={assistantById(id)} size={30} /> : null}
+          </div>
+          <b className="alu-nw" style={{ fontSize: 11, color: '#fff', background: '#151130e6', borderRadius: 999, padding: '0 6px', marginTop: 1 }}>{assistantLifeName(id)}</b>
+        </div>); })}
+    </div>
+    </div>);
+}
+
+function AssistantLifeFriendsTyped({ life, ids, metIds, peerSt, nameOf, tabs, tab = 'friends', onTab, onBack, unwatched = [], onWatch, onReplay = null,
+  peerItems = null, onUseItem = null, onGivePair = null, onRoom = null, result = null, onResultClose }) {
+  const [albumPair, setAlbumPair] = React.useState(null);
+  const [sheet, setSheet] = React.useState(null); // 'intro' | 'road' | 'all'
+  const [note, setNote] = React.useState('');
+  const st = peerSt || { bond: {} };
+  const list = (metIds || []).filter(id => ids.includes(id));
+  // 見ていない組(家の「見る」と同じ)の中の2人と、ほかの組の2人
+  const groupOf = {};
+  for (const g of unwatched || []) { const m = (g.ids || []).filter(id => list.includes(id)); for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) groupOf[assistantLifePairKey(m[i], m[j])] = g; }
+  const steps = [];
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) steps.push(assistantLifeFriendStep(st, list[i], list[j]));
+  const open = steps.filter(s => s.nextLv);
+  const best = open.filter(s => groupOf[s.pk]).sort((x, y) => x.need - y.need)[0] || null;
+  const soon = open.filter(s => !best || s.pk !== best.pk).sort((x, y) => x.need - y.need).slice(0, 4);
+  const introNext = (() => { try { const slot = assistantLifeSlotAt(); return ((life && life.nudges && life.nudges.introduce) || []).find(x => x.abs === slot.abs + 1) || null; } catch (_) { return null; } })();
+  const introduce = async (s) => {
+    let ok = false; try { ok = await assistantLifeNudge('introduce', [s.a, s.b]); } catch (_) { ok = false; }
+    setNote(ok ? `${nameOf(s.a)}と${nameOf(s.b)}が、次の時間に一緒に過ごしやすくなりました` : '次の時間に会わせる2人は、もう決まっています');
+  };
+  const duo = (s) => (
+    <div style={{ display: 'flex' }} aria-hidden="true">
+      {[s.a, s.b].map((id, k) => <div key={id} style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', border: '2px solid #fff', background: '#312e5a', marginLeft: k ? -10 : 0 }}>{typeof AssistantFace === 'function' && assistantById(id) ? <AssistantFace who={assistantById(id)} size={26} /> : null}</div>)}
+    </div>);
+  const bar = (s) => <div style={{ height: 6, borderRadius: 3, background: '#3b3566', overflow: 'hidden', marginTop: 3 }}><i style={{ display: 'block', height: '100%', width: `${Math.round(s.rate * 100)}%`, background: 'linear-gradient(90deg,#f9a8d4,#fb923c)' }} /></div>;
+  const pairRow = (s) => {
+    const g = groupOf[s.pk];
+    return (
+      <div key={s.pk} data-assistant-life-friends-pair={s.pk}>
+        <AluRow pic={duo(s)} text={<span className="alu-nw" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(s.a)}と{nameOf(s.b)}</span>}
+          note={<><span className="alu-nw" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>あと{s.need}で Lv{s.nextLv}「{s.nextName}」</span>{bar(s)}</>}
+          action={g ? <AluBtn onClick={() => onWatch && onWatch(g)}>見る</AluBtn> : <AluBtn disabled={!!introNext} onClick={() => introduce(s)}>会わせる</AluBtn>} />
+      </div>);
+  };
+  const goLabel = best
+    ? <span style={{ display: 'block' }}><span className="alu-nw">👀 {assistantLifeTypedGroupName(groupOf[best.pk], nameOf)}を見る</span><span className="alu-t alu-nw" style={{ display: 'block', color: 'inherit' }}>{nameOf(best.a)}と{nameOf(best.b)} あと{best.need}で Lv{best.nextLv}</span></span>
+    : <>いま見られる組はありません</>;
+  let resultNode = null;
+  if (result) {
+    const now = typeof assistantLifeSceneSnap === 'function' ? assistantLifeSceneSnap(result.ids) : { peer: 0, me: null };
+    const b = result.before || { peer: 0, me: null };
+    const dPeer = Math.max(0, Math.round(now.peer - b.peer));
+    const dMe = now.me != null && b.me != null ? Math.max(0, Math.round(now.me - b.me)) : 0;
+    const gains = [...(dMe > 0 ? [{ icon: '💗', label: '仲良し度', v: dMe }] : []), ...(dPeer > 0 ? [{ icon: '🤝', label: '友情', v: dPeer }] : [])];
+    resultNode = (
+      <div data-assistant-life-friends-result>
+        <AluResult title={result.title || '結果'} line={`${(result.ids || []).map(nameOf).join('・')}${gains.length ? '' : ' · 今日はもう上がりきっています'}`}
+          gains={gains} next={{ label: '🤝 友情に戻る', onClick: onResultClose }} onClose={onResultClose} />
+      </div>);
+  }
+  const sheetNode = sheet === 'intro' ? (
+    <AluSheet title="🤝 引き合わせる" gain="🤝 友情(一緒に過ごしやすくなる)" onClose={() => setSheet(null)}>
+      {typeof AssistantLifeIntroduceCard === 'function' ? <AssistantLifeIntroduceCard ids={list} life={life} /> : null}
+    </AluSheet>)
+    : sheet === 'road' ? (
+      <AluSheet title="💗 ごほうびの道のり" gain="💗 仲良し度(あなたと助手)" onClose={() => setSheet(null)}>
+        {typeof AssistantLifeRewardRoad === 'function' ? <AssistantLifeRewardRoad ids={list} peerSt={peerSt} nameOf={nameOf} onRoom={(id) => { setSheet(null); onRoom && onRoom(id); }} /> : null}
+      </AluSheet>)
+    : sheet === 'all' ? (
+      <AluSheet title="🗺 全部のペアと思い出アルバム" gain="🤝 友情Lv" onClose={() => setSheet(null)}>
+        {typeof AssistantPeerMap === 'function' ? <AssistantPeerMap metIds={metIds} onReplay={(t) => { setSheet(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} v2 onGivePair={onGivePair} /> : null}
+      </AluSheet>)
+    : null;
+  return (
+    <AluFrame title="友情" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} data-assistant-life-typed-friends="1"
+      scene={<AssistantLifeFriendGraph ids={list} st={st} hot={best ? [best.a, best.b] : null} onPair={setAlbumPair} />}
+      overlay={<>{resultNode || sheetNode}{albumPair && typeof AssistantPeerAlbum === 'function' ? <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); onReplay && onReplay(t); }} peerItems={peerItems} onUseItem={onUseItem} onGivePair={onGivePair} /> : null}</>}>
+      <AluGo data-assistant-life-friends-go disabled={!best} onClick={() => best && onWatch && onWatch(groupOf[best.pk])}>{goLabel}</AluGo>
+      {note ? <div className="alu-card alu-n" data-assistant-life-friends-note>{note}</div> : null}
+      {soon.length ? (
+        <div className="alu-card" data-assistant-life-friends-soon>
+          <div className="alu-h">もうすぐ Lv が上がるペア</div>
+          {soon.map(pairRow)}
+          <div className="alu-n alu-nw" style={{ marginTop: 4 }}>線の色・太さ = 友情Lv · 線を押すと思い出</div>
+        </div>) : null}
+      <div className="alu-card">
+        <AluRow pic="🤝" text="引き合わせる" note={<span className="alu-nw">次の時間を2人で過ごしやすく</span>} action={<AluBtn data-assistant-life-friends-intro onClick={() => setSheet('intro')}>選ぶ</AluBtn>} />
+        <AluRow pic="💗" text="ごほうびの道のり" note={<span className="alu-nw">あなたと助手の 💗 のごほうび</span>} action={<AluBtn data-assistant-life-friends-road onClick={() => setSheet('road')}>開く</AluBtn>} />
+        <AluRow pic="🗺" text={<span className="alu-nw">全部のペアと思い出</span>} note={<span className="alu-nw">28組の友情Lv・見返し</span>} action={<AluBtn data-assistant-life-friends-all onClick={() => setSheet('all')}>開く</AluBtn>} />
+      </div>
+    </AluFrame>);
 }
 
 // ---- part: 56-assistant-life-map.jsx ----
@@ -89371,7 +89532,7 @@ function AssistantLifeFriendPage({ life }) {
   const housesBlock = (<>
       {/* フレンドの家と「🚪 訪ねる」をいちばん上に(来てくれた・帰ってきたの知らせがまだのときは、その下)(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
       <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
-      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
+      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
       <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
@@ -89524,7 +89685,7 @@ const ALB_TABLE_LIKES = 'assistant_life_friend_likes';
 const ALB_MAX = Object.freeze({ houses: 3, likes: 3, friends: 100 });
 // 友情Lv に要るスタンプの数(Lv1〜Lv10)と呼び名(見た目の札)
 const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
-// 名前は「ご縁Lv」。助手どうしの「友情Lv」・あなたとの「仲良し度」と同じ言葉を使わない(2026-11-20 総点検 S-2: 「はじめまして」「なかよし」「親友」が3つの値の段で重なっていた)。
+// 名前は「🏠 おなじみ度」(2026-11-20 社長 r1119-043 ②。前は「ご縁Lv」)。助手どうしの「友情Lv」・あなたとの「仲良し度」と同じ言葉を使わない(2026-11-20 総点検 S-2: 「はじめまして」「なかよし」「親友」が3つの値の段で重なっていた)。
 //   呼び名は見た目だけ(保存はスタンプの数だけ。名前を変えても記録は変わらない)
 const ALB_TITLES = Object.freeze(['ごあいさつ', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', '行きつけ', '通い合う仲', 'いつもの人', '気心の知れた仲', '家族ぐるみ', '心の友', '末長いご縁']);
 const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
@@ -89746,7 +89907,7 @@ function AlfBondChip({ id, always = false }) {
   if (!albEnabled() || !s.bond) return null;
   const st = albOne(s.bond, id).st;
   if (!st && !always) return null;
-  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🌸 ご縁Lv{albLv(st)} {albTitle(st)}</span>;
+  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🏠 おなじみ度 Lv{albLv(st)} {albTitle(st)}</span>;
 }
 function AlfFavShelf({ fv }) {
   if (!fv) return null;
@@ -89774,7 +89935,7 @@ function AlfBondBar({ friend, more, onOpen, compact = false }) {
   return (
     <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
       <span className="min-w-0 flex-1">
-        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
+        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🏠 おなじみ度 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🏠 おなじみ度 Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
         <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
       </span>
       <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
@@ -89795,7 +89956,7 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 14, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
+        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🏠 {friend.name}さんとのおなじみ度 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
         <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -89836,7 +89997,7 @@ function AlfBondView({ friend, more, land = false }) {
   return (
     <div className="px-3 pb-4 pt-2" data-alf-bond-view>
       <div className={card} data-alf-bond-view-friend>
-        <p className="text-[15px] font-black text-pink-100">🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
+        <p className="text-[15px] font-black text-pink-100">🏠 {friend.name}さんとのおなじみ度 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200"><span className="whitespace-nowrap">「{albTitle(x.st)}」</span> <span className="whitespace-nowrap">スタンプ {x.st}個</span>{nx ? <> <span className="whitespace-nowrap">あと{nx.need}個で「{ALB_TITLES[albLv(x.st) + 1]}」</span></> : null}</p>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -89894,7 +90055,7 @@ function AlfGuestBook({ s, card, sec, onVisit }) {
             <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🌸 スタンプ +1</span> : null}</p>
           </div>); })
         : <p className="text-[11px] text-slate-400" data-alb-guests-none>この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。</p>}
-      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。</p>
+      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人とのおなじみ度のスタンプが1個たまります(1人につき1日1個)。</p>
     </div>
   </>);
 }
@@ -89922,7 +90083,7 @@ function AlfFavEditor({ s, card, sec }) {
         {row('m', '🐾 自慢のマスモン', fav.m ? `${fav.m.aid}|${fav.m.mo}` : '', mons, v => { const [aid, mo] = String(v).split('|'); albSaveFav({ m: v ? { aid, mo } : null }); })}
         {row('s', '🎵 好きな曲(最近モンヒロビートで遊んだ曲から)', fav.s || '', songList.map(x => ({ v: x, label: x })), v => albSaveFav({ s: v || null }))}
         <label className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>🪑 集めた家具の数を見せる</span><input type="checkbox" checked={fav.fn} data-alb-fav-fn onChange={e => albSaveFav({ fn: e.target.checked })}/></label>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「おなじみ度」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
       </> : null}
     </div>
   </>);

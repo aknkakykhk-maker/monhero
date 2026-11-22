@@ -46,3 +46,14 @@
 - **けんかを rel の1つに**: 3か所に分かれていたけんかの台本の集め方(前からの言い合い・助手たちの今の言い合い・原因つきのけんか)を `56-assistant-life-rel.jsx` の `assistantLifeRelQuarrels` 1つにまとめた
 - **台本を data/ へ**: 関係の出来事の台本 `ASSISTANT_LIFE_REL_TALKS`(403本)を `56-assistant-life-rel.jsx` から `data/assistants.js` へ移した(書くのは今までどおり `tools/assistant/life-rel-talks-import.js`)
 - 見張り `tools/assistant/life-script-count-check.js`: 思い出アルバムの台本(印 偽 332本・真 1581本)・けんか/仲直り(偽 16本・真 296本)の id・並び・中身が前と同じか
+
+## 社長の選択: 案A 型どおり(r1119-099)・作った後
+
+| 作った後(縦 390×844・切り欠きあり) | 作った後(横 844×390・切り欠きあり) | 全部のペアの窓 |
+| --- | --- | --- |
+| ![](after-tate.png) | ![](after-yoko.png) | ![](after-sheet-all.png) |
+
+- 部品 `AssistantLifeFriendsTyped`・関係図 `AssistantLifeFriendGraph`(`56-assistant-life-house-typed.jsx`)。呼ぶ所は `56-assistant-life-house.jsx` の `typedFriends`。検査だけ `window.__mhAssistantLifeUntypedFriends` で前の友情を開く(段13で片づけ)
+- 主なボタンは「いちばん上がりそうな2人がいる**組**を見る」(見るは組ごとに1回。2人だけを別に見ると同じ組を2回見られるため)。見ていない組が無いときは押せない
+- 案の見本との違い: 別々の2人のボタンは「誘う」ではなく「会わせる」(中身は引き合わせると同じ。部屋の「🎉 誘う」= 遊びに誘う と取り違えないため)。行の注は「あと◯で Lv◯「次の名前」」の1行(横の狭い欄で「Lv1「顔見知り」」が途中で折れたため)
+- 撮り直しと測る: `node tools/assistant/life-friend-plan-shoot.js --after`(切り欠きの縦横・戻ると時刻の重なり・下のタブ・主なボタン・字の段・折れ/切れ・線→アルバム・窓3つ・見る→場面)

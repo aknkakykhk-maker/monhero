@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>段11 フレンドの案</title>
+<!-- 助手ライフの作り直し 段11(フレンドを型に載せる)の案の見本。?plan=a|b|c。撮るのは tools/assistant/life-visit-plan-shoot.js
+     型の見た目は本物の ALU_CSS(56-assistant-life-ui.jsx)を読み込んで使う。
+     iPhone の切り欠き(上47px・下34px)を黒い帯で描き、その内側に画面を置く(2026-11-22 r1119-098)。
+     場面: 15:00 昼。フレンドは あおい(家に5人・おなじみ度 Lv1・あと2個で Lv2・今日来てくれた)・ゆうと(家に2人・Lv1)・みお(家がまだ届いていない)。
+     いまの行き来: あおいさんのあつが遊びに来ている(まだ迎えていない)。置き手紙2通(あおいの自由文つき・ゆうとのももすけ) -->
+<style id="alu"></style>
+<style>
+html,body{margin:0;height:100%;background:#000;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.notch-top{position:fixed;left:0;right:0;top:0;height:47px;background:#000;color:#fff;font:600 15px/47px -apple-system,sans-serif;display:flex;justify-content:space-between;padding:0 28px;box-sizing:border-box;z-index:5}
+.notch-bot{position:fixed;left:0;right:0;bottom:0;height:34px;background:#000;z-index:5}
+.notch-bot i{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#fff}
+#app{position:fixed;left:0;right:0;top:47px;bottom:34px}
+.alu{height:100%}
+.faces{display:flex}
+.faces img{width:22px;height:22px;border-radius:50%;border:1.5px solid #fff;background:#312e5a;object-fit:cover}
+.faces img+img{margin-left:-6px}
+.pic1 img{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:#312e5a;object-fit:cover}
+.lvchip{display:inline-block;font-size:11px;font-weight:900;color:#fde68a;background:#3b2f14;border:1px solid #fbbf2466;border-radius:999px;padding:0 6px;line-height:1.6;white-space:nowrap;vertical-align:middle}
+.bar{height:6px;border-radius:3px;background:#3b3566;overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#fb923c)}
+.fold{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.town{position:relative;flex:none;border-radius:14px;border:1px solid #3b3566;background:linear-gradient(#7dd3fc 0,#bae6fd 55%,#86efac 55%,#4ade80 100%);overflow:hidden}
+.house{position:absolute;bottom:14px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+.house .roof{width:0;height:0;border-left:46px solid transparent;border-right:46px solid transparent;border-bottom:30px solid #b45309}
+.house .wall{width:78px;height:50px;background:#fef3c7;border:2px solid #92400e;border-top:0;display:flex;align-items:center;justify-content:center}
+.house.wait .roof{border-bottom-color:#64748b}.house.wait .wall{background:#cbd5e1;border-color:#475569}
+.house.hot .wall{box-shadow:0 0 0 3px #fde047}
+.house b{font-size:11px;color:#fff;background:#151130e6;border-radius:999px;padding:0 6px;margin-top:2px;white-space:nowrap}
+.news{border-left:3px solid #f9a8d4;padding-left:8px}
+.note-q{margin-top:3px;border-left:2px solid #f9a8d4;background:#3b1d33;padding:2px 6px;border-radius:4px}
+.alu-row .alu-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q{display:inline-flex;width:22px;height:22px;border-radius:50%;border:1px solid #94a3b8;align-items:center;justify-content:center;font-size:13px;color:#e2e8f0;flex:none}
+</style></head>
+<body><div class="notch-top"><span>15:00</span><span>📶 🔋</span></div><div id="app"></div><div class="notch-bot"><i></i></div>
+<script>
+(async () => {
+  const src = await (await fetch('../../../../monster-hero/src/parts/56-assistant-life-ui.jsx')).text();
+  document.getElementById('alu').textContent = (src.match(/const ALU_CSS = `([\s\S]*?)`;/) || [])[1] || '';
+  const plan = (new URLSearchParams(location.search).get('plan') || 'a').toLowerCase();
+  const face = (id) => `../../../../monster-hero/images/assistant/face/${id === 'mua' ? 'myua' : id}_normal.PNG`;
+  const faces = (ids) => `<div class="faces">${ids.map(id => `<img src="${face(id)}" alt="">`).join('')}</div>`;
+  const H = [
+    { id: 'aoi', name: 'あおい', home: ['mua', 'dra', 'momosuke', 'kyuko', 'erubin'], lv: 1, title: '顔みしり', need: 2, rate: 0.33, act: '🎵「風がそよぐ」を遊んだ', came: true },
+    { id: 'yuto', name: 'ゆうと', home: ['momosuke', 'kyuko'], lv: 1, title: '顔みしり', need: 2, rate: 0.33, act: '', came: true },
+  ];
+  const row = (pic, text, note, btn) => `<div class="alu-row"><div class="pic">${pic}</div><div class="tx"><div class="alu-t">${text}</div>${note ? `<div class="alu-n">${note}</div>` : ''}</div>${btn ? `<button class="alu-btn">${btn}</button>` : ''}</div>`;
+  const houseRow = (h) => row(faces(h.home.slice(0, 3)), `${h.name}さんの家 <span class="lvchip">🏠 Lv${h.lv}</span>`, `家に${h.home.length}人${h.act ? ` · ${h.act}` : ''}`, '🚪 訪ねる');
+  const waitRow = row('<span style="font-size:22px">🏚</span>', 'みおさんの家', 'みおさんが助手ライフを開くと訪ねられます', '');
+  const top = `<div class="alu-top"><button class="bk">← 戻る</button><div class="ti">フレンド</div><div class="ck"><b>15:00 昼</b><small>次に動く 16:00</small></div></div>`;
+  const tabs = `<div class="alu-tabs">${[['🏡', '家'], ['🗺', '町'], ['🤝', '友情'], ['🏠', 'フレンド', 1], ['📖', '紹介']].map(([i, l, on]) => `<button class="${on ? 'on' : ''}"><i>${i}</i>${l}</button>`).join('')}</div>`;
+  const best = H[0];
+  const go = `<button class="alu-go"><span style="display:block"><span class="alu-nw" style="display:block">🚪 ${best.name}さんの家を訪ねる</span><span class="alu-t alu-nw" style="display:block;color:inherit">🏠 おなじみ度 あと${best.need}回で Lv${best.lv + 1}</span></span></button>`;
+  const now = `<div class="alu-card news">${row(`<div class="pic1"><img src="${face('atsu')}" alt=""></div>`, 'あおいさんのあつが遊びに来た', 'いま 家にいます · 迎えると 🏠 +1', '迎える')}</div>`;
+  const notesRow = row('✉️', '置き手紙 2通', '新しい1通: あおいさん「ソファふかふかでよかった！」', '読む');
+  const moreRows = row('📖', 'お客さん帳(この7日)', 'あおいさん・ゆうとさんが来てくれた', '開く')
+    + row('🏆', 'お気に入りの棚', '訪ねてきたフレンドに見せる物', '選ぶ')
+    + row('⚙️', '行き来の設定', '家を見せる・助手が遊びに来る ほか', '開く');
+  const help = `<div class="fold alu-n"><span>🏠 おなじみ度 = その人との行き来の記録</span><span class="q">?</span></div>`;
+  let body = '';
+  if (plan === 'a') {
+    // 案A 型どおり: 知らせ1行 → 主なボタン(いちばん訪ねてほしい家)→ フレンドの家の行 → 置き手紙1行 → もっと(お客さん帳・棚・設定)
+    body = `<div class="alu-main">${now}${go}
+      <div class="alu-card"><div class="alu-h">フレンドの家</div>${H.map(houseRow).join('')}${waitRow}${help}</div>
+      <div class="alu-card">${notesRow}</div>
+      <div class="alu-card"><div class="alu-h">もっと</div>${moreRows}</div></div>`;
+  } else if (plan === 'b') {
+    // 案B 家並みの絵(画面の3割): フレンドの家を絵で並べ、来ている人の顔を家の前に。押すと訪ねる。下に主なボタンと置き手紙
+    const h = Math.round((innerHeight - 47 - 34) * 0.28), W = innerWidth - 24;
+    const xs = [0.2, 0.5, 0.8];
+    const town = `<div class="town alu-scene" style="width:${W}px;height:${h}px">${[...H, { name: 'みお', wait: true }].map((x, i) => `<div class="house ${x.wait ? 'wait' : ''} ${x === best ? 'hot' : ''}" style="left:${xs[i] * W}px"><div class="roof"></div><div class="wall">${x.wait ? '<span style="font-size:11px;color:#334155">まだ</span>' : faces(x.home.slice(0, 3))}</div><b>${x.name}さん${x.wait ? '' : ` 🏠Lv${x.lv}`}</b></div>`).join('')}</div>`;
+    body = `<div class="alu-main">${town}${go}${now}
+      <div class="alu-card">${notesRow}</div>
+      <div class="alu-card"><div class="alu-h">もっと</div>${row('🏘', 'フレンドの家の一覧', '2軒 · 1軒はまだ届いていない', '開く')}${moreRows}</div></div>`;
+  } else {
+    // 案C 届いた物が主: 来てくれた・置き手紙をいちばん上に(お礼もその場で)→ 主なボタン「返しに行く」→ 家の行は小さく
+    const ret = `<button class="alu-go"><span style="display:block"><span class="alu-nw" style="display:block">🚪 あおいさんの家へ返しに行く</span><span class="alu-t alu-nw" style="display:block;color:inherit">来てくれたお礼 · 🏠 あと${best.need}回で Lv${best.lv + 1}</span></span></button>`;
+    body = `<div class="alu-main">
+      <div class="alu-card"><div class="alu-h">届いた物</div>
+        ${row(`<div class="pic1"><img src="${face('atsu')}" alt=""></div>`, 'あおいさんのあつが来ている', '迎えると 🏠 +1', '迎える')}
+        ${row('✉️', 'あおいさん「また来るね」', 'ソファふかふかでよかった！', 'お礼')}
+        ${row(`<div class="pic1"><img src="${face('momosuke')}" alt=""></div>`, 'ゆうとさんのももすけが来た', 'お礼「来てくれてありがとう!」を返した', '')}
+      </div>${ret}
+      <div class="alu-card"><div class="alu-h">フレンドの家</div>${H.map(houseRow).join('')}${waitRow}</div>
+      <div class="alu-card"><div class="alu-h">もっと</div>${moreRows}</div></div>`;
+  }
+  document.getElementById('app').innerHTML = `<div class="alu">${top}${body}${tabs}</div>`;
+})();
+</script></body></html>
