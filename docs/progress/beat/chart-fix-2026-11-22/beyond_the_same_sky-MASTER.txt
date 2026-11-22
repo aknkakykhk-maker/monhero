@@ -1,5 +1,5 @@
-beyond_the_same_sky/MASTER: 押さえ中の交差 2 → 1・動かしたノーツ 1(ノーツ数 1060 のまま)・Lv.の式 33 → 33
+beyond_the_same_sky/MASTER: 押さえ中の交差 2 → 2・動かしたノーツ 0(ノーツ数 1060 のまま)・Lv.の式 33 → 33
   手の決まり {"sideHeightSwitch":0,"skyAfterGround":0,"besideHeldBand":0,"fastSameSide":3,"heldHandSwitch":0} → {"sideHeightSwitch":0,"skyAfterGround":0,"besideHeldBand":0,"fastSameSide":3,"heldHandSwitch":0}
-  154.513秒 TAP 幅1.5 位置 2.25 → 0.75(押さえ HOLD)
   残り: 15.120秒 タップ x=4.00
+  残り: 154.513秒 タップ x=2.25
   書いた: beyond-the-same-sky-v3-master-notes

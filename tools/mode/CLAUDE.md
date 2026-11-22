@@ -34,6 +34,8 @@ HELL と新曲の5難易度の道具が直し、同じ検査が止める(前か�
 
 **新曲は `flowPlacement:true`**(手の流れを狙う配置・既定は切・2026-10-21)。本文: `CHART_ENGINE.md`
 
+**段変えの仕上げ(`settleLevelSwitches`・`rhythm-hell-mix.js`)は opt-in の後処理**(2026-11-22): SONGS に `levelSettle:true` を書いた曲だけに効き、書いていない曲・フラグ無しでは従来の測定と完全一致させる。使うときは曲の PR に同梱し、既存曲の測定が変わらない回帰記録を PR に付ける。段変えの許す数は `LEVEL_SWITCH_ALLOW`(公開 HELL 全80譜面の実績の帯ごと最大値・2026-11-22 社長決定 r1119-090)
+
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13)。上の難易度を下の難易度の写し+割増しで作らない。
 HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける(新しい HELL は `precision:true`)。本文: `CHART_ENGINE.md`
 

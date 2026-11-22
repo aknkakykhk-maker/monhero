@@ -1,10 +1,12 @@
-beyond_the_same_sky_short/MASTER: 押さえ中の交差 9 → 2・動かしたノーツ 5(ノーツ数 634 のまま)・Lv.の式 35 → 34
+beyond_the_same_sky_short/MASTER: 押さえ中の交差 9 → 7・動かしたノーツ 2(ノーツ数 634 のまま)・Lv.の式 35 → 35
   手の決まり {"sideHeightSwitch":0,"skyAfterGround":0,"besideHeldBand":0,"fastSameSide":56,"heldHandSwitch":0} → {"sideHeightSwitch":0,"skyAfterGround":0,"besideHeldBand":0,"fastSameSide":56,"heldHandSwitch":0}
-  67.451秒 TAP 幅1 位置 3.50 → 0.50(押さえ SLIDE)
-  67.620秒 TAP 幅1.5 位置 5.25 → 1.75(押さえ SLIDE)
   71.496秒 TAP 幅1.5 位置 1.75 → 4.75(押さえ HOLD)
-  98.210秒 TAP 幅0.5 位置 3.25 → 0.25(押さえ SLIDE)
   118.856秒 TAP 幅1.5 位置 4.75 → 1.25(押さえ HOLD)
   残り: 57.507秒 タップ x=2.75
+  残り: 67.451秒 タップ x=3.50
+  残り: 67.788秒 タップ x=2.25
+  残り: 67.957秒 タップ x=3.50
+  残り: 68.125秒 タップ x=3.50
   残り: 87.339秒 タップ x=2.75
+  残り: 98.210秒 タップ x=3.25
   書いた: beyond-the-same-sky-short-v3-master-notes
