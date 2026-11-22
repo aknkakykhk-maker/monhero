@@ -44,6 +44,18 @@ const lifeTab = (k) => async (s) => {
   await s.wait(1500);
   return ok;
 };
+// 段12(2026-11-22)から下のタブ5つ目は「🐾 マスモン」で、紹介はその画面の「📖 ◯◯のこと」の窓。前の版(タブが「📖 紹介」)でも撮れるよう、無いほうは前の形で開く
+const lifeTabOr = (k, alt) => async (s) => {
+  if (!(await lifeOpen(s))) return false;
+  const has = (key) => s.page.evaluate((q) => [...document.querySelectorAll(`[data-assistant-life-icon="${q}"],[data-alu-tab="${q}"]`)].some((x) => x.getClientRects().length), key);
+  return (await has(k)) ? lifeTab(k)(s) : lifeTab(alt)(s);
+};
+const lifeProfile = async (s) => {
+  if (!(await lifeTabOr('profile', 'masmon')(s))) return false;
+  const b = await s.page.evaluate(() => { const x = document.querySelector('[data-assistant-life-masmon-open="profile"]'); if (x) x.click(); return true; });
+  await s.wait(1200);
+  return b;
+};
 
 // モンヒロビートの結果の画面に入れる数字(社長の写真 docs/progress/beat/result-yoko-bug-2026-11-22/ と同じ桁の多さ)
 const BIG = { score: 899649, maxCombo: 331, fast: 126, slow: 97, precise: 152, judgments: { MARVELOUS: 213, EXCELLENT: 96, GREAT: 17, GOOD: 4, BAD: 1, MISS: 0 } };
@@ -77,7 +89,8 @@ const SCENES = [
   { id: 'life-town', area: '助手ライフ', name: '助手ライフ(町)', kind: 'walk', go: lifeTab('where'), hide: LIFE_MOVE },
   { id: 'life-bond', area: '助手ライフ', name: '助手ライフ(友情)', kind: 'walk', go: lifeTab('friends'), hide: LIFE_MOVE },
   { id: 'life-friend', area: '助手ライフ', name: '助手ライフ(フレンド)', kind: 'walk', go: lifeTab('visit'), hide: LIFE_MOVE },
-  { id: 'life-profile', area: '助手ライフ', name: '助手ライフ(紹介)', kind: 'walk', go: lifeTab('profile'), hide: LIFE_MOVE },
+  { id: 'life-profile', area: '助手ライフ', name: '助手ライフ(紹介)', kind: 'walk', go: lifeProfile, hide: LIFE_MOVE },
+  { id: 'life-masmon', area: '助手ライフ', name: '助手ライフ(マスモン)', kind: 'walk', go: lifeTabOr('masmon', 'profile'), hide: LIFE_MOVE },
   // ---- モンヒロビート ----
   { id: 'beat-top', area: 'モンヒロビート', name: 'モンヒロビート(入口)', kind: 'walk' },
   { id: 'beat-songs', area: 'モンヒロビート', name: '曲えらび', kind: 'walk' },
