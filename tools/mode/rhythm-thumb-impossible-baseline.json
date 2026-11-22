@@ -330,11 +330,15 @@
   "beyond_the_same_sky/MASTER/landscape": 0,
   "beyond_the_same_sky/MASTER/portrait": 0,
   "beyond_the_same_sky/HELL/landscape": 0,
-  "beyond_the_same_sky/HELL/portrait": 1,
+  "beyond_the_same_sky/HELL/portrait": 0,
   "beyond_the_same_sky_short/MASTER/landscape": 0,
   "beyond_the_same_sky_short/MASTER/portrait": 0,
   "beyond_the_same_sky_short/HELL/landscape": 0,
-  "beyond_the_same_sky_short/HELL/portrait": 2,
+  "beyond_the_same_sky_short/HELL/portrait": 0,
+  "zenbu_hissatsuwaza/MASTER/landscape": 0,
+  "zenbu_hissatsuwaza/MASTER/portrait": 0,
+  "zenbu_hissatsuwaza/HELL/landscape": 0,
+  "zenbu_hissatsuwaza/HELL/portrait": 0,
   "desert_crown/MASTER/landscape": 0,
   "desert_crown/MASTER/portrait": 0,
   "desert_crown/HELL/landscape": 0,
@@ -346,7 +350,15 @@
   "walkure_short/MASTER/landscape": 0,
   "walkure_short/MASTER/portrait": 0,
   "walkure_short/HELL/landscape": 0,
-  "walkure_short/HELL/portrait": 2
+  "walkure_short/HELL/portrait": 2,
+  "kimimachi_loop/MASTER/landscape": 0,
+  "kimimachi_loop/MASTER/portrait": 0,
+  "kimimachi_loop/HELL/landscape": 0,
+  "kimimachi_loop/HELL/portrait": 0,
+  "brand_new_sky/MASTER/landscape": 0,
+  "brand_new_sky/MASTER/portrait": 0,
+  "brand_new_sky/HELL/landscape": 0,
+  "brand_new_sky/HELL/portrait": 0
  },
  "history": [
   {
@@ -363,6 +375,26 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 8
+  },
+  {
+   "at": "2026-11-22T11:33",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 4
+  },
+  {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
+   "changed": 4
+  },
+  {
+   "at": "2026-11-22T12:05",
+   "reason": "新曲 BRAND NEW SKY を公開",
+   "changed": 4
+   },
+   {
+   "at": "2026-11-22T13:25",
+   "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
+   "changed": 2
   }
  ]
 }

@@ -396,6 +396,11 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
 // 期間限定イベントのお知らせが、いま開催中か(一覧の項目に「開催中」の札を出す)。
 // 助手の告知の期間(notifyFrom〜notifyUntil)を見る。描くたびに数え直す(CLAUDE.md ⑥-4)
+// 予告の項目で、まだ始まっていないか(eventStartAt より前)。固定の札を「開催予定」にする。書いていない項目は false(=今までどおり「開催中」)
+const changelogEventUpcoming = (entry, nowMs = Date.now()) => {
+  const startMs = Date.parse(entry && typeof entry.eventStartAt === 'string' ? entry.eventStartAt : '');
+  return Number.isFinite(startMs) && Number(nowMs) < startMs;
+};
 const changelogEventLive = (entry, nowMs = Date.now()) => {
   // イベント以外でも、pinTop:{ until } を書いた項目は、出はじめ(visibleFrom)から until まで一番上に固定する
   // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
