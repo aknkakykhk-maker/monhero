@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56a7150d8d1bdca0
+// source-sha256: 8ed74d4afaf725e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161749,7 +161749,7 @@ function AssistantLifeFriendPage({
     className: "mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100",
     style: JA_WRAP_STYLE,
     "data-alf-bond-note": true
-  }, jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
+  }, jaWrap('🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')), React.createElement("div", {
     "data-alf-houses": true,
     style: hideIfEmpty
   }, houses.length ? houses.map(f => {
@@ -162616,7 +162616,7 @@ function AlfBondChip({
   return React.createElement("span", {
     className: "ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100",
     "data-alb-chip": id
-  }, "🌸 ご縁Lv", albLv(st), " ", albTitle(st));
+  }, "🏠 おなじみ度 Lv", albLv(st), " ", albTitle(st));
 }
 function AlfFavShelf({
   fv
@@ -162678,7 +162678,7 @@ function AlfBondBar({
   }, React.createElement("b", {
     className: `block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`,
     "data-alb-bar-title": true
-  }, compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
+  }, compact ? `🏠 おなじみ度 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🏠 おなじみ度 Lv${albLv(x.st)}「${albTitle(x.st)}」`), React.createElement("small", {
     className: `truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`,
     "data-alb-bar-sub": true
   }, x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`, fresh ? ` ・ ✨ 見どころ ${fresh}` : '')), React.createElement("span", {
@@ -162738,7 +162738,7 @@ function AlfBondSheet({
   }, React.createElement("p", {
     className: "text-[16px] font-black text-pink-100",
     "data-alb-sheet-title": true
-  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🏠 ", friend.name, "さんとのおなじみ度 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, "「", albTitle(x.st), "」 ・ スタンプ ", x.st, "個", nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''), React.createElement("div", {
     className: "mt-1 h-2 overflow-hidden rounded-full bg-white/15"
@@ -162827,7 +162827,7 @@ function AlfBondView({
     "data-alf-bond-view-friend": true
   }, React.createElement("p", {
     className: "text-[15px] font-black text-pink-100"
-  }, "🌸 ", friend.name, "さんとのご縁 Lv", albLv(x.st)), React.createElement("p", {
+  }, "🏠 ", friend.name, "さんとのおなじみ度 Lv", albLv(x.st)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-200"
   }, React.createElement("span", {
     className: "whitespace-nowrap"
@@ -162954,7 +162954,7 @@ function AlfGuestBook({
     "data-alb-guests-none": true
   }, "この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。"), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。")));
+  }, "フレンドか、フレンドの助手が来てくれた日は、その人とのおなじみ度のスタンプが1個たまります(1人につき1日1個)。")));
 }
 function AlfFavEditor({
   s,
@@ -163050,7 +163050,7 @@ function AlfFavEditor({
     })
   })), React.createElement("p", {
     className: "mt-1 text-[10px] leading-snug text-slate-400"
-  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
+  }, "選んだ物は、フレンドがあなたの家を訪ねたときに「おなじみ度」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。")) : null));
 }
 const ALF_SENT_KEY = 'mh_alf_sent_notes_v1';
 const ALF_SENT_MAX = Object.freeze({
