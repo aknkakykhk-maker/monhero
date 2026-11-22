@@ -291,6 +291,23 @@ const SCENES = [
     await s.page.waitForTimeout(6500); // 「絵のほうを横向きにしました」の知らせが消えるまで待つ
     return true;
   } },
+  // 原曲・short ver. など版がある曲を選んだ曲えらび(2026-11-22 社長「曲が選べるやつのサイズを考えてない」。版の段のぶん難易度のボタンが
+  // 押しつぶされて字が切れたのに、撮影は版が1つの曲だけで気づけなかった)。一覧の「2つの版」の札がある曲を押す
+  { id: 'beat-songs-versions', area: 'モンヒロビート', name: '曲えらび(版がある曲)', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs');
+    if (!(await song.go(s))) return false;
+    const hit = await s.page.evaluate(() => { const b = document.querySelector('[data-rhythm-song-row-version-count]'); const btn = b && b.closest('button'); if (btn) btn.click(); return !!btn; });
+    if (!hit) return false;
+    await s.page.waitForTimeout(800);
+    return !!(await s.page.$('[data-rhythm-song-version]'));
+  } },
+  { id: 'beat-songs-versions-rot', area: 'モンヒロビート', name: '曲えらび(版がある曲・🔄横)', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs-versions');
+    if (!(await song.go(s))) return false;
+    if (!(await s.tapLabel(/^(🔄\s*)?横$|横画面に|横向き/, 1500))) return false;
+    await s.page.waitForTimeout(6500);
+    return !!(await s.page.$('[data-rhythm-song-version]'));
+  } },
   // ---- MFバトルカード ----
   { id: 'card-top', area: 'カードバトル', name: 'MFバトルカード', go: homeBtn('MFバトルカード') },
   // ---- 助手ライフ ----
