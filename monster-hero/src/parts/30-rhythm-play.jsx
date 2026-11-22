@@ -997,7 +997,8 @@ const RhythmResultMoreHint=({label})=>{
     return ()=>{box.removeEventListener('scroll',update);window.removeEventListener('resize',update);clearTimeout(t);};
   },[]);
   if(!more) return null;
-  return <div data-rhythm-result-more aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-6 flex justify-center"><span className="rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[10px] font-black text-slate-200">▼ {label}</span></div>;
+  // 印は下の帯の中(ボタンの上の1行)に置く。帯の上に浮かせていたら、解放の知らせ・助言の文・BEST SCORE の上に重なって読めなかった(2026-11-23 API総点検② V16・V17)
+  return <div data-rhythm-result-more aria-hidden="true" className="pointer-events-none mb-1 flex justify-center"><span className="rounded-full border border-white/15 bg-slate-900 px-3 py-0.5 text-[10px] font-black leading-4 text-slate-200">▼ 下に {label}</span></div>;
 };
 const RhythmChartNotePanel=({song,difficulty,chart})=>{
   const durationMs=Math.max(RHYTHM_CHART_NOTE_SEGMENT_MS,Number(song?.playDurationMs)||Number(chart?.durationMs)||0);
@@ -3363,7 +3364,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 break-keep text-[9px] font-black leading-snug">{/* 折ってよい所だけ <wbr>(横向きで「演奏しま／した」と折れていた・2026-10-27) */failed?<>ライフが0に<wbr/>なったまま<wbr/>曲が<wbr/>終わりました<wbr/>（DOWN）</>:<>ライフを<wbr/>残して<wbr/>最後まで<wbr/>演奏しました</>}</small></div>;})()}
     </div>
   </div>
-  {!tutorialProp&&<div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>}
+  {/* 新記録のときは BEST SCORE が上の大きなスコアと同じ数字になるので出さない(前回のベストは NEW RECORD の下に出ている・2026-11-23 API総点検② V19) */}
+  {!tutorialProp&&!(result.isNewRecord&&Number(result.bestScore)===Number(result.score))&&<div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>}
   {/* 次のランクまでのあと少し。その難易度の満点では届かないランクは出さない(rhythmNextRankId が止める) */}
 {!tutorialProp&&(()=>{const nextId=rhythmNextRankId(view.score,difficulty.maxScore);const next=nextId?RHYTHM_RANKS.find(item=>item.id===nextId):null;if(!next)return null;const need=next.min-view.score;if(!(need>0))return null;return <p data-rhythm-next-rank={nextId} className="mt-0.5 text-[11px] font-black tabular-nums text-slate-300">次のランク <b className={RHYTHM_RANK_COLORS[nextId]||'text-white'}>{nextId}</b> まで あと {need.toLocaleString()}</p>;})()}
 {/* 前の自己ベストとの差。更新したら「+いくつ」、届かなかったら「あといくつ」。
@@ -3399,13 +3401,13 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className={`whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
   <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
   {/* 刻みの数え方(2026-10-17): ホールド・スライドの刻みもノーツとしてコンボに数えたことと、取れた刻みの数を出す */}
-  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}<span className="block text-[9px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホールド・スライドの刻みもコンボに数えます')}</span></small>}
+  {view.result?.scoreVersion===2&&<small data-rhythm-result-ticks className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300">刻み <b className="tabular-nums text-white">{view.result.tickJust}</b>/{view.result.tickTotal}{view.result.tickMiss>0?<span className="text-rose-300">(MISS {view.result.tickMiss})</span>:null}{/* 中央そろえの2行で行の頭がずれていたので、区切りの良い所で2つに分ける(2026-11-23 API総点検② V22) */}<span className="block text-[9px] font-bold text-slate-400"><span className="inline-block">ホールド・スライドの刻みも</span><span className="inline-block">コンボに数えます</span></span></small>}
   <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
 {/* FAST と SLOW が大きく片寄ったときだけ、くせをひとこと。
     数が少ないうちは偶然の片寄りなので出さない(合わせて12回以上・片方が倍以上) */}
-{(()=>{const fast=Number(view.fast)||0,slow=Number(view.slow)||0;if(calibrating||fast+slow<12)return null;const early=fast>=slow*2,late=slow>=fast*2;if(!early&&!late)return null;return <p data-rhythm-timing-tendency className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early?'border-cyan-400/30 bg-cyan-950/30 text-cyan-100':'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`}>{early?'FASTが多めでした。少し早く叩くくせがあるようです。':'SLOWが多めでした。少し遅れて叩くくせがあるようです。'}気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。</p>;})()}
+{(()=>{const fast=Number(view.fast)||0,slow=Number(view.slow)||0;if(calibrating||fast+slow<12)return null;const early=fast>=slow*2,late=slow>=fast*2;if(!early&&!late)return null;return <p data-rhythm-timing-tendency className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early?'border-cyan-400/30 bg-cyan-950/30 text-cyan-100':'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`}>{/* 言葉の途中で折れていた(「オプ/ション」・2026-11-23 API総点検② V23) */}<span style={JA_WRAP_STYLE}>{jaWrap(`${early?'FASTが多めでした。少し早く叩くくせがあるようです。':'SLOWが多めでした。少し遅れて叩くくせがあるようです。'}気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。`)}</span></p>;})()}
 </div>
 </div>
 {/* 2026-11-22 r1119-108(社長の選択「案A スコアが主」・点検 N50): 経験値の箱は、スコアと判定の下へ移した(いちばん上が「経験値 +4」で、今回のスコア・ランクが2番目・3番目だった)。
