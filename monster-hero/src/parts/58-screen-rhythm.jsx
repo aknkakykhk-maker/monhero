@@ -78,7 +78,7 @@ function RhythmSongSelectScreen({
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice
-        ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
+        ?rhythmEventDivisions(rhythmEventNotice,RHYTHM_SONGS).filter(division=>division.songId).map(division=>division.lockedText||rhythmSongFullName(division.song)||division.songId)
         :[];
       // ビートP交換所は常設。獲得案内は、開催中だけ「獲得期間中」を出す
       // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」。
@@ -1025,7 +1025,7 @@ function RhythmRankingScreen({
                 {eventDivisions.map(division=>(
                   <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
+                    {division.songId?(division.lockedText||(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId)):'総合'}
                   </button>
                 ))}
               </div>}
@@ -1178,7 +1178,7 @@ function RhythmRankingScreen({
             {/* 対象曲。曲の名前はデータから引くので、ここに書き写さない */}
             {eventDefinition&&eventDivisions.length>1&&<p className="mb-3 text-[10px] leading-tight text-fuchsia-100">
               <b className="text-fuchsia-200">{rhythmEventSongsLabel(eventDefinition)}</b>　
-              {eventDivisions.filter(division=>division.songId).map(division=>rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
+              {eventDivisions.filter(division=>division.songId).map(division=>division.lockedText||rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
             </p>}
             {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
             {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
@@ -1187,7 +1187,7 @@ function RhythmRankingScreen({
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
                   <p className="mb-1 truncate text-[10px] font-black text-fuchsia-100">
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
+                    {division.songId?(division.lockedText||rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
                   </p>
                   <ul className="space-y-0.5">
                     {ranks.map(({rank,reward})=>(

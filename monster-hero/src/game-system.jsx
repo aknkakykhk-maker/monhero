@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e859fcd3335dfa12
+// generated-sha256: 311d7f4122ae1a08
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -552,6 +552,8 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
+  // 花の女3人のイベント(2026-11-23〜11-30・台帳 r1119-101)。お話の本文は社長の OK のあと data/assistants.js へ group:'flower3' で入れる
+  { id:'flower3', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
   { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   // モンヒロサクセスのお話(2026-11-14 第1話・β版の前の予告から)
   { id:'monsuc', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
@@ -38282,8 +38284,18 @@ const rhythmSongBundleSongs = (songId) => {
   return [owner, ...rhythmSongBundleIds(owner)].map((id) => RHYTHM_SONGS.find((song) => song && song.songId === id)).filter(Boolean);
 };
 
-const rhythmSongPrice = (songId) => {
-  const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
+// イベントのあいだだけ無料の曲(2026-11-23 花の女3人のイベント・社長「開催中は無料、終わったらビートPで買う」)。
+//   data/rhythm-event.js の rhythmEventFreeSongUntilMs が無料の終わる時刻を返す曲は、その時刻までは0(無料)、
+//   それからは表に値段が無くても RHYTHM_SONG_DEFAULT_PRICE。★時刻は呼ばれるたびに数え直す(CLAUDE.md ⑥-4)
+const rhythmSongFreeUntilMs = (songId) => {
+  const ms = typeof rhythmEventFreeSongUntilMs === 'function' ? rhythmEventFreeSongUntilMs(rhythmSongOwnerId(songId)) : null;
+  return Number.isFinite(ms) ? ms : null;
+};
+const rhythmSongPrice = (songId, nowMs = Date.now()) => {
+  const freeUntil = rhythmSongFreeUntilMs(songId);
+  if (freeUntil !== null && Number(nowMs) < freeUntil) return 0;
+  const listed = RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)];
+  const n = Math.floor(Number(listed === undefined && freeUntil !== null ? RHYTHM_SONG_DEFAULT_PRICE : listed));
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 const rhythmSongIsPaid = (songId) => rhythmSongPrice(songId) > 0;
@@ -45131,7 +45143,7 @@ function RhythmSongSelectScreen({
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice
-        ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
+        ?rhythmEventDivisions(rhythmEventNotice,RHYTHM_SONGS).filter(division=>division.songId).map(division=>division.lockedText||rhythmSongFullName(division.song)||division.songId)
         :[];
       // ビートP交換所は常設。獲得案内は、開催中だけ「獲得期間中」を出す
       // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」。
@@ -46078,7 +46090,7 @@ function RhythmRankingScreen({
                 {eventDivisions.map(division=>(
                   <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
-                    {division.songId?(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId):'総合'}
+                    {division.songId?(division.lockedText||(rhythmSongFullName(division.song)?<RhythmSongName song={division.song}/>:division.songId)):'総合'}
                   </button>
                 ))}
               </div>}
@@ -46231,7 +46243,7 @@ function RhythmRankingScreen({
             {/* 対象曲。曲の名前はデータから引くので、ここに書き写さない */}
             {eventDefinition&&eventDivisions.length>1&&<p className="mb-3 text-[10px] leading-tight text-fuchsia-100">
               <b className="text-fuchsia-200">{rhythmEventSongsLabel(eventDefinition)}</b>　
-              {eventDivisions.filter(division=>division.songId).map(division=>rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
+              {eventDivisions.filter(division=>division.songId).map(division=>division.lockedText||rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
             </p>}
             {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
             {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
@@ -46240,7 +46252,7 @@ function RhythmRankingScreen({
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
                   <p className="mb-1 truncate text-[10px] font-black text-fuchsia-100">
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
+                    {division.songId?(division.lockedText||rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
                   </p>
                   <ul className="space-y-0.5">
                     {ranks.map(({rank,reward})=>(
@@ -129984,7 +129996,12 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  // 花の女3人のイベント(data/rhythm-event.js の FLOWER3_STORIES)。第1話は開幕・第8話は閉幕のお話。
+  //   本文が回想の一覧に入っている話だけを流す(社長の OK の前は入れない)。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
+  const FLOWER3_STORY_IDS = FLOWER3_STORIES.map(story => story.id);
+  const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
+  const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -129993,11 +130010,14 @@ function MonsterHeroGame() {
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
     // 「鍵の向こう側へ」の第1話(第2〜7話は時刻で・第8話は閉幕のお話)
     [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1',
+    // 花の女3人のイベントの第1話(本文が入るまでは流さない)
+    ...(rhythmEventStoryHasScript(FLOWER3_OPEN_STORY_ID) ? { [FLOWER3_EVENT_ID]: FLOWER3_OPEN_STORY_ID } : {}),
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
   // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = { [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
-    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID, [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID };
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID, [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID,
+    ...(rhythmEventStoryHasScript(FLOWER3_THANKS_STORY_ID) ? { [FLOWER3_EVENT_ID]: FLOWER3_THANKS_STORY_ID } : {}) };
   // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
   const rhythmEventStoryIdFor = (event) => (event && RHYTHM_EVENT_STORY_BY_EVENT[event.id]) || null;
   const rhythmEventThanksStoryIdFor = (event) => (event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id]) || null;
@@ -130631,7 +130651,7 @@ function MonsterHeroGame() {
         ? (halloweenNightStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
       // 「鍵の向こう側へ」の第2〜7話。時刻が来ていて、まだ見ていない話のうち、いちばん古いもの(第1話は開幕・第8話は閉幕のお話として流れる)
       const pandoraWingsStoryId = RELEASE_FLAGS.rhythmWeeklyRanking === true
-        ? (pandoraWingsStoryIdsAt(Date.now()).find(id => notPlayedYet(id)) || null) : null;
+        ? ([...pandoraWingsStoryIdsAt(Date.now()), ...flower3StoryIdsAt(Date.now())].find(id => notPlayedYet(id)) || null) : null;
       if (!liveEvent) {
         if (raidStartStoryReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_STORY_START_ID);
         else if (raidHowtoReady) setRhythmEventStoryPending(prev => prev || RAID_JACK_HOWTO_STORY_ID);
@@ -133721,6 +133741,8 @@ function MonsterHeroGame() {
     // 「鍵の向こう側へ」の各話(第1〜7話)と終章(閉幕のお話)
     ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
+    // 花の女3人のイベントの各話(回想の unlockedKey は flower3EpNSeen)
+    ...Object.fromEntries(FLOWER3_STORIES.map(story => [`flower3Ep${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     // ジャックのストーリー(1.5部〜終章)。見たかは同じ配列(rhythmEventStorySeen)へ id を入れて持つ(新しいキーは作らない)
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),

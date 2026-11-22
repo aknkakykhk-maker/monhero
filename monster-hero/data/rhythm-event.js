@@ -87,6 +87,69 @@ const rhythmWeekId = (nowMs) => {
 //   書かなければ総合もプシュケーだけ。
 // ★週間(kind:'weekly')には報酬を付けていない(フェーズ3は報酬なし)。
 //   報酬が要るのは、いまのところ期間限定イベントだけ。
+// ===== 花の女3人のモンヒロビートイベント(2026-11-23〜11-30・台帳 r1119-101・台本 docs/progress/event-flower3/script.md) =====
+// 社長「みゅあ・きき・ももの新曲3曲でモンビーイベント。毎日開く形(パンドラと同じ)」。
+//   ・曲は1日に1曲ずつ開く(下の FLOWER3_SONG_SLOTS の openAt。曲えらびに出る時刻は rhythm-mode.js の rhythmSongReleased がここを見る)
+//   ・3曲はイベントのあいだ無料、終わったら1曲 RHYTHM_SONG_DEFAULT_PRICE(500)のビートPで買う曲になる(39-rhythm-song-owned.jsx の rhythmSongPrice がここを見る)
+//   ・開始はパンドラと同じ月曜12:00、終わりは週の区切り(月曜4:00・画面は 3:59 まで)
+// ★曲の受け口: 曲は別の会話が rhythm-song-add で1曲ずつ入れる。入れたら songId の仮の名前を本物の id へ差し替える
+//   (ここの1か所だけ。仮の名前のままでも、まだ公開曲に無い曲はイベントから外れるだけで画面は壊れない)。
+//   short ver. を作った曲は FLOWER3_SONG_VERSIONS へ { 本編のid: ['本編のid_short'] } を足す(同じ曲として数える・パンドラと同じ)
+// ★イベントは「公開曲に入っている受け口の曲」が1曲でもあるときだけ RHYTHM_EVENTS へ入る(曲の有無は読み込み時に決まる静的なデータ。時刻ではない)。
+//   曲が増えたら部門・参加報酬の曲数も自動で増える
+// id はイベント会話の既読・受取フラグに使うので、あとから変えない
+const FLOWER3_EVENT_ID = 'flower3_2026_11_23';
+const FLOWER3_START_AT = '2026-11-23T12:00:00+09:00';
+const FLOWER3_END_AT = '2026-11-30T04:00:00+09:00';
+const FLOWER3_DISPLAY_END_AT = '2026-11-30T03:59:00+09:00';
+// 仮の名前(社長の決定待ち)。画面に出るので決まったら差し替える
+const FLOWER3_EVENT_NAME = '花の女3人のモンヒロビートイベント';
+const FLOWER3_SONG_SLOTS = Object.freeze([
+  Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT }),
+  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: '2026-11-24T04:00:00+09:00' }),
+  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: '2026-11-25T04:00:00+09:00' }),
+]);
+const FLOWER3_SONG_VERSIONS = Object.freeze({});
+// 受け口の曲のうち、公開曲の一覧(rhythm-mode.js・先に読み込まれる)に入っているもの
+const flower3PublishedSlots = () => {
+  // 検査の道具が読む順番を変えて連結すると、まだ初期化されていない const を typeof でも触れずに止まるので、try で包む
+  let published = [];
+  try { published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : []; } catch (_) { published = []; }
+  return FLOWER3_SONG_SLOTS.filter(slot => published.includes(slot.songId));
+};
+// イベントで日ごとに開く曲の、開く時刻(ミリ秒)。受け口でない曲は null。short ver. は本編と同じ時刻
+const rhythmEventSongOpenAtMs = (songId) => {
+  const id = String(songId || '');
+  const slot = FLOWER3_SONG_SLOTS.find(s => s.songId === id
+    || (Array.isArray(FLOWER3_SONG_VERSIONS[s.songId]) && FLOWER3_SONG_VERSIONS[s.songId].includes(id)));
+  const ms = slot ? Date.parse(slot.openAt) : NaN;
+  return Number.isFinite(ms) ? ms : null;
+};
+// イベントのあいだだけ無料で、終わったらビートPで買う曲か。無料が終わる時刻(ミリ秒)を返す。受け口でない曲は null
+const rhythmEventFreeSongUntilMs = (songId) => (rhythmEventSongOpenAtMs(songId) === null ? null : Date.parse(FLOWER3_END_AT));
+const flower3RhythmEvent = (() => {
+  const slots = flower3PublishedSlots();
+  if (slots.length === 0) return null;
+  const songIds = slots.map(slot => slot.songId);
+  const versions = Object.fromEntries(songIds.filter(id => Array.isArray(FLOWER3_SONG_VERSIONS[id]))
+    .map(id => [id, Object.freeze([...FLOWER3_SONG_VERSIONS[id]])]));
+  return Object.freeze({
+    id: FLOWER3_EVENT_ID,
+    kind: 'limited',
+    name: FLOWER3_EVENT_NAME,
+    startAt: FLOWER3_START_AT,
+    endAt: FLOWER3_END_AT,
+    songIds: Object.freeze(songIds),
+    ...(Object.keys(versions).length ? { songVersions: Object.freeze(versions) } : {}),
+    // 超越の実の種族(案: パンドラと同じピクシー・社長の決定待ち)
+    rewardLineageBySongId: Object.freeze(Object.fromEntries(songIds.map(id => [id, 'pixie']))),
+    totalReward: 'heroProof',
+    playBonus: true,
+    // 参加報酬は「対象曲をすべて遊ぶ」。曲数は入っている曲の数(3曲そろえば3)
+    participationReward: Object.freeze({ songs: songIds.length, gold: 3000, psyche: 50 }),
+  });
+})();
+
 const RHYTHM_EVENTS = Object.freeze([
   // 2026-09-11・ユーザー指示「試験イベントとしてゲリラで週末イベントみたいな形でやる」。
   // 金曜15:00から月曜5:00まで。
@@ -194,6 +257,8 @@ const RHYTHM_EVENTS = Object.freeze([
     playBonus: true,
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
+  // 第4回(2026-11-23〜11-30)。花の女3人の新曲3曲(上の flower3RhythmEvent)。受け口の曲がまだ1曲も公開曲に無いあいだは入らない
+  ...(flower3RhythmEvent ? [flower3RhythmEvent] : []),
 ]);
 // その曲の id と、同じ曲として数える版(ショート版)の id。songVersions を書いていないイベントは原曲だけ(これまでと同じ)
 const rhythmEventSongVersionIds = (event, songId) => {
@@ -315,6 +380,19 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     // 札の題は2行(2026-11-14 社長「本オープン記念だけだと何の本オープンか分からない」→ 案B)
     banner: Object.freeze({ emoji: '🎉', title: 'モンヒロビート', title2: '本オープン記念', sub: '開催中 〜11/23 3:59' }),
   }),
+  // 花の女3人のイベント(2026-11-23 12:00〜11-30 3:59)。パンドラと同じ形: 周回5倍・ビートP5倍(ランキングイベントの計算が先に効く)・HOMEの帯。
+  // ランキングは RHYTHM_EVENTS の flower3_2026_11_23。イベントが入っていない(曲がまだ無い)あいだは帯も出さない
+  ...(flower3RhythmEvent ? [Object.freeze({
+    id: 'flower3_2026',
+    name: FLOWER3_EVENT_NAME,
+    startAt: FLOWER3_START_AT,
+    endAt: FLOWER3_END_AT,
+    displayEndAt: FLOWER3_DISPLAY_END_AT,
+    boost: 5,
+    loopScale: 10,
+    loopBoost: 5,
+    banner: Object.freeze({ emoji: '🌸', title: FLOWER3_EVENT_NAME, sub: '開催中 〜11/30 3:59' }),
+  })] : []),
 ]);
 // ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、
 // 週ごとに更新の5部構成」)。時刻で出すのは第1部(開幕)だけ。第2部以降は、ジャックのストーリーとしてレイドの進み具合で開く(assistants.js)。
@@ -343,6 +421,33 @@ const PANDORA_WINGS_STORIES = Object.freeze([
   Object.freeze({ id: 'pandora_wings_2026_ep7', part: 7, at: '2026-11-08T04:00:00+09:00' }),
   Object.freeze({ id: 'pandora_wings_2026_ep8', part: 8, at: '2026-11-09T04:00:00+09:00' }),
 ]);
+// 花の女3人のイベントのお話(パンドラと同じ形: 第1話は開幕・第2〜7話は毎朝4:00・第8話は閉幕)。
+//   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない。本文は社長の「この文で」をもらった話から EVENT_REPLAYS へ入れる
+//   (入っていない話は流れない)
+const FLOWER3_STORIES = Object.freeze([
+  Object.freeze({ id: 'flower3_2026_ep1', part: 1, at: FLOWER3_START_AT }),
+  Object.freeze({ id: 'flower3_2026_ep2', part: 2, at: '2026-11-24T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep3', part: 3, at: '2026-11-25T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep4', part: 4, at: '2026-11-26T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep5', part: 5, at: '2026-11-27T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep6', part: 6, at: '2026-11-28T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep7', part: 7, at: '2026-11-29T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep8', part: 8, at: FLOWER3_END_AT }),
+]);
+// 本文が回想の一覧に入っているお話か(静的なデータ。時刻ではない)
+const rhythmEventStoryHasScript = (id) => {
+  const replays = (typeof EVENT_REPLAYS !== 'undefined' && Array.isArray(EVENT_REPLAYS)) ? EVENT_REPLAYS : [];
+  return replays.some(replay => replay && replay.id === id && Array.isArray(replay.script) && replay.script.length > 0);
+};
+// いま流してよい第2〜7話のid(時刻が来ていて、本文が入っているもの)。古いほうから。見るたびに数え直す(CLAUDE.md ⑥-4)
+const flower3StoryIdsAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now) || !flower3RhythmEvent) return [];
+  return FLOWER3_STORIES
+    .filter(story => story.part >= 2 && story.part <= 7 && now >= Date.parse(story.at))
+    .filter(story => rhythmEventStoryHasScript(story.id))
+    .map(story => story.id);
+};
 // いま流してよい第2〜7話のid(時刻が来ていて、本文が入っているもの)。古いほうから。見るたびに数え直す(CLAUDE.md ⑥-4)
 const pandoraWingsStoryIdsAt = (nowMs) => {
   const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
@@ -970,7 +1075,13 @@ const rhythmEventDivisions = (event, songs) => {
     ...songIds.map(songId => ({
       id: rhythmEventSongDivisionId(songId),
       songId,
-      song: rhythmEventSong(songId, songs),
+      ...(() => {
+        // 日ごとに開く曲(FLOWER3_SONG_SLOTS)は、開く前は名前を出さず「◯/◯ 4:00 に開く曲」と出す(先の曲名を見せない)。見るたびに数え直す
+        const openMs = rhythmEventSongOpenAtMs(songId);
+        return (openMs !== null && Date.now() < openMs)
+          ? { song: null, lockedText: `🔒 ${rhythmEventJstText(openMs)} に開く曲` }
+          : { song: rhythmEventSong(songId, songs) };
+      })(),
     })),
     { id: RHYTHM_EVENT_TOTAL_DIVISION, songId: null, song: null },
   ];

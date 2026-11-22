@@ -545,6 +545,8 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 //   イベントを足すときは、data/assistants.js の項目へ group を1つ書く(tools/boot/event-replay-check.js が見張る)。
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
+  // 花の女3人のイベント(2026-11-23〜11-30・台帳 r1119-101)。お話の本文は社長の OK のあと data/assistants.js へ group:'flower3' で入れる
+  { id:'flower3', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
   { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   // モンヒロサクセスのお話(2026-11-14 第1話・β版の前の予告から)
   { id:'monsuc', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },

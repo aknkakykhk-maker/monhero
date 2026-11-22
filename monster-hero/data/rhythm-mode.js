@@ -75557,6 +75557,9 @@ const RHYTHM_SONG_RELEASE_AT=Object.freeze({
   crazy_party_night_full:'2026-10-04T08:00:00+09:00',
 });
 const rhythmSongReleased=(songId,nowMs=Date.now())=>{
+  // イベントで日ごとに開く曲(data/rhythm-event.js の FLOWER3_SONG_SLOTS・2026-11-23)。あとから読み込まれるので呼ばれた時に引く
+  const eventOpenMs=typeof rhythmEventSongOpenAtMs==='function'?rhythmEventSongOpenAtMs(songId):null;
+  if(eventOpenMs!==null&&!(Number(nowMs)>=eventOpenMs))return false;
   const at=RHYTHM_SONG_RELEASE_AT[songId];
   if(!at)return true;
   const ms=Date.parse(at);
