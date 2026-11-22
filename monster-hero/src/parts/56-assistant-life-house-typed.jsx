@@ -20,10 +20,11 @@ const assistantLifeTypedGroupName = (g, nameOf) => {
 
 function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms, diary, peerSt, nameOf, tabs, tab = 'house', onTab, onBack,
   unwatched = [], onWatch, tier = null, note = '', top = null, guideOn = false, onGuide = null, onGuideClose = null, dailyCard = null, planBand = null,
-  onTalk, onGive, onPlay, onRoom, onBoard, onRelView, result = null, onResultClose }) {
+  onTalk, onGive, onPlay, onRoom, onBoard, onRelView, result = null, onResultClose, profileList = null }) {
   const [goal, setGoal] = React.useState(() => (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null));
   const [openDaily, setOpenDaily] = React.useState(false);
   const [openNow, setOpenNow] = React.useState(false);
+  const [openProfile, setOpenProfile] = React.useState(false); // 📖 助手紹介の一覧(r1119-114・保存しない)
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_GOAL_STORE === 'undefined') return undefined;
     const S = ASSISTANT_LIFE_GOAL_STORE;
@@ -32,9 +33,18 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
     return () => { S.subs.delete(f); };
   }, []);
   const near = typeof assistantLifeNearestReward === 'function' ? assistantLifeNearestReward(ids) : null;
-  const head = near
+  const reward = near
     ? <AluNextReward rest={near.remain} text={`${nameOf(near.id)}の 💗 仲良し度 Lv${near.nextLv}${near.opens.length ? ` → ${near.opens.join('・')}` : ''}`} />
     : <AluNextReward rest={null} text="見る・話す・贈るで 💗 仲良し度が上がると、ごほうびが届きます" />;
+  // 📖 紹介(r1119-114 社長「家の上に📖ボタン」): 次のごほうびの右に置き、押すと助手全員の紹介の一覧(前の「📖 紹介」のタブと同じ物)を窓で開く
+  const head = profileList ? (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flex: 'none' }} data-assistant-life-house-head>
+      <div style={{ flex: 1, minWidth: 0 }}>{reward}</div>
+      <button type="button" className="alu-btn" data-assistant-life-house-profile aria-label="助手の紹介を見る" onClick={() => setOpenProfile(true)}
+        style={{ flex: 'none', width: 64, height: 'auto', minHeight: 44, padding: '4px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0, lineHeight: 1.2, borderRadius: 14 }}>
+        <span style={{ fontSize: 20 }}>📖</span><span className="alu-nw" style={{ fontSize: 13 }}>紹介</span>
+      </button>
+    </div>) : reward;
   const scene = (box) => {
     const landArt = box.wide && land;
     const width = assistantLifeTypedArtWidth(box, landArt);
@@ -78,6 +88,13 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
         {g0 && onWatch ? <div style={{ marginTop: 10 }}><AluGo onClick={() => { if (onGuideClose) onGuideClose(); onWatch(); }} data-assistant-life-guide-watch>👀 見てみる — {assistantLifeTypedGroupName(g0, nameOf)}の話</AluGo></div> : null}
       </AluSheet>
     </div>) : null;
+  const profileNode = openProfile && profileList && !resultNode ? (
+    <div data-assistant-life-house-profile-list>
+      <AluSheet title="📖 助手紹介" onClose={() => setOpenProfile(false)}>
+        <div style={{ margin: '0 -12px' }}>{profileList}</div>
+        <AluBtn onClick={() => setOpenProfile(false)} data-assistant-life-house-profile-back style={{ width: '100%' }}>🏡 家に戻る</AluBtn>
+      </AluSheet>
+    </div>) : null;
   const goBtn = (
     <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
       {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
@@ -86,7 +103,7 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
   //   主なボタンを「次のごほうび」のすぐ下(家の絵の上)へ(家の絵を小さくすると部屋の札が切れる・2026-11-22)
   const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return (
-    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
+    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || profileNode || guideNode} data-assistant-life-typed-house="1">
       {top}
       {note ? <div className="alu-card alu-t" data-assistant-life-note>{note}</div> : null}
       {low ? null : goBtn}
