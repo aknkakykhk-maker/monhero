@@ -72600,7 +72600,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Battle #5',
     bgmTrackId:'melo_battle_5',
     // 2026-11-22 追加。Suno で作ったオリジナル曲(約4分12秒・BPM 170)。ジャケットはマスクの絵。歌詞カードあり
-    artwork:'images/song-art/battle-5.jpg',
+    artwork:'images/song-art/battle-5.jpg?v=c98d8edcec3a',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,battle5Charts[id]||emptyRhythmChart()
     ])))
@@ -72610,7 +72610,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Battle #5',
     bgmTrackId:'melo_battle_5_short',
     // 2026-11-22 追加。「Battle #5」のショート版(約2分27秒・原曲の頭からの切り出しで、終わりにフェードアウト)。ジャケットは素顔の絵
-    artwork:'images/song-art/battle-5-short.jpg',
+    artwork:'images/song-art/battle-5-short.jpg?v=9197ce3f2aed',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,battle5ShortCharts[id]||emptyRhythmChart()
     ])))
@@ -79224,7 +79224,7 @@ const rhythmSongArtSrc=song=>{
 const RHYTHM_SONG_LYRIC_CARDS=Object.freeze({
   rebellion:Object.freeze(['images/song-lyrics/rebellion-1.jpg?v=91279274a51d']),
   stay_with_me:Object.freeze(['images/song-lyrics/stay_with_me-1.jpg?v=0a877cbeae9b']),
-  battle_5:Object.freeze(['images/song-lyrics/battle_5-1.jpg']),
+  battle_5:Object.freeze(['images/song-lyrics/battle_5-1.jpg?v=5cb3f982a55b']),
 });
 const rhythmSongLyricCards=song=>{
   const id=song&&typeof song.songId==='string'?song.songId.replace(/_hell_debug$/,'').replace(/_short$/,''):'';
