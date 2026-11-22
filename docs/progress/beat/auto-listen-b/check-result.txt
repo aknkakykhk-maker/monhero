@@ -1,0 +1,22 @@
+OK tate: 詳細の窓に鑑賞の欄が出る
+OK tate: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
+OK tate: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK tate: +10秒で進む(30秒 → 46秒・6秒待ち)
+OK tate: +10秒のあとも MISS なし({"(判定なし)":81,"MARVELOUS":5})
+OK tate: -10秒で戻る(41秒)
+OK tate: -10秒のあとも MISS なし({"(判定なし)":74,"MARVELOUS":7})
+OK tate: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
+OK tate: 結果の画面は出ていない
+OK tate: 自己ベスト・ビートP・ミッション等の保存値が変わらない
+OK tate: JSのエラーなし
+OK yoko: 詳細の窓に鑑賞の欄が出る
+OK yoko: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
+OK yoko: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK yoko: +10秒で進む(30秒 → 46秒・6秒待ち)
+OK yoko: +10秒のあとも MISS なし({"(判定なし)":81,"MARVELOUS":5})
+OK yoko: -10秒で戻る(41秒)
+OK yoko: -10秒のあとも MISS なし({"(判定なし)":74,"MARVELOUS":7})
+OK yoko: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
+OK yoko: 結果の画面は出ていない
+OK yoko: 自己ベスト・ビートP・ミッション等の保存値が変わらない
+OK yoko: JSのエラーなし
