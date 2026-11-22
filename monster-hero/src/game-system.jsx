@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9866139f821d53c4
+// generated-sha256: f0f0c11f6efe9205
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28387,9 +28387,6 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
 <h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden">RHYTHM RESULT</h2>
-{/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。リザルトを開いてすぐ目に入るよう、いちばん上に置く。
-    この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 <div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
 {/* 横に広いときは、曲の札だけを2列ぶち抜きで上に置く(2026-09-26・ユーザー報告「また曲名切れ」)。
     半分の幅に曲の札を入れていたら、曲名が「魔窟…」になり、Lv.とランクのゲージもランクの丸に押しつぶされていた。
@@ -28480,6 +28477,11 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {(()=>{const fast=Number(view.fast)||0,slow=Number(view.slow)||0;if(calibrating||fast+slow<12)return null;const early=fast>=slow*2,late=slow>=fast*2;if(!early&&!late)return null;return <p data-rhythm-timing-tendency className={`mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early?'border-cyan-400/30 bg-cyan-950/30 text-cyan-100':'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`}>{early?'FASTが多めでした。少し早く叩くくせがあるようです。':'SLOWが多めでした。少し遅れて叩くくせがあるようです。'}気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。</p>;})()}
 </div>
 </div>
+{/* 2026-11-22 r1119-108(社長の選択「案A スコアが主」・点検 N50): 経験値の箱は、スコアと判定の下へ移した(いちばん上が「経験値 +4」で、今回のスコア・ランクが2番目・3番目だった)。
+    ランクアップは重ねた画面(PlayerRankUpFx)の1回だけで伝え、この箱の中の RANK UP の札と判子は index.html で隠す(N51)。横・PC は左の列のまま */}
+{/* ビートランクの経験値の棒(2026-10-30 社長「終わったあとに経験値ゲージのバーの動きが見れない」)。(はじめはリザルトのいちばん上に置いていた。2026-11-22 にスコアと判定の下へ移した)
+    この1曲でたまった経験値と、ランクが上がったときのごほうび。裏のクイック周回の「経験値」と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward} onFull={onRankBarFull} onDone={onRankBarDone} onStart={onRankBarStart} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
@@ -28487,7 +28489,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
-{/* ビートランクの経験値の棒は、リザルトのいちばん上へ移した(2026-10-30) */}
+{/* ビートランクの経験値の棒は、上のまとめ(スコア・判定)のすぐ下にある(2026-11-22) */}
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -28552,7 +28554,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
 <div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
-  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2")}>{!multi&&!raidPlay&&<button data-rhythm-result-retry className="min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className={`min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi&&!raidPlay?'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]':''}`} onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96994e8a22d0de5c
+// source-sha256: d666c685aae3f469
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46858,14 +46858,7 @@ const RhythmTapTest = ({
       className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
     }, React.createElement("h2", {
       className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden"
-    }, "RHYTHM RESULT"), React.createElement(PlayerRankGain, {
-      kind: "beat",
-      award: beatRankAward,
-      onFull: onRankBarFull,
-      onDone: onRankBarDone,
-      onStart: onRankBarStart,
-      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
-    }), React.createElement("div", {
+    }, "RHYTHM RESULT"), React.createElement("div", {
       "data-rhythm-result-summary": true,
       className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
     }, React.createElement("div", {
@@ -47124,7 +47117,14 @@ const RhythmTapTest = ({
         "data-rhythm-timing-tendency": true,
         className: `mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early ? 'border-cyan-400/30 bg-cyan-950/30 text-cyan-100' : 'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`
       }, early ? 'FASTが多めでした。少し早く叩くくせがあるようです。' : 'SLOWが多めでした。少し遅れて叩くくせがあるようです。', "気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。");
-    })())), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
+    })())), React.createElement(PlayerRankGain, {
+      kind: "beat",
+      award: beatRankAward,
+      onFull: onRankBarFull,
+      onDone: onRankBarDone,
+      onStart: onRankBarStart,
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
+    }), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
       "data-rhythm-result-celebrate": true,
       className: "my-3 text-center"
     }, React.createElement("b", {
@@ -47328,15 +47328,16 @@ const RhythmTapTest = ({
       "data-rhythm-result-orientation": true,
       className: "shrink-0"
     }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
-      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
+      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2"
     }, !multi && !raidPlay && React.createElement("button", {
-      className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
+      "data-rhythm-result-retry": true,
+      className: "min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black",
       disabled: startLockRef.current,
       onClick: () => beginRun(mergeRhythmBestRecord(runRef.current?.startBest, result))
     }, "もう一度プレイ"), React.createElement("button", {
       "data-rhythm-multi-result-back": multi ? "" : undefined,
       "data-rhythm-raid-result-back": raidPlay ? "" : undefined,
-      className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
+      className: `min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi && !raidPlay ? 'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]' : ''}`,
       onClick: abort
     }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲選びへ戻る'))))))));
   }
