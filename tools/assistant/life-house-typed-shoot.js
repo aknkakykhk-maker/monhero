@@ -12,8 +12,13 @@ const { measure } = require('./life-ui-shoot');
 const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
 const OUT = path.resolve(root, opt('--out', 'docs/progress/assistant-life/step7-house'));
-const SIZES = argv.includes('--quick') ? { tate: { w: 390, h: 844 } } : { tate: { w: 390, h: 844 }, s320: { w: 320, h: 568 }, yoko: { w: 844, h: 390 }, pc: { w: 1280, h: 800 } };
+const SIZES = argv.includes('--quick') ? { tate: { w: 390, h: 844 } } : argv.includes('--phone') ? { tate: { w: 390, h: 844 }, s320: { w: 320, h: 568 } } : { tate: { w: 390, h: 844 }, s320: { w: 320, h: 568 }, yoko: { w: 844, h: 390 }, pc: { w: 1280, h: 800 } };
+// SHOT_REV=<コミット> … ゲームの画面だけその版から配る(前の見え方と比べる・tools/browser/serve-rev.js)
+const serveRev = require('../browser/serve-rev');
+const FROM_REV = serveRev.make(root);
 const PORT = 9289;
+// --hour <時>(既定15)・--untyped(段7の前の家の並びで撮る)・--sleep(寝ている助手の部屋も撮る。測らない)
+const HOUR = Number(opt('--hour', '15')) || 15, UNTYPED = argv.includes('--untyped'), SLEEP = argv.includes('--sleep') || HOUR >= 21 || HOUR < 6;
 fs.mkdirSync(OUT, { recursive: true });
 
 (async () => {
@@ -23,24 +28,31 @@ fs.mkdirSync(OUT, { recursive: true });
   const { MIME, STORY_IDS, INTRO_KEYS, seed, toHome, waitFaces, finishTalk } = require('./life-browser-shared');
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''), file = path.join(root, rel);
+    if (file.startsWith(root) && serveRev.serve(FROM_REV, root, file, res, MIME[path.extname(file).toLowerCase()])) return;
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
-  const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'sorashido', 'erubin'], doing: 'cards', place: 'cardroom' }],
+  const MIX = SLEEP ? { groups: [], solo: { mua: { doing: 'sleep', place: 'home' }, kiki: { doing: 'sleep', place: 'home' }, dra: { doing: 'sleep', place: 'home' }, kyuko: { doing: 'sleep', place: 'home' }, momosuke: { doing: 'sleep', place: 'home' }, atsu: { doing: 'sleep', place: 'home' }, sorashido: { doing: 'sleep', place: 'home' }, erubin: { doing: 'sleep', place: 'home' } } } : { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'sorashido', 'erubin'], doing: 'cards', place: 'cardroom' }],
     solo: { momosuke: { doing: 'battle', place: 'battle' }, atsu: { doing: 'idle', place: 'home' }, kyuko: { doing: 'read', place: 'library' } } };
   const result = { shots: {}, errors: [], miss: [] };
   let failed = 0;
   for (const [sizeId, v] of Object.entries(SIZES)) {
     const ctx = await browser.newContext({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: argv.includes('--2x') ? 2 : 1 });
     const page = await ctx.newPage();
-    const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(15, 0, 0, 0);
+    const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(HOUR, 0, 0, 0);
     await page.clock.setFixedTime(new Date(jst.getTime() - 9 * 3600000));
     page.on('pageerror', e => result.errors.push(`${sizeId}: ${String(e.message || e).slice(0, 160)}`));
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; if (window.__untyped) window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
+    if (UNTYPED) await page.addInitScript(() => { window.__untyped = true; });
+    // --bedtry '{"headDiv":3,"bedHeads":3,"quiltDrop":0.2}' … 寝ている部屋のベッドの釣り合いの案(ページの中だけ)
+    if (opt('--bedtry', '')) await page.addInitScript((t) => { window.__mhAssistantLifeBedTry = t; }, JSON.parse(opt('--bedtry', '{}')));
+    // --worn kiki:kiki_twintail_v1,… … 着せ替えを着せて撮る(着替えの保存 mh_assistant_costume_*_v1 はページの中だけ)
+    const WORN = Object.fromEntries((opt('--worn', '') || '').split(',').filter(Boolean).map(x => x.split(':')));
+    if (Object.keys(WORN).length) await page.addInitScript((worn) => { localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(Object.values(worn))); localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify(worn)); }, WORN);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
-    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
+    await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: Number(opt('--bond', '')) || null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     const shot = async (name, mo = {}) => {
       await page.waitForTimeout(700);
@@ -59,8 +71,19 @@ fs.mkdirSync(OUT, { recursive: true });
       await page.evaluate((m) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, moods: { atsu: 'lonely' }, watched: [] } }); }, MIX);
       await page.waitForTimeout(600); await finishTalk(page);
       await page.locator('[data-home-assistant-life]').first().click({ timeout: 20000 });
-      await page.locator('[data-assistant-life-typed-house]').waitFor({ timeout: 15000 });
+      await page.locator(UNTYPED || process.env.SHOT_REV ? '[data-assistant-life-screen]' : '[data-assistant-life-typed-house]').waitFor({ timeout: 15000 });
       await shot('house');
+      if (SLEEP) {
+        await page.waitForTimeout(1500);
+        for (const id of (opt('--rooms', 'dra,kyuko') || '').split(',').filter(Boolean)) {
+          await page.locator(`[data-assistant-life-room="${id}"]`).first().click({ timeout: 5000 }).catch(e => result.miss.push(`${sizeId} 部屋 ${id}: ${String(e.message).slice(0, 80)}`));
+          await page.waitForTimeout(1500);
+          await page.screenshot({ path: path.join(OUT, `${sizeId}-room-${id}.png`) });
+          await page.locator('[data-assistant-life-roomview-close]:visible').first().click({ timeout: 3000 }).catch(() => {});
+          await page.waitForTimeout(600);
+        }
+        await ctx.close(); continue;
+      }
       await page.evaluate(() => { const m = document.querySelector('[data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
       await shot('house-bottom', { skipMain: true });
       await page.evaluate(() => { const m = document.querySelector('[data-alu-main]'); if (m) m.scrollTop = 0; });

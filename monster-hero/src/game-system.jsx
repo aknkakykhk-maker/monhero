@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 262ac07d4d0e85ff
+// generated-sha256: 84c24bb88b9ae5a5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71414,7 +71414,9 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
         const imgLeft = r.left + cw / 2;
         // 寝顔の絵が大きすぎて布団・家具にはみ出す(2026-11-15 社長 r1115-005): 見えている部分の高さが 2.0U を超える絵は、目の位置を動かさずに縮めて枕に収める
-        const visH = r.height * (box.b - box.t), k = Math.min(1, (2.0 * U) / Math.max(1, visH));
+        //   全身の絵(ききのツインテール・きゅうこの冬の装いの寝顔など。縦が横の2.2倍より長い)には当てない: つま先まで数えて頭がとても小さく縮み、枕の左上に浮いていた(2026-11-22 社長「寝顔の表示方法変えた？かなりひどい」)
+        const fullBody = (box.b - box.t) * r.height > 2.2 * (box.r - box.l) * r.width;
+        const visH = r.height * (box.b - box.t), k = fullBody ? 1 : Math.min(1, (2.0 * U) / Math.max(1, visH));
         const eyeOrigin = `${(((box.l + box.r) / 2) * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
         const shrink = k < 0.999 ? { transform: `scale(${k.toFixed(3)})`, transformOrigin: eyeOrigin } : {};
         return (
