@@ -28,7 +28,7 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       <ScreenHead title="ギフトボックス" icon={<Package size={20}/>} accent="text-cyan-400" onBack={onBack} backLabel="戻る"/>
       <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable.length>0?'claim':'empty'} scene={claimable.length>0?'giftClaimable':'giftEmpty'} compact/></div>
       <ScreenTabs value={giftTab} onChange={onSelectTab} items={[
-        {id:'unclaimed',color:'#0891b2',label:<>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length}){tabCountBadge(claimable.length)}</>},
+        {id:'unclaimed',color:'#0891b2',label:<>未受取{tabCountBadge(claimable.length)}</>},
         {id:'history',color:'#4f46e5',label:`受取済み (${history.length})`},
       ]}/>
       {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">全て受け取る</button>}
@@ -36,7 +36,11 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
           色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}
       <div className={`mh-gift-list ${SCREEN_LIST_CLASS} pb-4`}>{shown.length===0?<ScreenEmpty emoji="🎁" lines={giftTab==='unclaimed'?['未受取のギフトはありません','ミッションやログインボーナスを達成すると、ここに届きます']:['受取済みのギフトはありません','受け取ったギフトは、ここに残ります']}/>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-2xl border ${g.claimedAt?'bg-[#111329] border-white/10':expired?'bg-[#250a1e] border-red-500/60':'bg-[#131630] border-cyan-400/60'}`}>
-        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b style={JA_WRAP_STYLE}>{jaWrap(display.title)}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
+        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b style={JA_WRAP_STYLE}>{jaWrap(display.title)}</b></h3>{(()=>{
+          // 「受取可」の札は「受け取る」のボタンと同じことを言うので出さない。受け取れる物は、期限が3日を切ったときだけ「あと◯日」を赤で出す(r1119-080)
+          if(!g.claimedAt&&!expired&&valid){const left=(g.expiresAt?new Date(g.expiresAt).getTime():NaN)-now;if(!Number.isFinite(left)||left<=0||left>3*86400000)return null;const hours=Math.ceil(left/3600000);return <em data-gift-deadline-soon className="bg-red-700 text-white">{hours<24?`あと${hours}時間`:`あと${Math.ceil(left/86400000)}日`}</em>;}
+          return <em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':'要確認'}</em>;
+        })()}</div>
         <div className="mh-gift-main"><div className="mh-gift-rewards">{Array.isArray(g.rewards)&&g.rewards.map((r,i)=><span key={i}>{giftRewardText(r)}</span>)}</div>{!g.claimedAt&&<button type="button" disabled={expired||!valid} onClick={()=>onClaim([g.id])} className="mh-button mh-button-primary">受け取る</button>}</div>
         <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
       </article>})}</div>
