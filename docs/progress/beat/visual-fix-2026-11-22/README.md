@@ -54,3 +54,19 @@
 - 横: 欄が低くなり、助手の一言が「決定」の裏に潜っていた → 欄の高さが300px以下なら一言を畳むようにした(667×375 の切り欠きなしでは出る)(切り欠きなしの横では今までどおり出る)
 - 気づいた別の件: 横の左右47pxの余白が、曲選びの見出しにも一覧にも入っていない(`--mh-sa-left` を使っていない)。今回の変更とは別。本物の端末で切り欠きの裏に入るかは確かめていない
 - 2. の直しも切り欠きありで撮った: [notch/songs2-tate.png](notch/songs2-tate.png)・[notch/songs2-yoko.png](notch/songs2-yoko.png)。鍵の条件の1行・1行にした助手の一言・決定は、どれも余白の中で重ならない
+
+## 3. マルチの結果(N41・N42・N44)
+
+撮り方: `MULTI_FEW=1 SHOT_DIR=<フォルダ> node tools/ui/rhythm-multi-assist-result-check.js`(3人。外すと5人)。切り欠きは検査が `--mh-safe-*` へ入れる(縦 上59・下34 / 横 左右47・下21)。
+直す前(main・3人): [before3-tate](multi-result/before3-tate.png)・[before3-yoko](multi-result/before3-yoko.png)・[before3-rot](multi-result/before3-rot.png) /
+直した後(3人): [after3-tate](multi-result/after3-tate.png)・[after3-yoko](multi-result/after3-yoko.png)・[after3-rot](multi-result/after3-rot.png) /
+5人: [after5-tate](multi-result/after5-tate.png)・[after5-yoko](multi-result/after5-yoko.png)・[after5-rot](multi-result/after5-rot.png)
+
+| 指摘 | どう直したか | 結果 |
+|---|---|---|
+| N41 | 列を「いる人数」だけにし、1列200pxまででまん中へ寄せる | 直した(3人で「けんさ(あなた)」が切れずに出る) |
+| N42 | 大きなランクの下を「SCORE RANK」→「チームのランク」。横は吹き出しが下の端に重なるので上に出す | 直した |
+| N44 | 「次へ」を高さ52px・字を大きく主に、「📋 メンバーの成績」は小さく横へ | 直した |
+
+- マルチの検査2本(assist-result・play-guard)が入口で止まっていた原因: 更新履歴の窓が少し遅れて開く/HOME の上の「🎉 モンヒロビート 本オープン記念」の札を入口と取り違えて押していた。閉じては押すを繰り返し、「音ゲー」と書いた入口を押すようにした
+- 🔄横の小さい画面(667×375)で5人のとき、友情Lv の行が欄の端で半分隠れる NG が1回出た。main でも欄が中身より数px足りないぎりぎりの所で、札の文の長さで出たり出なかったりする(2回目は通った)
