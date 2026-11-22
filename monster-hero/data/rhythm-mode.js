@@ -76834,7 +76834,8 @@ const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Num
     const yRatio=rhythmClamp01(y/rect.height);
     const span=rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,yRatio,at);
     const half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
-    const lift=rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,yRatio)*rhythmSlideSkyAt(note,at):0;
+    // 持ち上げは上端より上も1次の式で延ばす(rhythmSkyLiftRatio)。上端で切った yRatio を渡すと GPU の帯と食い違う
+    const lift=rhythmSlideHasSky(note)?rhythmSkyLiftPx(rect,Math.min(1,y/rect.height))*rhythmSlideSkyAt(note,at):0;
     lines.push({x1:rect.width*span.center-half,x2:rect.width*span.center+half,y:y-lift});
   }
   return lines;
@@ -77210,11 +77211,11 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const skyHead=rhythmNoteIsSlide(note)?rhythmSlideSkyAt(note,Math.max(Number(note.timeMs)||0,Number(chartNowMs)||0)):rhythmNoteSkyHeight(note);
   if(skyHead>0){
     out.skyShadow={cx:out.head.cx,cy:out.head.cy,w:out.head.w,h:out.head.h};
-    out.head={...out.head,cy:out.head.cy-rhythmSkyLiftPx(rect,yRatio)*skyHead};
+    out.head={...out.head,cy:out.head.cy-rhythmSkyLiftPx(rect,Math.min(1,centerY/rect.height))*skyHead};
   }
   if(out.end&&rhythmNoteIsSlide(note)&&rhythmSlideHasSky(note)){
     const endSky=rhythmSlideSkyAt(note,rhythmReleaseTargetMs(note));
-    if(endSky>0)out.end={...out.end,cy:out.end.cy-rhythmSkyLiftPx(rect,rhythmClamp01(out.end.cy/rect.height))*endSky};
+    if(endSky>0)out.end={...out.end,cy:out.end.cy-rhythmSkyLiftPx(rect,Math.min(1,out.end.cy/rect.height))*endSky};
   }
   return out;
 };
