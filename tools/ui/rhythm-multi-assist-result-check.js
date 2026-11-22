@@ -151,6 +151,7 @@ const measureResult = (page) => page.evaluate(() => {
       await page.waitForTimeout(2500);
       if (!FEW) await page.evaluate(() => { for (const id of ['atsu', 'dra', 'erubin', 'kiki']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
       await page.waitForTimeout(2000);
+      if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `room-${name}.png`) }); }
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-confirm]')?.click());
       await page.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 20000 });
       await page.waitForTimeout(1500);

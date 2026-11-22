@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: acd14ff0bbeb8969
+// generated-sha256: e859fcd3335dfa12
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59520,7 +59520,8 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
               {m.cpu && tall && (m.as
                 ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mx-auto mb-0.5 block w-fit rounded bg-pink-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">助手</b>
                 : <b data-rhythm-multi-cpu-mark className="mx-auto mb-0.5 block w-fit rounded bg-lime-300 px-0.5 text-[8px] font-black leading-[12px] text-slate-950">CPU</b>)}
-              <span data-rhythm-multi-member-name className={`block font-black leading-tight ${tall ? (m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : 'line-clamp-2 break-all text-[11px] landscape:text-sm') : 'truncate text-[10px]'}`}>{m.cpu && !tall && (m.as
+              {/* 人の名前は2行に折らず1行に(2026-11-22 r1119-094・点検 N25「モンヒロく/ん*」と途中で折れた)。長い名前は字を小さくし、それでも入らなければ「…」 */}
+              <span data-rhythm-multi-member-name className={`block font-black leading-tight ${tall ? (m.cpu ? 'whitespace-nowrap text-[11px] max-[359px]:text-[9.5px] max-[359px]:tracking-[-0.04em] landscape:text-sm' : `truncate whitespace-nowrap ${[...String(m.name || '')].length + (self ? 1 : 0) > 7 ? 'text-[9px] tracking-[-0.04em]' : [...String(m.name || '')].length + (self ? 1 : 0) > 5 ? 'text-[10px]' : 'text-[11px]'} landscape:text-sm`) : 'truncate text-[10px]'}`}>{m.cpu && !tall && (m.as
                 ? <b data-rhythm-multi-cpu-mark data-rhythm-multi-assist-mark className="mr-0.5 rounded bg-pink-300 px-0.5 text-[8px] font-black text-slate-950">助手</b>
                 : <b data-rhythm-multi-cpu-mark className="mr-0.5 rounded bg-lime-300 px-0.5 text-[8px] font-black text-slate-950">CPU</b>)}{m.name}{self ? '*' : ''}</span>
               {badge.sub && <small className={`block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`}>{badge.sub}</small>}
@@ -61053,7 +61054,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <div className="min-w-[7.5rem] flex-1 leading-none">
         <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
         {/* 折れるときは「・」の手前で折る(「・」で行が終わらないように・2026-11-07 ミハリ B3) */}
-        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"><span className="whitespace-nowrap">▶ {step}</span>{view ? <> <span className="whitespace-nowrap">・{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} {view.code}</span></> : ''}</small>
+        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"><span className="whitespace-nowrap">▶ {step}</span>{view ? <> <span className="whitespace-nowrap">・{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]}{opts.noCode ? '' : ` ${view.code}`}</span></> : ''}</small>
         {/* 回数ボーナス(連続ボーナス)を部屋の中でも(2026-11-07 社長「回数ボーナスの表示がクリアにしか見れないから不便」)。
             同じメンバーで続けると、次の曲のごほうびが上がる。結果画面の「🔥 連続◯曲目」と同じ数え方 */}
         {view && room && room.round && <small data-rhythm-multi-streak-next className="mt-0.5 inline-block whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-1.5 text-[9px] font-black leading-4 text-white">🔥 {rhythmMultiStreakNextText(view.streak)}</small>}
@@ -61191,7 +61192,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const buddySheetWasOpen = React.useRef(false);
   React.useEffect(() => { if (buddySheet) buddySheetWasOpen.current = true; else if (buddySheetWasOpen.current) { buddySheetWasOpen.current = false; setCallPreselect(''); } }, [buddySheet]);
   const inviteButton = (extra = '') => friendsOn && view && (
-    <button data-rhythm-multi-invite-open type="button" aria-label="フレンドを招待する" onClick={openInviteSheet}
+    <button data-rhythm-multi-invite-open type="button" aria-label="フレンド一覧から呼ぶ" onClick={openInviteSheet}
       className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-pink-400/50 bg-pink-950/40 text-lg ${extra}`}>💌</button>
   );
   const inviteSheetLayer = inviteSheet && friendsOn && view && (
@@ -61200,7 +61201,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <div data-rhythm-multi-invite-sheet className="absolute inset-x-0 bottom-0 flex max-h-[80%] flex-col gap-2 overflow-y-auto rounded-t-2xl border-t border-pink-400/40 bg-slate-900 p-3 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(420px,55%)] landscape:rounded-none landscape:rounded-l-2xl landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(.75rem + var(--mh-sa-bottom))' }}>
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-xl">💌</span>
-          <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンドを招待する</b>
+          <b className="min-w-0 flex-1 truncate text-base font-black text-pink-100">フレンド一覧から呼ぶ</b>
           <button type="button" onClick={() => setInviteSheet(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl bg-slate-800 px-3 text-[12px] font-black">閉じる</button>
         </div>
         {inviteListBody}
@@ -61531,7 +61532,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const publicRoom = !!view && view.mode !== 'private';
     return (
       <main data-rhythm-multi data-rhythm-multi-step="matching" className={shell}>
-        {header('マッチング', leaveRoom, { buddy: true })}
+        {/* 部屋の画面は下の箱に大きくコードが出るので、見出しには出さない(2026-11-22 r1119-094・点検 N23「2か所に出る」) */}
+        {header('マッチング', leaveRoom, { buddy: true, noCode: true })}
         {view && view.full
           ? <div className="min-h-0 flex-1 overflow-y-auto p-3"><section data-rhythm-multi-full className={card}>
             <p className="text-sm font-black text-rose-300">このルームは満員です(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
@@ -61545,7 +61547,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             {/* 下の欄は、上のメンバーの札の残りに縮む(2026-11-08 社長「下が少し切れてる」。札と欄の7割を足すと画面より高くなり、「ルームを出る」が下で切れていた)。入りきらないぶんは中で送る */}
             <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
-                <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : 'メンバーを待っています…'}</p>
+                {/* 2人以上そろったら「待っています…」のままにしない(2026-11-22 r1119-094・点検 N21) */}
+                <p data-rhythm-multi-matching-title className={`text-sm font-black ${view && members.length >= 2 ? 'text-lime-200' : 'animate-pulse text-amber-200'}`}>{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : members.length < 2 ? 'メンバーを待っています…' : isHost ? (view.mode === 'private' ? '「メンバー確定」で始められます' : '「このメンバーで始める」で始められます') : 'メンバーがそろいました'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
                   {!view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'}
                 </p>
@@ -61556,7 +61559,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                     <b data-rhythm-multi-room-code className="block text-2xl font-black leading-none tracking-[0.3em] text-cyan-200">{view.code}</b>
                     {view.status !== 'open' && <small className="block text-[9px] font-black text-amber-300">{view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…'}</small>}
                   </div>
-                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : 'フレンドに送る'}</button>
+                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : 'コードを送る'}</button>
                 </div>}
                 {view && <button data-rhythm-multi-watch-allow type="button" aria-pressed={watchAllowUi} onClick={toggleWatchAllow}
                   className={`mt-1.5 min-h-[40px] rounded-xl border px-3 text-[11px] font-black ${watchAllowUi ? 'border-amber-300/60 bg-amber-950/40 text-amber-100' : 'border-slate-600 bg-slate-800 text-slate-300'}`}>
@@ -61577,20 +61580,21 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                     className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40">このメンバーで始める<small className="block text-[9px] font-bold opacity-80">待たずにメンバーを確定</small></button>
                 )}
                 {view && isHost && view.mode === 'private' && me && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
-                      className={`min-h-[48px] rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`}>
-                      {me.open ? 'ルーム解放中' : 'ルーム解放'}<small className="block text-[9px] font-bold opacity-80">{me.open ? 'タップでやめる' : '知らない人も呼ぶ'}</small>
-                    </button>
+                  // 次に押す「メンバー確定」を全幅・いちばん大きく。「ルーム解放」はその下に小さく(2026-11-22 r1119-094・点検 N20「同じ半分幅」)
+                  <div className="space-y-1.5">
                     <button data-rhythm-multi-confirm type="button" disabled={members.length < 2} onClick={() => RHYTHM_MULTI.confirmMembers()}
-                      className="min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40">メンバー確定</button>
+                      className={`min-h-[52px] w-full rounded-xl bg-fuchsia-600 px-2 text-base font-black disabled:opacity-40 ${members.length >= 2 ? 'shadow-[0_0_14px_rgba(217,70,239,.45)]' : ''}`}>メンバー確定</button>
+                    <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
+                      className={`flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'border border-white/15 bg-slate-800'}`}>
+                      {me.open ? 'ルーム解放中' : 'ルーム解放'}<small className="text-[10px] font-bold opacity-80">{me.open ? 'タップでやめる' : '知らない人も呼ぶ'}</small>
+                    </button>
                   </div>
                 )}
               {/* 招待はプライベートでもフリーでも(2026-11-07 社長「フリーマッチでも招待できるように」) */}
               {/* 横・🔄横では、上の帯の 💌 と同じなので隠す(右の欄に「ルームを出る」を収めるため・2026-11-07 ミハリ B1) */}
               {friendsOn && view && (
                 <section data-rhythm-multi-friend-invite className={`${card} landscape:hidden`}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className="min-h-[44px] w-full rounded-xl border border-pink-400/40 bg-pink-950/50 px-3 text-xs font-black text-pink-100" onClick={openInvitePanel}>{invitePanel ? 'フレンド一覧を閉じる' : '💌 フレンド一覧から呼ぶ'}</button>
                   {invitePanel && inviteListBody}
                 </section>
               )}
@@ -61866,30 +61870,32 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     const shownDiffId = (drawnOpenDiffs.find((d) => d.id === myDiffId) || pickPlayDifficulty() || {}).id;
     return (
       <main data-rhythm-multi data-rhythm-multi-step="ready" className={shell}>
-        {header('難易度選択', leaveRoom, { timer: room.left, advance: 'すぐ開始', gesture: true })}
+        {/* 部屋主の「すぐ開始」は下の準備完了のボタンへまとめた(2026-11-22 r1119-094・点検 N36「次に押す物が2つ」) */}
+        {header('難易度選択', leaveRoom, { timer: room.left })}
         <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.readyRound === room.round ? { text: '準備完了', cls: 'bg-emerald-400 text-slate-950', sub: m.diff } : { text: '準備中', cls: 'bg-slate-600 text-white', sub: m.diff })} />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           {drawnSong && (
-            <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-900/90 p-1.5 landscape:w-[32%]">
-              <span className="h-12 w-12 shrink-0"><RhythmSongArt song={drawnSong} marked={false} /></span>
+            // 縦は札の下が約250px空いていたので、これから遊ぶ曲を大きく出す(ジャケット120px・2026-11-22 r1119-094・点検 N34)。横・🔄横は今までの大きさ。高さの低い縦(SE)は少し小さく
+            <div data-rhythm-multi-drawn-box className="flex min-w-0 items-center gap-3 rounded-xl bg-slate-900/90 p-2 [@media(max-height:620px)]:gap-2 [@media(max-height:620px)]:p-1.5 landscape:gap-2 landscape:p-1.5 landscape:w-[32%]">
+              <span className="h-[120px] w-[120px] shrink-0 [@media(max-height:760px)]:h-20 [@media(max-height:760px)]:w-20 [@media(max-height:620px)]:!h-12 [@media(max-height:620px)]:!w-12 landscape:!h-12 landscape:!w-12"><RhythmSongArt song={drawnSong} large marked={false} /></span>
               <div className="min-w-0 flex-1">
-                <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
-                <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
+                <small className="block text-[10px] font-black text-slate-400 landscape:text-[9px]">ライブする曲</small>
+                <b data-rhythm-multi-drawn className="line-clamp-2 text-lg font-black leading-tight [@media(max-height:760px)]:text-base [@media(max-height:620px)]:line-clamp-1 [@media(max-height:620px)]:text-sm landscape:block landscape:truncate landscape:text-sm">{rhythmSongFullName(drawnSong)}</b>
                 {/* おまかせで、助手・マスモンの希望から決まったとき(2026-11-10) */}
                 {(() => { const w = room.wishBy ? members.find((m) => m.id === room.wishBy) : null; return w ? <small data-rhythm-multi-wish={w.as ? 'assistant' : 'masmon'} className="mt-0.5 block truncate text-[10px] font-black text-lime-200">🎵 {w.name}の希望の曲にしたよ</small> : null; })()}
                 {/* 演出の段階(2026-10-03・ユーザー指示「完全に軽くじゃないやつも切り替えられるように」)。
                     軽め・標準・華やか は見た目のおまかせを対戦のあいだだけ重ねる。いつもの は自分の設定のまま */}
-                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex items-center gap-0.5">
+                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex flex-wrap items-center gap-0.5">
                   <small className="mr-0.5 shrink-0 text-[9px] font-black text-slate-400">演出</small>
                   {RHYTHM_MULTI_LOOK_CHOICES.map((c) => (
                     <button key={c.id} type="button" data-rhythm-multi-look={c.id} aria-pressed={multiLook === c.id} onClick={() => onChangeMultiLook(c.id)}
-                      className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
+                      className={`min-h-[26px] whitespace-nowrap rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
                   ))}
                 </div>}
                 {/* 演奏中の札(ほかの人の順位・スコア・コンボ)の出し入れ(2026-11-11 社長「消せる・はじめは入」) */}
                 {onChangeMultiLiveBoard && <button type="button" data-rhythm-multi-live-toggle aria-pressed={multiLiveBoard} onClick={() => onChangeMultiLiveBoard(!multiLiveBoard)}
-                  className={`mt-1 flex min-h-[26px] items-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
+                  className={`mt-1 flex min-h-[26px] items-center gap-1 whitespace-nowrap rounded-full border px-2 text-[10px] font-black leading-none ${multiLiveBoard ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>
                   <span>演奏中のみんなのスコア</span><b>{multiLiveBoard ? 'ON' : 'OFF'}</b>
                 </button>}
               </div>
@@ -61914,8 +61920,14 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               );
             })}
           </div>
-          <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
-            className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]">{iAmReady ? '準備完了!' : '準備完了'}{iAmReady && <small className="block text-[9px] font-bold">ほかのメンバーを待っています</small>}</button>
+          {/* 押す前は「準備完了」。押した後は、部屋主は「待たずに始める」(前の上の帯の「すぐ開始」)、ほかの人は押せない札で「✓ 準備OK」と出す(押せるのか分からなかった・N36) */}
+          {iAmReady && isHost
+            ? <button data-rhythm-multi-advance type="button" onClick={() => { if (onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
+                className="min-h-[52px] rounded-xl bg-fuchsia-600 px-3 text-base font-black text-white shadow-[0_0_14px_rgba(217,70,239,.45)] landscape:w-[22%]">待たずに始める<small className="block text-[9px] font-bold opacity-90">✓ 準備OK・準備中の人もいまの難易度で</small></button>
+            : iAmReady
+              ? <p data-rhythm-multi-ready-done role="status" className="flex min-h-[52px] flex-col items-center justify-center rounded-xl border border-emerald-300/50 bg-emerald-950/60 px-3 text-center text-sm font-black text-emerald-200 landscape:w-[22%]">✓ 準備OK<small className="block text-[9px] font-bold text-emerald-100/80">ほかのメンバーを待っています</small></p>
+              : <button data-rhythm-multi-ready type="button" onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
+                  className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 landscape:w-[22%]">準備完了</button>}
         </div>
         {chatSheet}{inviteSheetLayer}{rankingLayer}{buddyInfoLayer}
         {countdownLayer}

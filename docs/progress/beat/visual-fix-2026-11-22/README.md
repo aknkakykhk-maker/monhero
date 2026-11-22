@@ -70,3 +70,22 @@
 
 - マルチの検査2本(assist-result・play-guard)が入口で止まっていた原因: 更新履歴の窓が少し遅れて開く/HOME の上の「🎉 モンヒロビート 本オープン記念」の札を入口と取り違えて押していた。閉じては押すを繰り返し、「音ゲー」と書いた入口を押すようにした
 - 🔄横の小さい画面(667×375)で5人のとき、友情Lv の行が欄の端で半分隠れる NG が1回出た。main でも欄が中身より数px足りないぎりぎりの所で、札の文の長さで出たり出なかったりする(2回目は通った)
+
+## 4. マルチの部屋と準備(N20・N21・N23・N24・N25・N34・N35・N36)
+
+止め絵(3人・切り欠きあり・`MULTI_FEW=1`): 部屋 [after-room-tate](multi-room/after-room-tate.png)・[yoko](multi-room/after-room-yoko.png)・[rot](multi-room/after-room-rot.png)・[small](multi-room/after-room-small.png) /
+準備 直す前 [tate](multi-room/before-ready-tate.png)・[yoko](multi-room/before-ready-yoko.png)・[small](multi-room/before-ready-small.png) → 直した後 [tate](multi-room/after-ready-tate.png)・[yoko](multi-room/after-ready-yoko.png)・[rot](multi-room/after-ready-rot.png)・[small](multi-room/after-ready-small.png)
+
+| 指摘 | どう直したか | 結果 |
+|---|---|---|
+| N20 | プライベートの「メンバー確定」を全幅・52px で一番上、「ルーム解放」は下に40pxで小さく。招待のボタンも44pxの控えめな色に | 直した(撮ったのはフリーの部屋。プライベートは撮れていない) |
+| N21 | 2人以上で見出しを「「メンバー確定」で始められます」(フリーは「このメンバーで始める」)・入った側は「メンバーがそろいました」 | 直した |
+| N23 | 部屋の画面だけ見出しのコードを出さない(選曲・準備では手がかりとして残す) | 直した |
+| N24 | 「フレンドに送る」→「コードを送る」、「フレンドを招待する」→「💌 フレンド一覧から呼ぶ」(💌 の窓の題も) | 直した |
+| N25 | 人の名前を1行に。長い名前は10px・9pxに縮め、それでも入らなければ「…」 | 直した |
+| N34 | 縦の準備はジャケット120px・曲名18pxで2行まで。高さ760px以下は80px、620px以下は今までの48px・1行 | 直した(縦844で札と曲の間の空きは約250→約120px) |
+| N35 | 演出の札・スコアの札を字の途中で折らない(入らなければ札ごと次の行) | 直した |
+| N36 | 部屋主の上の帯の「すぐ開始」を外し、準備完了を押した後に同じ場所へ「待たずに始める」。ほかの人は押せない札「✓ 準備OK」 | 直した(取り消しは仕組みが無いので足していない) |
+
+- N22(PC の札が柱になる)は PC を撮れていないので残した。N37(ポーズ)は演奏中なので r1119-038 A のとおり触っていない
+- マルチ・ビートの検査4本(wait-bottom・play-guard・beat-presence・assist-result)の入口を直した。main で止まっていた物が通る

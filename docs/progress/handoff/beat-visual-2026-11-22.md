@@ -38,3 +38,29 @@
 - index.html の詰める規則(ジャケット5.5rem・決定36px)は `[data-rhythm-multi]` だけに絞った。ソロに戻さない
 - main でも落ちる検査: rhythm-landscape-layout(6件)・rhythm-multi-play-guard・rotation-height(モンサクの窓)・changelog-order(並びの逆転7か所)
 - 撮影: `node tools/browser/visual-shoot.js --only beat-songs,beat-songs-rot --sizes tate,yoko,yoko-s,pc`(直す前は `SHOT_REV=origin/main`)
+
+
+---
+
+## 追記 2026-11-22 夜(テンポくん・2つ目の会話)
+
+### 出した PR(どちらも gate「要る」→ 窓口からミハリへ。ミハリがマージ)
+
+| PR | 枝 | 中身 |
+|---|---|---|
+| #7199 | `beat/r1119-094-multi-result-wip` | マルチの結果 N41・N42・N44 + 検査の入口の直し |
+| #7203 | `beat/r1119-094-multi-room`(#7199 の上) | マルチの部屋と準備 N20・N21・N23・N24・N25・N34・N35・N36。**#7199 を先に** |
+
+止め絵: `docs/progress/beat/visual-fix-2026-11-22/multi-result/`・`multi-room/`(README の 3.・4.)
+
+### 分かったこと
+- マルチの検査が main で止まっていた原因は、遅れて開く更新履歴の窓と、HOME の上の「🎉 モンヒロビート 本オープン記念」の札の押し間違い。4本直した(assist-result・play-guard・wait-bottom・beat-presence)。**rhythm-multi-layout・rhythm-multi-spectate・home-screen-guide・rhythm-landscape-layout も同じ入口で止まっている見込み**(直していない)
+- マルチの部屋・準備・結果は `MULTI_FEW=1 SHOT_DIR=<フォルダ> node tools/ui/rhythm-multi-assist-result-check.js` で撮れる(room-・select-・ready-・result- × 縦・横・🔄横・320×568)
+- run-checks --changed はこの枝で約30分かかる。ヘルプ・更新履歴を直したら **build し直してから** 回す(忘れて cache-key・build --check が落ちた)
+
+### 残り(次の1手から)
+1. ソロの結果: **N50・N51・N53 は結果画面の並べ方を選ぶ作り替え → 案を2〜3つ止め絵にして docs/progress/ に入れ窓口へ**(まだ作っていない)。N52(ランクアップの「次へ」・位の名前)は `43-player-rank-ui.jsx` でビート部の外 → 窓口に持ち主を聞く。N49 は r1119-092 で直っているか確かめる。N54・N55 は点検で「後で」
+2. マルチ: N22(PC の札が柱)・N15(横の決定36px)・N43・N45〜N48(結果の札・空き・数え上げ・吹き出し)。N37(ポーズ)は演奏中なので触らない
+3. 縦横の切り替え N58・N59・N62(N61 は社長が決める)
+4. 呼ぶ窓・フリーマッチ N16〜N18・N28〜N33 → 中の残り(点検の表のとおり)
+5. 曲えらび: N11・N12・V7・V8・V12・V16(PC の列 600px)
