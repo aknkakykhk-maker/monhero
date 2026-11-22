@@ -43,10 +43,15 @@ for (const rel of ['monster-hero/src/parts/60-app.jsx', 'monster-hero/game-syste
   const compact = compactOf(rel);
   check(`${rel}: 曲えらびの試聴だけ輪にする`,
     /rhythmPreviewTrackId[\s\S]{0,200}?\{\s*loop:\s*true\s*\}/.test(src));
-  // 輪にする指定は1か所だけ(演奏やBGMへ広がっていない)
+  // 輪にする指定は試聴の2か所だけ(曲えらびの試聴と、ビートP交換所「曲」の試し聴き。演奏やBGMへ広がっていない)
   const loops = (compact.match(/\{loop:true\}/g) || []).length;
-  check(`${rel}: 輪にするのはその1か所だけ`, loops === 1, `${loops}か所`);
+  const expected = rel.endsWith('60-app.jsx') ? 1 : rel.endsWith('compiled.js') ? 2 : 1;
+  check(`${rel}: 輪にするのは試聴の${expected}か所だけ`, loops === expected, `${loops}か所`);
 }
+
+// ---- ビートP交換所「曲」の試し聴き(試聴なので輪。音量はモンヒロビートの設定) ----
+const shopSrc = read('monster-hero/src/parts/39-rhythm-song-owned.jsx');
+check('ビートP交換所の試し聴きだけ輪にする(1か所)', (shopSrc.replace(/\s+/g, '').match(/\{loop:true\}/g) || []).length === 1);
 
 // ---- 演奏の本体は輪にしない ----
 const playSrc = read('monster-hero/src/parts/30-rhythm-play.jsx');
