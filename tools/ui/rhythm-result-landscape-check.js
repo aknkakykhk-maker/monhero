@@ -95,7 +95,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
           const need = (k) => m[k] && m[k].seen >= 0.9;
           if (land) {
             check(`リザルト ${W}×${H}: 最初の画面に 曲名・点数・判定の数 が全部出る`, m.song && m.score && m.judge && need('song') && need('score') && need('judge'), JSON.stringify({ song: m.song, score: m.score, judge: m.judge, box: m.box }));
-            check(`リザルト ${W}×${H}: ランクアップの窓が最初の画面に(経験値の棒と)見えていて、点数をふさがない`, !m.up || m.up.seen > 0, JSON.stringify({ up: m.up, rank: m.rank }));
+            // 2026-11-22 r1119-108(社長の選択「案A」・点検 N51): ランクアップは重ねた画面の1回だけ。後ろの経験値の箱の中の窓は出さない
+            check(`リザルト ${W}×${H}: 後ろの経験値の箱にランクアップの窓を出さない(重ねた画面の1回だけ)`, !m.up || m.up.h === 0, JSON.stringify({ up: m.up, rank: m.rank }));
           } else {
             check(`リザルト ${W}×${H}: 最初の画面に 曲名・点数 が出る`, m.song && m.score && need('song') && need('score'), JSON.stringify({ song: m.song, score: m.score, box: m.box }));
           }

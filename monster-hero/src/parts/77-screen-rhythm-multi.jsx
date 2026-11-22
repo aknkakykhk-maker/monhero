@@ -4351,10 +4351,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     setRankHubTab(tab === 'buddy' ? 'buddy' : 'national');
     setRankHubOpen(true);
   };
-  // 字を添える(点検 N48: 🏆だけで何のボタンか分からなかった)
+  // 字を添える(点検 N48: 🏆だけで何のボタンか分からなかった)。横(🔄横も)は🏆を小さくして高さ34pxに収める(高くなると下の育ちの欄が縮み、🔄横 375×667 で友情Lv の行が隠れた)
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
-      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`}><span className="text-lg">🏆</span><span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100">ランキング</span></button>
+      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`}><span className="text-lg landscape:text-sm">🏆</span><span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100 landscape:mt-0 landscape:text-[8px]">ランキング</span></button>
   );
   // 曲の側に置く 🏆 ランキング(字つき)。上の帯の 🏆 は外した
   const rankingWideButton = (extra = '') => rankingSupport && (
