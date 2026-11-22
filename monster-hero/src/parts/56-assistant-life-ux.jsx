@@ -375,7 +375,7 @@ const assistantLifeDailyListen = async (slotId) => {
 };
 
 // life・onScene … 場面の印が真のとき、いま一緒にいる2人の場面を開く(家が AssistantLifeDailySceneView を重ねる)。偽なら今までどおり1人の話を聞く
-function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScene = null }) {
+function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScene = null, typed = false }) {
   const [st, setSt] = React.useState(() => ASSISTANT_LIFE_DAILY_STORE.state);
   const [said, setSaid] = React.useState('');
   const [got, setGot] = React.useState(false);
@@ -411,6 +411,32 @@ function AssistantLifeDailyCard({ ids, nameOf, land = false, life = null, onScen
     setGot(!!r.got);
     setBusy(false);
   };
+  // 型に載せた家(段7の残り・2026-11-22): 字は型の4段・行の形(56-assistant-life-ui.jsx)。時刻の話は上の帯だけなので「あと約◯時間」は出さない。数え方・受け取りは同じ
+  if (typed && typeof AluRow === 'function') {
+    const line = plan
+      ? (done ? `${castPlace}の${castNames}。この時間帯のできごとは見ました` : `${plan.kind === 'rare' ? '✨ ' : ''}${castPlace}で、${castNames}が「${plan.title}」`)
+      : (said || `${scene.text.replace('{n}', nameOf(who))}。${done ? 'この時間帯の話は聞きました' : '聞いてみると、この時間帯だけの話が聞けます'}`);
+    const nw = (x) => <span style={{ whiteSpace: 'nowrap' }}>{x}</span>; // 「(1日 +12 まで)」のような塊は途中で折らない
+    const gain = done ? null : plan
+      ? <>{nw('見ると 🤝 ふれあい1回')} · {nw(`💗 +${ASSISTANT_LIFE_DAILY_BOND[plan.kind] || 0}`)}{nw('(1日 +12 まで)')}</>
+      : <>{nw('聞くと 🤝 ふれあい1回')}{nw('(ミッション「助手とふれあう」)')}</>;
+    const need = ASSISTANT_LIFE_DAILY_NEED;
+    return (
+      <div data-assistant-life-daily data-assistant-life-daily-typed>
+        <AluRow pic={cardIconNode(scene.icon, 20)} text={<>{slotName}のできごと{done ? ' ✓' : ''}</>}
+          note={<span style={JA_WRAP_STYLE}>{jaWrap(line)}{gain ? <><br/>{gain}</> : null}{got ? <><br/>🧺 おやつバスケットを1個もらいました！(持ち物へ)</> : null}</span>}
+          action={done ? null : plan
+            ? <AluBtn data-assistant-life-daily-go={plan.kind} onClick={() => onScene({ plan, place: cast.place, slotId: slot.id, slotLabel: slotName })}>見に行く</AluBtn>
+            : <AluBtn data-assistant-life-daily-listen onClick={listen} disabled={busy}>聞く</AluBtn>} />
+        <div data-assistant-life-daily-stamps={n}>
+          <AluRow pic="🧺" text={<>7日で おやつバスケット1個 <b>{Math.min(n, need)}</b>/{need}</>}
+            note={<span style={JA_WRAP_STYLE}>{jaWrap(`できごとを聞いた日が7日たまるともらえます。あと${Math.max(0, need - n)}日(とびとびでもOK・消えません)`)}</span>} />
+          <div style={{ display: 'flex', gap: 6, paddingLeft: 54 }} aria-hidden="true">
+            {Array.from({ length: need }, (_, i) => <i key={i} className="alu-n" style={{ display: 'grid', placeItems: 'center', width: 22, height: 22, borderRadius: 999, fontStyle: 'normal', color: i < n ? '#1e1b4b' : '#e2e8f0', background: i < n ? '#fcd34d' : i === need - 1 ? '#f472b6' : '#334155' }}>{i < n ? '✓' : i === need - 1 ? '🧺' : i + 1}</i>)}
+          </div>
+        </div>
+      </div>);
+  }
   const T = land ? 'text-[11.5px]' : 'text-[12.5px]';
   return (
     <section className={`mx-3 ${land ? 'mb-1' : 'mb-2'} rounded-2xl border border-amber-300/60 bg-slate-950/85 p-1.5 text-white`} data-assistant-life-daily>
