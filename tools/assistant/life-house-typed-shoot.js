@@ -2,7 +2,7 @@
 // 助手ライフの作り直し 段7: 型に載せた家(56-assistant-life-house-typed.jsx)を本物の画面で撮って、型の決まりを測る。ゲーム本体は変えない・読むだけ。
 //   node tools/assistant/life-house-typed-shoot.js [--out <置き場>] [--2x]
 //   置き場の既定: docs/progress/assistant-life/step7-house/(<大きさ>-<場面>.png と measure.json)
-// 場面: house(開いたところ)・house-bottom(下まで送った)・daily(7日のごほうびを開いた)・guide(❓ 見かたの窓)・result(👀 見る → 場面の終わり → 結果の1枚)
+// 場面: house(開いたところ)・profile(📖 紹介の一覧)・profile-one(1人の紹介。測らない)・house-bottom(下まで送った)・daily(7日のごほうびを開いた)・guide(❓ 見かたの窓)・result(👀 見る → 場面の終わり → 結果の1枚)
 //       town・town-bottom(段9: 町)・room(段8: 部屋を開いたところ。--room <id> 既定 atsu)・room-more(「もっと見る」を開いて下まで送った)
 // 測る決まりは tools/assistant/life-ui-shoot.js の measure(字の4段・主なボタン1つ・帯とタブ・はみ出し・下の空き・窓・段組み)。
 // 偽のデータでページの中だけ(Supabase は偽物)。時刻は 15:00 に固定。最後の1行が OK / NG。
@@ -93,6 +93,19 @@ fs.mkdirSync(OUT, { recursive: true });
         }
         await ctx.close(); continue;
       }
+      // r1119-114: 家の上の「📖 紹介」→ 助手全員の紹介の一覧(窓)→ 1人の紹介 → 閉じる → 「🏡 家に戻る」で家へ
+      if (await page.locator('[data-assistant-life-house-profile]').count()) {
+        await page.locator('[data-assistant-life-house-profile]').first().click({ timeout: 5000 });
+        await page.locator('[data-assistant-life-house-profile-list] [data-alu-sheet]').waitFor({ timeout: 5000 });
+        await shot('profile', { skipMain: true });
+        await page.locator('[data-assistant-life-house-profile-list] [data-assistant-life-profile-card="mua"]').first().click({ timeout: 5000 });
+        await page.waitForTimeout(1200);
+        await page.screenshot({ path: path.join(OUT, `${sizeId}-profile-one.png`) });
+        await page.locator('[data-assistant-life-profile-close]:visible, [data-assistant-life-profile-sheet] button[aria-label="閉じる"]:visible').first().click({ timeout: 5000 }).catch(e => result.miss.push(`${sizeId} 紹介を閉じる: ${String(e.message).slice(0, 80)}`));
+        await page.waitForTimeout(400);
+        await page.locator('[data-assistant-life-house-profile-back]').click({ timeout: 5000 });
+        if (await page.locator('[data-assistant-life-house-profile-list]').count()) result.miss.push(`${sizeId} 紹介: 「家に戻る」で一覧が閉じない`);
+      } else if (!UNTYPED && !process.env.SHOT_REV) result.miss.push(`${sizeId} 家: 「📖 紹介」のボタンが無い`);
       await page.evaluate(() => { const m = document.querySelector('[data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
       await shot('house-bottom', { skipMain: true });
       // 段7の残り(2026-11-22): 7日のごほうびを開いた中身・予定の行・「❓ 見かた」の窓も型で測る
