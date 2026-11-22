@@ -124,7 +124,8 @@ const seed = () => {
     await page.waitForTimeout(1200);
     check('ミッション画面に「全て受け取る」がある', await page.locator('[data-mission-claim-all]').count() === 1);
     const label = await page.locator('[data-mission-claim-all]').innerText();
-    check('受け取れる件数がボタンに出る', /全て受け取る \(\d+\)/.test(label), label);
+    // r1119-080 でボタンの名前を「◯件まとめて受け取る」に変えた(受け取れる物が無いときは「全て受け取る」)
+    check('受け取れる件数がボタンに出る', /\d+件まとめて受け取る/.test(label), label);
     check('以前の作りで送ったままのものは「ギフトボックスに届いています」と出る', await page.evaluate(() => /ギフトボックスに届いています/.test(document.body.innerText)));
 
     // ---- 二度押ししても1回分だけ ----
