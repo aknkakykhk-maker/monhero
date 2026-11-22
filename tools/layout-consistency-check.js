@@ -300,7 +300,7 @@ check('神殿の一覧はスクロールできる(横画面で「限界突破」
   // 以前の書き方でも、今の書き方でも通す。実際に最後まで届くかは tools/landscape-screens-check.js が測る
   has('space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"><button onClick={()=>{setRegenerationSelectedId(null)')
     || (/const SCREEN_LIST_CLASS = '[^']*overflow-y-auto[^']*mh-scroll[^']*';/.test(source)
-      && /<div className=\{`w-full max-w-md mx-auto space-y-2 \$\{SCREEN_LIST_CLASS\}`\}>\s*\{templeLink\(/.test(source)));
+      && /<div className=\{`w-full max-w-md mx-auto space-y-2 [^`]*\$\{SCREEN_LIST_CLASS\}`\}>\s*\{templeLink\(/.test(source))); // 横の2列の指定(r1119-080)が間に入ってもよい
 check('HOMEに横画面用の配置がある', has('@media(orientation:landscape) and (max-height:600px){.mh-home-assistant'));
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
