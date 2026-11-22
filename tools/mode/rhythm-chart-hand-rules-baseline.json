@@ -3155,7 +3155,7 @@
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 3,
+   "fastSameSide": 0,
    "heldHandSwitch": 0
   },
   "beyond_the_same_sky_short/EASY": {
@@ -3190,7 +3190,7 @@
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
-   "fastSameSide": 56,
+   "fastSameSide": 0,
    "heldHandSwitch": 0
   },
   "desert_crown/EASY": {
@@ -3494,6 +3494,11 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T12:28",
+   "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
+   "changed": 2
   }
  ]
 }
