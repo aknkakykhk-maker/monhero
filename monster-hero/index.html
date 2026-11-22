@@ -538,6 +538,22 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      (ユーザー指摘「横画面ボタンで切り替えたときの表示だけど上部が空いてて」)。
      var(--mh-safe-*) は検査から余白を差し込むための口(器と同じ) */
   :root { --mh-sa-top: var(--mh-safe-top, env(safe-area-inset-top)); --mh-sa-bottom: var(--mh-safe-bottom, env(safe-area-inset-bottom)); --mh-sa-left: var(--mh-safe-left, env(safe-area-inset-left)); --mh-sa-right: var(--mh-safe-right, env(safe-area-inset-right)); }
+  /* 管理系の画面の根(.mh-screen-shell)は、横持ちの iPhone で左右の切り欠きの下に入らないよう、左右の余白を切り欠きの分まで広げる
+     (2026-11-22 r1119-080 切り欠き点検: 戻る・ミッションの左の列・「受け取る」が切り欠きに31〜35px入っていた)。
+     横の2列の左の列(下のグリッド)は、余白が増えた分だけ幅を足して、今までの幅を保つ。
+     縦・PC・🔄横(--mh-sa-* が0)は今までどおり16px。.p-4 と同じ強さなので二重に書いて勝たせる */
+  .mh-screen-shell.mh-screen-shell { padding-left: max(1rem, var(--mh-sa-left, 0px)); padding-right: max(1rem, var(--mh-sa-right, 0px)); }
+  /* HOME(.mh-home-scene)も、横持ちのスマホ(丈600px以下)では左右の切り欠きの分だけ部品を内側へ寄せる(2026-11-22 r1119-080 切り欠き点検)。
+     背景の絵は全面のまま。上の帯・右の丸ボタンの列・下の施設カード・みゅあの吹き出し・期間ものの札が、切り欠きの下に30〜45px入っていた。
+     並べ方は変えず、左右の余白に --mh-sa-left / --mh-sa-right を足すだけ(縦・PC・🔄横は 0 なので今までどおり) */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .mh-home-scene .mh-home-status { padding-left: calc(9px + var(--mh-sa-left, 0px)); padding-right: calc(9px + var(--mh-sa-right, 0px)); }
+    .mh-home-scene .mh-home-dock { padding-left: calc(8px + var(--mh-sa-left, 0px)); padding-right: calc(8px + var(--mh-sa-right, 0px)); }
+    .mh-home-scene .mh-home-side-stack { right: calc(6px + var(--mh-sa-right, 0px)); }
+    .mh-home-scene .mh-home-event-strip { left: calc(39% + var(--mh-sa-left, 0px)); right: calc(104px + var(--mh-sa-right, 0px)); }
+    .mh-home-scene .mh-home-assistant { margin-left: calc(2% + var(--mh-sa-left, 0px)); }
+    .mh-home-scene .mh-home-assistant-fold { margin-left: calc(3% + var(--mh-sa-left, 0px)); }
+  }
   /* 席の札に出るスタンプ(顔×言葉)。札の高さ(cqh)から絵の大きさを決めて、言葉が切れたり名前に重なったりしない(2026-11-15 r1115-025)。
      縦: 絵の下に言葉 / 横・🔄横(札が低い): 絵の右に言葉 */
   .mh-seat-stamp { flex-direction: column; gap: 1px; }
@@ -710,7 +726,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     #root > div[data-mh-portrait-layout="true"] { max-width: min(600px, var(--mh-vh)); }
     [data-mh-screen]:has(> .mh-scroll) {
       display: grid;
-      grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
+      grid-template-columns: minmax(0, calc(36% + (var(--mh-sa-left, 0px) + var(--mh-sa-right, 0px)) * 0.36)) minmax(0, 1fr);
       grid-template-rows: repeat(8, auto) 1fr;
       column-gap: 14px;
       align-content: start;
