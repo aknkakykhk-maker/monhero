@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 950d83555054015e
+// source-sha256: 5ec98e5ba103a891
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166379,6 +166379,7 @@ function MsxTrainEvent({
   } : s.stats;
   const palOn = b >= 3;
   const pair = b >= 3;
+  const peakOn = !!(msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && run.s && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in');
   const nx = msxTevNextText(run, o);
   const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
@@ -166438,7 +166439,10 @@ function MsxTrainEvent({
     className: "gr"
   }), React.createElement("div", {
     className: "tev-art"
-  }, palImg)) : null, pair && b !== 6 ? React.createElement(React.Fragment, null, React.createElement("span", {
+  }, palImg)) : null, peakOn && b >= 2 && b !== 6 ? React.createElement("span", {
+    className: `tev-pk${pair ? ' pair' : ''}`,
+    "data-msx-tev-peak": true
+  }, "🔥 ピーク中") : null, pair && b !== 6 ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "tev-nm me"
   }, run.nick || ''), m ? React.createElement("span", {
     className: `tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`
@@ -166648,6 +166652,8 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
 .msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
 .msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-pk{position:absolute;left:50%;bottom:calc(24% - 30px);transform:translateX(-50%);z-index:3;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#c2410c,#f97316);color:#fff;border:1.5px solid #fde047;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 #0006}
+.msx .msx-tev .tev-pk.pair{left:29%;bottom:calc(24% - 56px)}
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
