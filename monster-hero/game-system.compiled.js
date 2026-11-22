@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 49e188e7dbf096b1
+// source-sha256: 44ce499b79e5a54a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175447,7 +175447,7 @@ const MSX_CSS = `
 .msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
 .msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
 .msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;background:#0f172a}.msx-gt-row[data-msx-assist-type="with"] .hd .ic{background:#7c3aed}.msx-gt-row[data-msx-assist-type="stay"] .hd .ic{background:#0284c7}.msx-gt-row[data-msx-assist-type="self"] .hd .ic{background:#16a34a}.msx-gt-row[data-msx-assist-type="battle"] .hd .ic{background:#dc2626}.msx-gt-row .hd b{flex:1;min-width:0}
-.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-row .hd .st{font-size:11px;color:#cbd5e1}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
@@ -175885,6 +175885,15 @@ const MSX_CSS = `
 .msx .v-come:has(.msx-cm-tap){gap:4px}
 .msx .msx-cm-tap::after{display:none}
 .msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:44px} /* 編成のモンスターの札(押すとアシスト詳細) */
+/* 育-221: 仲間の札の顔と名前を大きく・親密度は数字と太めの棒・押せると分かる「›」 */
+.msx .v-come{max-width:196px}
+.msx .v-cm{gap:6px;padding:3px 6px}
+.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:44px}.msx .v-cm .v-pf img{height:44px;border-radius:10px}
+.msx .v-cm .tx b{font-size:13px}
+.msx .v-cm .afl{font-size:11px}.msx .v-cm .afl i{height:8px;border-radius:4px}
+.msx .msx-cm-tap{position:relative;padding-right:16px}
+.msx .msx-cm-tap::after{display:block;content:'›';position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:16px;font-weight:900;color:#cbd5e1;line-height:1}
+@media (max-height:700px){.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:30px}.msx .v-cm .v-pf img{height:30px;border-radius:8px}.msx .v-cm .tx b{font-size:11.5px}.msx .msx-cm-tap{min-height:36px}.msx .v-cm .afl{font-size:10.5px}} /* 背の低い画面は場面が低いので顔を控えめに(320×568 で札がはみ出した) */
 /* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
 .msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
 .msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
@@ -178592,9 +178601,9 @@ function MsxGatherTable({
       className: "hd"
     }, React.createElement("span", {
       className: "ic"
-    }, msxTrainIcon(k, 1)), React.createElement("b", null, msxTrainName(k, 1)), React.createElement("span", {
+    }, msxTrainIcon(k, 1)), React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
       className: "st"
-    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+    }, msxTrainName(k, 1)), React.createElement("span", {
       className: "n"
     }, rows.length, "体")), rows.length ? React.createElement("div", {
       className: "msx-gt-cols",
@@ -180297,7 +180306,10 @@ function MsxTeamPick({
   }) ? React.createElement("div", {
     className: "msx-tp-note msx-kp",
     "data-msx-tp-marknote": true
-  }, "「同じ種類」は編成にもういる種類、", '\u200b', "「育てる種」は育てるモンスターと同じ種類の印です。", '\u200b', "どちらも入れられます") : null, tab === 'memo' ? React.createElement("div", {
+  }, "「同じ種類」は編成にもういる種類、", '\u200b', "「育てる種」は育てるモンスターと同じ種類の印です。", '\u200b', "どちらも入れられます") : null, tab !== 'base' && items.some(x => msxTpCardM(x.rec, x.mem, x.species).grade) ? React.createElement("div", {
+    className: "msx-tp-note msx-kp",
+    "data-msx-tp-ranknote": true
+  }, "右上のバッジはランク。", '\u200b', "英字は総合力の大きさ・数字はその中の段(500ごと)で、", '\u200b', "枠の色もランクの色です") : null, tab === 'memo' ? React.createElement("div", {
     className: "msx-tp-note",
     "data-msx-assist-head": true
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
@@ -190696,6 +190708,7 @@ function MsxR3Retire({
     return React.createElement("button", {
       type: "button",
       key: sc.key,
+      "data-msx-r3-scene": sc.key,
       ref: el => {
         if (el && V3 && atab === sc.key && el.parentElement && typeof centerCarouselChild === 'function') {
           try {
@@ -190708,6 +190721,9 @@ function MsxR3Retire({
       "data-msx-r3-scene": sc.key
     }, sc.name, n ? ` ✓${n}つ` : '');
   })) : null, React.createElement("div", {
+    className: "msx-note",
+    "data-msx-r3-assist-when": true
+  }, "取ったアシストは、このモンスターを", React.createElement("b", null, "編成に入れた育成のあいだずっと"), "効く"), React.createElement("div", {
     className: V3 ? 'v-as3' : 'v-as'
   }, Object.keys(A).filter(id => !AT || !A[id].scene || A[id].scene === (atab || (AT.SCENES && AT.SCENES[0] ? AT.SCENES[0].key : A[id].scene))).map((id, i, arr) => {
     const a = A[id];
@@ -191004,7 +191020,7 @@ function MsxMmGrid({
   }, React.createElement("style", null, MSX_MM_GRID_CSS), lb === 'namepw' && mons.length ? React.createElement("p", {
     className: "mmg-lg",
     "data-msx-mm-legend": true
-  }, "右上はランク・下は Lv と総合力") : null, mons.map(m => {
+  }, "右上はランク(英字は総合力の大きさ・数字はその中の段)・", '\u200b', "下は Lv と総合力") : null, mons.map(m => {
     const lock = lockOf ? lockOf(m) : null;
     const on = isOn ? isOn(m) : false;
     return React.createElement("button", _extends({

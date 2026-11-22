@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9fc44cd2b3f28832
+// generated-sha256: 2de78c697508331b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91589,7 +91589,7 @@ const MSX_CSS = `
 .msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
 .msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
 .msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;background:#0f172a}.msx-gt-row[data-msx-assist-type="with"] .hd .ic{background:#7c3aed}.msx-gt-row[data-msx-assist-type="stay"] .hd .ic{background:#0284c7}.msx-gt-row[data-msx-assist-type="self"] .hd .ic{background:#16a34a}.msx-gt-row[data-msx-assist-type="battle"] .hd .ic{background:#dc2626}.msx-gt-row .hd b{flex:1;min-width:0}
-.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-row .hd .st{font-size:11px;color:#cbd5e1}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
@@ -92027,6 +92027,15 @@ const MSX_CSS = `
 .msx .v-come:has(.msx-cm-tap){gap:4px}
 .msx .msx-cm-tap::after{display:none}
 .msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:44px} /* 編成のモンスターの札(押すとアシスト詳細) */
+/* 育-221: 仲間の札の顔と名前を大きく・親密度は数字と太めの棒・押せると分かる「›」 */
+.msx .v-come{max-width:196px}
+.msx .v-cm{gap:6px;padding:3px 6px}
+.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:44px}.msx .v-cm .v-pf img{height:44px;border-radius:10px}
+.msx .v-cm .tx b{font-size:13px}
+.msx .v-cm .afl{font-size:11px}.msx .v-cm .afl i{height:8px;border-radius:4px}
+.msx .msx-cm-tap{position:relative;padding-right:16px}
+.msx .msx-cm-tap::after{display:block;content:'›';position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:16px;font-weight:900;color:#cbd5e1;line-height:1}
+@media (max-height:700px){.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:30px}.msx .v-cm .v-pf img{height:30px;border-radius:8px}.msx .v-cm .tx b{font-size:11.5px}.msx .msx-cm-tap{min-height:36px}.msx .v-cm .afl{font-size:10.5px}} /* 背の低い画面は場面が低いので顔を控えめに(320×568 で札がはみ出した) */
 /* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
 .msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
 .msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
@@ -93244,7 +93253,8 @@ function MsxGatherTable({ members, SUC, onClose }) {
             const rows = members.map((m) => ({ m, j: Array.isArray(m.top) ? m.top.indexOf(k) : -1 })).filter((x) => x.j >= 0 && x.j < 3).sort((a, b) => a.j - b.j);
             return (
               <div key={k} className="msx-gt-row" data-msx-gather-row={k}>
-                <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{msxTrainName(k, 1)}</b><span className="st">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="n">{rows.length}体</span></div>
+                {/* 見出しは下の欄と同じ能力名を主にし、トレーニング名を添える(名前のそろえ・育-125) */}
+                <div className="hd"><span className="ic">{msxTrainIcon(k, 1)}</span><b>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</b><span className="st">{msxTrainName(k, 1)}</span><span className="n">{rows.length}体</span></div>
                 {/* 「得意・来やすさ・伸び」は列の見出しに1回だけ出し、行には数字だけを並べる(同じ文のくり返しをやめた・育-243) */}
                 {rows.length ? <div className="msx-gt-cols" aria-hidden="true"><span/><span/><span>得意</span><span>来やすさ</span><span>伸び</span></div> : null}
                 {rows.length ? rows.map(({ m, j }, i) => { const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null; return (
@@ -93831,6 +93841,8 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
         </div>
         {/* 札の帯「同じ種類」「育てる種」の意味(選べないのか分からなかった・育-89) */}
         {items.some((x) => { const mk = markOf(x); return mk && mk.c !== 'in'; }) ? <div className="msx-tp-note msx-kp" data-msx-tp-marknote>「同じ種類」は編成にもういる種類、{'\u200b'}「育てる種」は育てるモンスターと同じ種類の印です。{'\u200b'}どちらも入れられます</div> : null}
+        {/* 右上の札(A1・C6 など)と枠の色の意味(育-132) */}
+        {tab !== 'base' && items.some((x) => msxTpCardM(x.rec, x.mem, x.species).grade) ? <div className="msx-tp-note msx-kp" data-msx-tp-ranknote>右上のバッジはランク。{'\u200b'}英字は総合力の大きさ・数字はその中の段(500ごと)で、{'\u200b'}枠の色もランクの色です</div> : null}
         {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? <MonsucCardGrid size="s">{items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; const at = mk && mk.c === 'in' ? otherIdx(x.slot) : -1; const pw = msxTpPow(x.rec, m); return (
@@ -97581,8 +97593,10 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     {AT && Array.isArray(AT.SCENES) ? (
       <div className={`r3-bar${V3 ? ' sc' : ''}`} data-msx-r3-scenes>{AT.SCENES.filter((sc) => Object.values(A).some((a) => a.scene === sc.key)).map((sc) => {
         const n = Object.keys(pick).filter((id) => A[id] && A[id].scene === sc.key).length;
-        return <button type="button" key={sc.key} ref={(el) => { if (el && V3 && atab === sc.key && el.parentElement && typeof centerCarouselChild === 'function') { try { centerCarouselChild(el.parentElement, [...el.parentElement.children].indexOf(el)); } catch (e) {} } }} className={`r3-chip ${(atab || AT.SCENES[0].key) === sc.key ? 'on' : ''}`} onClick={() => setAtab(sc.key)} data-msx-r3-scene={sc.key}>{sc.name}{n ? ` ✓${n}つ` : ''}</button>;
+        return <button type="button" key={sc.key} data-msx-r3-scene={sc.key} ref={(el) => { if (el && V3 && atab === sc.key && el.parentElement && typeof centerCarouselChild === 'function') { try { centerCarouselChild(el.parentElement, [...el.parentElement.children].indexOf(el)); } catch (e) {} } }} className={`r3-chip ${(atab || AT.SCENES[0].key) === sc.key ? 'on' : ''}`} onClick={() => setAtab(sc.key)} data-msx-r3-scene={sc.key}>{sc.name}{n ? ` ✓${n}つ` : ''}</button>;
       })}</div>) : null}
+    {/* 効く長さと場面(育-195): 取ったアシストがいつまで・どこで効くかを1行で */}
+    <div className="msx-note" data-msx-r3-assist-when>取ったアシストは、このモンスターを<b>編成に入れた育成のあいだずっと</b>効く</div>
     <div className={V3 ? 'v-as3' : 'v-as'}>{Object.keys(A).filter((id) => !AT || !A[id].scene || A[id].scene === (atab || (AT.SCENES && AT.SCENES[0] ? AT.SCENES[0].key : A[id].scene))).map((id, i, arr) => {
       const a = A[id]; const got = pick[id] || 0; const dim = !got && kinds >= maxKinds;
       if (V3) { // 1行: 名前・参考/オリジナルの札・いまの効き目(右)/説明/− ゲージ ＋ と使ったポイント
@@ -97697,7 +97711,7 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav, mark }) {
   return (<div className="mmg" data-msx-mm-grid>
     <style>{MSX_MM_GRID_CSS}</style>
     {/* 右上の札と下の数が何かを一覧の上に書く(育-158・168) */}
-    {lb === 'namepw' && mons.length ? <p className="mmg-lg" data-msx-mm-legend>右上はランク・下は Lv と総合力</p> : null}
+    {lb === 'namepw' && mons.length ? <p className="mmg-lg" data-msx-mm-legend>右上はランク(英字は総合力の大きさ・数字はその中の段)・{'\u200b'}下は Lv と総合力</p> : null}
     {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
       return (
         <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>

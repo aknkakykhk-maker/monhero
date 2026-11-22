@@ -1133,7 +1133,7 @@ const MSX_CSS = `
 .msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
 .msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
 .msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;background:#0f172a}.msx-gt-row[data-msx-assist-type="with"] .hd .ic{background:#7c3aed}.msx-gt-row[data-msx-assist-type="stay"] .hd .ic{background:#0284c7}.msx-gt-row[data-msx-assist-type="self"] .hd .ic{background:#16a34a}.msx-gt-row[data-msx-assist-type="battle"] .hd .ic{background:#dc2626}.msx-gt-row .hd b{flex:1;min-width:0}
-.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-row .hd .st{font-size:11px;color:#cbd5e1}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
@@ -1571,6 +1571,15 @@ const MSX_CSS = `
 .msx .v-come:has(.msx-cm-tap){gap:4px}
 .msx .msx-cm-tap::after{display:none}
 .msx .msx-cm-tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;min-height:44px} /* 編成のモンスターの札(押すとアシスト詳細) */
+/* 育-221: 仲間の札の顔と名前を大きく・親密度は数字と太めの棒・押せると分かる「›」 */
+.msx .v-come{max-width:196px}
+.msx .v-cm{gap:6px;padding:3px 6px}
+.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:44px}.msx .v-cm .v-pf img{height:44px;border-radius:10px}
+.msx .v-cm .tx b{font-size:13px}
+.msx .v-cm .afl{font-size:11px}.msx .v-cm .afl i{height:8px;border-radius:4px}
+.msx .msx-cm-tap{position:relative;padding-right:16px}
+.msx .msx-cm-tap::after{display:block;content:'›';position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:16px;font-weight:900;color:#cbd5e1;line-height:1}
+@media (max-height:700px){.msx .v-cm .v-pf,.msx .v-cm .v-pf img{width:30px}.msx .v-cm .v-pf img{height:30px;border-radius:8px}.msx .v-cm .tx b{font-size:11.5px}.msx .msx-cm-tap{min-height:36px}.msx .v-cm .afl{font-size:10.5px}} /* 背の低い画面は場面が低いので顔を控えめに(320×568 で札がはみ出した) */
 /* API 点検(④段2 PR): 選んでいないタブは同じ暗い色(フレンドの青緑が「選ばれている」に見えた)・得意の絞りは字が切れない幅 */
 .msx .msx-tp .msx-tp-tabs button.fr:not(.on){background:#1e293b;color:#cbd5e1}
 .msx .msx-tp-bar .msx-tp-sel select{max-width:none;width:84px}
