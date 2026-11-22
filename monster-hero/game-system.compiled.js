@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7b4b5803e8c7b636
+// source-sha256: d7ea933c51856f14
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121386,7 +121386,11 @@ function AssistantLifeRoomTyped({
       marginTop: 2
     },
     "data-assistant-life-room-where": true
-  }, statusLine) : null);
+  }, String(statusLine).split(' · ').map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement(React.Fragment, null, ' · ', React.createElement("wbr", null)) : null, React.createElement("span", {
+    className: "alu-nw"
+  }, x)))) : null);
   const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
   let resultNode = null;
   if (result) {
@@ -121444,7 +121448,7 @@ function AssistantLifeRoomTyped({
   const sceneFn = box => React.createElement("div", {
     style: {
       position: 'relative',
-      height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5))
+      height: box.wide ? '100%' : Math.max(240, Math.round(box.h / 0.42 * 0.36))
     },
     "data-assistant-life-roomview-typed-scene": true
   }, scene);
@@ -124756,15 +124760,17 @@ function AssistantLifeRoomScene({
     front: true,
     onTip: layoutEdit ? null : setTip
   }), away && React.createElement("div", {
-    className: "absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center",
+    className: "absolute rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-left",
     style: {
-      top: floorY - 120
+      top: topH + 10,
+      left: 10,
+      maxWidth: 'calc(100% - 20px)'
     },
     "data-assistant-life-roomview-away": true
   }, React.createElement("p", {
-    className: "whitespace-nowrap text-[14px] font-black text-white"
+    className: "whitespace-nowrap text-[16px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
-    className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
+    className: "whitespace-nowrap text-[11px] font-bold text-slate-300"
   }, away.sub)), asleep && night && !lit && React.createElement("div", {
     "aria-hidden": "true",
     "data-assistant-life-roomview-sleepdark": true,
@@ -126315,7 +126321,7 @@ const ALU_CSS = `
 .alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
-.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top{flex:none;box-sizing:content-box!important;height:48px;display:flex;align-items:center;gap:8px;padding:var(--mh-sa-top,0px) calc(10px + var(--mh-sa-right,0px)) 0 calc(10px + var(--mh-sa-left,0px));background:#151130;border-bottom:1px solid #3b3566}
 .alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
@@ -126327,7 +126333,7 @@ const ALU_CSS = `
 .alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px))}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
@@ -126409,7 +126415,19 @@ const useAluWide = () => {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const sab = () => {
+      try {
+        el.style.removeProperty('--alu-sab');
+        const tabs = el.querySelector('[data-alu-tabs]');
+        if (!tabs) return;
+        const sa = parseFloat(getComputedStyle(tabs).paddingBottom) || 0;
+        if (!sa) return;
+        const gap = Math.max(0, Math.round((window.innerHeight || 0) - el.getBoundingClientRect().bottom));
+        if (gap > 0) el.style.setProperty('--alu-sab', `${Math.max(0, sa - gap)}px`);
+      } catch (_) {}
+    };
     const measure = () => {
+      sab();
       const w = el.clientWidth,
         h = el.clientHeight;
       const wide = w >= ALU_WIDE_MIN && w > h * 1.15;
