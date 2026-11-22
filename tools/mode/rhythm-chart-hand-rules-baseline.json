@@ -3193,6 +3193,41 @@
    "fastSameSide": 56,
    "heldHandSwitch": 0
   },
+  "zenbu_hissatsuwaza/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "zenbu_hissatsuwaza/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "zenbu_hissatsuwaza/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "zenbu_hissatsuwaza/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 5,
+   "heldHandSwitch": 0
+  },
+  "zenbu_hissatsuwaza/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 11,
+   "heldHandSwitch": 0
+  },
   "desert_crown/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3494,6 +3529,11 @@
    "at": "2026-11-22T10:16",
    "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 0
+  },
+  {
+   "at": "2026-11-22T11:33",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 5
   }
  ]
 }
