@@ -405,27 +405,32 @@
   "beyond_the_same_sky/normal": "aa4f942b81fae2c2",
   "beyond_the_same_sky/hard": "7378982020dd476d",
   "beyond_the_same_sky/expert": "fd2ffd03a9f026a0",
-  "beyond_the_same_sky/master": "380d3ea20df0678d",
+  "beyond_the_same_sky/master": "2ab05e687d59657c",
   "beyond_the_same_sky_short/easy": "243f4f846aa14db1",
   "beyond_the_same_sky_short/normal": "3d0a892da99ad12d",
   "beyond_the_same_sky_short/hard": "1ad292bd42fd3ce9",
   "beyond_the_same_sky_short/expert": "980fa0f61461396f",
-  "beyond_the_same_sky_short/master": "7f361f54a8119f38",
+  "beyond_the_same_sky_short/master": "e45f582b83a63869",
   "desert_crown/easy": "78ff62f3f59453f5",
   "desert_crown/normal": "8900d3fe0631d6e5",
   "desert_crown/hard": "c751db1e76ca1edd",
   "desert_crown/expert": "a17456272bd683d3",
   "desert_crown/master": "ef80bc9a8a523fb5",
+  "brand_new_sky/easy": "c44310cfe1d0ee73",
+  "brand_new_sky/normal": "7aa8791cde189f49",
+  "brand_new_sky/hard": "ca355bbf76083a20",
+  "brand_new_sky/expert": "5517777d4f13069f",
+  "brand_new_sky/master": "62294cd306c39171",
   "kimimachi_loop/easy": "618f22d9de8ce9f9",
   "kimimachi_loop/normal": "4e7604d5769eb347",
   "kimimachi_loop/hard": "5f8316826b8fc0e6",
   "kimimachi_loop/expert": "a590f649d59c759a",
   "kimimachi_loop/master": "804001a10a1ec514",
-  "zenbu_hissatsuwaza/easy": "b2bb4fe15f7f1292",
-  "zenbu_hissatsuwaza/normal": "d8a57e4b86363b8e",
-  "zenbu_hissatsuwaza/hard": "7493d66ef70c7cf5",
-  "zenbu_hissatsuwaza/expert": "8a0573e5483dacb3",
-  "zenbu_hissatsuwaza/master": "eaaf5b77f179df44",
+  "zenbu_hissatsuwaza/easy": "07f646677627ba53",
+  "zenbu_hissatsuwaza/normal": "1d1fcd2a2e216f28",
+  "zenbu_hissatsuwaza/hard": "1a984063bd072fb0",
+  "zenbu_hissatsuwaza/expert": "8d1e6de178893216",
+  "zenbu_hissatsuwaza/master": "5fa75b4b5f7d6854",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -516,19 +521,14 @@
   "walkure/hell": "94860f0aa2cf55ca",
   "walkure_short/hell": "ca1fdfc6c9e030fb",
   "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
-  "beyond_the_same_sky/hell": "4d3be979d6a30aaf",
-  "beyond_the_same_sky_short/hell": "1e851e06b4bec6e5",
+  "beyond_the_same_sky/hell": "102ea3fc65e86d5c",
+  "beyond_the_same_sky_short/hell": "f0667345dc0cce0d",
   "desert_crown/hell": "662c4a0b30060ef2",
+  "brand_new_sky/hell": "184d3b1d09c53b39",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
-  "zenbu_hissatsuwaza/hell": "ec77dbc8f23c77ab",
+  "zenbu_hissatsuwaza/hell": "f224ffec8da24717",
   "megalovania_sans/hell": "b54acba215aae1da",
-  "megalovania_smash/hell": "2ba3b2a5cd05b394",
-  "brand_new_sky/easy": "c44310cfe1d0ee73",
-  "brand_new_sky/normal": "7aa8791cde189f49",
-  "brand_new_sky/hard": "ca355bbf76083a20",
-  "brand_new_sky/expert": "5517777d4f13069f",
-  "brand_new_sky/master": "62294cd306c39171",
-  "brand_new_sky/hell": "184d3b1d09c53b39"
+  "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
  "history": [
   {
@@ -1175,7 +1175,6 @@
     "zenbu_hissatsuwaza/expert",
     "zenbu_hissatsuwaza/master",
     "zenbu_hissatsuwaza/hell"
-
    ]
   },
   {
@@ -1205,6 +1204,28 @@
   {
    "at": "2026-11-22 22:25",
    "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
+   "changed": [
+    "beyond_the_same_sky/master",
+    "beyond_the_same_sky_short/master",
+    "beyond_the_same_sky/hell",
+    "beyond_the_same_sky_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 00:06",
+   "reason": "全部必殺技でつ を3曲で一番難しく・HELL は空なし(r1119-109・開催前)",
+   "changed": [
+    "zenbu_hissatsuwaza/easy",
+    "zenbu_hissatsuwaza/normal",
+    "zenbu_hissatsuwaza/hard",
+    "zenbu_hissatsuwaza/expert",
+    "zenbu_hissatsuwaza/master",
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 01:21",
+   "reason": "Beyond the Same Sky(原曲・short)の MASTER・HELL のノーツの幅を混ぜ、HELL の段変えを上限の内側へ(台帳 r1119-105 の続き・社長「全部ノーツが小さい」)",
    "changed": [
     "beyond_the_same_sky/master",
     "beyond_the_same_sky_short/master",

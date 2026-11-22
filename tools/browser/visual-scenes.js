@@ -291,6 +291,75 @@ const SCENES = [
     await s.page.waitForTimeout(6500); // 「絵のほうを横向きにしました」の知らせが消えるまで待つ
     return true;
   } },
+  // 原曲・short ver. など版がある曲を選んだ曲えらび(2026-11-22 社長「曲が選べるやつのサイズを考えてない」。版の段のぶん難易度のボタンが
+  // 押しつぶされて字が切れたのに、撮影は版が1つの曲だけで気づけなかった)。一覧の「2つの版」の札がある曲を押す
+  { id: 'beat-songs-versions', area: 'モンヒロビート', name: '曲えらび(版がある曲)', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs');
+    if (!(await song.go(s))) return false;
+    const hit = await s.page.evaluate(() => { const b = document.querySelector('[data-rhythm-song-row-version-count]'); const btn = b && b.closest('button'); if (btn) btn.click(); return !!btn; });
+    if (!hit) return false;
+    await s.page.waitForTimeout(800);
+    return !!(await s.page.$('[data-rhythm-song-version]'));
+  } },
+  { id: 'beat-songs-versions-rot', area: 'モンヒロビート', name: '曲えらび(版がある曲・🔄横)', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs-versions');
+    if (!(await song.go(s))) return false;
+    if (!(await s.tapLabel(/^(🔄\s*)?横$|横画面に|横向き/, 1500))) return false;
+    await s.page.waitForTimeout(6500);
+    return !!(await s.page.$('[data-rhythm-song-version]'));
+  } },
+  // ---- API 総点検②(2026-11-23): 難易度・演奏中・結果・ランキング・イベント(HOME から人と同じボタンで開く。デバッグは使わない) ----
+  { id: 'beat-diff', area: 'モンヒロビート', name: '曲を選んで難易度を選んだ所', group: 'beat-extra', go: async (s) => {
+    const song = SCENES.find((x) => x.id === 'beat-songs');
+    if (!(await song.go(s))) return false;
+    const ok = await s.page.evaluate(() => { const r = document.querySelector('[data-rhythm-song-row]'); if (r) r.click(); return !!r; });
+    await s.page.waitForTimeout(800);
+    await s.page.evaluate(() => { const d = [...document.querySelectorAll('[data-rhythm-difficulty]')].filter((x) => !x.disabled); const m = d.find((x) => x.getAttribute('data-rhythm-difficulty') === 'MASTER') || d[d.length - 1]; if (m) m.click(); });
+    await s.page.waitForTimeout(600);
+    return ok;
+  } },
+  { id: 'beat-play', area: 'モンヒロビート', name: '演奏中(始まって少し)', group: 'beat-extra', go: async (s) => {
+    const d = SCENES.find((x) => x.id === 'beat-diff');
+    if (!(await d.go(s))) return false;
+    const ok = await s.page.evaluate(() => { const b = document.querySelector('[data-rhythm-demo-start]:not([disabled])'); if (b) b.click(); return !!b; });
+    if (!ok) return false;
+    await s.page.waitForSelector('[data-rhythm-play-area]', { timeout: 15000 }).catch(() => {});
+    await s.page.waitForTimeout(9000);
+    return !!(await s.page.$('[data-rhythm-play-area]'));
+  } },
+  { id: 'beat-result', area: 'モンヒロビート', name: '結果(最後まで演奏したあと)', group: 'beat-extra', go: async (s) => {
+    const play = SCENES.find((x) => x.id === 'beat-play');
+    if (!(await play.go(s))) return false;
+    const { installPlayer } = require('../playbot/scenarios/rhythm.js');
+    const { touchInputSource } = require('../playbot/lib/touch-input.js');
+    const args = { sigma: 0, missRate: 0, seed: 7, human: false, persona: 'center', input: 'ios', dropRate: 0, lateRate: 0, touchSrc: touchInputSource };
+    await s.page.evaluate(`(${installPlayer.toString()})(${JSON.stringify(args)})`);
+    await s.page.waitForFunction(() => !document.querySelector('[data-rhythm-play-area]'), null, { timeout: 400000, polling: 500 }).catch(() => {});
+    await s.page.waitForTimeout(3500);
+    if (process.env.BEAT_DEBUG) console.log('RESULT-TEXT', await s.page.evaluate(() => ({ area: !!document.querySelector('[data-rhythm-play-area]'), t: document.body.innerText.slice(0, 300) })));
+    return !(await s.page.$('[data-rhythm-play-area]'));
+  } },
+  { id: 'beat-ranking', area: 'モンヒロビート', name: 'この曲の全国ランキング', group: 'beat-extra', go: async (s) => {
+    const d = SCENES.find((x) => x.id === 'beat-diff');
+    if (!(await d.go(s))) return false;
+    const ok = await s.page.evaluate(() => { const b = document.querySelector('[data-rhythm-demo-ranking]'); if (b) b.click(); return !!b; });
+    await s.page.waitForTimeout(1500);
+    return ok;
+  } },
+  { id: 'beat-result-close', area: 'モンヒロビート', name: '結果(ランクアップを閉じたあと)', group: 'beat-extra', go: async (s) => {
+    const r = SCENES.find((x) => x.id === 'beat-result');
+    if (!(await r.go(s))) return false;
+    await s.page.mouse.click(Math.round(s.viewport ? s.viewport.width / 2 : 195), 585).catch(() => {});
+    await s.page.evaluate(() => { const e = [...document.querySelectorAll('*')].find((x) => x.children.length === 0 && /押すと閉じる/.test(x.textContent)); if (e) e.click(); });
+    await s.page.waitForTimeout(1500);
+    return true;
+  } },
+  // 開催中のイベント(11/23 10:00〜)の見た目。時計を開催中に合わせて開く(保存・ランキングへは何も送らない)
+  { id: 'beat-event', area: 'モンヒロビート', name: '曲えらび(イベント開催中の時計)', group: 'beat-extra', go: async (s) => {
+    await s.page.clock.setFixedTime(new Date('2026-11-24T03:00:00Z')).catch(() => {});
+    const song = SCENES.find((x) => x.id === 'beat-songs');
+    return song.go(s);
+  } },
   // ---- MFバトルカード ----
   { id: 'card-top', area: 'カードバトル', name: 'MFバトルカード', go: homeBtn('MFバトルカード') },
   // ---- 助手ライフ ----
