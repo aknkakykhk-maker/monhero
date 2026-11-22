@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-23 03:47", type:'fix', group:'success', status:'new',
+    title:'マスモンの詳細と合体の画面が見やすくなりました',
+    items:[
+      'マスモンの詳細で「貸し出す」を目立たせ、アシストや技の説明が下のボタンに隠れにくくなりました。',
+      '合体の画面で、いなくなる2体の注意が最後まで読めるようになりました。',
+    ],
+  },
+  {
     date: "2026-11-23 03:27", type:'update', group:'rhythm', status:'new',
     title:'Beyond the Same Sky の MASTER と HELL が、スライドやホールドで歌を追える譜面になりました',
     items:[
