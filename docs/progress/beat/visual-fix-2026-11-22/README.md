@@ -44,3 +44,12 @@
 - rhythm-song-notice-landscape / rhythm-multi-select-fit / rhythm-song-select / rhythm-small-screen-layout / rhythm-edge-band / rhythm-safe-area-raw / rhythm-song-paid / rhythm-song-version / rhythm-rotated-dialog-height: OK
 - 直す前の main でも落ちる物(今回の変更とは別): rhythm-landscape-layout(曲えらびまで入れない 6件)・rhythm-multi-play-guard(モード選びで待ち切れ)・rhythm-portrait-play-modes(320幅の題「曲選び」の切れ = N7)・rotation-height(モンサクの窓)・changelog-order(並びの逆転7か所)
 - ja-wrap-beat-screen は10分で終わらず回し切れていない
+
+## 切り欠きありの撮り直し(2026-11-22 窓口の決まり)
+
+`SHOT_NOTCH=1 node tools/browser/visual-shoot.js …`(縦 上47・下34 / 横 左右47・下21 を `--mh-safe-*` から入れる)で撮った:
+[notch/songs-tate.png](notch/songs-tate.png)・[notch/songs-yoko.png](notch/songs-yoko.png)・[notch/songs-rot.png](notch/songs-rot.png)
+
+- 縦: 上の帯は切り欠きの下・「決定」は下の余白の上で隠れない。字の途中の折れ・数字の切れは無し。キャンペーンの帯(ビートP ×5)が出ている状態で撮った
+- 横: 欄が低くなり、助手の一言が「決定」の裏に潜っていた → 欄の高さが300px以下なら一言を畳むようにした(667×375 の切り欠きなしでは出る)(切り欠きなしの横では今までどおり出る)
+- 気づいた別の件: 横の左右47pxの余白が、曲選びの見出しにも一覧にも入っていない(`--mh-sa-left` を使っていない)。今回の変更とは別。本物の端末で切り欠きの裏に入るかは確かめていない

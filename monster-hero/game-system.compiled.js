@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29f2d4d5450327c2
+// source-sha256: 50ffd518641b517a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39200,7 +39200,7 @@ const RhythmSongSelect = ({
     className: "mt-1 truncate text-[10px] font-black leading-tight text-slate-400"
   }, lockHint)), notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice-landscape": true,
-    className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:290px)]:hidden",
+    className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden",
     style: {
       gridArea: 'note'
     }
