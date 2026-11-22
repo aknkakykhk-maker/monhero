@@ -2086,6 +2086,28 @@
     "EXPERT": "smooth",
     "MASTER": "smooth"
    }
+  },
+  "brand_new_sky": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-brand-new-sky.mp3",
+   "chartIntensity": "strong",
+   "handFinish": {
+    "EXPERT": "smooth",
+    "MASTER": "smooth"
+   },
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   },
+   "chartRevision": 40,
+   "audioSha256": "b93b1a67de51752680cf010fd542a57512f07f9943180debc103b4718e56150f",
+   "durationMs": 150024,
+   "analyzedTiming": {
+    "bpm": 146.143,
+    "beatZeroMs": 438.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

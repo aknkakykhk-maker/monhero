@@ -35,6 +35,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-22 20:32", type:'update', status:'new', group:'rhythm',
+    title:'新曲「BRAND NEW SKY」を追加しました',
+    image:'images/song-art/brand-new-sky.jpg?v=884148fad43e',
+    items:[
+      'モンヒロビートに「BRAND NEW SKY」を追加しました。みゅあの曲（2分30秒・BPM 146）です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.24 ／ MASTER Lv.35 ／ HELL Lv.44 です。',
+      'ノーツ数は 218 ／ 268 ／ 366 ／ 458 ／ 610 ／ 567 です。',
+      '11月23日からのイベントの間は無料で遊べます。イベントが終わったあとは、ビートP500で買って遊べます。',
+    ],
+    assistantNotice:{ id:'update_notice_brand_new_sky_v1', type:'content' },
+  },
+  {
     date: "2026-11-22 19:44", type:'update', title:'助手ライフの友情で、次に見る2人がすぐ分かるようになりました', status:'new', group:'assistant',
     items:[
       '「🤝 友情」のタブの一番上に関係図、その下に、一番友情Lvが上がりそうな2人がいる組を見るボタンが出るようになりました。',
