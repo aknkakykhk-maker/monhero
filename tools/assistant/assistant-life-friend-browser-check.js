@@ -198,7 +198,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-assistant-life-map-sheet-close]').click();
         await page.locator('[data-alf-vview="where"] [data-alf-vtab="bond"]').click();
         await page.locator('[data-alf-vview="bond"] [data-alf-bond-view]').waitFor({ timeout: 5000 }).catch(() => {});
-        const bondV = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="bond"]'); const t = w ? w.innerText : ''; return { lv: /ご縁 Lv\d/.test(t), tiers: w ? w.querySelectorAll('[data-alf-bond-view-tier]').length : -1, mua: /ずっと仲良し/.test(t), kiki: /なかよし/.test(t), none: /Lv\d+ ?(はじめ|なか|ずっと)/.test(t), shelf: !!(w && w.querySelector('[data-alb-shelf]')) }; });
+        const bondV = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="bond"]'); const t = w ? w.innerText : ''; return { lv: /おなじみ度 Lv\d/.test(t), tiers: w ? w.querySelectorAll('[data-alf-bond-view-tier]').length : -1, mua: /ずっと仲良し/.test(t), kiki: /なかよし/.test(t), none: /Lv\d+ ?(はじめ|なか|ずっと)/.test(t), shelf: !!(w && w.querySelector('[data-alb-shelf]')) }; });
         check(`㉑ きずなに、友情Lv・助手ごとの段(数は出ない)・お気に入りの棚が出る(${v.id})`, bondV.lv && bondV.tiers > 0 && bondV.mua && bondV.kiki && !bondV.none && bondV.shelf, JSON.stringify(bondV));
         await shot(page, `${v.id}-21-vtab-bond`);
         await page.locator('[data-alf-vview="bond"] [data-alf-vtab="profile"]').click();
