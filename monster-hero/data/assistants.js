@@ -12586,6 +12586,170 @@ const PANDORA_WINGS_EP8 = [
   { who:'erubin',   e:'happy',    t:'{name}、おつかれさま。来てすぐに、こんなあったかいお話に立ち会えて嬉しかったな☺️' },
 ];
 const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ', pandora: 'きゅうこ', erubin: 'パンドラちゃん' };
+
+// ===== イベント「咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～」(2026-11-23 10:00〜11-30 0:00)のお話 =====
+// 台本 docs/progress/event-flower3/script.md(社長 11-22: みゅあの話も足す → 第2〜4話を きき・もも・みゅあ の曲ができるまで、パンドラ・ぱんぷきんの話を後ろへ。台帳 r1119-101 追記で OK 済み)。
+// 出る時刻は data/rhythm-event.js の FLOWER3_STORIES(第1話は開幕・第2〜7話は毎日10:00・第8話は閉幕)。ももすけだけ初めての曲づくり。クリスマス前の空気を少し
+// 第1話「3人の作曲ブーム」(11/23 10:00・開幕)
+const FLOWER3_EP1 = [
+  { bg:'monhero_plaza', who:'mua', e:'excited', t:'ねえねえ{name}、聞いて！ 今日から、モンヒロビートのイベントはじまったよ〜！' },
+  { who:'momosuke', e:'excited', t:'しかも今回は、ももたち3人が主役なの♡' },
+  { who:'kiki', e:'normal', t:'……実は私たち、最近ずっと曲を作っていたんでつ。' },
+  { who:'mua', e:'happy', t:'ひめちんもあたしも、一回作ったらハマっちゃってさ。えるびんまで作り始めたし、もう止まんないの🤣ｗ' },
+  { who:'kiki', e:'happy', t:'楽しすぎて、やめられなくなりまちた (´ー`*)' },
+  { who:'mua', e:'wink', t:'で、ももも誘ったの！ 「一緒に作ろ〜」って' },
+  { who:'momosuke', e:'troubled', t:'ももは……曲なんて作ったことなかったから、ほんとにできるのかなって、ずっとどきどきしてたんだよ' },
+  { who:'momosuke', e:'happy', t:'でも2人が夜中まで鍵盤たたいてるの見てたら、ももも混ざりたくなっちゃった♡ もうすぐクリスマスなのに、飾りつけもまだだけどね' },
+  { who:'mua', e:'excited', t:'で、せっかくなら、3曲まとめてイベントにしちゃお！ってなったの✨' },
+  { who:'kiki', e:'normal', t:'イベントの名前は「咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～」でつ。' },
+  { who:'kiki', e:'normal', t:'曲は3曲。みゅあちんの「BRAND NEW SKY」、私の「全部必殺技でつ( `･ω･)」、ももさんの「きみ待ち♡ループ」でつ。今日から3曲とも遊べまつ。' },
+  { who:'momosuke', e:'wink', t:'イベントのあいだは、3曲とも無料で遊べるよ♡' },
+  { who:'kiki', e:'normal', t:'イベントが終わったあとは、ビートPで買う曲になりまつ。いまのうちに、たくさん遊んでくださいね。' },
+  { who:'mua', e:'happy', t:'ランキングは曲ごとと、3曲の合計の総合！ 上のほうに入るとごほうびがあるよ〜' },
+  { who:'kiki', e:'normal', t:'入賞できなくても、3曲ぜんぶ遊べば参加報酬がもらえまつ。' },
+  { who:'momosuke', e:'excited', t:'あとあと！ イベントの曲を遊ぶと、ビートPがいつもよりたくさんたまるんだよ！' },
+  { who:'mua', e:'happy', t:'お話も毎日1話ずつ届くからね！ 曲ができるまでのことも話しちゃうよ。最後のお話は、イベントが終わるときに流れるよ' },
+  { who:'kiki', e:'normal', t:'曲ができるまでには、いろんな人に助けてもらいまちた。' },
+  { who:'momosuke', e:'wink', t:'パンドラちゃんとか、ぱんぷきんとかね♡' },
+  { who:'mua', e:'excited', t:'そのお話は、また明日から！ まずは3曲、叩いてみて٩(`･ω･´)و' },
+];
+// 第2話「全部必殺技の夜」(11/24 10:00・ききの曲ができるまで)
+const FLOWER3_EP2 = [
+  { bg:'monhero_night', who:'kiki', e:'troubled', fxText:'少し前の夜。イベントの曲を作っていたころ', t:'……うーん。強い音を、ぜんぶ並べてみたんでつけど。' },
+  { who:'mua', e:'surprise', t:'ひめちん、それ前の曲のときに「ずっと全力だと疲れる」って言われてたやつぢゃん？ｗ' },
+  { who:'kiki', e:'normal', t:'はい。でも今回は、わざとでつ。最初から最後まで、ぜんぶ必殺技の曲にしたいんでつ。' },
+  { who:'momosuke', e:'surprise', t:'ぜんぶ必殺技！？ ききちゃん、意外と攻めるね……' },
+  { who:'kiki', e:'troubled', t:'……でも、弾いてみると、どれが必殺技か分からなくなってしまって' },
+  { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], fxText:'窓の外から、小さな声がした', t:'……その曲、好き' },
+  { who:'mua', e:'surprise', t:'パンドラ！ 聞いてたの！？' },
+  { who:'pandora', e:'normal', t:'……森まで、聞こえてきたの。強くて、まっすぐで。悪魔のわたしは、すごく好き' },
+  { who:'pandora', e:'normal', t:'でも、天使のわたしは……ちょっとだけ、息がしたいって言ってる' },
+  { who:'kiki', e:'surprise', t:'息、でつか' },
+  { who:'pandora', e:'normal', t:'……必殺技の前に、ひと息。そしたら、次の一発が、もっと強く聞こえると思う' },
+  { who:'kiki', e:'normal', t:'……ためて、放つ。なるほど、でつ。' },
+  { who:'momosuke', e:'excited', fxText:'ききの鍵盤に、ほんの少しの「ため」が入る', t:'すご！ ぜんぶ必殺技なのに、ちゃんと一発ずつ決まってる♡' },
+  { who:'kiki', e:'happy', t:'……できまちた。天使さんと悪魔さん、どっちのおかげでもありまつね。' },
+  { who:'pandora', e:'normal', t:'……ふたりとも、喜んでる。……喧嘩しないで同じことを言ったの、ひさしぶり' },
+  { who:'mua', e:'happy', t:'よかった〜(｡ ˘-˘)ｳﾝｳﾝ もうすぐクリスマスだし、ちょうどいいプレゼントぢゃん' },
+  { who:'kiki', e:'happy', t:'……こうしてできたのが「全部必殺技でつ( `･ω･)」でつ。{name}、パンドラさんのおかげでできた曲なんでつよ。' },
+];
+// 第3話「はじめての曲と、ステップの先生」(11/25 10:00・ももの曲ができるまで)
+const FLOWER3_EP3 = [
+  { bg:'monhero_plaza', who:'momosuke', e:'troubled', fxText:'少し前の昼。ももが、はじめての曲を作っていたころ', t:'うう〜ん……' },
+  { who:'mua', e:'normal', t:'もも、どしたの？ 顔がしわしわになってるよｗ' },
+  { who:'momosuke', e:'troubled', t:'もものはじめての曲、おどれる曲にしたいの。でも、リズムがふわふわして、足がそろわないんだよね……' },
+  { who:'momosuke', e:'troubled', t:'2人はすいすい作れてすごいなぁ。もも、どこを直せばいいのかも分かんなくて' },
+  { who:'kiki', e:'normal', t:'私も最初の曲は、ずっとそうでちた。ももさんの曲は明るくて、とてもかわいいでつ。あとは、足もとの音でつね。' },
+  { who:'pumpkin', e:'normal', t:'……ぼく、手伝えるかも' },
+  { who:'momosuke', e:'excited', t:'ぱんぷきん！ 来てくれたんだ♡' },
+  { who:'pumpkin', e:'happy', t:'ももが手紙をくれたから。……ステップなら、ハロウィンでいっぱい練習したんだ' },
+  { who:'momosuke', e:'wink', t:'ハロウィンの次はクリスマスだもんね。ぱんぷきんのステップ、冬も見たいなって♡' },
+  { who:'pumpkin', e:'happy', fxText:'ぱんぷきんが、ぴょん、ぴょん、と跳ねる', t:'……こう。1、2、1、2で、おなかが光るところで強く' },
+  { who:'mua', e:'excited', t:'え、ぱんぷきんのステップ、まぢで上手すぎる🤣ｗ' },
+  { who:'kiki', e:'normal', t:'跳ねる音に合わせて、太鼓の音を入れてみまつね。' },
+  { who:'momosuke', e:'excited', fxText:'ももの曲に、ぽん、ぽん、と跳ねる音がくわわる', t:'……そろった！ 足がそろった〜♡ ぱんぷきん、すごい！' },
+  { who:'momosuke', e:'happy', t:'……ももの曲、ほんとにできちゃった。はじめて作った曲なんだよ、これ' },
+  { who:'pumpkin', e:'happy', t:'えへへ。……ぼく、ステップの先生になれるかな' },
+  { who:'mua', e:'happy', t:'もうなってるよ〜ｗ' },
+  { who:'momosuke', e:'wink', t:'{name}、こうしてできたのが「きみ待ち♡ループ」なの！ ぱんぷきんと作ったステップ、叩いてみて♡' },
+];
+// 第4話「新しい空」(11/26 10:00・みゅあの曲ができるまで)
+const FLOWER3_EP4 = [
+  { bg:'monhero_plaza_evening', who:'mua', e:'normal', fxText:'少し前の夕方。みゅあが、屋根の上で空を見ていた', t:'……うーん。' },
+  { who:'kiki', e:'surprise', t:'みゅあちん、屋根の上で何をしているんでつか？' },
+  { who:'mua', e:'normal', t:'空見てたの。あたしの曲、空の歌にしたくてさ' },
+  { who:'momosuke', e:'surprise', t:'みゅあねぇ、前にあつくんと空の歌、作ってたよね？' },
+  { who:'mua', e:'happy', t:'そうそう。あれは、あつとの思い出の空。……だから今度は、あたしひとりの空を作りたいの' },
+  { who:'mua', e:'troubled', t:'でもね、ひとりで作ると、どうしても前の曲に似ちゃうんだよね。いい空のはずなのに、知ってる空っていうか' },
+  { who:'kiki', e:'normal', t:'知っている空……でつか。' },
+  { who:'momosuke', e:'normal', t:'ねえ、みゅあねぇ。いまの空は、どんな空？' },
+  { who:'mua', e:'surprise', fxText:'見上げると、冬の夕焼けが、雪雲のすき間に広がっていた', t:'……あ。' },
+  { who:'mua', e:'normal', t:'冷たくて、でも、街の明かりがぽつぽつついてて。もうすぐクリスマスだなって、わくわくする空' },
+  { who:'kiki', e:'happy', t:'それは、まだだれも歌っていない空でつね。' },
+  { who:'momosuke', e:'excited', t:'今日の空、明日の空、まだ見てない空！ それが、みゅあねぇの新しい空だよ♡' },
+  { who:'mua', e:'excited', t:'……それだ！ 新しい空！ BRAND NEW SKY！ まぢで降りてきた✨' },
+  { who:'mua', e:'happy', fxText:'その夜、みゅあの曲は一気に仕上がった', t:'ひめちん、もも、ありがと。2人がいなかったら、ずっと屋根の上だったわｗ' },
+  { who:'kiki', e:'happy', t:'どういたしましてでつ。風邪をひかないうちに、降りてきてくださいね。' },
+  { who:'mua', e:'wink', t:'{name}、これが「BRAND NEW SKY」！ あたしの、新しい空。いっぱい叩いてね٩(`･ω･´)و' },
+];
+// 第5話「箱とカボチャ」(11/27 10:00)
+const FLOWER3_EP5 = [
+  { bg:'monhero_plaza', who:'mua', e:'excited', t:'ねえ、今日はパンドラとぱんぷきんも一緒に練習するんだって！' },
+  { who:'momosuke', e:'happy', t:'ふたりが会うのは、はじめてだよね♡' },
+  { who:'pumpkin', e:'surprise', t:'……こ、こんにちは' },
+  { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……こんにちは' },
+  { who:'kiki', e:'happy', fxText:'しばらく、どちらもしゃべらない', t:'……おふたりとも、照れていまつね。' },
+  { who:'pumpkin', e:'troubled', t:'……ぼく、前にみんなの音を盗んじゃったことがあるんだ。ひとりで、さみしくて' },
+  { who:'pandora', e:'normal', t:'……わたしも、ずっと箱の中にいた。外がこわくて' },
+  { who:'pumpkin', e:'normal', t:'……箱の中って、どんな感じ？' },
+  { who:'pandora', e:'normal', t:'……静か。でも、静かすぎた' },
+  { who:'pumpkin', e:'normal', t:'カボチャの中も、同じだったよ' },
+  { who:'momosuke', e:'normal', t:'……ふたりとも、似てたんだね' },
+  { who:'mua', e:'happy', t:'でもさ、今はここにいるぢゃん。あたしたちの曲も、一緒に作ってくれたぢゃん' },
+  { who:'pandora', e:'normal', t:'……うん。外は、まぶしいけど、にぎやかで、楽しい' },
+  { who:'pumpkin', e:'happy', t:'ぼくも！ ……ねえパンドラ、ぼくのステップで、歌ってくれる？' },
+  { who:'pandora', e:'normal', t:'……いいよ。転ばないでね' },
+  { who:'kiki', e:'happy', t:'ふふ。いいコンビになりそうでつ♪' },
+  { who:'momosuke', e:'wink', t:'{name}も、3曲のランキング、のぞいてみてね♡ 総合はちょっとずつ順位が動いてるよ' },
+];
+// 第6話「ちがう色」(11/28 10:00)
+const FLOWER3_EP6 = [
+  { bg:'monhero_plaza', who:'momosuke', e:'troubled', t:'ねえねえ、みゅあねぇの曲、昨日いっぱい遊ばれてたね……' },
+  { who:'mua', e:'surprise', t:'え、そうなの？ てか、ももの曲もめっちゃ遊ばれてるって聞いたよ？' },
+  { who:'momosuke', e:'troubled', t:'……もものはじめての曲、いちばん少なかったらどうしよう' },
+  { who:'kiki', e:'troubled', t:'私も、少しだけ気になっていまちた……(´ー`*)' },
+  { who:'mua', e:'surprise', t:'ひめちんまで！？ もー、3人ともそわそわしすぎｗ' },
+  { who:'pumpkin', e:'happy', t:'……ぼく、ぜんぶ好きだよ。どの曲でも、おどれる' },
+  { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……わたしも。3つとも、ちがう色で、ぜんぶきれい' },
+  { who:'momosuke', e:'normal', t:'……ぜんぶ、ちがう色' },
+  { who:'kiki', e:'normal', t:'みゅあちんの曲は、空の色。私の曲は、必殺技の赤。ももさんの曲は、ピンクのループでつね。' },
+  { who:'mua', e:'happy', t:'そっか。くらべっこするより、3つそろってるのがいいんだよね' },
+  { who:'momosuke', e:'happy', t:'……うん。3曲ぜんぶ遊んでくれる人がいたら、それがいちばんうれしいかも♡' },
+  { who:'mua', e:'wink', t:'{name}は、どの曲が好き？ こっそり教えてｗ' },
+  { who:'pumpkin', e:'happy', t:'ぼくは、ぜんぶって答えると思う！' },
+  { who:'kiki', e:'happy', t:'曲ごとのランキングも、総合のランキングも、まだまだこれからでつ。' },
+];
+// 第7話「ランタンの前で」(11/29 10:00)
+const FLOWER3_EP7 = [
+  { bg:'monhero_night', who:'mua', e:'excited', t:'ねえ、思いついちゃった！ イベントの最後の夜に、広場で3曲ぜんぶやるライブしよ！' },
+  { who:'momosuke', e:'excited', t:'ライブ！？ やりたいやりたい♡' },
+  { who:'pumpkin', e:'happy', t:'ぼく、ランタンなら持ってるよ。ハロウィンのとき、ほんとは割っちゃうはずだったやつ……' },
+  { who:'mua', e:'happy', t:'いいぢゃん！ もうすぐクリスマスだし、広場がきらきらになるね' },
+  { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……わたしは、ききの曲で歌う。……みゅあの曲と、ももの曲も、少しだけ' },
+  { who:'mua', e:'surprise', t:'え、ぜんぶ出てくれるの！？ まぢありがと(๑°ロ°๑)‼️' },
+  { who:'momosuke', e:'wink', t:'衣装もそろえたいな〜。花の色で3人おそろい♡ ちょっとだけ、冬っぽいリボンもつけちゃお' },
+  { who:'mua', e:'normal', fxText:'その夜。並べたランタンの前で、ききが鍵盤に手をのせたまま止まっている', t:'ひめちん？ 手、ふるえてるよ' },
+  { who:'kiki', e:'troubled', t:'……大勢の前で弾くのは、はじめてなんでつ。まちがえたら、どうしようって' },
+  { who:'pandora', e:'normal', t:'……わたしも、こわい。箱の外で、大きな声で歌うのは、はじめて' },
+  { who:'pumpkin', e:'troubled', t:'ぼくも。……前のハロウィンは、こわい顔で出てきちゃったから。今度は、ちゃんと笑って出たい' },
+  { who:'momosuke', e:'troubled', t:'ももも、ちょっとだけこわい。はじめての曲を、みんなの前でなんて' },
+  { who:'mua', e:'normal', t:'あたしもだよ。でもさ、こわいのって、ちゃんと届けたいってことぢゃん？' },
+  { who:'mua', e:'happy', t:'{name}が遊んでくれた曲を、こんどはあたしたちがみんなの前で鳴らすの' },
+  { who:'pandora', e:'normal', t:'……そう思ったら、少しだけ、こわくなくなった' },
+  { who:'momosuke', e:'happy', t:'明日、みんなで笑って終わろうね♡' },
+  { who:'kiki', e:'normal', t:'……はい。私の音で、弾ききりまつ。' },
+];
+// 第8話「花ひらく夜」(11/30 0:00・閉幕)
+const FLOWER3_EP8 = [
+  { bg:'monhero_night', who:'mua', e:'excited', fxText:'広場いっぱいに、ランタンの明かりがともる', t:'みんなー！ 来てくれてありがとー！ 最初の曲、いっくよー！' },
+  { who:'momosuke', e:'excited', fxText:'「BRAND NEW SKY」が、冬の空へ鳴りひびく', t:'みゅあねぇ、空まで届いてる♡' },
+  { who:'kiki', e:'normal', fxText:'2曲目。ききの必殺技に、パンドラの歌声が重なる', t:'……まちがえずに、弾けまちた。' },
+  { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……歌えた。外で、ちゃんと' },
+  { who:'momosuke', e:'excited', fxText:'最後は「きみ待ち♡ループ」。広場のみんなが跳ねる', t:'ぱんぷきん、ステップいくよ♡' },
+  { who:'pumpkin', e:'happy', t:'うん！ 1、2、1、2！' },
+  { who:'momosuke', e:'happy', t:'さいごまで、おどりきった〜♡ ……ももがはじめて作った曲で、みんなが跳ねてくれた' },
+  { who:'mua', e:'happy', t:'{name}、ほんとにありがと！ どの曲もいっぱい遊んでくれて、まぢでうれしかった✨' },
+  { who:'kiki', e:'normal', t:'イベントは、これでおしまいでつ。ランキングに入った人には、ギフトでごほうびが届きまつ。' },
+  { who:'momosuke', e:'normal', t:'この曲たちは、これからは曲えらびやビートP交換所で買える曲になるよ♡' },
+  { who:'kiki', e:'normal', t:'遊んだ記録は、ちゃんと残っていまつから、安心してくださいね。' },
+  { who:'pumpkin', e:'troubled', t:'……ぼく、また呼んでもらえる？' },
+  { who:'pandora', e:'normal', t:'……わたしも。また、歌いたい' },
+  { who:'mua', e:'happy', t:'もちろん！ 次の曲ができたら、いちばんに声かけるね' },
+  { who:'momosuke', e:'wink', t:'3人の曲作りブーム、まだまだ終わらないからね♡ 次は、クリスマスに聞きたくなる曲とかどうかな？' },
+  { who:'kiki', e:'happy', t:'……ふふ。それは、また今度のお楽しみでつ。' },
+  { who:'kiki', e:'happy', t:'これからも、モンヒロビートをよろしくお願いしまつ♪♪' },
+];
+const FLOWER3_CALLS = { mua: 'ひめちん／もも／パンドラ／ぱんぷきん', kiki: 'みゅあちん／ももさん／パンドラさん', momosuke: 'みゅあねぇ／ききちゃん／パンドラちゃん／ぱんぷきん', pandora: 'みゅあ／きき／もも', pumpkin: 'もも／パンドラ' };
 // ききのお話「はじめての曲 ～Sparkling Pink Overture～」(2026-11-15 ココロ2・r1115-102・流れは docs/progress/sparkling-pink-story/script.md)。
 //   新曲「Sparkling Pink Overture」は、ききが初めて作った曲という設定。曲と同時に公開(組み込み・読める時の仕掛け・回想はテンポくん3)。
 //   締めは 2026-11-03 の案3(札と曲えらびのボタンは画面の側が出す)。難易度は「難しめ」。数字は書かない
@@ -12965,6 +13129,15 @@ const EVENT_REPLAYS = [
   { id: 'pandora_wings_2026_ep7', date: '2026-11-08 04:00', title: '鍵の向こう側へ 第7話 ～私と私で～', script: PANDORA_WINGS_EP7, calls: PANDORA_WINGS_EP7_CALLS, unlockedKey: 'pandoraWingsEp7Seen', group: 'pandora_wings' },
   // 終章(2026-11-09 4:00)。閉幕のお話として流れる(60-app.jsx の RHYTHM_EVENT_THANKS_STORY_BY_EVENT)
   { id: 'pandora_wings_2026_ep8', date: '2026-11-09 04:00', title: '鍵の向こう側へ 第8話・終章 ～鍵の向こう側へ～', script: PANDORA_WINGS_EP8, calls: PANDORA_WINGS_EP8_CALLS, unlockedKey: 'pandoraWingsEp8Seen', group: 'pandora_wings' },
+  // 咲かせて！ハナウタ・ノート(2026-11-23〜)。第1話は開幕・第8話は閉幕のお話(60-app.jsx)、第2〜7話は時刻で流れる(data/rhythm-event.js の flower3StoryIdsAt)
+  { id: 'flower3_2026_ep1', date: '2026-11-23 10:00', title: '咲かせて！ハナウタ・ノート 第1話 ～3人の作曲ブーム～', script: FLOWER3_EP1, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep1Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep2', date: '2026-11-24 10:00', title: '咲かせて！ハナウタ・ノート 第2話 ～全部必殺技の夜～', script: FLOWER3_EP2, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep2Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep3', date: '2026-11-25 10:00', title: '咲かせて！ハナウタ・ノート 第3話 ～はじめての曲と、ステップの先生～', script: FLOWER3_EP3, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep3Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep4', date: '2026-11-26 10:00', title: '咲かせて！ハナウタ・ノート 第4話 ～新しい空～', script: FLOWER3_EP4, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep4Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep5', date: '2026-11-27 10:00', title: '咲かせて！ハナウタ・ノート 第5話 ～箱とカボチャ～', script: FLOWER3_EP5, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep5Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep6', date: '2026-11-28 10:00', title: '咲かせて！ハナウタ・ノート 第6話 ～ちがう色～', script: FLOWER3_EP6, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep6Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep7', date: '2026-11-29 10:00', title: '咲かせて！ハナウタ・ノート 第7話 ～ランタンの前で～', script: FLOWER3_EP7, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep7Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep8', date: '2026-11-30 00:00', title: '咲かせて！ハナウタ・ノート 第8話・終章 ～花ひらく夜～', script: FLOWER3_EP8, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep8Seen', group: 'flower3' },
   // モンヒロビート本オープン(2026-11-07)。予告は rhythmGrandOpenTeaser、本編は rhythmGrandOpen の印が真になるまで回想にも出さない。
   //   date は公開の日が決まったら合わせる。見たかは mh_rhythm_event_story_v1 の id
   { id: 'rhythm_grand_open_teaser', date: '2026-11-07 12:00', title: 'もうすぐ本オープン！ ～モンヒロビート～', script: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER, calls: ASSISTANT_RHYTHM_GRAND_OPEN_TEASER_CALLS, unlockedKey: 'rhythmGrandOpenTeaserSeen', releaseFlag: 'rhythmGrandOpenTeaser', group: 'update' },

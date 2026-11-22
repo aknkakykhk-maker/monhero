@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5e9f528c6d249fb
+// source-sha256: 5100e5d1df8136a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7841,6 +7841,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  flowerTrioStoryEvent: 'original_event_01',
   beyondSameSkyStoryEvent: 'original_event_01',
   desertCrownStoryEvent: 'original_event_01',
   sparklingPinkStoryEvent: 'melo_sparkling_pink_overture',
@@ -7945,6 +7946,14 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  flower3_2026_ep1: 'flowerTrioStoryEvent',
+  flower3_2026_ep2: 'flowerTrioStoryEvent',
+  flower3_2026_ep3: 'flowerTrioStoryEvent',
+  flower3_2026_ep4: 'flowerTrioStoryEvent',
+  flower3_2026_ep5: 'flowerTrioStoryEvent',
+  flower3_2026_ep6: 'flowerTrioStoryEvent',
+  flower3_2026_ep7: 'flowerTrioStoryEvent',
+  flower3_2026_ep8: 'flowerTrioStoryEvent',
   beyond_same_sky_story: 'beyondSameSkyStoryEvent',
   desert_crown_story: 'desertCrownStoryEvent',
   sparkling_pink_kiki_story: 'sparklingPinkStoryEvent',
@@ -235439,15 +235448,16 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
   const FLOWER3_STORY_IDS = FLOWER3_STORIES.map(story => story.id);
+  const FLOWER3_RANKING_EVENT_ID = 'flower3_2026_11_23';
   const FLOWER3_OPEN_STORY_ID = 'flower3_2026_ep1';
   const FLOWER3_THANKS_STORY_ID = 'flower3_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, ...FLOWER3_STORY_IDS, FLOWER3_THANKS_STORY_ID, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
     [PANDORA_WINGS_EVENT_ID]: 'pandora_wings_2026_ep1',
     ...(rhythmEventStoryHasScript(FLOWER3_OPEN_STORY_ID) ? {
-      [FLOWER3_EVENT_ID]: FLOWER3_OPEN_STORY_ID
+      [FLOWER3_RANKING_EVENT_ID]: FLOWER3_OPEN_STORY_ID
     } : {})
   };
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
@@ -235455,7 +235465,7 @@ function MonsterHeroGame() {
     [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID,
     [PANDORA_WINGS_EVENT_ID]: PANDORA_WINGS_THANKS_STORY_ID,
     ...(rhythmEventStoryHasScript(FLOWER3_THANKS_STORY_ID) ? {
-      [FLOWER3_EVENT_ID]: FLOWER3_THANKS_STORY_ID
+      [FLOWER3_RANKING_EVENT_ID]: FLOWER3_THANKS_STORY_ID
     } : {})
   };
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
@@ -239247,7 +239257,8 @@ function MonsterHeroGame() {
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     ...Object.fromEntries(PANDORA_WINGS_STORIES.filter(story => story.id !== PANDORA_WINGS_THANKS_STORY_ID).map(story => [`pandoraWingsEp${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     pandoraWingsEp8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(PANDORA_WINGS_THANKS_STORY_ID),
-    ...Object.fromEntries(FLOWER3_STORIES.map(story => [`flower3Ep${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    ...Object.fromEntries(FLOWER3_STORIES.filter(story => story.id !== FLOWER3_THANKS_STORY_ID).map(story => [`flower3Ep${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
+    flower3Ep8Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(FLOWER3_THANKS_STORY_ID),
     ...Object.fromEntries(HALLOWEEN_NIGHT_STORIES.map(story => [`halloweenNightPart${story.part}Seen`, Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(story.id)])),
     ...Object.fromEntries(RAID_JACK_STORY_IDS.map(id => [raidJackStoryUnlockKey(id), Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(id)])),
     rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
@@ -253784,7 +253795,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['beyondSameSkyStoryEvent', 'あつとみゅあの歌のお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「初めての曲」のお話 BGM'], ['kikiTwintailStoryEvent', 'ききの「ツインテール」のお話 BGM'], ['desertCrownStoryEvent', 'えるびんの「砂の向こうの歌」のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['flowerTrioStoryEvent', '咲かせて！ハナウタ・ノートのお話 BGM'], ['beyondSameSkyStoryEvent', 'あつとみゅあの歌のお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「初めての曲」のお話 BGM'], ['kikiTwintailStoryEvent', 'ききの「ツインテール」のお話 BGM'], ['desertCrownStoryEvent', 'えるびんの「砂の向こうの歌」のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',

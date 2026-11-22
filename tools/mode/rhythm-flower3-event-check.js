@@ -45,6 +45,7 @@ check('B. 開始前は開いていない・開始(11/23 10:00)で開く', all.rh
 check('B. 11/30 0:00 で終わり、週をまたがない', all.rhythmLimitedEventAt(T('2026-11-29T23:59:59+09:00'))?.id === all.FLOWER3_EVENT_ID
   && !all.rhythmLimitedEventAt(T('2026-11-30T00:00:00+09:00'))
   && all.rhythmWeekStartMs(Date.parse(ev.startAt)) === all.rhythmWeekStartMs(Date.parse(ev.endAt) - 1));
+check('B. 超越の実はみゅあ=モッチー・きき=ザン・もも=ユグ', JSON.stringify(ev.rewardLineageBySongId) === JSON.stringify({ [ids[0]]: 'mocchi', [ids[1]]: 'zan', [ids[2]]: 'yggdrasil' }));
 check('B. 参加報酬の曲数は入っている曲の数', ev.participationReward.songs === ids.length);
 check('B. 帯(周回5倍・ビートP5倍)が期間中だけ出る', all.rhythmEventPointCampaignAt(T('2026-11-25T10:00:00+09:00'))?.id === 'flower3_2026'
   && all.rhythmEventPointCampaignAt(T('2026-11-30T00:00:00+09:00'))?.id !== 'flower3_2026');

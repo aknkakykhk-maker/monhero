@@ -33,9 +33,9 @@
 4. `node tools/mode/rhythm-flower3-event-check.js` と `node tools/mode/rhythm-event-window-check.js` を通す
 5. 曲の告知(更新履歴)を書くなら `visibleFrom` を 11/23 10:00 にそろえる(開始より前は曲えらびに出ないため)
 
-## 残っていること(ことばが続ける)
+## 残っていること
 
-- お話の本文を `data/assistants.js` へ(社長の OK のあと)。BGM は `EVENT_BGM_SCENES`(曲が入ったら)
-- 更新履歴・助手の告知は入れた(11/23 10:00 から出る)。ヘルプのイベントの項目は曲が入ってから
-- キービジュアルは v2 を `images/events/flower3-2026-wide.jpg` に入れた(元の大きさ 1774×887・r1115-143)。差し替えは同じ道のファイルを置き換えて `node tools/build.js`
-- 止め絵(縦横・iPhone の切り欠き)は、曲が1曲入ってイベントが出る状態になってから撮る
+- お話の本文は `data/assistants.js` の `FLOWER3_EP1〜8` に入れた(社長 OK 済み・11-22)。元の台本は [`script.md`](script.md)
+- お話の BGM は `flowerTrioStoryEvent`(いまは `original_event_01`)。曲が入ったらイベント曲へ替えてよい
+- 超越の実は受け口の `rewardLineage`(みゅあ=mocchi・きき=zan・もも=yggdrasil)
+- ヘルプのイベントの項目は、曲が入ってから

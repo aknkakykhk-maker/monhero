@@ -113,9 +113,10 @@ const FLOWER3_EVENT_NAME = `${FLOWER3_EVENT_TITLE} ～${FLOWER3_EVENT_SUBTITLE}�
 const FLOWER3_TARGET_POINT_BOOST = 7;
 const FLOWER3_SONG_SLOTS = Object.freeze([
   // 曲名は窓口から(BRAND NEW SKY / 全部必殺技でつ( `･ω･) / きみ待ち♡ループ)。id は曲を入れる会話の報告が届いたら差し替える
-  Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT }),
-  Object.freeze({ slot: 2, owner: 'kiki', songId: 'zenbu_hissatsuwaza', openAt: FLOWER3_START_AT }),
-  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT }),
+  // rewardLineage … その曲の部門の1〜5位へ配る超越の実の種族(社長 11-22: みゅあの曲=モッチー・ききの曲=ザン・ももの曲=ユグ)
+  Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT, rewardLineage: 'mocchi' }),
+  Object.freeze({ slot: 2, owner: 'kiki', songId: 'zenbu_hissatsuwaza', openAt: FLOWER3_START_AT, rewardLineage: 'zan' }),
+  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT, rewardLineage: 'yggdrasil' }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});
 // 告知の横長の絵(キービジュアル v2・社長 11-22。元は docs/progress/beat/event-flower3/assets/keyvisual-wide-v2.png を元の大きさのまま JPEG へ)。
@@ -153,8 +154,8 @@ const flower3RhythmEvent = (() => {
     ...(FLOWER3_BANNER ? { banner: FLOWER3_BANNER } : {}),
     songIds: Object.freeze(songIds),
     ...(Object.keys(versions).length ? { songVersions: Object.freeze(versions) } : {}),
-    // 超越の実の種族(案: パンドラと同じピクシー・社長の決定待ち)
-    rewardLineageBySongId: Object.freeze(Object.fromEntries(songIds.map(id => [id, 'pixie']))),
+    // 超越の実の種族は受け口の rewardLineage(社長の決定)
+    rewardLineageBySongId: Object.freeze(Object.fromEntries(slots.map(slot => [slot.songId, slot.rewardLineage]))),
     totalReward: 'heroProof',
     playBonus: true,
     // 対象曲のビートPの倍率(イベントの無い日の何倍か)。書かないイベントは今までどおり1.5(=7.5倍)
