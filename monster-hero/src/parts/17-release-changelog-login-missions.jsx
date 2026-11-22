@@ -1508,7 +1508,7 @@ const missionWithComplete = (type, normal, complete, now) => {
   return [...list, { ...complete, target, condition:`通常${label}${list.length}個のうち${target}個を達成する${inSwitch ? `(切り替えの${when}だけ)` : ''}` }];
 };
 const missionDailyDefinitions = (now=Date.now()) => missionWithComplete('daily', [
-  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:2000}]},
+  {id:'daily_login',name:'今日もMonster Hero！',condition:'今日ログインする',key:'login',target:1,rewards:[{type:'diamond',amount:2000}]},
   {id:'daily_battles',name:'好きな遊びを3回',tag:MISSION_TAG_ANY,condition:'バトル・モンヒロビート1曲・カード1戦のどれでも',key:'anyPlays',target:3,rewards:[{type:'beatPoint',amount:50}]},
   // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'daily_wins',name:'デイリーチャレンジ',tag:MISSION_TAG_BATTLE,condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:10}]},
