@@ -365,14 +365,16 @@ function AssistantLifeFriendsTyped({ life, ids, metIds, peerSt, nameOf, tabs, ta
 
 // 段12: 新UIの下のタブ5つ目「🐾 マスモン」(社長 2026-11-22 案A「型どおり」・r1119-075 ①・docs/progress/assistant-life/step12-masmon/)
 //   並び: 顔の列で助手を選ぶ → いるマスモンの札(大・勇者モン)→ 主なボタン「📣 ◯◯を応援する」(応援できない時間は「👀 ◯◯のマスモンを見る」)
-//   → 1行「🔒 あと仲良し度 ◯Lv で次のマスモン」→ 育成ノート・編成とデッキ(今のシート)・次に迎えてほしいマスモンを伝える・📖 ◯◯のこと(紹介)
+//   → 1行「🔒 あと仲良し度 ◯Lv で次のマスモン」→ 育成ノート・編成とデッキ(今のシート)・次に迎えてほしいマスモンを伝える・📖 ◯◯のこと(紹介の窓)
 //   応援は今の口 assistantMasmonCheer(得も回数も今のまま)。何も新しく保存しない
-function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBack, bondLvOf = null, onSheet = null, onProfile = null }) {
+function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBack, bondLvOf = null, onSheet = null }) {
   const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
   const save = typeof useAssistantMasmonSave === 'function' ? useAssistantMasmonSave() : null;
   const [sel, setSel] = React.useState(null);
   const [ask, setAsk] = React.useState(false);
   const [result, setResult] = React.useState(null);
+  const [profileId, setProfileId] = React.useState(null);
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null; // 紹介の窓の好み(前の紹介ページと同じ)
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
@@ -407,13 +409,21 @@ function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBac
     : `💗 ${nameOf(cur)}が次のマスモンを迎えられます(「見る」から)`;
   const nowText = info && info.today ? `🔥 今日は${info.today.kind || '修行'}${info.today.main ? `(${info.today.main})` : ''}` : info && info.last ? `📒 前の修行: ${info.last.nick}` : '';
   const nw = (x) => <span className="alu-nw" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x}</span>;
+  // 高さの低い画面(スマホの横)は、主なボタンが最初の画面に入るよう絵を小さく・棒を3列に
+  const short = typeof window !== 'undefined' && window.innerHeight < 500;
   const cheer = () => {
+    // 上がった 💗 は前後の差で出す(仲良し度の上がり方の倍率が乗るため、応援の決まりの +5 と違うことがある)
+    const pts = () => { try { const v = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(cur) : null; return Number.isFinite(v) ? v : null; } catch (_) { return null; } };
+    const before = pts();
     const r = typeof assistantMasmonCheer === 'function' ? assistantMasmonCheer(cur) : { ok: false };
-    if (r && r.ok) setResult({ line: r.tech ? `${r.nick}の「${r.tech}」の熟練 ${r.from}→${r.to}` : `${r.nick}を応援した`, bond: r.bond || 0, left: r.left });
+    const after = pts();
+    const gain = before != null && after != null ? Math.max(0, Math.round(after - before)) : (r && r.bond) || 0;
+    if (r && r.ok) setResult({ line: r.tech ? `${r.nick}の「${r.tech}」の熟練 ${r.from}→${r.to}` : `${r.nick}を応援した`, bond: gain, left: r.left });
     else setResult({ line: (r && r.why && r.why !== 'off') ? r.why : 'いまは応援できません', bond: 0, left: null });
   };
   const canCheer = !!(info && info.canCheer);
-  const goSub = canCheer ? `技の熟練 +1・💗 +5 · 今日あと${info.left}回` : (info && info.why) || '育ち方・編成・デッキ・好み';
+  const goSub = canCheer ? `技の熟練 +1・💗 仲良し度 · 今日あと${info.left}回` : '育ち方・編成・デッキ・好み';
+  const cheerWhy = !canCheer && info && info.why ? `📣 応援は、${info.why.replace(/^モンヒロバトルにいるときにできます$/, `${nameOf(cur)}がモンヒロバトルにいるときにできます`)}` : '';
   const resultNode = result ? (
     <div data-assistant-life-masmon-result>
       <AluResult title="📣 応援した" line={result.line} gains={result.bond ? [{ icon: '💗', label: '仲良し度', v: result.bond }] : []}
@@ -425,25 +435,26 @@ function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBac
     {ask && typeof AssistantMasmonAskSheet === 'function' && typeof assistantById === 'function' ? <AssistantMasmonAskSheet who={assistantById(cur)} from="welcome" onClose={() => setAsk(false)} /> : null}
     {typeof AssistantMasmonTrainWatchHost === 'function' ? <AssistantMasmonTrainWatchHost /> : null}
     {typeof AssistantMasmonNoteHost === 'function' ? <AssistantMasmonNoteHost /> : null}
+    {profileId && typeof AssistantLifeProfileSheet === 'function' ? <AssistantLifeProfileSheet id={profileId} bondLevelOf={bondLvOf} giftSt={giftSt} onMasmon={() => setProfileId(null)} onClose={() => setProfileId(null)} /> : null}
   </>);
   return frame(<>
-    <div className="alu-card" data-assistant-life-masmon-who style={{ display: 'flex', justifyContent: 'space-between', gap: 4, overflowX: 'auto' }}>
+    <div className="alu-card" data-assistant-life-masmon-who style={{ flex: 'none', display: 'flex', justifyContent: 'space-between', gap: 4, overflowX: 'auto' }}>
       {list.map(id => (
         <button key={id} type="button" aria-label={`${nameOf(id)}のマスモン`} aria-pressed={id === cur} data-assistant-life-masmon-pick={id} onClick={() => { setSel(id); setResult(null); }}
           style={{ flex: 'none', width: 40, height: 40, borderRadius: '50%', padding: 0, overflow: 'hidden', background: '#312e5a', border: id === cur ? '2px solid #fde047' : '2px solid #475569', boxShadow: id === cur ? '0 0 0 3px #fde04755' : 'none' }}>
           {typeof AssistantFace === 'function' && assistantById(id) ? <AssistantFace who={assistantById(id)} size={36} /> : null}
         </button>))}
     </div>
-    <div className="alu-card" data-assistant-life-masmon-card={t.monster}>
+    <div className="alu-card" data-assistant-life-masmon-card={t.monster} style={{ flex: 'none' }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <button type="button" aria-label={`${t.nick}をくわしく見る`} onClick={() => onSheet && onSheet(cur)} style={{ flex: 'none', width: 112, height: 112, borderRadius: 14, border: 0, padding: 0, background: 'radial-gradient(circle,#3b3566,#1e1b3a)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={t} size={100} /> : null}
+        <button type="button" aria-label={`${t.nick}を詳しく見る`} onClick={() => onSheet && onSheet(cur)} style={{ flex: 'none', width: short ? 84 : 112, height: short ? 84 : 112, borderRadius: 14, border: 0, padding: 0, background: 'radial-gradient(circle,#3b3566,#1e1b3a)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          {typeof AssistantMasmonPic === 'function' ? <AssistantMasmonPic t={t} size={short ? 76 : 100} /> : null}
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="alu-h" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}><span className="alu-nw" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.nick}</span><span className="alu-chip">{nameOf(cur)}のマスモン</span></div>
           {nw(<span className="alu-n">{m ? m.name : ''} · Lv.{t.lv} · {t.grow}</span>)}
           {nowText ? nw(<span className="alu-t">{nowText}</span>) : null}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 10px', marginTop: 4 }} data-assistant-life-masmon-bars>
+          <div style={{ display: 'grid', gridTemplateColumns: short ? '1fr 1fr 1fr' : '1fr 1fr', gap: '2px 10px', marginTop: 4 }} data-assistant-life-masmon-bars>
             {bars.map(([k, label, v]) => (
               <div key={k} className="alu-n alu-nw" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{label}<i style={{ flex: 1, height: 5, borderRadius: 3, background: '#3b3566', overflow: 'hidden' }}><b style={{ display: 'block', height: '100%', width: `${Math.round(v * 100)}%`, background: 'linear-gradient(90deg,#fde68a,#fb923c)' }} /></i></div>))}
           </div>
@@ -453,6 +464,7 @@ function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBac
     <AluGo data-assistant-life-masmon-go onClick={canCheer ? cheer : () => onSheet && onSheet(cur)}>
       <span style={{ display: 'block', minWidth: 0 }}>{nw(canCheer ? `📣 ${t.nick}を応援する` : `👀 ${nameOf(cur)}のマスモンを見る`)}<span className="alu-t alu-nw" style={{ display: 'block', color: 'inherit' }}>{goSub}</span></span>
     </AluGo>
+    {cheerWhy ? <div className="alu-n alu-nw" style={{ overflow: 'hidden', textOverflow: 'ellipsis', marginTop: -4 }} data-assistant-life-masmon-why>{cheerWhy}</div> : null}
     {nextLine ? <div className="alu-n alu-nw" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }} data-assistant-life-masmon-next>{nextLine}</div> : null}
     <div className="alu-card">
       {typeof amgpOn === 'function' && amgpOn() && typeof assistantMasmonNoteOpen === 'function'
@@ -460,7 +472,7 @@ function AssistantLifeMasmonTyped({ ids = [], tabs, tab = 'masmon', onTab, onBac
       <AluRow pic="⚔️" text="育ち方・編成・デッキ・好み" note={nw(`${nameOf(cur)}のマスモン${team.length}体${waiting.length ? `・まだ${waiting.length}体` : ''}`)} action={<AluBtn data-assistant-life-masmon-open="sheet" onClick={() => onSheet && onSheet(cur)}>開く</AluBtn>} />
       {p.v2 && waiting.length && typeof AssistantMasmonAskSheet === 'function'
         ? <AluRow pic="💡" text="次に迎えてほしいマスモンを伝える" note={nw(`${nameOf(cur)}が迎えるときの参考にします`)} action={<AluBtn data-assistant-life-masmon-open="ask" onClick={() => setAsk(true)}>伝える</AluBtn>} /> : null}
-      {onProfile ? <AluRow pic="📖" text={`${nameOf(cur)}のこと`} note={nw('助手の紹介・ひとこと')} action={<AluBtn data-assistant-life-masmon-open="profile" onClick={() => onProfile(cur)}>見る</AluBtn>} /> : null}
+      {typeof AssistantLifeProfileSheet === 'function' && giftSt ? <AluRow pic="📖" text={`${nameOf(cur)}のこと`} note={nw('助手の紹介・ひとこと')} action={<AluBtn data-assistant-life-masmon-open="profile" onClick={() => setProfileId(cur)}>見る</AluBtn>} /> : null}
     </div>
   </>, overlay);
 }

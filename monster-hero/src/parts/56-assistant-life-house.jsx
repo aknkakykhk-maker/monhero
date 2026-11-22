@@ -1683,7 +1683,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         ) : typedMasmon ? (
           <AssistantLifeMasmonTyped ids={ids.filter(id => metSet.has(id))} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
             onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
-            bondLvOf={(id) => (typeof bondLevelOf === 'function' ? bondLevelOf(id) : null)} onSheet={(id) => setMasmonId(id)} onProfile={() => { setTab('profile'); setRoomId(null); }}/>
+            bondLvOf={(id) => (typeof bondLevelOf === 'function' ? bondLevelOf(id) : null)} onSheet={(id) => setMasmonId(id)}/>
         ) : typedVisit ? (
           <AssistantLifeVisitTyped life={life} tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
             onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}/>

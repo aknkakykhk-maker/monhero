@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 605fd44c1846b78b
+// source-sha256: 172af1674818f06e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119603,6 +119603,7 @@ function AssistantLifeHouse({
   const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
+  const typedMasmon = uiV2 && tab === 'masmon' && typeof AssistantLifeMasmonTyped === 'function' && typeof AluFrame === 'function';
   const typedVisit = uiV2 && tab === 'visit' && typeof AssistantLifeVisitTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedVisit);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
@@ -120336,7 +120337,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit ? 'none' : 480
+      maxWidth: land || tab === 'where' || typedHouse || typedFriends || typedVisit || typedMasmon ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -120424,6 +120425,24 @@ function AssistantLifeHouse({
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
       }
     }, icons))
+  }) : typedMasmon ? React.createElement(AssistantLifeMasmonTyped, {
+    ids: ids.filter(id => metSet.has(id)),
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2,
+    bondLvOf: id => typeof bondLevelOf === 'function' ? bondLevelOf(id) : null,
+    onSheet: id => setMasmonId(id)
   }) : typedVisit ? React.createElement(AssistantLifeVisitTyped, {
     life: life,
     tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
@@ -122094,6 +122113,345 @@ function AssistantLifeFriendsTyped({
       onClick: () => setSheet('all')
     }, "開く")
   })));
+}
+function AssistantLifeMasmonTyped({
+  ids = [],
+  tabs,
+  tab = 'masmon',
+  onTab,
+  onBack,
+  bondLvOf = null,
+  onSheet = null
+}) {
+  const amgSt = typeof useAmgState === 'function' ? useAmgState() : null;
+  const save = typeof useAssistantMasmonSave === 'function' ? useAssistantMasmonSave() : null;
+  const [sel, setSel] = React.useState(null);
+  const [ask, setAsk] = React.useState(false);
+  const [result, setResult] = React.useState(null);
+  const [profileId, setProfileId] = React.useState(null);
+  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof ASSISTANT_MASMON_STORE !== 'undefined') await ASSISTANT_MASMON_STORE.load();
+      } catch (_) {}
+      if (alive) setTick(n => n + 1);
+    })();
+    const subs = [typeof AMGC_STORE !== 'undefined' ? AMGC_STORE : null, typeof AMGT_STORE !== 'undefined' ? AMGT_STORE : null].filter(Boolean);
+    const f = () => setTick(n => n + 1);
+    subs.forEach(s => s.subs && s.subs.add(f));
+    return () => {
+      alive = false;
+      subs.forEach(s => s.subs && s.subs.delete(f));
+    };
+  }, []);
+  const nameOf = id => typeof assistantLifeName === 'function' ? assistantLifeName(id) : id;
+  const planOf = id => {
+    try {
+      return typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(id) : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  const list = ids.filter(id => {
+    const p = planOf(id);
+    return p && assistantMasmonTeam(p).length;
+  });
+  const infoOf = id => {
+    try {
+      return typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  const cur = sel && list.includes(sel) ? sel : list.find(id => (infoOf(id) || {}).canCheer) || list[0] || null;
+  React.useEffect(() => {
+    if (cur && typeof amgTick === 'function') void amgTick(cur);
+  }, [cur]);
+  const frame = (children, overlay = null) => React.createElement(AluFrame, {
+    title: "マスモン",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    overlay: overlay,
+    "data-assistant-life-typed-masmon": "1"
+  }, children);
+  if (!cur) return frame(React.createElement("div", {
+    className: "alu-card alu-t",
+    "data-assistant-life-masmon-none": true
+  }, "仲良くなった助手は、自分のマスモンを育てます。家で助手と話してみましょう。"));
+  const p = planOf(cur);
+  const team = assistantMasmonTeam(p);
+  const t = team.find(x => x.lead) || team[0];
+  const m = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(t.monster) : null;
+  const info = infoOf(cur);
+  const ge = typeof amgOn === 'function' && amgOn() && typeof amgEntryOf === 'function' ? amgEntryOf(cur, t, amgSt || (typeof AMG_STORE !== 'undefined' ? AMG_STORE.state : null)) : null;
+  const bars = ge && typeof AMG_STATS !== 'undefined' ? AMG_STATS.map(([k, label]) => [k, label, Math.max(0, Math.min(1, ge.st[k] / AMG_MAX))]) : (() => {
+    const st = assistantMasmonStats(t) || {};
+    return ASSISTANT_MASMON_STAT_LABEL.map(([k, label]) => [k, label, Math.max(0, Math.min(1, st[k] || 0))]);
+  })();
+  const waiting = typeof assistantMasmonWaiting === 'function' ? assistantMasmonWaiting(p, save || undefined) : [];
+  const waitNext = waiting.slice().sort((a, b) => (a.welcome || 0) - (b.welcome || 0))[0] || null;
+  const lv = bondLvOf ? Number(bondLvOf(cur)) : NaN;
+  const nextLine = !waitNext ? null : Number.isFinite(lv) && waitNext.welcome > lv ? `🔒 あと仲良し度 ${waitNext.welcome - lv}Lv で、${nameOf(cur)}が次のマスモンを迎えます` : `💗 ${nameOf(cur)}が次のマスモンを迎えられます(「見る」から)`;
+  const nowText = info && info.today ? `🔥 今日は${info.today.kind || '修行'}${info.today.main ? `(${info.today.main})` : ''}` : info && info.last ? `📒 前の修行: ${info.last.nick}` : '';
+  const nw = x => React.createElement("span", {
+    className: "alu-nw",
+    style: {
+      display: 'block',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, x);
+  const short = typeof window !== 'undefined' && window.innerHeight < 500;
+  const cheer = () => {
+    const pts = () => {
+      try {
+        const v = typeof assistantLifeBondPointsOf === 'function' ? assistantLifeBondPointsOf(cur) : null;
+        return Number.isFinite(v) ? v : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    const before = pts();
+    const r = typeof assistantMasmonCheer === 'function' ? assistantMasmonCheer(cur) : {
+      ok: false
+    };
+    const after = pts();
+    const gain = before != null && after != null ? Math.max(0, Math.round(after - before)) : r && r.bond || 0;
+    if (r && r.ok) setResult({
+      line: r.tech ? `${r.nick}の「${r.tech}」の熟練 ${r.from}→${r.to}` : `${r.nick}を応援した`,
+      bond: gain,
+      left: r.left
+    });else setResult({
+      line: r && r.why && r.why !== 'off' ? r.why : 'いまは応援できません',
+      bond: 0,
+      left: null
+    });
+  };
+  const canCheer = !!(info && info.canCheer);
+  const goSub = canCheer ? `技の熟練 +1・💗 仲良し度 · 今日あと${info.left}回` : '育ち方・編成・デッキ・好み';
+  const cheerWhy = !canCheer && info && info.why ? `📣 応援は、${info.why.replace(/^モンヒロバトルにいるときにできます$/, `${nameOf(cur)}がモンヒロバトルにいるときにできます`)}` : '';
+  const resultNode = result ? React.createElement("div", {
+    "data-assistant-life-masmon-result": true
+  }, React.createElement(AluResult, {
+    title: "📣 応援した",
+    line: result.line,
+    gains: result.bond ? [{
+      icon: '💗',
+      label: '仲良し度',
+      v: result.bond
+    }] : [],
+    next: {
+      label: typeof assistantMasmonTrainWatchOpen === 'function' ? '👀 修行を見る' : '🐾 マスモンに戻る',
+      onClick: () => {
+        setResult(null);
+        if (typeof assistantMasmonTrainWatchOpen === 'function') assistantMasmonTrainWatchOpen(cur);
+      }
+    },
+    onClose: () => setResult(null)
+  })) : null;
+  const overlay = React.createElement(React.Fragment, null, resultNode, ask && typeof AssistantMasmonAskSheet === 'function' && typeof assistantById === 'function' ? React.createElement(AssistantMasmonAskSheet, {
+    who: assistantById(cur),
+    from: "welcome",
+    onClose: () => setAsk(false)
+  }) : null, typeof AssistantMasmonTrainWatchHost === 'function' ? React.createElement(AssistantMasmonTrainWatchHost, null) : null, typeof AssistantMasmonNoteHost === 'function' ? React.createElement(AssistantMasmonNoteHost, null) : null, profileId && typeof AssistantLifeProfileSheet === 'function' ? React.createElement(AssistantLifeProfileSheet, {
+    id: profileId,
+    bondLevelOf: bondLvOf,
+    giftSt: giftSt,
+    onMasmon: () => setProfileId(null),
+    onClose: () => setProfileId(null)
+  }) : null);
+  return frame(React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-masmon-who": true,
+    style: {
+      flex: 'none',
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: 4,
+      overflowX: 'auto'
+    }
+  }, list.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "aria-label": `${nameOf(id)}のマスモン`,
+    "aria-pressed": id === cur,
+    "data-assistant-life-masmon-pick": id,
+    onClick: () => {
+      setSel(id);
+      setResult(null);
+    },
+    style: {
+      flex: 'none',
+      width: 40,
+      height: 40,
+      borderRadius: '50%',
+      padding: 0,
+      overflow: 'hidden',
+      background: '#312e5a',
+      border: id === cur ? '2px solid #fde047' : '2px solid #475569',
+      boxShadow: id === cur ? '0 0 0 3px #fde04755' : 'none'
+    }
+  }, typeof AssistantFace === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+    who: assistantById(id),
+    size: 36
+  }) : null))), React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-masmon-card": t.monster,
+    style: {
+      flex: 'none'
+    }
+  }, React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 10,
+      alignItems: 'center'
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": `${t.nick}を詳しく見る`,
+    onClick: () => onSheet && onSheet(cur),
+    style: {
+      flex: 'none',
+      width: short ? 84 : 112,
+      height: short ? 84 : 112,
+      borderRadius: 14,
+      border: 0,
+      padding: 0,
+      background: 'radial-gradient(circle,#3b3566,#1e1b3a)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden'
+    }
+  }, typeof AssistantMasmonPic === 'function' ? React.createElement(AssistantMasmonPic, {
+    t: t,
+    size: short ? 76 : 100
+  }) : null), React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    className: "alu-h",
+    style: {
+      margin: 0,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      overflow: 'hidden'
+    }
+  }, React.createElement("span", {
+    className: "alu-nw",
+    style: {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    }
+  }, t.nick), React.createElement("span", {
+    className: "alu-chip"
+  }, nameOf(cur), "のマスモン")), nw(React.createElement("span", {
+    className: "alu-n"
+  }, m ? m.name : '', " · Lv.", t.lv, " · ", t.grow)), nowText ? nw(React.createElement("span", {
+    className: "alu-t"
+  }, nowText)) : null, React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: short ? '1fr 1fr 1fr' : '1fr 1fr',
+      gap: '2px 10px',
+      marginTop: 4
+    },
+    "data-assistant-life-masmon-bars": true
+  }, bars.map(([k, label, v]) => React.createElement("div", {
+    key: k,
+    className: "alu-n alu-nw",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4
+    }
+  }, label, React.createElement("i", {
+    style: {
+      flex: 1,
+      height: 5,
+      borderRadius: 3,
+      background: '#3b3566',
+      overflow: 'hidden'
+    }
+  }, React.createElement("b", {
+    style: {
+      display: 'block',
+      height: '100%',
+      width: `${Math.round(v * 100)}%`,
+      background: 'linear-gradient(90deg,#fde68a,#fb923c)'
+    }
+  })))))))), React.createElement(AluGo, {
+    "data-assistant-life-masmon-go": true,
+    onClick: canCheer ? cheer : () => onSheet && onSheet(cur)
+  }, React.createElement("span", {
+    style: {
+      display: 'block',
+      minWidth: 0
+    }
+  }, nw(canCheer ? `📣 ${t.nick}を応援する` : `👀 ${nameOf(cur)}のマスモンを見る`), React.createElement("span", {
+    className: "alu-t alu-nw",
+    style: {
+      display: 'block',
+      color: 'inherit'
+    }
+  }, goSub))), cheerWhy ? React.createElement("div", {
+    className: "alu-n alu-nw",
+    style: {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      marginTop: -4
+    },
+    "data-assistant-life-masmon-why": true
+  }, cheerWhy) : null, nextLine ? React.createElement("div", {
+    className: "alu-n alu-nw",
+    style: {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    },
+    "data-assistant-life-masmon-next": true
+  }, nextLine) : null, React.createElement("div", {
+    className: "alu-card"
+  }, typeof amgpOn === 'function' && amgpOn() && typeof assistantMasmonNoteOpen === 'function' ? React.createElement(AluRow, {
+    pic: "📒",
+    text: "育成ノート",
+    note: nw('予定を組む・疲れとストレス・記録'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-masmon-open": "note",
+      onClick: () => assistantMasmonNoteOpen(cur)
+    }, "見る")
+  }) : null, React.createElement(AluRow, {
+    pic: "⚔️",
+    text: "育ち方・編成・デッキ・好み",
+    note: nw(`${nameOf(cur)}のマスモン${team.length}体${waiting.length ? `・まだ${waiting.length}体` : ''}`),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-masmon-open": "sheet",
+      onClick: () => onSheet && onSheet(cur)
+    }, "開く")
+  }), p.v2 && waiting.length && typeof AssistantMasmonAskSheet === 'function' ? React.createElement(AluRow, {
+    pic: "💡",
+    text: "次に迎えてほしいマスモンを伝える",
+    note: nw(`${nameOf(cur)}が迎えるときの参考にします`),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-masmon-open": "ask",
+      onClick: () => setAsk(true)
+    }, "伝える")
+  }) : null, typeof AssistantLifeProfileSheet === 'function' && giftSt ? React.createElement(AluRow, {
+    pic: "📖",
+    text: `${nameOf(cur)}のこと`,
+    note: nw('助手の紹介・ひとこと'),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-masmon-open": "profile",
+      onClick: () => setProfileId(cur)
+    }, "見る")
+  }) : null)), overlay);
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
@@ -125792,7 +126150,8 @@ async function assistantLifeUiV2Load() {
 }
 function assistantLifeUiV2Tabs() {
   const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
-  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', '友情'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏠', 'フレンド']] : []), ...profile];
+  const masmon = typeof AssistantLifeMasmonTyped === 'function' && typeof assistantMasmonPlanOf === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeProfileTab) ? [['masmon', '🐾', 'マスモン']] : null;
+  return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', '友情'], ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏠', 'フレンド']] : []), ...(masmon || profile)];
 }
 function AssistantLifeIntroduceCard({
   ids,
