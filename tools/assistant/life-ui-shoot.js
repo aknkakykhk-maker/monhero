@@ -27,7 +27,8 @@ const measure = (o = {}) => {
   const ng = [];
   // o.skipMain … 下まで送った絵(主なボタンが上へ流れて見えない)は②を見ない。場面の絵([data-alu-scene])の中の字は①④で数えない(絵の札は段8〜で直す)
   const inScene = (el) => !!(el && el.closest && el.closest('[data-alu-scene]'));
-  const frame = document.querySelector('[data-alu-frame]');
+  // o.frame … 測る型の目印(部屋は家の型の上に重なるので '[data-assistant-life-typed-room]')
+  const frame = document.querySelector(o.frame || '[data-alu-frame]');
   if (!frame) return { ng: ['型(.alu)が描かれていない'] };
   const F = frame.getBoundingClientRect();
   const H = F.height, W = F.width;

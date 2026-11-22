@@ -3,6 +3,7 @@
 //   node tools/assistant/life-house-typed-shoot.js [--out <置き場>] [--2x]
 //   置き場の既定: docs/progress/assistant-life/step7-house/(<大きさ>-<場面>.png と measure.json)
 // 場面: house(開いたところ)・house-bottom(下まで送った)・result(👀 見る → 場面の終わり → 結果の1枚)
+//       room(段8: 部屋を開いたところ。--room <id> 既定 atsu)・room-more(「もっと見る」を開いて下まで送った)
 // 測る決まりは tools/assistant/life-ui-shoot.js の measure(字の4段・主なボタン1つ・帯とタブ・はみ出し・下の空き・窓・段組み)。
 // 偽のデータでページの中だけ(Supabase は偽物)。時刻は 15:00 に固定。最後の1行が OK / NG。
 'use strict';
@@ -44,7 +45,7 @@ fs.mkdirSync(OUT, { recursive: true });
     const jst = new Date(Date.now() + 9 * 3600000); jst.setUTCHours(HOUR, 0, 0, 0);
     await page.clock.setFixedTime(new Date(jst.getTime() - 9 * 3600000));
     page.on('pageerror', e => result.errors.push(`${sizeId}: ${String(e.message || e).slice(0, 160)}`));
-    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; if (window.__untyped) window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; window.__mhKeepRoomFold = true; if (window.__untyped) window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
     if (UNTYPED) await page.addInitScript(() => { window.__untyped = true; });
     // --bedtry '{"headDiv":3,"bedHeads":3,"quiltDrop":0.2}' … 寝ている部屋のベッドの釣り合いの案(ページの中だけ)
     if (opt('--bedtry', '')) await page.addInitScript((t) => { window.__mhAssistantLifeBedTry = t; }, JSON.parse(opt('--bedtry', '{}')));
@@ -92,6 +93,24 @@ fs.mkdirSync(OUT, { recursive: true });
       await page.locator('[data-assistant-life-scene-back]').first().click({ timeout: 5000 });
       await page.locator('[data-assistant-life-house-result] [data-alu-sheet]').waitFor({ timeout: 5000 });
       await shot('result');
+      // 段8: 部屋(型に載せた部屋。段8の前の版では型が無いので絵だけ撮る)
+      await page.locator('[data-assistant-life-house-result] [data-alu-sheet-close]').first().click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(400);
+      const RID = opt('--room', 'atsu');
+      await page.locator(`[data-assistant-life-room="${RID}"]`).first().click({ timeout: 5000 });
+      await page.locator(`[data-assistant-life-room-sheet="${RID}"]`).waitFor({ timeout: 5000 });
+      const typedRoom = await page.locator('[data-assistant-life-typed-room]').count();
+      if (typedRoom) {
+        await shot('room', { frame: '[data-assistant-life-typed-room]' });
+        const moreBtn = page.locator('[data-assistant-life-typed-room] [data-assistant-life-room-more]').first();
+        if ((await moreBtn.getAttribute('aria-expanded')) !== 'true') await moreBtn.click({ timeout: 3000 });
+        await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-typed-room] [data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
+        await shot('room-more', { frame: '[data-assistant-life-typed-room]', skipMain: true });
+      } else {
+        await page.waitForTimeout(900); await page.screenshot({ path: path.join(OUT, `${sizeId}-room.png`) });
+        await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-roomview-scroll]'); if (m) m.scrollTop = m.scrollHeight; });
+        await page.waitForTimeout(400); await page.screenshot({ path: path.join(OUT, `${sizeId}-room-more.png`) });
+      }
     } catch (e) { result.miss.push(`${sizeId}: ${String(e.message || e).split('\n')[0].slice(0, 140)}`); failed++; }
     await ctx.close();
   }
