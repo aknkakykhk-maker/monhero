@@ -26,7 +26,7 @@ const ALU_CSS = `
 .alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px))}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
@@ -87,7 +87,18 @@ const useAluWide = () => {
   const [box, setBox] = React.useState({ wide: false, h: 0, w: 0 });
   React.useLayoutEffect(() => {
     const el = ref.current; if (!el) return undefined;
-    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
+    // 下のタブの下の余白: 器が画面の下の端まで届いていない(iPhone のホーム画面のアプリで、器の下に黒い帯が出ていた)ときは、
+    //   届いていないぶんを切り欠きの余白から引く(二重に取るとタブの中身が 22px になり、絵が上で切れた・2026-11-22 r1119-098)
+    const sab = () => {
+      try {
+        el.style.removeProperty('--alu-sab');
+        const tabs = el.querySelector('[data-alu-tabs]'); if (!tabs) return;
+        const sa = parseFloat(getComputedStyle(tabs).paddingBottom) || 0; if (!sa) return;
+        const gap = Math.max(0, Math.round((window.innerHeight || 0) - el.getBoundingClientRect().bottom));
+        if (gap > 0) el.style.setProperty('--alu-sab', `${Math.max(0, sa - gap)}px`);
+      } catch (_) {}
+    };
+    const measure = () => { sab(); const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
     measure();
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9612604f8c3bf8c9
+// generated-sha256: 7d9c110324c2f45a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70706,7 +70706,8 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
         {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました'}</span> : null}
         <AluCond id={id} sleeping={sleeping} hour={hour} />
       </div>
-      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{statusLine}</div> : null}
+      {/* 「· 」で区切った塊の途中では折らない(「気分: ご機 / 嫌」と折れていた・2026-11-22 r1119-098) */}
+      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{String(statusLine).split(' · ').map((x, i) => <React.Fragment key={i}>{i ? <>{' · '}<wbr/></> : null}<span className="alu-nw">{x}</span></React.Fragment>)}</div> : null}
     </div>);
   const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
   let resultNode = null;
@@ -70728,7 +70729,7 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
       {play.map(p => <AssistantLifeRoomTypedRow key={p.k} {...p} on={p.on ? () => { setPlayOpen(false); p.on(); } : null} />)}
     </AluSheet>) : null;
   const sceneFn = (box) => (
-    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
+    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(240, Math.round(box.h / 0.42 * 0.36)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
   return (
     <AluFrame title={`${who.name}の部屋`} onBack={onBack} backProps={{ 'data-assistant-life-close': undefined, 'data-assistant-life-roomview-close': '', 'data-assistant-life-room-close': '' }}
       tab={tab} onTab={onTab} tabs={tabs} head={head} scene={sceneFn} overlay={resultNode || playSheet || overlay} data-assistant-life-typed-room={id}>
@@ -71840,9 +71841,10 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
-        <div className="absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center" style={{ top: floorY - 120 }} data-assistant-life-roomview-away>
-          <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
-          {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
+        // 留守の札は窓(右の壁)にかからない左上へ(前は真ん中で窓に重なっていた・2026-11-22 r1119-098)
+        <div className="absolute rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-left" style={{ top: topH + 10, left: 10, maxWidth: 'calc(100% - 20px)' }} data-assistant-life-roomview-away>
+          <p className="whitespace-nowrap text-[16px] font-black text-white">{away.title}</p>
+          {away.sub && <p className="whitespace-nowrap text-[11px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
       {/* みんな寝ているときだけ、家具やベッドもふくめて部屋ぜんたいを暗くする */}
@@ -72669,7 +72671,7 @@ const ALU_CSS = `
 .alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px))}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
@@ -72730,7 +72732,18 @@ const useAluWide = () => {
   const [box, setBox] = React.useState({ wide: false, h: 0, w: 0 });
   React.useLayoutEffect(() => {
     const el = ref.current; if (!el) return undefined;
-    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
+    // 下のタブの下の余白: 器が画面の下の端まで届いていない(iPhone のホーム画面のアプリで、器の下に黒い帯が出ていた)ときは、
+    //   届いていないぶんを切り欠きの余白から引く(二重に取るとタブの中身が 22px になり、絵が上で切れた・2026-11-22 r1119-098)
+    const sab = () => {
+      try {
+        el.style.removeProperty('--alu-sab');
+        const tabs = el.querySelector('[data-alu-tabs]'); if (!tabs) return;
+        const sa = parseFloat(getComputedStyle(tabs).paddingBottom) || 0; if (!sa) return;
+        const gap = Math.max(0, Math.round((window.innerHeight || 0) - el.getBoundingClientRect().bottom));
+        if (gap > 0) el.style.setProperty('--alu-sab', `${Math.max(0, sa - gap)}px`);
+      } catch (_) {}
+    };
+    const measure = () => { sab(); const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
     measure();
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();
