@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 172af1674818f06e
+// source-sha256: e5423a40bb06e76f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -129183,7 +129183,7 @@ function AssistantLifeProfileSheet({
   const top = React.createElement("div", {
     className: "flex items-center gap-2 border-b border-white/10 bg-slate-950 px-3 py-2",
     style: {
-      paddingTop: land ? 8 : 'calc(8px + env(safe-area-inset-top))'
+      paddingTop: land ? 8 : 'calc(8px + var(--mh-sa-top, env(safe-area-inset-top)))'
     }
   }, React.createElement("button", {
     type: "button",
@@ -129198,10 +129198,10 @@ function AssistantLifeProfileSheet({
     "data-assistant-life-profile": id,
     role: "dialog",
     "aria-label": `${who.name}の紹介`,
-    style: land ? {
-      flexDirection: 'row'
-    } : {
-      flexDirection: 'column'
+    style: {
+      flexDirection: land ? 'row' : 'column',
+      paddingLeft: 'var(--mh-sa-left, 0px)',
+      paddingRight: 'var(--mh-sa-right, 0px)'
     }
   }, land ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "relative h-full w-[34%] max-w-[320px] shrink-0"

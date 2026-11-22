@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 64111e831da6ed5a
+// generated-sha256: c0af5763ddccbe89
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74047,12 +74047,12 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       <p className="mt-1.5 text-[10.5px] font-bold leading-snug text-slate-400">表情つきで台詞が出ます(ボイスはまだありません)。仲良し度が上がると、聞ける台詞が増えます。</p>
     </div>);
   const top = (
-    <div className="flex items-center gap-2 border-b border-white/10 bg-slate-950 px-3 py-2" style={{ paddingTop: land ? 8 : 'calc(8px + env(safe-area-inset-top))' }}>
+    <div className="flex items-center gap-2 border-b border-white/10 bg-slate-950 px-3 py-2" style={{ paddingTop: land ? 8 : 'calc(8px + var(--mh-sa-top, env(safe-area-inset-top)))' }}>
       <button type="button" data-assistant-life-profile-close onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl border border-white/15 bg-slate-800 px-3 text-[13px] font-black text-white active:scale-95">← 戻る</button>
       <p className="min-w-0 truncate text-[17px] font-black text-white">{who.name}のこと</p>
     </div>);
   return (
-    <div className="absolute inset-0 z-[60] flex bg-slate-950" data-assistant-life-profile={id} role="dialog" aria-label={`${who.name}の紹介`} style={land ? { flexDirection: 'row' } : { flexDirection: 'column' }}>
+    <div className="absolute inset-0 z-[60] flex bg-slate-950" data-assistant-life-profile={id} role="dialog" aria-label={`${who.name}の紹介`} style={{ flexDirection: land ? 'row' : 'column', paddingLeft: 'var(--mh-sa-left, 0px)', paddingRight: 'var(--mh-sa-right, 0px)' }}>{/* 横の左右の切り欠きに字・ボタンを入れない(2026-11-22 段12・撮り比べ) */}
       {land ? <>
         <div className="relative h-full w-[34%] max-w-[320px] shrink-0">{hero}
           <button type="button" data-assistant-life-profile-close onClick={onClose} className="absolute left-2 top-2 z-[3] min-h-[44px] rounded-xl border border-white/15 bg-slate-800/90 px-3 text-[13px] font-black text-white active:scale-95">← 戻る</button></div>
