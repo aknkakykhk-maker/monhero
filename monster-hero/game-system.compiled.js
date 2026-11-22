@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4039575da17dc8e8
+// source-sha256: 5bd339a4eef78c5b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39231,7 +39231,7 @@ const RhythmSongSelect = ({
     "data-rhythm-demo-ticks": true,
     title: "ホールド・スライドを押さえている途中で入る判定の数",
     className: "ml-1 inline-block whitespace-nowrap text-slate-300"
-  }, `+ 長押しの刻み${rhythmChartTickCount(song, chart, difficulty.id)}`) : null)), React.createElement("div", {
+  }, `+ 刻み${rhythmChartTickCount(song, chart, difficulty.id)}`) : null)), React.createElement("div", {
     "data-rhythm-song-stats": true,
     style: {
       gridArea: 'stats'

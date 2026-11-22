@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 26f39b927736d4ff
+// generated-sha256: a1cc9962b8a1b968
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24711,7 +24711,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             </div>
             <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}{/* Lv. は難易度の札と一覧の行に出ているので、ここには書かない(2026-11-23 API総点検② V7・V31・V33: 同じ Lv. が3か所に出ていた)。
                 ノーツの数と刻みの数は、それぞれ途中で折り返さない1かたまりにする(「刻/み247」と切れていた) */}
-              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks title="ホールド・スライドを押さえている途中で入る判定の数" className="ml-1 inline-block whitespace-nowrap text-slate-300">{/* 「刻み」だけでは何の数か分からなかった(2026-11-23 API総点検② V34) */}{`+ 長押しの刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
+              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks title="ホールド・スライドを押さえている途中で入る判定の数" className="ml-1 inline-block whitespace-nowrap text-slate-300">{/* 「長押しの刻み」と書くと縦で2行目に落ち、一覧が1行ぶん狭くなったので「刻み」のまま(2026-11-23 API総点検② V34 は見送り) */}{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
