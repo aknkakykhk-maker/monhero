@@ -1369,6 +1369,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
   // 段7: 新UIの家のタブは型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx)。ほかのタブ・旧UIは今のまま
   //   window.__mhAssistantLifeUntypedHouse … 検査だけが立てる印(段7 の前の並びを確かめる assistant-life-top-check・benefit-check)。前の並びは段13 の片づけで消す
+  // 段9: 新UIの町を型に載せる(56-assistant-life-map.jsx の AssistantLifeTownTyped)。検査だけ window.__mhAssistantLifeUntypedTown で前の町を開く
+  const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
@@ -1656,7 +1658,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
-        {tab === 'where' ? (
+        {tab === 'where' && typedTown ? (
+          <AssistantLifeTownTyped life={life} ids={ids} land={land}
+            tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            onRoom={(id) => setRoomId(id)} onGo={(fn) => { try { close(); fn(); } catch {} }} onBeat={beat} onCard={card}
+            initialPlace={mapFocusPlace} initialAssistantId={mapFocusAssistantId} initialKey={mapFocusKey}/>
+        ) : tab === 'where' ? (
           <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} initialKey={mapFocusKey} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
