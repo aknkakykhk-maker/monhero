@@ -146,13 +146,36 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
   // ジャケットを重ねて見せる札で、どちらの版が手前か(札の曲 id → 手前の版の曲 id)。未指定なら持ち主の版が手前
   const [frontBySong, setFrontBySong] = React.useState({});
   // 売り場を離れる(タブを替える・交換所を出る)と、試し聴きを止めて元の BGM へ戻す
-  React.useEffect(() => () => { try { Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
+  // 試し聴きはモンヒロビートで遊ぶときと同じ鳴らし方(音ゲー設定の BGM 音量・曲ごとの音量合わせ)。2026-11-22 社長「試聴の音が遊ぶときの音量と違う」
+  const handleRef = React.useRef(null), resumeKeyRef = React.useRef(null), reqRef = React.useRef(0);
+  const stopListen = () => {
+    ++reqRef.current;
+    const h = handleRef.current; handleRef.current = null;
+    if (h) { try { h.stop(); } catch (_) { /* 止まっている */ } }
+    const key = resumeKeyRef.current; resumeKeyRef.current = null;
+    if (key) { try { Audio_.playBGM(key); } catch (_) { /* 音が無い環境 */ } }
+  };
+  React.useEffect(() => () => { try { stopListen(); Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
   if (!songs.length) return null;
   const toggleListen = async (song) => {
     try {
+      if (playingId === song.songId) { stopListen(); setPlayingId(''); return; }
+      const hadHandle = !!handleRef.current;
+      const prevKey = hadHandle ? resumeKeyRef.current : (Audio_.currentBgmKey ? Audio_.currentBgmKey() : null);
+      if (hadHandle) { const h = handleRef.current; handleRef.current = null; try { h.stop(); } catch (_) { /* 止まっている */ } }
+      const req = ++reqRef.current;
+      resumeKeyRef.current = prevKey || null;
       await Audio_.unlock();
-      const started = await Audio_.previewBGM(song.bgmTrackId);
-      setPlayingId(started ? song.songId : '');
+      // 保存済みの音ゲー設定を読むだけ(書き換えない)。無い・壊れているときは既定値
+      const saved = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
+      const audio = await Audio_.startRhythmTrack(song.bgmTrackId, saved.bgmVolume, { loop: true });
+      if (req !== reqRef.current || !audio) {
+        if (audio) { try { audio.stop(); } catch (_) { /* 止まっている */ } }
+        if (req === reqRef.current) { const key = resumeKeyRef.current; resumeKeyRef.current = null; if (key) Audio_.playBGM(key); setPlayingId(''); }
+        return;
+      }
+      handleRef.current = audio;
+      setPlayingId(song.songId);
     } catch (_) { setPlayingId(''); }
   };
   const anyBundle = songs.some((song) => rhythmSongHasBundle(song.songId));
