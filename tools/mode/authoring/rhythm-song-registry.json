@@ -2087,6 +2087,34 @@
     "MASTER": "smooth"
    }
   },
+  "battle_5": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-battle-5.mp3",
+   "chartRevision": 40,
+   "audioSha256": "a911ffe142ba9f4a1eaa28f357ebccac0ee00213a9837c78ef2f63b2450a1924",
+   "durationMs": 251904,
+   "analyzedTiming": {
+    "bpm": 170.001,
+    "beatZeroMs": 423.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "battle_5_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-battle-5-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "7fc06521006765125ad1c5986f200218c73d93715da9fe99c0ac05ba3e557db9",
+   "durationMs": 147360,
+   "analyzedTiming": {
+    "bpm": 169.999,
+    "beatZeroMs": 423.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
   "zenbu_hissatsuwaza": {
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-zenbu-hissatsuwaza.mp3",
