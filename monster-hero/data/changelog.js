@@ -94,13 +94,9 @@ const CHANGELOG = [
     date: "2026-11-22 23:14", type:'update', group:'rhythm', status:'new',
     title:'Beyond the Same Sky の MASTER と HELL が、2人の歌い分けに合わせた譜面になりました',
     items:[
-      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL を、あつとみゅあの歌い分けに合わせて作り直しました。',
-      'みゅあが歌うところは右手、あつが歌うところは左手で歌の言葉を叩きます。反対の手は自分の側で伴奏の拍を取ります。',
-      '2人で歌うところやハモりは、左右の同時押しや左右対称のホールドになります。HELL では、サビの伸ばしやハモりの山場に空中のノーツが出ます。',
-      'ホールドやスライドは歌っている手の側にだけ出るので、押さえている手の上をもう片方の手がまたぐ所はありません。',
-      'レベルは、原曲 MASTER Lv.36 ／ HELL Lv.55、short ver. MASTER Lv.32 ／ HELL Lv.58 です。',
-      'ノーツ数は、原曲 MASTER 1112 ／ HELL 1227、short ver. MASTER 639 ／ HELL 733 です。',
-      'これまでのスコアやランキングの記録はそのまま残ります。',
+      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL を、あつとみゅあの歌に合わせて作り直しました。',
+      'レベルは、原曲 MASTER Lv.36、short ver. MASTER Lv.32 です。HELL は変わりません。',
+      'これまでのスコアとランキングの記録はそのまま残ります。',
     ],
   },
   // 咲かせて！ハナウタ・ノートの予告(2026-11-22 社長「イベント予告を更新して」)。出しはじめる時刻(いま)を date・visibleFrom・notifyFrom にそろえる。
