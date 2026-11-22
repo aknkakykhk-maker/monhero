@@ -1,0 +1,528 @@
+曲	songId	難易度	表示Lv	見込みLv	Lvの印	ノーツ	毎秒	最密4秒	最短間隔ms	押せない	交差/100	届きにくい/100	跳び	帯の中	モンスター数	段の逆転	同時で重なる	同じ所70ms未満	同じ所の最短ms	HOLD/SLIDEの同時始まり	最後のノーツms	イベント曲	気になる点
+MF × ICHIKA MIX	mf_ichika_mix	EASY	7	6.9		202	1.44	12	177	0	0	0	0	0	4		0	0		0	143117		
+MF × ICHIKA MIX	mf_ichika_mix	NORMAL	9	9.5		230	1.63	14	177	0	0	0	0	0	4		0	0		0	143117		
+MF × ICHIKA MIX	mf_ichika_mix	HARD	13	13.5		316	2.24	16	88	0	0	1	3	0	4		0	0		0	143117		
+MF × ICHIKA MIX	mf_ichika_mix	EXPERT	20	20		385	2.72	22	88	0	0	9	2	1	4		0	0		0	143294		帯の中 1
+MF × ICHIKA MIX	mf_ichika_mix	MASTER	25	24.6		400	2.83	25	88	0	3	11	3	0	4		0	0		0	143294		
+MF × ICHIKA MIX	mf_ichika_mix	HELL	35	35.7		373	2.64	25	88	0	15	38	7	0	4		0	0		0			
+Monster Hero	monster_hero	EASY	8	8.9		250	1.7	14	173	0	0	0	0	0	4		0	0		0	149727		
+Monster Hero	monster_hero	NORMAL	9	10.6		286	1.94	15	173	0	0	0	0	0	4		0	0		0	149901		
+Monster Hero	monster_hero	HARD	15	19		391	2.63	23	86	0	0	4	7	0	4		0	0		0	151547		
+Monster Hero	monster_hero	EXPERT	22	24		477	3.21	26	86	0	3	4	5	0	4		0	0		0	151547		
+Monster Hero	monster_hero	MASTER	27	30		561	3.76	30	86	0	9	19	23	0	4		0	0		0	151547		
+Monster Hero	monster_hero	HELL	51	53.4		652	4.37	35	86	0	22	37	32	0	4		0	0		0			
+Monster Hero -Another-	monster_hero_another	EASY	8	6.8		242	1.6	11	175	0	0	0	0	0	4		0	0		0	153463		
+Monster Hero -Another-	monster_hero_another	NORMAL	9	9.8		274	1.81	14	175	0	0	0	1	0	4		0	0		0	153463		
+Monster Hero -Another-	monster_hero_another	HARD	14	16.8		375	2.48	20	87	0	0	2	3	0	4		0	0		0	153463		
+Monster Hero -Another-	monster_hero_another	EXPERT	19	21.2		460	3.04	21	87	0	4	8	8	0	4		0	0		0	153463		
+Monster Hero -Another-	monster_hero_another	MASTER	24	26.6		514	3.4	25	87	0	5	20	13	0	4		0	0		0	153463		
+Monster Hero -Another-	monster_hero_another	HELL	41	47	表示が低い	586	3.88	29	87	0	33	51	29	0	4		0	0		0			表示が低い
+SIX ÉTERNEL	six_eternel_beat	EASY	10	11.7		359	2.33	16	108	0	0	0	0	0	4		0	0		0	156220		
+SIX ÉTERNEL	six_eternel_beat	NORMAL	14	16.8		435	2.83	20	108	0	0	0	1	0	4		0	0		0	156220		
+SIX ÉTERNEL	six_eternel_beat	HARD	22	23.6		569	3.69	27	54	0	0	4	8	0	4		0	1	55	0	156220		
+SIX ÉTERNEL	six_eternel_beat	EXPERT	32	31.5		704	4.55	31	54	0	8	19	5	1	4		0	25	54	0	156655		帯の中 1
+SIX ÉTERNEL	six_eternel_beat	MASTER	39	35.1		789	5.1	31	54	0	3	17	10	1	4		0	17	54	0	156655		帯の中 1
+SIX ÉTERNEL	six_eternel_beat	HELL	63	60.2		804	5.2	32	54	0	24	62	15	0	4		0	0		0			
+SIX ÉTERNEL	six_eternel_remix	EASY	7	6		213	1.46	10	184	0	0	0	0	0	4		0	0		0	148686		
+SIX ÉTERNEL	six_eternel_remix	NORMAL	8	8.8		244	1.66	12	184	0	0	0	1	0	4		0	0		0	149055		
+SIX ÉTERNEL	six_eternel_remix	HARD	13	16.2		333	2.26	20	92	0	0	2	4	0	4		0	0		0	149055		
+SIX ÉTERNEL	six_eternel_remix	EXPERT	20	20.5		401	2.73	22	92	0	0	10	7	0	4		0	0		0	148133		
+SIX ÉTERNEL	six_eternel_remix	MASTER	23	25.6		456	3.1	24	92	0	5	10	11	0	4		0	0		0	148133		
+SIX ÉTERNEL	six_eternel_remix	HELL	44	46.4		524	3.56	25	92	0	51	58	23	0	4		0	0		0			
+Stay With Me	stay_with_me	EASY	6	4		324	1.2	10	176	0	0	0	0	0	4		0	0		0	271868		
+Stay With Me	stay_with_me	NORMAL	7	5.1		371	1.37	10	176	0	0	0	1	0	4		0	0		0	271868		
+Stay With Me	stay_with_me	HARD	12	11.7		503	1.86	16	88	0	0	3	10	0	4		0	0		0	271868		跳びの割合 0.086(帯 〜0.074)
+Stay With Me	stay_with_me	EXPERT	17	16		613	2.26	18	88	0	5	19	7	0	4		0	0		0	271868		
+Stay With Me	stay_with_me	MASTER	19	19.6		676	2.49	19	88	0	12	23	3	0	4		0	0		0	271868		
+Stay With Me	stay_with_me	HELL	48	42.7		829	3.06	24	88	0	84	124	41	0	4		0	0		0			交差/100 10.1(帯 〜9.82)/届きにくい/100 15(帯 〜13.99)
+綺季一閃	kiki_issen	EASY	8	6.6		397	1.54	12	193	0	0	0	0	0	4		0	0		0	260299		
+綺季一閃	kiki_issen	NORMAL	10	11.4		451	1.75	17	193	0	0	0	2	0	4		0	0		0	260299		
+綺季一閃	kiki_issen	HARD	16	18.2		623	2.41	22	96	0	0	8	5	0	4		0	0		0	260396		
+綺季一閃	kiki_issen	EXPERT	24	24.8		757	2.93	26	96	0	11	22	11	1	4		0	0		0	260396		帯の中 1
+綺季一閃	kiki_issen	MASTER	30	33.1		873	3.38	34	96	0	23	41	14	0	4		0	0		0	260396		
+綺季一閃	kiki_issen	HELL	48	51.3		979	3.78	33	96	0	92	126	32	0	4		0	0		0			
+風がそよぐ場所	kaze_ga_soyogu	EASY	4	0.6		81	0.87	6	253	0	0	0	0	0	4		0	0		0	95599		
+風がそよぐ場所	kaze_ga_soyogu	NORMAL	5	1.6		94	1	7	252	0	0	0	0	0	4		0	0		0	97113		
+風がそよぐ場所	kaze_ga_soyogu	HARD	7	3.7		126	1.34	9	252	0	0	1	0	0	4		0	0		0	97113		
+風がそよぐ場所	kaze_ga_soyogu	EXPERT	11	7.1		167	1.8	11	252	0	0	2	0	0	4		0	0		0	95599		
+風がそよぐ場所	kaze_ga_soyogu	MASTER	18	12	表示が高い	193	2.04	16	252	0	0	2	4	0	4		0	0		0	97113		表示が高い
+風がそよぐ場所	kaze_ga_soyogu	HELL	21	15.7		193	2.04	16	252	0	0	2	4	0	4		0	0		0			
+Close To Your Heart	close_to_your_heart	EASY	6	5.7		161	1.39	10	230	0	0	0	0	0	4		0	0		0	118754		
+Close To Your Heart	close_to_your_heart	NORMAL	8	6.9		187	1.61	11	230	0	0	0	0	0	4		0	0		0	118754		
+Close To Your Heart	close_to_your_heart	HARD	11	12.8		260	2.24	15	115	0	0	2	4	0	4		0	0		0	118754		
+Close To Your Heart	close_to_your_heart	EXPERT	21	19.1		311	2.68	21	115	0	2	5	4	4	4		0	0		0	118754		
+Close To Your Heart	close_to_your_heart	MASTER	23	23.6		356	3.07	25	115	0	0	2	8	2	4		0	0		0	118870		
+Close To Your Heart	close_to_your_heart	HELL	38	39.1		425	3.66	29	115	0	3	5	13	0	4		0	0		0			
+綺季一閃	eiki_boss_remix	EASY	7	6.3		323	1.51	11	194	0	0	0	0	0	4		0	0		0	214856		
+綺季一閃	eiki_boss_remix	NORMAL	8	8.8		368	1.72	13	194	0	0	0	0	0	4		0	0		0	214856		
+綺季一閃	eiki_boss_remix	HARD	16	19.2		510	2.38	24	97	0	0	7	5	0	4		0	0		0	214856		
+綺季一閃	eiki_boss_remix	EXPERT	24	23.1		609	2.85	25	97	0	2	11	8	0	4		0	0		0	214856		
+綺季一閃	eiki_boss_remix	MASTER	30	28.8		705	3.3	29	97	0	15	16	13	1	4		0	0		0	214856		帯の中 1
+綺季一閃	eiki_boss_remix	HELL	48	47.2		812	3.8	30	97	0	64	78	41	0	4		0	0		0			
+Stay With Me	pandora_boss_remix	EASY	6	5.6		245	1.27	12	185	0	0	0	0	0	4		0	0		0	196350		
+Stay With Me	pandora_boss_remix	NORMAL	8	7.7		278	1.44	13	185	0	0	0	0	0	4		0	0		0	195979		
+Stay With Me	pandora_boss_remix	HARD	11	12.6		383	1.97	16	92	0	0	6	2	0	4		0	0		0	196350		
+Stay With Me	pandora_boss_remix	EXPERT	19	17.5		465	2.4	19	92	0	1	10	2	0	4		0	0		0	196350		
+Stay With Me	pandora_boss_remix	MASTER	26	23.8		541	2.79	24	92	0	5	13	11	0	4		0	0		0	196350		
+Stay With Me	pandora_boss_remix	HELL	37	39.4		633	3.26	26	92	0	28	52	25	0	4		0	0		0			
+デュラハンテーマ	dullahan	EASY	7	6.3		210	1.68	11	200	0	0	0	0	0	4		0	0		0	127203		
+デュラハンテーマ	dullahan	NORMAL	9	9.6		245	1.96	14	200	0	0	0	0	0	4		0	0		0	127203		
+デュラハンテーマ	dullahan	HARD	13	14.6		334	2.67	18	100	0	0	2	1	0	4		0	0		0	127203		
+デュラハンテーマ	dullahan	EXPERT	17	19.9		407	3.25	21	100	0	2	9	7	5	4		0	0		0	127203		
+デュラハンテーマ	dullahan	MASTER	25	26.3		480	3.83	26	100	0	6	22	10	4	4		0	0		0	127203		
+デュラハンテーマ	dullahan	HELL	59	57.3		543	4.33	36	100	0	51	64	18	0	4		0	0		0			
+呪われた騎士の時計仕掛け	dullahan_clockwork	EASY	7	4.7		160	1.36	10	197	0	0	0	0	0	4		0	0		0	120098		
+呪われた騎士の時計仕掛け	dullahan_clockwork	NORMAL	8	6.5		184	1.56	12	197	0	0	0	0	0	4		0	0		0	120098		
+呪われた騎士の時計仕掛け	dullahan_clockwork	HARD	11	11.9		253	2.14	17	98	0	0	3	1	0	4		0	0		0	120197		
+呪われた騎士の時計仕掛け	dullahan_clockwork	EXPERT	17	15.6		309	2.61	18	98	0	2	6	5	6	4		0	0		0	120296		
+呪われた騎士の時計仕掛け	dullahan_clockwork	MASTER	25	21.7		352	2.97	24	98	0	7	11	12	4	4		0	0		0	120296		
+呪われた騎士の時計仕掛け	dullahan_clockwork	HELL	40	40.4		421	3.56	28	98	1	12	25	19	0	4		0	0		0			押せない 1
+トリコ	toriko	EASY	5	3.6		74	0.98	8	222	0	0	0	0	0	4		0	0		0	77815		
+トリコ	toriko	NORMAL	6	3.4		83	1.1	8	222	0	0	0	0	0	4		0	0		0	77815		
+トリコ	toriko	HARD	8	9		116	1.54	11	111	0	0	0	0	0	4		0	0		0	77815		
+トリコ	toriko	EXPERT	15	12.7		136	1.81	14	111	0	0	6	1	0	4		0	0		0	77815		
+トリコ	toriko	MASTER	20	17.4		156	2.07	16	111	0	0	5	0	0	4		0	0		0	77815		
+トリコ	toriko	HELL	32	28		187	2.48	21	111	0	3	7	4	0	4		0	0		0			
+4U ～ひたすら～	4u_hitasura	EASY	6	4.9		136	1.18	9	207	0	0	0	0	0	4		0	0		0	117310		
+4U ～ひたすら～	4u_hitasura	NORMAL	8	6.1		160	1.39	11	206	0	0	0	0	0	4		0	0		0	117310		
+4U ～ひたすら～	4u_hitasura	HARD	10	9.1		216	1.86	15	103	0	0	1	1	0	4		0	0		0	118138		
+4U ～ひたすら～	4u_hitasura	EXPERT	15	16.4		259	2.23	18	103	0	2	3	4	0	4		0	0		0	118138		
+4U ～ひたすら～	4u_hitasura	MASTER	24	22.3		297	2.56	25	103	0	1	9	6	0	4		0	0		0	118138		
+4U ～ひたすら～	4u_hitasura	HELL	33	33.6		356	3.07	25	103	0	4	10	7	0	4		0	0		0			
+禁断のレジスタンス	kindan_no_resistance	EASY	8	7.3		290	1.83	13	166	0	0	0	0	0	4		0	0		0	161079		
+禁断のレジスタンス	kindan_no_resistance	NORMAL	10	10.5		336	2.12	14	166	0	0	0	2	0	4		0	0		0	161079		
+禁断のレジスタンス	kindan_no_resistance	HARD	16	16.7		466	2.92	20	83	0	0	7	3	0	4		0	0		0	161662		
+禁断のレジスタンス	kindan_no_resistance	EXPERT	22	22.5		568	3.56	23	83	0	4	18	13	1	4		0	0		0	161662		
+禁断のレジスタンス	kindan_no_resistance	MASTER	28	27.4		650	4.07	26	83	0	6	19	23	1	4		0	0		0	161662		
+禁断のレジスタンス	kindan_no_resistance	HELL	56	54.8		762	4.76	33	83	0	36	80	42	0	4		0	0		0			
+crossing field	crossing_field	EASY	8	7.6		161	1.92	12	167	0	0	0	0	0	4		0	0		0	83767		
+crossing field	crossing_field	NORMAL	10	10.9		183	2.19	14	167	0	0	0	0	0	4		0	0		0	83767		
+crossing field	crossing_field	HARD	16	17.4		249	2.95	20	84	0	0	0	1	0	4		0	0		0	83767		
+crossing field	crossing_field	EXPERT	24	24.9		308	3.65	22	83	0	7	15	3	0	4		0	0		0	83767		
+crossing field	crossing_field	MASTER	32	31.1		349	4.14	26	83	0	12	13	6	0	4		0	0		0	83767		
+crossing field	crossing_field	HELL	55	51.8		385	4.57	29	83	0	24	45	17	0	4		0	0		0			
+Nothing Without You	nothing_without_you	EASY	7	4.1		291	1.57	11	155	0	0	0	0	0	4		0	0		0	187811		
+Nothing Without You	nothing_without_you	NORMAL	8	6.1		338	1.82	12	154	0	0	0	0	0	4		0	0		0	188120		
+Nothing Without You	nothing_without_you	HARD	12	12.1		471	2.54	16	77	0	1	4	2	0	4		0	0		0	187811		
+Nothing Without You	nothing_without_you	EXPERT	18	16.2		568	3.06	19	77	0	1	8	4	10	4		0	0		0	188120		
+Nothing Without You	nothing_without_you	MASTER	24	22.1		641	3.45	24	77	0	3	14	5	8	4		0	0		0	188120		
+Nothing Without You	nothing_without_you	HELL	44	45		729	3.92	26	77	0	31	81	19	0	4		0	0		0			
+もう一つの世界へ	mou_hitotsu_no_sekai_e	EASY	8	7.6		338	1.53	13	160	0	0	0	0	0	4		0	0		0	221824		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	NORMAL	10	10.4		383	1.73	16	160	0	0	0	0	0	4		0	0		0	221824		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	HARD	14	13.3		548	2.47	17	80	0	0	2	4	0	4		0	0		0	221824		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	EXPERT	21	20.2		654	2.95	22	80	0	2	13	4	0	4		0	0		0	221824		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	MASTER	26	26		751	3.39	27	80	0	3	13	15	0	4		0	0		0	221824		
+もう一つの世界へ	mou_hitotsu_no_sekai_e	HELL	43	48.6	表示が低い	887	4	32	80	0	30	50	40	0	4		0	0		0			表示が低い
+戦場の疾風	senjou_no_shippuu	EASY	8	7.9		309	1.63	12	214	0	0	0	0	0	4		0	0		0	191725		
+戦場の疾風	senjou_no_shippuu	NORMAL	9	10.3		357	1.88	14	214	0	0	0	2	0	4		0	0		0	191725		
+戦場の疾風	senjou_no_shippuu	HARD	14	15.9		490	2.59	20	107	0	0	0	8	0	4		0	0		0	191511		
+戦場の疾風	senjou_no_shippuu	EXPERT	25	24.6		584	3.07	26	107	0	3	5	12	0	4		0	0		0	192047		
+戦場の疾風	senjou_no_shippuu	MASTER	29	28.8		633	3.33	29	107	1	7	8	12	1	4		0	0		0	192047		帯の中 1/押せない 1
+戦場の疾風	senjou_no_shippuu	HELL	46	39.7	表示が高い	644	3.39	30	107	0	8	10	22	0	4		0	0		0			表示が高い
+魔窟の旋律	makutsu_no_senritsu	EASY	8	9.2		273	1.88	13	208	0	0	0	0	0	4		0	0		0	147221		
+魔窟の旋律	makutsu_no_senritsu	NORMAL	10	12.4		316	2.18	15	208	0	0	0	4	0	4		0	0		0	147221		
+魔窟の旋律	makutsu_no_senritsu	HARD	19	19.5		432	2.97	21	104	0	0	1	9	0	4		0	0		0	147221		
+魔窟の旋律	makutsu_no_senritsu	EXPERT	23	24.3		473	3.26	25	104	0	2	6	9	0	4		0	0		0	147221		
+魔窟の旋律	makutsu_no_senritsu	MASTER	27	24.4		536	3.69	25	104	0	3	5	13	0	4		0	0		0	147221		
+魔窟の旋律	makutsu_no_senritsu	HELL	39	38.5		477	3.28	28	104	0	13	30	27	0	4		0	0		0			
+The City Beneath the Comets	the_city_beneath_the_comets	EASY	9	10.3		325	2.1	14	175	0	0	0	0	0	4		0	0		0	157331		
+The City Beneath the Comets	the_city_beneath_the_comets	NORMAL	12	14.8		376	2.44	18	175	0	0	0	0	0	4		0	0		0	157155		
+The City Beneath the Comets	the_city_beneath_the_comets	HARD	22	23.9		522	3.33	26	87	0	0	1	19	0	4		0	0		0	158739		
+The City Beneath the Comets	the_city_beneath_the_comets	EXPERT	30	32.9		628	4.01	33	87	0	9	16	20	0	4		0	0		0	158739		
+The City Beneath the Comets	the_city_beneath_the_comets	MASTER	41	39.8		726	4.63	37	87	0	22	28	21	0	4		0	0		0	158651		
+The City Beneath the Comets	the_city_beneath_the_comets	HELL	61	58.1		655	4.18	37	87	0	60	93	35	0	4		0	0		0			届きにくい/100 14.2(帯 〜13.99)
+FREEDOM DiVE↓	freedom_dive	EASY	16	13.6		375	2.66	19	67	0	0	0	0	0	4		0	2	67	0	142948		
+FREEDOM DiVE↓	freedom_dive	NORMAL	24	20.8		474	3.37	25	67	0	0	0	1	0	4		0	3	67	0	142678		
+FREEDOM DiVE↓	freedom_dive	HARD	28	26.5		556	3.94	27	67	0	0	1	2	0	4		0	0		0	142948		
+FREEDOM DiVE↓	freedom_dive	EXPERT	39	35.5		732	5.17	31	67	0	0	5	9	0	4		0	11	67	0	143488		
+FREEDOM DiVE↓	freedom_dive	MASTER	41	40.7		804	5.66	35	67	0	1	9	19	0	4		0	8	67	0	143826		
+FREEDOM DiVE↓	freedom_dive	HELL	73	63.7	表示が高い	782	5.51	36	67	0	25	49	38	0	4		0	0		0			表示が高い
+only my railgun	only_my_railgun	EASY	7	6.8		146	1.68	11	209	0	0	0	0	0	4		0	0		0	88684		
+only my railgun	only_my_railgun	NORMAL	9	9.8		169	1.95	14	209	0	0	0	0	0	4		0	0		0	88684		
+only my railgun	only_my_railgun	HARD	14	13.7		227	2.61	17	104	0	0	0	1	0	4		0	0		0	88684		
+only my railgun	only_my_railgun	EXPERT	21	20		282	3.25	22	104	0	0	0	6	0	4		0	0		0	88684		
+only my railgun	only_my_railgun	MASTER	23	23.7		325	3.74	24	104	0	0	4	13	1	4		0	0		0	88684		
+only my railgun	only_my_railgun	HELL	39	36.6		282	3.25	26	104	0	5	12	13	0	4		0	0		0			
+ビッグブリッヂの死闘	big_bridge_no_shitou	EASY	9	10.4		345	2.43	15	167	0	0	0	0	0	4		0	0		0	142134		
+ビッグブリッヂの死闘	big_bridge_no_shitou	NORMAL	12	14.1		400	2.82	16	167	0	0	0	0	0	4		0	0		0	142134		
+ビッグブリッヂの死闘	big_bridge_no_shitou	HARD	19	22.5		538	3.8	24	83	0	0	4	3	0	4		0	0		0	142134		
+ビッグブリッヂの死闘	big_bridge_no_shitou	EXPERT	27	30.6		651	4.59	29	83	0	7	7	10	1	4		0	0		0	142134		
+ビッグブリッヂの死闘	big_bridge_no_shitou	MASTER	34	38		768	5.42	32	83	0	25	30	28	0	4		0	0		0	142134		
+ビッグブリッヂの死闘	big_bridge_no_shitou	HELL	64	60.6		714	5.04	34	83	0	56	72	32	0	4		0	0		0			
+Rising Hope	rising_hope	EASY	9	8.7		176	2.03	12	157	0	0	0	0	0	4		0	0		0	88657		
+Rising Hope	rising_hope	NORMAL	11	12.4		208	2.4	14	157	0	0	0	1	0	4		0	0		0	88657		
+Rising Hope	rising_hope	HARD	17	18.6		281	3.22	20	78	0	0	3	4	0	4		0	0		0	89052		
+Rising Hope	rising_hope	EXPERT	25	26.2		343	3.93	24	78	0	2	15	8	10	4		0	0		0	89052		
+Rising Hope	rising_hope	MASTER	32	33.7		393	4.5	28	78	0	13	21	23	5	4		0	0		0	89052		
+Rising Hope	rising_hope	HELL	58	57.4		439	5.03	31	78	0	30	58	34	0	4		0	0		0			
+ハルカ	haruka	EASY	9	9.6		206	2.2	13	150	0	0	0	0	0	4		0	0		0	96123		
+ハルカ	haruka	NORMAL	10	13		231	2.47	15	150	0	0	0	0	0	4		0	0		0	96123		
+ハルカ	haruka	HARD	19	19.2		322	3.44	20	75	0	0	0	6	0	4		0	0		0	96123		
+ハルカ	haruka	EXPERT	30	29		389	4.13	27	75	0	11	19	2	0	4		0	0		0	96123		
+ハルカ	haruka	MASTER	37	33.5		454	4.82	28	75	0	11	21	6	0	4		0	0		0	96123		
+ハルカ	haruka	HELL	62	59.1		492	5.22	29	75	0	33	51	21	0	4		0	0		0			
+Stay With Me	stay_with_me_short	EASY	7	6.2		243	1.4	11	176	0	0	0	0	0	4		0	0		0	174911		
+Stay With Me	stay_with_me_short	NORMAL	10	8.8		292	1.69	13	176	0	0	0	4	0	4		0	0		0	174911		
+Stay With Me	stay_with_me_short	HARD	16	15.8		395	2.28	20	88	0	0	1	8	0	4		0	0		0	174911		
+Stay With Me	stay_with_me_short	EXPERT	20	21.7		491	2.84	23	88	0	9	13	5	0	4		0	0		0	174911		
+Stay With Me	stay_with_me_short	MASTER	31	28.6		564	3.26	28	88	0	10	23	10	0	4		0	0		0	174911		
+Stay With Me	stay_with_me_short	HELL	44	34.3	表示が高い	470	2.72	19	88	0	33	54	11	0	4		0	0		0			表示が高い
+綺季一閃	kiki_issen_short	EASY	9	8.8		318	1.67	14	193	0	0	0	0	0	4		0	0		0	192576		
+綺季一閃	kiki_issen_short	NORMAL	10	10.6		368	1.93	15	193	0	0	0	2	0	4		0	0		0	192576		
+綺季一閃	kiki_issen_short	HARD	17	20.1		497	2.61	24	96	0	0	7	6	0	4		0	0		0	192285		
+綺季一閃	kiki_issen_short	EXPERT	25	27.6		592	3.1	30	96	0	4	15	10	0	4		0	0		0	192963		
+綺季一閃	kiki_issen_short	MASTER	27	27.2		628	3.29	26	96	0	3	13	12	1	4		0	0		0	192963		帯の中 1/段の逆転(EXPERT→MASTER: ノーツ数 ×1.06・最密4秒 ×0.87)
+綺季一閃	kiki_issen_short	HELL	44	39.5		589	3.08	27	96	0	22	34	13	0	4		0	0		0			
+Crazy Party Night	crazy_party_night	EASY	7	5		138	1.54	10	234	0	0	0	0	0	4		0	0		0	92314		
+Crazy Party Night	crazy_party_night	NORMAL	8	8.3		163	1.82	12	234	0	0	0	0	0	4		0	0		0	92314		
+Crazy Party Night	crazy_party_night	HARD	11	14.1		220	2.46	17	117	0	0	1	0	0	4		0	0		0	92314		
+Crazy Party Night	crazy_party_night	EXPERT	20	20.5		273	3.03	21	117	0	0	1	4	0	4		0	0		0	92783		
+Crazy Party Night	crazy_party_night	MASTER	29	26.1		307	3.41	27	117	0	2	6	9	0	4		0	0		0	92783		
+Crazy Party Night	crazy_party_night	HELL	43	42.8		363	4.03	31	117	0	0	1	19	0	4		0	0		0			
+Crazy Party Night	crazy_party_night_full	EASY	7	6.3		359	1.5	11	234	0	0	0	0	0	4		0	0		0	241877		
+Crazy Party Night	crazy_party_night_full	NORMAL	8	8.4		412	1.72	12	234	0	0	0	0	0	4		0	0		0	241877		
+Crazy Party Night	crazy_party_night_full	HARD	13	14.2		585	2.44	17	117	0	0	3	9	0	4		0	0		0	241994		
+Crazy Party Night	crazy_party_night_full	EXPERT	20	21.5		705	2.95	23	117	0	3	9	13	0	4		0	0		0	241994		
+Crazy Party Night	crazy_party_night_full	MASTER	28	25.9		796	3.32	27	117	0	2	15	21	0	4		0	0		0	241994		
+Crazy Party Night	crazy_party_night_full	HELL	41	40.9		936	3.9	29	117	0	7	11	47	0	4		0	0		0			
+Emerald Rush	emerald_rush	EASY	6	6.9		193	1.35	10	392	0	0	0	0	0	4		0	0		0	144779		
+Emerald Rush	emerald_rush	NORMAL	8	8.2		217	1.52	12	198	0	0	0	0	0	4		0	0		0	144779		
+Emerald Rush	emerald_rush	HARD	13	13.6		301	2.12	17	98	0	0	3	1	0	4		0	0		0	144878		
+Emerald Rush	emerald_rush	EXPERT	20	19.3		368	2.58	20	98	0	3	18	4	0	4		0	0		0	144878		
+Emerald Rush	emerald_rush	MASTER	27	24.1		424	2.98	24	98	0	7	26	6	0	4		0	0		0	144779		
+Emerald Rush	emerald_rush	HELL	41	45.6		482	3.38	33	98	0	23	50	16	0	4		0	0		0			
+Wrath of the Thorn King	wrath_of_the_thorn_king	EASY	5	4.2		106	1.15	8	212	0	0	0	0	0	4		0	0		0	94836		
+Wrath of the Thorn King	wrath_of_the_thorn_king	NORMAL	7	2.3		124	1.35	10	212	0	0	0	0	0	4		0	0		0	94836		
+Wrath of the Thorn King	wrath_of_the_thorn_king	HARD	9	9.8		166	1.8	13	105	0	0	3	0	0	4		0	0		0	94836		
+Wrath of the Thorn King	wrath_of_the_thorn_king	EXPERT	16	15.3		201	2.18	16	105	0	1	10	1	9	4		0	0		0	94836		
+Wrath of the Thorn King	wrath_of_the_thorn_king	MASTER	22	20.5		229	2.47	20	104	0	0	4	4	5	4		0	0		0	94836		
+Wrath of the Thorn King	wrath_of_the_thorn_king	HELL	35	29.3		253	2.72	21	104	0	1	8	3	0	4		0	0		0			
+Monster	monster	EASY	6	3.6		313	1.2	9	222	0	0	0	0	0	4		0	0		0	263586		
+Monster	monster	NORMAL	7	5.8		366	1.4	11	222	0	0	0	1	0	4		0	0		0	263586		
+Monster	monster	HARD	10	10.4		487	1.86	15	111	0	0	1	6	0	4		0	0		0	263586		
+Monster	monster	EXPERT	19	18.4		594	2.27	21	111	0	1	11	5	0	4		0	0		0	263586		
+Monster	monster	MASTER	25	23.8		694	2.65	26	111	0	1	16	13	0	4		0	0		0	263586		
+Monster	monster	HELL	34	35.5		806	3.08	27	111	1	3	7	16	0	4		0	0		0			押せない 1
+Monster	monster_short	EASY	6	4.5		126	1.18	9	222	0	0	0	0	0	4		0	0		0	109153		
+Monster	monster_short	NORMAL	7	5.9		144	1.35	10	222	0	0	0	0	0	4		0	0		0	109153		
+Monster	monster_short	HARD	9	11.3		194	1.82	14	222	0	0	1	2	0	4		0	0		0	109153		
+Monster	monster_short	EXPERT	16	15.6		235	2.19	17	111	0	1	2	3	2	4		0	0		0	109597		
+Monster	monster_short	MASTER	22	20.2		276	2.57	20	111	0	0	4	7	3	4		0	0		0	109597		
+Monster	monster_short	HELL	35	32.9		317	2.95	25	111	1	2	2	6	0	4		0	0		0			押せない 1
+ANiMA	anima	EASY	9	8.8		211	1.92	13	163	0	0	0	0	0	4		0	0		0	112680		
+ANiMA	anima	NORMAL	10	12		254	2.31	15	163	0	0	0	0	0	4		0	0		0	112680		
+ANiMA	anima	HARD	18	19.4		353	3.21	20	81	0	0	3	4	0	4		0	0		0	112680		
+ANiMA	anima	EXPERT	27	27.2		441	4.01	25	81	0	2	4	12	0	4		0	0		0	112680		
+ANiMA	anima	MASTER	40	40		569	5.18	34	81	0	6	4	17	0	4		0	0		0	112680		
+ANiMA	anima	HELL	58	52.7		522	4.75	31	81	0	20	42	30	0	4		0	0		0			
+Journey	journey	EASY	7	5.4		233	1.45	10	234	0	0	0	0	0	4		0	0		0	162460		
+Journey	journey	NORMAL	10	10.4		287	1.79	14	234	0	0	0	4	0	4		0	0		0	162460		
+Journey	journey	HARD	15	17.7		398	2.48	20	117	0	0	4	10	0	4		0	0		0	162928		
+Journey	journey	EXPERT	30	29.6		627	3.9	28	117	0	4	15	20	15	4		0	0		0	162928		
+Journey	journey	MASTER	36	40.4		731	4.55	37	117	0	13	15	29	25	4		0	0		0	162928		
+Journey	journey	HELL	51	48.9		706	4.38	35	117	0	6	21	30	0	4		0	0		0			
+Sheriruth	sheriruth	EASY	9	11		259	2	13	324	0	0	0	0	0	4		0	0		0	132394		
+Sheriruth	sheriruth	NORMAL	14	15.3		312	2.41	17	324	0	0	0	0	0	4		0	0		0	132394		
+Sheriruth	sheriruth	HARD	22	20.6		384	2.96	23	81	0	0	0	18	1	4		0	0		0	127772		跳びの割合 0.121(帯 〜0.074)
+Sheriruth	sheriruth	EXPERT	33	30.4		535	4.12	29	81	0	0	0	39	0	4		0	0		0	132556		跳びの割合 0.141(帯 〜0.066)
+Sheriruth	sheriruth	MASTER	39	39.4		642	4.95	36	81	4	3	2	57	0	4		0	0		0	132556		押せない 4
+Sheriruth	sheriruth	HELL	50	55.9		624	4.81	36	81	11	10	6	56	0	4		0	0		0			押せない 11/跳びの割合 0.166(帯 〜0.137)
+Grievous Lady	grievous_lady	EASY	12	10.3		294	2.15	17	143	0	0	0	0	0	4		0	0		0	139097		
+Grievous Lady	grievous_lady	NORMAL	16	17.4		355	2.6	21	142	0	0	0	3	0	4		2	0		0	139097		
+Grievous Lady	grievous_lady	HARD	22	26.9		422	3.09	27	71	0	0	0	8	2	4		0	0		0	139097		
+Grievous Lady	grievous_lady	EXPERT	35	35.8		536	3.92	34	71	0	0	0	17	6	4		0	0		0	139097		
+Grievous Lady	grievous_lady	MASTER	43	43.6		636	4.65	41	71	0	0	0	19	7	4		1	0		0	139097		
+Against My Own Shadow	against_my_own_shadow	EASY	7	4.6		130	1.14	10	209	0	0	0	0	0	4		0	0		0	116459		
+Against My Own Shadow	against_my_own_shadow	NORMAL	9	6.5		158	1.39	11	209	0	0	0	0	0	4		0	0		0	116459		
+Against My Own Shadow	against_my_own_shadow	HARD	12	12.2		210	1.84	16	104	0	0	2	1	0	4		0	0		0	116564		
+Against My Own Shadow	against_my_own_shadow	EXPERT	22	23		337	2.95	23	104	0	9	15	11	0	4		0	0		0	116668		
+Against My Own Shadow	against_my_own_shadow	MASTER	29	29		397	3.48	26	104	0	17	24	23	0	4		0	0		0	116668		
+Against My Own Shadow	against_my_own_shadow	HELL	49	46.3		437	3.83	34	104	0	11	20	20	0	4		0	0		0			
+ROSE	rose	EASY	5	2.9		159	0.99	8	240	0	0	0	0	0	4		0	0		0	160996		
+ROSE	rose	NORMAL	7	4.9		196	1.21	10	240	0	0	0	0	0	4		0	0		0	163876		
+ROSE	rose	HARD	10	11		268	1.66	14	120	0	0	5	2	0	4		0	0		0	163876		
+ROSE	rose	EXPERT	20	21.4		424	2.62	24	120	0	1	8	11	0	4		0	0		0	163876		
+ROSE	rose	MASTER	32	29.5		521	3.22	31	120	0	0	7	9	0	4		0	0		0	163876		
+ROSE	rose	HELL	51	46.6		638	3.94	37	120	1	4	17	27	0	4		0	0		0			押せない 1
+ROSE	rose_short	EASY	5	2.8		113	1.01	8	240	0	0	0	0	0	4		0	0		0	113956		
+ROSE	rose_short	NORMAL	6	5		131	1.17	9	240	0	0	0	0	0	4		0	0		0	114196		
+ROSE	rose_short	HARD	10	10.7		183	1.63	14	120	0	0	3	1	0	4		0	0		0	114196		
+ROSE	rose_short	EXPERT	17	18		286	2.55	19	120	0	0	5	1	0	4		0	0		0	114196		
+ROSE	rose_short	MASTER	28	28		356	3.18	29	120	0	1	7	6	0	4		0	0		0	114196		
+ROSE	rose_short	HELL	49	41.3	表示が高い	434	3.87	30	120	0	2	7	10	0	4		0	0		0			表示が高い
+SAD SONG	sad_song	EASY	8	7.1		351	1.64	12	174	0	0	0	0	0	4		0	0		0	217239		
+SAD SONG	sad_song	NORMAL	9	9.1		402	1.88	13	174	0	0	0	0	0	4		0	0		0	217239		
+SAD SONG	sad_song	HARD	15	16.1		551	2.56	19	87	0	0	5	5	0	4		0	0		0	217239		
+SAD SONG	sad_song	EXPERT	24	22.6		652	3.03	23	87	0	5	22	5	0	4		0	0		0	217239		
+SAD SONG	sad_song	MASTER	28	27.8		746	3.47	26	87	0	8	28	19	0	4		0	0		0	217239		
+SAD SONG	sad_song	HELL	43	45.8		774	3.6	26	87	0	60	95	29	0	4		0	0		0			
+SAD SONG	sad_song_short	EASY	9	7.5		143	1.83	12	174	0	0	0	0	0	4		0	0		0	79979		
+SAD SONG	sad_song_short	NORMAL	10	10.6		162	2.05	15	174	0	0	0	0	0	4		0	0		0	79979		
+SAD SONG	sad_song_short	HARD	18	18.3		219	2.78	20	87	0	0	1	4	0	4		0	0		0	79805		
+SAD SONG	sad_song_short	EXPERT	27	25.7		269	3.41	26	87	0	1	7	3	0	4		0	0		0	81200		
+SAD SONG	sad_song_short	MASTER	29	28.8		299	3.79	25	87	0	6	16	12	0	4		0	0		0	80677		段の逆転(EXPERT→MASTER: ノーツ数 ×1.11・最密4秒 ×0.96)
+SAD SONG	sad_song_short	HELL	43	45.2		296	3.75	23	87	0	26	34	10	0	4		0	0		0			
+Toward the Stars, Paradise or Truth	toward_the_stars_short	EASY	7	5.8		179	1.38	11	209	0	0	0	0	0	4		0	0		0	132474		
+Toward the Stars, Paradise or Truth	toward_the_stars_short	NORMAL	8	9.4		200	1.54	14	209	0	0	0	0	0	4		0	0		0	132474		
+Toward the Stars, Paradise or Truth	toward_the_stars_short	HARD	14	15.6		281	2.17	19	104	0	0	2	4	0	4		0	0		0	132474		
+Toward the Stars, Paradise or Truth	toward_the_stars_short	EXPERT	21	23.3		334	2.57	26	104	0	2	8	4	0	4		0	0		0	131845		
+Toward the Stars, Paradise or Truth	toward_the_stars_short	MASTER	37	33.7		484	3.73	33	104	0	5	13	7	0	4		0	0		0	131845		
+Toward the Stars, Paradise or Truth	toward_the_stars_short	HELL	50	45.6		548	4.2	26	104	0	27	53	28	0	4		0	0		0			
+BLACK SHOUT	black_shout	EASY	9	9.6		207	2	13	162	0	0	0	0	0	4		0	0		0	106679		
+BLACK SHOUT	black_shout	NORMAL	13	15		245	2.33	19	162	0	0	0	2	0	4		0	0		0	107976		
+BLACK SHOUT	black_shout	HARD	17	19.3		328	3.12	22	81	0	0	0	3	0	4		0	0		0	107976		
+BLACK SHOUT	black_shout	EXPERT	27	27.1		401	3.79	26	81	0	2	8	5	0	4		0	0		0	107976		
+BLACK SHOUT	black_shout	MASTER	33	33.5		455	4.31	30	81	0	7	18	12	0	4		0	0		0	107976		
+BLACK SHOUT	black_shout	HELL	61	58.9		508	4.81	32	81	0	38	49	22	0	4		0	0		0			
+light player	light_player	EASY	8	7.7		476	1.81	12	159	0	0	0	0	0	4		0	0		0	266341		
+light player	light_player	NORMAL	9	10.1		557	2.11	14	158	0	0	0	0	0	4		0	0		0	266341		
+light player	light_player	HARD	14	15		762	2.89	19	79	0	0	0	3	0	4		0	0		0	266661		
+light player	light_player	EXPERT	22	22.6		904	3.43	24	79	0	0	7	10	0	4		0	0		0	266501		
+light player	light_player	MASTER	32	28.8		1072	4.06	28	79	0	3	17	31	0	4		0	0		0	266661		
+light player	light_player	HELL	54	55		1249	4.73	34	79	0	43	77	68	0	4		0	0		0			
+light player	light_player_short	EASY	8	7.3		267	1.82	12	159	0	0	0	0	0	4		0	0		0	149206		
+light player	light_player_short	NORMAL	10	9.9		308	2.1	14	159	0	0	0	0	0	4		0	0		0	149206		
+light player	light_player_short	HARD	14	14.9		417	2.85	20	79	0	0	0	4	0	4		0	0		0	149206		
+light player	light_player_short	EXPERT	21	23.3		499	3.41	23	79	0	0	1	9	0	4		0	0		0	149206		
+light player	light_player_short	MASTER	27	28.4		570	3.89	26	79	0	2	4	15	0	4		0	0		0	149206		
+light player	light_player_short	HELL	52	54.2		678	4.63	33	79	0	22	47	23	0	4		0	0		0			
+月が満ちる前に	tsuki_ga_michiru_mae_ni	EASY	9	9.5		549	2.02	14	159	0	0	0	0	0	4		0	0		0	272715		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	NORMAL	11	13.5		648	2.39	17	159	0	0	0	2	0	4		0	0		0	272715		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	HARD	16	18.9		861	3.17	21	79	0	0	4	17	0	4		0	0		0	272715		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	EXPERT	25	27.4		1037	3.82	27	79	0	6	12	11	0	4		0	0		0	272715		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	MASTER	31	34.2		1206	4.44	32	79	0	16	40	45	0	4		0	0		0	272715		
+月が満ちる前に	tsuki_ga_michiru_mae_ni	HELL	65	62.9		1419	5.23	38	79	0	73	117	78	0	4		0	0		0			
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	EASY	10	10.5		233	2.17	14	158	0	0	0	0	0	4		0	0		0	110313		
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	NORMAL	12	13.9		268	2.5	16	158	0	0	0	2	0	4		0	0		0	110313		
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	HARD	17	19.7		354	3.29	21	80	0	0	1	8	0	4		0	0		0	110472		
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	EXPERT	24	27.8		431	4.01	26	79	0	1	9	10	0	4		0	0		0	110472		
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	MASTER	35	36.1		504	4.69	32	79	0	8	25	20	0	4		0	0		0	110472		
+月が満ちる前に	tsuki_ga_michiru_mae_ni_short	HELL	65	63.1		562	5.23	36	79	0	41	53	35	0	4		0	0		0			
+Rebellion	rebellion	EASY	9	7.6		427	1.71	13	154	0	0	0	0	0	4		0	0		0	252173		
+Rebellion	rebellion	NORMAL	10	11		493	1.98	15	154	0	0	0	1	0	4		0	0		0	252173		
+Rebellion	rebellion	HARD	16	18.3		672	2.69	22	77	0	0	4	11	0	4		0	0		0	252173		
+Rebellion	rebellion	EXPERT	24	22.7		812	3.25	23	77	0	5	16	10	0	4		0	0		0	252173		
+Rebellion	rebellion	MASTER	45	41.4		1297	5.18	36	77	0	28	43	32	0	4		0	0		0	252251		
+Rebellion	rebellion	HELL	48	53.6		1168	4.67	37	77	0	4	5	162	0	4		0	0		0			跳びの割合 0.234(帯 〜0.137)
+Rebellion	rebellion_short	EASY	8	10.3		281	1.9	15	154	0	0	0	0	0	4		0	0		0	150912		
+Rebellion	rebellion_short	NORMAL	11	13.8		323	2.18	18	154	0	0	0	2	0	4		0	0		0	150912		
+Rebellion	rebellion_short	HARD	17	21.1		440	2.97	25	77	0	0	1	7	0	4		0	0		0	150912		
+Rebellion	rebellion_short	EXPERT	26	26.5		534	3.61	25	77	0	17	28	9	0	4		0	0		0	150912		
+Rebellion	rebellion_short	MASTER	42	39.1		780	5.25	31	77	0	29	28	22	0	4		0	0		0	151144		
+Rebellion	rebellion_short	HELL	49	48.3		720	4.84	29	77	0	0	3	101	0	4		0	0		0			跳びの割合 0.234(帯 〜0.137)
+Altar of the World Tree, Beneath the White Night	altar_world_tree	EASY	7	6.6		592	1.55	12	182	0	0	0	0	0	4		0	0		0	383486		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	NORMAL	9	9.6		689	1.81	14	182	0	0	0	4	0	4		0	0		0	383486		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	HARD	13	14.7		930	2.44	18	91	0	0	10	10	0	4		0	0		0	383852		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	EXPERT	21	22		1135	2.97	23	91	0	1	10	21	0	4		0	0		0	383852		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	MASTER	25	26.4		1303	3.41	25	91	0	4	16	31	0	4		0	0		0	383852		
+Altar of the World Tree, Beneath the White Night	altar_world_tree	HELL	46	48.9		1551	4.06	31	91	1	82	151	52	0	4		0	0		0			押せない 1
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	EASY	8	8.7		230	1.71	13	182	0	0	0	0	0	4		0	0		0	136822		
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	NORMAL	10	10.3		263	1.95	14	182	0	0	0	1	0	4		0	0		0	136822		
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	HARD	15	17.7		363	2.7	20	91	0	0	3	4	0	4		0	0		0	136822		
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	EXPERT	24	24.9		431	3.2	25	91	0	6	8	4	0	4		0	0		0	136822		
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	MASTER	28	27.4		499	3.71	24	91	0	5	14	11	0	4		0	0		0	136822		段の逆転(EXPERT→MASTER: ノーツ数 ×1.16・最密4秒 ×0.96)
+Altar of the World Tree, Beneath the White Night	altar_world_tree_short	HELL	53	56.2		570	4.23	31	91	0	67	79	27	0	4		0	0		0			交差/100 11.8(帯 〜9.82)
+Evans	evans	EASY	10	10.7		218	2.11	15	162	0	0	0	0	0	4		0	0		0	106257		
+Evans	evans	NORMAL	12	13.6		247	2.39	16	162	0	0	0	2	0	4		0	0		0	106257		
+Evans	evans	HARD	21	22.1		343	3.31	25	81	0	0	0	4	0	4		0	0		0	106257		
+Evans	evans	EXPERT	27	28.9		408	3.94	27	81	0	5	18	10	0	4		0	0		0	106257		
+Evans	evans	MASTER	43	43.7		561	5.42	37	81	0	23	37	23	0	4		0	0		0	106257		
+Evans	evans	HELL	51	53.2		462	4.44	30	81	0	24	54	17	0	4		0	0		0			
+ヒューマノイド	humanoid	EASY	12	13.2		247	2.62	17	94	0	0	0	0	0	4		0	0		0	97113		
+ヒューマノイド	humanoid	NORMAL	19	20.7		317	3.35	22	94	0	1	0	4	0	4		0	0		0	97302		交差/100 0.3(帯 〜0)
+ヒューマノイド	humanoid	HARD	25	26.3		358	3.78	25	94	0	0	3	7	0	4		0	0		0	97490		
+ヒューマノイド	humanoid	EXPERT	31	35.8		444	4.7	28	94	0	34	37	21	0	4		0	0		0	97302		交差/100 7.7(帯 〜3.975)/届きにくい/100 8.3(帯 〜7.925)/跳びの割合 0.067(帯 〜0.066)
+ヒューマノイド	humanoid	MASTER	50	47.2		606	6.4	34	94	0	53	71	17	0	4		0	0		0	97490		交差/100 8.7(帯 〜6.825)/届きにくい/100 11.7(帯 〜9.45)
+ヒューマノイド	humanoid	HELL	77	78.1		615	6.49	35	94	0	99	97	39	0	4		0	0		0			交差/100 16.1(帯 〜9.82)/届きにくい/100 15.8(帯 〜13.99)
+LAMIA	lamia	EASY	13	11.7		362	2.64	18	75	0	0	2	0	0	4		0	0		0	137246		届きにくい/100 0.6(帯 〜0)
+LAMIA	lamia	NORMAL	19	19.4		442	3.22	23	75	0	1	12	1	0	4		0	0		0	137246		交差/100 0.2(帯 〜0)/届きにくい/100 2.7(帯 〜0)
+LAMIA	lamia	HARD	25	26.1		495	3.61	28	75	0	2	18	4	0	4		0	0		0	137246		
+LAMIA	lamia	EXPERT	34	35.8		617	4.5	35	75	0	5	15	11	0	4		0	0		0	137246		
+LAMIA	lamia	MASTER	51	44.3		797	5.8	41	75	1	6	11	19	0	4		0	0		0	137246		押せない 1
+LAMIA	lamia	HELL	78	71.2	表示が高い	728	5.3	43	75	0	54	76	22	0	4		0	0		0			表示が高い
+サウダージ	saudade	EASY	6	5.9		329	1.3	10	249	0	0	0	0	0	4		0	0		0	252929		
+サウダージ	saudade	NORMAL	7	7.1		376	1.49	11	249	0	0	0	0	0	4		0	0		0	252929		
+サウダージ	saudade	HARD	12	12.6		515	2.04	15	124	0	0	3	14	0	4		0	0		0	252929		
+サウダージ	saudade	EXPERT	18	18.4		618	2.45	18	124	0	2	9	11	0	4		0	0		0	252929		
+サウダージ	saudade	MASTER	29	28.6		866	3.43	28	124	0	3	11	24	0	4		0	0		0	252929		
+サウダージ	saudade	HELL	37	37.2		853	3.38	28	124	1	8	20	33	0	4		0	0		0			押せない 1
+サウダージ	saudade_short	EASY	7	6.2		121	1.32	10	250	0	0	0	0	0	4		0	0		0	94078		
+サウダージ	saudade_short	NORMAL	8	7.7		139	1.51	11	250	0	0	0	0	0	4		0	0		0	94078		
+サウダージ	saudade_short	HARD	10	12.2		190	2.07	15	125	0	0	1	3	0	4		0	0		0	94078		
+サウダージ	saudade_short	EXPERT	19	21.1		228	2.48	24	124	0	0	4	2	0	4		0	0		0	94078		
+サウダージ	saudade_short	MASTER	29	27.1		319	3.46	27	124	0	0	6	7	0	4		0	0		0	94328		
+サウダージ	saudade_short	HELL	37	37.9		310	3.37	29	124	0	2	6	14	0	4		0	0		0			
+メガロバニア	megalovania_sans	EASY	12	13.2		425	2.75	17	125	0	0	0	0	0	4		0	0		0	157326		
+メガロバニア	megalovania_sans	NORMAL	15	18.1		487	3.14	20	125	0	0	0	4	0	4		0	0		0	157326		
+メガロバニア	megalovania_sans	HARD	21	22.2		610	3.93	25	62	0	0	1	2	0	4		0	6	62	0	157326		
+メガロバニア	megalovania_sans	EXPERT	29	31		732	4.72	30	62	0	1	2	6	0	4		0	10	62	0	157326		
+メガロバニア	megalovania_sans	MASTER	43	39		846	5.45	36	62	0	4	15	26	0	4		0	17	62	0	157326		
+メガロバニア	megalovania_sans	HELL	77	70.2	表示が高い	971	6.26	38	62	0	19	39	28	0	4		0	0		0			表示が高い
+MEGALOVANIA	megalovania_smash	EASY	7	5.1		224	1.57	10	250	0	0	0	0	0	4		0	0		0	145011		
+MEGALOVANIA	megalovania_smash	NORMAL	8	7.7		261	1.83	12	250	0	0	0	0	0	4		0	0		0	145261		
+MEGALOVANIA	megalovania_smash	HARD	14	12.6		361	2.51	17	125	0	0	1	3	0	4		0	0		0	145886		
+MEGALOVANIA	megalovania_smash	EXPERT	21	19.8		427	2.97	21	125	0	0	4	3	0	4		0	0		0	145886		
+MEGALOVANIA	megalovania_smash	MASTER	27	26.5		497	3.46	28	125	0	0	2	9	0	4		0	0		0	145886		
+MEGALOVANIA	megalovania_smash	HELL	42	46.2		587	4.09	31	125	0	7	9	9	0	4		0	0		0			
+departure!	departure	EASY	5	3.4		333	1.14	8	192	0	0	0	0	0	4		0	0		0	294381		
+departure!	departure	NORMAL	6	5		380	1.3	9	192	0	0	0	2	0	4		0	0		0	294381		
+departure!	departure	HARD	9	7.3		502	1.72	12	96	0	0	7	4	0	4		0	0		0	294381		
+departure!	departure	EXPERT	17	14.7		621	2.13	18	96	0	0	6	7	0	4		0	0		0	294381		
+departure!	departure	MASTER	22	17.7		708	2.42	20	96	0	0	9	13	0	4		0	0		0	294381		
+departure!	departure	HELL	32	33.6		840	2.87	22	96	0	15	35	12	0	4		0	0		0			
+departure!	departure_short	EASY	6	4.4		117	1.15	10	192	0	0	0	0	0	4		0	0		0	103745		
+departure!	departure_short	NORMAL	7	5		133	1.31	9	192	0	0	0	3	0	4		0	0		0	103745		跳びの割合 0.136(帯 〜0.058)/段の逆転(EASY→NORMAL: ノーツ数 ×1.14・最密4秒 ×0.9)
+departure!	departure_short	HARD	11	9.8		182	1.79	14	96	0	0	5	0	0	4		0	0		0	103745		
+departure!	departure_short	EXPERT	16	15.5		222	2.19	18	96	0	1	3	0	0	4		0	0		0	103745		
+departure!	departure_short	MASTER	23	19		250	2.46	20	96	0	2	9	4	0	4		0	0		0	103745		
+departure!	departure_short	HELL	29	32.9		289	2.85	21	96	0	4	14	6	0	4		0	0		0			
+RPG	rpg	EASY	8	5.7		415	1.73	11	171	0	0	0	0	0	4		0	0		0	242292		
+RPG	rpg	NORMAL	9	8.8		475	1.97	13	171	0	0	0	0	0	4		0	0		0	243149		
+RPG	rpg	HARD	13	14		649	2.69	18	86	0	0	3	0	0	4		0	0		0	243149		
+RPG	rpg	EXPERT	22	24.6		797	3.31	25	85	0	6	15	6	0	4		0	0		0	243149		
+RPG	rpg	MASTER	27	29.6		911	3.78	27	85	0	14	40	29	0	4		0	0		0	243149		
+RPG	rpg	HELL	47	51.9		1044	4.33	31	85	0	50	82	61	0	4		0	0		0			
+RPG	rpg_short	EASY	7	5.8		152	1.81	11	171	0	0	0	0	0	4		0	0		0	86291		
+RPG	rpg_short	NORMAL	10	8.6		178	2.12	13	171	0	0	0	0	0	4		0	0		0	86291		
+RPG	rpg_short	HARD	14	13.3		244	2.9	16	85	0	0	0	3	0	4		0	0		0	86291		
+RPG	rpg_short	EXPERT	21	23.8		292	3.48	22	85	0	6	7	0	0	4		0	0		0	86291		
+RPG	rpg_short	MASTER	31	28.9		338	4.02	24	85	0	7	11	8	0	4		0	0		0	86291		
+RPG	rpg_short	HELL	46	53.7		399	4.75	29	85	0	17	34	17	0	4		0	0		0			
+Midnight Studio	midnight_studio	EASY	7	5.1		300	1.41	11	202	0	0	0	0	0	4		0	0		0	215599		
+Midnight Studio	midnight_studio	NORMAL	8	6.5		340	1.6	12	202	0	0	0	0	0	4		0	0		0	214383		
+Midnight Studio	midnight_studio	HARD	12	15.5		463	2.18	19	101	0	0	8	3	0	4		0	0		0	214788		
+Midnight Studio	midnight_studio	EXPERT	22	22.3		557	2.61	25	101	0	4	17	3	0	4		0	0		0	215599		
+Midnight Studio	midnight_studio	MASTER	27	26.8		636	2.98	27	101	0	8	26	11	0	4		0	0		0	215599		
+Midnight Studio	midnight_studio	HELL	45	44.4		760	3.56	32	101	0	35	84	24	0	4		0	0		0			
+Midnight Studio	midnight_studio_short	EASY	7	4		97	1.37	9	202	0	0	0	0	0	4		0	0		0	73096		
+Midnight Studio	midnight_studio_short	NORMAL	8	6		110	1.56	10	202	0	0	0	0	0	4		0	0		0	73096		
+Midnight Studio	midnight_studio_short	HARD	10	12.2		146	2.07	14	102	0	0	2	2	0	4		0	0		0	73096		
+Midnight Studio	midnight_studio_short	EXPERT	21	18.9		177	2.51	20	101	0	1	2	0	0	4		0	0		0	73096		
+Midnight Studio	midnight_studio_short	MASTER	25	24.5		207	2.93	22	101	0	6	7	5	0	4		0	0		0	73096		
+Midnight Studio	midnight_studio_short	HELL	35	40.6		234	3.3	23	101	0	14	22	7	0	4		0	0		0			
+Hopes and Dreams	hopes_and_dreams	EASY	8	7.2		323	1.8	13	175	0	0	0	0	0	4		0	0		0	182044		
+Hopes and Dreams	hopes_and_dreams	NORMAL	9	10.3		374	2.08	15	175	0	0	0	0	0	4		0	0		0	182044		
+Hopes and Dreams	hopes_and_dreams	HARD	14	15.8		515	2.86	20	88	0	0	1	5	0	4		0	0		0	182044		
+Hopes and Dreams	hopes_and_dreams	EXPERT	22	23.8		608	3.38	26	87	0	1	4	8	0	4		0	0		0	182044		
+Hopes and Dreams	hopes_and_dreams	MASTER	26	27.1		700	3.89	27	87	0	3	6	25	0	4		0	0		0	182044		
+Hopes and Dreams	hopes_and_dreams	HELL	42	50.3	表示が低い	840	4.67	32	87	0	16	35	25	0	4		0	0		0			表示が低い
+Hopes and Dreams	hopes_and_dreams_short	EASY	7	6.7		197	1.45	12	174	0	0	0	0	0	4		0	0		0	137636		
+Hopes and Dreams	hopes_and_dreams_short	NORMAL	9	10.2		222	1.64	16	174	0	0	0	0	0	4		0	0		0	138335		
+Hopes and Dreams	hopes_and_dreams_short	HARD	13	12		316	2.33	17	87	0	0	5	3	0	4		0	0		0	138335		
+Hopes and Dreams	hopes_and_dreams_short	EXPERT	22	21.8		393	2.9	24	87	0	4	11	3	0	4		0	0		0	138335		
+Hopes and Dreams	hopes_and_dreams_short	MASTER	27	25		435	3.21	25	87	0	3	8	5	0	4		0	0		0	138335		
+Hopes and Dreams	hopes_and_dreams_short	HELL	42	46.2		523	3.85	29	87	0	15	28	8	0	4		0	0		0			
+Sparkling Pink Overture	sparkling_pink_overture	EASY	13	12.1		281	2.34	16	94	0	1	11	0	0	4		0	0		0	122847		交差/100 0.4(帯 〜0)/届きにくい/100 3.9(帯 〜0)
+Sparkling Pink Overture	sparkling_pink_overture	NORMAL	17	18.4		330	2.74	23	94	0	1	16	2	0	4		0	0		0	122847		交差/100 0.3(帯 〜0)/届きにくい/100 4.8(帯 〜0)
+Sparkling Pink Overture	sparkling_pink_overture	HARD	24	22.7		459	3.8	25	47	0	7	26	4	0	4		0	18	47	0	123130		交差/100 1.5(帯 〜0.425)/届きにくい/100 5.7(帯 〜3.725)
+Sparkling Pink Overture	sparkling_pink_overture	EXPERT	31	29.1		577	4.76	27	47	0	6	11	10	0	4		0	9	47	0	123130		
+Sparkling Pink Overture	sparkling_pink_overture	MASTER	39	33.1	表示が高い	621	5.13	29	47	0	5	18	16	0	4		0	4	47	0	123130		表示が高い
+Sparkling Pink Overture	sparkling_pink_overture	HELL	52	56.5		593	4.89	28	47	0	26	51	15	0	4		0	0		0			
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	EASY	9	8.8		256	1.76	14	177	0	0	0	0	0	4		0	0		0	148024		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	NORMAL	11	11.7		298	2.05	16	177	0	0	0	1	0	4		0	0		0	148024		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	HARD	14	15.5		416	2.86	18	88	0	0	8	5	0	4		0	0		0	147935		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	EXPERT	25	25.9		496	3.4	27	88	0	2	5	12	0	4		0	0		0	148024		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	MASTER	29	29.2		559	3.83	28	88	0	1	7	6	0	4		0	0		0	148024		
+僕たちのページは晴れ模様	seasons_of_a_little_plaza	HELL	44	51.5	表示が低い	707	4.84	30	88	0	20	62	24	0	4		0	0		0			表示が低い
+英雄の証	eiyuu_no_akashi	EASY	6	1.8		133	1.13	8	185	0	0	0	0	0	4		0	0		0	121074		
+英雄の証	eiyuu_no_akashi	NORMAL	7	4.3		151	1.28	10	185	0	0	0	0	0	4		0	0		0	121074		
+英雄の証	eiyuu_no_akashi	HARD	9	7		205	1.72	13	92	0	0	2	0	0	4		0	0		0	121074		
+英雄の証	eiyuu_no_akashi	EXPERT	17	14.2		250	2.1	18	92	0	0	3	3	0	4		0	0		0	121074		
+英雄の証	eiyuu_no_akashi	MASTER	20	16.3		283	2.37	18	92	0	0	5	2	0	4		0	0		0	121260		
+英雄の証	eiyuu_no_akashi	HELL	30	28.9		309	2.59	20	92	0	4	12	6	0	4		0	0		0			
+英雄の証	eiyuu_no_akashi_milktea	EASY	9	9.8		290	2.04	14	156	0	0	0	0	0	4		0	0		0	144810		
+英雄の証	eiyuu_no_akashi_milktea	NORMAL	10	11.7		328	2.31	15	156	0	0	0	2	0	4		0	0		0	144810		
+英雄の証	eiyuu_no_akashi_milktea	HARD	19	19.8		451	3.17	22	78	0	0	13	8	0	4		0	0		0	144810		
+英雄の証	eiyuu_no_akashi_milktea	EXPERT	30	27.8		548	3.86	28	78	0	0	4	4	0	4		0	0		0	144810		
+英雄の証	eiyuu_no_akashi_milktea	MASTER	34	32.5		612	4.3	31	78	0	2	6	8	0	4		0	0		0	145123		
+英雄の証	eiyuu_no_akashi_milktea	HELL	52	53.5		645	4.53	31	78	0	38	63	24	0	4		0	0		0			
+グルメレース	gourmet_race_64	EASY	10	11.4		385	2.75	14	160	0	0	0	0	0	4		0	0		0	142098		
+グルメレース	gourmet_race_64	NORMAL	14	17		449	3.21	18	160	0	0	0	0	0	4		0	0		0	142098		
+グルメレース	gourmet_race_64	HARD	18	21.9		559	3.99	22	80	0	1	1	13	0	4		0	0		0	142098		
+グルメレース	gourmet_race_64	EXPERT	27	30.9		658	4.7	27	80	0	4	4	11	0	4		0	0		0	142098		
+グルメレース	gourmet_race_64	MASTER	33	37.7		761	5.43	31	80	0	11	20	16	0	4		0	0		0	142098		
+グルメレース	gourmet_race_64	HELL	69	68.4		875	6.25	37	80	0	32	78	33	0	4		0	0		0			
+グルメレース	gourmet_race_dx	EASY	7	6.2		166	1.48	11	187	0	0	0	0	0	4		0	0		0	114956		
+グルメレース	gourmet_race_dx	NORMAL	9	8.7		194	1.73	13	187	0	0	0	0	0	4		0	0		0	114956		
+グルメレース	gourmet_race_dx	HARD	14	11.8		266	2.37	16	93	0	0	9	1	0	4		0	0		0	114956		
+グルメレース	gourmet_race_dx	EXPERT	22	19.7		318	2.83	20	93	0	0	9	2	0	4		0	0		0	114956		
+グルメレース	gourmet_race_dx	MASTER	29	25.5		355	3.16	24	93	0	2	9	11	0	4		0	0		0	114956		
+グルメレース	gourmet_race_dx	HELL	38	39.1		369	3.29	23	93	0	18	35	8	0	4		0	0		0			
+Dr.WILY STAGE 1	dr_wily_stage_1	EASY	11	14.5		423	2.71	17	166	0	0	0	0	0	4		0	0		0	156721		
+Dr.WILY STAGE 1	dr_wily_stage_1	NORMAL	14	18.1		486	3.12	19	166	0	0	0	0	0	4		0	0		0	156721		
+Dr.WILY STAGE 1	dr_wily_stage_1	HARD	22	26.5		620	3.97	27	83	0	2	39	12	0	4		0	0		0	156721		届きにくい/100 6.3(帯 〜3.725)
+Dr.WILY STAGE 1	dr_wily_stage_1	EXPERT	32	34		755	4.84	30	83	0	15	24	27	0	4		0	0		0	156721		
+Dr.WILY STAGE 1	dr_wily_stage_1	MASTER	43	41.7		863	5.53	36	83	0	18	24	8	0	4		0	0		0	156721		
+Dr.WILY STAGE 1	dr_wily_stage_1	HELL	78	72.7		915	5.86	37	83	0	114	135	19	0	4		0	0		0			交差/100 12.5(帯 〜9.82)/届きにくい/100 14.8(帯 〜13.99)
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	EASY	10	9.5		370	2.15	15	84	0	0	0	1	0	4		0	0		0	172499		跳びの割合 0.009(帯 〜0)
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	NORMAL	14	14.7		453	2.64	19	83	0	1	1	2	0	4		0	0		0	172499		交差/100 0.2(帯 〜0)/届きにくい/100 0.2(帯 〜0)
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	HARD	21	23.7		621	3.61	24	83	0	1	36	3	0	4		0	0		0	172499		届きにくい/100 5.8(帯 〜3.725)
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	EXPERT	34	34.1		769	4.47	32	83	0	3	16	5	0	4		0	0		0	172499		
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	MASTER	48	44.1		935	5.43	39	83	0	4	16	18	0	4		0	0		0	172499		
+Dr.WILY STAGE 1	dr_wily_stage_1_okkussenman	HELL	67	62.3		864	5.02	35	83	0	72	111	22	0	4		0	0		0			
+Erfolg	erfolg	EASY	9	10.6		407	2.14	14	140	0	0	0	0	0	4		0	0		0	189171		
+Erfolg	erfolg	NORMAL	10	12.1		446	2.35	15	140	0	0	0	2	0	4		0	0		0	189171		
+Erfolg	erfolg	HARD	19	21.3		669	3.52	22	70	0	0	12	5	0	4		0	0		0	189171		
+Erfolg	erfolg	EXPERT	33	30.4		812	4.27	29	70	0	4	6	11	0	4		0	0		0	189171		
+Erfolg	erfolg	MASTER	40	38.6		924	4.86	35	70	0	18	18	17	0	4		0	0		0	189171		
+Erfolg	erfolg	HELL	58	61.6		906	4.76	36	70	0	64	88	20	0	4		0	0		0			
+Erfolg	erfolg_piano	EASY	7	4.8		196	1.31	10	182	0	0	0	0	0	4		0	0		0	152360		
+Erfolg	erfolg_piano	NORMAL	8	7.2		227	1.51	12	182	0	0	0	0	0	4		0	0		0	152360		
+Erfolg	erfolg_piano	HARD	12	13.6		309	2.06	17	91	0	1	10	5	0	4		0	0		0	152360		
+Erfolg	erfolg_piano	EXPERT	21	18.6		377	2.51	20	91	0	2	6	3	0	4		0	0		0	152360		
+Erfolg	erfolg_piano	MASTER	25	23.9		441	2.93	23	91	0	7	17	6	0	4		0	0		0	152360		
+Erfolg	erfolg_piano	HELL	36	38.8		444	2.95	24	91	0	21	43	5	0	4		0	0		0			
+天翔る翼	amakakeru_tsubasa	EASY	10	11.6		242	2.3	15	144	0	0	0	0	0	4		0	0		0	107720		
+天翔る翼	amakakeru_tsubasa	NORMAL	13	15.4		273	2.59	18	144	0	0	0	0	0	4		0	0		0	107720		
+天翔る翼	amakakeru_tsubasa	HARD	22	24		372	3.52	25	72	0	4	22	6	0	4		0	0		0	107936		交差/100 1.1(帯 〜0.425)/届きにくい/100 5.9(帯 〜3.725)
+天翔る翼	amakakeru_tsubasa	EXPERT	33	30.4		427	4.04	29	72	1	10	11	8	0	4		0	0		0	107936		押せない 1
+天翔る翼	amakakeru_tsubasa	MASTER	48	36.8	表示が高い	556	5.26	34	72	0	7	12	12	0	4		0	0		0	107936		表示が高い
+天翔る翼	amakakeru_tsubasa	HELL	67	65.6		522	4.94	36	72	0	47	53	21	0	4		0	0		0			
+Beyond the Same Sky	beyond_the_same_sky	EASY	7	7.1		409	1.6	12	168	0	0	0	1	0	4		0	0		0	258747		跳びの割合 0.018(帯 〜0)
+Beyond the Same Sky	beyond_the_same_sky	NORMAL	9	9.2		479	1.87	14	168	0	0	0	0	0	4		0	0		0	258747		
+Beyond the Same Sky	beyond_the_same_sky	HARD	14	15.9		642	2.51	19	84	0	1	9	10	0	4		0	0		0	258662		
+Beyond the Same Sky	beyond_the_same_sky	EXPERT	25	26.6		906	3.53	27	84	0	6	9	20	0	4		0	0		0	258747		
+Beyond the Same Sky	beyond_the_same_sky	MASTER	36	31.1		1112	4.39	29	84	0	0	0	36	0	4		0	0		0	255541		
+Beyond the Same Sky	beyond_the_same_sky	HELL	55	55.4		1227	4.84	34	84	0	0	0	12	0	4		0	0		0			
+Beyond the Same Sky	beyond_the_same_sky_short	EASY	7	7.1		240	1.6	12	168	0	0	0	0	0	4		0	0		0	152227		
+Beyond the Same Sky	beyond_the_same_sky_short	NORMAL	9	8.9		276	1.84	13	168	0	0	0	0	0	4		0	0		0	152227		
+Beyond the Same Sky	beyond_the_same_sky_short	HARD	15	17.2		384	2.57	20	84	0	0	7	6	0	4		0	0		0	152058		
+Beyond the Same Sky	beyond_the_same_sky_short	EXPERT	23	21.8		464	3.1	21	84	0	9	17	12	0	4		0	0		0	152227		
+Beyond the Same Sky	beyond_the_same_sky_short	MASTER	32	26.8		639	4.27	25	84	0	0	0	6	0	4		0	0		0	151721		
+Beyond the Same Sky	beyond_the_same_sky_short	HELL	58	53.5		733	4.9	30	84	0	0	0	5	0	4		0	0		0			
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	EASY	9	10.5		251	2.2	14	155	0	0	0	0	0	4		0	0		0	116664		
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	NORMAL	12	13.9		298	2.62	16	155	0	0	0	0	0	4		0	0		0	116664		
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	HARD	20	24.6		411	3.59	26	77	0	0	6	5	0	4		0	0		0	116664		
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	EXPERT	31	31.4		574	5.02	28	77	0	2	5	12	0	4		0	0		0	116664		
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	MASTER	42	38.9		606	5.29	33	77	0	1	6	16	0	4		0	0		0	116664		
+全部必殺技でつ( `･ω･)	zenbu_hissatsuwaza	HELL	46	60	表示が低い	591	5.16	36	77	0	24	38	13	0	4		0	0		0			表示が低い
+Desert Crown	desert_crown	EASY	6	4		134	0.9	7	300	0	0	0	0	0	4		0	0		0	151222		
+Desert Crown	desert_crown	NORMAL	7	5.9		165	1.1	10	300	0	0	0	0	0	4		0	0		0	151822		
+Desert Crown	desert_crown	HARD	9	12.4		223	1.49	15	150	0	0	1	2	0	4		0	0		0	152422		
+Desert Crown	desert_crown	EXPERT	18	19.8		357	2.38	20	150	0	8	10	8	0	4		0	0		0	152422		
+Desert Crown	desert_crown	MASTER	30	27.9		449	2.99	30	150	0	7	12	9	0	4		0	0		0	152422		
+Desert Crown	desert_crown	HELL	36	42.7	表示が低い	581	3.87	33	150	0	0	3	14	0	4		0	0		0			表示が低い
+BRAND NEW SKY	brand_new_sky	EASY	7	8.1		218	1.5	12	205	0	0	0	1	0	4		0	0		0	148239		跳びの割合 0.043(帯 〜0)
+BRAND NEW SKY	brand_new_sky	NORMAL	9	10.9		268	1.84	15	205	0	0	0	0	0	4		0	0		0	148239		
+BRAND NEW SKY	brand_new_sky	HARD	15	18.4		366	2.5	21	102	0	1	9	2	0	4		0	0		0	148547		
+BRAND NEW SKY	brand_new_sky	EXPERT	24	24		458	3.13	24	102	0	3	7	5	0	4		0	0		0	148547		
+BRAND NEW SKY	brand_new_sky	MASTER	35	34.8		610	4.17	32	102	0	6	17	10	0	4		0	0		0	148239		
+BRAND NEW SKY	brand_new_sky	HELL	44	50	表示が低い	567	3.88	30	102	0	44	75	9	0	4		0	0		0			表示が低い
+ワルキューレ	walkure	EASY	11	13.7		1698	2.48	18	138	0	0	0	0	0	4		0	0		0	684697		
+ワルキューレ	walkure	NORMAL	14	16.8		1912	2.8	20	138	0	0	0	8	0	4		0	0		0	684697		
+ワルキューレ	walkure	HARD	26	26.8		2619	3.83	30	69	0	11	84	26	0	4		0	199	69	0	684697		
+ワルキューレ	walkure	EXPERT	36	33.5		2850	4.17	36	69	0	1	14	70	0	4		0	13	69	0	684697		
+ワルキューレ	walkure	MASTER	50	38.1	表示が高い	3460	5.06	39	69	0	1	11	38	0	4		0	7	69	0	684697		表示が高い
+ワルキューレ	walkure	HELL	61	53.1	表示が高い	2855	4.18	37	69	0	69	198	71	0	4		0	0		0			表示が高い
+ワルキューレ	walkure_short	EASY	12	13.2		446	2.54	17	138	0	0	0	0	0	4		0	0		0	178609		
+ワルキューレ	walkure_short	NORMAL	15	17		500	2.85	20	138	0	0	0	1	0	4		0	0		0	178609		
+ワルキューレ	walkure_short	HARD	24	24.7		654	3.72	27	69	0	2	16	7	0	4		0	54	69	0	178609		
+ワルキューレ	walkure_short	EXPERT	30	30.1		720	4.1	31	69	0	1	2	17	0	4		0	0		0	178748		
+ワルキューレ	walkure_short	MASTER	50	39.1	表示が高い	878	4.99	41	69	0	0	2	12	0	4		0	3	69	0	178748		表示が高い
+ワルキューレ	walkure_short	HELL	49	47.1		713	4.06	29	69	0	19	42	15	0	4		0	0		0			
+きみ待ち♡ループ	kimimachi_loop	EASY	6	4.8		207	1.32	10	180	0	0	0	0	0	4		0	0		0	160082		
+きみ待ち♡ループ	kimimachi_loop	NORMAL	7	8		237	1.51	13	180	0	0	0	0	0	4		0	0		0	160082		
+きみ待ち♡ループ	kimimachi_loop	HARD	14	13.6		361	2.29	16	90	0	1	8	2	0	4		0	0		0	160532		
+きみ待ち♡ループ	kimimachi_loop	EXPERT	21	20.9		483	3.05	21	90	0	2	14	5	0	4		0	0		0	160532		
+きみ待ち♡ループ	kimimachi_loop	MASTER	26	24.3		541	3.42	24	90	0	1	18	6	0	4		0	0		0	160532		
+きみ待ち♡ループ	kimimachi_loop	HELL	37	35.8		501	3.16	24	90	0	8	44	3	0	4		0	0		0			

@@ -74,6 +74,15 @@ const LIFE_MOVE = '[data-assistant-life-room-masmon-pet],[data-assistant-life-ro
 const SCENES = [
   // ---- HOME ----
   { id: 'home', area: 'HOME', name: 'HOME', kind: 'walk' },
+  { id: 'home-changelog', area: 'HOME', name: '更新履歴', kind: 'walk' },
+  { id: 'home-assistant-menu', area: 'HOME', name: '助手のメニュー(HOME)', kind: 'walk' },
+  { id: 'home-assistant-help', area: 'HOME', name: '助手の説明(HOME)', kind: 'walk' },
+  { id: 'profile', area: 'HOME', name: 'プロフィール', kind: 'walk' },
+  { id: 'replay-list', area: 'HOME', name: 'イベント回想(まとまりを開いた所)', kind: 'walk' },
+  { id: 'replay-end', area: 'HOME', name: 'イベント回想(お話の締め)', kind: 'walk' },
+  { id: 'mission', area: 'HOME', name: 'ミッション', kind: 'walk' },
+  { id: 'gift', area: 'HOME', name: 'ギフト', kind: 'walk' },
+  { id: 'temple', area: 'HOME', name: '神殿', kind: 'walk' },
   // ---- マーケット ----
   { id: 'market', area: 'マーケット', name: 'マーケット', kind: 'walk' },
   // ---- カードバトル ----

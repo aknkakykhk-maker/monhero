@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1cf5ca15d5ea3ee
+// source-sha256: ba94b2f4775346f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120691,7 +120691,14 @@ function AssistantLifeHouse({
     onBoard: () => setBoardOpen(true),
     onRelView: relView,
     result: aluResult,
-    onResultClose: () => setAluResult(null)
+    onResultClose: () => setAluResult(null),
+    profileList: typeof AssistantLifeProfilePage === 'function' ? React.createElement(AssistantLifeProfilePage, {
+      metIds: metIds,
+      bondLevelOf: bondLevelOf,
+      land: land,
+      onMasmon: setMasmonId,
+      typed: true
+    }) : null
   }) : land ? React.createElement("div", {
     className: "relative z-[2] flex h-full min-h-0",
     style: {
@@ -121288,11 +121295,13 @@ function AssistantLifeHouseTyped({
   onBoard,
   onRelView,
   result = null,
-  onResultClose
+  onResultClose,
+  profileList = null
 }) {
   const [goal, setGoal] = React.useState(() => typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null);
   const [openDaily, setOpenDaily] = React.useState(false);
   const [openNow, setOpenNow] = React.useState(false);
+  const [openProfile, setOpenProfile] = React.useState(false);
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_GOAL_STORE === 'undefined') return undefined;
     const S = ASSISTANT_LIFE_GOAL_STORE;
@@ -121308,13 +121317,56 @@ function AssistantLifeHouseTyped({
     };
   }, []);
   const near = typeof assistantLifeNearestReward === 'function' ? assistantLifeNearestReward(ids) : null;
-  const head = near ? React.createElement(AluNextReward, {
+  const reward = near ? React.createElement(AluNextReward, {
     rest: near.remain,
     text: `${nameOf(near.id)}の 💗 仲良し度 Lv${near.nextLv}${near.opens.length ? ` → ${near.opens.join('・')}` : ''}`
   }) : React.createElement(AluNextReward, {
     rest: null,
     text: "見る・話す・贈るで 💗 仲良し度が上がると、ごほうびが届きます"
   });
+  const head = profileList ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'stretch',
+      flex: 'none'
+    },
+    "data-assistant-life-house-head": true
+  }, React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, reward), React.createElement("button", {
+    type: "button",
+    className: "alu-btn",
+    "data-assistant-life-house-profile": true,
+    "aria-label": "助手の紹介を見る",
+    onClick: () => setOpenProfile(true),
+    style: {
+      flex: 'none',
+      width: 64,
+      height: 'auto',
+      minHeight: 44,
+      padding: '4px 0',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 0,
+      lineHeight: 1.2,
+      borderRadius: 14
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 20
+    }
+  }, "📖"), React.createElement("span", {
+    className: "alu-nw",
+    style: {
+      fontSize: 13
+    }
+  }, "紹介"))) : reward;
   const scene = box => {
     const landArt = box.wide && land;
     const width = assistantLifeTypedArtWidth(box, landArt);
@@ -121435,6 +121487,22 @@ function AssistantLifeHouseTyped({
     },
     "data-assistant-life-guide-watch": true
   }, "👀 見てみる — ", assistantLifeTypedGroupName(g0, nameOf), "の話")) : null)) : null;
+  const profileNode = openProfile && profileList && !resultNode ? React.createElement("div", {
+    "data-assistant-life-house-profile-list": true
+  }, React.createElement(AluSheet, {
+    title: "📖 助手紹介",
+    onClose: () => setOpenProfile(false)
+  }, React.createElement("div", {
+    style: {
+      margin: '0 -12px'
+    }
+  }, profileList), React.createElement(AluBtn, {
+    onClick: () => setOpenProfile(false),
+    "data-assistant-life-house-profile-back": true,
+    style: {
+      width: '100%'
+    }
+  }, "🏡 家に戻る"))) : null;
   const goBtn = React.createElement(AluGo, {
     onClick: () => {
       if (g0 && onWatch) onWatch();
@@ -121451,7 +121519,7 @@ function AssistantLifeHouseTyped({
     tabs: tabs,
     head: low ? React.createElement(React.Fragment, null, head, goBtn) : head,
     scene: scene,
-    overlay: resultNode || guideNode,
+    overlay: resultNode || profileNode || guideNode,
     "data-assistant-life-typed-house": "1"
   }, top, note ? React.createElement("div", {
     className: "alu-card alu-t",
@@ -128823,7 +128891,8 @@ function AssistantLifeProfilePage({
   onMasmon = null,
   viewOnly = false,
   ownerName = '',
-  tierOf = null
+  tierOf = null,
+  typed = false
 }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
@@ -128890,7 +128959,7 @@ function AssistantLifeProfilePage({
     className: "mb-2 flex items-center gap-2"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
-  }, React.createElement("p", {
+  }, typed ? null : React.createElement("p", {
     className: "text-[16px] font-black text-white"
   }, "📖 助手紹介"), React.createElement("p", {
     className: "text-[11px] font-bold text-indigo-200"
@@ -128917,7 +128986,7 @@ function AssistantLifeProfilePage({
         fontSize: face / 2
       }
     }, "？"), React.createElement("p", {
-      className: "mt-1 text-[15px] font-black text-slate-400"
+      className: `mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-slate-400`
     }, "？？？"), React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
     }, "まだ会っていません"));
@@ -128935,25 +129004,25 @@ function AssistantLifeProfilePage({
       }
     }, isNew(w.id) && React.createElement("span", {
       "data-assistant-life-profile-new": true,
-      className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950"
+      className: `absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-1.5 py-0.5 ${typed ? 'text-[11px]' : 'text-[10px]'} font-black text-slate-950`
     }, "NEW"), typeof AssistantFace === 'function' && React.createElement(AssistantFace, {
       who: w,
       size: face,
       accent: w.accent,
       expression: "happy"
     }), React.createElement("p", {
-      className: "mt-1 text-[15px] font-black text-white"
+      className: `mt-1 ${typed ? 'text-[16px]' : 'text-[15px]'} font-black text-white`
     }, w.name), React.createElement("p", {
-      className: "text-[10.5px] font-bold leading-snug text-slate-200",
+      className: `${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-200`,
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
     }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), b && React.createElement("span", {
-      className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
+      className: `mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-black text-pink-100`
     }, "💗 Lv", b.lv), viewOnly && typeof tierOf === 'function' && tierOf(w.id) && React.createElement("span", {
       "data-assistant-life-profile-tier": w.id,
       className: "mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
     }, "💗 ", tierOf(w.id)));
   })), React.createElement("p", {
-    className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
+    className: `mt-2 ${typed ? 'text-[11px]' : 'text-[10.5px]'} font-bold leading-snug text-slate-300`
   }, viewOnly ? metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '' : React.createElement(React.Fragment, null, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : '')), openId && (() => {
     const sheet = React.createElement(AssistantLifeProfileSheet, {
       id: openId,
