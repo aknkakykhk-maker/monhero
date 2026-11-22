@@ -141,7 +141,7 @@ const CHANGELOG = [
   {
     date: "2026-11-23 01:20", type:'update', group:'rhythm', status:'new', releaseFlag:'battle5',
     title:'新曲「Battle #5」（原曲＋short ver.）を追加しました',
-    image:'images/song-art/battle-5.jpg',
+    image:'images/song-art/battle-5.jpg?v=c98d8edcec3a',
     items:[
       'モンヒロビートに「Battle #5」を追加しました。原曲（4分12秒・BPM 170）と short ver.（2分27秒・BPM 170）の、2バージョンの曲組です。',
       '原曲のレベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.24 ／ MASTER Lv.31 ／ HELL Lv.49 です。',
