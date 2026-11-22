@@ -59,8 +59,14 @@ if (has('--list')) {
 // ---- 比べる相手の版と、いまの変更の指紋 ----
 const baseRev = () => opt('--base') || gitText(['merge-base', 'origin/main', 'HEAD']) || gitText(['rev-parse', 'origin/main']) || 'HEAD';
 // 画面に出る物(配るファイル)だけを見る。src/ は配らない(配るのは build.js が作った game-system.compiled.js)
+// ビルドの日時(build.js が毎回書き換える)だけの差は、画面の差に数えない。撮るときも両方の版で同じ日時にそろえる
+const BUILD_DATE_RE = /window\.__mhBuildDate = '[^']*'/;
+const sameButBuildDate = (base, f) => {
+  try { const a = git(['show', `${base}:${f}`]).toString(), b = fs.readFileSync(path.join(ROOT, f), 'utf8'); return a.replace(BUILD_DATE_RE, '') === b.replace(BUILD_DATE_RE, ''); } catch (e) { return false; }
+};
 const servedDiff = (base) => gitText(['diff', '--name-only', '--no-renames', base, '--', 'monster-hero']).split('\n').filter(Boolean)
-  .filter((f) => !/^monster-hero\/(src|audio|debug)\//.test(f));
+  .filter((f) => !/^monster-hero\/(src|audio|debug)\//.test(f) && f !== 'monster-hero/version.json')
+  .filter((f) => !(f === 'monster-hero/index.html' && sameButBuildDate(base, f)));
 const fingerprint = (base, files) => {
   const h = crypto.createHash('sha1').update(gitText(['rev-parse', base]));
   for (const f of files) { h.update(f); try { h.update(fs.readFileSync(path.join(ROOT, f))); } catch (e) { h.update('gone'); } }
@@ -127,6 +133,11 @@ const makeServer = (side, rev, port) => new Promise((resolve) => {
     let buf = fromRev ? fromRev(r) : null;
     if (buf === false) { res.writeHead(404); res.end(); return; }
     if (buf === null && (!fs.existsSync(f) || fs.statSync(f).isDirectory())) { res.writeHead(404); res.end(); return; }
+    if (r === 'monster-hero/version.json') { res.writeHead(200, { 'Content-Type': type }); res.end('{"build": "2026-01-01 00:00"}'); return; }
+    if (r === 'monster-hero/index.html') {
+      const t = (buf || fs.readFileSync(f)).toString('utf8');
+      res.writeHead(200, { 'Content-Type': type }); res.end(t.replace(BUILD_DATE_RE, "window.__mhBuildDate = '2026-01-01 00:00'")); return;
+    }
     if (r === 'monster-hero/data/rhythm-mode.js') {
       const t = (buf || fs.readFileSync(f)).toString('utf8');
       lifePatched[side] = t.includes(LIFE_FROM);
