@@ -19,11 +19,10 @@ const assistantLifeTypedGroupName = (g, nameOf) => {
 };
 
 function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms, diary, peerSt, nameOf, tabs, tab = 'house', onTab, onBack,
-  unwatched = [], onWatch, tier = null, note = '', top = null, guide = null, dailyCard = null, planBand = null,
+  unwatched = [], onWatch, tier = null, note = '', top = null, guideOn = false, onGuide = null, onGuideClose = null, dailyCard = null, planBand = null,
   onTalk, onGive, onPlay, onRoom, onBoard, onRelView, result = null, onResultClose }) {
   const [goal, setGoal] = React.useState(() => (typeof assistantLifeGoalView === 'function' ? assistantLifeGoalView() : null));
   const [openDaily, setOpenDaily] = React.useState(false);
-  const [openPlan, setOpenPlan] = React.useState(false);
   const [openNow, setOpenNow] = React.useState(false);
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_GOAL_STORE === 'undefined') return undefined;
@@ -41,7 +40,7 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
     const width = assistantLifeTypedArtWidth(box, landArt);
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: box.wide ? '100%' : undefined, padding: '6px 0' }} data-assistant-life-top-house>
-        <AssistantLifeHouseArt width={width} land={landArt} look={look} rooms={rooms} metSet={metSet} onOpen={onRoom} diary={diary} pop={false} onBoard={onBoard} life={life} peerSt={peerSt} v2 grid4={!landArt} />
+        <AssistantLifeHouseArt width={width} land={landArt} look={look} rooms={rooms} metSet={metSet} onOpen={onRoom} diary={diary} pop={false} onBoard={onBoard} life={life} peerSt={peerSt} v2 grid4={!landArt} typed />
       </div>);
   };
   const g0 = unwatched[0];
@@ -68,11 +67,21 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
           gains={gains} next={next} onClose={onResultClose} />
       </div>);
   }
+  // 見かた(初めての1回は自動で開く・あとは家のいちばん下の「❓ 見かた」から。段7の残り・2026-11-22)。黄色い札ではなく型の窓
+  const guideNode = guideOn && !resultNode ? (
+    <div data-assistant-life-guide data-assistant-life-typed-guide>
+      <AluSheet title="❓ 助手ライフの見かた" gain="💗 仲良し度 · 🤝 友情" onClose={onGuideClose}>
+        <div className="alu-t" style={{ marginBottom: 4 }}>助手と過ごすと得する場所です</div>
+        <AluRow pic="👀" text="見る・話す・贈る・誘う" note="家で助手たちと過ごします。今日の目標は4つのうち3つで達成" />
+        <AluRow pic="💗" text="仲良くなるとごほうび" note="ダイヤ・飾り枠・話し方・マスモンが届きます" />
+        <AluRow pic="🎮" text="ほかの遊びも得になる" note={`モンヒロビートは券なし・カードはごほうび${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : 'アップ'}`} />
+        {g0 && onWatch ? <div style={{ marginTop: 10 }}><AluGo onClick={() => { if (onGuideClose) onGuideClose(); onWatch(); }} data-assistant-life-guide-watch>👀 見てみる — {assistantLifeTypedGroupName(g0, nameOf)}の話</AluGo></div> : null}
+      </AluSheet>
+    </div>) : null;
   return (
-    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={head} scene={scene} overlay={resultNode} data-assistant-life-typed-house="1">
+    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
       {top}
       {note ? <div className="alu-card alu-t" data-assistant-life-note>{note}</div> : null}
-      {guide}
       <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
         {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
       </AluGo>
@@ -91,11 +100,7 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
           : <div className="alu-n" style={{ marginTop: 4 }}>まだありません。見る・話す・贈るをすると、ここに残ります</div>}
         {total > items.length ? <div style={{ marginTop: 6 }}><AluBtn onClick={onBoard}>もっと見る(全部で{total}件)</AluBtn></div> : null}
       </div>
-      {planBand ? (
-        <div className="alu-card" data-assistant-life-typed-plan>
-          <AluBtn onClick={() => setOpenPlan(v => !v)} aria-expanded={openPlan}>📅 予定 {openPlan ? '▲' : '▼'}</AluBtn>
-          {openPlan ? <div style={{ marginTop: 8 }}>{planBand}</div> : null}
-        </div>) : null}
+      {planBand}
       <div className="alu-card" data-assistant-life-v2-status>
         <AluBtn onClick={() => setOpenNow(v => !v)} aria-expanded={openNow}>🏡 みんなの今({ids.length}人) {openNow ? '▲' : '▼'}</AluBtn>
         {openNow ? ASSISTANT_LIFE_HOUSE_ORDER.filter(id => metSet.has(id)).map(id => {
@@ -106,6 +111,10 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
             action={<AluBtn onClick={() => onRoom(id)} data-assistant-life-v2-status-id={id}>部屋へ</AluBtn>} />;
         }) : null}
       </div>
+      {onGuide ? (
+        <div className="alu-card" data-assistant-life-typed-guide-row>
+          <AluRow pic="❓" text="助手ライフの見かた" note="何をすると何が上がるか" action={<AluBtn onClick={onGuide} data-assistant-life-guide-open>開く</AluBtn>} />
+        </div>) : null}
     </AluFrame>);
 }
 

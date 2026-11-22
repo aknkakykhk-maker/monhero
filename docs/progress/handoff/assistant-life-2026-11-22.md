@@ -44,6 +44,8 @@
 
 ## 手で書く所(ここだけ人が書く。無ければ「なし」)
 
+- **追記(11/22 夕・段7の残り)**: 段8(#7155)はミハリがマージ済み。段7の残り3つ(家の絵の中の札の字を11pxに・7日のごほうびと予定を型の行に・「❓ 見かた」を型の窓にして家の一番下から開き直せる)は #7163 でマージ・公開済み(gate 要らない)。止め絵と突き合わせ表 `docs/progress/assistant-life/step7-house/README.md`。測る道具 `life-ui-shoot.js` の measure に `withScene`(絵の中の字も数える・家の撮影は既定で数える・部屋の撮影は数えない)。**次は段9(町 `-map`)**: 仕様書 §8 の表は「得を2種類・下のタブ」だけで、段7のような案(step9-plan.md)と社長の選択がまだ無い → 先に案を作り窓口経由で社長に選んでもらう。更新履歴は #7163 の分を窓口に文案で渡した(まだ changelog.js に入れていない)
+
 - やりかけ(どのファイルのどこまで・次の1手): 段8(部屋を型に載せる)は PR #7155(枝 `claude/assistant-life-step8-room`)でミハリの確認待ち(gate「要る」)。部品は `56-assistant-life-house-typed.jsx` の `AssistantLifeRoomTyped`、呼ぶ所は `56-assistant-life-house.jsx` の `AssistantLifeRoomSheet` の「段8:」の枝。止め絵 `docs/progress/assistant-life/step8-room/`。**次は段7の残り**(家の絵の中の札の字 8.5〜10.5px・「📅 予定」「🧺 7日のごほうび」を開いた中身が前の部品・「❓ 見かた」を家から開き直せない)→ 段9(町 `-map`)。段8の残り: 「📖 ◯◯のこと」は段12で・喧嘩の札/施設の得/家具の窓は前の部品の字のまま(段10・13)
 - 社長・窓口の返事待ち(何を聞いているか): なし(#7155 のミハリ確認は窓口が回す)。#7112(寝顔)はミハリがマージ
 - はまった所・次の会話がやってはいけないこと: ①新しい容れ物では `cd tools && npm install` が要る(無いと build.js が @babel/core で落ちる) ②`life-browser-shared.js` の toHome が部屋の「もっと見る」を最初から開く(`ASSISTANT_LIFE_ROOM_MORE.open=true`)。畳んで撮るなら `window.__mhKeepRoomFold = true` ③前の撮影が裏で残っていると同じ番号の口で EADDRINUSE。`pgrep -af` で確かめて止める ④main との比べ方: `git stash` → build → 1本ずつ回す → `git stash pop`(worktree は作らない) ⑤ux 検査は前の部屋の並びを見るので `__mhAssistantLifeUntypedRoom` を立てている ⑥run-checks --changed は 45 分を超え裏の時間切れに当たる。画面の検査は1本ずつ回すほうが確か ⑦歩く点検の残る NG(家の「声をかける(えらぶ)」「贈る(えらぶ)」「道具」に届かない)は段7からの物

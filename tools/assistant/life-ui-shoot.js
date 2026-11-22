@@ -26,7 +26,9 @@ if (require.main === module) fs.mkdirSync(OUT, { recursive: true });
 const measure = (o = {}) => {
   const ng = [];
   // o.skipMain … 下まで送った絵(主なボタンが上へ流れて見えない)は②を見ない。場面の絵([data-alu-scene])の中の字は①④で数えない(絵の札は段8〜で直す)
-  const inScene = (el) => !!(el && el.closest && el.closest('[data-alu-scene]'));
+  // o.withScene … 場面の絵の中の字も数える(段7の残り: 家の絵の札を4段に載せた・2026-11-22)
+  const inScene = (el) => !o.withScene && !!(el && el.closest && el.closest('[data-alu-scene]'));
+  const badAt = [];
   // o.frame … 測る型の目印(部屋は家の型の上に重なるので '[data-assistant-life-typed-room]')
   const frame = document.querySelector(o.frame || '[data-alu-frame]');
   if (!frame) return { ng: ['型(.alu)が描かれていない'] };
@@ -39,14 +41,18 @@ const measure = (o = {}) => {
   const walker = document.createTreeWalker(frame, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.textContent.trim()) continue;
-    const el = n.parentElement; if (inScene(el)) continue; const r = el.getBoundingClientRect();
+    const el = n.parentElement; if (inScene(el)) continue;
+    // 絵として置いた絵文字(aria-hidden の飾り・部屋の家具)は字ではないので数えない
+    if (el.closest('[aria-hidden="true"], [data-assistant-life-room-furn]')) continue;
+    const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1 || r.bottom < F.top || r.top > F.bottom) continue;
     const st = getComputedStyle(el); if (st.visibility === 'hidden' || st.display === 'none') continue;
     const px = Math.round(parseFloat(st.fontSize) * 10) / 10; sizes.add(px); if (px < 10) tiny++;
+    if (![11, 13, 16, 20].includes(px) && badAt.length < (o.badMax || 6)) { const at = o.badMax ? ` ${(el.className && String(el.className).slice(0, 30)) || ''}[${[...el.attributes].map(a => a.name).filter(a => a.startsWith('data-')).slice(0, 1).join('')}]` : ''; badAt.push(`${px}px「${n.textContent.trim().slice(0, 10)}」${at}`); }
   }
   const steps = [...sizes].sort((a, b) => a - b);
   const bad = steps.filter(s => ![11, 13, 16, 20].includes(s));
-  if (bad.length) ng.push(`① 4段のほかの字の大きさ: ${bad.join('・')}px`);
+  if (bad.length) ng.push(`① 4段のほかの字の大きさ: ${bad.join('・')}px(${badAt.join(' ')})`);
   if (tiny) ng.push(`① 10px 未満の字が ${tiny}か所`);
   // ② 主なボタン
   const gos = [...frame.querySelectorAll('.alu-go')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.bottom > F.top && r.top < F.bottom && onTop(e); });
