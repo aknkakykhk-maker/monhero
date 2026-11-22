@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cfb9d7e4b3f209d
+// source-sha256: e68a4b2ad5b563c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -36993,6 +36993,9 @@ const RhythmOrientationButton = ({
       setBusy(false);
     }
   };
+  const pcLike = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches && Math.min(window.innerWidth || 0, window.innerHeight || 0) >= 600;
+  const rotatedNow = typeof RHYTHM_VIEW_ROTATION === 'object' && !!RHYTHM_VIEW_ROTATION && typeof RHYTHM_VIEW_ROTATION.active === 'function' && RHYTHM_VIEW_ROTATION.active();
+  if (pcLike && !rotatedNow && note === '') return null;
   return React.createElement("div", {
     className: `relative shrink-0 ${className}`
   }, React.createElement("button", {
@@ -37011,11 +37014,15 @@ const RhythmOrientationButton = ({
     className: "text-[9px] font-black leading-none"
   }, landscape ? '縦' : '横')), note !== '' && React.createElement("p", {
     "data-rhythm-orientation-note": true,
+    role: "status",
     onClick: () => setNote(''),
     style: {
-      whiteSpace: 'pre-line'
+      whiteSpace: 'pre-line',
+      top: 'calc(var(--mh-sa-top, 0px) + 4px)',
+      left: 'calc(var(--mh-sa-left, 0px) + 8px)',
+      right: 'calc(var(--mh-sa-right, 0px) + 8px)'
     },
-    className: "absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg"
+    className: "fixed z-[90000] mx-auto max-w-lg rounded-xl border border-amber-300/60 bg-slate-950/95 px-3 py-1.5 text-[10px] font-bold leading-snug text-amber-100 shadow-lg"
   }, note, React.createElement("span", {
     className: "mt-1 block text-[8px] font-black text-amber-300/80"
   }, "タップで閉じる")));
