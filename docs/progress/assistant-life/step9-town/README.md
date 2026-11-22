@@ -42,3 +42,38 @@
 - 選ばれた案で `56-assistant-life-map.jsx` の新UIの町を型(`AluFrame`)に載せる。旧UI・フレンドの町は今のまま
 - 得の2種類の分け方(上の 🎟/💗)を `assistantLifePerkRows` の行に印として足す(判定は今のまま・保存は何もしない)
 - 測る道具 `life-house-typed-shoot.js` に町の場面を足し、型の①〜⑦で測る(案A・C を選んだときは「場面の3割」を町だけ外す)
+
+## 作った物(社長の選択: 案A 地図を大きく・r1119-097・2026-11-22 ナカヨシ)
+
+- 部品: `56-assistant-life-map.jsx` の `AssistantLifeTownTyped`(新UIの町のタブだけ)。地図は今の `AssistantLifeTownMap` を `typedBox` で型の枠の中に描く(上の帯は型の帯に任せて出さない)。呼ぶ所は `56-assistant-life-house.jsx` の `typedTown`(検査だけ `window.__mhAssistantLifeUntypedTown` で前の町)
+- 旧UI・フレンドの町は今のまま。保存は何も足していない。得の判定も今のまま(`assistantLifePerkRows`。並びが得の大きい順)
+- 撮り直し・測り直し: `node tools/assistant/life-house-typed-shoot.js`(town・town-bottom を型の①〜⑦で測る。地図の中の札は HOME と同じ札なので数えない)。前の町は `--untyped-town`
+
+| 大きさ | 前(型に載せる前) | 開いたところ | 下まで送った | 「見る」→ 場所の窓 |
+| --- | --- | --- | --- | --- |
+| 縦 390×844 | [tate-town-untyped](after/tate-town-untyped.png) | [tate-town](after/tate-town.png) | [tate-town-bottom](after/tate-town-bottom.png) | [tate-town-sheet](after/tate-town-sheet.png) |
+| 幅320 320×568 | [s320-town-untyped](after/s320-town-untyped.png) | [s320-town](after/s320-town.png) | [s320-town-bottom](after/s320-town-bottom.png) | [s320-town-sheet](after/s320-town-sheet.png) |
+| 横 844×390 | [yoko-town-untyped](after/yoko-town-untyped.png) | [yoko-town](after/yoko-town.png) | [yoko-town-bottom](after/yoko-town-bottom.png) | [yoko-town-sheet](after/yoko-town-sheet.png) |
+| PC 1280×800 | [pc-town-untyped](after/pc-town-untyped.png) | [pc-town](after/pc-town.png) | [pc-town-bottom](after/pc-town-bottom.png) | [pc-town-sheet](after/pc-town-sheet.png) |
+
+測った数(8枚とも OK): 型の部分の字は 11・13・16・20px だけ / 主なボタン1つ(296〜529×52px・16px)/ 帯48px・タブ5つが下の端 / はみ出しなし / PC の下の空き 131px(16%)
+
+### 突き合わせ表(作った物)
+
+| 決めごと・参考 | 中身 | 止め絵のどこで満たすか | 結果 |
+| --- | --- | --- | --- |
+| r1119-097 案A | 地図を大きく・下に主なボタンと行き先にいる助手の行 | tate-town: 地図(高さ 400px の窓・送れる)→「🃏 MFバトルカードへ行く / 🎟 ごほうび×1.375」→「MFバトルカードにいる助手」3行(部屋へ) | 満たす |
+| §5 町のいちばん押してほしい物 | 得のいちばん大きい場所へ「行く」を主なボタン1つ | 各大きさの主なボタン1つ。押すと今の「いま行くと得」と同じ行き先(カードなら対戦へ)。得が無いときは人のいちばん多い場所の「見る」 | 満たす |
+| §5 1人の行の5つのボタン → 「部屋へ」1つ | 行は右にボタン1つ | 「◯◯にいる助手」の行は「部屋へ」1つ・「ほかの場所」の行は「見る」1つ | 満たす(場所の窓の中は前の部品のまま・下の残り) |
+| §3 38 得は2種類 | 🎟 券・割引 / 💗 多め | 地図の札の上「🎟 ごほうび×1.375」・モンヒロバトルの「💗 多め」・ほかの場所の行の札 | 満たす |
+| 窓口の指示「場面の3割は町だけ外す」 | 地図は大きく | 縦は画面の高さの47%まで(400px)・幅320は 267px で主なボタンが最初から見える(s320-town) | 満たす |
+| UI §1 下のタブ・時刻は上の帯だけ | | 下にタブ5つ・上の帯「15:00 昼 · 次に動く 16:00」。前の地図の上のタブと「あと1時間でみんなが動く」は無い | 満たす |
+| UI §5 PC・横は2段組 | 左に地図・右に中身 | pc-town・yoko-town。横は箱が低いので、地図は HOME と同じ大きさで描いて箱の中で縦横に送る(箱の大きさで描くと札が重なった) | 満たす |
+| r1115-031 地図の顔の大きさをそろえる | | 地図の人の並びは前と同じ部品(大きさの表もそのまま) | 満たす |
+| 2026-11-14 言葉の途中で折らない | | 主なボタンは「行き先 / 得」の2行(幅320で「MFバトルカードへ / 行く」と折れたので直した)・得の印が顔に隠れたので人の並びが印を避ける | 満たす |
+| r1119-039 社長より先に気付く(数字で測る) | | 撮る道具が町を型の①〜⑦で測る。目で見て、幅320のボタンの折れ・縦の得の印の隠れ・横の札の重なりを見つけて直した | 満たす |
+
+### 残り
+
+- 場所の窓(「見る」・地図の札を押したとき)の中は前の部品のまま(1人の行に5つのボタン・字は前の大きさ)。型の窓(`AluSheet`)へは段10〜13で
+- 横の地図の「助手ライフ」の札が横に長く伸びるのは、型に載せる前からの見え方(yoko-town-untyped も同じ)。HOME の札の置き方(横向き)の CSS で、この段では触っていない

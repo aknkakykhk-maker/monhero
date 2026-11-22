@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 36f2347fdc56b0c2
+// generated-sha256: 48a2491750c57e63
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70082,6 +70082,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
   // 段7: 新UIの家のタブは型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx)。ほかのタブ・旧UIは今のまま
   //   window.__mhAssistantLifeUntypedHouse … 検査だけが立てる印(段7 の前の並びを確かめる assistant-life-top-check・benefit-check)。前の並びは段13 の片づけで消す
+  // 段9: 新UIの町を型に載せる(56-assistant-life-map.jsx の AssistantLifeTownTyped)。検査だけ window.__mhAssistantLifeUntypedTown で前の町を開く
+  const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
@@ -70369,7 +70371,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
-        {tab === 'where' ? (
+        {tab === 'where' && typedTown ? (
+          <AssistantLifeTownTyped life={life} ids={ids} land={land}
+            tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            onRoom={(id) => setRoomId(id)} onGo={(fn) => { try { close(); fn(); } catch {} }} onBeat={beat} onCard={card}
+            initialPlace={mapFocusPlace} initialAssistantId={mapFocusAssistantId} initialKey={mapFocusKey}/>
+        ) : tab === 'where' ? (
           <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} initialKey={mapFocusKey} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
@@ -70991,8 +70999,22 @@ function AssistantLifeBattleHall({ metIds }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0, friendView = null }) {
-  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0, friendView = null, typedBox = null }) {
+  // typedBox … 型の枠(段9・AssistantLifeTownTyped)の中に描くとき { w, h, scrollH?, focus? }。地図は w×h で描き、scrollH があればその高さの窓で縦に送る(focus の場所を真ん中へ)。上の帯は型の帯に任せて出さない
+  const [homeRaw, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const home = typedBox ? { ...homeRaw, w: typedBox.w, h: typedBox.h, fromHome: false } : homeRaw;
+  const typedScrollRef = React.useRef(null);
+  // 型の町(縦): 地図の窓を、主なボタンの行き先の場所(focus)が真ん中に来るまで送る(札の上の顔のぶん少し下げる)
+  React.useEffect(() => {
+    if (!typedBox || !typedBox.scrollH || !typedBox.focus) return undefined;
+    const t = setTimeout(() => {
+      const box = typedScrollRef.current; const el = box && box.querySelector(`[data-assistant-life-map-place="${typedBox.focus}"]`); if (!el) return;
+      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect();
+      box.scrollTop = Math.max(0, box.scrollTop + (er.top - br.top) - (box.clientHeight / 2 - er.height / 2 - 24));
+      if (typedBox.scrollX) box.scrollLeft = Math.max(0, box.scrollLeft + (er.left - br.left) - (box.clientWidth / 2 - er.width / 2));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [typedBox && typedBox.focus, typedBox && typedBox.scrollH]);
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   // 開いたままの地図へ、外から「この場所の窓を」と来たとき(部屋の「いま行くと得」の 行く › など)も窓を出す
   React.useEffect(() => { if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace); }, [initialKey]);
@@ -71037,6 +71059,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       // HOME の札(押す所の見えている箱)
       const tagOf = (el) => (el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el);
       for (const el of S.querySelectorAll('[data-assistant-life-map-place]')) { if (el.hasAttribute('data-assistant-life-map-town')) continue; obs.push(rel(tagOf(el).getBoundingClientRect())); }
+      // 得の印も人の並びで隠さない(型の町で、行き先の札の「🎟 ごほうび×1.375」が顔の下に隠れていた・段9)
+      for (const el of S.querySelectorAll('[data-assistant-life-map-perk]')) obs.push(rel(el.getBoundingClientRect()));
       const W = S.clientWidth, H = S.clientHeight;
       const inside = (q) => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
       const best = (cands) => cands.find(q => inside(q) && obs.every(o => !hit(q, o))) || cands.filter(inside).sort((a, b) => obs.reduce((s, o) => s + area(a, o), 0) - obs.reduce((s, o) => s + area(b, o), 0))[0] || cands[0];
@@ -71109,7 +71133,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   // 得の印(2026-11-11 ナカヨシ12の改善案5。判定は「いま行くと得なこと」と同じ assistantLifePerkAt。ナカヨシ10が main に入れるまでは出さない)
   const PERK_WORD = { studio: '券なし', cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}` }; // カードの倍率は部屋・帯・カード画面と同じ字(2026-11-11 ミヤスサ点検 ③ 地図だけ ×1.5 だった)
   const perkOf = (place) => { if (ro) return false; try { return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true; } catch (_) { return false; } };
-  const perkMark = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
+  // 型の町は得の印を2種類にそろえる(🎟 券・割引 / 💗 多め・ASSISTANT_LIFE.md §3 の38)。字は注の段 11px
+  const perkMarkTyped = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} data-assistant-life-map-perk-kind={assistantLifeTownPerkKind(place)} className="pointer-events-none absolute -right-1 -top-3 z-[2] whitespace-nowrap rounded-full px-2 text-[11px] font-black not-italic leading-[16px] shadow" style={assistantLifeTownPerkKind(place) === 'h' ? { background: '#fbcfe8', color: '#831843' } : { background: '#fde68a', color: '#78350f' }}>{assistantLifeTownPerkText(place)}</i> : null);
+  const perkMark = (place) => typedBox ? perkMarkTyped(place) : (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
   const facBtn = (place, cls, aria, inner) => {
     const n = (at[place] || []).length;
     return <button key={place} type="button" className={`mh-home-facility ${cls}`} aria-label={`${aria}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={place} data-assistant-life-map-empty={n ? '0' : '1'} style={n ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet(place)}>{inner}{perkMark(place)}</button>;
@@ -71147,17 +71173,17 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     <AssistantLifeMapRow key={id} id={id} place={place} town={town} life={life} selected={initialAssistantId === id} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} close={() => setSheet(null)}
       onRoom={(rid) => { if (typeof onView === 'function') onView(rid); else { setSheet(null); onPick(rid); } }} onBeat={onBeat} onCard={onCard}/>);
   return (
-    <div className="absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]" data-assistant-life-where data-assistant-life-map-art={art}>
+    <div ref={typedScrollRef} className={typedBox ? 'relative bg-[#0b1020]' : 'absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]'} style={typedBox ? { height: typedBox.scrollH || typedBox.h, overflowY: typedBox.scrollH ? 'auto' : 'hidden', overflowX: typedBox.scrollX ? 'auto' : 'hidden', overscrollBehavior: 'contain' } : undefined} data-assistant-life-where data-assistant-life-map-art={art} data-assistant-life-map-typed={typedBox ? '1' : undefined}>
       {!ro && typeof AssistantMasmonRanchHost === 'function' && <AssistantMasmonRanchHost/>}
       {!ro && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <style>{`.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${typedBox || home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`}</style>
       {/* 地図の枠は少なくとも画面の高さ。HOME の場面が画面より低い端末(上下に帯がある iPhone など)で、
           下の一覧の見出しが地図の下にのぞいて切れて見えていた(2026-11-09 社長「画面バグってる」) */}
-      <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
+      <div className="relative" style={typedBox ? undefined : { minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
         {/* 地図の施設ボタン(HOME と同じ class・同じ中身だが、並びは地図専用の配置)。押すと、そこにいる助手とできること。下の案内は、下のボタンと重ならないよう上に置く(2026-11-11) */}
@@ -71176,7 +71202,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <span>{ASSISTANT_LIFE_PLACE_ICON[p]} {assistantLifePlaceShow(p)}</span></button>); })}
         {assistantLifeMapOrderNow().map(crowd)}
         {/* 上の帯: 家へ戻る・題・時間帯・一覧へ */}
-        <div className={`absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`} style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
+        {!typedBox && <div className={`absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`} style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
           {/* 新UI(nav あり): 「家へ」と「一覧」の代わりに、ほかの画面と同じ4つのタブ(家・町・きずな・フレンド) */}
           {nav ? <div className="shrink-0" style={{ width: land ? 250 : 216 }} data-assistant-life-map-nav>{nav}</div>
             : <button type="button" data-assistant-life-map-back onClick={onBack} className="shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95">🏡 家へ</button>}
@@ -71185,8 +71211,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <p className={ro ? 'text-[10px] font-bold leading-tight text-slate-200' : 'truncate text-[10px] font-bold text-slate-200'} data-assistant-life-map-time>{assistantLifeTodLabel()} ・ {assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</p>
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
-        </div>
-        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))' }} data-assistant-life-map-hint>{ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'}</p>{/* 下にあるとモンヒロバトルの札にかぶっていた(2026-11-11 ミヤスサ点検 ⑥)。上のタブのすぐ下へ */}
+        </div>}
+        <p className={`pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 ${typedBox ? 'text-[11px]' : 'text-[10.5px]'} font-bold text-slate-100`} style={{ top: typedBox ? 8 : land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))' }} data-assistant-life-map-hint>{ro ? '場所を押すと、いる助手が見られます' : typedBox ? '場所を押すと、いる助手と得が出ます' : '場所を押すと、いる助手と「いま行くと得」が見られます'}</p>{/* 下にあるとモンヒロバトルの札にかぶっていた(2026-11-11 ミヤスサ点検 ⑥)。上のタブのすぐ下へ */}
       </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}
@@ -71216,6 +71242,73 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           </div>
         </div>)}
     </div>);
+}
+
+// ===== 助手ライフの作り直し 段9: 町を型に載せる(2026-11-22 社長 r1119-097「案A 地図を大きく」・docs/progress/assistant-life/step9-town/) =====
+// 新UI(mh_assistant_life_ui_v2)の町のタブだけ。旧UI・フレンドの町は今のまま。何も保存しない。
+// 並び: 地図(縦は高さ 400px の窓で送れる・PC と横は左いっぱい。「場面の3割」は町だけ外す)→ 主なボタン「◯◯へ行く」(得のいちばん大きい場所)→ 行き先にいる助手の行(部屋へ)→ ほかの場所の行(見る)
+// 得は2種類(🎟 券・割引 / 💗 多め・ASSISTANT_LIFE.md §3 の38)。判定は今のまま assistantLifePerkRows(並びがそのまま得の大きい順)
+const ASSISTANT_LIFE_TOWN_PERK_KIND = Object.freeze({ studio: 't', cardroom: 't', market: 't', temple: 'h', battle: 'h', ranch: 'h' });
+const assistantLifeTownPerkKind = (place) => ASSISTANT_LIFE_TOWN_PERK_KIND[place] || 'h';
+const assistantLifeTownPerkText = (place) => {
+  if (assistantLifeTownPerkKind(place) === 'h') return '💗 多め';
+  const card = typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375';
+  return `🎟 ${({ studio: '券なし', cardroom: `ごほうび×${card}`, market: '1割引き' })[place] || '券・割引'}`;
+};
+const ASSISTANT_LIFE_TOWN_SCROLL_H = 400; // 縦の地図の窓の高さの上限(案A: 中身の半分ほど。小さい画面は画面の高さの47%)
+
+function AssistantLifeTownTyped({ life, ids, tabs, tab = 'where', onTab, onBack, onRoom, onGo = null, onBeat = null, onCard = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0 }) {
+  const [req, setReq] = React.useState({ place: initialPlace, key: initialKey });
+  React.useEffect(() => { if (initialKey) setReq({ place: initialPlace, key: initialKey }); }, [initialKey]);
+  const openSheet = (place) => setReq(r => ({ place, key: (r.key || 0) + 1000 }));
+  const nameOf = (id) => assistantLifeName(id);
+  const whereOf = (id) => assistantLifeWhereOf(life, id);
+  // 場所 → いる助手(家の部屋の順)
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = whereOf(id); const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  let perks = [];
+  try { perks = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : []; } catch (_) { perks = []; }
+  const top = perks[0] || null;
+  // 得が無いときの行き先: 家の外でいちばん人の多い場所(見るだけ)
+  const crowdTop = Object.keys(at).filter(p => p !== 'home').sort((a, b) => at[b].length - at[a].length)[0] || null;
+  const focus = top ? top.place : crowdTop;
+  const placeWord = (p) => (p === 'home' ? '助手の家' : assistantLifePlaceShow(p));
+  const chip = (p) => perks.some(r => r.place === p) ? <span className="alu-chip" data-assistant-life-town-perk-kind={assistantLifeTownPerkKind(p)} style={assistantLifeTownPerkKind(p) === 'h' ? { background: '#fbcfe8', borderColor: '#f472b6', color: '#831843' } : { background: '#fde68a', borderColor: '#f59e0b', color: '#78350f' }}>{assistantLifeTownPerkText(p)}</span> : null;
+  const face = (id) => (typeof AssistantFace === 'function' && assistantById(id) ? <AssistantFace who={assistantById(id)} size={44} /> : '🙂');
+  const doingOf = (id) => { const w = whereOf(id); const d = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? ASSISTANT_LIFE_DOINGS[w.doing] : null; return d ? d.label : ''; };
+  const goTop = () => { if (top && top.go && onGo) onGo(top.go); else if (focus) openSheet(focus); };
+  // 主なボタンは2行(行き先 / 得)。幅320でも行き先の名前の途中で折れない
+  const mainLabel = top ? <span style={{ display: 'block' }}><span className="alu-nw">{ASSISTANT_LIFE_PLACE_ICON[top.place] || top.icon} {placeWord(top.place)}へ行く</span><span className="alu-t" style={{ display: 'block' }}>{assistantLifeTownPerkText(top.place)}</span></span>
+    : focus ? <>{ASSISTANT_LIFE_PLACE_ICON[focus] || '📍'} {placeWord(focus)}を見る</> : <>いま町にいる助手はいません</>;
+  const others = Object.keys(at).filter(p => p !== focus).sort((a, b) => (perks.findIndex(r => r.place === a) + 1 || 99) - (perks.findIndex(r => r.place === b) + 1 || 99) || at[b].length - at[a].length);
+  const scene = (box) => {
+    const raw = assistantLifeMapReadHome();
+    // 横(背の低い 2段組)は箱が低すぎて札が重なる。HOME の札の置き方は画面の向きで決まるので、地図は HOME と同じ大きさ(画面の大きさ)で描き、箱の中で縦横に送る
+    const tb = box.wide && box.h < 480 ? { w: raw.w, h: raw.h, scrollH: box.h, scrollX: true, focus } : box.wide ? { w: box.w, h: box.h, focus } : { w: box.w, h: Math.round(raw.h * box.w / Math.max(1, raw.w)), scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)), focus }; // 縦は画面の半分ほどまで(幅320でも主なボタンが最初から見える)
+    return (
+      <AssistantLifeTownMap life={life} ids={ids} land={land} typedBox={tb} onGo={onGo} initialPlace={req.place} initialAssistantId={initialAssistantId} initialKey={req.key}
+        onBack={onBack} onPick={onRoom} onView={onRoom} onBeat={onBeat} onCard={onCard} />);
+  };
+  return (
+    <AluFrame title="町" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} scene={scene} data-assistant-life-typed-town="1">
+      <AluGo onClick={goTop} disabled={!focus} data-assistant-life-town-go={focus || ''}>{mainLabel}</AluGo>
+      {focus ? (
+        <div className="alu-card" data-assistant-life-town-here={focus}>
+          <div className="alu-h">{placeWord(focus)}にいる助手</div>
+          {(at[focus] || []).map(id => <AluRow key={id} pic={face(id)} text={nameOf(id)} note={doingOf(id)}
+            action={<AluBtn onClick={() => onRoom(id)} data-assistant-life-town-room={id}>部屋へ</AluBtn>} />)}
+        </div>) : null}
+      {others.length ? (
+        <div className="alu-card" data-assistant-life-town-others>
+          <div className="alu-h">ほかの場所</div>
+          {others.map(p => <AluRow key={p} pic={ASSISTANT_LIFE_PLACE_ICON[p] || '📍'} text={<>{placeWord(p)} {chip(p)}</>} note={(at[p] || []).map(nameOf).join('・')}
+            action={<AluBtn onClick={() => openSheet(p)} data-assistant-life-town-see={p}>見る</AluBtn>} />)}
+        </div>) : null}
+    </AluFrame>);
 }
 
 // ---- part: 56-assistant-life-finds.jsx ----
