@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 469f0f81211d7f56
+// source-sha256: 908719868702b093
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -90064,7 +90064,7 @@ function BattleScreen({
     "data-em-fx": !enemyIsMoo && emSpec?.[1] || undefined,
     "data-em-emo": !enemyIsMoo && emSpec?.[3] || undefined,
     "data-enemy-hurt": !enemyIsMoo && enemyHurtNow ? 'true' : undefined,
-    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 [@media(orientation:landscape)_and_(max-height:520px)]:!p-[3px] ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
+    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} [@media(orientation:landscape)_and_(max-height:520px)]:!p-[3px] ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
     onClick: () => {
       if (isBusy || autoBattle || battleTutorialStep != null || !enemy) return;
