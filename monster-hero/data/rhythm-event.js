@@ -105,7 +105,7 @@ const FLOWER3_END_AT = '2026-11-30T00:00:00+09:00';
 const FLOWER3_DISPLAY_END_AT = '2026-11-29T23:59:00+09:00';
 // 名前(台帳 r1119-101 追記・窓口が決めた)。札は2行(FLOWER3_EVENT_TITLE / FLOWER3_EVENT_SUBTITLE)
 const FLOWER3_EVENT_TITLE = '咲かせて！ハナウタ・ノート';
-const FLOWER3_EVENT_SUBTITLE = '花の3人とはじめての曲づくり';
+const FLOWER3_EVENT_SUBTITLE = '花の3人、曲づくりに夢中！';
 const FLOWER3_EVENT_NAME = `${FLOWER3_EVENT_TITLE} ～${FLOWER3_EVENT_SUBTITLE}～`;
 // イベント曲を遊んだときのビートP(台帳 r1119-103「イベント曲だけ7倍」)。イベントの無い日の貯まり方(0.2)の7倍。
 // ほかの公開曲はランキングイベントの計算どおり(1.0=いつもの5倍)。クイック周回は5倍のまま
