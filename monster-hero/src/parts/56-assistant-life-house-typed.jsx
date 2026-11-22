@@ -154,7 +154,8 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
         {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました'}</span> : null}
         <AluCond id={id} sleeping={sleeping} hour={hour} />
       </div>
-      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{statusLine}</div> : null}
+      {/* 「· 」で区切った塊の途中では折らない(「気分: ご機 / 嫌」と折れていた・2026-11-22 r1119-098) */}
+      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{String(statusLine).split(' · ').map((x, i) => <React.Fragment key={i}>{i ? <>{' · '}<wbr/></> : null}<span className="alu-nw">{x}</span></React.Fragment>)}</div> : null}
     </div>);
   const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
   let resultNode = null;
@@ -176,7 +177,7 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
       {play.map(p => <AssistantLifeRoomTypedRow key={p.k} {...p} on={p.on ? () => { setPlayOpen(false); p.on(); } : null} />)}
     </AluSheet>) : null;
   const sceneFn = (box) => (
-    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
+    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(240, Math.round(box.h / 0.42 * 0.36)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
   return (
     <AluFrame title={`${who.name}の部屋`} onBack={onBack} backProps={{ 'data-assistant-life-close': undefined, 'data-assistant-life-roomview-close': '', 'data-assistant-life-room-close': '' }}
       tab={tab} onTab={onTab} tabs={tabs} head={head} scene={sceneFn} overlay={resultNode || playSheet || overlay} data-assistant-life-typed-room={id}>
