@@ -71,8 +71,11 @@ let SP_=null;const SP=()=>SP_||(SP_=require('./rhythm-hell-sameplace-fix.js'));
 const overlapsSameTime=(notes,n)=>notes.some(o=>o!==n&&!isBand(o)&&Math.abs(o.timeMs-n.timeMs)<=2&&!!o.skyHeight===!!n.skyHeight
   &&Number(o.subLane)<Number(n.subLane)+Number(n.subLaneWidth)&&Number(n.subLane)<Number(o.subLane)+Number(o.subLaneWidth));
 const windowOf=(notes,at,ms=5000)=>notes.filter(n=>Number(n.endTimeMs||n.timeMs)>=at-ms&&n.timeMs<=at+ms);
-const scoreWindow=(notes,at)=>{const w=windowOf(notes,at);const h=heldCrosses(w);return {held:h.list.length,cost:h.cost,rules:ruleScore(w)};};
-const better=(a,b)=>a.held!==b.held?a.held<b.held:a.rules!==b.rules?a.rules<b.rules:a.cost+a.move<b.cost+b.move;
+// 親指2本のモデルの「押せない」(横持ち・縦持ち)。直して押せない所を作らないため、何より先に見る
+//   (2026-11-22 社長「Desert Crown の HELL まだ押せないとこ残ってた」: 前の直しは交差だけを見て、動かした先が押せない所を作っていた)
+const impossibleOf=w=>{const d=T.fromRuntime(w);let k=0;for(const p of ['landscape','portrait'])k+=T.thumbCheck(d,T.THUMB_PROFILES[p]).issues.filter(i=>i.kind==='impossible').length;return k;};
+const scoreWindow=(notes,at)=>{const w=windowOf(notes,at);const h=heldCrosses(w);return {imp:impossibleOf(w),held:h.list.length,cost:h.cost,rules:ruleScore(w)};};
+const better=(a,b)=>a.imp!==b.imp?a.imp<b.imp:a.held!==b.held?a.held<b.held:a.rules!==b.rules?a.rules<b.rules:a.cost+a.move<b.cost+b.move;
 
 const fixChart=notes=>{
   const work=notes.map(n=>({...n}));const moves=[];
@@ -85,7 +88,7 @@ const fixChart=notes=>{
       for(let s=0;s<=12-w;s++){if(s===from)continue;n.subLane=s;n.lane=Math.floor(s/2);
         if(overlapsSameTime(work,n))continue;
         const sc={...scoreWindow(work,n.timeMs),move:Math.abs(s-from)*2};
-        if(sc.rules>base.rules)continue;                    // 手の決まりを悪くしない
+        if(sc.rules>base.rules||sc.imp>base.imp)continue;   // 手の決まり・押せないを悪くしない
         if(better(sc,best||base))best={...sc,s};}
       n.subLane=from;n.lane=Math.floor(from/2);
       if(best&&best.held<base.held){n.subLane=best.s;n.lane=Math.floor(best.s/2);changed=true;
@@ -95,7 +98,7 @@ const fixChart=notes=>{
     for(const c of heldCrosses(work).list){for(const b of c.bands){if(b.type!=='SLIDE'||(b.hand!=='L'&&b.hand!=='R')||b._flipped)continue;
       const base={...scoreWindow(work,c.at),move:0},was=b.hand;b.hand=was==='L'?'R':'L';
       const sc={...scoreWindow(work,c.at),move:0};
-      if(sc.held<base.held&&sc.rules<=base.rules){b._flipped=true;changed=true;moves.push({at:b.timeMs,end:b.endTimeMs,type:'SLIDE',fromHand:was,toHand:b.hand,held:'手の色 '+was+'→'+b.hand});}
+      if(sc.held<base.held&&sc.rules<=base.rules&&sc.imp<=base.imp){b._flipped=true;changed=true;moves.push({at:b.timeMs,end:b.endTimeMs,type:'SLIDE',fromHand:was,toHand:b.hand,held:'手の色 '+was+'→'+b.hand});}
       else b.hand=was;}}
     if(!changed)break;
   }
