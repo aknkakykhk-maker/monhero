@@ -51,6 +51,13 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_walkure_v1', type:'content' },
   },
   {
+    date: "2026-11-22 18:54", type:'fix', title:'みゅあの全身イラスト（ハロウィン・カードマスター）に背景が残って見える不具合を直しました', status:'new', group:'assistant',
+    items:[
+      '助手「みゅあ」の全身イラスト（ハロウィンとカードマスターの服）で、髪の間や羽のまわりに白い背景が残って見える不具合がありました。',
+      '2つの服・8種類の表情すべての全身イラストを直しました。',
+    ],
+  },
+  {
     date: "2026-11-22 18:21", type:'fix', title:'みゅあの全身イラストに背景が残って見える不具合を直しました', status:'new', group:'assistant',
     items:[
       '助手「みゅあ」（通常の服）の全身イラストで、髪の間や腕のまわりに白い背景が残って見える不具合がありました。',
