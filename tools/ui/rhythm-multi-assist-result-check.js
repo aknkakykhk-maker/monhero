@@ -3,6 +3,7 @@
 //
 //   node tools/ui/rhythm-multi-assist-result-check.js
 //   SHOT_DIR=<フォルダ> を付けると、曲えらびと結果を撮る
+//   MULTI_FEW=1 を付けると、助手を2人だけ呼ぶ(3人の部屋。結果の列がいる人数だけになるかを撮る)
 //
 // 社長の報告(本番・🔄横・助手4人と5人・Rebellion・MVP は本人):
 //   ・結果の MVP の枠で、顔アイコンの上下と「HELL Lv.48」が切れる
@@ -126,7 +127,17 @@ const measureResult = (page) => page.evaluate(() => {
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.waitForTimeout(2500);
       for (let i = 0; i < 12; i++) { const hit = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /^(スキップ|受け取る|閉じる|OK)$/.test((e.innerText || '').trim())); if (x) { x.click(); return true; } return false; }); if (!hit) break; await page.waitForTimeout(300); }
-      await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((e) => e.offsetParent && /モンヒロビート/.test(e.innerText || '')); x && x.click(); });
+      // 更新履歴などの窓が少し遅れて開くことがあるので、閉じては押すを入れるまで繰り返す(2026-11-22 窓が開いたまま押して止まっていた)
+      for (let i = 0; i < 30; i++) {
+        if (await page.$('[data-rhythm-mode-select]')) break;
+        await page.evaluate(() => {
+          const shown = (e) => e.offsetParent;
+          const close = [...document.querySelectorAll('button')].find((e) => shown(e) && /^(スキップ|受け取る|閉じる|OK)$/.test((e.innerText || '').trim()));
+          if (close) { close.click(); return; }
+          const x = [...document.querySelectorAll('button')].find((e) => shown(e) && /モンヒロビート[\s\S]*音ゲー/.test(e.innerText || '')); x && x.click(); // 上の「本オープン記念」の札ではなく HOME の入口
+        });
+        await page.waitForTimeout(700);
+      }
       await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });
       await page.waitForTimeout(800);
       if (rot) await page.evaluate(() => { try { RHYTHM_VIEW_ROTATION.set(90); } catch (e) {} });
@@ -135,9 +146,10 @@ const measureResult = (page) => page.evaluate(() => {
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-free-create]').click());
       await page.waitForSelector('[data-rhythm-multi-step="matching"]', { timeout: 30000 });
       await page.waitForTimeout(2500);
-      await page.evaluate(() => { for (const id of ['erubin', 'kiki', 'momosuke']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
+      const FEW = !!process.env.MULTI_FEW;
+      await page.evaluate((few) => { for (const id of (few ? ['erubin', 'kiki'] : ['erubin', 'kiki', 'momosuke'])) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } }, FEW);
       await page.waitForTimeout(2500);
-      await page.evaluate(() => { for (const id of ['atsu', 'dra', 'erubin', 'kiki']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
+      if (!FEW) await page.evaluate(() => { for (const id of ['atsu', 'dra', 'erubin', 'kiki']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
       await page.waitForTimeout(2000);
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-confirm]')?.click());
       await page.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 20000 });
