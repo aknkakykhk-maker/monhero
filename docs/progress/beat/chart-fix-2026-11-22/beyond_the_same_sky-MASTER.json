@@ -1,0 +1,35 @@
+{
+ "songId": "beyond_the_same_sky",
+ "diff": "MASTER",
+ "before": [
+  {
+   "at": 15120,
+   "x": 4,
+   "what": "タップ"
+  },
+  {
+   "at": 154513,
+   "x": 2.25,
+   "what": "タップ"
+  }
+ ],
+ "after": [
+  {
+   "at": 15120,
+   "x": 4,
+   "what": "タップ"
+  }
+ ],
+ "moves": [
+  {
+   "at": 154513,
+   "type": "TAP",
+   "width": 3,
+   "from": 3,
+   "to": 0,
+   "fromX": 2.25,
+   "toX": 0.75,
+   "held": "HOLD"
+  }
+ ]
+}

@@ -3193,41 +3193,6 @@
    "fastSameSide": 56,
    "heldHandSwitch": 0
   },
-  "atsu_cup_theme_debug_short/EASY": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/NORMAL": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/HARD": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/EXPERT": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
-  "atsu_cup_theme_debug_short/MASTER": {
-   "sideHeightSwitch": 0,
-   "skyAfterGround": 0,
-   "besideHeldBand": 0,
-   "fastSameSide": 0,
-   "heldHandSwitch": 0
-  },
   "desert_crown/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3257,6 +3222,41 @@
    "heldHandSwitch": 0
   },
   "desert_crown/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "atsu_cup_theme_debug_short/MASTER": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
    "besideHeldBand": 0,
@@ -3409,6 +3409,11 @@
    "at": "2026-11-21T16:57",
    "reason": "新曲 Desert Crown を公開",
    "changed": 5
+  },
+  {
+   "at": "2026-11-22T05:48",
+   "reason": "r1119-096 Beyond the Same Sky(原曲・short)MASTER・HELL と Desert Crown HELL の押さえ中の交差を位置だけ直した。押さえ中の交差の控えを新しく作った",
+   "changed": 0
   }
  ]
 }

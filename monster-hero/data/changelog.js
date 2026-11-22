@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-22 14:48", type:'fix', title:'Beyond the Same Sky と Desert Crown の譜面を押しやすくしました', status:'new', group:'rhythm',
+    items:[
+      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL で、片手でホールドやスライドを押さえている間に、もう片方の手がその上をまたいで叩くことになる所を減らしました。',
+      'Desert Crown の HELL で、ホールドやスライドを押さえたまま、親指2本では届かない所に出ていたタップを、押していない手の側へ移しました。',
+      'ノーツの数とタイミングはそのままで、置く位置と、一部の空中スライドの色(左手・右手の案内)だけを変えています。これまでのスコアやランキングの記録はそのまま残ります。',
+    ],
+  },
+  {
     date: "2026-11-22 14:32", type:'fix', title:'横向きの結果画面で MARVELOUS などの数やスコアが重なって見えていたのを直しました', status:'new', group:'rhythm',
     items:[
       'iPhone などを横向きにして遊んだとき、結果画面の MARVELOUS〜MISS の数が出ない、スコアが途中で切れる、JUST MARVELOUS や CLEAR の一言がとなりに重なることがありました。',

@@ -15,6 +15,10 @@
 //   6. 押さえている帯の中にノーツを置かない(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。
 //      同じ高さで重なる・幅1が絡む半レーンの重なりは0件(地上の押さえと空中のノーツは同じ位置でもよい・両方幅1.5以上の半レーンは許す)。
 //      決まりより前からある譜面は rhythm-held-band-existing.json の件数を上限に見るだけ(公開中の譜面は変えない・直すかは社長が決める)。新しい曲・新しい HELL は0
+//   8. 押さえ中の交差(片手がホールド・スライドを押さえている間に、もう片手がその帯をまたいで叩く・rhythm-held-cross.js)を、
+//      公開中の MASTER・HELL で控え(rhythm-held-cross-baseline.json)より増やさない。控えに無い譜面(新しい曲・新しい HELL)は0
+//      (2026-11-22 台帳 r1119-096 社長「片手ホールドで片手タップならいいけど、クロス混じりでやりづらい」「親指2本じゃ押せない」)。
+//      見つかったら node tools/mode/rhythm-held-cross.js --fix --song <曲> --diff <難易度> --write で横の位置だけ直せる
 'use strict';
 const fs=require('fs'),path=require('path');
 const R=require('./rhythm-chart-hand-rules.js');
@@ -67,6 +71,11 @@ let ng=0;const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name
 
 // ── 2〜4. 公開中の譜面と HELL ──
 const {loadRuntimeSongs}=require('./rhythm-chart-level.js');const runtime=loadRuntimeSongs();
+// 8 で使う: 公開中の MASTER・HELL の押さえ中の交差の件数
+const HELD_CROSS_BASELINE=path.join(__dirname,'rhythm-held-cross-baseline.json');
+const heldCrossCounts=()=>{const X=require('./rhythm-held-cross.js'),{songs,chartOf}=X.loadCharts(),out={};
+  for(const s of songs)for(const d of ['MASTER','HELL']){const c=chartOf(s.songId,d);if(c&&Array.isArray(c.notes)&&c.notes.length)out[`${s.songId}/${d}`]=X.heldCrosses(c.notes).list.length;}
+  return out;};
 const released={};
 for(const s of runtime.RHYTHM_SONGS||[])for(const [d,c] of Object.entries(s.difficulties||{}))if(c&&Array.isArray(c.notes))released[`${s.songId}/${d}`]=R.countsOf(c.notes);
 if(args.includes('--update')){
@@ -76,6 +85,11 @@ if(args.includes('--update')){
   const next={note:'公開中の譜面の「手の決まり」の件数の控え。rhythm-chart-hand-rules-check.js が、これより増えていないかを見る。書き直しは --update --reason',
     rules:R.RULE_LABELS,charts:released,history:[...(old.history||[]),{at:new Date().toISOString().slice(0,16),reason,changed:changed.length}]};
   fs.writeFileSync(BASELINE,JSON.stringify(next,null,1)+'\n');
+  {const oldH=fs.existsSync(HELD_CROSS_BASELINE)?JSON.parse(fs.readFileSync(HELD_CROSS_BASELINE,'utf8')):{history:[]};const now=heldCrossCounts();
+    const ch=Object.keys(now).filter(k=>(oldH.charts||{})[k]!==now[k]);
+    fs.writeFileSync(HELD_CROSS_BASELINE,JSON.stringify({note:'公開中の MASTER・HELL の「押さえ中の交差」(rhythm-held-cross.js)の件数の控え。rhythm-chart-hand-rules-check.js が、これより増えていないかを見る。控えに無い譜面は0。書き直しは --update --reason',
+      charts:now,history:[...(oldH.history||[]),{at:new Date().toISOString().slice(0,16),reason,changed:ch.length}]},null,1)+'\n');
+    console.log(`押さえ中の交差の控えも書き直した(${ch.length}譜面)`);}
   console.log(`控えを書き直した(${changed.length}譜面): ${changed.slice(0,10).join(' ')}${changed.length>10?' …':''}`);process.exit(0);}
 const base=fs.existsSync(BASELINE)?JSON.parse(fs.readFileSync(BASELINE,'utf8')):null;
 ok('控え(rhythm-chart-hand-rules-baseline.json)がある',!!base);
@@ -126,11 +140,24 @@ for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(
 //    許す数は Lv.45未満0・45〜54は2・55〜64は4・65以上は6。rhythm-hell-sameplace-fix.js の SAME_PLACE_ALLOW)。
 //    直したあとも許す数を超えて残った曲は、そのときの件数を上限にする(これ以上ふやさない)。新しい HELL は rhythm-hell-mix.js が直して書く
 {const SP=require('./rhythm-hell-sameplace-fix.js');
-  const OVER_CAP={monster_hero_another:1,six_eternel_beat:5,stay_with_me:2,kiki_issen:3,sad_song_short:1};
+  // desert_crown: 2026-11-22 押さえ中の交差を直したとき、82.808秒の空中タップだけは左手の空中スライドが右端へ振り切る最中で、
+  //   右側のどこへ置いても通り道の真上に1件かかる(交差のままだと親指2本では押せない)。右端へ寄せて1件を許した(r1119-096)
+  const OVER_CAP={monster_hero_another:1,six_eternel_beat:5,stay_with_me:2,kiki_issen:3,sad_song_short:1,desert_crown:1};
   const bad=[];
   for(const s of runtime.RHYTHM_PROTO_SONGS||[]){const c=(s.difficulties||{}).HELL;if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;
     const id=s.songId.replace(/_hell_debug$/,''),n=SP.skyHits(c.notes).length,cap=Math.max(SP.SAME_PLACE_ALLOW(c.level),OVER_CAP[id]||0);
     if(n>cap)bad.push(`${id} Lv.${c.level} ${n}件(上限${cap})`);}
   ok('HELL の「指が同じ位置に来る形」は Lv. ごとの許す数まで',bad.length===0,bad.slice(0,8).join(' / '));}
+// 8. 押さえ中の交差を控えより増やさない(控えに無い譜面は0)
+{const now=heldCrossCounts(),b=fs.existsSync(HELD_CROSS_BASELINE)?JSON.parse(fs.readFileSync(HELD_CROSS_BASELINE,'utf8')).charts:null;
+  ok('押さえ中の交差の控え(rhythm-held-cross-baseline.json)がある',!!b);
+  if(b){const worse=Object.entries(now).filter(([k,n])=>n>(b[k]??0)).map(([k,n])=>`${k} ${b[k]??'新しい譜面 0'}→${n}`);
+    ok('公開中の MASTER・HELL で、押さえ中の交差が控えより増えていない(新しい譜面は0。直す道具: rhythm-held-cross.js --fix)',worse.length===0,worse.slice(0,6).join(' / '));
+    // 物差しが正しく数える: Desert Crown HELL は直したので0(2.99秒・3.29秒のように帯の左右両側へ来るタップを数えていた)
+    ok('押さえ中の交差: 直した Desert Crown HELL は0',now['desert_crown/HELL']===0,String(now['desert_crown/HELL']));}
+  // 物差しの正しさ(作った小さな譜面): 真ん中のホールドを押さえたまま左右両側へタップ → 1件 / 片側だけ → 0件
+  const tp=(t,sub)=>({type:'TAP',timeMs:t,lane:Math.floor(sub/2),subLane:sub,subLaneWidth:2}),hd={type:'HOLD',timeMs:1000,endTimeMs:3000,lane:2,subLane:5,subLaneWidth:2};
+  const X=require('./rhythm-held-cross.js');
+  ok('押さえ中の交差: 帯の左右両側へ来るタップを数え、片側だけなら数えない',X.heldCrosses([hd,tp(1500,0),tp(2000,10)]).list.length===1&&X.heldCrosses([hd,tp(1500,0),tp(2000,1)]).list.length===0);}
 console.log(ng?`\n✗ ${ng}件NG`:'\nすべてOK');
 process.exit(ng?1:0);
