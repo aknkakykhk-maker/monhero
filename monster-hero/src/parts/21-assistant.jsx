@@ -235,8 +235,15 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 // ヘルプ本文のブロックを描く。ヘルプ画面と助手の詳細で同じ見た目にするため1か所にまとめる
 // ヘルプの文は言葉の切れ目で折る(2026-10-24 窓口「部品を通さずに描いている文の多い画面」の1番目)。
 // 長い段落なので行の長さはそろえず(balance は使わない)、言葉の途中で折らないことだけを守る。文字列でないもの(絵・表の部品)はそのまま
-const helpWrap = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
-  ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
+// 矢印でつないだ切り替わりの順(「OFF → AUTO → ∞ → OFF」)と「∞周回」は1つの塊で出し、途中で折らない
+// (2026-11-22 点検 #7059 HOME の助手の説明「OFF → / AUTO」「その∞ / 周回」と折れて順が読めなかった・r1119-080)
+const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
+const helpWrap = (x) => {
+  if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
+  const parts = x.split(HELP_NOWRAP_RE);
+  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? jaWrap(x)
+    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? jaWrap(t) : null}</React.Fragment>))}</span>;
+};
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
   if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
@@ -543,14 +550,15 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {oneLine ? <>
             <span className="absolute" style={{ left:'-9px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
             <span className="absolute" style={{ left:'-6px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-            <span className="shrink-0 text-[9px] font-black tracking-widest" style={{ color }}>{who.name}</span>
+            <span className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</span>
             <span data-bubble-text data-bubble-max-lines={1} className="min-w-0 flex-1 truncate text-[10px] leading-snug text-white" style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}>{text}</span>{/* index.html の text-wrap: balance が折らない指定を上書きするので、ここで直に止める */}
             {hasDetail&&<span data-bubble-more-text aria-hidden="true" className="shrink-0" style={{ color }}><ChevronRight size={12}/></span>}
           </> : <>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-          <span className={`block font-black tracking-widest ${compact?'text-[9px]':'text-[10px]'}`} style={{ color }}>{who.name}</span>
+          {/* 名前は小さい吹き出しでも 11px(2026-11-22 点検 #7059「みゅあ」が 9px で読めない・r1119-080) */}
+          <span className="block font-black tracking-widest text-[11px]" style={{ color }}>{who.name}</span>
           {/* maxLines … セリフをこの行数で切る(0なら切らない)。HOMEは吹き出しの下に施設の札があるので2行まで
               (2026-10-23 社長「MB管理に助手のコメントが被ってくる」)。全文は「タップで詳しく」で開く画面の上に出る */}
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
@@ -570,28 +578,34 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           </div>
         </>}
       </div>
-      {open&&(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
-            <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
-              <AssistantFace who={who} size={68} accent={color} expression={face}/>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
-                <div className="text-[12px] text-white leading-relaxed" style={bubbleWrapStyle()}>{bubbleWrap(text)}</div>
+      {open&&(()=>{
+        // 説明の窓(2026-11-22 点検 #7059 HOME の助手の説明・r1119-080)
+        //  ・閉じるは下の大きな1つだけ(右上の小さい「閉じる」と二重だった)
+        //  ・document.body へ出す。吹き出しの中に置くと、HOME の札に重ねた助手の顔の束が窓より手前に出て本文に重なった
+        //  ・横の低い画面は顔を小さく・セリフを1行・閉じるを細くし、本文の見える高さを広げる。窓は下に余白を空けて真ん中に置く
+        const low = typeof window !== 'undefined' && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+        const sheet = (
+        <div className={`fixed inset-0 flex ${low?'items-center p-2':'items-end'} justify-center`} style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000,...(low?{paddingTop:'max(8px, var(--mh-sa-top))',paddingBottom:'max(8px, var(--mh-sa-bottom))'}:{})}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`} data-assistant-help-sheet>
+          <div className={`w-full ${low?'max-w-2xl rounded-3xl border-2 max-h-full':'max-w-md rounded-t-3xl border-t-2 border-x-2 max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]'} bg-slate-950 flex flex-col`} style={{ borderColor:color }}>
+            <div className={`shrink-0 flex items-center border-b border-white/10 ${low?'gap-2 px-3 py-1.5':'gap-3 p-4'}`}>
+              <AssistantFace who={who} size={low?32:68} accent={color} expression={face}/>
+              <div className={`flex-1 min-w-0 ${low?'flex items-baseline gap-2':''}`}>
+                <div className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</div>
+                <div className={`text-[12px] text-white leading-relaxed ${low?'min-w-0 truncate':''}`} style={low?{whiteSpace:'nowrap'}:bubbleWrapStyle()}>{low?text:bubbleWrap(text)}</div>
               </div>
-              <button onClick={()=>setOpen(false)} className="mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5">
+            <div className={`flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low?'px-4 py-3':'p-4'}`}>
               {topic
                 ? renderHelpBlocks(topic.blocks, color)
                 : (paragraphs || []).map((x,i)=><p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(x)}</p>)}
             </div>
-            <div className="shrink-0 p-4 pt-2" style={{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
-              <button onClick={()=>setOpen(false)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{ backgroundColor:color }}>閉じる</button>
+            <div className={`shrink-0 ${low?'px-3 py-2':'p-4 pt-2'}`} style={low?undefined:{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
+              <button onClick={()=>setOpen(false)} data-assistant-help-close className={`w-full ${low?'min-h-[44px]':'min-h-[48px]'} rounded-2xl font-black text-sm text-black active:scale-[.98]`} style={{ backgroundColor:color }}>閉じる</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>);
+        return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined') ? ReactDOM.createPortal(sheet, document.body) : sheet;
+      })()}
     </>
   );
 };
