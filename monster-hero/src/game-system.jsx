@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe0719e8c04ba9eb
+// generated-sha256: 7a03cbf150f8d884
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71287,9 +71287,9 @@ function AssistantLifeTownTyped({ life, ids, tabs, tab = 'where', onTab, onBack,
     : focus ? <>{ASSISTANT_LIFE_PLACE_ICON[focus] || '📍'} {placeWord(focus)}を見る</> : <>いま町にいる助手はいません</>;
   const others = Object.keys(at).filter(p => p !== focus).sort((a, b) => (perks.findIndex(r => r.place === a) + 1 || 99) - (perks.findIndex(r => r.place === b) + 1 || 99) || at[b].length - at[a].length);
   const scene = (box) => {
-    const raw = assistantLifeMapReadHome();
+    const homeNow = assistantLifeMapReadHome(); // HOME の大きさを読むだけ(保存値ではない)
     // 横(背の低い 2段組)は箱が低すぎて札が重なる。HOME の札の置き方は画面の向きで決まるので、地図は HOME と同じ大きさ(画面の大きさ)で描き、箱の中で縦横に送る
-    const tb = box.wide && box.h < 480 ? { w: raw.w, h: raw.h, scrollH: box.h, scrollX: true, focus } : box.wide ? { w: box.w, h: box.h, focus } : { w: box.w, h: Math.round(raw.h * box.w / Math.max(1, raw.w)), scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)), focus }; // 縦は画面の半分ほどまで(幅320でも主なボタンが最初から見える)
+    const tb = box.wide && box.h < 480 ? { w: homeNow.w, h: homeNow.h, scrollH: box.h, scrollX: true, focus } : box.wide ? { w: box.w, h: box.h, focus } : { w: box.w, h: Math.round(homeNow.h * box.w / Math.max(1, homeNow.w)), scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)), focus }; // 縦は画面の半分ほどまで(幅320でも主なボタンが最初から見える)
     return (
       <AssistantLifeTownMap life={life} ids={ids} land={land} typedBox={tb} onGo={onGo} initialPlace={req.place} initialAssistantId={initialAssistantId} initialKey={req.key}
         onBack={onBack} onPick={onRoom} onView={onRoom} onBeat={onBeat} onCard={onCard} />);
