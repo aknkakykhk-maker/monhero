@@ -43,6 +43,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-22 14:32", type:'fix', title:'横向きの結果画面で MARVELOUS などの数やスコアが重なって見えていたのを直しました', status:'new', group:'rhythm',
+    items:[
+      'iPhone などを横向きにして遊んだとき、結果画面の MARVELOUS〜MISS の数が出ない、スコアが途中で切れる、JUST MARVELOUS や CLEAR の一言がとなりに重なることがありました。',
+      'スコアと MARVELOUS〜MISS の表が広く並ぶようにしました。クイック∞周やビートPなどで入ったものは、下へスクロールすると見られます。',
+    ],
+  },
+  {
     date: "2026-11-22 14:26", type:'update', title:'助手ライフの家が読みやすくなりました', status:'new', group:'assistant',
     items:[
       '家の絵の中の名前や行き先の文字を大きくしました。',
