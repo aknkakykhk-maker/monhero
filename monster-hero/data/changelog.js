@@ -51,6 +51,13 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_walkure_v1', type:'content' },
   },
   {
+    date: "2026-11-22 18:21", type:'fix', title:'みゅあの全身イラストに背景が残って見える不具合を直しました', status:'new', group:'assistant',
+    items:[
+      '助手「みゅあ」（通常の服）の全身イラストで、髪の間や腕のまわりに白い背景が残って見える不具合がありました。',
+      '8種類の表情すべての全身イラストを直しました。',
+    ],
+  },
+  {
     date: "2026-11-22 15:48", type:'update', title:'縦画面の曲選びで、一度に見える曲が増えました', status:'new', group:'rhythm',
     items:[
       '縦画面の曲選びの助手の一言を1行にしました。押すと全文が読めます。そのぶん曲の一覧が広くなります。',

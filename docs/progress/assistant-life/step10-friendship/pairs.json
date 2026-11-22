@@ -1,0 +1,210 @@
+{
+ "at": "15:00",
+ "groups": [
+  {
+   "ids": [
+    "mua",
+    "kiki"
+   ],
+   "place": "cafe",
+   "doing": "cafe"
+  },
+  {
+   "ids": [
+    "dra",
+    "sorashido",
+    "erubin"
+   ],
+   "place": "cardroom",
+   "doing": "card"
+  }
+ ],
+ "solo": {
+  "momosuke": {
+   "doing": "battle",
+   "place": "battle"
+  },
+  "atsu": {
+   "doing": "idle",
+   "place": "home"
+  },
+  "kyuko": {
+   "doing": "read",
+   "place": "library"
+  }
+ },
+ "pairs": [
+  {
+   "pair": "kiki-mua",
+   "pts": 1183,
+   "lv": 7,
+   "next": null
+  },
+  {
+   "pair": "dra-sorashido",
+   "pts": 860,
+   "lv": 6,
+   "next": null
+  },
+  {
+   "pair": "erubin-sorashido",
+   "pts": 640,
+   "lv": 5,
+   "next": null
+  },
+  {
+   "pair": "dra-erubin",
+   "pts": 520,
+   "lv": 5,
+   "next": null
+  },
+  {
+   "pair": "momosuke-mua",
+   "pts": 470,
+   "lv": 5,
+   "next": null
+  },
+  {
+   "pair": "atsu-momosuke",
+   "pts": 390,
+   "lv": 4,
+   "next": null
+  },
+  {
+   "pair": "kiki-kyuko",
+   "pts": 330,
+   "lv": 4,
+   "next": null
+  },
+  {
+   "pair": "atsu-dra",
+   "pts": 260,
+   "lv": 4,
+   "next": null
+  },
+  {
+   "pair": "kyuko-mua",
+   "pts": 240,
+   "lv": 3,
+   "next": null
+  },
+  {
+   "pair": "erubin-kiki",
+   "pts": 200,
+   "lv": 3,
+   "next": null
+  },
+  {
+   "pair": "atsu-kiki",
+   "pts": 170,
+   "lv": 3,
+   "next": null
+  },
+  {
+   "pair": "kiki-momosuke",
+   "pts": 150,
+   "lv": 3,
+   "next": null
+  },
+  {
+   "pair": "kyuko-sorashido",
+   "pts": 120,
+   "lv": 3,
+   "next": null
+  },
+  {
+   "pair": "atsu-mua",
+   "pts": 110,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "dra-mua",
+   "pts": 95,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "erubin-mua",
+   "pts": 80,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "kiki-sorashido",
+   "pts": 70,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "dra-kiki",
+   "pts": 60,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "atsu-kyuko",
+   "pts": 50,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "atsu-erubin",
+   "pts": 45,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "dra-momosuke",
+   "pts": 40,
+   "lv": 2,
+   "next": null
+  },
+  {
+   "pair": "erubin-momosuke",
+   "pts": 35,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "kyuko-momosuke",
+   "pts": 30,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "mua-sorashido",
+   "pts": 25,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "atsu-sorashido",
+   "pts": 20,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "dra-kyuko",
+   "pts": 15,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "erubin-kyuko",
+   "pts": 12,
+   "lv": 1,
+   "next": null
+  },
+  {
+   "pair": "momosuke-sorashido",
+   "pts": 10,
+   "lv": 1,
+   "next": null
+  }
+ ],
+ "beforeScroll": {
+  "scroll": 1875,
+  "view": 699
+ }
+}
