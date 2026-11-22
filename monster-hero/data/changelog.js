@@ -83,6 +83,19 @@ const CHANGELOG = [
       'イベント「咲かせて！ハナウタ・ノート」のあいだは無料で遊べます。イベントが終わったあとは、ビートP500で買って遊ぶ曲になります。',
     ],
   },
+  {
+    date: "2026-11-22 23:14", type:'update', group:'rhythm', status:'new',
+    title:'Beyond the Same Sky の MASTER と HELL が、2人の歌い分けに合わせた譜面になりました',
+    items:[
+      'Beyond the Same Sky(原曲・short ver.)の MASTER と HELL を、あつとみゅあの歌い分けに合わせて作り直しました。',
+      'みゅあが歌うところは右手、あつが歌うところは左手で歌の言葉を叩きます。反対の手は自分の側で伴奏の拍を取ります。',
+      '2人で歌うところやハモりは、左右の同時押しや左右対称のホールドになります。HELL では、サビの伸ばしやハモりの山場に空中のノーツが出ます。',
+      'ホールドやスライドは歌っている手の側にだけ出るので、押さえている手の上をもう片方の手がまたぐ所はありません。',
+      'レベルは、原曲 MASTER Lv.36 ／ HELL Lv.55、short ver. MASTER Lv.32 ／ HELL Lv.58 です。',
+      'ノーツ数は、原曲 MASTER 1112 ／ HELL 1227、short ver. MASTER 639 ／ HELL 733 です。',
+      'これまでのスコアやランキングの記録はそのまま残ります。',
+    ],
+  },
   // 咲かせて！ハナウタ・ノートの予告(2026-11-22 社長「イベント予告を更新して」)。出しはじめる時刻(いま)を date・visibleFrom・notifyFrom にそろえる。
   //   開始(11/23 10:00)からは上の「開催中」の項目だけを札にする(pinUntil)。お話の中身は書かない。キービジュアルは作り直しが届いたら image へ
   {
@@ -346,10 +359,10 @@ const CHANGELOG = [
     image:'images/song-art/beyond-the-same-sky.jpg?v=ecf19c624394',
     items:[
       'モンヒロビートに「Beyond the Same Sky」を追加しました。あつとみゅあの曲で、ギルド「W.o.F」のころの思い出を歌っています。原曲（4分18秒・BPM 178）と short ver.（2分31秒・BPM 178）の、2バージョンの曲組です。',
-      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.33 ／ HELL Lv.55 です。',
-      '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1060 ／ 1229 です。',
-      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.35 ／ HELL Lv.58 です。',
-      'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 634 ／ 715 です。',
+      '原曲のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.25 ／ MASTER Lv.36 ／ HELL Lv.55 です。',
+      '原曲のノーツ数は 409 ／ 479 ／ 642 ／ 906 ／ 1112 ／ 1227 です。',
+      'short ver. のレベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.23 ／ MASTER Lv.32 ／ HELL Lv.58 です。',
+      'short ver. のノーツ数は 240 ／ 276 ／ 384 ／ 464 ／ 639 ／ 733 です。',
       'ジャケットは版ごとに違う絵です。譜面も版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
       'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
       '更新のあとに初めて開くと、あつとみゅあのお話が流れます。',
