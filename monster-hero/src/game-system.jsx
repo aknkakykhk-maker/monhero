@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e10bc18ea37e4195
+// generated-sha256: c7d5e3c8f58f021f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91857,6 +91857,19 @@ const MSX_CSS = `
 /* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
 .msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+/* 振り分けの3段は形を分ける(育-178・245): 行き先=下線のタブ / 刻み=1本につながった区切り / まとめて振る=枠だけの四角いボタン(押すとすぐ振る・選ばれた色で光らせない) */
+.msx .msx-pttabs{display:flex;margin:6px 0 4px;border-bottom:2px solid #475569}
+.msx .msx-pttabs .chip{flex:1;min-height:44px;border:0;border-radius:0;background:transparent;color:#94a3b8;font-size:14px;font-weight:900;margin-bottom:-2px;border-bottom:3px solid transparent}
+.msx .msx-pttabs .chip.on{background:transparent;color:#fde047;border-bottom-color:#fde047}
+.msx .msx-ptunit{display:flex;align-items:center;gap:0;margin:6px 0}
+.msx .msx-ptunit .msx-ptunit-k{flex:none;font-size:11px;font-weight:800;color:#cbd5e1;margin-right:6px;white-space:nowrap}
+.msx .msx-ptunit .msx-ptseg{flex:1;display:flex;min-width:0;border:1px solid #64748b;border-radius:10px;overflow:hidden}
+.msx .msx-ptunit .chip{flex:1;min-width:0;min-height:36px;border-radius:0;border:0;border-left:1px solid #64748b;background:#1e293b;color:#e2e8f0}
+.msx .msx-ptunit .chip:first-child{border-left:0}
+.msx .msx-ptunit .chip.on{background:#fde047;color:#422006}
+.msx .chip.msx-ptact{min-height:36px;border-radius:9px;background:transparent;border:1.5px solid #94a3b8;color:#f1f5f9;padding:0 10px}
+.msx .chip.msx-ptact:active{background:#334155}
+.msx .chip.msx-ptact:disabled{opacity:.45}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
 /* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
@@ -95176,8 +95189,8 @@ function useMsxPtUnit(mastery = false) {
 }
 function MsxPtUnits({ unit, setUnit, mastery = false }) {
   return (
-    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units>
-      {(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}
+    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units><span className="msx-ptunit-k" aria-hidden="true">1回に</span>
+      <span className="msx-ptseg">{(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}</span>
     </div>
   );
 }
@@ -95192,7 +95205,7 @@ function MsxPtBtn({ onPress, ...rest }) {
 //   技の熟練は、振り分けの並び(draft)に 'm:' + 技のID を積む。芯の spendPts が 'm:…' を熟練として扱う(保存は s.mastery に足すだけ)
 function MsxPtTabs({ tab, setTab }) {
   return (
-    <div className="msx-ptunit" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
+    <div className="msx-pttabs" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
       {[['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => <button type="button" role="tab" key={k} aria-selected={tab === k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)} data-msx-pt-tab={k}>{nm}</button>)}
     </div>
   );
@@ -95277,7 +95290,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
         <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={(x) => { if (ptTab === 'mastery') setUnitM(x); else setUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
         {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
         {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
-        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
+        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
         {/* 説明は短く1か所に。行ごとの「1点で +1」は2点のときだけ出す(2026-11-20 r1119-033 育-114・育-116: 同じ説明が7回・2行に詰め込まれていた) */}
         <div className="msx-note msx-kp">1点で能力 +1{lineOf ? `(${lineOf}を超えた能力は 2点で +1)` : ''}。＋で仮に振って、「決定」で確定する</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
@@ -97377,9 +97390,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
-        <button type="button" className="chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
-        <button type="button" className="chip" onClick={() => preset('low')}>おまかせで振る</button>
-        <button type="button" className="chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('low')}>おまかせで振る</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>

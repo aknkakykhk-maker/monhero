@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8160678b6e9bfc3
+// source-sha256: 346e9f04ee377fa4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175676,6 +175676,19 @@ const MSX_CSS = `
 /* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
 .msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+/* 振り分けの3段は形を分ける(育-178・245): 行き先=下線のタブ / 刻み=1本につながった区切り / まとめて振る=枠だけの四角いボタン(押すとすぐ振る・選ばれた色で光らせない) */
+.msx .msx-pttabs{display:flex;margin:6px 0 4px;border-bottom:2px solid #475569}
+.msx .msx-pttabs .chip{flex:1;min-height:44px;border:0;border-radius:0;background:transparent;color:#94a3b8;font-size:14px;font-weight:900;margin-bottom:-2px;border-bottom:3px solid transparent}
+.msx .msx-pttabs .chip.on{background:transparent;color:#fde047;border-bottom-color:#fde047}
+.msx .msx-ptunit{display:flex;align-items:center;gap:0;margin:6px 0}
+.msx .msx-ptunit .msx-ptunit-k{flex:none;font-size:11px;font-weight:800;color:#cbd5e1;margin-right:6px;white-space:nowrap}
+.msx .msx-ptunit .msx-ptseg{flex:1;display:flex;min-width:0;border:1px solid #64748b;border-radius:10px;overflow:hidden}
+.msx .msx-ptunit .chip{flex:1;min-width:0;min-height:36px;border-radius:0;border:0;border-left:1px solid #64748b;background:#1e293b;color:#e2e8f0}
+.msx .msx-ptunit .chip:first-child{border-left:0}
+.msx .msx-ptunit .chip.on{background:#fde047;color:#422006}
+.msx .chip.msx-ptact{min-height:36px;border-radius:9px;background:transparent;border:1.5px solid #94a3b8;color:#f1f5f9;padding:0 10px}
+.msx .chip.msx-ptact:active{background:#334155}
+.msx .chip.msx-ptact:disabled{opacity:.45}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
 /* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
@@ -184394,6 +184407,11 @@ function MsxPtUnits({
     role: "group",
     "aria-label": "振り分けの単位",
     "data-msx-pt-units": true
+  }, React.createElement("span", {
+    className: "msx-ptunit-k",
+    "aria-hidden": "true"
+  }, "1回に"), React.createElement("span", {
+    className: "msx-ptseg"
   }, (mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map(x => React.createElement("button", {
     type: "button",
     key: x,
@@ -184401,7 +184419,7 @@ function MsxPtUnits({
     className: `chip${unit === x ? ' on' : ''}`,
     onClick: () => setUnit(x),
     "data-msx-pt-unit": x
-  }, x === 'MAX' ? 'MAX' : `${x}P`)));
+  }, x === 'MAX' ? 'MAX' : `${x}P`))));
 }
 function MsxPtBtn({
   onPress,
@@ -184419,7 +184437,7 @@ function MsxPtTabs({
   setTab
 }) {
   return React.createElement("div", {
-    className: "msx-ptunit",
+    className: "msx-pttabs",
     role: "tablist",
     "aria-label": "振り分け先",
     "data-msx-pt-tabs": true
@@ -184764,17 +184782,17 @@ function MsxStats({
     }
   }, "まとめて"), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: autoTop
   }, "全部 ", MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: auto
   }, "おまかせで振る"), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: autoBal
   }, "バランス")), React.createElement("div", {
@@ -190042,15 +190060,15 @@ function MsxR3Retire({
       }
     }, "まとめて"), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('top')
     }, "全部 ", MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('low')
     }, "おまかせで振る"), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('bal'),
       "data-msx-r3-bal": true
     }, "バランス")), React.createElement("div", {
