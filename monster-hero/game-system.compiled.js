@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed0ebfe1a1c52f0d
+// source-sha256: b79ed28ddecce89f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119602,6 +119602,7 @@ function AssistantLifeHouse({
   };
   const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
+  const typedFriends = uiV2 && tab === 'friends' && typeof AssistantLifeFriendsTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedFriends);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
       setRoomId(null);
@@ -120334,7 +120335,7 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
-      maxWidth: land || tab === 'where' || typedHouse ? 'none' : 480
+      maxWidth: land || tab === 'where' || typedHouse || typedFriends ? 'none' : 480
     }
   }, React.createElement("div", {
     className: `mhl-sky t-${look}`
@@ -120422,6 +120423,37 @@ function AssistantLifeHouse({
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
       }
     }, icons))
+  }) : typedFriends ? React.createElement(AssistantLifeFriendsTyped, {
+    life: life,
+    ids: ids.filter(partnerOk),
+    metIds: metIds,
+    peerSt: peerSt,
+    nameOf: nameOf,
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2,
+    unwatched: unwatched,
+    onWatch: g => {
+      if (g) watch(g);
+    },
+    onReplay: t => playTalk(t, null),
+    peerItems: peerItems,
+    onUseItem: onUseItem,
+    onGivePair: canGive ? pair => openGive(pair) : null,
+    onRoom: setRoomId,
+    result: aluResult,
+    onResultClose: () => setAluResult(null)
   }) : typedHouse ? React.createElement(AssistantLifeHouseTyped, {
     land: land,
     life: life,
@@ -120804,13 +120836,13 @@ function AssistantLifeHouse({
       }
     })(),
     canGive: canGive && itemsLeft > 0,
-    noResult: typedHouse,
+    noResult: typedHouse || typedFriends,
     onClose: () => {
       const sc = scene;
       setScene(null);
       const following = !!followAfterRef.current;
       showFollow();
-      if ((typedHouse || uiV2 && roomId) && sc && sc.before && !following) setAluResult({
+      if ((typedHouse || typedFriends || uiV2 && roomId) && sc && sc.before && !following) setAluResult({
         ids: sc.ids,
         before: sc.before,
         title: sc.resultTitle
@@ -121621,6 +121653,430 @@ function AssistantLifeRoomTypedCheki({
     text: `チェキ ${days.length}枚`,
     note: `一番新しい日 ${String(days[days.length - 1]).slice(5).replace('-', '/')}`
   }));
+}
+const ASSISTANT_LIFE_FRIEND_LINE = lv => lv >= 9 ? '#fde68a' : lv >= 7 ? '#fcd34d' : lv >= 5 ? '#f9a8d4' : lv >= 4 ? '#c4b5fd' : '#93c5fd';
+const assistantLifeFriendStep = (st, a, b) => {
+  const pts = typeof assistantPeerPoints === 'function' ? assistantPeerPoints(st, a, b) : 0;
+  const lv = typeof assistantPeerLevelOf === 'function' ? assistantPeerLevelOf(pts) : 1;
+  const levels = typeof ASSISTANT_PEER_BOND_LEVELS !== 'undefined' ? ASSISTANT_PEER_BOND_LEVELS : [];
+  const cur = levels.find(s => s.level === lv) || null;
+  const nx = levels.find(s => s.level === lv + 1) || null;
+  const stageName = s => s ? typeof assistantPeerStageName === 'function' ? assistantPeerStageName(s) : s.name : '';
+  const from = cur ? cur.min : 0;
+  return {
+    a,
+    b,
+    pk: assistantLifePairKey(a, b),
+    pts,
+    lv,
+    stage: stageName(cur),
+    nextLv: nx ? nx.level : null,
+    nextName: stageName(nx),
+    need: nx ? Math.max(1, nx.min - pts) : 0,
+    rate: nx ? Math.max(0, Math.min(1, (pts - from) / Math.max(1, nx.min - from))) : 1
+  };
+};
+function AssistantLifeFriendGraph({
+  ids,
+  st,
+  hot = null,
+  onPair
+}) {
+  const n = ids.length;
+  const pos = Object.fromEntries(ids.map((id, i) => {
+    const t = -Math.PI / 2 + 2 * Math.PI * i / n;
+    return [id, [50 + 38 * Math.cos(t), 50 + 37 * Math.sin(t)]];
+  }));
+  const lines = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = ids[i],
+      b = ids[j];
+    const lv = assistantPeerLevel(st, a, b);
+    if (lv >= 3) lines.push({
+      a,
+      b,
+      lv,
+      hot: !!(hot && hot.includes(a) && hot.includes(b))
+    });
+  }
+  return React.createElement("div", {
+    style: {
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 14,
+      background: 'radial-gradient(circle at 50% 45%,#2b2552,#151130)',
+      overflow: 'hidden'
+    }
+  }, React.createElement("div", {
+    "data-assistant-life-friend-graph": true,
+    style: {
+      position: 'relative',
+      height: '100%',
+      maxHeight: 420,
+      aspectRatio: '1.4 / 1',
+      maxWidth: '100%'
+    }
+  }, React.createElement("svg", {
+    viewBox: "0 0 100 100",
+    preserveAspectRatio: "none",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%'
+    }
+  }, lines.map(l => {
+    const [x1, y1] = pos[l.a],
+      [x2, y2] = pos[l.b];
+    return React.createElement("g", {
+      key: `${l.a}-${l.b}`,
+      "data-assistant-life-friend-line": assistantLifePairKey(l.a, l.b),
+      style: {
+        cursor: 'pointer'
+      },
+      onClick: () => onPair && onPair([l.a, l.b])
+    }, React.createElement("line", {
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
+      stroke: "transparent",
+      strokeWidth: "22",
+      vectorEffect: "non-scaling-stroke"
+    }), React.createElement("line", {
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
+      stroke: ASSISTANT_LIFE_FRIEND_LINE(l.lv),
+      strokeWidth: l.hot ? 5 : Math.min(5, 1.5 + (l.lv - 3) * 0.6),
+      strokeLinecap: "round",
+      vectorEffect: "non-scaling-stroke",
+      strokeDasharray: l.hot ? '2 6' : undefined,
+      opacity: l.hot ? 1 : 0.85
+    }));
+  })), ids.map(id => {
+    const on = !!(hot && hot.includes(id));
+    return React.createElement("div", {
+      key: id,
+      "aria-hidden": "true",
+      style: {
+        position: 'absolute',
+        left: `${pos[id][0]}%`,
+        top: `${pos[id][1]}%`,
+        transform: 'translate(-50%,-50%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        pointerEvents: 'none'
+      }
+    }, React.createElement("div", {
+      style: {
+        width: 34,
+        height: 34,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        border: `2px solid ${on ? '#fde047' : '#fff'}`,
+        boxShadow: on ? '0 0 0 3px #fde04766' : 'none',
+        background: '#312e5a'
+      }
+    }, typeof AssistantFace === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+      who: assistantById(id),
+      size: 30
+    }) : null), React.createElement("b", {
+      className: "alu-nw",
+      style: {
+        fontSize: 11,
+        color: '#fff',
+        background: '#151130e6',
+        borderRadius: 999,
+        padding: '0 6px',
+        marginTop: 1
+      }
+    }, assistantLifeName(id)));
+  })));
+}
+function AssistantLifeFriendsTyped({
+  life,
+  ids,
+  metIds,
+  peerSt,
+  nameOf,
+  tabs,
+  tab = 'friends',
+  onTab,
+  onBack,
+  unwatched = [],
+  onWatch,
+  onReplay = null,
+  peerItems = null,
+  onUseItem = null,
+  onGivePair = null,
+  onRoom = null,
+  result = null,
+  onResultClose
+}) {
+  const [albumPair, setAlbumPair] = React.useState(null);
+  const [sheet, setSheet] = React.useState(null);
+  const [note, setNote] = React.useState('');
+  const st = peerSt || {
+    bond: {}
+  };
+  const list = (metIds || []).filter(id => ids.includes(id));
+  const groupOf = {};
+  for (const g of unwatched || []) {
+    const m = (g.ids || []).filter(id => list.includes(id));
+    for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) groupOf[assistantLifePairKey(m[i], m[j])] = g;
+  }
+  const steps = [];
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) steps.push(assistantLifeFriendStep(st, list[i], list[j]));
+  const open = steps.filter(s => s.nextLv);
+  const best = open.filter(s => groupOf[s.pk]).sort((x, y) => x.need - y.need)[0] || null;
+  const soon = open.filter(s => !best || s.pk !== best.pk).sort((x, y) => x.need - y.need).slice(0, 4);
+  const introNext = (() => {
+    try {
+      const slot = assistantLifeSlotAt();
+      return (life && life.nudges && life.nudges.introduce || []).find(x => x.abs === slot.abs + 1) || null;
+    } catch (_) {
+      return null;
+    }
+  })();
+  const introduce = async s => {
+    let ok = false;
+    try {
+      ok = await assistantLifeNudge('introduce', [s.a, s.b]);
+    } catch (_) {
+      ok = false;
+    }
+    setNote(ok ? `${nameOf(s.a)}と${nameOf(s.b)}が、次の時間に一緒に過ごしやすくなりました` : '次の時間に会わせる2人は、もう決まっています');
+  };
+  const duo = s => React.createElement("div", {
+    style: {
+      display: 'flex'
+    },
+    "aria-hidden": "true"
+  }, [s.a, s.b].map((id, k) => React.createElement("div", {
+    key: id,
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: '50%',
+      overflow: 'hidden',
+      border: '2px solid #fff',
+      background: '#312e5a',
+      marginLeft: k ? -10 : 0
+    }
+  }, typeof AssistantFace === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+    who: assistantById(id),
+    size: 26
+  }) : null)));
+  const bar = s => React.createElement("div", {
+    style: {
+      height: 6,
+      borderRadius: 3,
+      background: '#3b3566',
+      overflow: 'hidden',
+      marginTop: 3
+    }
+  }, React.createElement("i", {
+    style: {
+      display: 'block',
+      height: '100%',
+      width: `${Math.round(s.rate * 100)}%`,
+      background: 'linear-gradient(90deg,#f9a8d4,#fb923c)'
+    }
+  }));
+  const pairRow = s => {
+    const g = groupOf[s.pk];
+    return React.createElement("div", {
+      key: s.pk,
+      "data-assistant-life-friends-pair": s.pk
+    }, React.createElement(AluRow, {
+      pic: duo(s),
+      text: React.createElement("span", {
+        className: "alu-nw",
+        style: {
+          display: 'block',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      }, nameOf(s.a), "と", nameOf(s.b)),
+      note: React.createElement(React.Fragment, null, React.createElement("span", {
+        className: "alu-nw",
+        style: {
+          display: 'block',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      }, "あと", s.need, "で Lv", s.nextLv, "「", s.nextName, "」"), bar(s)),
+      action: g ? React.createElement(AluBtn, {
+        onClick: () => onWatch && onWatch(g)
+      }, "見る") : React.createElement(AluBtn, {
+        disabled: !!introNext,
+        onClick: () => introduce(s)
+      }, "会わせる")
+    }));
+  };
+  const goLabel = best ? React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, React.createElement("span", {
+    className: "alu-nw"
+  }, "👀 ", assistantLifeTypedGroupName(groupOf[best.pk], nameOf), "を見る"), React.createElement("span", {
+    className: "alu-t alu-nw",
+    style: {
+      display: 'block',
+      color: 'inherit'
+    }
+  }, nameOf(best.a), "と", nameOf(best.b), " あと", best.need, "で Lv", best.nextLv)) : React.createElement(React.Fragment, null, "いま見られる組はありません");
+  let resultNode = null;
+  if (result) {
+    const now = typeof assistantLifeSceneSnap === 'function' ? assistantLifeSceneSnap(result.ids) : {
+      peer: 0,
+      me: null
+    };
+    const b = result.before || {
+      peer: 0,
+      me: null
+    };
+    const dPeer = Math.max(0, Math.round(now.peer - b.peer));
+    const dMe = now.me != null && b.me != null ? Math.max(0, Math.round(now.me - b.me)) : 0;
+    const gains = [...(dMe > 0 ? [{
+      icon: '💗',
+      label: '仲良し度',
+      v: dMe
+    }] : []), ...(dPeer > 0 ? [{
+      icon: '🤝',
+      label: '友情',
+      v: dPeer
+    }] : [])];
+    resultNode = React.createElement("div", {
+      "data-assistant-life-friends-result": true
+    }, React.createElement(AluResult, {
+      title: result.title || '結果',
+      line: `${(result.ids || []).map(nameOf).join('・')}${gains.length ? '' : ' · 今日はもう上がりきっています'}`,
+      gains: gains,
+      next: {
+        label: '🤝 友情に戻る',
+        onClick: onResultClose
+      },
+      onClose: onResultClose
+    }));
+  }
+  const sheetNode = sheet === 'intro' ? React.createElement(AluSheet, {
+    title: "🤝 引き合わせる",
+    gain: "🤝 友情(一緒に過ごしやすくなる)",
+    onClose: () => setSheet(null)
+  }, typeof AssistantLifeIntroduceCard === 'function' ? React.createElement(AssistantLifeIntroduceCard, {
+    ids: list,
+    life: life
+  }) : null) : sheet === 'road' ? React.createElement(AluSheet, {
+    title: "💗 ごほうびの道のり",
+    gain: "💗 仲良し度(あなたと助手)",
+    onClose: () => setSheet(null)
+  }, typeof AssistantLifeRewardRoad === 'function' ? React.createElement(AssistantLifeRewardRoad, {
+    ids: list,
+    peerSt: peerSt,
+    nameOf: nameOf,
+    onRoom: id => {
+      setSheet(null);
+      onRoom && onRoom(id);
+    }
+  }) : null) : sheet === 'all' ? React.createElement(AluSheet, {
+    title: "🗺 全部のペアと思い出アルバム",
+    gain: "🤝 友情Lv",
+    onClose: () => setSheet(null)
+  }, typeof AssistantPeerMap === 'function' ? React.createElement(AssistantPeerMap, {
+    metIds: metIds,
+    onReplay: t => {
+      setSheet(null);
+      onReplay && onReplay(t);
+    },
+    peerItems: peerItems,
+    onUseItem: onUseItem,
+    v2: true,
+    onGivePair: onGivePair
+  }) : null) : null;
+  return React.createElement(AluFrame, {
+    title: "友情",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    "data-assistant-life-typed-friends": "1",
+    scene: React.createElement(AssistantLifeFriendGraph, {
+      ids: list,
+      st: st,
+      hot: best ? [best.a, best.b] : null,
+      onPair: setAlbumPair
+    }),
+    overlay: React.createElement(React.Fragment, null, resultNode || sheetNode, albumPair && typeof AssistantPeerAlbum === 'function' ? React.createElement(AssistantPeerAlbum, {
+      pair: albumPair,
+      onClose: () => setAlbumPair(null),
+      onReplay: t => {
+        setAlbumPair(null);
+        onReplay && onReplay(t);
+      },
+      peerItems: peerItems,
+      onUseItem: onUseItem,
+      onGivePair: onGivePair
+    }) : null)
+  }, React.createElement(AluGo, {
+    "data-assistant-life-friends-go": true,
+    disabled: !best,
+    onClick: () => best && onWatch && onWatch(groupOf[best.pk])
+  }, goLabel), note ? React.createElement("div", {
+    className: "alu-card alu-n",
+    "data-assistant-life-friends-note": true
+  }, note) : null, soon.length ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-friends-soon": true
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "もうすぐ Lv が上がるペア"), soon.map(pairRow), React.createElement("div", {
+    className: "alu-n alu-nw",
+    style: {
+      marginTop: 4
+    }
+  }, "線の色・太さ = 友情Lv · 線を押すと思い出")) : null, React.createElement("div", {
+    className: "alu-card"
+  }, React.createElement(AluRow, {
+    pic: "🤝",
+    text: "引き合わせる",
+    note: React.createElement("span", {
+      className: "alu-nw"
+    }, "次の時間を2人で過ごしやすく"),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-friends-intro": true,
+      onClick: () => setSheet('intro')
+    }, "選ぶ")
+  }), React.createElement(AluRow, {
+    pic: "💗",
+    text: "ごほうびの道のり",
+    note: React.createElement("span", {
+      className: "alu-nw"
+    }, "あなたと助手の 💗 のごほうび"),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-friends-road": true,
+      onClick: () => setSheet('road')
+    }, "開く")
+  }), React.createElement(AluRow, {
+    pic: "🗺",
+    text: React.createElement("span", {
+      className: "alu-nw"
+    }, "全部のペアと思い出"),
+    note: React.createElement("span", {
+      className: "alu-nw"
+    }, "28組の友情Lv・見返し"),
+    action: React.createElement(AluBtn, {
+      "data-assistant-life-friends-all": true,
+      onClick: () => setSheet('all')
+    }, "開く")
+  })));
 }
 const ASSISTANT_LIFE_MAP_ORDER = Object.freeze(['ranch', 'temple', 'market', 'battle', 'home', 'studio', 'cardroom', 'hill', 'library', 'cafe', 'garden', 'plaza']);
 const ASSISTANT_LIFE_MAP_TOWN_ONLY = Object.freeze(['hill', 'library', 'cafe', 'garden', 'plaza']);
