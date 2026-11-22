@@ -76,7 +76,8 @@ const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, {
     await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(900);
-    await page.locator('[data-assistant-life-icon="profile"]').click(); await page.waitForTimeout(700);
+    // 新UIの紹介の入口は家の上の「📖 紹介」(r1119-114。下のタブの「📖 紹介」は段12で「🐾 マスモン」に替わった)
+    await page.locator('[data-assistant-life-house-profile], [data-assistant-life-icon="profile"]').first().click(); await page.waitForTimeout(700);
     await page.locator('[data-assistant-life-profile-card="atsu"]').click(); await page.waitForTimeout(1000);
     const read = () => page.evaluate(() => {
       const b = document.querySelector('[data-assistant-life-profile-greeting]'), hero = document.querySelector('[data-assistant-life-profile-hero]');
