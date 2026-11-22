@@ -70,6 +70,7 @@ function renderIndex(depts) {
     '<!-- このファイルは tools/team/depts.json から作っている。作り直し: node tools/team/dept-guide.js --write -->', '',
     '新しい会話は、CLAUDE.md のあと**自分の部の1枚だけ**を読んで始める。ほかの部の手引きは読まない。',
     'どの部のファイルか分からないとき: `node tools/ctx.js dept --of <ファイル>`', '',
+    '**どの部も、公開の前に撮り比べの違いを見る。** `node tools/ctx.js gate` に「撮り比べ: 違い n 画面」と出たら、止め絵(左 main・右 枝)を見て、意図した違いだけ控えて PR に書く([`BUILD_CHECKS.md`](../rules/BUILD_CHECKS.md)「撮り比べ」)。', '',
     '| 部 | 部長 | 受け持ち | 手引き |', '| --- | --- | --- | --- |'];
   for (const d of depts) L.push(`| ${d['部']} | ${d['部長']} | ${d['受け持ち']} | [\`${d.id}.md\`](${d.id}.md) |`);
   L.push('', '部を足す・受け持ちを変えるとき: `tools/team/depts.json` を直して `node tools/team/dept-guide.js --write`。', '');

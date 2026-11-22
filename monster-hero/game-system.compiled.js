@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ce759b6bd54e7a21
+// source-sha256: 84ef2ee9d6355009
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119567,6 +119567,7 @@ function AssistantLifeHouse({
     setScene(null);
     assistantLifeCloseScreen();
   };
+  const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
@@ -120309,7 +120310,37 @@ function AssistantLifeHouse({
     style: {
       backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
     }
-  }), tab === 'where' ? React.createElement(AssistantLifeTownMap, {
+  }), tab === 'where' && typedTown ? React.createElement(AssistantLifeTownTyped, {
+    life: life,
+    ids: ids,
+    land: land,
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2,
+    onRoom: id => setRoomId(id),
+    onGo: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
+    onBeat: beat,
+    onCard: card,
+    initialPlace: mapFocusPlace,
+    initialAssistantId: mapFocusAssistantId,
+    initialKey: mapFocusKey
+  }) : tab === 'where' ? React.createElement(AssistantLifeTownMap, {
     life: life,
     ids: ids,
     land: land,
@@ -121172,26 +121203,28 @@ function AssistantLifeHouseTyped({
     },
     "data-assistant-life-guide-watch": true
   }, "👀 見てみる — ", assistantLifeTypedGroupName(g0, nameOf), "の話")) : null)) : null;
+  const goBtn = React.createElement(AluGo, {
+    onClick: () => {
+      if (g0 && onWatch) onWatch();
+    },
+    disabled: !g0,
+    "data-assistant-life-today-act": "watch"
+  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に');
+  const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return React.createElement(AluFrame, {
     title: "家",
     onBack: onBack,
     tab: tab,
     onTab: onTab,
     tabs: tabs,
-    head: head,
+    head: low ? React.createElement(React.Fragment, null, head, goBtn) : head,
     scene: scene,
     overlay: resultNode || guideNode,
     "data-assistant-life-typed-house": "1"
   }, top, note ? React.createElement("div", {
     className: "alu-card alu-t",
     "data-assistant-life-note": true
-  }, note) : null, React.createElement(AluGo, {
-    onClick: () => {
-      if (g0 && onWatch) onWatch();
-    },
-    disabled: !g0,
-    "data-assistant-life-today-act": "watch"
-  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'), React.createElement(AluGoalCard, {
+  }, note) : null, low ? null : goBtn, React.createElement(AluGoalCard, {
     view: goal,
     onKind: k => {
       const f = kindGo[k];
@@ -122122,9 +122155,30 @@ function AssistantLifeTownMap({
   initialPlace = null,
   initialAssistantId = null,
   initialKey = 0,
-  friendView = null
+  friendView = null,
+  typedBox = null
 }) {
-  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const [homeRaw, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const home = typedBox ? {
+    ...homeRaw,
+    w: typedBox.w,
+    h: typedBox.h,
+    fromHome: false
+  } : homeRaw;
+  const typedScrollRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!typedBox || !typedBox.scrollH || !typedBox.focus) return undefined;
+    const t = setTimeout(() => {
+      const box = typedScrollRef.current;
+      const el = box && box.querySelector(`[data-assistant-life-map-place="${typedBox.focus}"]`);
+      if (!el) return;
+      const br = box.getBoundingClientRect(),
+        er = el.getBoundingClientRect();
+      box.scrollTop = Math.max(0, box.scrollTop + (er.top - br.top) - (box.clientHeight / 2 - er.height / 2 - 24));
+      if (typedBox.scrollX) box.scrollLeft = Math.max(0, box.scrollLeft + (er.left - br.left) - (box.clientWidth / 2 - er.width / 2));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [typedBox && typedBox.focus, typedBox && typedBox.scrollH]);
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   React.useEffect(() => {
     if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace);
@@ -122182,6 +122236,7 @@ function AssistantLifeTownMap({
         if (el.hasAttribute('data-assistant-life-map-town')) continue;
         obs.push(rel(tagOf(el).getBoundingClientRect()));
       }
+      for (const el of S.querySelectorAll('[data-assistant-life-map-perk]')) obs.push(rel(el.getBoundingClientRect()));
       const W = S.clientWidth,
         H = S.clientHeight;
       const inside = q => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
@@ -122374,7 +122429,20 @@ function AssistantLifeTownMap({
       return false;
     }
   };
-  const perkMark = place => perkOf(place) ? React.createElement("i", {
+  const perkMarkTyped = place => perkOf(place) ? React.createElement("i", {
+    "aria-hidden": "true",
+    "data-assistant-life-map-perk": place,
+    "data-assistant-life-map-perk-kind": assistantLifeTownPerkKind(place),
+    className: "pointer-events-none absolute -right-1 -top-3 z-[2] whitespace-nowrap rounded-full px-2 text-[11px] font-black not-italic leading-[16px] shadow",
+    style: assistantLifeTownPerkKind(place) === 'h' ? {
+      background: '#fbcfe8',
+      color: '#831843'
+    } : {
+      background: '#fde68a',
+      color: '#78350f'
+    }
+  }, assistantLifeTownPerkText(place)) : null;
+  const perkMark = place => typedBox ? perkMarkTyped(place) : perkOf(place) ? React.createElement("i", {
     "aria-hidden": "true",
     "data-assistant-life-map-perk": place,
     className: "pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow"
@@ -122501,16 +122569,24 @@ function AssistantLifeTownMap({
     onCard: onCard
   });
   return React.createElement("div", {
-    className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
+    ref: typedScrollRef,
+    className: typedBox ? 'relative bg-[#0b1020]' : 'absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]',
+    style: typedBox ? {
+      height: typedBox.scrollH || typedBox.h,
+      overflowY: typedBox.scrollH ? 'auto' : 'hidden',
+      overflowX: typedBox.scrollX ? 'auto' : 'hidden',
+      overscrollBehavior: 'contain'
+    } : undefined,
     "data-assistant-life-where": true,
-    "data-assistant-life-map-art": art
+    "data-assistant-life-map-art": art,
+    "data-assistant-life-map-typed": typedBox ? '1' : undefined
   }, !ro && typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), !ro && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${typedBox || home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
     className: "relative",
-    style: {
+    style: typedBox ? undefined : {
       minHeight: '100%'
     },
     "data-assistant-life-map-fill": true
@@ -122580,7 +122656,7 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-empty": n ? '0' : '1',
       onClick: () => setSheet(p)
     }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
-  }), assistantLifeMapOrderNow().map(crowd), React.createElement("div", {
+  }), assistantLifeMapOrderNow().map(crowd), !typedBox && React.createElement("div", {
     className: `absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`,
     style: {
       paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
@@ -122635,12 +122711,12 @@ function AssistantLifeTownMap({
     },
     className: "shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95"
   }, "📃 一覧 ↓")), React.createElement("p", {
-    className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
+    className: `pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 ${typedBox ? 'text-[11px]' : 'text-[10.5px]'} font-bold text-slate-100`,
     style: {
-      top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
+      top: typedBox ? 8 : land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
     },
     "data-assistant-life-map-hint": true
-  }, ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
+  }, ro ? '場所を押すと、いる助手が見られます' : typedBox ? '場所を押すと、いる助手と得が出ます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true
@@ -122720,6 +122796,188 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-sheet-town": true,
     style: JA_WRAP_STYLE
   }, jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))))));
+}
+const ASSISTANT_LIFE_TOWN_PERK_KIND = Object.freeze({
+  studio: 't',
+  cardroom: 't',
+  market: 't',
+  temple: 'h',
+  battle: 'h',
+  ranch: 'h'
+});
+const assistantLifeTownPerkKind = place => ASSISTANT_LIFE_TOWN_PERK_KIND[place] || 'h';
+const assistantLifeTownPerkText = place => {
+  if (assistantLifeTownPerkKind(place) === 'h') return '💗 多め';
+  const card = typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375';
+  return `🎟 ${{
+    studio: '券なし',
+    cardroom: `ごほうび×${card}`,
+    market: '1割引き'
+  }[place] || '券・割引'}`;
+};
+const ASSISTANT_LIFE_TOWN_SCROLL_H = 400;
+function AssistantLifeTownTyped({
+  life,
+  ids,
+  tabs,
+  tab = 'where',
+  onTab,
+  onBack,
+  onRoom,
+  onGo = null,
+  onBeat = null,
+  onCard = null,
+  land = false,
+  initialPlace = null,
+  initialAssistantId = null,
+  initialKey = 0
+}) {
+  const [req, setReq] = React.useState({
+    place: initialPlace,
+    key: initialKey
+  });
+  React.useEffect(() => {
+    if (initialKey) setReq({
+      place: initialPlace,
+      key: initialKey
+    });
+  }, [initialKey]);
+  const openSheet = place => setReq(r => ({
+    place,
+    key: (r.key || 0) + 1000
+  }));
+  const nameOf = id => assistantLifeName(id);
+  const whereOf = id => assistantLifeWhereOf(life, id);
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = whereOf(id);
+    const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  let perks = [];
+  try {
+    perks = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
+  } catch (_) {
+    perks = [];
+  }
+  const top = perks[0] || null;
+  const crowdTop = Object.keys(at).filter(p => p !== 'home').sort((a, b) => at[b].length - at[a].length)[0] || null;
+  const focus = top ? top.place : crowdTop;
+  const placeWord = p => p === 'home' ? '助手の家' : assistantLifePlaceShow(p);
+  const chip = p => perks.some(r => r.place === p) ? React.createElement("span", {
+    className: "alu-chip",
+    "data-assistant-life-town-perk-kind": assistantLifeTownPerkKind(p),
+    style: assistantLifeTownPerkKind(p) === 'h' ? {
+      background: '#fbcfe8',
+      borderColor: '#f472b6',
+      color: '#831843'
+    } : {
+      background: '#fde68a',
+      borderColor: '#f59e0b',
+      color: '#78350f'
+    }
+  }, assistantLifeTownPerkText(p)) : null;
+  const face = id => typeof AssistantFace === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+    who: assistantById(id),
+    size: 44
+  }) : '🙂';
+  const doingOf = id => {
+    const w = whereOf(id);
+    const d = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? ASSISTANT_LIFE_DOINGS[w.doing] : null;
+    return d ? d.label : '';
+  };
+  const goTop = () => {
+    if (top && top.go && onGo) onGo(top.go);else if (focus) openSheet(focus);
+  };
+  const mainLabel = top ? React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, React.createElement("span", {
+    className: "alu-nw"
+  }, ASSISTANT_LIFE_PLACE_ICON[top.place] || top.icon, " ", placeWord(top.place), "へ行く"), React.createElement("span", {
+    className: "alu-t",
+    style: {
+      display: 'block'
+    }
+  }, assistantLifeTownPerkText(top.place))) : focus ? React.createElement(React.Fragment, null, ASSISTANT_LIFE_PLACE_ICON[focus] || '📍', " ", placeWord(focus), "を見る") : React.createElement(React.Fragment, null, "いま町にいる助手はいません");
+  const others = Object.keys(at).filter(p => p !== focus).sort((a, b) => (perks.findIndex(r => r.place === a) + 1 || 99) - (perks.findIndex(r => r.place === b) + 1 || 99) || at[b].length - at[a].length);
+  const scene = box => {
+    const homeNow = assistantLifeMapReadHome();
+    const tb = box.wide && box.h < 480 ? {
+      w: homeNow.w,
+      h: homeNow.h,
+      scrollH: box.h,
+      scrollX: true,
+      focus
+    } : box.wide ? {
+      w: box.w,
+      h: box.h,
+      focus
+    } : {
+      w: box.w,
+      h: Math.round(homeNow.h * box.w / Math.max(1, homeNow.w)),
+      scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)),
+      focus
+    };
+    return React.createElement(AssistantLifeTownMap, {
+      life: life,
+      ids: ids,
+      land: land,
+      typedBox: tb,
+      onGo: onGo,
+      initialPlace: req.place,
+      initialAssistantId: initialAssistantId,
+      initialKey: req.key,
+      onBack: onBack,
+      onPick: onRoom,
+      onView: onRoom,
+      onBeat: onBeat,
+      onCard: onCard
+    });
+  };
+  return React.createElement(AluFrame, {
+    title: "町",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    scene: scene,
+    "data-assistant-life-typed-town": "1"
+  }, React.createElement(AluGo, {
+    onClick: goTop,
+    disabled: !focus,
+    "data-assistant-life-town-go": focus || ''
+  }, mainLabel), focus ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-town-here": focus
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, placeWord(focus), "にいる助手"), (at[focus] || []).map(id => React.createElement(AluRow, {
+    key: id,
+    pic: face(id),
+    text: nameOf(id),
+    note: doingOf(id),
+    action: React.createElement(AluBtn, {
+      onClick: () => onRoom(id),
+      "data-assistant-life-town-room": id
+    }, "部屋へ")
+  }))) : null, others.length ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-town-others": true
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "ほかの場所"), others.map(p => React.createElement(AluRow, {
+    key: p,
+    pic: ASSISTANT_LIFE_PLACE_ICON[p] || '📍',
+    text: React.createElement(React.Fragment, null, placeWord(p), " ", chip(p)),
+    note: (at[p] || []).map(nameOf).join('・'),
+    action: React.createElement(AluBtn, {
+      onClick: () => openSheet(p),
+      "data-assistant-life-town-see": p
+    }, "見る")
+  }))) : null);
 }
 const ASSISTANT_LIFE_FIND_KEY = 'mh_msx_find_v1';
 const ASSISTANT_LIFE_FIND_DAILY = 2;
@@ -126075,13 +126333,13 @@ const ALU_CSS = `
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
-.alu-body{flex:1;min-height:0;display:flex}
+.alu-body{flex:1;min-height:0;display:flex;padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
-.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px calc(12px + var(--mh-sa-right,0px)) 0 calc(12px + var(--mh-sa-left,0px))}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px))}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px));padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
