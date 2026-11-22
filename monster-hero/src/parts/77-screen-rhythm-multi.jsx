@@ -4878,10 +4878,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
               結果画面には見出しが無いので、いちばん上の帯の右(部屋と同じ右上)へ置く。向きは RHYTHM_VIEW_ROTATION が画面をまたいで持つので、
               部屋で横 → 演奏 → 結果でも横のまま。結果で変えた向きも、部屋へ戻ればそのまま */}
           <div data-rhythm-multi-result-orientation className="shrink-0 self-start"><RhythmOrientationButton/></div>
-          <div className="flex w-16 shrink-0 flex-col items-center">
+          <div className="flex w-16 shrink-0 flex-col items-center landscape:flex-col-reverse">
+            {/* 横は下の端に吹き出しが重なるので、「チームのランク」を上に出す */}
             <b data-rhythm-multi-team-rank className="text-5xl font-black leading-none text-amber-300 drop-shadow">{team.waiting ? '…' : team.rank}</b>
             {/* だれのランクか分かるように「チーム」と書く(MVP がフルコンボでも D と出て、自分が D だと思った・点検 N42) */}
-            <small data-rhythm-multi-team-rank-label className="whitespace-nowrap text-[9px] font-black text-slate-300">チームのランク</small>
+            <small data-rhythm-multi-team-rank-label className="whitespace-nowrap text-[9px] font-black leading-none text-slate-300">チームのランク</small>
           </div>
         </section>
         {/* 縦画面ではゲージを曲の下へ1段で出す(横画面では上の帯の中) */}
