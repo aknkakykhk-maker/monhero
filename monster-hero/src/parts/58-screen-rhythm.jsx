@@ -202,7 +202,7 @@ function RhythmSongSelectScreen({
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
           <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モード選びへ戻る'} title={debugAll?'デバッグへ戻る':'モード選びへ戻る'}
             onClick={onExit}
-            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/>{/* 幅380px未満は矢印だけ(題「曲選び」とビートPが「曲…」「0 ビ…」と切れていた・2026-11-22 r1119-094 点検 N7) */}<span className="whitespace-nowrap text-[11px] font-black max-[379px]:hidden">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
