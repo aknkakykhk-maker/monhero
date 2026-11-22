@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8680f0176712f3a4
+// source-sha256: e59efea76623f0a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40792,7 +40792,7 @@ function RhythmSkyStage({
       steps = 8,
       ys = [];
     for (let i = 0; i <= steps; i++) ys.push(line - SKY_LANE_DEPTH + SKY_LANE_DEPTH * i / steps);
-    const lift = y => (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100;
+    const lift = y => (y - rhythmSkyLiftRatio(y)) * 100;
     const at = (k, y) => `${f(rhythmProjectBoundary(k, y) * 100)},${f(lift(y))}`;
     const surface = [...ys.map(y => at(0, y)), ...ys.slice().reverse().map(y => at(RHYTHM_LANE_COUNT, y))].join(' ');
     const dividers = Array.from({
@@ -42732,7 +42732,7 @@ const RhythmTapTest = ({
     for (let i = 0; i <= steps; i++) {
       const y = top + (line - top) * i / steps;
       pts.push({
-        y: (y - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(y) / base) * 100,
+        y: (y - rhythmSkyLiftRatio(y)) * 100,
         l: rhythmProjectBoundary(0, y) * 100,
         r: rhythmProjectBoundary(RHYTHM_LANE_COUNT, y) * 100,
         gy: y * 100
@@ -43624,7 +43624,7 @@ const RhythmTapTest = ({
         hi = line;
       for (let k = 0; k < 18; k++) {
         const m = (lo + hi) / 2;
-        if (m - RHYTHM_SKY_LIFT.ratio * rhythmProjectionScale(m) / base < y) lo = m;else hi = m;
+        if (m - rhythmSkyLiftRatio(m) < y) lo = m;else hi = m;
       }
       return rhythmProjectionScale(lo);
     };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9c0f4062c12f6b22
+// generated-sha256: 54de353d7d286dcf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25575,7 +25575,7 @@ function RhythmSkyStage({plane,still=false}){
     if(!/^d[12][lm]$/.test(skyLaneLook))return null;
     const SKY_LANE_DEPTH=.14,line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line),steps=8,ys=[];
     for(let i=0;i<=steps;i++)ys.push(line-SKY_LANE_DEPTH+SKY_LANE_DEPTH*i/steps);
-    const lift=y=>(y-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base)*100;
+    const lift=y=>(y-rhythmSkyLiftRatio(y))*100; // 空中の持ち上げは rhythmSkyLiftRatio(上端で0)と同じ
     const at=(k,y)=>`${f(rhythmProjectBoundary(k,y)*100)},${f(lift(y))}`;
     const surface=[...ys.map(y=>at(0,y)),...ys.slice().reverse().map(y=>at(RHYTHM_LANE_COUNT,y))].join(' ');
     const dividers=Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>ys.map(y=>at(k,y)).join(' '));
@@ -26358,7 +26358,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const skyPlane=(()=>{
     if(!skyChart)return null;
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line),steps=24,top=.03,pts=[];
-    for(let i=0;i<=steps;i++){const y=top+(line-top)*i/steps;pts.push({y:(y-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base)*100,l:rhythmProjectBoundary(0,y)*100,r:rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*100,gy:y*100});}
+    for(let i=0;i<=steps;i++){const y=top+(line-top)*i/steps;pts.push({y:(y-rhythmSkyLiftRatio(y))*100,l:rhythmProjectBoundary(0,y)*100,r:rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*100,gy:y*100});}
     const f=v=>v.toFixed(2);
     const left=pts.map(p=>`${f(p.l)},${f(p.y)}`),right=pts.map(p=>`${f(p.r)},${f(p.y)}`).reverse();
     const last=pts[pts.length-1];
@@ -26876,7 +26876,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     // HELL(空中のノーツがある譜面)では、空中の面の幅にも合わせて隠し、空中の判定線(と判定の文字)には届かないところで止める(2026-10-13)。
     // 空中の面の同じ高さの幅は、持ち上げ前の奥行き t を y = t − 持ち上げ(t) から探して決める
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
-    const skyAt=y=>{if(!skyChart||!(base>0))return 0;let lo=0,hi=line;for(let k=0;k<18;k++){const m=(lo+hi)/2;if(m-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(m)/base<y)lo=m;else hi=m;}return rhythmProjectionScale(lo);};
+    const skyAt=y=>{if(!skyChart||!(base>0))return 0;let lo=0,hi=line;for(let k=0;k<18;k++){const m=(lo+hi)/2;if(m-rhythmSkyLiftRatio(m)<y)lo=m;else hi=m;}return rhythmProjectionScale(lo);};
     if(skyChart)percent=Math.min(percent,Math.max(0,(line-RHYTHM_SKY_LIFT.ratio)*100-8));
     if(!(percent>0))return null;
     const steps=8,left=[],right=[];
