@@ -3228,6 +3228,76 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
+  "walkure/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 293,
+   "heldHandSwitch": 0
+  },
+  "walkure/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
+  "walkure/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 64,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 2,
+   "heldHandSwitch": 0
+  },
+  "walkure_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 2,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -3416,13 +3486,13 @@
    "changed": 0
   },
   {
-   "at": "2026-11-22T09:16",
-   "reason": "r1119-096 Desert Crown HELL の押せない3か所を直した。親指2本の押せないの控えを新しく作った",
-   "changed": 0
+   "at": "2026-11-22T08:28",
+   "reason": "新曲 ワルキューレ(原曲・short ver.)を公開",
+   "changed": 10
   },
   {
-   "at": "2026-11-22T09:18",
-   "reason": "r1119-096 Beyond の4譜面を押せない所を作らない条件で直し直した・Desert Crown HELL の押せない3か所を直した",
+   "at": "2026-11-22T10:16",
+   "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 0
   }
  ]

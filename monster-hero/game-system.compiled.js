@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bcabf0a141ad7146
+// source-sha256: 56a7150d8d1bdca0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6530,6 +6530,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_walkure',
+  name: 'ワルキューレ',
+  creator: 'ALHAMBRA',
+  src: 'audio/bgm-walkure.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_walkure_short',
+  name: 'ワルキューレ short ver.',
+  creator: 'ALHAMBRA',
+  src: 'audio/bgm-walkure-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8415,6 +8429,8 @@ const Audio_ = (() => {
     "audio/bgm-toward-the-stars-short.mp3": "88907da29e09",
     "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
+    "audio/bgm-walkure-short.mp3": "4ac3e2f2af3e",
+    "audio/bgm-walkure.mp3": "c0643f725dff",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
@@ -54341,7 +54357,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['excited', '1:52と3:14、強い所が何回も来るの！ テンション続くぢゃんｗ']],
     'listen:altar_world_tree': [['surprise', '6分以上あるの！？ 3:13のサビまで、わくわくがずっと続くぢゃん♪']],
     'listen:evans': [['surprise', '0:59でいきなり強くなるとこ、ドキッとするぢゃんｗ']],
-    'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']]
+    'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']],
+    'listen:walkure': [['excited', '1:37でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']]
   },
   kiki: {
     join: [['happy', '{name}、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
@@ -54435,7 +54452,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['normal', '2:42の静かな所が、次の盛り上がりの前の深呼吸みたいです']],
     'listen:altar_world_tree': [['happy', '最初の48秒、静かに広がっていくところが美しいでつ']],
     'listen:evans': [['normal', '0:27で静かになるところ、きれいな間ですね']],
-    'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']]
+    'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
+    'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']]
   },
   momosuke: {
     join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
@@ -54529,7 +54547,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['excited', '3:14からのサビ！！ ここでいちばん盛り上がるの！！']],
     'listen:altar_world_tree': [['excited', '3:13から6秒だけのサビ！！ 一瞬だけど、そこがピーク！！']],
     'listen:evans': [['excited', '1:33からのサビ！！ 短いけど、ぎゅっと詰まってるの！！']],
-    'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']]
+    'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']],
+    'listen:walkure': [['excited', '2:20も2:39もいちばん強い！ ももはこの勢いが大好き♡']]
   },
   dra: {
     join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', '{name}、今日もよろしくな']],
@@ -54623,7 +54642,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['troubled', '4分以上で1299ノーツだぞ。おでの膝との大冒険だな']],
     'listen:altar_world_tree': [['surprise', '6分25秒だぞ。これはもう、長い長い冒険だな']],
     'listen:evans': [['surprise', '2分もないのにLv.44だぞ。短くて濃い冒険だな']],
-    'listen:humanoid': [['troubled', 'Lv.50だぞ。短いけど、おでには大冒険だな']]
+    'listen:humanoid': [['troubled', 'Lv.50だぞ。短いけど、おでには大冒険だな']],
+    'listen:walkure': [['normal', '11分32秒もある長い冒険だな。BPM216で駆け抜けるからな']]
   },
   atsu: {
     join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たよ！ 今日もやろ笑']],
@@ -54717,7 +54737,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['excited', '好きな曲笑 3:49でもう一回いちばん強くなって締めるの、ずるい！']],
     'listen:altar_world_tree': [['happy', '5:01でもう一回いちばん強くなって、そこから締めに向かう笑']],
     'listen:evans': [['happy', '1:45ですっと静かに締めるとこ、かっこいい笑']],
-    'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']]
+    'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']],
+    'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']]
   },
   kyuko: {
     join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
@@ -54811,7 +54832,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['normal', 'サビが3:14からで、そのあと3:49にもう一回山があるんだよねぇ']],
     'listen:altar_world_tree': [['normal', '6分を、静かな所と強い所で細かく区切ってる構成なんだよねぇ']],
     'listen:evans': [['happy', '好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑']],
-    'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']]
+    'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
+    'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']]
   },
   sorashido: {
     join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
@@ -54905,7 +54927,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['excited', '1299ノーツ、Lv.44。数えがいがありますね・・・！']],
     'listen:altar_world_tree': [['normal', '6:25で1295ノーツ、でもLv.24。長いけど、落ち着いて叩けますよ']],
     'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
-    'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']]
+    'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']],
+    'listen:walkure': [['normal', 'BPM216で3460ノーツ！ 強い音54%・軽い音3%、力で押し切る配分だぜ・・・！']]
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -54999,7 +55022,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:rebellion': [['normal', '2:15の静かな所で、少しひと息つけるかな']],
     'listen:altar_world_tree': [['happy', '好きな曲なんだ。4:00の静かな所、何度聞いても落ち着くね']],
     'listen:evans': [['happy', '1:45で静かに終わる所、聞き終わってほっとするね']],
-    'listen:humanoid': [['normal', '1:27で強めに落ちる所、少しほっとできるね']]
+    'listen:humanoid': [['normal', '1:27で強めに落ちる所、少しほっとできるね']],
+    'listen:walkure': [['normal', '5:14や6:33の静かな所は落ち着くね。長い曲だし、そこで息を整えようかな']]
   }
 });
 const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({
@@ -62034,7 +62058,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   erfolg: 500,
   amakakeru_tsubasa: 500,
   beyond_the_same_sky: 500,
-  desert_crown: 500
+  desert_crown: 500,
+  walkure: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -62045,7 +62070,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
   dr_wily_stage_1_okkussenman: 'dr_wily_stage_1',
   erfolg_piano: 'erfolg',
-  beyond_the_same_sky_short: 'beyond_the_same_sky'
+  beyond_the_same_sky_short: 'beyond_the_same_sky',
+  walkure_short: 'walkure'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');

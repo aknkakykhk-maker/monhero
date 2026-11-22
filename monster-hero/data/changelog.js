@@ -34,6 +34,22 @@
 //   ・作っている途中の調整・内部の作り直し・見たこともない不具合の修正 → dev:true も付ける
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
+  // 新曲「ワルキューレ」(2026-11-21 社長決定。原曲+short ver. の2つの版の曲組・ビートP500で両方の版が付く・ジャケットは両版共通。お知らせは曲組で1件)
+  {
+    date: "2026-11-22 16:25", type:'update', group:'rhythm', status:'new',
+    title:'新曲「ワルキューレ」（原曲＋short ver.）を追加しました',
+    image:'images/song-art/walkure.jpg?v=25ed534ed26b',
+    items:[
+      'モンヒロビートに ALHAMBRA の「ワルキューレ」を追加しました。原曲（11分32秒・BPM 216）と short ver.（3分00秒・BPM 216）の、2バージョンの曲組です。',
+      '原曲のレベルは EASY Lv.11 ／ NORMAL Lv.14 ／ HARD Lv.26 ／ EXPERT Lv.36 ／ MASTER Lv.50 ／ HELL Lv.61 です。',
+      '原曲のノーツ数は 1698 ／ 1912 ／ 2619 ／ 2850 ／ 3460 ／ 2855 です。',
+      'short ver. のレベルは EASY Lv.12 ／ NORMAL Lv.15 ／ HARD Lv.24 ／ EXPERT Lv.30 ／ MASTER Lv.50 ／ HELL Lv.49 です。',
+      'short ver. のノーツ数は 446 ／ 500 ／ 654 ／ 720 ／ 878 ／ 713 です。',
+      '譜面は版ごとに違います。曲えらびの版タブで切り替えて遊べます。',
+      'この曲はビートP500で買って遊びます。買うと原曲と short ver. の両方で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_walkure_v1', type:'content' },
+  },
   {
     date: "2026-11-22 18:54", type:'fix', title:'みゅあの全身イラスト（ハロウィン・カードマスター）に背景が残って見える不具合を直しました', status:'new', group:'assistant',
     items:[

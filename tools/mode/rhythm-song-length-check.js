@@ -32,7 +32,8 @@ const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/r
 const MAX_PLAY_MS=5*60*1000;
 // 5分を超えてよい曲(社長がその曲だけ例外にしたもの)。ほかの曲の上限は変えない
 //   altar_world_tree … 2026-11-01 社長「この曲だけ例外」(原曲は6分25秒のまま最後まで遊べる。イベント「鍵の向こう側へ」の対象曲)
-const LONG_PLAY_ALLOWED=new Set(['altar_world_tree']);
+//   walkure … 2026-11-22 社長「例外に足して最後まで遊べるようにする。短く遊びたい人はショート版」(原曲は11分32秒・台帳 r1119-095)
+const LONG_PLAY_ALLOWED=new Set(['altar_world_tree','walkure']);
 
 for(const songId of RHYTHM_DEMO_SONG_IDS){
   const song=RHYTHM_SONGS.find(entry=>entry.songId===songId);

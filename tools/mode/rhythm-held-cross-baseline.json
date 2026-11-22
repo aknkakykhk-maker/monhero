@@ -169,7 +169,11 @@
   "beyond_the_same_sky_short/MASTER": 7,
   "beyond_the_same_sky_short/HELL": 19,
   "desert_crown/MASTER": 7,
-  "desert_crown/HELL": 0
+  "desert_crown/HELL": 0,
+  "walkure/MASTER": 1,
+  "walkure/HELL": 10,
+  "walkure_short/MASTER": 0,
+  "walkure_short/HELL": 1
  },
  "history": [
   {
@@ -178,13 +182,13 @@
    "changed": 169
   },
   {
-   "at": "2026-11-22T09:16",
-   "reason": "r1119-096 Desert Crown HELL の押せない3か所を直した。親指2本の押せないの控えを新しく作った",
-   "changed": 0
+   "at": "2026-11-22T08:28",
+   "reason": "新曲 ワルキューレ(原曲・short ver.)を公開",
+   "changed": 4
   },
   {
-   "at": "2026-11-22T09:19",
-   "reason": "r1119-096 Beyond の4譜面を押せない所を作らない条件で直し直した・Desert Crown HELL の押せない3か所を直した",
+   "at": "2026-11-22T10:16",
+   "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
    "changed": 4
   }
  ]

@@ -386,6 +386,16 @@
   "erfolg_piano/hard": "88a9b6891e13e530",
   "erfolg_piano/expert": "27f5f35124c1aeef",
   "erfolg_piano/master": "031cc81580b212e3",
+  "walkure/easy": "8cf9cb33f2bcc1fe",
+  "walkure/normal": "e4290dd16a98677d",
+  "walkure/hard": "fb356d5b9e5f6f16",
+  "walkure/expert": "8269e31419679c2b",
+  "walkure/master": "a644d495b9894772",
+  "walkure_short/easy": "a95380f2dfb4e0d7",
+  "walkure_short/normal": "954e7a24c285ace1",
+  "walkure_short/hard": "37eccc33cd466b30",
+  "walkure_short/expert": "bf6fdebaad16a2c0",
+  "walkure_short/master": "3483c98e1670d287",
   "amakakeru_tsubasa/easy": "153f0f77521cc4c4",
   "amakakeru_tsubasa/normal": "bb1c1aa5cc335adf",
   "amakakeru_tsubasa/hard": "f4923a42b1c9b0d8",
@@ -493,6 +503,8 @@
   "dr_wily_stage_1_okkussenman/hell": "3ac9515e935debaa",
   "erfolg/hell": "38991ec2bf0b2a01",
   "erfolg_piano/hell": "af6f6690583fc26c",
+  "walkure/hell": "94860f0aa2cf55ca",
+  "walkure_short/hell": "ca1fdfc6c9e030fb",
   "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
   "beyond_the_same_sky/hell": "3a4e1897374ef048",
   "beyond_the_same_sky_short/hell": "ddf78efbca21f9eb",
@@ -1098,20 +1110,32 @@
    ]
   },
   {
-   "at": "2026-11-22 18:16",
-   "reason": "r1119-096 社長「Desert Crown の HELL まだ押せないとこ残ってた」: 空中スライド3本(81.31・116.72・133.07秒)の終わりの横の位置だけを直した(時刻・点の数・ノーツ数はそのまま)",
+   "at": "2026-11-22 17:28",
+   "reason": "新曲 ワルキューレ(原曲・short ver.)を公開",
    "changed": [
-    "desert_crown/hell"
+    "walkure/easy",
+    "walkure/normal",
+    "walkure/hard",
+    "walkure/expert",
+    "walkure/master",
+    "walkure_short/easy",
+    "walkure_short/normal",
+    "walkure_short/hard",
+    "walkure_short/expert",
+    "walkure_short/master",
+    "walkure/hell",
+    "walkure_short/hell"
    ]
   },
   {
-   "at": "2026-11-22 18:18",
-   "reason": "r1119-096 社長「Desert Crown の HELL まだ押せないとこ残ってた」: 前の直し(#7187)が Beyond the Same Sky に作った押せない所を無くすため、Beyond の4譜面を直す前へ戻して、押せない所を作らない条件で位置だけ直し直した",
+   "at": "2026-11-22 19:16",
+   "reason": "r1119-096 社長「Desert Crown の HELL まだ押せないとこ残ってた」: Desert Crown HELL の空中スライド3本の位置と、Beyond の4譜面を押せない所を作らない条件で直し直した",
    "changed": [
     "beyond_the_same_sky/master",
     "beyond_the_same_sky_short/master",
     "beyond_the_same_sky/hell",
-    "beyond_the_same_sky_short/hell"
+    "beyond_the_same_sky_short/hell",
+    "desert_crown/hell"
    ]
   }
  ]
