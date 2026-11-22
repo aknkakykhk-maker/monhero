@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11da0c39e01bdd2a
+// source-sha256: a1cf5ca15d5ea3ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39091,7 +39091,7 @@ const RhythmSongSelect = ({
       }, rank), React.createElement("span", {
         className: "shrink-0 whitespace-nowrap tabular-nums text-slate-300"
       }, record.bestScore.toLocaleString())) : React.createElement("span", {
-        className: "truncate"
+        className: "shrink-0 whitespace-nowrap"
       }, "未プレイ"));
     })(), row.versions > 1 && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-row-version-count': row.versions
@@ -39106,7 +39106,9 @@ const RhythmSongSelect = ({
       'data-rhythm-song-first': firstSongId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
-    }), "🔰 初めての1曲"), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
+    }), "🔰", React.createElement("span", {
+      className: "[@container(max-width:300px)]:hidden"
+    }, " 初めての1曲")), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-locked': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"

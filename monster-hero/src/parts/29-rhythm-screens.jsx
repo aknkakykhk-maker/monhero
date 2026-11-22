@@ -1270,7 +1270,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                       {played
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
                           <span className="shrink-0 whitespace-nowrap tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
-                        :<span className="truncate">未プレイ</span>}
+                        // 「未プレイ」は縮めずに全部見せる。狭い行では「初めての1曲」の札を🔰だけにする(点検 V7: PC で「未プ…」「未」と切れていた)
+                        :<span className="shrink-0 whitespace-nowrap">未プレイ</span>}
                     </small>;
                   })()}
                   {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
@@ -1278,7 +1279,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 初めての1曲</small>}
+                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰<span className="[@container(max-width:300px)]:hidden"> 初めての1曲</span></small>}
                   {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
