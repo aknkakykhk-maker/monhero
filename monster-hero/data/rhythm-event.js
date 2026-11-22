@@ -118,9 +118,9 @@ const FLOWER3_SONG_SLOTS = Object.freeze([
   Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});
-// 告知の横長の絵(キービジュアル)。社長が作り直した絵が届いたら images/events/flower3-2026-wide.jpg に置き、ここへその道を書く
-// (?v= は build.js が打つ)。null のあいだはイベントタブに絵が出ないだけで画面は壊れない。お知らせ(changelog.js)の image も同じ道を書く
-const FLOWER3_BANNER = null;
+// 告知の横長の絵(キービジュアル v2・社長 11-22。元は docs/progress/beat/event-flower3/assets/keyvisual-wide-v2.png を元の大きさのまま JPEG へ)。
+// 絵を差し替えるときは同じ道のファイルを置き換えるだけ(?v= は build.js が打ち直す)。お知らせ(changelog.js)の予告・開始の2件も同じ道
+const FLOWER3_BANNER = 'images/events/flower3-2026-wide.jpg?v=666d1c6a0683';
 // 受け口の曲のうち、公開曲の一覧(rhythm-mode.js・先に読み込まれる)に入っているもの
 const flower3PublishedSlots = () => {
   // 検査の道具が読む順番を変えて連結すると、まだ初期化されていない const を typeof でも触れずに止まるので、try で包む
