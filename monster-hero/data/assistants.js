@@ -12674,7 +12674,175 @@ const KIKI_TWINTAIL_STORY = [
   { who:'kiki',     e:'happy',    outfit:'twintail', t:'買ってくれたら、プロフィールの「着替え」から着替えられまつ。{name}、よかったらおそろいにしてくだたいね♪' },
 ];
 const KIKI_TWINTAIL_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん／ももさん／きゅうこさん／ドラさん', momosuke: 'ききちゃん', dra: 'きき', atsu: 'きき', kyuko: 'ききさん', sorashido: 'ききさん', erubin: 'ききさん' };
+// ---------- あつとみゅあの歌のお話「同じ空の先へ ～Beyond the Same Sky～」(2026-11-22 社長 r1119-076・社長が全文を読んで OK) ----------
+// 新曲 Beyond the Same Sky(フル版・ショート版)は、あつとみゅあがギルド「W.o.F」のころの思い出を曲にしたという設定。台本の説明は docs/progress/beyond-the-same-sky-story/script.md
+// 歌詞の「君」は W.o.F のみんな(仲間の歌・社長「仲間の歌に寄せる」)。あつに会っていない人には、あつは出ず、旗のそばに置いた帳面に次の朝あつの字で続きが書かれている流れ(atsu:'with'/'without')
+// お披露目の行から曲をこの曲(melo_beyond_the_same_sky)へ替える。曲の BGM がまだ無い版では bgm は無視され、いつものお話の曲のまま
+const BEYOND_SAME_SKY_STORY = [
+  // ---- 夕方の広場: 古い帳面 ----
+  { bg:'monhero_plaza_evening', who:'mua', e:'surprise', fxText:'みゅあが、色のあせた小さな帳面をひらいている', holdMs:2500, t:'あれ……これ、まだあったんだ' },
+  { who:'momosuke', e:'normal',   t:'みゅあねぇ、なにそれ？ 日記？' },
+  { who:'mua',      e:'normal',   t:'W.o.F のころの帳面。冒険の途中で思ったこと、なんでも書いてたの' },
+  { who:'kiki',     e:'surprise', t:'あれま……。このページ、字がふたつありまつね。丸い字と、とがった字' },
+  { who:'mua',      e:'wink',     t:'丸いのがあたし。とがってるのは……あつくん' },
+  { who:'momosuke', e:'surprise', t:'あつ！？ あつって字書くの！？ 剣しか持ってないと思ってた w' },
+  { who:'mua',      e:'happy',    t:'それ本人に言ったら怒るやつｗ' },
+  { who:'mua',      e:'normal',   t:'これね、歌なの。あたしが何行か書いたら、あつくんが続きを書いて……2人で、かわりばんこに作ってた' },
+  { who:'kiki',     e:'normal',   t:'途中で終わってまつね。最後のほうのページが、白いまま' },
+  { who:'mua',      e:'troubled', t:'魔王のお城に入る前の夜に書いたのが最後。……そのあと、ばたばたしちゃって' },
+  // ---- 帳面の1ページ目 ----
+  { who:'atsu',     e:'normal',   atsu:'with', t:'それ、まだ持ってたんだ' },
+  { who:'mua',      e:'surprise', atsu:'with', t:'うわっ！？ あつくん、いつからいたの！？' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'「とがった字」のあたりから笑' },
+  { who:'momosuke', e:'angry',    atsu:'with', t:'ほぼ最初からじゃん！！' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'てか、なつかしいな。1行目、みゅあだよね。「知らない街を駆け抜けて」' },
+  { who:'mua',      e:'surprise', atsu:'with', t:'覚えてるの！？' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'覚えてるよ。旅に出て最初の夜。みゅあ、強がってたくせに、ずっと空見てたじゃん' },
+  { who:'mua',      e:'troubled', atsu:'with', t:'そ、それは……見たこともない空だったんだもん！' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'で、俺の行が「傷だらけの剣を握り」。あのころの俺、まじで行き先とか考えてなかったわ笑' },
+  { who:'kiki',     e:'normal',   atsu:'with', t:'あっくんは、いつも、いちばん前でちたからね' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'守るもんとか、べつになかったしね。……でも W.o.F に、帰る場所ができた。それはまじで助かった' },
+  { who:'mua',      e:'normal',   atsu:'with', t:'あつくん……' },
+  { who:'momosuke', e:'troubled', atsu:'without', t:'あつ、いまどこにいるんだろうね。……これじゃ続き、書けないじゃん' },
+  { who:'mua',      e:'normal',   atsu:'without', t:'1行目はあたし。「知らない街を駆け抜けて」。旅に出て、最初の夜に書いたの' },
+  { who:'mua',      e:'wink',     atsu:'without', t:'見たこともない空で、ほんとはちょっと怖かったんだけど……強がってた！' },
+  { who:'kiki',     e:'normal',   atsu:'without', t:'あっくんの行は……「傷だらけの剣を握り」。あっくんらしいでつね' },
+  { who:'mua',      e:'troubled', atsu:'without', t:'あのころのあつくん、自分には守るものなんてないって、よく言ってたの。だから W.o.F が、あつくんの帰る場所になればいいなって、ずっと思ってた' },
+  // ---- 夜: あのころの思い出 ----
+  { bg:'monhero_night', who:'mua', e:'happy', fxText:'帳面をめくるたびに、あのころの夜がよみがえる', holdMs:2500, t:'焚き火を囲んで、くだらない夢の話して……朝まで笑ってたよね' },
+  { who:'momosuke', e:'happy',    t:'あったあった！ ももが「お城に住む！」って言ったら、みんな大笑いしたやつ w' },
+  { who:'kiki',     e:'happy',    t:'雨の夜もありまちたね。テントがひとつしかなくて、みんなで、ぎゅうぎゅうでちた' },
+  { who:'atsu',     e:'troubled', atsu:'with', t:'勝てない敵にも、何回も挑んだな。傷ばっか増えてさ' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'それでも前向けたのは、振り向いたら、みんながいたからだよ。……みゅあも' },
+  { who:'mua',      e:'troubled', atsu:'without', t:'勝てない敵にも何回も挑んで、そのたびに傷が増えて……' },
+  { who:'mua',      e:'normal',   atsu:'without', t:'それでも前を向けたのはね、振り向いたら、みんながいたから' },
+  { who:'kiki',     e:'surprise', t:'……いまの言葉、そのまま帳面の続きになりそうでつ' },
+  { who:'mua',      e:'excited',  t:'ほんとだ！ 書こ書こ！' },
+  // ---- 帳面の続き ----
+  { who:'atsu',     e:'normal',   atsu:'with', fxText:'白かったページが、少しずつ埋まっていく', t:'いちばん盛り上がるところは、みゅあと俺で交代にしよ。最初のころと同じで' },
+  { who:'mua',      e:'happy',    atsu:'with', t:'うん！ じゃあ、あたしから。「同じ空を越えてゆこう」……どう？' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'いいじゃん。じゃ、俺は「必ず君を見つける」' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'だれかが迷子になったら、俺が見つけに行く。W.o.F は昔からそうだったじゃん' },
+  { who:'momosuke', e:'angry',    atsu:'with', t:'……それ、ももが雪の山で迷子になったときのこと言ってる！？' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'言ってない言ってない笑' },
+  { who:'mua',      e:'normal',   atsu:'with', t:'最後のほうに「もしもあの日 出会わなければ」って入れたいな' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'出会ってなかったら、俺はたぶん、いまここにいないな' },
+  { who:'mua',      e:'normal',   atsu:'without', fxText:'白かったページが、少しずつ埋まっていく', t:'あたしの行は「同じ空を越えてゆこう」。あつくんの行は……空けておこ' },
+  { who:'kiki',     e:'normal',   atsu:'without', t:'歌の「君」は、W.o.F のみんなのことでつね' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'うん。はるちゃんも、デロチーも、もももね。みんなに向けた歌にしたいの' },
+  { who:'mua',      e:'normal',   atsu:'without', t:'最後のほうに「もしもあの日 出会わなければ」って入れたいの。出会ってなかったら、あたし、こんなに笑ってなかったと思うから' },
+  { who:'kiki',     e:'happy',    t:'……すてきでつ' },
+  // ---- あつに会っていない人: 次の朝の旗 ----
+  { who:'mua',      e:'normal',   atsu:'without', t:'帳面、W.o.F の旗のとこに置いとこ。……あつくん、昔から旗だけは見つけるから' },
+  { bg:'monhero_plaza', who:'momosuke', e:'surprise', atsu:'without', fxText:'次の朝。旗のそばの帳面の、白いページが埋まっていた', holdMs:2500, t:'みゅあねぇ！！ 帳面、続きが書いてある！！' },
+  { who:'kiki',     e:'surprise', atsu:'without', t:'とがった字……。あっくんの字でつ' },
+  { who:'mua',      e:'surprise', atsu:'without', t:'「必ず君を見つける」……「出会ってなかったら、俺はたぶん、いまここにいない」……' },
+  { who:'momosuke', e:'angry',    atsu:'without', t:'夜中に来て、書くだけ書いて帰ったの！？ 顔ぐらい見せてよ！！' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'……やっぱり、どこかで見てるんだ。あつくん' },
+  // ---- 曲の名前 ----
+  { who:'momosuke', e:'normal',   t:'で、曲の名前は？' },
+  { who:'mua',      e:'normal',   t:'あのころ、みんなバラバラの場所から来たのに、見上げてたのは同じ空だったの' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'で、これからも同じ空の下で、その先まで行く。……「Beyond the Same Sky」' },
+  { who:'mua',      e:'excited',  atsu:'with', t:'それ！ それでいこ！' },
+  { who:'kiki',     e:'surprise', atsu:'without', t:'みゅあちん、最後のページに、なにか書いてありまつ' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'「Beyond the Same Sky」……。同じ空の、その先へ。……うん、これにしよ！' },
+  { who:'mua',      e:'wink',     t:'帳面のいちばん最後は、2人とも同じこと書いてたんだ。「ねぇ 次はどこへ行こうか」って' },
+  // ---- お披露目(ここから曲をこの曲へ) ----
+  { bg:'monhero_plaza', bgm:'melo_beyond_the_same_sky', who:'mua', e:'happy', atsu:'with', fxText:'ふたりの声が、かわりばんこに広場へひびく', holdMs:3000, t:'……♪' },
+  { bg:'monhero_plaza', bgm:'melo_beyond_the_same_sky', who:'mua', e:'happy', atsu:'without', fxText:'みゅあの歌と、帳面に残されていた歌声が、かわりばんこに広場へひびく', holdMs:3000, t:'……♪' },
+  { who:'momosuke', e:'crying',   t:'……なにこれ、ずるい。泣くじゃん……' },
+  { who:'kiki',     e:'crying',   t:'焚き火の夜のにおいがしまつ……♪♪' },
+  { who:'atsu',     e:'troubled', atsu:'with', t:'……照れるから、そんな見ないで笑' },
+  // ---- {name}へ(このあと締めの札) ----
+  { who:'mua',      e:'excited',  t:'{name}！ あたしとあつくんの曲、モンビーに入れてもらったよ！' },
+  { who:'atsu',     e:'excited',  atsu:'with', t:'MASTER は叩きごたえあるよ。HELL は……まじで本気で来て笑' },
+  { who:'mua',      e:'wink',     atsu:'without', t:'帳面のすみに、あつくんの字で「HELL は本気で来い」って書いてあった！ ……だから、かなり難しいよｗ' },
+  { who:'mua',      e:'happy',    t:'ショートもあるから、まずはそっちからでもいいよ٩(ˊᗜˋ*)و' },
+  { who:'atsu',     e:'normal',   atsu:'with', t:'同じ空の下で、待ってるから' },
+  { who:'mua',      e:'happy',    t:'いっしょに、その先まで行こ！' },
+];
+const BEYOND_SAME_SKY_STORY_CALLS = { mua: 'あつくん／ひめちん／もも', kiki: 'みゅあちん／あっくん', momosuke: 'みゅあねぇ／あつ', atsu: 'みゅあ／もも' };
+// ---------- えるびんの歌のお話「砂の向こうの歌 ～Desert Crown～」(2026-11-21 社長 r1119-079・社長が全文を読んで「全部おすすめで」OK) ----------
+// 新曲 Desert Crown は、えるびんが作った曲という設定。動機は「みんなが曲を作っていて、自分もやってみたくなった」(社長)。台本の説明は docs/progress/desert-crown-story/script.md
+// 歌詞の「君」は、この世界で迎えてくれたみんな(仲間の歌)。石油王かどうかはぼかしたまま(向こうでも「なぜか王様あつかい」とだけ言う)。帰り方は「まだ分からない・今はこの道を行きたい」
+// 「同じ空の先へ」(beyond_same_sky_story)を見たあと、次に HOME に着いたときに流れる(60-app)。あつに会っていない人には、あつの行の代わりにソラシド・ドラが話す
+// お披露目の行から曲をこの曲(melo_desert_crown)へ替える。曲の BGM がまだ無い版では bgm は無視され、いつものお話の曲のまま
+const DESERT_CROWN_STORY = [
+  // ---- 夕方の広場: やってみたくなった ----
+  { bg:'monhero_plaza_evening', who:'mua', e:'happy', fxText:'お披露目のあとの広場。みんな、まだ歌を口ずさんでいる', holdMs:2500, t:'はー、楽しかった！ ひめちんの曲に、あたしたちの帳面の歌……モンヒロビート、どんどん増えてくね♪' },
+  { who:'kiki',     e:'happy',    t:'みゅあちんたちの歌、焚き火の夜のにおいがしまちた♪♪' },
+  { who:'erubin',   e:'normal',   t:'……いいね、ふたりとも。自分の曲があるって' },
+  { who:'momosuke', e:'surprise', t:'えるちゃん、いまの言い方……もしかして、うらやましい？' },
+  { who:'erubin',   e:'troubled', t:'うーん……正直、ちょっとね笑 みんなが作ってるの見てたら、俺もやってみたくなっちゃったかな' },
+  { who:'mua',      e:'excited',  t:'まぢ！？ るびちんも作るの！？ 聞きたすぎる！' },
+  { who:'atsu',     e:'wink',     atsu:'with',    t:'エルちゃんの曲とか、絶対かっこいいやつじゃん笑' },
+  { who:'sorashido', e:'excited', atsu:'without', t:'えるさんの曲！？ 自分、計算ならいくらでも手伝います・・・！' },
+  { who:'kyuko',    e:'happy',    t:'ほい、えるニキの曲〜。絶対しぶいやつだねぇw' },
+  { who:'dra',      e:'excited',  t:'ふむ。ビンビンの曲なら、石油王の曲だな！' },
+  { who:'erubin',   e:'happy',    t:'だから石油王じゃないって笑 ……まだ1文字も書いてないし、気長に待っててね' },
+  // ---- 夜: ききの問いかけ ----
+  { bg:'monhero_night', who:'erubin', e:'troubled', fxText:'夜。えるびんがひとり、白い紙を前にペンを止めている', holdMs:2500, t:'……やってみたいって言ったのは俺なんだけどね。何を書けばいいのかな🤔' },
+  { who:'kiki',     e:'normal',   t:'えるびんさん。お茶、持ってきまちた' },
+  { who:'erubin',   e:'surprise', t:'ききさん。ありがとう、助かるよ☺️' },
+  { who:'kiki',     e:'wink',     t:'最初は、私もそうでちた。頭の中では鳴っているのに、言葉にならなくて' },
+  { who:'kiki',     e:'normal',   t:'……えるびんさん、ひとつ聞いてもいいでつか。この曲を聞いた人に、どんな気持ちになってほしいでつか？' },
+  { who:'erubin',   e:'surprise', t:'……そう来たか笑 俺がききさんに聞いたこと、そのまま返されちゃった' },
+  { who:'kiki',     e:'happy',    t:'あのとき、あの言葉で、私の曲は動き出したので。今度は私の番でつ' },
+  { who:'erubin',   e:'normal',   t:'……そうだね。じゃあ、俺がいちばんよく知ってる景色から、話してみようかな' },
+  // ---- 思い出: 砂の向こう ----
+  { bg:'desert_palace', who:'erubin', e:'normal', fxText:'灼けた風。砂の向こうから朝日が昇ると、砂漠が一面、金色に光る', holdMs:2500, t:'……こっちに来る前にいた所はね、こんな景色だったんだ' },
+  { who:'erubin',   e:'normal',   t:'白い宮殿があって、静かで、ほしいものは何でもそろってた' },
+  { who:'erubin',   e:'troubled', t:'でも、なんでだろうね。胸の奥は、ずっと空いたままだったかな' },
+  { who:'erubin',   e:'troubled', t:'向こうでも、なぜかみんなに王様あつかいされててさ。名前で呼んでくれる人は、あんまりいなかったんだよね' },
+  // ---- 夜: 残っている名前 ----
+  { bg:'monhero_night', who:'kiki', e:'troubled', t:'えるびんさん……' },
+  { who:'erubin',   e:'happy',    t:'でもね、こっちに落ちてきた日。みんな、会って1分で呼び名つけてくれたでしょ笑' },
+  { who:'erubin',   e:'happy',    t:'るびちん、えるニキ、えるちゃん、ビンビン……。ききさんの「えるびんさん」もね' },
+  { who:'erubin',   e:'normal',   t:'あれ、うれしかったんだよね。空いてた所に、みんなの呼ぶ声が残ってる感じがして' },
+  { who:'kiki',     e:'surprise', t:'……いまの言葉、そのまま歌になりそうでつ' },
+  { who:'erubin',   e:'wink',     t:'だよね。今、俺もそう思った笑' },
+  { who:'erubin',   e:'normal',   fxText:'えるびんのペンが、静かに動き出す', holdMs:2000, t:'たくさん書かなくていいかな。言葉は少なくても、ちゃんと伝わる歌にしたいね' },
+  // ---- 次の日の広場: みんなで仕上げる ----
+  { bg:'monhero_plaza', who:'mua', e:'excited', t:'るびちん、歌詞できたってまぢ！？ 見せて見せて！' },
+  { who:'erubin',   e:'troubled', t:'まだ途中だよ笑 ……「世界が俺を王と呼んでも、君の前ではただの男」' },
+  { who:'momosuke', e:'surprise', t:'……え、ちょっと待って。かっこいい……！' },
+  { who:'kyuko',    e:'wink',     t:'「王と呼んでも」って、俺らが石油王って呼んでるのも入ってるよねぇ？ w' },
+  { who:'erubin',   e:'happy',    t:'入ってるよ笑 向こうでもこっちでも王様あつかいだけど、みんなの前だと普通の人でいられるからね' },
+  { who:'momosuke', e:'wink',     t:'次のとこは……「すべてを得ても、君だけは値札のない宝」。……値札って言うあたり、やっぱり石油王っぽい w' },
+  { who:'erubin',   e:'troubled', t:'そこは許して笑 ……お金で買えないものって言いたかったんだよね' },
+  { who:'atsu',     e:'normal',   atsu:'with',    t:'砂漠の曲なら、速くて、砂嵐みたいに駆け抜ける感じがいいんじゃない？' },
+  { who:'dra',      e:'normal',   atsu:'without', t:'ふむ。砂漠の曲なら、砂嵐みたいにびゅーっと駆け抜けるのがいいぞ' },
+  { who:'sorashido', e:'excited', t:'砂嵐ですね！ 自分、速さを計算してみます。サビでいちばん風が強くなるように……こんな感じです・・・！' },
+  { who:'dra',      e:'happy',    t:'夜食も持ってきたぞ。砂漠っぽく、ナツメヤシ入りのおにぎりだ。えへへ' },
+  { who:'erubin',   e:'happy',    t:'ドラちゃん、それ合うのかな笑 ……でも、ありがとね。みんな、さすがだよ' },
+  // ---- 曲の名前 ----
+  { who:'mua',      e:'normal',   t:'で、曲の名前は？' },
+  { who:'erubin',   e:'normal',   t:'「Desert Crown」にしようかなって' },
+  { who:'mua',      e:'excited',  t:'砂漠の王冠！？ やっぱ石油王ぢゃんｗ' },
+  { who:'erubin',   e:'happy',    t:'そう言われると思った笑' },
+  { who:'erubin',   e:'normal',   t:'でもね、王冠は向こうに置いてきた、って意味なんだ。最後に「王冠などなくて構わない」って入れたの' },
+  { who:'kiki',     e:'troubled', t:'……えるびんさん。もとの所に、帰りたくなったりはしないでつか？' },
+  { who:'erubin',   e:'normal',   t:'帰り方は、まだ分からないけどね。……今は、みんなと選んだこの道を行きたいかな' },
+  { who:'erubin',   e:'wink',     t:'だから最後は「君と行く」。それだけで、十分かなって思ったんだよね' },
+  { who:'momosuke', e:'crying',   t:'……えるちゃん、ずるい。それ、泣くやつじゃん……' },
+  // ---- お披露目(ここから曲をこの曲へ) ----
+  { who:'erubin',   e:'normal',   bgm:'melo_desert_crown', fxText:'金色の砂漠の夜を、砂嵐が駆け抜けていくような音が広場にひびく', holdMs:3000, t:'……♪' },
+  { who:'mua',      e:'excited',  t:'るびちん、まぢかっこよすぎる……！' },
+  { who:'kiki',     e:'crying',   t:'砂の向こうの、金色の朝が見えまちた……♪♪' },
+  { who:'dra',      e:'crying',   t:'おで、こういうの弱いんだよ……えへへ' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'エルちゃん、ふだん静かなのに、曲だと熱いじゃん笑' },
+  { who:'erubin',   e:'happy',    t:'……照れるね笑 みんな、ありがとう。楽しかったー！' },
+  // ---- {name}へ(このあと締めの札) ----
+  { who:'erubin',   e:'normal',   t:'{name}。俺の曲、モンヒロビートに入れてもらったよ' },
+  { who:'erubin',   e:'wink',     t:'砂嵐みたいに速いところもあるから、無理のないように、ゆっくりでいいからね' },
+  { who:'erubin',   e:'happy',    t:'遊んでもらえたら、うれしいな。これからも、よろしくね☺️' },
+];
+const DESERT_CROWN_STORY_CALLS = { mua: 'るびちん／ひめちん', kiki: 'えるびんさん／みゅあちん', momosuke: 'えるちゃん', dra: 'ビンビン', atsu: 'エルちゃん', kyuko: 'えるニキ', sorashido: 'えるさん', erubin: 'ききさん／ドラちゃん' };
 const EVENT_REPLAYS = [
+  // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076)。新曲 Beyond the Same Sky と一緒に出る。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は BEYOND_SAME_SKY_STORY
+  { id: 'beyond_same_sky_story', date: '2026-11-22 12:00', title: '同じ空の先へ ～Beyond the Same Sky～', script: BEYOND_SAME_SKY_STORY, calls: BEYOND_SAME_SKY_STORY_CALLS, unlockedKey: 'beyondSameSkyStorySeen', group: 'wof_song' },
+  // えるびんの歌のお話(2026-11-21 社長 r1119-079)。新曲 Desert Crown と一緒に出る。「同じ空の先へ」を見たあと、次に HOME に着いたときに1回流れ、あとは回想から読める。台本は DESERT_CROWN_STORY
+  { id: 'desert_crown_story', date: '2026-11-22 12:00', title: '砂の向こうの歌 ～Desert Crown～', script: DESERT_CROWN_STORY, calls: DESERT_CROWN_STORY_CALLS, unlockedKey: 'desertCrownStorySeen', group: 'erubin_song' },
   // ききのツインテールのお話(2026-11-20 社長)。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は KIKI_TWINTAIL_STORY
   { id: 'kiki_twintail_2026_11', date: '2026-11-20 12:00', title: 'イメチェン ～ききのツインテール～', script: KIKI_TWINTAIL_STORY, calls: KIKI_TWINTAIL_STORY_CALLS, unlockedKey: 'kikiTwintailStorySeen', group: 'update' },
   // きゅうこの冬服のお話(2026-11-16 社長)。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は KYUKO_WINTER_STORY

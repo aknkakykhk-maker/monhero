@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7980980b1f5af64
+// source-sha256: 6bb90d36d3c115f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -723,6 +723,18 @@ const EVENT_REPLAY_GROUPS = Object.freeze([{
   label: 'モンヒロサクセス',
   note: '新しい育成場のお話',
   color: '#4ade80'
+}, {
+  id: 'wof_song',
+  emoji: '🌌',
+  label: 'あつとみゅあの歌',
+  note: 'W.o.F のころの思い出の歌のお話',
+  color: '#a78bfa'
+}, {
+  id: 'erubin_song',
+  emoji: '🏜️',
+  label: 'えるびんの歌',
+  note: 'えるびんが初めて作った曲のお話',
+  color: '#d6b47a'
 }, {
   id: 'kiki_song',
   emoji: '🎹',
@@ -6497,6 +6509,27 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_beyond_the_same_sky',
+  name: 'Beyond the Same Sky',
+  creator: 'あつ × みゅあ',
+  src: 'audio/bgm-beyond-the-same-sky.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_beyond_the_same_sky_short',
+  name: 'Beyond the Same Sky short ver.',
+  creator: 'あつ × みゅあ',
+  src: 'audio/bgm-beyond-the-same-sky-short.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_desert_crown',
+  name: 'Desert Crown',
+  creator: 'えるびん',
+  src: 'audio/bgm-desert-crown.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -7781,6 +7814,8 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  beyondSameSkyStoryEvent: 'original_event_01',
+  desertCrownStoryEvent: 'original_event_01',
   sparklingPinkStoryEvent: 'melo_sparkling_pink_overture',
   kikiTwintailStoryEvent: 'melo_seasons_of_a_little_plaza',
   erubinJoinStoryEvent: 'original_event_01',
@@ -7883,6 +7918,8 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  beyond_same_sky_story: 'beyondSameSkyStoryEvent',
+  desert_crown_story: 'desertCrownStoryEvent',
   sparkling_pink_kiki_story: 'sparklingPinkStoryEvent',
   kiki_twintail_2026_11: 'kikiTwintailStoryEvent',
   erubin_join_2026_11: 'erubinJoinStoryEvent',
@@ -8271,6 +8308,8 @@ const Audio_ = (() => {
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
+    "audio/bgm-beyond-the-same-sky-short.mp3": "fc0c43a87755",
+    "audio/bgm-beyond-the-same-sky.mp3": "4719843e73e2",
     "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
     "audio/bgm-black-shout.mp3": "03a627c682de",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
@@ -8283,6 +8322,7 @@ const Audio_ = (() => {
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
+    "audio/bgm-desert-crown.mp3": "1a440c813bbb",
     "audio/bgm-dr-wily-stage-1-okkussenman.mp3": "1653c82ce75e",
     "audio/bgm-dr-wily-stage-1.mp3": "80f1ad0c564c",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
@@ -15352,6 +15392,9 @@ const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const KYUKO_WINTER_STORY_ID = 'kyuko_winter_2026_11';
 const KIKI_TWINTAIL_STORY_ID = 'kiki_twintail_2026_11';
+const BEYOND_SAME_SKY_STORY_ID = 'beyond_same_sky_story';
+const DESERT_CROWN_STORY_ID = 'desert_crown_story';
+const DESERT_CROWN_AFTER_STORY_ID = 'beyond_same_sky_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -54179,7 +54222,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
+    'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:desert_crown': [['excited', '1:07からいちばん強いの！ 最後までずっと全開なのー♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
     'listen:eiyuu_no_akashi': [['excited', '0:27から強めが続いて、1:11でいちばん強くなるぢゃん！ 一気に来るよ♪']],
@@ -54271,7 +54316,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
+    'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:desert_crown': [['normal', '頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
     'listen:eiyuu_no_akashi': [['normal', '強い音が68%もあるのに、0:13で静かになる落差がきれいです♪']],
@@ -54363,7 +54410,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
+    'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:desert_crown': [['excited', '1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
     'listen:eiyuu_no_akashi': [['excited', '1:11でいちばん強くなって、1:40までずっと強い！！ ももはここが大好き♡']],
@@ -54455,7 +54504,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
+    'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:desert_crown': [['happy', 'BPM100でじっくり進む旅だな。2分半、砂漠を越えるぞ']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162で強い音68%だ。最初から戦闘態勢って感じだな']],
@@ -54547,7 +54598,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
+    'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:desert_crown': [['happy', '2:02からもう一回いちばん強くなって、そのまま締めるのいいね']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
     'listen:eiyuu_no_akashi': [['happy', '0:01から強めで始まるの、待たせない感じでいいね笑']],
@@ -54639,7 +54692,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
+    'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:desert_crown': [['happy', '静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
     'listen:eiyuu_no_akashi': [['happy', 'BPM162、強い音68%。0:13の静けさが短いから、休む暇なく進むんだよね〜']],
@@ -54731,7 +54786,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
+    'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:desert_crown': [['normal', 'BPM100です。強く打つ音が40%・・・！ どっしりした音です']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
     'listen:eiyuu_no_akashi': [['normal', 'BPM162です。強い音68%に軽い音3%、攻めの配分です']],
@@ -54823,7 +54880,9 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
+    'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:desert_crown': [['normal', '始まりの静かなところ、落ち着いて入っていけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
     'listen:eiyuu_no_akashi': [['normal', '1:40からも強めで終わるね。最後まで気を抜けないかな']],
@@ -61919,7 +61978,9 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   gourmet_race_64: 500,
   dr_wily_stage_1: 500,
   erfolg: 500,
-  amakakeru_tsubasa: 500
+  amakakeru_tsubasa: 500,
+  beyond_the_same_sky: 500,
+  desert_crown: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -61929,7 +61990,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   gourmet_race_dx: 'gourmet_race_64',
   eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
   dr_wily_stage_1_okkussenman: 'dr_wily_stage_1',
-  erfolg_piano: 'erfolg'
+  erfolg_piano: 'erfolg',
+  beyond_the_same_sky_short: 'beyond_the_same_sky'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -244995,7 +245057,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID, KIKI_TWINTAIL_STORY_ID, BEYOND_SAME_SKY_STORY_ID, DESERT_CROWN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -245522,6 +245584,19 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KIKI_TWINTAIL_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || KIKI_TWINTAIL_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(BEYOND_SAME_SKY_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(BEYOND_SAME_SKY_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || BEYOND_SAME_SKY_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(DESERT_CROWN_STORY_ID)) return;
+    if (!rhythmEventStorySeen.includes(DESERT_CROWN_AFTER_STORY_ID) || rhythmEventStoryStartedRef.current.includes(DESERT_CROWN_AFTER_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(DESERT_CROWN_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || DESERT_CROWN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
@@ -248800,6 +248875,8 @@ function MonsterHeroGame() {
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     kyukoWinterStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_WINTER_STORY_ID),
     kikiTwintailStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KIKI_TWINTAIL_STORY_ID),
+    beyondSameSkyStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEYOND_SAME_SKY_STORY_ID),
+    desertCrownStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(DESERT_CROWN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -263316,7 +263393,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「初めての曲」のお話 BGM'], ['kikiTwintailStoryEvent', 'ききの「ツインテール」のお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['beyondSameSkyStoryEvent', 'あつとみゅあの歌のお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「初めての曲」のお話 BGM'], ['kikiTwintailStoryEvent', 'ききの「ツインテール」のお話 BGM'], ['desertCrownStoryEvent', 'えるびんの「砂の向こうの歌」のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
