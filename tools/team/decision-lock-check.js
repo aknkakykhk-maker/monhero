@@ -110,6 +110,10 @@ function behaviours() {
     const allow = (settings.permissions && settings.permissions.allow) || [];
     return ['execute_sql', 'apply_migration'].filter(n => !allow.some(a => String(a).endsWith(n))).map(n => `.claude/settings.json の permissions.allow に ${n} が無い(SQL のたびに社長へ許可の問いが出る)`);
   };
+  B['newsession の出力に permission_mode: auto が出る'] = () => {
+    const r = run('tools/ctx.js', ['newsession', 'dev', '錠の検査', '--name', '検査', '--kind', 'build']);
+    return /permission_mode: auto/.test(r.stdout || '') ? [] : ['tools/team/newsession.js の出力に permission_mode: auto が無い(部の会話が「ふつう」で作られ、社長に許可の画面が出る・r1119-086)'];
+  };
   B['部署のサブエージェントはフックが止める'] = () => {
     const p = [];
     const { judge } = require('../hooks/no-subagent-in-dept.js');

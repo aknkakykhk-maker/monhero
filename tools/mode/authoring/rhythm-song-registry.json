@@ -1979,6 +1979,63 @@
    "sustainScale": {
     "MASTER": 0.2
    }
+  },
+  "beyond_the_same_sky": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-beyond-the-same-sky.mp3",
+   "chartRevision": 40,
+   "audioSha256": "4719843e73e2a77a6f8d98648feb5b9530ccaa59a4d86515ea4d8d0f77c6761a",
+   "durationMs": 260160,
+   "analyzedTiming": {
+    "bpm": 178,
+    "beatZeroMs": 2058,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "mild",
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "beyond_the_same_sky_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-beyond-the-same-sky-short.mp3",
+   "chartRevision": 40,
+   "audioSha256": "fc0c43a8775570978221f735b2bd415ed18af627377504df79ca6d5071543c76",
+   "durationMs": 153432,
+   "analyzedTiming": {
+    "bpm": 178,
+    "beatZeroMs": 2058,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "masterDensity": 1.2,
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
+  },
+  "desert_crown": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-desert-crown.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1a440c813bbb8adb634a3c645e562a3c02e57a97a83151cd4d59440dd233048d",
+   "durationMs": 153624,
+   "analyzedTiming": {
+    "bpm": 99.98,
+    "beatZeroMs": 2392,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "sustainScale": {
+    "MASTER": 0.7
+   },
+   "chartIntensityByDifficulty": {
+    "HELL": "extreme"
+   }
   }
  }
 }

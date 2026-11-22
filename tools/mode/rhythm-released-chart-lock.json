@@ -391,6 +391,16 @@
   "amakakeru_tsubasa/hard": "f4923a42b1c9b0d8",
   "amakakeru_tsubasa/expert": "1038a23ed5da01f2",
   "amakakeru_tsubasa/master": "5613f661a7834887",
+  "beyond_the_same_sky/easy": "e28bfd89d86078aa",
+  "beyond_the_same_sky/normal": "aa4f942b81fae2c2",
+  "beyond_the_same_sky/hard": "7378982020dd476d",
+  "beyond_the_same_sky/expert": "fd2ffd03a9f026a0",
+  "beyond_the_same_sky/master": "45ed2424efef9ef7",
+  "beyond_the_same_sky_short/easy": "243f4f846aa14db1",
+  "beyond_the_same_sky_short/normal": "3d0a892da99ad12d",
+  "beyond_the_same_sky_short/hard": "1ad292bd42fd3ce9",
+  "beyond_the_same_sky_short/expert": "980fa0f61461396f",
+  "beyond_the_same_sky_short/master": "7e99975ee3f6a876",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -479,8 +489,16 @@
   "erfolg/hell": "38991ec2bf0b2a01",
   "erfolg_piano/hell": "af6f6690583fc26c",
   "amakakeru_tsubasa/hell": "34a2b5e26dee1f49",
+  "beyond_the_same_sky/hell": "b08b806bee480ea4",
+  "beyond_the_same_sky_short/hell": "04c2351152a32ab5",
   "megalovania_sans/hell": "b54acba215aae1da",
-  "megalovania_smash/hell": "2ba3b2a5cd05b394"
+  "megalovania_smash/hell": "2ba3b2a5cd05b394",
+  "desert_crown/easy": "78ff62f3f59453f5",
+  "desert_crown/normal": "8900d3fe0631d6e5",
+  "desert_crown/hard": "c751db1e76ca1edd",
+  "desert_crown/expert": "a17456272bd683d3",
+  "desert_crown/master": "ef80bc9a8a523fb5",
+  "desert_crown/hell": "145f323554154f66"
  },
  "history": [
   {
@@ -1036,6 +1054,36 @@
     "gourmet_race_dx/expert",
     "rebellion_short/hell",
     "hopes_and_dreams/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 01:13",
+   "reason": "新曲 Beyond the Same Sky(原曲・short ver.)を公開",
+   "changed": [
+    "beyond_the_same_sky/easy",
+    "beyond_the_same_sky/normal",
+    "beyond_the_same_sky/hard",
+    "beyond_the_same_sky/expert",
+    "beyond_the_same_sky/master",
+    "beyond_the_same_sky_short/easy",
+    "beyond_the_same_sky_short/normal",
+    "beyond_the_same_sky_short/hard",
+    "beyond_the_same_sky_short/expert",
+    "beyond_the_same_sky_short/master",
+    "beyond_the_same_sky/hell",
+    "beyond_the_same_sky_short/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 02:09",
+   "reason": "新曲 Desert Crown を公開",
+   "changed": [
+    "desert_crown/easy",
+    "desert_crown/normal",
+    "desert_crown/hard",
+    "desert_crown/expert",
+    "desert_crown/master",
+    "desert_crown/hell"
    ]
   }
  ]
