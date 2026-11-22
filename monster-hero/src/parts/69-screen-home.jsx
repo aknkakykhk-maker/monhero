@@ -538,9 +538,37 @@ function HomeScreen({
             設定「ホームの助手コメント」が「切」のときは、この枠ごと出さない(2026-11-17 あっくん) */}
         {homeComment.on&&<div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact menu={typeof onOpenAssistantChat==='function'?[{ key:'chat', label:'💬 おしゃべりする', onClick:onOpenAssistantChat, attr:{ 'data-home-assistant-chat':'' } }]:null}/>
           {/* 「💬 おしゃべり」は吹き出しの中に重ねず、吹き出しを押したときのメニューに入れた(押し所が2つで違いが分からなかった。r1119-050 窓-36) */}
+          <HomeAssistantCommentToggle on/>
         </div>}
+        {/* 「切」のときも、HOME から1押しで吹き出しを戻せる小さな顔のボタンを残す(r1119-081 社長「ホームの助手のオンオフはホーム上で出し入れできるようにして」) */}
+        {!homeComment.on&&<div className={`mh-home-assistant-fold${spotClass('assistant')}`}><HomeAssistantCommentToggle on={false}/></div>}
       </main>
     
+  );
+}
+
+// HOMEの助手コメント(吹き出し)を HOME の上で出し入れする押し所(r1119-081)。
+//   値は設定「ホームの助手コメント」と同じ HOME_ASSISTANT_COMMENT_STORE(保存キー mh_home_assistant_comment_v1)。
+//   どちらで変えても同じになる。新しい保存キーは作らない(CLAUDE.md ⑦)
+//   入 … 顔の下に小さな「隠す」 / 切 … 助手の顔の丸いボタン(押す所 44px)。押すと吹き出しが戻る
+function HomeAssistantCommentToggle({ on }) {
+  const bond = useAssistantBond();
+  const who = assistantById(assistantSceneById('home')?.assistantId || bond.assistantId || null);
+  const color = who.accent || ASSISTANT_FALLBACK.accent;
+  if (on) {
+    return (
+      <button type="button" data-home-assistant-toggle="hide" onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(false)}
+        aria-label={`${who.name}のコメントを隠す`} className="mh-home-assistant-hide active:scale-95">
+        <span style={{ borderColor: color, color }}>隠す</span>
+      </button>
+    );
+  }
+  return (
+    <button type="button" data-home-assistant-toggle="show" onClick={() => HOME_ASSISTANT_COMMENT_STORE.setOn(true)}
+      aria-label={`${who.name}のコメントを出す`} className="mh-home-assistant-show active:scale-95">
+      <AssistantFace who={who} size={40} accent={color}/>
+      <span className="mh-home-assistant-show-mark" style={{ borderColor: color }} aria-hidden="true">💬</span>
+    </button>
   );
 }
 
