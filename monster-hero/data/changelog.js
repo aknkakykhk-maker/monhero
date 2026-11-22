@@ -85,6 +85,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-22 23:47", type:'fix', title:'きゅうこのイラストが粗く見える不具合を直しました', status:'new', group:'assistant',
+    items:[
+      '助手「きゅうこ」（通常の服）の全身イラストが粗く、顔がおかしく見える不具合がありました。',
+      '全身・バスト・顔アイコン・立ち絵のイラストを、8種類の表情すべて作り直したものに差し替えました。',
+    ],
+  },
+  {
     date: "2026-11-22 23:14", type:'update', group:'rhythm', status:'new',
     title:'Beyond the Same Sky の MASTER と HELL が、2人の歌い分けに合わせた譜面になりました',
     items:[
