@@ -1,6 +1,6 @@
 # `tools/mode/`(譜面生成ツール MHB CHART ENGINE など)を触るときの決まり
 
-ルートの [`CLAUDE.md`](../../CLAUDE.md) から、**この場所のファイルを触るときだけ要る決まり**を移したもの。決まりの重さはルートと同じ。
+ルートの [`CLAUDE.md`](../../CLAUDE.md) から移した、**ここを触るときだけ要る決まり**(重さはルートと同じ)。
 移した一覧: [`docs/rules/README.md`](../../docs/rules/README.md)「節の置き場所」。
 
 - モンヒロビートの新曲を足すときは `rhythm-song-add` スキルを開く(⑥-3 の本文はスキルにある)
@@ -29,12 +29,11 @@
 同じ側の押し始めは90ms未満にしない)は `rhythm-chart-hand-rules-check.js` が見張る。**公開中の譜面のノーツを動かす・戻すとき**は
 `rhythm-overlap-reach-check.js` と手の決まりの検査も回す(#2808→#2821)。本文: `CHART_ENGINE.md`
 **HELL の交差は上下に分ける**(同じ高さのまま左右が入れ替わる「水平クロス」は作らない・2026-10-13)。同じ検査が HELL で0を見張る
-**押さえている帯の中にノーツを置かない**(2026-10-13): 同じ高さで重なる・幅1が絡む半レーンの重なりは不可(地上と空中なら同じ位置でもよい)。
-HELL と新曲の5難易度の道具が直し、同じ検査が止める(前からある譜面の上限は `rhythm-held-band-existing.json`)
+**押さえている帯の中にノーツを置かない**(2026-10-13・地上と空中なら同じ位置でもよい)。同じ検査が止める。本文: `CHART_ENGINE.md`「手の決まり」
 
 **新曲は `flowPlacement:true`**(手の流れを狙う配置・既定は切・2026-10-21)。本文: `CHART_ENGINE.md`
 
-**段変えの仕上げ(`settleLevelSwitches`・`rhythm-hell-mix.js`)は opt-in の後処理**(2026-11-22): SONGS に `levelSettle:true` を書いた曲だけに効き、書いていない曲・フラグ無しでは従来の測定と完全一致させる。使うときは曲の PR に同梱し、既存曲の測定が変わらない回帰記録を PR に付ける。段変えの許す数は `LEVEL_SWITCH_ALLOW`(公開 HELL 全80譜面の実績の帯ごと最大値・2026-11-22 社長決定 r1119-090)
+**段変えの仕上げ(`settleLevelSwitches`)は `levelSettle:true` を書いた曲だけの後処理**(2026-11-22・r1119-090)。本文: `CHART_ENGINE.md`「段変えの仕上げ」
 
 **参考動画がない限り、各難易度は難易度ごとに作る**(2026-10-13)。上の難易度を下の難易度の写し+割増しで作らない。
 HELL は `rhythm-chart-v3-generate.js --difficulty HELL` で曲の解析から骨組みを作り、`rhythm-hell-mix.js` の `source:'audio'` で空中を付ける(新しい HELL は `precision:true`)。本文: `CHART_ENGINE.md`

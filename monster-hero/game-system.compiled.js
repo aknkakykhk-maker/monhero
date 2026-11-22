@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 332e076eb0b4941b
+// source-sha256: a1cf5ca15d5ea3ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38614,6 +38614,19 @@ const RhythmSongSelect = ({
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
+  const [viewWide, setViewWide] = React.useState(() => orientationIsLandscape());
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(orientation: landscape)');
+    const onChange = () => setViewWide(orientationIsLandscape());
+    onChange();
+    const unsubscribeRotation = RHYTHM_VIEW_ROTATION.subscribe(onChange);
+    if (mql.addEventListener) mql.addEventListener('change', onChange);else mql.addListener?.(onChange);
+    return () => {
+      unsubscribeRotation();
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange);else mql.removeListener?.(onChange);
+    };
+  }, []);
   const [artPage, setArtPage] = React.useState(0);
   const [lyricFull, setLyricFull] = React.useState(null);
   const artPagesRef = React.useRef(null);
@@ -38875,6 +38888,30 @@ const RhythmSongSelect = ({
     return () => clearTimeout(id);
   }, [loopEnabled]);
   const blocks = loopEnabled ? [0, 1, 2] : [1];
+  const versionTabs = !song ? null : (() => {
+    const versions = versionsOf(song);
+    if (versions.length < 2) return null;
+    return React.createElement("div", {
+      "data-rhythm-song-versions": true,
+      "data-rhythm-song-versions-inline": viewWide ? '1' : undefined,
+      className: viewWide ? "flex shrink-0 gap-1" : "mb-1 flex gap-1"
+    }, versions.map(item => {
+      const on = item.songId === song.songId,
+        eventVersion = eventSongIds.has(item.songId);
+      return React.createElement("button", {
+        key: item.songId,
+        type: "button",
+        "data-rhythm-song-version": item.songId,
+        "aria-pressed": on,
+        onClick: () => setSongId(item.songId),
+        className: `flex min-h-[36px] min-w-0 ${viewWide ? 'max-w-[6.5rem] px-2 text-[11px]' : 'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "truncate"
+      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
+        "aria-label": "イベント対象"
+      }, "🏆"));
+    }));
+  })();
   return React.createElement("div", {
     "data-rhythm-song-select": true,
     "data-rhythm-song-genre": genre ? genre.id : 'all',
@@ -39136,11 +39173,11 @@ const RhythmSongSelect = ({
     "data-rhythm-song-title": true,
     className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]",
     style: {
-      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, 44)
+      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, viewWide && versionsOf(song).length > 1 ? 44 + 76 * versionsOf(song).length : 44)
     }
   }, React.createElement(RhythmSongName, {
     song: song
-  })), React.createElement("button", {
+  })), viewWide && versionTabs, React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
     "aria-pressed": favoriteIds.has(song.songId),
@@ -39195,29 +39232,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'diff'
     }
-  }, (() => {
-    const versions = versionsOf(song);
-    if (versions.length < 2) return null;
-    return React.createElement("div", {
-      "data-rhythm-song-versions": true,
-      className: "mb-1 flex gap-1"
-    }, versions.map(item => {
-      const on = item.songId === song.songId,
-        eventVersion = eventSongIds.has(item.songId);
-      return React.createElement("button", {
-        key: item.songId,
-        type: "button",
-        "data-rhythm-song-version": item.songId,
-        "aria-pressed": on,
-        onClick: () => setSongId(item.songId),
-        className: `flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-      }, React.createElement("span", {
-        className: "truncate"
-      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
-        "aria-label": "イベント対象"
-      }, "🏆"));
-    }));
-  })(), React.createElement("div", {
+  }, !viewWide && versionTabs, React.createElement("div", {
     "data-rhythm-difficulty-row": true,
     className: `flex gap-1${spot('difficulty')}`
   }, available.map(item => {
@@ -46868,14 +46883,7 @@ const RhythmTapTest = ({
       className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
     }, React.createElement("h2", {
       className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden"
-    }, "RHYTHM RESULT"), React.createElement(PlayerRankGain, {
-      kind: "beat",
-      award: beatRankAward,
-      onFull: onRankBarFull,
-      onDone: onRankBarDone,
-      onStart: onRankBarStart,
-      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
-    }), React.createElement("div", {
+    }, "RHYTHM RESULT"), React.createElement("div", {
       "data-rhythm-result-summary": true,
       className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
     }, React.createElement("div", {
@@ -47134,7 +47142,14 @@ const RhythmTapTest = ({
         "data-rhythm-timing-tendency": true,
         className: `mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early ? 'border-cyan-400/30 bg-cyan-950/30 text-cyan-100' : 'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`
       }, early ? 'FASTが多めでした。少し早く叩くくせがあるようです。' : 'SLOWが多めでした。少し遅れて叩くくせがあるようです。', "気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。");
-    })())), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
+    })())), React.createElement(PlayerRankGain, {
+      kind: "beat",
+      award: beatRankAward,
+      onFull: onRankBarFull,
+      onDone: onRankBarDone,
+      onStart: onRankBarStart,
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
+    }), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
       "data-rhythm-result-celebrate": true,
       className: "my-3 text-center"
     }, React.createElement("b", {
@@ -47338,15 +47353,16 @@ const RhythmTapTest = ({
       "data-rhythm-result-orientation": true,
       className: "shrink-0"
     }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
-      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"
+      className: multi ? "grid min-w-0 flex-1 grid-cols-1 gap-2" : raidPlay ? "grid grid-cols-1 gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2"
     }, !multi && !raidPlay && React.createElement("button", {
-      className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
+      "data-rhythm-result-retry": true,
+      className: "min-h-[48px] rounded-xl border border-white/15 bg-slate-700 text-sm font-black",
       disabled: startLockRef.current,
       onClick: () => beginRun(mergeRhythmBestRecord(runRef.current?.startBest, result))
     }, "もう一度プレイ"), React.createElement("button", {
       "data-rhythm-multi-result-back": multi ? "" : undefined,
       "data-rhythm-raid-result-back": raidPlay ? "" : undefined,
-      className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
+      className: `min-h-[48px] rounded-xl bg-indigo-700 font-black ${!multi && !raidPlay ? 'text-lg shadow-[0_0_16px_rgba(99,102,241,.6)]' : ''}`,
       onClick: abort
     }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲選びへ戻る'))))))));
   }
@@ -102540,9 +102556,9 @@ function RhythmMultiScreenBody({
     onClick: openRanking,
     className: `flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`
   }, React.createElement("span", {
-    className: "text-lg"
+    className: "text-lg landscape:text-sm"
   }, "🏆"), React.createElement("span", {
-    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100"
+    className: "mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100 landscape:mt-0 landscape:text-[8px]"
   }, "ランキング"));
   const rankingWideButton = (extra = '') => rankingSupport && React.createElement("button", {
     "data-rhythm-multi-ranking": true,
