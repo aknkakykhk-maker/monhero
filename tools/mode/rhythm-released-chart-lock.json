@@ -522,7 +522,13 @@
   "kimimachi_loop/hell": "c58629c2c246d6f1",
   "zenbu_hissatsuwaza/hell": "ec77dbc8f23c77ab",
   "megalovania_sans/hell": "b54acba215aae1da",
-  "megalovania_smash/hell": "2ba3b2a5cd05b394"
+  "megalovania_smash/hell": "2ba3b2a5cd05b394",
+  "brand_new_sky/easy": "c44310cfe1d0ee73",
+  "brand_new_sky/normal": "7aa8791cde189f49",
+  "brand_new_sky/hard": "ca355bbf76083a20",
+  "brand_new_sky/expert": "5517777d4f13069f",
+  "brand_new_sky/master": "62294cd306c39171",
+  "brand_new_sky/hell": "184d3b1d09c53b39"
  },
  "history": [
   {
@@ -1182,6 +1188,18 @@
     "kimimachi_loop/expert",
     "kimimachi_loop/master",
     "kimimachi_loop/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 21:05",
+   "reason": "新曲 BRAND NEW SKY を公開",
+   "changed": [
+    "brand_new_sky/easy",
+    "brand_new_sky/normal",
+    "brand_new_sky/hard",
+    "brand_new_sky/expert",
+    "brand_new_sky/master",
+    "brand_new_sky/hell"
    ]
   }
  ]

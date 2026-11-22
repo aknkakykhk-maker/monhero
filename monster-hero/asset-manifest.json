@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b9a74d604f96",
-  "packs": {"beat":{"bytes":294745858,"count":160},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":735418813,"count":2766},"core":{"bytes":25457977,"count":25}},
+  "id": "4f29b88d5365",
+  "packs": {"beat":{"bytes":298686022,"count":162},"battle":{"bytes":402587658,"count":1560},"card":{"bytes":38085297,"count":1046},"all":{"bytes":739358977,"count":2768},"core":{"bytes":25517655,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -18,6 +18,7 @@
     "audio/bgm-black-shout.mp3": {"v":"03a627c682de","size":1310256,"pack":"beat"},
     "audio/bgm-boss-ichika.mp3": {"v":"9c8bda857de7","size":1982739,"pack":"battle"},
     "audio/bgm-boss.mp3": {"v":"a11bc8056d79","size":1660249,"pack":"battle"},
+    "audio/bgm-brand-new-sky.mp3": {"v":"b93b1a67de51","size":3600576,"pack":"beat"},
     "audio/bgm-clear-ichika.mp3": {"v":"cf8bc41a228c","size":1457964,"pack":"battle"},
     "audio/bgm-close-to-your-heart-alt.mp3": {"v":"86bbdc8872f1","size":1493725,"pack":"battle"},
     "audio/bgm-close-to-your-heart.mp3": {"v":"990493074a91","size":1442448,"pack":"beat"},
@@ -2256,6 +2257,7 @@
     "images/song-art/beyond-the-same-sky.jpg": {"v":"ecf19c624394","size":44000,"pack":"beat"},
     "images/song-art/big-bridge-no-shitou.jpg": {"v":"2a3180288c72","size":84106,"pack":"beat"},
     "images/song-art/black-shout.jpg": {"v":"2b22abc63755","size":80668,"pack":"beat"},
+    "images/song-art/brand-new-sky.jpg": {"v":"884148fad43e","size":339588,"pack":"beat"},
     "images/song-art/crazy-party-night.jpg": {"v":"cc3f31ed7b0d","size":86588,"pack":"beat"},
     "images/song-art/crossing-field.jpg": {"v":"7062766e0099","size":75222,"pack":"beat"},
     "images/song-art/departure.jpg": {"v":"fa45a696f06d","size":34272,"pack":"beat"},
@@ -2771,7 +2773,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"163706665f21","size":316761,"pack":"core"},
+    "tailwind.css": {"v":"fc61039f46a0","size":316761,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2779,12 +2781,12 @@
     "data/breeder.js": {"v":"94e44f8d7df0","size":145296,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"6606b166658a","size":6561560,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"02d20ba3fbfa","size":6619153,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
-    "data/rhythm-event.js": {"v":"d51835915ae4","size":108541,"pack":"core"},
-    "data/changelog.js": {"v":"39f79eb20e79","size":1990012,"pack":"core"},
+    "data/rhythm-event.js": {"v":"3c840d519564","size":108538,"pack":"core"},
+    "data/changelog.js": {"v":"47b9c1fc36a3","size":1990905,"pack":"core"},
     "data/help.js": {"v":"4a2a3f89e93e","size":906922,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2793,6 +2795,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"276c6944d0cd","size":12318885,"pack":"core"}
+    "game-system.compiled.js": {"v":"a959effb000e","size":12320080,"pack":"core"}
   }
 }

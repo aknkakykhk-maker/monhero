@@ -166,7 +166,7 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
     if(Date.parse(e.startAt)>=R1115_143_FROM)return true;
     const rel=O.rhythmEventBanner(e).split('?')[0];
     const file=path.join(ROOT,'monster-hero',rel);
-    return !fsx.existsSync(file)||fsx.statSync(file).size<=200*1024;
+    return !fsx.existsSync(file)||fsx.statSync(file).size<=1024*1024;
   }),withBanner.map(e=>{
     const file=path.join(ROOT,'monster-hero',O.rhythmEventBanner(e).split('?')[0]);
     return fsx.existsSync(file)?`${(fsx.statSync(file).size/1024).toFixed(0)}KB`:'?';

@@ -114,7 +114,7 @@ const FLOWER3_TARGET_POINT_BOOST = 7;
 const FLOWER3_SONG_SLOTS = Object.freeze([
   // 曲名は窓口から(BRAND NEW SKY / 全部必殺技でつ( `･ω･) / きみ待ち♡ループ)。id は曲を入れる会話の報告が届いたら差し替える
   // rewardLineage … その曲の部門の1〜5位へ配る超越の実の種族(社長 11-22: みゅあの曲=モッチー・ききの曲=ザン・ももの曲=ユグ)
-  Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT, rewardLineage: 'mocchi' }),
+  Object.freeze({ slot: 1, owner: 'mua', songId: 'brand_new_sky', openAt: FLOWER3_START_AT, rewardLineage: 'mocchi' }),
   Object.freeze({ slot: 2, owner: 'kiki', songId: 'zenbu_hissatsuwaza', openAt: FLOWER3_START_AT, rewardLineage: 'zan' }),
   Object.freeze({ slot: 3, owner: 'momosuke', songId: 'kimimachi_loop', openAt: FLOWER3_START_AT, rewardLineage: 'yggdrasil' }),
 ]);
