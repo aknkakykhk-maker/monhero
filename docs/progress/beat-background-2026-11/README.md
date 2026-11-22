@@ -153,3 +153,17 @@ A で触るのは HUD ではなく `main` の属性1つだが、その検査が 
 ### 残った謎
 
 - 2つの測り方(`getComputedStyle` で読む / `offsetHeight` で読む)で候補 D の数字が食い違った(20ms と 2ms)。演奏で比べた合計では D は効かなかったので、判断には演奏の合計を使った
+
+## 続き3: 案 A で直した(社長の答え「書き方を変えて直す」・2026-11-22 しらべ)
+
+- `30-rhythm-play.jsx`: 演奏画面の器 `main[data-rhythm-tap-test]` にもカウントダウン中の印 `data-rhythm-counting` を付けた(`className` の後ろ。`rhythm-screen-layout-check.js` の形はそのまま)
+- `index.html`: `.mh-app:has([data-rhythm-counting="1"]) [data-rhythm-pause]` を `main[data-rhythm-tap-test][data-rhythm-counting="1"] [data-rhythm-pause]` に替えた
+- 見た目: カウントダウン中のボタンは 0.35、始まったら 1(本物の演奏画面で確かめた・前と同じ)。判定・譜面・音は触っていない
+- HUD を写す検査: HUD の JSX は変えていない。`main` の形を見る検査(`rhythm-screen-layout-check.js` ほか)は通った
+
+| 測り方 | 直す前 | 直した後 |
+|---|---|---|
+| 判定の文字の入れ替え1回のスタイル計算(CPU 4倍遅く) | 約12〜15ms | 1.2〜1.7ms |
+| 演奏中のスタイル計算の合計(曲の0〜20秒目・3回の真ん中) | 776ms | 300ms |
+| 50ms 超の止まり(同じ測り・3回の真ん中) | 5回(最大 217ms) | 1回(最大 117ms) |
+| `rhythm-stall-check.js`(曲の0〜12秒目・前の版と交互に5回) | 1回・最大 67ms | 0回・最大 0ms |
