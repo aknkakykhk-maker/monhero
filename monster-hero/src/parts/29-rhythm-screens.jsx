@@ -911,9 +911,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
   const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
-  // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
-  const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)
-    .reduce((a,b)=>rhythmTitleFitEm(b)>rhythmTitleFitEm(a)?b:a,''):'';
+  // 鍵のかかった難易度の開け方を、難易度の札の下に1行で出す(2026-11-22 r1119-094・点検 N8・V14)。
+  //   札の中の「HARDで解放」は6pxで読めなかったので札から外し、10px以上の1行にまとめる。いちばん手前の条件だけ出す
+  const lockHint=(()=>{if(!song)return '';const locked=available.filter(item=>!unlocked(item));if(!locked.length)return '';
+    const need=rhythmDifficultyUnlockRequirement(locked[0].id,song.songId);
+    const names=locked.filter(item=>rhythmDifficultyUnlockRequirement(item.id,song.songId)===need).map(item=>item.id);
+    return need?`🔒 ${need}をクリアすると ${names.join('・')} が遊べます`:'';})();
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
@@ -1144,7 +1147,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
           畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
           横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
+      {/* 縦は助手の一言を1行の形にする(押すと全文が開く)。2行の吹き出しで一覧の上が約70px埋まり、曲が5曲しか見えなかった(2026-11-22 r1119-094・点検 N6)。
+          助手の吹き出し(scene を持つ物)だけ。マルチの注意書きのような文はそのまま */}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{React.isValidElement(notice)&&notice.props&&notice.props.scene?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
       {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
           (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
           ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
@@ -1358,20 +1363,20 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {item.id==='HELL'
                 ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
                 :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
-              <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
+              <span className="block text-[8px] tracking-wide">{item.id}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
                   合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
                 // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
-                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
-                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block text-[10px] leading-none opacity-80"><span aria-hidden="true">🔒</span><span className="sr-only">{need}で解放</span></span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
                   style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
+          {lockHint&&<p data-rhythm-difficulty-lock-hint className="mt-1 truncate text-[10px] font-black leading-tight text-slate-400">{lockHint}</p>}
           </div>
           {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
@@ -1383,8 +1388,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom} aria-label="ランダムに選ぶ"
               className="flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"><span aria-hidden="true" className="text-base leading-none">🎲</span>ランダム</button>}
             {lockedSong(song)
-              ?<button type="button" data-rhythm-song-buy={song.songId} onClick={()=>{setBuyError('');setBuyAsk(song);}}
-                className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
+              ?(()=>{const price=rhythmSongPrice(song.songId),balance=Number(songLock&&songLock.balance),short=Number.isFinite(balance)&&balance<price?price-balance:0;
+                // ビートPが足りないときは暗くして「あと◯ビートP」と出す(2026-11-22 r1119-094・点検 N9)。押すと今までどおり買う窓(足りないことの説明)が開く
+                return <button type="button" data-rhythm-song-buy={song.songId} data-rhythm-song-buy-short={short>0?'1':'0'} onClick={()=>{setBuyError('');setBuyAsk(song);}}
+                className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:[@container(min-height:540px)]:min-h-[64px] ${short>0?'border border-amber-300/40 bg-slate-900/80 text-amber-100/80':'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`}>
+                  <span className="whitespace-nowrap text-[15px]">🔒 {price.toLocaleString()}ビートPで買う</span>
+                  {short>0&&<span data-rhythm-song-buy-need className="whitespace-nowrap text-[10px] text-amber-200/80">あと {short.toLocaleString()}ビートP</span>}
+                </button>;})()
               :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
               className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40">{playLabel}</button>}

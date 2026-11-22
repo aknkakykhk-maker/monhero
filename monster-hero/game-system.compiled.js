@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 666affdad65c3afa
+// source-sha256: 2dd33d830258a7b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38593,7 +38593,14 @@ const RhythmSongSelect = ({
   };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
-  const lockedFitText = song ? available.filter(item => !unlocked(item)).map(item => `${rhythmDifficultyUnlockRequirement(item.id, song.songId)}で解放`).reduce((a, b) => rhythmTitleFitEm(b) > rhythmTitleFitEm(a) ? b : a, '') : '';
+  const lockHint = (() => {
+    if (!song) return '';
+    const locked = available.filter(item => !unlocked(item));
+    if (!locked.length) return '';
+    const need = rhythmDifficultyUnlockRequirement(locked[0].id, song.songId);
+    const names = locked.filter(item => rhythmDifficultyUnlockRequirement(item.id, song.songId) === need).map(item => item.id);
+    return need ? `🔒 ${need}をクリアすると ${names.join('・')} が遊べます` : '';
+  })();
   const picked = available.find(entry => entry.id === difficultyId);
   const difficulty = (picked && unlocked(picked) ? picked : null) || openList[0] || null;
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
@@ -38811,7 +38818,10 @@ const RhythmSongSelect = ({
   }, notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice": true,
     className: "shrink-0 px-2 pt-2 landscape:hidden"
-  }, notice), React.createElement("div", {
+  }, React.isValidElement(notice) && notice.props && notice.props.scene ? React.cloneElement(notice, {
+    oneLine: true,
+    faceSize: 28
+  }) : notice), React.createElement("div", {
     "data-rhythm-song-toolbar": true,
     className: "flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0"
   }, React.createElement("button", {
@@ -39166,16 +39176,17 @@ const RhythmSongSelect = ({
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
       className: "block text-[8px] tracking-wide"
-    }, open ? item.id : `🔒${item.id}`), (() => {
+    }, item.id), (() => {
       const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
       const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
       if (!open) return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
-        className: "block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
-        style: {
-          fontSize: rhythmTitleFitSize(lockedFitText, 8, 6, 2)
-        }
-      }, need, React.createElement("wbr", null), "で解放");
+        className: "block text-[10px] leading-none opacity-80"
+      }, React.createElement("span", {
+        "aria-hidden": "true"
+      }, "🔒"), React.createElement("span", {
+        className: "sr-only"
+      }, need, "で解放"));
       return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
         className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
@@ -39184,7 +39195,10 @@ const RhythmSongSelect = ({
         }
       }, text);
     })());
-  }))), notice && noticeOpen && React.createElement("div", {
+  })), lockHint && React.createElement("p", {
+    "data-rhythm-difficulty-lock-hint": true,
+    className: "mt-1 truncate text-[10px] font-black leading-tight text-slate-400"
+  }, lockHint)), notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice-landscape": true,
     className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:290px)]:hidden",
     style: {
@@ -39208,15 +39222,26 @@ const RhythmSongSelect = ({
   }, React.createElement("span", {
     "aria-hidden": "true",
     className: "text-base leading-none"
-  }, "🎲"), "ランダム"), lockedSong(song) ? React.createElement("button", {
-    type: "button",
-    "data-rhythm-song-buy": song.songId,
-    onClick: () => {
-      setBuyError('');
-      setBuyAsk(song);
-    },
-    className: "min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950"
-  }, "🔒 ", rhythmSongPrice(song.songId).toLocaleString(), "ビートPで買う") : React.createElement("button", {
+  }, "🎲"), "ランダム"), lockedSong(song) ? (() => {
+    const price = rhythmSongPrice(song.songId),
+      balance = Number(songLock && songLock.balance),
+      short = Number.isFinite(balance) && balance < price ? price - balance : 0;
+    return React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-buy": song.songId,
+      "data-rhythm-song-buy-short": short > 0 ? '1' : '0',
+      onClick: () => {
+        setBuyError('');
+        setBuyAsk(song);
+      },
+      className: `flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:[@container(min-height:540px)]:min-h-[64px] ${short > 0 ? 'border border-amber-300/40 bg-slate-900/80 text-amber-100/80' : 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`
+    }, React.createElement("span", {
+      className: "whitespace-nowrap text-[15px]"
+    }, "🔒 ", price.toLocaleString(), "ビートPで買う"), short > 0 && React.createElement("span", {
+      "data-rhythm-song-buy-need": true,
+      className: "whitespace-nowrap text-[10px] text-amber-200/80"
+    }, "あと ", short.toLocaleString(), "ビートP"));
+  })() : React.createElement("button", {
     type: "button",
     "data-rhythm-demo-start": difficulty.id,
     disabled: playDisabled,
@@ -73466,7 +73491,7 @@ function RhythmSongSelectScreen({
   }, React.createElement(ArrowLeft, {
     size: 20
   }), React.createElement("span", {
-    className: "whitespace-nowrap text-[11px] font-black"
+    className: "whitespace-nowrap text-[11px] font-black max-[379px]:hidden"
   }, debugAll ? 'デバッグへ戻る' : 'モード選びへ戻る')), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
