@@ -2,7 +2,7 @@
 
 社長の選択「案B 詳細の窓から」([案の止め絵](../auto-listen-plan/README.md))。曲えらびのジャケットを押して開く画面(曲の詳細)から、
 選んだ譜面を自動で叩きながら曲を最後まで流す。止め絵は本物の画面を人と同じボタンで開いて撮った(切り欠きの余白あり・曲は MF × ICHIKA MIX)。
-撮り直しと動きの確かめ: `node docs/progress/beat/auto-listen-b/shoot.js`(結果は [check-result.txt](check-result.txt))
+撮り直しと動きの確かめ: `node docs/progress/beat/auto-listen-b/shoot.js`(縦 390×844・横 844×390・小さい横 667×375・小さい縦 320×568。結果は [check-result.txt](check-result.txt))
 
 ## 案の止め絵と、入れたものの突き合わせ
 
@@ -12,6 +12,7 @@
 | 詳細の窓 | 曲名・難易度・「🎧 この譜面を鑑賞する」・閉じる | [tate-2-detail.png](tate-2-detail.png) | [yoko-2-detail.png](yoko-2-detail.png) | 同じ。難易度は遊べるものだけ(鍵の EXPERT・MASTER・HELL は出さない)。開くたびに曲えらびで選んでいる難易度から |
 | 鑑賞中 | 判定・スコア・コンボを消す・下に「-10秒・Ⅱ・+10秒」と進みぐあい・右上に ✕ | [tate-3-listen.png](tate-3-listen.png) | [yoko-3-listen.png](yoko-3-listen.png) | 縦は案どおり下の帯。**横は帯が判定ラインに重なるので、右の空き(レーンの外)へ縦に並べた**。ライフ・運のポイント・時計も隠す |
 | 送る・戻す | — | [tate-4-after-seek.png](tate-4-after-seek.png) | [yoko-4-after-seek.png](yoko-4-after-seek.png) | 移した先から自動で叩き直す。移した先より前のノーツは判定せず済んだ扱い(MISS にしない) |
+| 一時停止の窓(Ⅱ) | — | [tate-5-pause.png](tate-5-pause.png)・小さい縦 [tate-s-5-pause.png](tate-s-5-pause.png) | [yoko-5-pause.png](yoko-5-pause.png)・小さい横 [yoko-s-5-pause.png](yoko-s-5-pause.png) | ミハリの指摘で直した: 窓が開いているあいだは鑑賞の帯と右上を出さない(窓のボタンに重なっていた)・窓に SCORE・COMBO を出さない・出口は「鑑賞をやめて曲選びへ戻る」 |
 | 終わり | — | — | — | 結果の画面は出さず、曲えらびへ戻る。✕ でもすぐ戻る。Ⅱ はふだんの一時停止(再開・最初から・やめる) |
 
 ## 記録に載せない(CLAUDE.md ⑦)

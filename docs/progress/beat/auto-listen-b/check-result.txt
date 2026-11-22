@@ -1,22 +1,60 @@
 OK tate: 詳細の窓に鑑賞の欄が出る
 OK tate: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
 OK tate: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
-OK tate: +10秒で進む(30秒 → 46秒・6秒待ち)
-OK tate: +10秒のあとも MISS なし({"(判定なし)":81,"MARVELOUS":5})
-OK tate: -10秒で戻る(41秒)
-OK tate: -10秒のあとも MISS なし({"(判定なし)":74,"MARVELOUS":7})
+OK tate: Ⅱ で一時停止の窓が開く
+OK tate: 一時停止中は鑑賞の帯を出さず、窓のボタンに何も重ならない
+OK tate: 一時停止の窓に SCORE・COMBO が出ない
+OK tate: 出口のボタンが「鑑賞をやめて曲選びへ戻る」
+OK tate: +10秒で進む(32秒 → 48秒・6秒待ち)
+OK tate: +10秒のあとも MISS なし({"(判定なし)":82,"MARVELOUS":8})
+OK tate: -10秒で戻る(43秒)
+OK tate: -10秒のあとも MISS なし({"(判定なし)":76,"MARVELOUS":6})
 OK tate: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
 OK tate: 結果の画面は出ていない
 OK tate: 自己ベスト・ビートP・ミッション等の保存値が変わらない
 OK tate: JSのエラーなし
 OK yoko: 詳細の窓に鑑賞の欄が出る
 OK yoko: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
-OK yoko: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":60,"MISS":2})
-OK yoko: +10秒で進む(30秒 → 46秒・6秒待ち)
-OK yoko: +10秒のあとも MISS なし({"(判定なし)":81,"MARVELOUS":5})
-OK yoko: -10秒で戻る(41秒)
-OK yoko: -10秒のあとも MISS なし({"(判定なし)":74,"MARVELOUS":7})
+OK yoko: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK yoko: Ⅱ で一時停止の窓が開く
+OK yoko: 一時停止中は鑑賞の帯を出さず、窓のボタンに何も重ならない
+OK yoko: 一時停止の窓に SCORE・COMBO が出ない
+OK yoko: 出口のボタンが「鑑賞をやめて曲選びへ戻る」
+OK yoko: +10秒で進む(32秒 → 48秒・6秒待ち)
+OK yoko: +10秒のあとも MISS なし({"(判定なし)":82,"MARVELOUS":8})
+OK yoko: -10秒で戻る(43秒)
+OK yoko: -10秒のあとも MISS なし({"(判定なし)":75,"MARVELOUS":7})
 OK yoko: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
 OK yoko: 結果の画面は出ていない
 OK yoko: 自己ベスト・ビートP・ミッション等の保存値が変わらない
 OK yoko: JSのエラーなし
+OK yoko-s: 詳細の窓に鑑賞の欄が出る
+OK yoko-s: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
+OK yoko-s: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK yoko-s: Ⅱ で一時停止の窓が開く
+OK yoko-s: 一時停止中は鑑賞の帯を出さず、窓のボタンに何も重ならない
+OK yoko-s: 一時停止の窓に SCORE・COMBO が出ない
+OK yoko-s: 出口のボタンが「鑑賞をやめて曲選びへ戻る」
+OK yoko-s: +10秒で進む(32秒 → 48秒・6秒待ち)
+OK yoko-s: +10秒のあとも MISS なし({"(判定なし)":82,"MARVELOUS":8})
+OK yoko-s: -10秒で戻る(43秒)
+OK yoko-s: -10秒のあとも MISS なし({"(判定なし)":75,"MARVELOUS":7})
+OK yoko-s: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
+OK yoko-s: 結果の画面は出ていない
+OK yoko-s: 自己ベスト・ビートP・ミッション等の保存値が変わらない
+OK yoko-s: JSのエラーなし
+OK tate-s: 詳細の窓に鑑賞の欄が出る
+OK tate-s: 鍵のついた難易度は出ない(EASY・NORMAL・HARD)
+OK tate-s: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: {"MARVELOUS":61,"MISS":2})
+OK tate-s: Ⅱ で一時停止の窓が開く
+OK tate-s: 一時停止中は鑑賞の帯を出さず、窓のボタンに何も重ならない
+OK tate-s: 一時停止の窓に SCORE・COMBO が出ない
+OK tate-s: 出口のボタンが「鑑賞をやめて曲選びへ戻る」
+OK tate-s: +10秒で進む(32秒 → 48秒・6秒待ち)
+OK tate-s: +10秒のあとも MISS なし({"(判定なし)":82,"MARVELOUS":8})
+OK tate-s: -10秒で戻る(43秒)
+OK tate-s: -10秒のあとも MISS なし({"(判定なし)":75,"MARVELOUS":7})
+OK tate-s: 曲の終わりで曲えらびへ戻る(結果の画面は出ない)
+OK tate-s: 結果の画面は出ていない
+OK tate-s: 自己ベスト・ビートP・ミッション等の保存値が変わらない
+OK tate-s: JSのエラーなし

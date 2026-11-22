@@ -13,7 +13,7 @@ const { chromium } = require(path.join(ROOT, 'tools/node_modules/playwright'));
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.json': 'application/json', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.woff2': 'font/woff2' };
 const SONG = 'MF × ICHIKA MIX';
-const SIZES = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'yoko', w: 844, h: 390 }];
+const SIZES = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'yoko', w: 844, h: 390 }, { tag: 'yoko-s', w: 667, h: 375 }, { tag: 'tate-s', w: 320, h: 568 }];
 async function openGame(browser, size) {
   const land = size.w > size.h;
   const ctx = await browser.newContext({ viewport: { width: size.w, height: size.h }, deviceScaleFactor: 1, hasTouch: true });
@@ -98,6 +98,24 @@ const songMs = (p) => p.evaluate(() => window.__mhTestHooks?.rhythmSongMs?.() ??
       const r1 = await results(p);
       check(Object.keys(r1).length > 0 && (r1.MISS || 0) <= 3, `${size.tag}: 自動で叩かれる(MISS は3つ以下。単独のホールドをまれに取りこぼす: ${JSON.stringify(r1)})`);
       await p.screenshot({ path: path.join(OUT, `${size.tag}-3-listen.png`) });
+      // 一時停止の窓(ミハリの指摘 2026-11-23: 帯が窓に重なる・SCORE が出る・出口の文が「練習」)
+      await p.evaluate(() => document.querySelector('[data-rhythm-listen-pause]')?.click());
+      await p.waitForFunction(() => !!document.querySelector('[data-rhythm-pause-menu]'), null, { timeout: 10000 }).catch(() => {});
+      await p.waitForTimeout(600);
+      await p.screenshot({ path: path.join(OUT, `${size.tag}-5-pause.png`) });
+      const pz = await p.evaluate(() => { const m = document.querySelector('[data-rhythm-pause-menu]'); const t = m ? m.textContent : '';
+        const ex = document.querySelector('[data-rhythm-pause-exit]'); const bar = document.querySelector('[data-rhythm-listen-bar]');
+        const btns = [...document.querySelectorAll('[data-rhythm-pause-resume],[data-rhythm-pause-restart],[data-rhythm-pause-exit]')].map((b) => b.getBoundingClientRect());
+        const covered = btns.some((r) => { const x = r.left + r.width - 4, y = r.top + r.height / 2, x2 = r.left + r.width / 2, y2 = r.top + r.height - 4;
+          const top1 = document.elementFromPoint(x, y), top2 = document.elementFromPoint(x2, y2); return !(top1 && top1.closest('[data-rhythm-pause-menu]')) || !(top2 && top2.closest('[data-rhythm-pause-menu]')); });
+        return { open: !!m, score: /SCORE|COMBO/.test(t), exit: ex ? ex.textContent.trim() : '', bar: !!bar, covered }; });
+      check(pz.open, `${size.tag}: Ⅱ で一時停止の窓が開く`);
+      check(!pz.bar && !pz.covered, `${size.tag}: 一時停止中は鑑賞の帯を出さず、窓のボタンに何も重ならない`);
+      check(!pz.score, `${size.tag}: 一時停止の窓に SCORE・COMBO が出ない`);
+      check(pz.exit === '鑑賞をやめて曲選びへ戻る', `${size.tag}: 出口のボタンが「${pz.exit}」`);
+      await p.evaluate(() => document.querySelector('[data-rhythm-pause-resume]')?.click());
+      await p.waitForFunction(() => !!document.querySelector('[data-rhythm-listen-bar]') && (window.__mhTestHooks?.rhythmSongMs?.() ?? null) != null, null, { timeout: 15000, polling: 200 }).catch(() => {});
+      await p.waitForTimeout(1500);
       // +10秒
       const a = await songMs(p);
       await p.evaluate(() => document.querySelector('[data-rhythm-listen-seek="10000"]')?.click());

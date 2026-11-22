@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e970dcce393947fb
+// source-sha256: a5eb169056828683
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42530,7 +42530,8 @@ const RhythmListenBar = ({
   onSeek,
   onPause,
   onClose,
-  isLandscape
+  isLandscape,
+  paused = false
 }) => {
   const [now, setNow] = useState({
     ms: 0,
@@ -42552,7 +42553,7 @@ const RhythmListenBar = ({
   }, [runRef]);
   const pct = now.total > 0 ? Math.max(0, Math.min(100, now.ms / now.total * 100)) : 0;
   const btn = 'flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
-  return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), React.createElement("div", {
+  return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), !paused && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-listen-top": true,
     className: "pointer-events-auto absolute z-[35] flex items-center gap-1.5",
     style: {
@@ -42651,7 +42652,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒"))));
+  }, "+10秒")))));
 };
 const RhythmLineAdjustPanel = ({
   adjust,
@@ -47853,7 +47854,8 @@ const RhythmTapTest = ({
     onSeek: listenSeek,
     onPause: pause,
     onClose: onExit,
-    isLandscape: isLandscape
+    isLandscape: isLandscape,
+    paused: view.status === 'paused'
   }) : lineAdjust && React.createElement(RhythmLineAdjustPanel, {
     adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),
@@ -48358,7 +48360,7 @@ const RhythmTapTest = ({
       className: `shrink-0 rounded ${difficulty.id === 'HELL' ? 'bg-red-900/90 text-red-200 ring-1 ring-red-500/70' : 'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`
     }, difficulty.id), !calibrating && !tutorial && React.createElement("span", {
       className: "text-cyan-300"
-    }, "Lv.", chart.level), React.createElement("span", {
+    }, "Lv.", chart.level), !listenMode && React.createElement(React.Fragment, null, React.createElement("span", {
       className: "ml-auto tabular-nums text-slate-300"
     }, "SCORE ", React.createElement("b", {
       className: "text-white"
@@ -48366,7 +48368,7 @@ const RhythmTapTest = ({
       className: "tabular-nums text-slate-300"
     }, "COMBO ", React.createElement("b", {
       className: "text-white"
-    }, hudRef.current.get().combo))), React.createElement("div", {
+    }, hudRef.current.get().combo)))), React.createElement("div", {
       className: "mt-2 flex items-center gap-2"
     }, React.createElement("div", {
       className: "relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
@@ -48393,7 +48395,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
+  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : listenMode ? '鑑賞をやめて曲選びへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
 };
 const rhythmPreviewHandsStart = area => {
   if (typeof window === 'undefined' || !area) return () => {};
