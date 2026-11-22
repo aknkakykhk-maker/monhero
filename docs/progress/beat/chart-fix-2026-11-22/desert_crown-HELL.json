@@ -1,0 +1,99 @@
+{
+ "songId": "desert_crown",
+ "diff": "HELL",
+ "before": [
+  {
+   "at": 3292,
+   "x": 4.5,
+   "what": "タップ"
+  },
+  {
+   "at": 17695,
+   "x": 5,
+   "what": "タップ"
+  },
+  {
+   "at": 17995,
+   "x": 5,
+   "what": "タップ"
+  },
+  {
+   "at": 18145,
+   "x": 4.75,
+   "what": "タップ"
+  },
+  {
+   "at": 79207,
+   "x": 5,
+   "what": "タップ"
+  },
+  {
+   "at": 82808,
+   "x": 1.75,
+   "what": "タップ"
+  }
+ ],
+ "after": [],
+ "moves": [
+  {
+   "at": 3292,
+   "type": "TAP",
+   "width": 2,
+   "from": 8,
+   "to": 2,
+   "fromX": 4.5,
+   "toX": 1.5,
+   "held": "HOLD"
+  },
+  {
+   "at": 17695,
+   "type": "TAP",
+   "width": 4,
+   "from": 8,
+   "to": 1,
+   "fromX": 5,
+   "toX": 1.5,
+   "held": "HOLD"
+  },
+  {
+   "at": 17995,
+   "type": "TAP",
+   "width": 4,
+   "from": 8,
+   "to": 1,
+   "fromX": 5,
+   "toX": 1.5,
+   "held": "HOLD"
+  },
+  {
+   "at": 18145,
+   "type": "TAP",
+   "width": 3,
+   "from": 8,
+   "to": 2,
+   "fromX": 4.75,
+   "toX": 1.75,
+   "held": "HOLD"
+  },
+  {
+   "at": 79207,
+   "type": "TAP",
+   "width": 4,
+   "from": 8,
+   "to": 1,
+   "fromX": 5,
+   "toX": 1.5,
+   "held": "HOLD"
+  },
+  {
+   "at": 82808,
+   "type": "TAP(空中)",
+   "width": 3,
+   "from": 2,
+   "to": 9,
+   "fromX": 1.75,
+   "toX": 5.25,
+   "held": "手で(--also)"
+  }
+ ]
+}
