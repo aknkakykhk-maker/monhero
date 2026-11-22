@@ -1012,7 +1012,10 @@ const helpDataRows = (id) => {
       return entry ? [['初めての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中で一番やさしい曲)`]] : [];
     }
     case 'rhythmHellSongs': {
-      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      // 公開している曲だけ出す(ほかのヘルプの曲一覧と同じく rhythmDemoSongs で絞る)。
+      // 公開を止めている曲(台帳 r1119-118 の Battle #5 など)を、名前・Lv. つきで出さないため
+      const allSongs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const songs = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(allSongs) : allSongs;
       const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
       return songs.map(song => {
         const chart = song && hell[song.songId];

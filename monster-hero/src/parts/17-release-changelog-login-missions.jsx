@@ -98,6 +98,11 @@ const QUICK_RUN_ANYWHERE_RELEASE = true;
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴・お話「話せるようになった日」がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  // 新曲「Battle #5」の告知(2026-11-23 社長決定・台帳 r1119-118)。曲のデータは入っているが公開は社長の
+  //   タイミングで別途行うため、偽のあいだは更新履歴と助手の告知に出さない。曲そのものの公開は
+  //   data/rhythm-mode.js の公開曲の一覧(RHYTHM_DEMO_SONG_IDS)が持つ(この印は告知だけの印)。
+  //   ★解禁するときは、ここを true にし、告知の date を解禁の日時に直す
+  battle5: false,
   // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
   //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
   //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
