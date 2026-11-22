@@ -184,7 +184,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
 
 // 呼ぶシートの「助手」のタブの中身。カードを押して選び、下の帯の「呼ぶ」で呼ぶ(マスモンのタブと同じ流れ)
 // 2026-11-07 社長「複数選択がほしい」: 選んだ印(picked)は呼ぶシートが持ち、まとめて呼ぶ帯もシートが出す
-function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssistantId = '', picked = [], onToggle = null }) {
+function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssistantId = '', picked = [], onToggle = null, roomy = false }) {
   const state = useRhythmAssistSessionState();
   const list = (assistants || []).filter((who) => who && RHYTHM_ASSIST_SESSION_IDS.includes(who.id));
   const calledOf = (id) => calledIds.includes(rhythmAssistSessionKey(id));
@@ -208,9 +208,9 @@ function RhythmAssistSessionPicker({ assistants = [], calledIds = [], guideAssis
               return (
                 <button key={who.id} type="button" data-rhythm-assist-card={who.id} data-picked={picked.includes(who.id) ? '1' : undefined} onClick={() => onToggle && onToggle(who.id)}
                   className={`relative flex min-h-[112px] w-full flex-col items-center gap-1 rounded-2xl border-2 p-2 active:scale-95 ${picked.includes(who.id) ? 'border-pink-300 bg-slate-800' : 'border-white/10 bg-slate-900'}`}>
-                  <AssistantFace who={who} size={48} accent={who.accent} expression={picked.includes(who.id) ? 'happy' : null} />
+                  <AssistantFace who={who} size={roomy ? 84 : 48} accent={who.accent} expression={picked.includes(who.id) ? 'happy' : null} />
                   {picked.includes(who.id) && <b className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pink-400 text-[12px] font-black text-slate-950">✓</b>}
-                  <span className="w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center text-[11px] font-black">{who.name}</span>
+                  <span className={`w-full truncate rounded-lg border border-white/10 bg-slate-950/70 px-1 py-0.5 text-center font-black ${roomy ? 'text-[14px]' : 'text-[11px]'}`}>{who.name}</span>
                   <span className="whitespace-nowrap text-[10px] font-black text-pink-200">セッションLv.{lv}</span>
                   {lv >= RHYTHM_ASSIST_SESSION_TASTE_LEVEL && <span data-rhythm-assist-taste className="w-full truncate text-center text-[9px] font-bold text-slate-300">♡ {rhythmAssistSessionLikedNames(who.id).join('・')}</span>}
                   {calledOf(who.id) && <span className="rounded-full bg-lime-400 px-1.5 py-0.5 text-[10px] font-black text-slate-950">呼んでいる</span>}
