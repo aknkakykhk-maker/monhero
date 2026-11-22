@@ -1986,7 +1986,7 @@ function RhythmMultiResultBubble({ text: raw }) {
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-result-bubble className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
       <span className="relative max-w-full rounded-xl border-2 border-sky-300 bg-white px-1.5 py-0.5 text-center text-[11px] font-black leading-tight text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,.5)] landscape:text-xs" style={JA_WRAP_STYLE}>
         {/* 言葉の切れ目で折る(「セッションL / vが上が…」と途中で折れていた・2026-11-08 ミハリ) */}
-        <span className="line-clamp-2">{jaWrap(text)}</span>
+        <span className="line-clamp-2 [@media(orientation:portrait)_and_(min-height:700px)]:line-clamp-3">{jaWrap(text)}</span>
         <i aria-hidden="true" className="absolute -bottom-[6px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-sky-300 bg-white" />
       </span>
     </span>
@@ -2213,9 +2213,9 @@ function RhythmMultiRoomList({ onJoin, onWatch = null, onCreate, onBack, resolve
       </div>
       <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いま人を待っている部屋です。自動で新しくなります')}</p>
       {list == null
-        ? <p className="rounded-xl bg-slate-950/50 p-3 text-center text-[12px] font-bold text-slate-300">部屋を探しています…</p>
+        ? <p className="px-1 py-2 text-[12px] font-bold text-slate-300">部屋を探しています…</p>
         : list.length === 0
-          ? <p data-rhythm-multi-room-list-empty className="rounded-xl border border-dashed border-slate-500/60 p-3 text-center text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋はありません。部屋を作って待ってみましょう')}</p>
+          ? <p data-rhythm-multi-room-list-empty className="rounded-xl border border-dashed border-slate-500/60 p-3 text-left text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋はありません。部屋を作って待ってみましょう')}</p>
           : <ul className="flex flex-col gap-1.5">{list.map((r) => (
             <li key={r.code} data-rhythm-multi-room-row={r.code} className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-2 py-1.5">
               <span className="h-9 w-9 shrink-0"><RhythmMultiAvatar m={{ icon: r.hi }} resolveIconUrl={resolveIconUrl} sizeClass="h-9 w-9" small /></span>
@@ -2721,7 +2721,8 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
   const tall = size === 'tall';
   return (
     <ul data-rhythm-multi-cards className={tall
-      ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3'
+      // 高い横画面(PC)は札を高さ約200pxまでにする(点検 N22・N31: 高さ480〜650pxの柱になり、中は丸と名前だけだった)
+      ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3 landscape:[@media(min-height:600px)]:max-h-[210px]'
       : 'grid shrink-0 grid-cols-5 gap-1 border-b border-white/10 bg-slate-900/70 px-1.5 pb-1 pt-2 landscape:pt-1.5'}>
       {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
         const m = members[i];
@@ -4278,7 +4279,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   // 本家の左上の題字(MULTI LIVE)と、その下の小さな段の名前。右に残り時間とチャット
   const header = (step, onBackClick, opts = {}) => (
     <header className="z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
-      <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>
+      {/* opts.exitLabel: 曲えらびでは、左上が部屋から出る1つの出口(下の「ルームを出る」は外した・点検 N18)。「出る」と書いて、ほかのボタンと違う形にする */}
+      {opts.exitLabel
+        ? <button data-rhythm-multi-back data-rhythm-multi-exit type="button" aria-label={opts.exitLabel} className="flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[40px] shrink-0 flex-col items-center justify-center rounded-xl border border-rose-300/40 bg-rose-950/40 font-black leading-none text-rose-100" onClick={onBackClick}><span className="text-base">←</span><span className="mt-0.5 text-[9px]">出る</span></button>
+        : <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>}
       {/* 題字には最低の幅を残す。右のボタンが入りきらない細い画面では、ボタンのほうを2段目へ回す(「…」で切らない) */}
       <div className="min-w-[7.5rem] flex-1 leading-none">
         <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
@@ -4295,7 +4299,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       {opts.advance && isHost && <button data-rhythm-multi-advance type="button" onClick={() => { if (opts.gesture && onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
         className="min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black">{opts.advance}</button>}
       {/* 部屋主だけの、選曲の制限時間の切り替え(押すたびに 30秒 → 60秒 → 90秒 → なし)。横画面でも見えるようヘッダーに置く */}
-      {opts.selectTime && view && room && isHost && selectTimeButton('max-[480px]:hidden landscape:block')}
+      {/* 残り時間(⏱)が動いている間は出さない。時間が2つあるように見えた(点検 N17・2026-11-22) */}
+      {opts.selectTime && view && room && isHost && opts.timer == null && selectTimeButton('max-[480px]:hidden landscape:block')}
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
       {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
       <RhythmOrientationButton/>
@@ -4346,9 +4351,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     setRankHubTab(tab === 'buddy' ? 'buddy' : 'national');
     setRankHubOpen(true);
   };
+  // 字を添える(点検 N48: 🏆だけで何のボタンか分からなかった)
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
-      className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
+      className={`flex min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 flex-col items-center justify-center rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none ${extra}`}><span className="text-lg">🏆</span><span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-amber-100">ランキング</span></button>
   );
   // 曲の側に置く 🏆 ランキング(字つき)。上の帯の 🏆 は外した
   const rankingWideButton = (extra = '') => rankingSupport && (
@@ -4362,8 +4368,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </div>
   );
   // 最新の発言を添えた💬(結果画面用)。押すとチャット欄が開く
-  const chatLatestButton = (extra = '') => {
-    const last = chatList.length ? chatList[chatList.length - 1] : null;
+  // plain: 結果画面では最新の発言を札に出さない(カードの上の吹き出しと同じ文が2か所に出て、どちらも「…」で切れた・点検 N47)
+  const chatLatestButton = (extra = '', plain = false) => {
+    const last = !plain && chatList.length ? chatList[chatList.length - 1] : null;
     return (
       <button data-rhythm-multi-chat-open type="button" onClick={() => setChatOpen(true)} aria-label={chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット'}
         className={`relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left landscape:w-[22%] landscape:max-w-[160px] ${extra}`}>
@@ -4635,7 +4642,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         {freeOpen && (
           <div className="absolute inset-0 z-[85000]">
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={() => { setFreeOpen(false); setFreeList(false); }} />
-            <div data-rhythm-mode-free-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-fuchsia-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(420px,60%)] landscape:rounded-none landscape:rounded-l-3xl landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
+            {/* 横は右に浮かせた札で、高さは中身に合わせる(点検 N31: 画面の高さいっぱいで下の6〜7割が空いていた)。右の切り欠きもよける */}
+            <div data-rhythm-mode-free-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-fuchsia-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-auto landscape:bottom-auto landscape:left-auto landscape:top-3 landscape:right-[calc(.75rem+var(--mh-sa-right))] landscape:max-h-[calc(100%-1.5rem)] landscape:w-[min(420px,60%)] landscape:rounded-3xl landscape:border" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🎮</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-fuchsia-100">フリーマッチ</b><small className="block text-[11px] font-bold text-slate-400">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></div>
@@ -4692,7 +4700,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         {privateOpen && (
           <div className="absolute inset-0 z-[85000]">
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={() => setPrivateOpen(false)} />
-            <div data-rhythm-mode-private-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(440px,62%)] landscape:rounded-none landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
+            <div data-rhythm-mode-private-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-auto landscape:bottom-auto landscape:left-auto landscape:top-3 landscape:right-[calc(.75rem+var(--mh-sa-right))] landscape:max-h-[calc(100%-1.5rem)] landscape:w-[min(440px,62%)] landscape:rounded-3xl landscape:border" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
                 <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、フレンドだけと遊べます</small></div>
@@ -4774,8 +4782,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
                 高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
             {/* 下の欄は、上のメンバーの札の残りに縮む(2026-11-08 社長「下が少し切れてる」。札と欄の7割を足すと画面より高くなり、「ルームを出る」が下で切れていた)。入りきらないぶんは中で送る */}
-            <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
-              <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
+            <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2 landscape:[@media(min-height:600px)]:mt-0 landscape:[@media(min-height:600px)]:max-h-none" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
+              {/* 探している間は枠に入れない(入力欄のようで押せそうに見えた・点検 N33) */}
+              <section data-rhythm-multi-matching className={view ? 'rounded-2xl border border-white/15 bg-slate-900/85 p-2' : 'px-1 py-2'}>
                 {/* 2人以上そろったら「待っています…」のままにしない(2026-11-22 r1119-094・点検 N21) */}
                 <p data-rhythm-multi-matching-title className={`text-sm font-black ${view && members.length >= 2 ? 'text-lime-200' : 'animate-pulse text-amber-200'}`}>{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : members.length < 2 ? 'メンバーを待っています…' : isHost ? (view.mode === 'private' ? '「メンバー確定」で始められます' : '「このメンバーで始める」で始められます') : 'メンバーがそろいました'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
@@ -4835,7 +4844,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
                 {view && rankingWideButton('w-full')}
                 {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
-                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>ルームを出る</button>
+                <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700 ${!view ? 'landscape:col-span-2' : ''}`} onClick={leaveRoomAfterTap}>ルームを出る</button>
                 </div>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
               </div>
@@ -4904,9 +4913,10 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             横向き(🔄横も)は送らない: カードの上の吹き出しが欄の上で切れるため。横は育ちの札の欄が中で送る */}
         <div data-rhythm-multi-result-body className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden landscape:overflow-visible">
         {/* カードに最低の高さを持たせる。下の育ちの札・友情Lv の欄やあいさつの段に押しつぶされて、MVP の顔と「HELL Lv.◯」が切れた(2026-11-08 社長・🔄横。320幅の縦ではカードがほぼ消えていた) */}
-        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+        <ul data-rhythm-multi-result-cards={resultCols} style={{ ...resultWidthStyle, ...resultGridStyle }} className="relative mx-auto grid w-full max-h-[300px] min-h-[184px] flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-11 [@media(orientation:portrait)_and_(min-height:700px)]:pt-[58px] landscape:min-h-[136px] landscape:pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2 [[data-mh-view-rotation=true]_&]:pt-2">
+          {/* 吹き出しの段は高い縦(700px以上)で3行まで入る高さ(58px)にする(全文を出す・点検 N47) */}
           {/* 吹き出しの段: カードの上の余白に、カードと同じ5列で重ねる(高さは ul の上の余白と同じ。下の端=カードの上の端) */}
-          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
+          <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
             {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
               return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
@@ -4927,8 +4937,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                   <RhythmMultiAvatar m={r.m} resolveIconUrl={resolveIconUrl} sizeClass="h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [[data-mh-view-rotation=true]_&]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:w-11" />
                 </span>
                 <span className={`relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`}>{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
-                <small className="block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
-                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0')) : r.m.gone ? '—' : 'ライブ中…'}</b>
+                <small className="block h-3.5 shrink-0 text-[10px] font-black italic leading-[14px] text-pink-300 landscape:text-[11px]">{r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''}</small>
+                <b className={`block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm [[data-mh-view-rotation=true]_&]:text-sm ${isMvp ? 'text-amber-200' : ''}`}>{r.res ? (r.res.quit ? 'リタイア' : (Number(r.res.score) || 0).toLocaleString()) : r.m.gone ? '—' : 'ライブ中…'}</b>
                 {r.res && !r.res.quit && <>
                   <small className="mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5 [[data-mh-view-rotation=true]_&]:mt-0.5">{r.res.diffId || '-'}{lv ? ` Lv.${lv}` : ''}</small>
                   {!r.res.cleared && <small className="text-[8px] font-black text-rose-300">失敗</small>}
@@ -4948,7 +4958,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <RhythmMultiStampBar phase="result" onSend={(text) => RHYTHM_MULTI.sendChat(text)} big limit={6} className="min-w-0 flex-1 portrait:flex-wrap landscape:gap-1 [[data-mh-view-rotation=true]_&]:flex-nowrap" />
           {/* 横向きは🏆とチャットも少し低く(この段の高さが育ちの札・友情Lv の欄を削っていた・2026-11-08) */}
           {rankingButton('landscape:min-h-[34px]')}
-          {chatLatestButton('landscape:min-h-[34px]')}
+          {chatLatestButton('landscape:min-h-[34px]', true)}
         </div>
         {(() => {
           // 自分が呼んだマスモンがこのライブに出ていたら、1体ずつ育てて見せる(全員の結果がそろってから)
@@ -5173,7 +5183,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   };
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
-      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る', buddy: true, selectTime: true })}
+      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る', buddy: true, selectTime: true, exitLabel: 'ルームを出る' })}
       <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}
@@ -5191,9 +5201,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         hideRandom
         notice={(
           <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
+            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{/* 短くして曲の一覧を広く(点検 N16: 縦で一覧が3曲半しか見えなかった) */}{jaWrap('全員の選曲からシャッフルで1曲に決まります')}{!room.deadline && jaWrap('(いまは時間の制限なし)')}</p>
             {/* 狭い画面では、制限時間の切り替えを注意書きの右に置く(行を増やさない。広い画面はヘッダーに出る) */}
-            {isHost && selectTimeButton('min-[481px]:hidden', true)}
+            {isHost && !room.deadline && selectTimeButton('min-[481px]:hidden', true)}
           </div>
         )}
         footer={() => (
@@ -5202,8 +5212,6 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             {rankingWideButton('whitespace-nowrap')}
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
               className={`mh-multi-select-omakase flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight landscape:min-h-[34px] ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small data-rhythm-multi-omakase-note className="block text-[8px] font-bold opacity-80">{members.some((m) => m.cpu) ? (members.some((m) => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に') : 'ほかの人の曲が優先'}</small></button>
-            <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
-              className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300 landscape:min-h-[34px]">ルームを出る</button>
           </div>
           </div>
         )} />

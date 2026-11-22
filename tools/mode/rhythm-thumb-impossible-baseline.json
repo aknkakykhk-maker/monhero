@@ -351,6 +351,10 @@
   "walkure_short/MASTER/portrait": 0,
   "walkure_short/HELL/landscape": 0,
   "walkure_short/HELL/portrait": 2,
+  "kimimachi_loop/MASTER/landscape": 0,
+  "kimimachi_loop/MASTER/portrait": 0,
+  "kimimachi_loop/HELL/landscape": 0,
+  "kimimachi_loop/HELL/portrait": 0,
   "brand_new_sky/MASTER/landscape": 0,
   "brand_new_sky/MASTER/portrait": 0,
   "brand_new_sky/HELL/landscape": 0,
@@ -375,6 +379,11 @@
   {
    "at": "2026-11-22T11:33",
    "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 4
+  },
+  {
+   "at": "2026-11-22T11:49",
+   "reason": "新曲 きみ待ち♡ループ を公開",
    "changed": 4
   },
   {

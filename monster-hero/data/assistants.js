@@ -12611,7 +12611,7 @@ const FLOWER3_EP1 = [
   { who:'mua', e:'happy', t:'お話も毎日1話ずつ届くからね！ 曲ができるまでのことも話しちゃうよ。最後のお話は、イベントが終わるときに流れるよ' },
   { who:'kiki', e:'normal', t:'曲ができるまでには、いろんな人に助けてもらいまちた。' },
   { who:'momosuke', e:'wink', t:'パンドラちゃんとか、ぱんぷきんとかね♡' },
-  { who:'mua', e:'excited', t:'そのお話は、また明日から！ まずは3曲、叩いてみて٩(`･ω･´)و' },
+  { who:'mua', e:'excited', bgm:'melo_brand_new_sky', t:'そのお話は、また明日から！ まずは3曲、叩いてみて٩(`･ω･´)و' },
 ];
 // 第2話「全部必殺技の夜」(11/24 10:00・ききの曲ができるまで)
 const FLOWER3_EP2 = [
@@ -12627,7 +12627,7 @@ const FLOWER3_EP2 = [
   { who:'kiki', e:'surprise', t:'息、でつか' },
   { who:'pandora', e:'normal', t:'……必殺技の前に、ひと息。そしたら、次の一発が、もっと強く聞こえると思う' },
   { who:'kiki', e:'normal', t:'……ためて、放つ。なるほど、でつ。' },
-  { who:'momosuke', e:'excited', fxText:'ききの鍵盤に、ほんの少しの「ため」が入る', t:'すご！ ぜんぶ必殺技なのに、ちゃんと一発ずつ決まってる♡' },
+  { who:'momosuke', e:'excited', bgm:'melo_zenbu_hissatsuwaza', fxText:'ききの鍵盤に、ほんの少しの「ため」が入る', t:'すご！ ぜんぶ必殺技なのに、ちゃんと一発ずつ決まってる♡' },
   { who:'kiki', e:'happy', t:'……できまちた。天使さんと悪魔さん、どっちのおかげでもありまつね。' },
   { who:'pandora', e:'normal', t:'……ふたりとも、喜んでる。……喧嘩しないで同じことを言ったの、ひさしぶり' },
   { who:'mua', e:'happy', t:'よかった〜(｡ ˘-˘)ｳﾝｳﾝ もうすぐクリスマスだし、ちょうどいいプレゼントぢゃん' },
@@ -12647,7 +12647,7 @@ const FLOWER3_EP3 = [
   { who:'pumpkin', e:'happy', fxText:'ぱんぷきんが、ぴょん、ぴょん、と跳ねる', t:'……こう。1、2、1、2で、おなかが光るところで強く' },
   { who:'mua', e:'excited', t:'え、ぱんぷきんのステップ、まぢで上手すぎる🤣ｗ' },
   { who:'kiki', e:'normal', t:'跳ねる音に合わせて、太鼓の音を入れてみまつね。' },
-  { who:'momosuke', e:'excited', fxText:'ももの曲に、ぽん、ぽん、と跳ねる音がくわわる', t:'……そろった！ 足がそろった〜♡ ぱんぷきん、すごい！' },
+  { who:'momosuke', e:'excited', bgm:'melo_kimimachi_loop', fxText:'ももの曲に、ぽん、ぽん、と跳ねる音がくわわる', t:'……そろった！ 足がそろった〜♡ ぱんぷきん、すごい！' },
   { who:'momosuke', e:'happy', t:'……ももの曲、ほんとにできちゃった。はじめて作った曲なんだよ、これ' },
   { who:'pumpkin', e:'happy', t:'えへへ。……ぼく、ステップの先生になれるかな' },
   { who:'mua', e:'happy', t:'もうなってるよ〜ｗ' },
@@ -12667,7 +12667,7 @@ const FLOWER3_EP4 = [
   { who:'mua', e:'normal', t:'冷たくて、でも、街の明かりがぽつぽつついてて。もうすぐクリスマスだなって、わくわくする空' },
   { who:'kiki', e:'happy', t:'それは、まだだれも歌っていない空でつね。' },
   { who:'momosuke', e:'excited', t:'今日の空、明日の空、まだ見てない空！ それが、みゅあねぇの新しい空だよ♡' },
-  { who:'mua', e:'excited', t:'……それだ！ 新しい空！ BRAND NEW SKY！ まぢで降りてきた✨' },
+  { who:'mua', e:'excited', bgm:'melo_brand_new_sky', t:'……それだ！ 新しい空！ BRAND NEW SKY！ まぢで降りてきた✨' },
   { who:'mua', e:'happy', fxText:'その夜、みゅあの曲は一気に仕上がった', t:'ひめちん、もも、ありがと。2人がいなかったら、ずっと屋根の上だったわｗ' },
   { who:'kiki', e:'happy', t:'どういたしましてでつ。風邪をひかないうちに、降りてきてくださいね。' },
   { who:'mua', e:'wink', t:'{name}、これが「BRAND NEW SKY」！ あたしの、新しい空。いっぱい叩いてね٩(`･ω･´)و' },
@@ -12732,10 +12732,10 @@ const FLOWER3_EP7 = [
 // 第8話「花ひらく夜」(11/30 0:00・閉幕)
 const FLOWER3_EP8 = [
   { bg:'monhero_night', who:'mua', e:'excited', fxText:'広場いっぱいに、ランタンの明かりがともる', t:'みんなー！ 来てくれてありがとー！ 最初の曲、いっくよー！' },
-  { who:'momosuke', e:'excited', fxText:'「BRAND NEW SKY」が、冬の空へ鳴りひびく', t:'みゅあねぇ、空まで届いてる♡' },
-  { who:'kiki', e:'normal', fxText:'2曲目。ききの必殺技に、パンドラの歌声が重なる', t:'……まちがえずに、弾けまちた。' },
+  { who:'momosuke', e:'excited', bgm:'melo_brand_new_sky', fxText:'「BRAND NEW SKY」が、冬の空へ鳴りひびく', t:'みゅあねぇ、空まで届いてる♡' },
+  { who:'kiki', e:'normal', bgm:'melo_zenbu_hissatsuwaza', fxText:'2曲目。ききの必殺技に、パンドラの歌声が重なる', t:'……まちがえずに、弾けまちた。' },
   { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……歌えた。外で、ちゃんと' },
-  { who:'momosuke', e:'excited', fxText:'最後は「きみ待ち♡ループ」。広場のみんなが跳ねる', t:'ぱんぷきん、ステップいくよ♡' },
+  { who:'momosuke', e:'excited', bgm:'melo_kimimachi_loop', fxText:'最後は「きみ待ち♡ループ」。広場のみんなが跳ねる', t:'ぱんぷきん、ステップいくよ♡' },
   { who:'pumpkin', e:'happy', t:'うん！ 1、2、1、2！' },
   { who:'momosuke', e:'happy', t:'さいごまで、おどりきった〜♡ ……ももがはじめて作った曲で、みんなが跳ねてくれた' },
   { who:'mua', e:'happy', t:'{name}、ほんとにありがと！ どの曲もいっぱい遊んでくれて、まぢでうれしかった✨' },

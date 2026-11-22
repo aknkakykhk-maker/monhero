@@ -1,0 +1,13 @@
+/* 案A: スコアを一番上。経験値は下に小さく(ランクアップは重ねた画面の1回だけ)。主は「曲選びへ戻る」 */
+@container (max-width: 679px) {
+[data-rhythm-result-scroll]{display:flex;flex-direction:column}
+[data-rhythm-result-scroll]>h2{order:-2}
+[data-rhythm-result-scroll]>[data-rhythm-result-summary]{order:-1}
+[data-rhythm-result-scroll]>[data-player-rank-gain]{order:1;margin-top:8px;padding:8px 10px!important}
+}
+[data-rhythm-result-scroll] [data-player-rank-up]{display:none!important}
+[data-rhythm-result-scroll] [data-player-rank-gain] .mh-rankup-stamp, [data-rhythm-result-scroll] [data-player-rank-gain] [data-player-rank-up-stamp]{display:none!important}
+[data-rhythm-result-actions] .grid > button:first-child, [data-rhythm-result-actions] .flex > button:first-child{flex:1 1 0;background:#334155!important;font-size:14px}
+[data-rhythm-result-actions] .grid > button:last-child, [data-rhythm-result-actions] .flex > button:last-child{flex:2 1 0;font-size:18px;min-height:56px;box-shadow:0 0 16px rgba(99,102,241,.6)}
+[data-rhythm-result-actions] .grid{grid-template-columns:1fr 2fr!important}
+[data-rhythm-result-scroll] .mh-prxb-up{display:none!important} /* 撮るときだけ: 重ねたランクアップの画面を消して後ろを撮る */ [data-player-rank-up-fx]{display:none!important}

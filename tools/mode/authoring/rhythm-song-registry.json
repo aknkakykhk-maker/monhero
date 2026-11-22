@@ -2101,6 +2101,29 @@
     "source": "detected"
    }
   },
+  "kimimachi_loop": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-kimimachi-loop.mp3",
+   "chartRevision": 40,
+   "audioSha256": "1be296a6cdb3e39c29dab23cf2b4f974be446ec21cd8bfa70909714d7b62c7d4",
+   "durationMs": 161952,
+   "analyzedTiming": {
+    "bpm": 166.649,
+    "beatZeroMs": 764.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "sustainScale": {
+    "MASTER": 0.7
+   },
+   "chartIntensityByDifficulty": {
+    "HARD": "mild",
+    "EXPERT": "mild",
+    "MASTER": "strong",
+    "HELL": "extreme"
+   }
+  },
   "brand_new_sky": {
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-brand-new-sky.mp3",

@@ -82,5 +82,20 @@ check('F. ほかの公開曲はいつもの5倍(200P)', na && !na.target && na.a
 check('F. イベント前(11/23 5:00)は本オープン記念の5倍', all.rhythmEventPointAwardAt(T('2026-11-23T05:00:00+09:00'), 'monster_hero', 1000000, 100000)?.amount === 200);
 check('F. 終わったあとは、いつもの貯まり方(40P)', all.rhythmEventPointAwardAt(T('2026-11-30T00:00:00+09:00'), 'monster_hero', 1000000, 100000)?.amount === 40);
 
+// G. お話の BGM(社長「新曲3曲を演出でうまく使って」)。行の bgm で切り替え、曲がまだ入っていなければお話の曲のまま(止まらない)
+{
+  const bgmSrc = read('src/parts/13-bgm-and-rhythm-settings.jsx');
+  const fn = (bgmSrc.match(/const eventScriptBgmAt = [\s\S]*?\n\};\n/) || [''])[0];
+  const asst = read('data/assistants.js');
+  const ep8 = (asst.match(/const FLOWER3_EP8 = \[[\s\S]*?\n\];/) || [''])[0];
+  check('G. 第8話のライブは3曲を順に(みゅあ→きき→もも)', /melo_brand_new_sky[\s\S]*melo_zenbu_hissatsuwaza[\s\S]*melo_kimimachi_loop/.test(ep8));
+  const run = (tracks) => { const c = { BGM_TRACKS: tracks.map(id => ({ id })) }; vm.createContext(c);
+    vm.runInContext(`${fn}\n${ep8.replace('const FLOWER3_EP8', 'this.EP8')}\nthis.at = eventScriptBgmAt;`, c); return c; };
+  const none = run([]); const all = run(['melo_brand_new_sky', 'melo_zenbu_hissatsuwaza', 'melo_kimimachi_loop']);
+  const last = none.EP8.length - 1;
+  check('G. 曲がまだ入っていない回は、お話の曲のまま(切り替えない)', [...Array(none.EP8.length).keys()].every(i => none.at(none.EP8, i) === null));
+  check('G. 曲が入っていれば、最後はきみ待ち♡ループ', all.at(all.EP8, last) === 'melo_kimimachi_loop');
+}
+
 console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
 process.exit(failed ? 1 : 0);
