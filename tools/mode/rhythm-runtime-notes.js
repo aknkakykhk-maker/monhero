@@ -251,6 +251,8 @@ const RELEASED_MARKERS=Object.freeze({
   erfolg:'erfolg-v3',
   erfolg_piano:'erfolg-piano-v3',
   amakakeru_tsubasa:'amakakeru-tsubasa-v3',
+  beyond_the_same_sky:'beyond-the-same-sky-v3',
+  beyond_the_same_sky_short:'beyond-the-same-sky-short-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -337,6 +339,8 @@ const RELEASED_TRACKS=Object.freeze({
   erfolg:'erfolg',
   erfolg_piano:'erfolg_piano',
   amakakeru_tsubasa:'amakakeru_tsubasa',
+  beyond_the_same_sky:'beyond_the_same_sky',
+  beyond_the_same_sky_short:'beyond_the_same_sky_short',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });
