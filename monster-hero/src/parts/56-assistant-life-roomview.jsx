@@ -493,9 +493,10 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
-        <div className="absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center" style={{ top: floorY - 120 }} data-assistant-life-roomview-away>
-          <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
-          {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
+        // 留守の札は窓(右の壁)にかからない左上へ(前は真ん中で窓に重なっていた・2026-11-22 r1119-098)
+        <div className="absolute rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-left" style={{ top: topH + 10, left: 10, maxWidth: 'calc(100% - 20px)' }} data-assistant-life-roomview-away>
+          <p className="whitespace-nowrap text-[16px] font-black text-white">{away.title}</p>
+          {away.sub && <p className="whitespace-nowrap text-[11px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
       {/* みんな寝ているときだけ、家具やベッドもふくめて部屋ぜんたいを暗くする */}
