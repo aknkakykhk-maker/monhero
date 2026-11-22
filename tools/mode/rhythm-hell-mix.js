@@ -85,6 +85,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   beyond_the_same_sky:{marker:'beyond-the-same-sky-v3',zero:2058,beat:337.0787,levelRe:/const beyondTheSameSkyHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.4},
   beyond_the_same_sky_short:{marker:'beyond-the-same-sky-short-v3',zero:2058,beat:337.0787,levelRe:/const beyondTheSameSkyShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.4},
   desert_crown:{marker:'desert-crown-v3',zero:2392,beat:600.12,levelRe:/const desertCrownHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,hellDensity:1.6},
+  walkure:{marker:'walkure-v3',zero:70,beat:277.743,levelRe:/const walkureHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['ground','L','ground','R'],levelSettle:true},
+  walkure_short:{marker:'walkure-short-v3',zero:23,beat:277.743,levelRe:/const walkureShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   megalovania_smash:{marker:'megalovania-smash-v3',zero:761,beat:375,levelRe:/const megalovaniaSmashHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   evans:{marker:'evans-v3',zero:2135,beat:324.3682,levelRe:/const evansHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
@@ -597,6 +599,10 @@ const levelSwitchViolations=(notes,beat)=>{const out=[];
   for(const h of ['L','R']){const list=notes.filter(n=>n.hand===h).sort((a,b)=>startOf(a)-startOf(b));
     for(let i=1;i<list.length;i++)if(startLv(list[i])!==endLv(list[i-1])&&startOf(list[i])-endOf(list[i-1])<BEAT_GAP*beat-2)out.push(startOf(list[i]));}
   return out;};
+// 段変えの許す数(選定の物差し)。2026-11-22 社長決定 r1119-090: それまでの 0/2/4/6(指が同じ位置に来る形の SAME_PLACE_ALLOW の流用)は
+//   公開済み HELL の実績と合っていなかったため、公開 HELL 全80譜面を levelSwitchViolations で直接測った実績の、Lv帯ごとの最大値に緩めた
+//   (Lv<45:37=もう一つの世界へ / 45〜54:46=綺季一閃 / 55〜64:32=Erfolg / ≥65:25=FREEDOM DiVE↓)。公開中の譜面は作り直さず、この表はこれからの選定にだけ使う
+const LEVEL_SWITCH_ALLOW=lv=>lv>=65?25:lv>=55?32:lv>=45?46:37;
 // 同じ側(レーンの左右)の続く2点で、SIDE_GAP_MS 以内に高さが変わる所(同時押しは除く)。テンポくんの数え方
 const sideSwitches=notes=>{const out=[],lv=(n,e)=>n.k==='s'?(n.pts[e?n.pts.length-1:0][3]>=0.5?1:0):(n.sky?1:0);
   const ev=[];for(const n of notes){ev.push({n,at:startOf(n),e:false});if(n.k!=='t')ev.push({n,at:endOf(n),e:true});}
@@ -627,15 +633,97 @@ const settleSwitches=notes=>{const HR=require('./rhythm-chart-hand-rules.js');
       if(done)break;}
     if(!done)break;}
   notes.settle={before:start,after:cur.v.length,lowered};return notes;};
+// 段変えの仕上げ(2026-11-22・opt-in。SONGS に levelSettle:true を書いた曲か --level-settle のときだけ。書いていない曲は今までどおり):
+//   同じ親指が1.5拍未満で段を変える違反(levelSwitchViolations・窓は BEAT_GAP 拍=BPM から決まる)を、違反に関わる空中のタップ
+//   (モンスターノーツ以外・交差の区間の外)を地上へ下ろして消す。settleSwitches(150/250ms の速い持ち替え)では届かない、
+//   間が 250ms〜1.5拍 の違反が対象(216 BPM 級では窓が約417ms と広く、空タップ起因の違反が恒常的に残るため)。
+//   下ろすのは空タップが絡む違反だけ。スライドが段を作る違反・実ノーツどうしの違反は触らず、残件として数える。
+//   1つ下ろすたびに物差しを取り直し、違反が減り、かつ 押せない(横持ち+地上だけのシミュレート)・水平クロス・帯の中・
+//   見分けにくい所・指が同じ位置に来る形 が増えないときだけ採る(増える手は戻す)。時刻・位置・ノーツ数は変えない
+const settleLevelSwitches=(notes,beat)=>{
+  const HR=require('./rhythm-chart-hand-rules.js');
+  const startLv=n=>n.k==='s'?(n.pts[0][3]>=0.5?1:0):(n.sky?1:0),endLv=n=>n.k==='s'?(n.pts[n.pts.length-1][3]>=0.5?1:0):(n.sky?1:0);
+  const pairs=()=>{const out=[];
+    for(const h of ['L','R']){const list=notes.filter(n=>n.hand===h).sort((a,b)=>startOf(a)-startOf(b));
+      for(let i=1;i<list.length;i++)if(startLv(list[i])!==endLv(list[i-1])&&startOf(list[i])-endOf(list[i-1])<BEAT_GAP*beat-2)out.push({prev:list[i-1],next:list[i]});}
+    return out;};
+  const inCross=t=>(notes.crossWindows||[]).some(([a,b])=>t>=a&&t<=b);
+  // 下ろせるタップ(元から空・モンスター以外・交差の区間の外)。第2段階の割り当て選び直しの対象
+  const origSky=new Set(notes.filter(n=>n.k==='t'&&n.sky&&!n.mon&&!inCross(n.t)));
+  const measure=()=>{const rt=toRuntime(notes);
+    const sim=simulateRuntime(rt.filter(n=>!(n.skyHeight>0)&&!(n.slidePoints&&n.slidePoints.some(p=>p.sky>0))));
+    return {viol:pairs().length,guard:HR.flatCross(rt).length+HR.heldBandBlocked(rt).length+HR.skyConfusable(rt).length+HR.samePlace(rt).length
+      +thumbCheck(notes,HELL_LANDSCAPE,beat).issues.filter(i=>i.kind==='impossible').length+sim.impossible};};
+  // 違反の空側にある、下ろせるタップ(無ければ null)
+  const candOf=({prev,next})=>{
+    if(endLv(prev)===0&&startLv(next)===1&&next.k==='t'&&next.sky&&!next.mon&&!inCross(next.t))return next;
+    if(endLv(prev)===1&&startLv(next)===0&&prev.k==='t'&&prev.sky&&!prev.mon&&!inCross(prev.t))return prev;
+    return null;};
+  let cur=measure();const start=cur.viol;let lowered=0;
+  for(let round=0;round<200&&cur.viol>0;round++){let done=false;
+    for(const pair of pairs()){const n=candOf(pair);if(!n)continue;
+      n.sky=0;const next=measure();
+      if(next.viol<cur.viol&&next.guard<=cur.guard){cur=next;lowered++;done=true;break;}
+      n.sky=1;}
+    if(!done)break;}
+  // 第2段階: 貪欲では「1つ下ろすと反対側に違反ができる」空タップの連なりで止まるので、手ごとに下ろせるタップの段の割り当てを
+  //   動的計画法で選び直し、タップの下ろしだけで届く違反の最小値を出す(段が固定のノーツ=スライド・ホールド・モンスター・交差の区間は固定)。
+  //   割り当てを丸ごと当てて、違反が減り物差しが悪化しないときだけ採る(悪化したら貪欲の結果に戻す)
+  {
+    const gap=BEAT_GAP*beat-2;
+    const assign=new Map();   // note -> 選んだ段(下ろせるタップだけ)
+    for(const h of ['L','R']){
+      const list=notes.filter(n=>n.hand===h).sort((a,b)=>startOf(a)-startOf(b));
+      // 各ノーツの [始まりの段の候補, 終わりの段] 。タップは始まり=終わり。下ろせるタップは {0,1}、他は固定
+      const opts=list.map(n=>{
+        if(n.k==='t')return origSky.has(n)?[[0,0],[1,1]]:[[n.sky?1:0,n.sky?1:0]];
+        if(n.k==='s')return [[startLv(n),endLv(n)]];
+        return [[0,0]];});
+      // dp の状態は「そのノーツの終わりの段」(0/1)。遷移のコストは、前の終わりの段 pe とこのノーツの始まりの段 s が違い、
+      //   間が窓未満なら違反1つ。下ろせるタップは下ろすこと自体にも小さなコスト(0.001)を付け、同点なら空を多く残す割り当てを選ぶ
+      let dp=[Infinity,Infinity];const back=[];
+      list.forEach((n,i)=>{
+        const ndp=[Infinity,Infinity],bk=[-1,-1];
+        for(const [s,e] of opts[i]){
+          const lowCost=(origSky.has(n)&&s===0)?0.001:0;
+          if(i===0){if(lowCost<ndp[e]){ndp[e]=lowCost;bk[e]=-2;}}
+          else for(const pe of [0,1]){
+            if(dp[pe]===Infinity)continue;
+            const viol=(s!==pe&&startOf(n)-endOf(list[i-1])<gap)?1:0;
+            const c=dp[pe]+viol+lowCost;
+            if(c<ndp[e]){ndp[e]=c;bk[e]=pe;}}
+        }
+        back.push(bk);dp=ndp;});
+      let e=dp[0]<=dp[1]?0:1;
+      for(let i=list.length-1;i>=0;i--){
+        if(origSky.has(list[i]))assign.set(list[i],e);   // タップは始まり=終わりの段なので、選んだ終わりの段がそのまま割り当て
+        e=back[i][e];if(e===-2)break;}
+    }
+    if(assign.size){
+      const saved=new Map([...origSky].map(n=>[n,n.sky]));
+      for(const [n,lv] of assign)n.sky=lv;
+      const next=measure();
+      if(next.viol<cur.viol&&next.guard<=cur.guard){lowered=[...origSky].filter(n=>!n.sky).length;cur=next;}
+      else for(const [n,v] of saved)n.sky=v;
+    }
+  }
+  // 残件の内訳: 空側がスライド / 空側はタップだが安全に下ろせなかった(下ろすと別の違反や悪化が出る・交差の区間の中) / その他
+  const residual={slide:0,blockedTap:0,other:0};
+  for(const pair of pairs()){
+    const skySide=endLv(pair.prev)===1?pair.prev:pair.next;
+    if(skySide.k==='t'&&skySide.sky)residual.blockedTap++;
+    else if(skySide.k==='s')residual.slide++;
+    else residual.other++;}
+  notes.levelSettle={before:start,after:cur.viol,lowered,residual};return notes;};
 // precision: 盛り上がりで回すと、混んだ所では段を変える間(1.5拍)が取れず空中が減ることがある。順番で回したときの空中の量の PRECISION_SKY_KEEP を下回らない所まで、
 //   両手が空の小節を増やす(energyBias 0→3)。どれも届かなければ、空中がいちばん多いものを使う
 const PRECISION_SKY_KEEP=.9;
 const skyCount=notes=>notes.filter(n=>n.k==='s'?n.pts.some(p=>p[3]>=.5):!!n.sky).length;
 const mixBest=(master,opts)=>{
-  if(!opts.precision)return mixBest0(master,opts);
+  if(!opts.precision){const out=mixBest0(master,opts);if(opts.levelSettle)settleLevelSwitches(out,opts.beat);return out;}
   const copy=()=>JSON.parse(JSON.stringify(master)),base=skyCount(mixBest0(copy(),{...opts,precision:false}));
   let best=null;
-  for(let bias=0;bias<=3;bias++){const out=settleSwitches(mixBest0(copy(),{...opts,energyBias:bias})),sky=skyCount(out);
+  for(let bias=0;bias<=3;bias++){const out=settleSwitches(mixBest0(copy(),{...opts,energyBias:bias}));if(opts.levelSettle)settleLevelSwitches(out,opts.beat);const sky=skyCount(out);
     out.precision={bias,sky,baseSky:base};
     if(!best||sky>skyCount(best))best=out;
     if(sky>=base*PRECISION_SKY_KEEP){best=out;break;}}
@@ -698,12 +786,14 @@ if(require.main===module){
       if(used>span*PEAK_SHARE+1)throw new Error(`mixedWindows は合わせて曲の長さの${Math.round(PEAK_SHARE*100)}%まで(山場だけ・docs/rules/CHART_ENGINE.md「HELL の地上と空中の入り乱れ」)`);}
     // precision(盛り上がりで回す・交差を盛り上がる所から・速い持ち替えを下ろす)は曲の設定に書いた曲だけ。--precision / --no-precision で試しに入切
     const precision=args.includes('--no-precision')?false:args.includes('--precision')||conf.precision===true;
-    const hell=mixBest(master,{...conf,precision,mixedWindows,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null,keepMixed:args.includes('--keep-mixed')});
+    const hell=mixBest(master,{...conf,precision,mixedWindows,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null,keepMixed:args.includes('--keep-mixed'),levelSettle:args.includes('--level-settle')||conf.levelSettle===true});
     for(const d of hell.drawers||[])console.log(`引き出し ${D.drawerLine(d)}${d.use&&d.lifted!=null?`(空へ上げた ${d.lifted}本・手直しのあと${d.id==='R3'?'区間の中で空を通るスライド':'空で終わる'} ${d.kept}本)`:''}`);
     if(!drawersOn)console.log('引き出し: 使わない(この曲は drawers:false。試すときは --drawers)');
     if(hell.precision)console.log(`精度の強化: 空中・地上の回し方を小節の盛り上がりで決めた(空中のノーツ ${hell.precision.sky}個・順番で回すと ${hell.precision.baseSky}個・両手が空の小節の増やし方 ${hell.precision.bias}/3)`);
     if(hell.settle)console.log(`精度の仕上げ: 同じ親指の速い持ち替え ${hell.settle.before}→${hell.settle.after}件(空中のタップ ${hell.settle.lowered}個を地上へ)`);
+    if(hell.levelSettle)console.log(`段変えの仕上げ: 同じ親指が1.5拍未満で段を変える ${hell.levelSettle.before}→${hell.levelSettle.after}件(空中のタップ ${hell.levelSettle.lowered}個を地上へ・残りの内訳 スライド起因${hell.levelSettle.residual.slide} 下ろせなかったタップ${hell.levelSettle.residual.blockedTap} その他${hell.levelSettle.residual.other})`);
     if(precision&&args.includes('--write')&&!conf.precision)throw new Error('--precision で書くときは、SONGS のその曲に precision:true を書いてから(作り直したとき同じ譜面になるように)');
+    if(args.includes('--write')&&args.includes('--level-settle')&&!conf.levelSettle)throw new Error('--level-settle で書くときは、SONGS のその曲に levelSettle:true を書いてから(作り直したとき同じ譜面になるように)');
     const {chartLevel}=require('./rhythm-chart-level.js');
     const rt=toRuntime(hell),level=chartLevel({notes:rt}).level,mLevel=chartLevel({notes:toRuntime(before)}).level;
     const windows=[...(conf.showcase||[]),...(hell.crossWindows||[])],inWin=t=>windows.some(([a,b])=>t>=a&&t<=b);
@@ -725,7 +815,7 @@ if(require.main===module){
       {const fc=HR.flatCross(rt);console.log(`  ${HR.FLAT_CROSS_LABEL} ${fc.length}件`+(fc.length?': '+fc.map(x=>`${(x.at/1000).toFixed(2)}(${x.level})`).join(' / ')+' ← HELL の交差は上下に分ける(書いたあと rhythm-chart-hand-rules-check.js が NG にする)':''));}
       {const hb=HR.heldBandBlocked(rt);console.log(`  ${HR.ON_HELD_BAND_LABEL} ${hb.length}件`+(hb.length?': '+hb.map(x=>`${(x.at/1000).toFixed(2)}(${HR.HELD_BAND_KINDS[x.kind]})`).join(' / ')+' ← 書いたあと rhythm-chart-hand-rules-check.js が NG にする':''));}
       if(res.sideHeightSwitch.length!==ss.length)console.log(`  ※ 共通の物差しでは ${res.sideHeightSwitch.length}件(ゲームの形へ写したあとで数えたため)`);}
-    console.log(`Lv.${level}(MASTER Lv.${mLevel}) | 横持ち(高さの差39%・交差の区間の外) 押せない${th.count.impossible}・交差${th.count.cross}・届きにくい${th.count.reach} | 両手のシミュレート(地上だけ) 押せない${sim.impossible} | 同じ親指が1.5拍未満で段を変える ${viol.length}`);
+    console.log(`Lv.${level}(MASTER Lv.${mLevel}) | 横持ち(高さの差39%・交差の区間の外) 押せない${th.count.impossible}・交差${th.count.cross}・届きにくい${th.count.reach} | 両手のシミュレート(地上だけ) 押せない${sim.impossible} | 同じ親指が1.5拍未満で段を変える ${viol.length}(Lv帯の上限 ${LEVEL_SWITCH_ALLOW(level)})`);
     if(th.count.impossible||th.count.cross||th.count.reach)console.log('  横持ち:',th.issues.filter(i=>i.kind!=='busy').slice(0,12).map(i=>`${(i.t/1000).toFixed(2)} ${i.kind} ${i.what} ${i.why}`).join(' / '));
     if(!args.includes('--write')){console.log('※ --write を付けると HELL のマーカーの内側と Lv. だけを書く');process.exit(0);}
     let next=source.slice(0,oldHell.from)+render(hell)+source.slice(oldHell.to);
@@ -772,4 +862,4 @@ if(require.main===module){
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
-module.exports={peakWindows,PEAK_SHARE,mix,mixBest,settleSwitches,skyCount,PRECISION_SKY_KEEP,handRuleScore,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
+module.exports={peakWindows,PEAK_SHARE,mix,mixBest,settleSwitches,settleLevelSwitches,LEVEL_SWITCH_ALLOW,skyCount,PRECISION_SKY_KEEP,handRuleScore,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};

@@ -164,18 +164,32 @@
   "erfolg_piano/HELL": 9,
   "amakakeru_tsubasa/MASTER": 0,
   "amakakeru_tsubasa/HELL": 13,
-  "beyond_the_same_sky/MASTER": 1,
-  "beyond_the_same_sky/HELL": 7,
-  "beyond_the_same_sky_short/MASTER": 2,
-  "beyond_the_same_sky_short/HELL": 4,
+  "beyond_the_same_sky/MASTER": 2,
+  "beyond_the_same_sky/HELL": 22,
+  "beyond_the_same_sky_short/MASTER": 7,
+  "beyond_the_same_sky_short/HELL": 19,
   "desert_crown/MASTER": 7,
-  "desert_crown/HELL": 0
+  "desert_crown/HELL": 0,
+  "walkure/MASTER": 1,
+  "walkure/HELL": 10,
+  "walkure_short/MASTER": 0,
+  "walkure_short/HELL": 1
  },
  "history": [
   {
    "at": "2026-11-22T05:48",
    "reason": "r1119-096 Beyond the Same Sky(原曲・short)MASTER・HELL と Desert Crown HELL の押さえ中の交差を位置だけ直した。押さえ中の交差の控えを新しく作った",
    "changed": 169
+  },
+  {
+   "at": "2026-11-22T08:28",
+   "reason": "新曲 ワルキューレ(原曲・short ver.)を公開",
+   "changed": 4
+  },
+  {
+   "at": "2026-11-22T10:16",
+   "reason": "r1119-096 Desert Crown HELL の押せない3か所と、Beyond の4譜面の直し直し(main のワルキューレの控えを取り込んだうえで数え直し)",
+   "changed": 4
   }
  ]
 }
