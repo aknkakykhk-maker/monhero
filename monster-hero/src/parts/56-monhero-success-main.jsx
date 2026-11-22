@@ -1013,7 +1013,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
+        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div>{/* 名札は歩く層に入れて足元に付いて行く(跳ね・向きの反転は受けない・育-244) */}<span className="v-nm">{run.nick}</span></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
           {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
@@ -1022,7 +1022,6 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
-        <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
@@ -1194,8 +1193,8 @@ function useMsxPtUnit(mastery = false) {
 }
 function MsxPtUnits({ unit, setUnit, mastery = false }) {
   return (
-    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units>
-      {(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}
+    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units><span className="msx-ptunit-k" aria-hidden="true">1回に</span>
+      <span className="msx-ptseg">{(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}</span>
     </div>
   );
 }
@@ -1210,7 +1209,7 @@ function MsxPtBtn({ onPress, ...rest }) {
 //   技の熟練は、振り分けの並び(draft)に 'm:' + 技のID を積む。芯の spendPts が 'm:…' を熟練として扱う(保存は s.mastery に足すだけ)
 function MsxPtTabs({ tab, setTab }) {
   return (
-    <div className="msx-ptunit" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
+    <div className="msx-pttabs" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
       {[['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => <button type="button" role="tab" key={k} aria-selected={tab === k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)} data-msx-pt-tab={k}>{nm}</button>)}
     </div>
   );
@@ -1295,7 +1294,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
         <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={(x) => { if (ptTab === 'mastery') setUnitM(x); else setUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
         {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
         {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
-        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
+        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
         {/* 説明は短く1か所に。行ごとの「1点で +1」は2点のときだけ出す(2026-11-20 r1119-033 育-114・育-116: 同じ説明が7回・2行に詰め込まれていた) */}
         <div className="msx-note msx-kp">1点で能力 +1{lineOf ? `(${lineOf}を超えた能力は 2点で +1)` : ''}。＋で仮に振って、「決定」で確定する</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (

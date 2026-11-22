@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 77606dde3b7a1f62
+// generated-sha256: f18380b76354dc41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11698,7 +11698,7 @@ const missionWithComplete = (type, normal, complete, now) => {
   return [...list, { ...complete, target, condition:`通常${label}${list.length}個のうち${target}個を達成する${inSwitch ? `(切り替えの${when}だけ)` : ''}` }];
 };
 const missionDailyDefinitions = (now=Date.now()) => missionWithComplete('daily', [
-  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:2000}]},
+  {id:'daily_login',name:'今日もMonster Hero！',condition:'今日ログインする',key:'login',target:1,rewards:[{type:'diamond',amount:2000}]},
   {id:'daily_battles',name:'好きな遊びを3回',tag:MISSION_TAG_ANY,condition:'バトル・モンヒロビート1曲・カード1戦のどれでも',key:'anyPlays',target:3,rewards:[{type:'beatPoint',amount:50}]},
   // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'daily_wins',name:'デイリーチャレンジ',tag:MISSION_TAG_BATTLE,condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:10}]},
@@ -43194,12 +43194,12 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
         {id:'monthly',color:'#c026d3',label:<>マンスリー{tabCountBadge(missionClaimableList(state,'monthly').length)}</>},
       ]}/>
-      {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>全て受け取る{total>0&&` (${total})`}</button>;})()}
+      {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>{total>0?`${total}件まとめて受け取る`:'全て受け取る'}</button>;})()}
       <div className="mb-2 flex shrink-0 justify-center"><span className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[10px] font-black text-slate-300">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:defs.map(m=>{const shownRewards=missionRewardsFor(m.rewards,{ownedItems,room}),swapped=shownRewards.filter(r=>r.swappedFrom),value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
-        <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words">{m.tag&&<span data-mission-tag className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200">{m.tag}</span>}<span className="min-w-0">{m.name}</span></h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:[...defs].map((m,i)=>({m,i,rank:(missionValue(state,missionTab,m)>=m.target&&!sent.includes(m.id))?0:1})).sort((a,b)=>a.rank-b.rank||a.i-b.i).map(({m})=>{const shownRewards=missionRewardsFor(m.rewards,{ownedItems,room}),swapped=shownRewards.filter(r=>r.swappedFrom),value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
+        <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words">{m.tag&&<span data-mission-tag className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200">{m.tag}</span>}<span className="min-w-0">{m.name}</span></h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(m.condition)}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
         <div className="h-2 my-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5"><div className={`h-full rounded-full transition-[width] ease-out ${done?'bg-amber-400':'bg-cyan-500'}`} style={{width:`${pct}%`}}></div></div>
-        <div className="flex items-center justify-between gap-2"><div className="min-w-0 flex-1" data-mission-rewards><div className="flex flex-wrap items-center gap-1"><span className="shrink-0 text-[11px] font-black text-cyan-200">報酬:</span>{shownRewards.map((r,i)=><span key={i} data-mission-reward-chip className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black ${r.type==='beatPoint'?'border-violet-300/50 bg-violet-900/60 text-violet-50':'border-white/10 bg-slate-800/80 text-cyan-200'}`}>{missionRewardChipText(r)}</span>)}</div>{swapped.length>0&&<p data-mission-furniture-swap className="mt-1 text-[10px] font-bold leading-snug text-slate-400">{swapped.map(r=>giftItemRewardInfo(r.swappedFrom)?.name||'家具').join('・')}は持っているので、ビートPに替えて届きます</p>}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">{inGiftBox(m)?'ギフトボックスに届いています':'受け取り済み'}</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[11px] font-black text-slate-400">進行中 {pct}%</span>}</div>
+        <div className="flex items-center justify-between gap-2"><div className="min-w-0 flex-1" data-mission-rewards><div className="flex flex-wrap items-center gap-1"><span className="shrink-0 text-[11px] font-black text-cyan-200">報酬:</span>{shownRewards.map((r,i)=><span key={i} data-mission-reward-chip className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-black ${r.type==='beatPoint'?'border-violet-300/50 bg-violet-900/60 text-violet-50':'border-white/10 bg-slate-800/80 text-cyan-200'}`}>{missionRewardChipText(r)}</span>)}</div>{swapped.length>0&&<p data-mission-furniture-swap className="mt-1 text-[10px] font-bold leading-snug text-slate-400">{swapped.map(r=>giftItemRewardInfo(r.swappedFrom)?.name||'家具').join('・')}は持っているので、ビートPに替えて届きます</p>}</div>{isSent?<button type="button" disabled className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-500 text-[11px] font-black text-black disabled:opacity-40">{inGiftBox(m)?'ギフトボックスに届いています':'受け取り済み'}</button>:done?<button type="button" onClick={()=>onClaim(missionTab,m)} className="shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95">受け取る</button>:null}</div>
       </article>})}</div>
     </div>
   );
@@ -43236,7 +43236,7 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       <ScreenHead title="ギフトボックス" icon={<Package size={20}/>} accent="text-cyan-400" onBack={onBack} backLabel="戻る"/>
       <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable.length>0?'claim':'empty'} scene={claimable.length>0?'giftClaimable':'giftEmpty'} compact/></div>
       <ScreenTabs value={giftTab} onChange={onSelectTab} items={[
-        {id:'unclaimed',color:'#0891b2',label:<>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length}){tabCountBadge(claimable.length)}</>},
+        {id:'unclaimed',color:'#0891b2',label:<>未受取{tabCountBadge(claimable.length)}</>},
         {id:'history',color:'#4f46e5',label:`受取済み (${history.length})`},
       ]}/>
       {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">全て受け取る</button>}
@@ -43244,7 +43244,11 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
       {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
           色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}
       <div className={`mh-gift-list ${SCREEN_LIST_CLASS} pb-4`}>{shown.length===0?<ScreenEmpty emoji="🎁" lines={giftTab==='unclaimed'?['未受取のギフトはありません','ミッションやログインボーナスを達成すると、ここに届きます']:['受取済みのギフトはありません','受け取ったギフトは、ここに残ります']}/>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-2xl border ${g.claimedAt?'bg-[#111329] border-white/10':expired?'bg-[#250a1e] border-red-500/60':'bg-[#131630] border-cyan-400/60'}`}>
-        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b style={JA_WRAP_STYLE}>{jaWrap(display.title)}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
+        <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b style={JA_WRAP_STYLE}>{jaWrap(display.title)}</b></h3>{(()=>{
+          // 「受取可」の札は「受け取る」のボタンと同じことを言うので出さない。受け取れる物は、期限が3日を切ったときだけ「あと◯日」を赤で出す(r1119-080)
+          if(!g.claimedAt&&!expired&&valid){const left=(g.expiresAt?new Date(g.expiresAt).getTime():NaN)-now;if(!Number.isFinite(left)||left<=0||left>3*86400000)return null;const hours=Math.ceil(left/3600000);return <em data-gift-deadline-soon className="bg-red-700 text-white">{hours<24?`あと${hours}時間`:`あと${Math.ceil(left/86400000)}日`}</em>;}
+          return <em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':'要確認'}</em>;
+        })()}</div>
         <div className="mh-gift-main"><div className="mh-gift-rewards">{Array.isArray(g.rewards)&&g.rewards.map((r,i)=><span key={i}>{giftRewardText(r)}</span>)}</div>{!g.claimedAt&&<button type="button" disabled={expired||!valid} onClick={()=>onClaim([g.id])} className="mh-button mh-button-primary">受け取る</button>}</div>
         <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
       </article>})}</div>
@@ -71424,7 +71428,9 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
         const imgLeft = r.left + cw / 2;
         // 寝顔の絵が大きすぎて布団・家具にはみ出す(2026-11-15 社長 r1115-005): 見えている部分の高さが 2.0U を超える絵は、目の位置を動かさずに縮めて枕に収める
-        const visH = r.height * (box.b - box.t), k = Math.min(1, (2.0 * U) / Math.max(1, visH));
+        //   全身の絵(ききのツインテール・きゅうこの冬の装いの寝顔など。縦が横の2.2倍より長い)には当てない: つま先まで数えて頭がとても小さく縮み、枕の左上に浮いていた(2026-11-22 社長「寝顔の表示方法変えた？かなりひどい」)
+        const fullBody = (box.b - box.t) * r.height > 2.2 * (box.r - box.l) * r.width;
+        const visH = r.height * (box.b - box.t), k = fullBody ? 1 : Math.min(1, (2.0 * U) / Math.max(1, visH));
         const eyeOrigin = `${(((box.l + box.r) / 2) * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
         const shrink = k < 0.999 ? { transform: `scale(${k.toFixed(3)})`, transformOrigin: eyeOrigin } : {};
         return (
@@ -86602,6 +86608,8 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
   const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
   const shown = b >= 5 ? s.stats : (ups ? { ...s.stats, [e.d.stat]: s.stats[e.d.stat] - e.d.up } : s.stats);
   const palOn = b >= 3; const pair = b >= 3;
+  // ピーク中はモンスターの後ろに炎が出る。状態だと分かるよう、名札の下に「ピーク中」の札を付ける(育-207)
+  const peakOn = !!(msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && run.s && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in');
   const nx = msxTevNextText(run, o);
   const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
@@ -86614,6 +86622,7 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className={`tev-who me${pair ? ' pair' : ''}`}><div className="gr"/><MsxMonArt run={run} className="tev-art" style={{}} live/>{surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? <span className="tev-bang" aria-hidden="true">!!</span> : null}{b === 2 && surprise ? <span className="tev-q" aria-hidden="true">?</span> : null}</div>
       {m ? <div className={`tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`}><div className="gr"/><div className="tev-art">{palImg}</div></div> : null}
+      {peakOn && b >= 2 && b !== 6 ? <span className={`tev-pk${pair ? ' pair' : ''}`} data-msx-tev-peak>🔥 ピーク中</span> : null}
       {pair && b !== 6 ? <><span className="tev-nm me">{run.nick || ''}</span>{m ? <span className={`tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`}>{name}</span> : null}</> : null}
       {b === 5 && !bk && !calm ? <div className="tev-dust" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ animationDelay: `${k * 0.07}s`, top: `${44 + (k % 3) * 6}%` }}/>)}</div> : null}
       {b >= 2 ? <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={title}/> : null}
@@ -86724,6 +86733,8 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
 .msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
 .msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-pk{position:absolute;left:50%;bottom:calc(24% - 30px);transform:translateX(-50%);z-index:3;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#c2410c,#f97316);color:#fff;border:1.5px solid #fde047;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 #0006}
+.msx .msx-tev .tev-pk.pair{left:29%;bottom:calc(24% - 56px)}
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
@@ -91286,7 +91297,9 @@ const MSX_CSS = `
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
-.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+/* なぞった線は丸の後ろに薄く引く(育-223: 丸の絵や「Lv.2」の札の上を白い線が走り、壊れた表示に見えた) */
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:0;opacity:.4}
+.msx .v-trs > .v-tr{z-index:1}
 .msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
@@ -91608,6 +91621,7 @@ const MSX_CSS = `
 .msx .v-scene.home .msx-roam{position:absolute;inset:0;pointer-events:none;transform-origin:50% 72%;animation:msx-roam-mv 28s linear infinite;will-change:transform}
 .msx .v-scene.home .msx-roam-f{position:absolute;inset:0;transform-origin:50% 72%;animation:msx-roam-fl 28s steps(1,end) infinite}
 .msx .v-scene.home .msx-roam-h{position:absolute;inset:0;animation:msx-roam-hp 28s linear infinite}
+.msx .v-scene.home .msx-roam .v-nm{bottom:calc(var(--mb,25%) - 18px)} /* 手前へ歩いて大きくなっても、名札が場面の下の縁にかからない(育-244) */
 @keyframes msx-roam-mv{0%{transform:translate(0%,0%) scale(1)}10%{transform:translate(24%,0%) scale(1)}14%{transform:translate(24%,0%) scale(1)}15%{transform:translate(24%,0%) scale(1)}26%{transform:translate(-4%,11%) scale(1.2)}30%{transform:translate(-4%,11%) scale(1.2)}31%{transform:translate(-4%,11%) scale(1.2)}40%{transform:translate(-22%,9%) scale(1.15)}41%{transform:translate(-22%,9%) scale(1.15)}52%{transform:translate(-18%,-4%) scale(0.92)}56%{transform:translate(-18%,-4%) scale(0.92)}57%{transform:translate(-18%,-4%) scale(0.92)}68%{transform:translate(20%,-4%) scale(0.92)}72%{transform:translate(20%,-4%) scale(0.92)}73%{transform:translate(20%,-4%) scale(0.92)}88%{transform:translate(0%,0%) scale(1)}92%{transform:translate(0%,0%) scale(1)}93%{transform:translate(0%,0%) scale(1)}100%{transform:translate(0%,0%) scale(1)}}
 @keyframes msx-roam-fl{0%{transform:scaleX(1)}10%{transform:scaleX(1)}14%{transform:scaleX(1)}15%{transform:scaleX(-1)}26%{transform:scaleX(-1)}30%{transform:scaleX(-1)}31%{transform:scaleX(1)}40%{transform:scaleX(1)}41%{transform:scaleX(-1)}52%{transform:scaleX(-1)}56%{transform:scaleX(-1)}57%{transform:scaleX(1)}68%{transform:scaleX(1)}72%{transform:scaleX(1)}73%{transform:scaleX(-1)}88%{transform:scaleX(-1)}92%{transform:scaleX(-1)}93%{transform:scaleX(1)}100%{transform:scaleX(1)}}
 @keyframes msx-roam-hp{0%{transform:translateY(0)}0.5%{transform:translateY(-3.5%)}1.6%{transform:translateY(0)}2.7%{transform:translateY(-3.5%)}3.8%{transform:translateY(0)}4.9%{transform:translateY(-3.5%)}6.0%{transform:translateY(0)}7.1%{transform:translateY(-3.5%)}8.2%{transform:translateY(0)}9.3%{transform:translateY(-3.5%)}10%{transform:translateY(0)}11.1%{transform:translateY(0)}11.5%{transform:translateY(-9%)}12.0%{transform:translateY(0)}12.2%{transform:translateY(0)}12.6%{transform:translateY(-9%)}13.1%{transform:translateY(0)}15.5%{transform:translateY(-3.5%)}16.6%{transform:translateY(0)}17.7%{transform:translateY(-3.5%)}18.8%{transform:translateY(0)}19.9%{transform:translateY(-3.5%)}21.0%{transform:translateY(0)}22.1%{transform:translateY(-3.5%)}23.2%{transform:translateY(0)}24.3%{transform:translateY(-3.5%)}25.4%{transform:translateY(0)}26%{transform:translateY(0)}31.5%{transform:translateY(-3.5%)}32.6%{transform:translateY(0)}33.7%{transform:translateY(-3.5%)}34.8%{transform:translateY(0)}35.9%{transform:translateY(-3.5%)}37.0%{transform:translateY(0)}38.1%{transform:translateY(-3.5%)}39.2%{transform:translateY(0)}40%{transform:translateY(0)}57.5%{transform:translateY(-3.5%)}58.1%{transform:translateY(0)}58.5%{transform:translateY(-9%)}58.6%{transform:translateY(0)}59.0%{transform:translateY(0)}59.2%{transform:translateY(0)}59.6%{transform:translateY(-9%)}59.7%{transform:translateY(-3.5%)}60.1%{transform:translateY(0)}60.8%{transform:translateY(0)}61.9%{transform:translateY(-3.5%)}63.0%{transform:translateY(0)}64.1%{transform:translateY(-3.5%)}65.2%{transform:translateY(0)}66.3%{transform:translateY(-3.5%)}67.4%{transform:translateY(0)}68%{transform:translateY(0)}73.5%{transform:translateY(-3.5%)}74.6%{transform:translateY(0)}75.7%{transform:translateY(-3.5%)}76.8%{transform:translateY(0)}77.9%{transform:translateY(-3.5%)}79.0%{transform:translateY(0)}80.1%{transform:translateY(-3.5%)}81.2%{transform:translateY(0)}82.3%{transform:translateY(-3.5%)}83.4%{transform:translateY(0)}84.5%{transform:translateY(-3.5%)}85.6%{transform:translateY(0)}86.7%{transform:translateY(-3.5%)}87.8%{transform:translateY(0)}88%{transform:translateY(0)}}
@@ -91867,6 +91881,19 @@ const MSX_CSS = `
 /* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
 .msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+/* 振り分けの3段は形を分ける(育-178・245): 行き先=下線のタブ / 刻み=1本につながった区切り / まとめて振る=枠だけの四角いボタン(押すとすぐ振る・選ばれた色で光らせない) */
+.msx .msx-pttabs{display:flex;margin:6px 0 4px;border-bottom:2px solid #475569}
+.msx .msx-pttabs .chip{flex:1;min-height:44px;border:0;border-radius:0;background:transparent;color:#94a3b8;font-size:14px;font-weight:900;margin-bottom:-2px;border-bottom:3px solid transparent}
+.msx .msx-pttabs .chip.on{background:transparent;color:#fde047;border-bottom-color:#fde047}
+.msx .msx-ptunit{display:flex;align-items:center;gap:0;margin:6px 0}
+.msx .msx-ptunit .msx-ptunit-k{flex:none;font-size:11px;font-weight:800;color:#cbd5e1;margin-right:6px;white-space:nowrap}
+.msx .msx-ptunit .msx-ptseg{flex:1;display:flex;min-width:0;border:1px solid #64748b;border-radius:10px;overflow:hidden}
+.msx .msx-ptunit .chip{flex:1;min-width:0;min-height:36px;border-radius:0;border:0;border-left:1px solid #64748b;background:#1e293b;color:#e2e8f0}
+.msx .msx-ptunit .chip:first-child{border-left:0}
+.msx .msx-ptunit .chip.on{background:#fde047;color:#422006}
+.msx .chip.msx-ptact{min-height:36px;border-radius:9px;background:transparent;border:1.5px solid #94a3b8;color:#f1f5f9;padding:0 10px}
+.msx .chip.msx-ptact:active{background:#334155}
+.msx .chip.msx-ptact:disabled{opacity:.45}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
 /* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
@@ -93635,7 +93662,9 @@ const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : 
 // カードの下の伸びの表示。絵文字だけでは能力が分からないので名前を添え、1つずつ折れないようにする(育-234・前は「🛡️+4% 🎯 ⏎ +3%」と数だけ次の行へ落ちていた)
 const msxTpBonusText = (mem) => {
   if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
-  return mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>);
+  // 3つ目からは「ほか◯つ」の印だけ(詳細の窓には全部出る。カードと詳細が食い違って見えないように・育-126)
+  const more = mem.top.length - 2;
+  return [...mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>), more > 0 ? <React.Fragment key="more"> <span className="msx-tp-more">ほか{more}つ</span></React.Fragment> : null];
 };
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
@@ -95005,7 +95034,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
+        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div>{/* 名札は歩く層に入れて足元に付いて行く(跳ね・向きの反転は受けない・育-244) */}<span className="v-nm">{run.nick}</span></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
           {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
@@ -95014,7 +95043,6 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
-        <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
@@ -95186,8 +95214,8 @@ function useMsxPtUnit(mastery = false) {
 }
 function MsxPtUnits({ unit, setUnit, mastery = false }) {
   return (
-    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units>
-      {(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}
+    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units><span className="msx-ptunit-k" aria-hidden="true">1回に</span>
+      <span className="msx-ptseg">{(mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}</span>
     </div>
   );
 }
@@ -95202,7 +95230,7 @@ function MsxPtBtn({ onPress, ...rest }) {
 //   技の熟練は、振り分けの並び(draft)に 'm:' + 技のID を積む。芯の spendPts が 'm:…' を熟練として扱う(保存は s.mastery に足すだけ)
 function MsxPtTabs({ tab, setTab }) {
   return (
-    <div className="msx-ptunit" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
+    <div className="msx-pttabs" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
       {[['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => <button type="button" role="tab" key={k} aria-selected={tab === k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)} data-msx-pt-tab={k}>{nm}</button>)}
     </div>
   );
@@ -95287,7 +95315,7 @@ function MsxStats({ run, setRun, v, ev, onClose, onOpenTech = null }) {
         <MsxPtUnits unit={ptTab === 'mastery' ? unitM : unit} setUnit={(x) => { if (ptTab === 'mastery') setUnitM(x); else setUnit(x); setPtWarn(''); }} mastery={ptTab === 'mastery'}/>
         {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
         {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
-        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
+        <div className="msx-row msx-pt-bulk" style={{ gap: 6, marginBottom: 6 }}><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoTop}>全部 {MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={auto}>おまかせで振る</button><button type="button" className="chip msx-ptact" disabled={!ws.pts} onClick={autoBal}>バランス</button></div>
         {/* 説明は短く1か所に。行ごとの「1点で +1」は2点のときだけ出す(2026-11-20 r1119-033 育-114・育-116: 同じ説明が7回・2行に詰め込まれていた) */}
         <div className="msx-note msx-kp">1点で能力 +1{lineOf ? `(${lineOf}を超えた能力は 2点で +1)` : ''}。＋で仮に振って、「決定」で確定する</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
@@ -97387,9 +97415,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {ptWarn ? <div className="msx-note" style={{ color: '#fbbf24' }} data-msx-pt-warn>{ptWarn}</div> : null}
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
-        <button type="button" className="chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
-        <button type="button" className="chip" onClick={() => preset('low')}>おまかせで振る</button>
-        <button type="button" className="chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('low')}>おまかせで振る</button>
+        <button type="button" className="chip msx-ptact" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
@@ -98211,6 +98239,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-more{display:inline-block;white-space:nowrap;color:#cbd5e1;font-weight:800}
 .mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}

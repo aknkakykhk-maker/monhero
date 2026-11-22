@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b2721adae97f615
+// source-sha256: 7dfd8690acbd5b71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16652,7 +16652,7 @@ const missionWithComplete = (type, normal, complete, now) => {
 const missionDailyDefinitions = (now = Date.now()) => missionWithComplete('daily', [{
   id: 'daily_login',
   name: '今日もMonster Hero！',
-  condition: 'その期間中にログインする',
+  condition: '今日ログインする',
   key: 'login',
   target: 1,
   rewards: [{
@@ -69913,7 +69913,7 @@ function MissionsScreen({
       disabled: !total,
       onClick: () => onClaimAll(),
       className: `shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`
-    }, "全て受け取る", total > 0 && ` (${total})`);
+    }, total > 0 ? `${total}件まとめて受け取る` : '全て受け取る');
   })(), React.createElement("div", {
     className: "mb-2 flex shrink-0 justify-center"
   }, React.createElement("span", {
@@ -69930,7 +69930,13 @@ function MissionsScreen({
   }, defs.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🗒️",
     lines: ['このタブのミッションはありません', 'ほかのタブに受け取れるものがあるかもしれません']
-  }) : defs.map(m => {
+  }) : [...defs].map((m, i) => ({
+    m,
+    i,
+    rank: missionValue(state, missionTab, m) >= m.target && !sent.includes(m.id) ? 0 : 1
+  })).sort((a, b) => a.rank - b.rank || a.i - b.i).map(({
+    m
+  }) => {
     const shownRewards = missionRewardsFor(m.rewards, {
         ownedItems,
         room
@@ -69955,8 +69961,9 @@ function MissionsScreen({
     }, m.tag), React.createElement("span", {
       className: "min-w-0"
     }, m.name)), React.createElement("p", {
-      className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words"
-    }, m.condition)), React.createElement("b", {
+      className: "mt-0.5 text-[11px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap(m.condition))), React.createElement("b", {
       className: "shrink-0 text-[12px] text-amber-200"
     }, Math.min(value, m.target), " / ", m.target)), React.createElement("div", {
       className: "h-2 my-2 overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5"
@@ -69989,9 +69996,7 @@ function MissionsScreen({
       type: "button",
       onClick: () => onClaim(missionTab, m),
       className: "shrink-0 min-h-[44px] px-4 rounded-xl bg-amber-500 text-[12px] font-black text-black active:scale-95"
-    }, "受け取る") : React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black text-slate-400"
-    }, "進行中 ", pct, "%")));
+    }, "受け取る") : null));
   })));
 }
 function GiftBoxScreen({
@@ -70030,7 +70035,7 @@ function GiftBoxScreen({
     items: [{
       id: 'unclaimed',
       color: '#0891b2',
-      label: React.createElement(React.Fragment, null, "未受取 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length))
+      label: React.createElement(React.Fragment, null, "未受取", tabCountBadge(claimable.length))
     }, {
       id: 'history',
       color: '#4f46e5',
@@ -70062,9 +70067,20 @@ function GiftBoxScreen({
       className: "mh-gift-heading"
     }, React.createElement("h3", null, display.label && React.createElement("span", null, display.label), React.createElement("b", {
       style: JA_WRAP_STYLE
-    }, jaWrap(display.title))), React.createElement("em", {
-      className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
-    }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), React.createElement("div", {
+    }, jaWrap(display.title))), (() => {
+      if (!g.claimedAt && !expired && valid) {
+        const left = (g.expiresAt ? new Date(g.expiresAt).getTime() : NaN) - now;
+        if (!Number.isFinite(left) || left <= 0 || left > 3 * 86400000) return null;
+        const hours = Math.ceil(left / 3600000);
+        return React.createElement("em", {
+          "data-gift-deadline-soon": true,
+          className: "bg-red-700 text-white"
+        }, hours < 24 ? `あと${hours}時間` : `あと${Math.ceil(left / 86400000)}日`);
+      }
+      return React.createElement("em", {
+        className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : 'bg-amber-900 text-amber-200'}`
+      }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : '要確認');
+    })()), React.createElement("div", {
       className: "mh-gift-main"
     }, React.createElement("div", {
       className: "mh-gift-rewards"
@@ -123110,8 +123126,9 @@ function AssistantLifeRoomBed({
     const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
     const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
     const imgLeft = r.left + cw / 2;
+    const fullBody = (box.b - box.t) * r.height > 2.2 * (box.r - box.l) * r.width;
     const visH = r.height * (box.b - box.t),
-      k = Math.min(1, 2.0 * U / Math.max(1, visH));
+      k = fullBody ? 1 : Math.min(1, 2.0 * U / Math.max(1, visH));
     const eyeOrigin = `${((box.l + box.r) / 2 * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
     const shrink = k < 0.999 ? {
       transform: `scale(${k.toFixed(3)})`,
@@ -166385,6 +166402,7 @@ function MsxTrainEvent({
   } : s.stats;
   const palOn = b >= 3;
   const pair = b >= 3;
+  const peakOn = !!(msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && run.s && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in');
   const nx = msxTevNextText(run, o);
   const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
@@ -166444,7 +166462,10 @@ function MsxTrainEvent({
     className: "gr"
   }), React.createElement("div", {
     className: "tev-art"
-  }, palImg)) : null, pair && b !== 6 ? React.createElement(React.Fragment, null, React.createElement("span", {
+  }, palImg)) : null, peakOn && b >= 2 && b !== 6 ? React.createElement("span", {
+    className: `tev-pk${pair ? ' pair' : ''}`,
+    "data-msx-tev-peak": true
+  }, "🔥 ピーク中") : null, pair && b !== 6 ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "tev-nm me"
   }, run.nick || ''), m ? React.createElement("span", {
     className: `tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`
@@ -166654,6 +166675,8 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
 .msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
 .msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-pk{position:absolute;left:50%;bottom:calc(24% - 30px);transform:translateX(-50%);z-index:3;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#c2410c,#f97316);color:#fff;border:1.5px solid #fde047;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 #0006}
+.msx .msx-tev .tev-pk.pair{left:29%;bottom:calc(24% - 56px)}
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
@@ -175102,7 +175125,9 @@ const MSX_CSS = `
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
-.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+/* なぞった線は丸の後ろに薄く引く(育-223: 丸の絵や「Lv.2」の札の上を白い線が走り、壊れた表示に見えた) */
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:0;opacity:.4}
+.msx .v-trs > .v-tr{z-index:1}
 .msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
@@ -175424,6 +175449,7 @@ const MSX_CSS = `
 .msx .v-scene.home .msx-roam{position:absolute;inset:0;pointer-events:none;transform-origin:50% 72%;animation:msx-roam-mv 28s linear infinite;will-change:transform}
 .msx .v-scene.home .msx-roam-f{position:absolute;inset:0;transform-origin:50% 72%;animation:msx-roam-fl 28s steps(1,end) infinite}
 .msx .v-scene.home .msx-roam-h{position:absolute;inset:0;animation:msx-roam-hp 28s linear infinite}
+.msx .v-scene.home .msx-roam .v-nm{bottom:calc(var(--mb,25%) - 18px)} /* 手前へ歩いて大きくなっても、名札が場面の下の縁にかからない(育-244) */
 @keyframes msx-roam-mv{0%{transform:translate(0%,0%) scale(1)}10%{transform:translate(24%,0%) scale(1)}14%{transform:translate(24%,0%) scale(1)}15%{transform:translate(24%,0%) scale(1)}26%{transform:translate(-4%,11%) scale(1.2)}30%{transform:translate(-4%,11%) scale(1.2)}31%{transform:translate(-4%,11%) scale(1.2)}40%{transform:translate(-22%,9%) scale(1.15)}41%{transform:translate(-22%,9%) scale(1.15)}52%{transform:translate(-18%,-4%) scale(0.92)}56%{transform:translate(-18%,-4%) scale(0.92)}57%{transform:translate(-18%,-4%) scale(0.92)}68%{transform:translate(20%,-4%) scale(0.92)}72%{transform:translate(20%,-4%) scale(0.92)}73%{transform:translate(20%,-4%) scale(0.92)}88%{transform:translate(0%,0%) scale(1)}92%{transform:translate(0%,0%) scale(1)}93%{transform:translate(0%,0%) scale(1)}100%{transform:translate(0%,0%) scale(1)}}
 @keyframes msx-roam-fl{0%{transform:scaleX(1)}10%{transform:scaleX(1)}14%{transform:scaleX(1)}15%{transform:scaleX(-1)}26%{transform:scaleX(-1)}30%{transform:scaleX(-1)}31%{transform:scaleX(1)}40%{transform:scaleX(1)}41%{transform:scaleX(-1)}52%{transform:scaleX(-1)}56%{transform:scaleX(-1)}57%{transform:scaleX(1)}68%{transform:scaleX(1)}72%{transform:scaleX(1)}73%{transform:scaleX(-1)}88%{transform:scaleX(-1)}92%{transform:scaleX(-1)}93%{transform:scaleX(1)}100%{transform:scaleX(1)}}
 @keyframes msx-roam-hp{0%{transform:translateY(0)}0.5%{transform:translateY(-3.5%)}1.6%{transform:translateY(0)}2.7%{transform:translateY(-3.5%)}3.8%{transform:translateY(0)}4.9%{transform:translateY(-3.5%)}6.0%{transform:translateY(0)}7.1%{transform:translateY(-3.5%)}8.2%{transform:translateY(0)}9.3%{transform:translateY(-3.5%)}10%{transform:translateY(0)}11.1%{transform:translateY(0)}11.5%{transform:translateY(-9%)}12.0%{transform:translateY(0)}12.2%{transform:translateY(0)}12.6%{transform:translateY(-9%)}13.1%{transform:translateY(0)}15.5%{transform:translateY(-3.5%)}16.6%{transform:translateY(0)}17.7%{transform:translateY(-3.5%)}18.8%{transform:translateY(0)}19.9%{transform:translateY(-3.5%)}21.0%{transform:translateY(0)}22.1%{transform:translateY(-3.5%)}23.2%{transform:translateY(0)}24.3%{transform:translateY(-3.5%)}25.4%{transform:translateY(0)}26%{transform:translateY(0)}31.5%{transform:translateY(-3.5%)}32.6%{transform:translateY(0)}33.7%{transform:translateY(-3.5%)}34.8%{transform:translateY(0)}35.9%{transform:translateY(-3.5%)}37.0%{transform:translateY(0)}38.1%{transform:translateY(-3.5%)}39.2%{transform:translateY(0)}40%{transform:translateY(0)}57.5%{transform:translateY(-3.5%)}58.1%{transform:translateY(0)}58.5%{transform:translateY(-9%)}58.6%{transform:translateY(0)}59.0%{transform:translateY(0)}59.2%{transform:translateY(0)}59.6%{transform:translateY(-9%)}59.7%{transform:translateY(-3.5%)}60.1%{transform:translateY(0)}60.8%{transform:translateY(0)}61.9%{transform:translateY(-3.5%)}63.0%{transform:translateY(0)}64.1%{transform:translateY(-3.5%)}65.2%{transform:translateY(0)}66.3%{transform:translateY(-3.5%)}67.4%{transform:translateY(0)}68%{transform:translateY(0)}73.5%{transform:translateY(-3.5%)}74.6%{transform:translateY(0)}75.7%{transform:translateY(-3.5%)}76.8%{transform:translateY(0)}77.9%{transform:translateY(-3.5%)}79.0%{transform:translateY(0)}80.1%{transform:translateY(-3.5%)}81.2%{transform:translateY(0)}82.3%{transform:translateY(-3.5%)}83.4%{transform:translateY(0)}84.5%{transform:translateY(-3.5%)}85.6%{transform:translateY(0)}86.7%{transform:translateY(-3.5%)}87.8%{transform:translateY(0)}88%{transform:translateY(0)}}
@@ -175683,6 +175709,19 @@ const MSX_CSS = `
 /* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
 .msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+/* 振り分けの3段は形を分ける(育-178・245): 行き先=下線のタブ / 刻み=1本につながった区切り / まとめて振る=枠だけの四角いボタン(押すとすぐ振る・選ばれた色で光らせない) */
+.msx .msx-pttabs{display:flex;margin:6px 0 4px;border-bottom:2px solid #475569}
+.msx .msx-pttabs .chip{flex:1;min-height:44px;border:0;border-radius:0;background:transparent;color:#94a3b8;font-size:14px;font-weight:900;margin-bottom:-2px;border-bottom:3px solid transparent}
+.msx .msx-pttabs .chip.on{background:transparent;color:#fde047;border-bottom-color:#fde047}
+.msx .msx-ptunit{display:flex;align-items:center;gap:0;margin:6px 0}
+.msx .msx-ptunit .msx-ptunit-k{flex:none;font-size:11px;font-weight:800;color:#cbd5e1;margin-right:6px;white-space:nowrap}
+.msx .msx-ptunit .msx-ptseg{flex:1;display:flex;min-width:0;border:1px solid #64748b;border-radius:10px;overflow:hidden}
+.msx .msx-ptunit .chip{flex:1;min-width:0;min-height:36px;border-radius:0;border:0;border-left:1px solid #64748b;background:#1e293b;color:#e2e8f0}
+.msx .msx-ptunit .chip:first-child{border-left:0}
+.msx .msx-ptunit .chip.on{background:#fde047;color:#422006}
+.msx .chip.msx-ptact{min-height:36px;border-radius:9px;background:transparent;border:1.5px solid #94a3b8;color:#f1f5f9;padding:0 10px}
+.msx .chip.msx-ptact:active{background:#334155}
+.msx .chip.msx-ptact:disabled{opacity:.45}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
 /* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
@@ -179811,13 +179850,18 @@ const msxTpCardM = (rec, mem, species) => ({
 const msxTpPow = (rec, mem) => rec && Number.isFinite(rec.score) ? rec.score : mem && mem.kind !== 'base' && Number.isFinite(mem.power) ? mem.power : null;
 const msxTpBonusText = mem => {
   if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
-  return mem.top.slice(0, 2).map((k, i) => React.createElement(React.Fragment, {
+  const more = mem.top.length - 2;
+  return [...mem.top.slice(0, 2).map((k, i) => React.createElement(React.Fragment, {
     key: k
   }, i ? ' ' : null, React.createElement("span", {
     className: "msx-tp-bn"
   }, MSX_STAT_ICON[k], React.createElement("span", {
     className: "n"
-  }, MSX_STAT_NAME[k]), "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%")));
+  }, MSX_STAT_NAME[k]), "+", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), more > 0 ? React.createElement(React.Fragment, {
+    key: "more"
+  }, " ", React.createElement("span", {
+    className: "msx-tp-more"
+  }, "ほか", more, "つ")) : null];
 };
 function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
@@ -183766,7 +183810,9 @@ function MsxPlay({
       run: run,
       className: `mon${low ? ' low' : ''}`,
       live: true
-    })))), React.createElement("div", {
+    }))), React.createElement("span", {
+      className: "v-nm"
+    }, run.nick)), React.createElement("div", {
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
@@ -183789,9 +183835,7 @@ function MsxPlay({
       className: "v-chip bad"
     }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, typeof MsxBuffChips === 'function' ? React.createElement(MsxBuffChips, {
       s: s
-    }) : null), React.createElement("span", {
-      className: "v-nm"
-    }, run.nick)), React.createElement("div", {
+    }) : null)), React.createElement("div", {
       className: "v-under"
     }, React.createElement("button", {
       type: "button",
@@ -184401,6 +184445,11 @@ function MsxPtUnits({
     role: "group",
     "aria-label": "振り分けの単位",
     "data-msx-pt-units": true
+  }, React.createElement("span", {
+    className: "msx-ptunit-k",
+    "aria-hidden": "true"
+  }, "1回に"), React.createElement("span", {
+    className: "msx-ptseg"
   }, (mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map(x => React.createElement("button", {
     type: "button",
     key: x,
@@ -184408,7 +184457,7 @@ function MsxPtUnits({
     className: `chip${unit === x ? ' on' : ''}`,
     onClick: () => setUnit(x),
     "data-msx-pt-unit": x
-  }, x === 'MAX' ? 'MAX' : `${x}P`)));
+  }, x === 'MAX' ? 'MAX' : `${x}P`))));
 }
 function MsxPtBtn({
   onPress,
@@ -184426,7 +184475,7 @@ function MsxPtTabs({
   setTab
 }) {
   return React.createElement("div", {
-    className: "msx-ptunit",
+    className: "msx-pttabs",
     role: "tablist",
     "aria-label": "振り分け先",
     "data-msx-pt-tabs": true
@@ -184771,17 +184820,17 @@ function MsxStats({
     }
   }, "まとめて"), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: autoTop
   }, "全部 ", MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: auto
   }, "おまかせで振る"), React.createElement("button", {
     type: "button",
-    className: "chip",
+    className: "chip msx-ptact",
     disabled: !ws.pts,
     onClick: autoBal
   }, "バランス")), React.createElement("div", {
@@ -190049,15 +190098,15 @@ function MsxR3Retire({
       }
     }, "まとめて"), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('top')
     }, "全部 ", MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('low')
     }, "おまかせで振る"), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip msx-ptact",
       onClick: () => preset('bal'),
       "data-msx-r3-bal": true
     }, "バランス")), React.createElement("div", {
@@ -192127,6 +192176,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-more{display:inline-block;white-space:nowrap;color:#cbd5e1;font-weight:800}
 .mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
