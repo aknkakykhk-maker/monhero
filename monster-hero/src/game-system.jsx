@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 655d2ccdabdeca4e
+// generated-sha256: 856afaa55d24a090
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24236,6 +24236,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
+  // 見えている向き(🔄横で絵を回しているときも横)。版の切り替えの置き場所を決める(2026-11-22 社長「曲が選べるやつのサイズを考えてない」)
+  const [viewWide,setViewWide]=React.useState(()=>orientationIsLandscape());
+  useEffect(()=>{
+    if(typeof window==='undefined'||typeof window.matchMedia!=='function')return undefined;
+    const mql=window.matchMedia('(orientation: landscape)');
+    const onChange=()=>setViewWide(orientationIsLandscape());
+    onChange();
+    const unsubscribeRotation=RHYTHM_VIEW_ROTATION.subscribe(onChange);
+    if(mql.addEventListener)mql.addEventListener('change',onChange);else mql.addListener?.(onChange);
+    return()=>{unsubscribeRotation();if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);};
+  },[]);
   // 拡大画面のページ(0=ジャケット、1〜=歌詞カード)と、歌詞カードを原寸で見ている絵(2026-11-02 社長)
   const [artPage,setArtPage]=React.useState(0);
   const [lyricFull,setLyricFull]=React.useState(null);
@@ -24494,6 +24505,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // data-rhythm-song-row を持つ。上下のぶんは「同じものの影」なので別の名前にする。
   const blocks=loopEnabled?[0,1,2]:[1];
 
+  // 版の切り替え(原曲・short ver. など)。縦は難易度の上、横(🔄横も)は曲名の行の右に小さく並べる。
+  // 横で難易度の上に置くと、その段のぶん難易度のボタンが押しつぶされ、HARD〜HELL の字と自己ベストが切れた(2026-11-22 社長の写真 docs/progress/beat/select-version-yoko-2026-11-22/)。
+  // 1か所にだけ出す(検査・ボットは data-rhythm-song-version を押す)
+  const versionTabs=!song?null:(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
+            return <div data-rhythm-song-versions data-rhythm-song-versions-inline={viewWide?'1':undefined} className={viewWide?"flex shrink-0 gap-1":"mb-1 flex gap-1"}>{versions.map(item=>{
+              const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
+              return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
+                onClick={()=>setSongId(item.songId)}
+                className={`flex min-h-[36px] min-w-0 ${viewWide?'max-w-[6.5rem] px-2 text-[11px]':'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
+              </button>;})}</div>;})();
   return <div data-rhythm-song-select data-rhythm-song-genre={genre?genre.id:'all'} className="flex min-h-0 flex-1 flex-col landscape:flex-row">
     {/* 曲の一覧。案内(notice)はスクロールの**外**へ置き、動くのは曲の並びだけにする。
         中に入れていたときは、曲を探して指を動かすと案内も一緒に流れて場所を食っていた
@@ -24663,7 +24685,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
             <div className="flex items-start gap-1.5 [container-type:inline-size]">
               <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]"
-                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}><RhythmSongName song={song}/></b>
+                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,viewWide&&versionsOf(song).length>1?44+76*versionsOf(song).length:44)}}><RhythmSongName song={song}/></b>
+              {viewWide&&versionTabs}
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
                 aria-label={favoriteIds.has(song.songId)?'お気に入りから外す':'お気に入りに入れる'}
                 onClick={()=>toggleFavorite(song.songId)}
@@ -24696,14 +24719,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           {/* 版の切り替え(2026-10-03)。版が2つ以上ある曲だけ出す。押すと選んでいる曲がその版に変わり、
               難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す)。
               高さは縦36px・横32px(2026-10-16 社長の決定。30px未満で押しにくかった) */}
-          {(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
-            return <div data-rhythm-song-versions className="mb-1 flex gap-1">{versions.map(item=>{
-              const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
-              return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
-                onClick={()=>setSongId(item.songId)}
-                className={`flex min-h-[36px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[12px] font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
-                <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
-              </button>;})}</div>;})()}
+          {!viewWide&&versionTabs}
           <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`}>
           {available.map(item=>{
             const tone=rhythmDifficultyTone(item.id);
