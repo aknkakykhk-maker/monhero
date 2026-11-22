@@ -168,6 +168,8 @@
   "beyond_the_same_sky/HELL": 0,
   "beyond_the_same_sky_short/MASTER": 0,
   "beyond_the_same_sky_short/HELL": 0,
+  "zenbu_hissatsuwaza/MASTER": 0,
+  "zenbu_hissatsuwaza/HELL": 0,
   "desert_crown/MASTER": 7,
   "desert_crown/HELL": 0,
   "walkure/MASTER": 1,
@@ -192,7 +194,12 @@
    "changed": 4
   },
   {
-   "at": "2026-11-22T12:28",
+   "at": "2026-11-22T11:33",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": 2
+  },
+  {
+   "at": "2026-11-22T13:25",
    "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
    "changed": 4
   }

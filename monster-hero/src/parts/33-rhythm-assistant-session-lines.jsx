@@ -98,6 +98,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['surprise', '0:59でいきなり強くなるとこ、ドキッとするぢゃんｗ']],
     'listen:humanoid': [['excited', '0:57から30秒、ずっとサビなの！ ここまぢでアガる♪']],
     'listen:walkure': [['excited', '1:37でいちばん強いとこ来るの！ そこからずっとアガるぢゃん♪']],
+    'listen:zenbu_hissatsuwaza': [['excited', '1:31からいちばん強いの！ 最後まで全開で駆け抜けるやつなのー♪']],
   },
   kiki: {
     join: [['happy', '{name}、よろしくお願いしまつ♪'], ['happy', '今日も一緒に演奏できてうれしいです♪']],
@@ -193,6 +194,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['normal', '0:27で静かになるところ、きれいな間ですね']],
     'listen:humanoid': [['normal', '0:25で一度静かになるところ、すっとした感じが好きでつ']],
     'listen:walkure': [['normal', '5:02からの静かな所、音がすっと引いてとてもきれいです♪']],
+    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところで一回ひと息つけるでつ。そこからまた全力でつ']],
   },
   momosuke: {
     join: [['happy', 'ももが来たからには盛り上げるよ！！'], ['happy', '{name}、ももとセッションできるなんてラッキーだよw']],
@@ -288,6 +290,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['excited', '1:33からのサビ！！ 短いけど、ぎゅっと詰まってるの！！']],
     'listen:humanoid': [['excited', '0:57からのサビで、もう最高潮！！ 一緒に盛り上がろ♡']],
     'listen:walkure': [['excited', '2:20も2:39もいちばん強い！ ももはこの勢いが大好き♡']],
+    'listen:zenbu_hissatsuwaza': [['excited', 'サビは1:31から最後までだよ♡ ずっと最高潮で止まらないよ♡']],
   },
   dra: {
     join: [['happy', 'おでも混ぜてくれよな、えへへ'], ['happy', '{name}、今日もよろしくな']],
@@ -383,6 +386,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['surprise', '2分もないのにLv.44だぞ。短くて濃い冒険だな']],
     'listen:humanoid': [['troubled', 'Lv.50だぞ。短いけど、おでには大冒険だな']],
     'listen:walkure': [['normal', '11分32秒もある長い冒険だな。BPM216で駆け抜けるからな']],
+    'listen:zenbu_hissatsuwaza': [['happy', 'BPM193の全力疾走だな。2分足らずで一気に突っ切るぞ']],
   },
   atsu: {
     join: [['happy', 'とりあえず一曲いくか笑'], ['happy', '来たよ！ 今日もやろ笑']],
@@ -478,6 +482,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '1:45ですっと静かに締めるとこ、かっこいい笑']],
     'listen:humanoid': [['happy', '1:33で静かに締めるとこ、きれいだよね笑']],
     'listen:walkure': [['happy', '8:12からいちばん強いまま、最後まで押し切るの熱いよね笑']],
+    'listen:zenbu_hissatsuwaza': [['happy', '1:45でもう一回いちばん強くなって、そのまま締めるのいいね笑']],
   },
   kyuko: {
     join: [['happy', 'ほい！俺も入るね〜'], ['happy', 'よろしく〜、今日は何いく？']],
@@ -573,6 +578,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '好きなんだよね〜。0:59で一回山を見せて、1:33で本番なの笑']],
     'listen:humanoid': [['normal', '強め→静か→強め、を2回やってからサビに入るんだよねぇ']],
     'listen:walkure': [['happy', '4:33で一回静かに落として、8:12でまた一番上まで上げる。構成が効いてるんだよね〜']],
+    'listen:zenbu_hissatsuwaza': [['happy', '0:34で強めに入って、1:03で一回静かにして、1:31で爆発する構成なんだよね〜']],
   },
   sorashido: {
     join: [['happy', '自分も参戦します！ よろしくお願いします笑'], ['happy', '今日はオリヒメの曲、ありますかね・・・！ 楽しみです笑']],
@@ -668,6 +674,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['normal', 'BPM185で563ノーツ、Lv.44。1:48でこの数は濃いですね']],
     'listen:humanoid': [['excited', '好きな曲です！ BPM159で606ノーツ、Lv.50。全部計算済みです・・・！']],
     'listen:walkure': [['normal', 'BPM216で3460ノーツ！ 強い音54%・軽い音3%、力で押し切る配分だぜ・・・！']],
+    'listen:zenbu_hissatsuwaza': [['normal', 'BPM193です。強く打つ音が46%・・・！ 叩きごたえのある音です']],
   },
   erubin: {
     join: [['happy', '俺も一緒にいいかな？よろしくね'], ['happy', '今日もセッション、楽しみにしてたよ']],
@@ -763,6 +770,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:evans': [['happy', '1:45で静かに終わる所、聞き終わってほっとするね']],
     'listen:humanoid': [['normal', '1:27で強めに落ちる所、少しほっとできるね']],
     'listen:walkure': [['normal', '5:14や6:33の静かな所は落ち着くね。長い曲だし、そこで息を整えようかな']],
+    'listen:zenbu_hissatsuwaza': [['normal', '1:03の静かなところ、ここで落ち着いて息を整えようね']],
   },
 });
 const RHYTHM_ASSIST_SESSION_PAIR_LINES = Object.freeze({

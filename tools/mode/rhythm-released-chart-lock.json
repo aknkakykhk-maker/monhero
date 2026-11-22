@@ -416,6 +416,11 @@
   "desert_crown/hard": "c751db1e76ca1edd",
   "desert_crown/expert": "a17456272bd683d3",
   "desert_crown/master": "ef80bc9a8a523fb5",
+  "zenbu_hissatsuwaza/easy": "b2bb4fe15f7f1292",
+  "zenbu_hissatsuwaza/normal": "d8a57e4b86363b8e",
+  "zenbu_hissatsuwaza/hard": "7493d66ef70c7cf5",
+  "zenbu_hissatsuwaza/expert": "8a0573e5483dacb3",
+  "zenbu_hissatsuwaza/master": "eaaf5b77f179df44",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -509,6 +514,7 @@
   "beyond_the_same_sky/hell": "4d3be979d6a30aaf",
   "beyond_the_same_sky_short/hell": "1e851e06b4bec6e5",
   "desert_crown/hell": "662c4a0b30060ef2",
+  "zenbu_hissatsuwaza/hell": "ec77dbc8f23c77ab",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -1139,7 +1145,28 @@
    ]
   },
   {
-   "at": "2026-11-22 21:28",
+   "at": "2026-11-22 20:29",
+   "reason": "新曲 全部必殺技でつ を公開",
+   "changed": [
+    "zenbu_hissatsuwaza/easy",
+    "zenbu_hissatsuwaza/normal",
+    "zenbu_hissatsuwaza/hard",
+    "zenbu_hissatsuwaza/expert",
+    "zenbu_hissatsuwaza/master",
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 20:34",
+   "reason": "新曲 全部必殺技でつ を公開(押さえ中の交差を0に直した形)",
+   "changed": [
+    "zenbu_hissatsuwaza/expert",
+    "zenbu_hissatsuwaza/master",
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-22 22:25",
    "reason": "Beyond the Same Sky(原曲・short)の HELL・MASTER を歌い分けで組み直した(台帳 r1119-096 追記・r1119-105)",
    "changed": [
     "beyond_the_same_sky/master",
