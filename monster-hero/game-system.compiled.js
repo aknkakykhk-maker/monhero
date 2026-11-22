@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba94b2f4775346f2
+// source-sha256: 933e60d2869ccc2c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153738,6 +153738,20 @@ function MonsucFuseSheet({
   }, plan.child.gen, "代目・まだ育てていないマスモン"), React.createElement("small", {
     className: "mt-1 block text-[12px] font-bold text-slate-200"
   }, "成長の型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''))), React.createElement("div", {
+    className: "mt-1 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
+    "data-monsuc-fuse-lose": true
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-rose-100",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。", keepNote ? keepNote : '元に戻せません'), !keepNote ? React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
+  }, "思い出に名前・ランク・代が残ります") : keepNote.includes('思い出') ? null : React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200",
+    "data-monsuc-fuse-keep": true
+  }, "思い出の記録(名前・ランク・代)もそのまま残ります")), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
     "data-monsuc-fuse-plan": true
   }, React.createElement("p", {
@@ -153764,21 +153778,7 @@ function MonsucFuseSheet({
   }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-200",
     "data-monsuc-fuse-apt": true
-  }, "受け継ぐ間合い適性: ", Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null).filter(Boolean).join('・') : 'なし'), React.createElement("div", {
-    className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
-    "data-monsuc-fuse-lose": true
-  }, React.createElement("p", {
-    className: "text-[12px] font-black text-rose-100",
-    style: {
-      wordBreak: 'keep-all',
-      overflowWrap: 'anywhere'
-    }
-  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。", keepNote ? keepNote : '元に戻せません'), !keepNote ? React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
-  }, "思い出に名前・ランク・代が残ります") : keepNote.includes('思い出') ? null : React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-rose-200",
-    "data-monsuc-fuse-keep": true
-  }, "思い出の記録(名前・ランク・代)もそのまま残ります")), err && React.createElement("p", {
+  }, "受け継ぐ間合い適性: ", Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null).filter(Boolean).join('・') : 'なし'), err && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-rose-200",
     "data-monsuc-fuse-err": true
   }, err)) : React.createElement("p", {
@@ -183163,6 +183163,13 @@ const MSX_MM_CSS = `
 .msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
 .msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
 .msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
+/* 詳細の下は「貸し出す」「お別れ」「閉じる」の3段で約170pxを使い、アシストの札や技の段が切れていた(API 総点検① 2026-11-23 X4・X9・X10・X12)。
+   貸し出すとお別れを1行に並べて2段にし、空いた高さを中身に回す。貸し出すは押せないボタンに見えない色の主ボタンにする */
+.msx .msx-md-foot:has(>.mm-acts){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-hint{grid-column:1/-1}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-acts{margin-top:4px}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-bye-row{margin-top:4px}
+.msx .mm-acts button{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff;box-shadow:0 2px 0 #9a3412}
 `;
 const MSX_BOX_HOST = {
   open: null,
@@ -183501,7 +183508,15 @@ function MsxAssistCard({
   }, n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)')), note ? React.createElement("div", {
     className: "sc",
     "data-msx-assist-cap": true
-  }, "上限: ", note.replace(/^[(（]|[)）]$/g, '')) : null, scene ? React.createElement("div", {
+  }, "上限: ", (() => {
+    const t = note.replace(/^[(（]|[)）]$/g, '');
+    const i = t.lastIndexOf('編成の合計');
+    return i >= 0 ? React.createElement(React.Fragment, null, t.slice(0, i), React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, t.slice(i))) : t;
+  })()) : null, scene ? React.createElement("div", {
     className: "sc"
   }, "効く場面: ", scene) : null, open ? React.createElement("div", {
     className: "sc"

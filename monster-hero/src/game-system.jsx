@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 965d05f0c426055a
+// generated-sha256: c14414931e3d1366
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85246,6 +85246,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
             {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
             <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
+          {/* いなくなる2体の注意は、下の決めるボタンの帯で切れていた(API 総点検① F2)。見通しのすぐ下に出し、送らなくても読めるようにする */}
+          <div className="mt-1 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
+            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
+            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
+          </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
             <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
             <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
@@ -85253,10 +85258,6 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
-          <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
-            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
-            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
-          </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
@@ -98682,6 +98683,13 @@ const MSX_MM_CSS = `
 .msx .mm-bye-row{display:flex;justify-content:flex-end;margin-top:4px}
 .msx .mm-bye-sm{min-height:44px;padding:0 6px;font-size:11.5px;font-weight:800;color:#fca5a5;text-decoration:underline;text-underline-offset:3px;background:none}
 .msx .mm-bye-sm:disabled{color:#94a3b8;text-decoration:none;opacity:.8}
+/* 詳細の下は「貸し出す」「お別れ」「閉じる」の3段で約170pxを使い、アシストの札や技の段が切れていた(API 総点検① 2026-11-23 X4・X9・X10・X12)。
+   貸し出すとお別れを1行に並べて2段にし、空いた高さを中身に回す。貸し出すは押せないボタンに見えない色の主ボタンにする */
+.msx .msx-md-foot:has(>.mm-acts){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-hint{grid-column:1/-1}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-acts{margin-top:4px}
+.msx .msx-md-foot:has(>.mm-acts)>.mm-bye-row{margin-top:4px}
+.msx .mm-acts button{background:linear-gradient(90deg,#fb923c,#f97316);color:#fff;box-shadow:0 2px 0 #9a3412}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
@@ -98892,7 +98900,7 @@ function MsxAssistCard({ a, n }) {
         <div className="tx">{short}</div>
         <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
           <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
-        {note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
+        {note ? <div className="sc" data-msx-assist-cap>上限: {(() => { /* 「編成の合/計」と言葉の途中で折れていた(API 総点検① X4)。「編成の合計 ◯%まで」はひとかたまりで折る */ const t = note.replace(/^[(（]|[)）]$/g, ''); const i = t.lastIndexOf('編成の合計'); return i >= 0 ? <>{t.slice(0, i)}<span style={{ whiteSpace: 'nowrap' }}>{t.slice(i)}</span></> : t; })()}</div> : null}
         {scene ? <div className="sc">効く場面: {scene}</div> : null}
         {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>

@@ -232,6 +232,11 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
             {typeof MonsucMonCard === 'function' ? <span style={{ width: 'min(30vw,112px)', flex: 'none' }}><MonsucMonCard size="m" m={{ species: plan.child.species, colors: Array.isArray(plan.child.colors) ? plan.child.colors : [] }}/></span> : typeof amgpMonIcon === 'function' ? amgpMonIcon(plan.child.species) : null}
             <p className="text-[16px] font-black text-amber-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>新しいマスモンが生まれます<small className="block text-[12px] font-bold text-slate-200">{plan.child.gen}代目・まだ育てていないマスモン</small><small className="mt-1 block text-[12px] font-bold text-slate-200">成長の型: {typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : ''}</small></p>
           </div>
+          {/* いなくなる2体の注意は、下の決めるボタンの帯で切れていた(API 総点検① F2)。見通しのすぐ下に出し、送らなくても読めるようにする */}
+          <div className="mt-1 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
+            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
+            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
+          </div>
           <div className="mt-1 rounded-xl bg-slate-800 p-2" data-monsuc-fuse-plan>
             <p className="mb-1 text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>初めの能力に上乗せが付きます。2体ともに強いほど大きくなります</p>
             <p className="flex justify-between text-[10.5px] font-bold text-slate-400"><span>能力</span><span>上乗せのあと・上乗せ分</span></p>
@@ -239,10 +244,6 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], lockWhy =
           </div>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
-          <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
-            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
-            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
-          </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
         </div>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
         {/* 決めるボタンは送る所の外(下)に置き、窓の中を送らなくても見える(2026-11-19 r1119-013 ⑥ U-12。横で「キャンセル」だけが見え、「合体する」は送った先だった) */}
