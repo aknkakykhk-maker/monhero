@@ -88,6 +88,8 @@ const CHANGELOG = [
   {
     date: "2026-11-22 20:34", type:'event', group:'rhythm', title:'【期間限定】咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～ を開催します', status:'new',
     visibleFrom:'2026-11-22T20:34:00+09:00',
+    // 開始前の予告なので、固定の札は「📅 開催予定」(60-app.jsx の changelogEventUpcoming)
+    eventStartAt:'2026-11-23T10:00:00+09:00',
     pinUntil:'2026-11-23T10:00:00+09:00',
     image: 'images/events/flower3-2026-wide.jpg?v=666d1c6a0683',
     pinEmoji:'🌸',
