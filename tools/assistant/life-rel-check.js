@@ -45,6 +45,7 @@ const load = (rel) => {
   vm.runInContext(code, ctx);
 };
 load('monster-hero/data/assistants.js');
+load('monster-hero/data/assistant-life-rel-talks.js'); // 関係の出来事の台本(段10で data/ へ)
 vm.runInContext('var assistantBubbleDayKey = () => __day(); var assistantPeerDayKey = () => __day(); var jstDayKey4 = (t) => (t === __oldAt ? "2026-11-07" : __day()); var assistantById = (id) => ASSISTANTS.find(a => a.id === id); var AssistantFace = () => null;', ctx);
 load('monster-hero/src/parts/56-assistant-peer.jsx');
 load('monster-hero/src/parts/56-assistant-life.jsx');

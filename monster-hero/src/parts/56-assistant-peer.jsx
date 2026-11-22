@@ -131,15 +131,8 @@ const assistantPeerExtraTalks = () => {
   const on = assistantPeerLifeOn();
   if (assistantPeerExtraCache && assistantPeerExtraCacheOn === on) return assistantPeerExtraCache;
   const events = (typeof ASSISTANT_PEER_EVENTS !== 'undefined' ? ASSISTANT_PEER_EVENTS : []).map(assistantPeerRewrite).map(t => ({ ...t, pair: [...t.pair].sort(), kind: 'event', lv: t.lv || (typeof ASSISTANT_PEER_EVENT_LV !== 'undefined' ? ASSISTANT_PEER_EVENT_LV : 3), scene: 'any' }));
-  const quarrels = [];
-  for (const q0 of (typeof ASSISTANT_PEER_QUARRELS !== 'undefined' ? ASSISTANT_PEER_QUARRELS : [])) {
-    const q = assistantPeerRewrite(q0);
-    const pair = [...q.pair].sort();
-    quarrels.push({ id: q.id, pair, kind: 'quarrel', lv: 2, scene: 'home', makeupId: `${q.id}m`, lines: q.lines, distance: q.distance || [] });
-    quarrels.push({ id: `${q.id}m`, pair, kind: 'makeup', lv: 2, scene: 'home', quarrelId: q.id, lines: q.makeup });
-  }
-  // 助手たちの今の言い合い(ASSISTANT_LIFE_TALKS の quarrel)も同じ形で足す(印が真のときだけ)
-  if (on && typeof assistantLifeQuarrelTalks === 'function') quarrels.push(...assistantLifeQuarrelTalks());
+  // けんか・仲直りは 56-assistant-life-rel.jsx の1つの表から(段10。前からの言い合い・助手たちの今の言い合い・原因つきのけんか)
+  const quarrels = typeof assistantLifeRelQuarrels === 'function' ? assistantLifeRelQuarrels(on) : [];
   const trios = (typeof ASSISTANT_PEER_TRIO_TALKS !== 'undefined' ? ASSISTANT_PEER_TRIO_TALKS : []).map(assistantPeerRewrite).map(t => ({ ...t, kind: 'trio', lv: 1, scene: 'any' }));
   assistantPeerExtraCache = { events, quarrels, trios };
   assistantPeerExtraCacheOn = on;

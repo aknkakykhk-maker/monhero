@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>段10 友情の案</title>
+<!-- 助手ライフの作り直し 段10(友情を型に載せる)の案の見本。?plan=a|b|c。撮るのは tools/assistant/life-friend-plan-shoot.js
+     型の見た目は本物の ALU_CSS(56-assistant-life-ui.jsx)を読み込んで使う。友情ポイントは pairs.json(いまの画面を偽のデータで開いて読んだ値)。
+     iPhone の切り欠き(上47px・下34px)を黒い帯で描き、その内側に画面を置く(2026-11-22 r1119-098)。
+     場面: 15:00 昼。みゅあ・ききがおやつ屋さん、ドラ・ソラシド・えるびんがMFバトルカード、ももすけがモンヒロバトル、きゅうこが図書室、あつが家 -->
+<style id="alu"></style>
+<style>
+html,body{margin:0;height:100%;background:#000;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.notch-top{position:fixed;left:0;right:0;top:0;height:47px;background:#000;color:#fff;font:600 15px/47px -apple-system,sans-serif;display:flex;justify-content:space-between;padding:0 28px;box-sizing:border-box;z-index:5}
+.notch-bot{position:fixed;left:0;right:0;bottom:0;height:34px;background:#000;z-index:5}
+.notch-bot i{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#fff}
+#app{position:fixed;left:0;right:0;top:47px;bottom:34px}
+.alu{height:100%}
+.graph{position:relative;flex:none;border-radius:14px;border:1px solid #3b3566;background:radial-gradient(circle at 50% 45%,#2b2552,#151130);overflow:hidden}
+.graph svg{position:absolute;inset:0}
+.gf{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
+.gf img{border-radius:50%;border:2px solid #fff;background:#312e5a;object-fit:cover}
+.gf b{font-size:11px;color:#fff;background:#151130e6;border-radius:999px;padding:0 6px;margin-top:1px;white-space:nowrap}
+.gf.hot img{border-color:#fde047;box-shadow:0 0 0 3px #fde04766}
+.lvt{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:900;color:#1e1b4b;background:#fde047;border-radius:999px;padding:0 6px;line-height:1.6;white-space:nowrap}
+.duo{display:flex;flex:none}
+.duo img{width:30px;height:30px;border-radius:50%;border:2px solid #fff;background:#312e5a;object-fit:cover}
+.duo img+img{margin-left:-10px}
+.bar{height:6px;border-radius:3px;background:#3b3566;overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#f9a8d4,#fb923c)}
+.leg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sw{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:3px}
+.fold{display:flex;justify-content:space-between;align-items:center}
+.hint{position:absolute;left:50%;top:8px;transform:translateX(-50%);white-space:nowrap}
+.float-go{position:absolute;left:12px;right:12px;bottom:12px}
+.alu-row .alu-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style></head>
+<body><div class="notch-top"><span>15:00</span><span>📶 🔋</span></div><div id="app"></div><div class="notch-bot"><i></i></div>
+<script>
+(async () => {
+  const src = await (await fetch('../../../../monster-hero/src/parts/56-assistant-life-ui.jsx')).text();
+  document.getElementById('alu').textContent = (src.match(/const ALU_CSS = `([\s\S]*?)`;/) || [])[1] || '';
+  const data = await (await fetch('pairs.json')).json();
+  const plan = (new URLSearchParams(location.search).get('plan') || 'a').toLowerCase();
+  const face = (id) => `../../../../monster-hero/images/assistant/face/${id === 'mua' ? 'myua' : id}_normal.PNG`;
+  const NAME = { mua: 'みゅあ', kiki: 'きき', dra: 'ドラ', sorashido: 'ソラシド', erubin: 'えるびん', momosuke: 'ももすけ', kyuko: 'きゅうこ', atsu: 'あつ' };
+  const IDS = ['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin'];
+  const LV = [[1, 0, '顔見知り'], [2, 40, '話し仲間'], [3, 120, '友だち'], [4, 250, 'いい友だち'], [5, 450, '名コンビ'], [6, 700, '息ぴったり'], [7, 1000, '親友'], [8, 1400, '大親友'], [9, 1900, '最強コンビ'], [10, 2500, '伝説のふたり']];
+  const lvOf = (p) => LV.filter(x => p >= x[1]).pop();
+  const nextOf = (p) => LV.find(x => x[1] > p) || null;
+  const PLACE = { cafe: '🍰 おやつ屋さん', cardroom: '🃏 MFバトルカード' };
+  const togetherAt = {};
+  for (const g of data.groups) for (let i = 0; i < g.ids.length; i++) for (let j = i + 1; j < g.ids.length; j++) togetherAt[[g.ids[i], g.ids[j]].sort().join('-')] = g.place;
+  const pairs = data.pairs.map(p => { const [a, b] = p.pair.split('-'); const l = lvOf(p.pts), n = nextOf(p.pts); return { ...p, a, b, lv: l[0], stage: l[2], need: n ? n[1] - p.pts : 0, nextLv: n ? n[0] : null, nextName: n ? n[2] : '', from: l[1], to: n ? n[1] : l[1], at: togetherAt[p.pair] || null }; });
+  // いちばん友情Lv が上がりそうなペア = いまいっしょにいて、次の Lv まであとが少ない組
+  const best = pairs.filter(p => p.at).sort((x, y) => x.need - y.need)[0];
+  const soon = pairs.filter(p => p.need > 0).sort((x, y) => x.need - y.need);
+  const duo = (p) => `<div class="duo"><img src="${face(p.a)}" alt=""><img src="${face(p.b)}" alt=""></div>`;
+  const nm = (p) => `${NAME[p.a]}と${NAME[p.b]}`;
+  const bar = (p) => `<div class="bar"><i style="width:${Math.round(100 * (p.pts - p.from) / Math.max(1, p.to - p.from))}%"></i></div>`;
+  const row = (pic, text, note, btn, extra = '') => `<div class="alu-row"><div class="pic">${pic}</div><div class="tx"><div class="alu-t">${text}</div>${note ? `<div class="alu-n">${note}</div>` : ''}${extra}</div>${btn ? `<button class="alu-btn">${btn}</button>` : ''}</div>`;
+  const pairRow = (p, btn) => row(duo(p), `${nm(p)} <span class="alu-n">Lv${p.lv}「${p.stage}」</span>`, p.at ? `いっしょにいる · あと${p.need}で Lv${p.nextLv}` : `別々の場所 · あと${p.need}で Lv${p.nextLv}`, btn, bar(p));
+  const top = `<div class="alu-top"><button class="bk">← 戻る</button><div class="ti">友情</div><div class="ck"><b>15:00 昼</b><small>次に動く 16:00</small></div></div>`;
+  const tabs = `<div class="alu-tabs">${[['🏡', '家'], ['🗺', '町'], ['🤝', '友情', 1], ['🏠', 'フレンド'], ['📖', '紹介']].map(([i, l, on]) => `<button class="${on ? 'on' : ''}"><i>${i}</i>${l}</button>`).join('')}</div>`;
+  const go = `<button class="alu-go">👀 ${nm(best)}を見る — あと${best.need}で Lv${best.nextLv}</button>`;
+  const COL = (lv) => lv >= 9 ? '#fde047' : lv >= 7 ? '#facc15' : lv >= 5 ? '#f472b6' : lv >= 4 ? '#a78bfa' : '#93c5fd';
+  // 関係図: 8人を輪に置き、Lv3 から線(色・太さ = Lv)。big … 線の上に Lv の札も出す
+  const graph = (w, h, { big = false, r0 = 26 } = {}) => {
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - r0 - 14;
+    const pos = Object.fromEntries(IDS.map((id, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / IDS.length; return [id, [cx + R * Math.cos(t), cy + R * Math.sin(t)]]; }));
+    const lines = pairs.filter(p => p.lv >= 3).map(p => { const [x1, y1] = pos[p.a], [x2, y2] = pos[p.b]; const hot = p.pair === best.pair; return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${COL(p.lv)}" stroke-width="${hot ? 6 : Math.min(6, 1.5 + (p.lv - 3) * 0.8)}" stroke-linecap="round" opacity="${hot ? 1 : 0.85}"${hot ? ' stroke-dasharray="2 6"' : ''}/>`; }).join('');
+    const tags = big ? pairs.filter(p => p.lv >= 4).map(p => { const [x1, y1] = pos[p.a], [x2, y2] = pos[p.b]; return `<span class="lvt" style="left:${(x1 + x2) / 2}px;top:${(y1 + y2) / 2}px">Lv${p.lv}</span>`; }).join('') : '';
+    const faces = IDS.map(id => `<div class="gf ${id === best.a || id === best.b ? 'hot' : ''}" style="left:${pos[id][0]}px;top:${pos[id][1]}px"><img src="${face(id)}" alt="" style="width:${r0 * 2}px;height:${r0 * 2}px"><b>${NAME[id]}</b></div>`).join('');
+    return `<div class="graph alu-scene" style="width:${w}px;height:${h}px"><svg width="${w}" height="${h}">${lines}</svg>${tags}${faces}</div>`;
+  };
+  const legend = `<div class="leg alu-n"><span><i class="sw" style="background:#93c5fd"></i>Lv3</span><span><i class="sw" style="background:#a78bfa"></i>Lv4</span><span><i class="sw" style="background:#f472b6"></i>Lv5〜6</span><span><i class="sw" style="background:#facc15"></i>Lv7〜8</span><span><i class="sw" style="background:#fde047"></i>Lv9〜</span></div>`;
+  const introduce = row('🤝', '引き合わせる', '2人を選ぶと、次の時間に一緒に過ごしやすくなる', '選ぶ');
+  const road = `<div class="alu-card"><div class="fold"><div class="alu-t">💗 ごほうびの道のり(あなたと助手)</div><button class="alu-btn">開く</button></div><div class="alu-n">いちばん近い: みゅあ あと38で Lv2</div></div>`;
+  const W = innerWidth, mainW = W - 24;
+  let body = '';
+  if (plan === 'a') {
+    // 案A 型どおり: 関係図は場面の絵(画面の3割)・主なボタン・もうすぐ Lv が上がるペアの行(見る/引き合わせる)・引き合わせる・ごほうびの道のりは畳む
+    const h = Math.round((innerHeight - 47 - 34) * 0.3);
+    body = `<div class="alu-main">${graph(mainW, h, { r0: 18 })}
+      ${go}
+      <div class="alu-card"><div class="alu-h">もうすぐ Lv が上がるペア</div>
+        ${soon.slice(0, 4).map(p => pairRow(p, p.at ? '見る' : '誘う')).join('')}
+        <div class="alu-n" style="margin-top:4px">線の色・太さは友情Lv(Lv3 から)。線を押すと思い出アルバム</div></div>
+      <div class="alu-card">${introduce}</div>${road}</div>`;
+  } else if (plan === 'b') {
+    // 案B 一覧が主: 図は出さず、主なボタンの下にペアの一覧(いま会える組 → もうすぐ上がる組)。関係図は「🗺 関係図」で窓に開く
+    body = `<div class="alu-main">
+      <div class="alu-card" style="display:flex;align-items:center;gap:10px">${duo(best)}<div style="flex:1;min-width:0"><div class="alu-t">${nm(best)} <span class="alu-n">Lv${best.lv}「${best.stage}」</span></div><div class="alu-n">いま ${PLACE[best.at]} · あと${best.need}で「${best.nextName}」</div>${bar(best)}</div></div>
+      ${go}
+      <div class="alu-card"><div class="fold"><div class="alu-h">いま会えるペア</div><button class="alu-btn">🗺 関係図</button></div>
+        ${pairs.filter(p => p.at && p.pair !== best.pair).map(p => pairRow(p, '見る')).join('')}</div>
+      <div class="alu-card"><div class="alu-h">もうすぐ Lv が上がるペア</div>
+        ${soon.filter(p => !p.at).slice(0, 3).map(p => pairRow(p, '誘う')).join('')}</div>
+      <div class="alu-card">${introduce}</div>${road}</div>`;
+  } else {
+    // 案C 関係図を大きく: 図が中身の半分(線の上に Lv)・凡例・主なボタン・押した線の窓(ここでは一番上の行だけ)。町の案A と同じく「場面の3割」を外す
+    const h = Math.round((innerHeight - 47 - 34) * 0.5);
+    body = `<div class="alu-main"><div style="position:relative">${graph(mainW, h, { big: true, r0: 22 })}<div class="hint alu-chip">線を押すと、その2人の思い出</div></div>
+      ${legend}
+      ${go}
+      <div class="alu-card">${pairRow(soon.filter(p => !p.at)[0], '誘う')}${introduce}</div>${road}</div>`;
+  }
+  document.getElementById('app').innerHTML = `<div class="alu" data-plan="${plan}">${top}<div class="alu-body">${body}</div>${tabs}</div>`;
+})();
+</script></body></html>
