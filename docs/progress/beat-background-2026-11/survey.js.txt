@@ -183,9 +183,12 @@ async function runOnce(playwright, tone) {
     const cdp = await ctx.newCDPSession(p);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
     await p.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
+    // カウントダウン中に一時停止ボタンが薄くなっているか(見た目の確かめ)
+    let dimDuringCount = null;
+    try { await p.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area][data-rhythm-counting="1"]') && !!document.querySelector('[data-rhythm-pause]'), null, { timeout: 30000, polling: 20 }); dimDuringCount = await p.evaluate(() => ({ opacity: getComputedStyle(document.querySelector('[data-rhythm-pause]')).opacity, onMain: !!document.querySelector('main[data-rhythm-tap-test][data-rhythm-counting="1"]') })); } catch (e) { dimDuringCount = { why: 'カウントダウンを見つけられない' }; }
     await p.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && (window.__mhTestHooks.rhythmNotes() || []).length > 0, null, { timeout: 90000 });
     await p.evaluate(installPlayer, { ...installArgs({ rand: Math.random }), sigma: 4, missRate: 0, dropRate: 0, lateRate: 0 });
-    if (BISECT) { await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 1500; } catch (e) { return false; } }, null, { timeout: 60000, polling: 100 }); return { bisect: await p.evaluate(layoutBisect, BISECT_LITE) }; }
+    if (BISECT) { await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 1500; } catch (e) { return false; } }, null, { timeout: 60000, polling: 100 }); return { bisect: { dimDuringCount, after: await p.evaluate(() => getComputedStyle(document.querySelector('[data-rhythm-pause]')).opacity), ...(await p.evaluate(layoutBisect, BISECT_LITE)) } }; }
     // 曲が鳴り始めたら測り始める
     await p.waitForFunction(() => { try { return window.__mhTestHooks.rhythmSongMs() > 200; } catch (e) { return false; } }, null, { timeout: 60000, polling: 50 });
     let traceEvents = null;
