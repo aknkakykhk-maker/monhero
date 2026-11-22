@@ -138,6 +138,7 @@ const Audio_ = (() => {
     "audio/bgm-black-shout.mp3": "03a627c682de",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
+    "audio/bgm-brand-new-sky.mp3": "b93b1a67de51",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
     "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",

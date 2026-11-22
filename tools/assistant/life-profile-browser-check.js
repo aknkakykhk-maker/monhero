@@ -34,6 +34,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
     await page.addInitScript(() => {
       window.__mhSupabaseStubbed = true;
+      // 段12(2026-11-22)から下のタブ5つ目は「🐾 マスモン」。紹介の一覧はこの検査だけの印で前のタブに出して見る(印なしの並びは⑦で見る)
+      window.__mhAssistantLifeProfileTab = true;
       localStorage.setItem('mh_assistant_life_ui_v2', 'true');
       if (localStorage.getItem('mh_breeder_name') === null) {
         // きき: 仲良し度 Lv8 ぐらい・好み(お茶=好き・おにぎり=苦手・観葉植物=好き)が分かっている。NEW を見るため、控えは 0
@@ -69,11 +71,19 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       check('① 印が偽なら「📖 紹介」のタブが出ない', !(await tabs(page)).includes('profile'), (await tabs(page)).join(','));
       await page.close();
     }
+    // ⑦ 検査の印が無ければ(遊ぶ人の画面)、5つ目は「🐾 マスモン」で「📖 紹介」は無い(社長 2026-11-22 段12 案A)
+    {
+      const p2 = await open({ name: '印なし', w: 390, h: 844 }, true);
+      await p2.evaluate(() => { window.__mhAssistantLifeProfileTab = false; });
+      const t = await p2.evaluate(() => assistantLifeUiV2Tabs().map(x => x[0]));
+      check('⑦ 遊ぶ人の画面では5つ目が「🐾 マスモン」で「📖 紹介」のタブは無い', t[t.length - 1] === 'masmon' && !t.includes('profile'), t.join(','));
+      await p2.close();
+    }
     for (const v of [{ name: '縦', w: 390, h: 844, tag: 'tate' }, { name: '横', w: 844, h: 390, tag: 'yoko' }]) {
       const T = `[${v.name}] `;
       const page = await open(v, true);
       const t = await tabs(page);
-      check(`${T}② 印が真なら「📖 紹介」のタブが出る(きずなの次)`, t.includes('profile') && t.indexOf('profile') === t.indexOf('friends') + 1, t.join(','));
+      check(`${T}② 印が真なら「📖 紹介」のタブが出る(5つ目・いちばん右。段7で友情とのあいだにフレンドが入った)`, t.includes('profile') && t.indexOf('profile') === t.length - 1, t.join(','));
       const bad = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-icons] button')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.height < 40 || r.right > window.innerWidth + 1); }).length);
       check(`${T}② タブは横にはみ出さず高さ40px以上`, bad === 0, String(bad));
       await page.locator('[data-assistant-life-icon="profile"]').click(); await page.waitForTimeout(700);
