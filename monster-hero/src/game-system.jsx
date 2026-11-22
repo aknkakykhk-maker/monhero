@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef658e343b97d90e
+// generated-sha256: c1cbace750fb10cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23150,6 +23150,12 @@ const RhythmOrientationButton=({className=''})=>{
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
     }finally{setBusy(false);}
   };
+  // PC(マウスで操作する広い画面)では出さない。モニターは回せないので、押すと画面全体が横倒しになって読めなかった(2026-11-22 r1119-094・点検 N58)。
+  // ただし絵を回している最中は、元へ戻せるよう出したままにする。試験のブラウザはタッチが無くても電話の大きさなら出す(短い辺 600px 未満)
+  const pcLike=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    &&Math.min(window.innerWidth||0,window.innerHeight||0)>=600;
+  const rotatedNow=typeof RHYTHM_VIEW_ROTATION==='object'&&!!RHYTHM_VIEW_ROTATION&&typeof RHYTHM_VIEW_ROTATION.active==='function'&&RHYTHM_VIEW_ROTATION.active();
+  if(pcLike&&!rotatedNow&&note==='')return null;
   return <div className={`relative shrink-0 ${className}`}>
     <button data-rhythm-orientation-toggle data-orientation={landscape?'landscape':'portrait'}
       aria-label={label} title={label} onClick={toggle} disabled={busy} aria-busy={busy?'true':undefined}
@@ -23157,9 +23163,11 @@ const RhythmOrientationButton=({className=''})=>{
       <span aria-hidden="true" className="text-base leading-none">🔄</span>
       <span className="text-[9px] font-black leading-none">{landscape?'縦':'横'}</span>
     </button>
-    {note!==''&&<p data-rhythm-orientation-note onClick={()=>setNote('')}
-      style={{whiteSpace:'pre-line'}}
-      className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg">{note}<span className="mt-1 block text-[8px] font-black text-amber-300/80">タップで閉じる</span></p>}
+    {/* 案内はボタンの下に箱で出していたが、フリーマッチ・ランキングのボタンや部屋のメンバーの枠、ルームコードに重なった(2026-11-22 r1119-094・点検 N59・N62)。
+        画面の上の端に細い帯で出す(押すと閉じる)。回しているときは回した画面の上の端になる */}
+    {note!==''&&<p data-rhythm-orientation-note role="status" onClick={()=>setNote('')}
+      style={{whiteSpace:'pre-line',top:'calc(var(--mh-sa-top, 0px) + 4px)',left:'calc(var(--mh-sa-left, 0px) + 8px)',right:'calc(var(--mh-sa-right, 0px) + 8px)'}}
+      className="fixed z-[90000] mx-auto max-w-lg rounded-xl border border-amber-300/60 bg-slate-950/95 px-3 py-1.5 text-[10px] font-bold leading-snug text-amber-100 shadow-lg">{note}<span className="mt-1 block text-[8px] font-black text-amber-300/80">タップで閉じる</span></p>}
   </div>;
 };
 // ============================================================================
@@ -25581,7 +25589,7 @@ function RhythmSkyStage({plane,still=false}){
     if(!/^d[12][lm]$/.test(skyLaneLook))return null;
     const SKY_LANE_DEPTH=.14,line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line),steps=8,ys=[];
     for(let i=0;i<=steps;i++)ys.push(line-SKY_LANE_DEPTH+SKY_LANE_DEPTH*i/steps);
-    const lift=y=>(y-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base)*100;
+    const lift=y=>(y-rhythmSkyLiftRatio(y))*100; // 空中の持ち上げは rhythmSkyLiftRatio(上端で0)と同じ
     const at=(k,y)=>`${f(rhythmProjectBoundary(k,y)*100)},${f(lift(y))}`;
     const surface=[...ys.map(y=>at(0,y)),...ys.slice().reverse().map(y=>at(RHYTHM_LANE_COUNT,y))].join(' ');
     const dividers=Array.from({length:RHYTHM_LANE_COUNT+1},(_,k)=>ys.map(y=>at(k,y)).join(' '));
@@ -26364,7 +26372,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const skyPlane=(()=>{
     if(!skyChart)return null;
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line),steps=24,top=.03,pts=[];
-    for(let i=0;i<=steps;i++){const y=top+(line-top)*i/steps;pts.push({y:(y-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base)*100,l:rhythmProjectBoundary(0,y)*100,r:rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*100,gy:y*100});}
+    for(let i=0;i<=steps;i++){const y=top+(line-top)*i/steps;pts.push({y:(y-rhythmSkyLiftRatio(y))*100,l:rhythmProjectBoundary(0,y)*100,r:rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*100,gy:y*100});}
     const f=v=>v.toFixed(2);
     const left=pts.map(p=>`${f(p.l)},${f(p.y)}`),right=pts.map(p=>`${f(p.r)},${f(p.y)}`).reverse();
     const last=pts[pts.length-1];
@@ -26882,7 +26890,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     // HELL(空中のノーツがある譜面)では、空中の面の幅にも合わせて隠し、空中の判定線(と判定の文字)には届かないところで止める(2026-10-13)。
     // 空中の面の同じ高さの幅は、持ち上げ前の奥行き t を y = t − 持ち上げ(t) から探して決める
     const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
-    const skyAt=y=>{if(!skyChart||!(base>0))return 0;let lo=0,hi=line;for(let k=0;k<18;k++){const m=(lo+hi)/2;if(m-RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(m)/base<y)lo=m;else hi=m;}return rhythmProjectionScale(lo);};
+    const skyAt=y=>{if(!skyChart||!(base>0))return 0;let lo=0,hi=line;for(let k=0;k<18;k++){const m=(lo+hi)/2;if(m-rhythmSkyLiftRatio(m)<y)lo=m;else hi=m;}return rhythmProjectionScale(lo);};
     if(skyChart)percent=Math.min(percent,Math.max(0,(line-RHYTHM_SKY_LIFT.ratio)*100-8));
     if(!(percent>0))return null;
     const steps=8,left=[],right=[];
@@ -89536,7 +89544,7 @@ function AssistantLifeFriendPage({ life }) {
   const housesBlock = (<>
       {/* フレンドの家と「🚪 訪ねる」をいちばん上に(来てくれた・帰ってきたの知らせがまだのときは、その下)(2026-11-20 総点検 §10: フレンドで押してほしいのは訪ねる。前はいちばん下で半分切れていた) */}
       <p className={sec} style={hideIfEmpty}>🏠 フレンドの家</p>
-      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🌸 ご縁Lv は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
+      {houses.length > 0 && typeof albEnabled === 'function' && albEnabled() && <p className="mt-1 rounded-xl bg-slate-950/85 px-2 py-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE} data-alf-bond-note>{jaWrap('🏠 おなじみ度は、その人との行き来の記録です。訪ねた家で「話す・部屋を見る・置き手紙」をそろえると、スタンプが1個たまります')}</p>}
       <div data-alf-houses style={hideIfEmpty}>
         {houses.length ? houses.map(f => { const can = assistantLifeFriendCanLook(f.id); const been = st.photos.some(p => p.host === f.id); return (
           <div key={f.id} className={`${card} flex items-center gap-2`} data-alf-house={f.id}>
@@ -89689,7 +89697,7 @@ const ALB_TABLE_LIKES = 'assistant_life_friend_likes';
 const ALB_MAX = Object.freeze({ houses: 3, likes: 3, friends: 100 });
 // 友情Lv に要るスタンプの数(Lv1〜Lv10)と呼び名(見た目の札)
 const ALB_STEPS = Object.freeze([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]);
-// 名前は「ご縁Lv」。助手どうしの「友情Lv」・あなたとの「仲良し度」と同じ言葉を使わない(2026-11-20 総点検 S-2: 「はじめまして」「なかよし」「親友」が3つの値の段で重なっていた)。
+// 名前は「🏠 おなじみ度」(2026-11-20 社長 r1119-043 ②。前は「ご縁Lv」)。助手どうしの「友情Lv」・あなたとの「仲良し度」と同じ言葉を使わない(2026-11-20 総点検 S-2: 「はじめまして」「なかよし」「親友」が3つの値の段で重なっていた)。
 //   呼び名は見た目だけ(保存はスタンプの数だけ。名前を変えても記録は変わらない)
 const ALB_TITLES = Object.freeze(['ごあいさつ', '顔みしり', 'ごきんじょさん', 'お茶のみ友だち', '行きつけ', '通い合う仲', 'いつもの人', '気心の知れた仲', '家族ぐるみ', '心の友', '末長いご縁']);
 const ALB_TASKS = Object.freeze([['talk', '💬', '話す'], ['find', '👀', '部屋を見る'], ['note', '✉️', '置き手紙']]);
@@ -89911,7 +89919,7 @@ function AlfBondChip({ id, always = false }) {
   if (!albEnabled() || !s.bond) return null;
   const st = albOne(s.bond, id).st;
   if (!st && !always) return null;
-  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🌸 ご縁Lv{albLv(st)} {albTitle(st)}</span>;
+  return <span className="ml-1 inline-block whitespace-nowrap rounded-full border border-pink-300/60 bg-pink-950/60 px-1.5 text-[9.5px] font-black leading-[15px] text-pink-100" data-alb-chip={id}>🏠 おなじみ度 Lv{albLv(st)} {albTitle(st)}</span>;
 }
 function AlfFavShelf({ fv }) {
   if (!fv) return null;
@@ -89939,7 +89947,7 @@ function AlfBondBar({ friend, more, onOpen, compact = false }) {
   return (
     <button type="button" className={`flex w-full items-center gap-1.5 rounded-xl border border-pink-300/50 bg-slate-950/85 px-2 text-left active:scale-[.99] ${compact ? 'mb-0.5 py-0' : 'mb-1.5 py-1'}`} data-alb-bar onClick={onOpen}>
       <span className="min-w-0 flex-1">
-        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🌸 ご縁Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🌸 ご縁Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
+        <b className={`block truncate font-black text-pink-100 ${compact ? 'text-[10.5px] leading-[16px]' : 'text-[11.5px]'}`} data-alb-bar-title>{compact ? `🏠 おなじみ度 Lv${albLv(x.st)} ${albTitle(x.st)}${x.done ? ' ・ 今日 ✔' : full ? '' : ` ・ あと${left}つ`}${fresh ? ` ・ ✨${fresh}` : ''}` : `🏠 おなじみ度 Lv${albLv(x.st)}「${albTitle(x.st)}」`}</b>
         <small className={`truncate text-[10px] font-bold text-slate-200 ${compact ? 'hidden' : 'block'}`} data-alb-bar-sub>{x.done ? '今日のスタンプ ✔ もらった' : full ? `今日のスタンプは${ALB_MAX.houses}軒ぶん もらった` : `あと${left}つで 今日のスタンプ`}{fresh ? ` ・ ✨ 見どころ ${fresh}` : ''}</small>
       </span>
       <span className="flex shrink-0 gap-0.5" data-alb-bar-tasks>{ALB_TASKS.map(([k, icon]) => <i key={k} className={`flex ${compact ? 'h-4 w-4 text-[10px]' : 'h-6 w-6 text-[12px]'} items-center justify-center rounded-full not-italic ${x.t[k] ? 'border border-pink-300 bg-pink-500/40' : 'border border-dashed border-slate-400/70 opacity-60'}`} data-alb-task={k} data-alb-task-done={x.t[k] ? '1' : '0'}>{icon}</i>)}</span>
@@ -89960,7 +89968,7 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
     <div className="absolute inset-0" style={{ zIndex: 31 }} data-alb-sheet>
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/55" onClick={onClose}/>
       <div className="mhl-sheet" style={land ? { left: 'auto', width: '46%', top: 0, maxHeight: '100%', paddingTop: 14, borderRadius: '22px 0 0 22px' } : { maxHeight: 'calc(100% - 96px)' }}>
-        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
+        <p className="text-[16px] font-black text-pink-100" data-alb-sheet-title>🏠 {friend.name}さんとのおなじみ度 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200">「{albTitle(x.st)}」 ・ スタンプ {x.st}個{nx ? ` ・ あと${nx.need}個で「${ALB_TITLES[albLv(x.st) + 1]}」` : ''}</p>
         <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2.5 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -90001,7 +90009,7 @@ function AlfBondView({ friend, more, land = false }) {
   return (
     <div className="px-3 pb-4 pt-2" data-alf-bond-view>
       <div className={card} data-alf-bond-view-friend>
-        <p className="text-[15px] font-black text-pink-100">🌸 {friend.name}さんとのご縁 Lv{albLv(x.st)}</p>
+        <p className="text-[15px] font-black text-pink-100">🏠 {friend.name}さんとのおなじみ度 Lv{albLv(x.st)}</p>
         <p className="text-[11px] font-bold text-slate-200"><span className="whitespace-nowrap">「{albTitle(x.st)}」</span> <span className="whitespace-nowrap">スタンプ {x.st}個</span>{nx ? <> <span className="whitespace-nowrap">あと{nx.need}個で「{ALB_TITLES[albLv(x.st) + 1]}」</span></> : null}</p>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
         <p className="mt-2 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
@@ -90059,7 +90067,7 @@ function AlfGuestBook({ s, card, sec, onVisit }) {
             <p className="text-[10.5px] leading-snug text-slate-300">{did.map((t, i) => <span key={i} className="whitespace-nowrap">{i ? '・' : ''}{t}</span>)}{x.in.includes(today) ? <span className="whitespace-nowrap font-black text-pink-200">・🌸 スタンプ +1</span> : null}</p>
           </div>); })
         : <p className="text-[11px] text-slate-400" data-alb-guests-none>この7日、来てくれたフレンドはまだいません。あなたが訪ねて置き手紙を残すと、相手のお客さん帳に載ります。</p>}
-      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人とのご縁スタンプが1個たまります(1人につき1日1個)。</p>
+      <p className="mt-1 text-[10px] leading-snug text-slate-400">フレンドか、フレンドの助手が来てくれた日は、その人とのおなじみ度のスタンプが1個たまります(1人につき1日1個)。</p>
     </div>
   </>);
 }
@@ -90087,7 +90095,7 @@ function AlfFavEditor({ s, card, sec }) {
         {row('m', '🐾 自慢のマスモン', fav.m ? `${fav.m.aid}|${fav.m.mo}` : '', mons, v => { const [aid, mo] = String(v).split('|'); albSaveFav({ m: v ? { aid, mo } : null }); })}
         {row('s', '🎵 好きな曲(最近モンヒロビートで遊んだ曲から)', fav.s || '', songList.map(x => ({ v: x, label: x })), v => albSaveFav({ s: v || null }))}
         <label className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px] text-slate-100"><span>🪑 集めた家具の数を見せる</span><input type="checkbox" checked={fav.fn} data-alb-fav-fn onChange={e => albSaveFav({ fn: e.target.checked })}/></label>
-        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「ご縁」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-400">選んだ物は、フレンドがあなたの家を訪ねたときに「おなじみ度」の中に出ます。次に助手ライフを開いたときの控えから変わります。文字を自由に書く所はありません。</p>
       </> : null}
     </div>
   </>);

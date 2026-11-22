@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>段12 マスモンの案</title>
+<!-- 助手ライフの作り直し 段12(下のタブ5つ目「🐾 マスモン」の画面)の案の見本。?plan=a|b|c。撮るのは tools/assistant/life-masmon-plan-shoot.js
+     型の見た目は本物の ALU_CSS(56-assistant-life-ui.jsx)。iPhone の切り欠き(上47px・下34px)を黒い帯で描く。
+     場面: 15:00 昼。あつのマスモン「スプ」(スプーキー Lv.19・攻撃型)が修行中・次のマスモンは仲良し度 Lv3 で。ほかの助手も1体ずつ -->
+<style id="alu"></style>
+<style>
+html,body{margin:0;height:100%;background:#000;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.notch-top{position:fixed;left:0;right:0;top:0;height:47px;background:#000;color:#fff;font:600 15px/47px -apple-system,sans-serif;display:flex;justify-content:space-between;padding:0 28px;box-sizing:border-box;z-index:5}
+.notch-bot{position:fixed;left:0;right:0;bottom:0;height:34px;background:#000;z-index:5}
+.notch-bot i{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#fff}
+#app{position:fixed;left:0;right:0;top:47px;bottom:34px}
+.alu{height:100%}
+.who{display:flex;gap:6px;overflow:hidden}
+.who{justify-content:space-between}.who button{flex:none;width:36px;height:36px;border-radius:50%;padding:0;border:2px solid #475569;background:#312e5a;overflow:hidden}
+.who button.on{border-color:#fde047;box-shadow:0 0 0 3px #fde04755}
+.who img{width:100%;height:100%;object-fit:cover}
+.big{display:flex;gap:10px;align-items:center}
+.big .mon{flex:none;width:112px;height:112px;border-radius:14px;background:radial-gradient(circle,#3b3566,#1e1b3a);display:flex;align-items:center;justify-content:center}
+.big .mon img{width:100px;height:100px;object-fit:contain}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;margin-top:4px}
+.stats div{display:flex;align-items:center;gap:4px;font-size:11px;color:#cbd5e1;white-space:nowrap}
+.stats i{flex:1;height:5px;border-radius:3px;background:#3b3566;overflow:hidden}
+.stats i b{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#fb923c)}
+.chip{display:inline-block;font-size:11px;font-weight:900;color:#fbcfe8;background:#4a1d3a;border:1px solid #f9a8d466;border-radius:999px;padding:0 6px;line-height:1.6;white-space:nowrap;vertical-align:middle}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini{border-radius:14px;border:1px solid #3b3566;background:#1e1b3a;padding:8px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.mini.hot{border-color:#fde047}
+.mini .mon{width:64px;height:64px;object-fit:contain}
+.mini .face{position:absolute;left:6px;top:6px;width:24px;height:24px;border-radius:50%;border:1.5px solid #fff;object-fit:cover;background:#312e5a}
+.plan{display:flex;gap:4px}
+.plan span{flex:1;text-align:center;border-radius:8px;background:#0f172a;border:1px solid #475569;font-size:11px;font-weight:900;color:#cbd5e1;padding:4px 0;white-space:nowrap}
+.plan span.on{background:#064e3b;border-color:#34d399;color:#fff}
+.alu-row .alu-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style></head>
+<body><div class="notch-top"><span>15:00</span><span>📶 🔋</span></div><div id="app"></div><div class="notch-bot"><i></i></div>
+<script>
+(async () => {
+  const src = await (await fetch('../../../../monster-hero/src/parts/56-assistant-life-ui.jsx')).text();
+  document.getElementById('alu').textContent = (src.match(/const ALU_CSS = `([\s\S]*?)`;/) || [])[1] || '';
+  const plan = (new URLSearchParams(location.search).get('plan') || 'a').toLowerCase();
+  const face = (id) => `../../../../monster-hero/images/assistant/face/${id === 'mua' ? 'myua' : id}_normal.PNG`;
+  const mon = (m) => `../../../../monster-hero/images/monster-thumbs/${m}.png`;
+  const NAME = { mua: 'みゅあ', kiki: 'きき', dra: 'ドラ', sorashido: 'ソラシド', erubin: 'えるびん', momosuke: 'ももすけ', kyuko: 'きゅうこ', atsu: 'あつ' };
+  const MS = [
+    { a: 'atsu', n: 'スプ', m: 'spooky', sp: 'スプーキー', lv: 19, type: '攻撃型', now: '🔥 ちから修行中', st: [18, 22, 12, 25, 16, 9] },
+    { a: 'mua', n: 'もち丸', m: 'mocchi', sp: 'モッチー', lv: 24, type: 'バランス型', now: '💤 おやすみ', st: [30, 20, 22, 24, 18, 20] },
+    { a: 'kiki', n: 'ピコ', m: 'pixie', sp: 'ピクシー', lv: 21, type: '技型', now: '📒 予定どおり', st: [20, 14, 30, 26, 22, 12] },
+    { a: 'dra', n: 'ガルド', m: 'golem', sp: 'ゴーレム', lv: 17, type: '守り型', now: '⚔️ モンヒロバトル', st: [34, 26, 8, 12, 6, 30] },
+  ];
+  const me = MS[0];
+  const SN = ['ライフ', 'ちから', 'かしこさ', '命中', '回避', '丈夫さ'];
+  const stats = (x) => `<div class="stats">${x.st.map((v, i) => `<div>${SN[i]}<i><b style="width:${v * 2.5}%"></b></i></div>`).join('')}</div>`;
+  const row = (pic, text, note, btn) => `<div class="alu-row"><div class="pic">${pic}</div><div class="tx"><div class="alu-t">${text}</div>${note ? `<div class="alu-n">${note}</div>` : ''}</div>${btn ? `<button class="alu-btn">${btn}</button>` : ''}</div>`;
+  const top = `<div class="alu-top"><button class="bk">← 戻る</button><div class="ti">マスモン</div><div class="ck"><b>15:00 昼</b><small>次に動く 16:00</small></div></div>`;
+  const tabs = `<div class="alu-tabs">${[['🏡', '家'], ['🗺', '町'], ['🤝', '友情'], ['🏠', 'フレンド'], ['🐾', 'マスモン', 1]].map(([i, l, on]) => `<button class="${on ? 'on' : ''}"><i>${i}</i>${l}</button>`).join('')}</div>`;
+  const go = (x) => `<button class="alu-go"><span style="display:block"><span class="alu-nw" style="display:block">📣 ${x.n}を応援する</span><span class="alu-t alu-nw" style="display:block;color:inherit">${x.now.replace(/^\S+ /, '')}を見る · 技の熟練 +1・💗 +5(1日3回)</span></span></button>`;
+  const who = `<div class="who">${['atsu', 'mua', 'kiki', 'dra', 'momosuke', 'kyuko', 'sorashido', 'erubin'].map(id => `<button class="${id === me.a ? 'on' : ''}"><img src="${face(id)}" alt=""></button>`).join('')}</div>`;
+  const bigCard = (x) => `<div class="alu-card"><div class="big"><div class="mon"><img src="${mon(x.m)}" alt=""></div><div style="flex:1;min-width:0">
+      <div class="alu-h" style="margin:0">${x.n} <span class="chip">${NAME[x.a]}のマスモン</span></div>
+      <div class="alu-n">${x.sp} · Lv.${x.lv} · ${x.type}</div><div class="alu-t">${x.now}</div>${stats(x)}</div></div></div>`;
+  const nextLine = `<div class="alu-n alu-nw">🔒 あと仲良し度 2Lv で、${NAME[me.a]}が次のマスモンを迎えます</div>`;
+  const more = row('📒', '育成ノート(今日の予定)', '午前 ちから修行 · 午後 おやすみ · 夜 モンヒロバトル', '見る')
+    + row('⚔️', '編成・デッキ', 'モンヒロバトルの3体 · MFバトルカードのデッキ', '開く')
+    + row('💡', '次に迎えてほしいマスモンを伝える', 'まだ伝えていない', '伝える');
+  let body = '';
+  if (plan === 'a') {
+    // 案A 助手を選ぶ列 + いる子の札(大): 顔の列で助手を選ぶ → 大きい札 → 主なボタン「応援する」→ 1行「あと◯で次」→ 育成ノート・編成・伝える
+    body = `<div class="alu-main"><div class="alu-card">${who}</div>${bigCard(me)}${go(me)}${nextLine}<div class="alu-card">${more}</div></div>`;
+  } else if (plan === 'b') {
+    // 案B 全員の札を2列で: 応援できる(修行中の)マスモンに黄色い縁 → 主なボタン → 押すと札の窓(今の4つのタブの中身)
+    body = `<div class="alu-main">${go(me)}<div class="grid2">${MS.map(x => `<div class="mini ${x === me ? 'hot' : ''}"><img class="face" src="${face(x.a)}" alt=""><img class="mon" src="${mon(x.m)}" alt=""><div class="alu-t alu-nw">${x.n} <span class="alu-n">Lv.${x.lv}</span></div><div class="alu-n alu-nw">${x.now}</div></div>`).join('')}</div>
+      <div class="alu-n alu-nw">札を押すと、育ち方・編成・デッキ・好みを見られます</div>${nextLine}</div>`;
+  } else {
+    // 案C 育成ノートが主: 顔の列 → 今日の予定の帯(朝・昼・夕方・夜)→ 大きい札 → 主なボタン
+    const planBar = `<div class="alu-card"><div class="alu-h">📒 ${NAME[me.a]}の今日の予定</div><div class="plan"><span>朝 おやすみ</span><span class="on">昼 ちから</span><span>夕方 命中</span><span>夜 バトル</span></div><div class="alu-n alu-nw" style="margin-top:4px">予定を変えるのは${NAME[me.a]}。気分で変わることがあります</div></div>`;
+    body = `<div class="alu-main"><div class="alu-card">${who}</div>${planBar}${bigCard(me)}${go(me)}${nextLine}</div>`;
+  }
+  document.getElementById('app').innerHTML = `<div class="alu">${top}${body}${tabs}</div>`;
+})();
+</script></body></html>
