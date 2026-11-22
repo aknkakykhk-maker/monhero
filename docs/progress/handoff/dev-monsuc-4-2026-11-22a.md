@@ -11,7 +11,7 @@
 - #7139 育-244(歩き回りの名札が足元に付いて行く) `docs/progress/monsuc4-ikusei-o/`
 - #7141 育-207(編成の子のイベントで「🔥 ピーク中」の札) `docs/progress/monsuc4-ikusei-p/`
 - #7143 育-223・126(なぞった線を丸の後ろに薄く・カードに「ほか1つ」) `docs/progress/monsuc4-ikusei-q/`
-- その18 育-215・159(総合力の札から「いまの能力」の窓・ボックスの入口のボタンを縦に) `docs/progress/monsuc4-ikusei-r/`
+- #7151 育-215・159(総合力の札から「いまの能力」の窓・ボックスの入口のボタンを縦に) `docs/progress/monsuc4-ikusei-r/`
 
 ## 残り(表の「| 中 | 未 |」9件)
 
