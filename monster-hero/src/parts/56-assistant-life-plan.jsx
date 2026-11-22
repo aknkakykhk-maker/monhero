@@ -382,10 +382,16 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
 }
 
 // 家・町の上の小さな1行(入口③)
-function AssistantLifePlanBand({ ids = [], land = false }) {
+function AssistantLifePlanBand({ ids = [], land = false, typed = false }) {
   assistantLifePlanUse();
   if (!assistantLifePlanOn() || !assistantLifePlanSlotsLeft().length) return null;
   const n = assistantLifePlanFreeCount(ids);
+  // 型に載せた家(段7の残り・2026-11-22): 行の形で1行(押すと今の予定表が開く)
+  if (typed && typeof AluRow === 'function') return (
+    <div className="alu-card" data-assistant-life-typed-plan>
+      <AluRow pic="📅" text="今日の予定表" note={n ? `あと${n}回の移動が「おまかせ」` : '今日の予定を組みました'}
+        action={<AluBtn data-assistant-life-plan-band onClick={() => assistantLifePlanOpen({})}>開く</AluBtn>} />
+    </div>);
   return (
     <button type="button" data-assistant-life-plan-band onClick={() => assistantLifePlanOpen({})}
       className={`mx-3 ${land ? 'mb-1' : 'mb-2'} flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-dashed border-amber-300/80 bg-slate-950/85 px-2 text-left text-white`} style={{ width: 'calc(100% - 24px)' }}>

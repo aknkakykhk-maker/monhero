@@ -191,7 +191,7 @@ const problemsOf = (key, label, m, view, who) => {
       await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
       // 開いてすぐ(はじめての案内などが出ていれば、それも込みで「最初に見える物」)
       await snap('first-view', '開いてすぐ(家)');
-      for (let i = 0; i < 4; i++) { const b = page.locator('[data-assistant-life-item-intro-close]:visible, [data-assistant-life-screen] button:visible:text-matches("^(わかった！?|OK|はじめる|とじる)$")').first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); }
+      for (let i = 0; i < 4; i++) { const b = page.locator('[data-assistant-life-item-intro-close]:visible, [data-assistant-life-typed-guide] [data-alu-sheet-close]:visible, [data-assistant-life-screen] button:visible:text-matches("^(わかった！?|OK|はじめる|とじる)$")').first(); if (!(await b.count())) break; await b.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(400); }
       await step('house-list', '家(みんなの今を開く)', () => click('[data-assistant-life-v2-status] button'), () => click('[data-assistant-life-v2-status] button'));
       await step('diary', '今日あったこと', () => click('[data-assistant-life-board]'), closeSheets);
       await step('call', '声をかける(えらぶ)', () => click('[data-assistant-life-today-act="call"]'), () => click('[data-assistant-life-call-picker] button:has-text("閉じる")'));

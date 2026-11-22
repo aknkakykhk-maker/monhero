@@ -7,12 +7,12 @@
 
 ## 止め絵
 
-| 大きさ | 開いたところ | 下まで送った | 👀 見る → 結果の1枚 |
-| --- | --- | --- | --- |
-| 縦 390×844 | [tate-house](tate-house.png) | [tate-house-bottom](tate-house-bottom.png) | [tate-result](tate-result.png) |
-| 幅320 320×568 | [s320-house](s320-house.png) | [s320-house-bottom](s320-house-bottom.png) | [s320-result](s320-result.png) |
-| 横 844×390 | [yoko-house](yoko-house.png) | [yoko-house-bottom](yoko-house-bottom.png) | [yoko-result](yoko-result.png) |
-| PC 1280×800 | [pc-house](pc-house.png) | [pc-house-bottom](pc-house-bottom.png) | [pc-result](pc-result.png) |
+| 大きさ | 開いたところ | 下まで送った | 🧺 7日のごほうびを開いた | ❓ 見かたの窓 | 👀 見る → 結果の1枚 |
+| --- | --- | --- | --- | --- | --- |
+| 縦 390×844 | [tate-house](tate-house.png) | [tate-house-bottom](tate-house-bottom.png) | [tate-daily](tate-daily.png) | [tate-guide](tate-guide.png) | [tate-result](tate-result.png) |
+| 幅320 320×568 | [s320-house](s320-house.png) | [s320-house-bottom](s320-house-bottom.png) | [s320-daily](s320-daily.png) | [s320-guide](s320-guide.png) | [s320-result](s320-result.png) |
+| 横 844×390 | [yoko-house](yoko-house.png) | [yoko-house-bottom](yoko-house-bottom.png) | [yoko-daily](yoko-daily.png) | [yoko-guide](yoko-guide.png) | [yoko-result](yoko-result.png) |
+| PC 1280×800 | [pc-house](pc-house.png) | [pc-house-bottom](pc-house-bottom.png) | [pc-daily](pc-daily.png) | [pc-guide](pc-guide.png) | [pc-result](pc-result.png) |
 
 測った数(12枚とも OK): 型の部分の字は 11・13・16・20px の4段だけ / 主なボタン 1つ(296〜530×52px・16px)/ 帯48px・タブ5つが下の端 / はみ出しなし / PC の下の空き 156px(19.5%)
 
@@ -35,8 +35,24 @@
 | r1119-068(段4 🌡調子・◎○△) | 画面に出す | 家には出さない(部屋の段8で出す) | 段8 |
 | r1119-039(社長より先に気付く) | 数字で測る | life-house-typed-shoot.js が型の①〜⑦を12枚で測る。目で見て、幅320の札の折れ・PC の札の重なりを見つけて直した | 満たす |
 
-## 残り
+## 段7の残り(2026-11-22 ナカヨシ)で直した物
 
-- 家の絵の中の札の字(8.5〜10.5px)は前のまま。絵の中なので型の4段の外にした(段8 で部屋と一緒に見直す)
-- 「📅 予定」「🧺 7日のごほうび」を開いた中身は前の部品のままで、字は4段に入っていない(段12・段13)
-- 初めて開いた人への案内を後から開き直す「❓ 見かた」は、得の3行と一緒に家から無くなった(初めての1回は今までどおり出る)
+測る道具は家の絵の中の字も数えるようにした(`measure` の `withScene`。aria-hidden の飾りの絵文字・部屋の家具は絵なので数えない)。**20枚とも OK**(字は 11・13・16・20px だけ・10px 未満なし・はみ出しなし)。
+
+| 決めごと・参考 | 中身 | 止め絵のどこで満たすか | 結果 |
+| --- | --- | --- | --- |
+| ASSISTANT_LIFE_UI §2 字は4段・10px 未満なし | 家の絵の中の札(名札・行き先・吹き出し・Lv・会える印・掲示板・居間)も 11px | *-house の家の絵: 名札「みゅあ」・札「🍰 おやつ / 屋さんで / ひと休み」・掲示板「📌 今日あったこと ›」がどれも 11px。前は 8〜10.5px | 満たす |
+| 2026-11-14 言葉の途中で折らない | 11px で1行に入らない札は意味の切れ目で2行 | yoko-house「MFバトル / カードを研究」(前に試した形では「MFバトルカー/ド」と折れたので直した)・tate-daily「(1日 +12 まで)」は1つの塊 | 満たす |
+| 大きさの釣り合い(r1119-039) | 11px の吹き出しが顔にかからない | 幅110px 未満の部屋は顔を 36px までに・幅80px 未満(幅320)は吹き出しを出さない(s320-house のあつの部屋) | 満たす |
+| ASSISTANT_LIFE_UI §1 行・§2 | 「🧺 7日のごほうび」を開いた中身を型の行に | *-daily: 「昼のできごと」の行(右に「見に行く」)と「7日で おやつバスケット1個 0/7」の行と7つの丸。数え方・受け取りは前のまま。時刻の「あと約◯時間」は上の帯だけなので出さない | 満たす |
+| r1119-075 ④ 予定は1行 | 「📅 予定 ▼」を開くと前の帯 → 1行そのまま | *-house-bottom「📅 今日の予定表 / あと4回の移動が「おまかせ」 [開く]」 | 満たす |
+| ASSISTANT_LIFE_UI §3 窓・黄色い札は使わない | 「❓ 見かた」を家から開き直せる | *-house-bottom の一番下「❓ 助手ライフの見かた [開く]」→ *-guide: 型の窓(✕・上がる物の1行・3行・主なボタン「👀 見てみる」1つ)。初めての1回も同じ窓が自動で開く | 満たす |
+| 言葉(新UIは「見る」) | 家の絵の掲示板の空の文 | 「👀 見ると ここに残ります」(前は「見守ると」) | 満たす |
+
+歩く点検(`life-walkthrough.js`): 合計 3428点(同じ日の main は 3599点)。残る NG 4件(声をかける・贈る・部屋→マスモン・道具に届かない)は main でも同じ。初めての人は見かたの窓を ✕ で閉じてから歩くように道具を合わせた。
+
+## 残り(前の版)
+
+- ~~家の絵の中の札の字~~ → 2026-11-22 に直した
+- ~~「📅 予定」「🧺 7日のごほうび」を開いた中身~~ → 2026-11-22 に型の行へ(予定表の窓そのものは前の部品のまま・段12〜13)
+- ~~「❓ 見かた」~~ → 2026-11-22 に家の一番下へ戻した

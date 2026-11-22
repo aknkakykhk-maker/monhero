@@ -17,7 +17,7 @@
     "h": 52,
     "font": 16
    },
-   "bottomGap": -152,
+   "bottomGap": -252,
    "ng": []
   },
   "tate-house-bottom.png": {
@@ -38,6 +38,46 @@
     "font": 16
    },
    "bottomGap": 12,
+   "ng": []
+  },
+  "tate-daily.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 366,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -48,
+   "ng": []
+  },
+  "tate-guide.png": {
+   "w": 390,
+   "h": 844,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見てみる — みゅあとききの話",
+    "w": 360,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
    "ng": []
   },
   "tate-result.png": {
@@ -77,7 +117,7 @@
     "h": 52,
     "font": 16
    },
-   "bottomGap": -388,
+   "bottomGap": -488,
    "ng": []
   },
   "s320-house-bottom.png": {
@@ -91,13 +131,43 @@
     16,
     20
    ],
+   "main": null,
+   "bottomGap": 12,
+   "ng": []
+  },
+  "s320-daily.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": -194,
+   "ng": []
+  },
+  "s320-guide.png": {
+   "w": 320,
+   "h": 568,
+   "wide": false,
+   "twoCol": false,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
    "main": {
-    "label": "👀 見る — みゅあとききの話",
-    "w": 296,
+    "label": "👀 見てみる — みゅあとききの話",
+    "w": 290,
     "h": 52,
     "font": 16
    },
-   "bottomGap": 12,
+   "bottomGap": 15,
    "ng": []
   },
   "s320-result.png": {
@@ -137,7 +207,7 @@
     "h": 52,
     "font": 16
    },
-   "bottomGap": -270,
+   "bottomGap": -370,
    "ng": []
   },
   "yoko-house-bottom.png": {
@@ -148,10 +218,46 @@
    "fontSteps": [
     11,
     13,
-    16
+    16,
+    20
    ],
    "main": null,
    "bottomGap": 12,
+   "ng": []
+  },
+  "yoko-daily.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": null,
+   "bottomGap": -281,
+   "ng": []
+  },
+  "yoko-guide.png": {
+   "w": 844,
+   "h": 390,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見てみる — みゅあとききの話",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -5,
    "ng": []
   },
   "yoko-result.png": {
@@ -191,7 +297,7 @@
     "h": 52,
     "font": 16
    },
-   "bottomGap": 156,
+   "bottomGap": 56,
    "ng": []
   },
   "pc-house-bottom.png": {
@@ -211,7 +317,47 @@
     "h": 52,
     "font": 16
    },
-   "bottomGap": 156,
+   "bottomGap": 56,
+   "ng": []
+  },
+  "pc-daily.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見る — みゅあとききの話",
+    "w": 529,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": -61,
+   "ng": []
+  },
+  "pc-guide.png": {
+   "w": 1280,
+   "h": 800,
+   "wide": true,
+   "twoCol": true,
+   "fontSteps": [
+    11,
+    13,
+    16,
+    20
+   ],
+   "main": {
+    "label": "👀 見てみる — みゅあとききの話",
+    "w": 530,
+    "h": 52,
+    "font": 16
+   },
+   "bottomGap": 15,
    "ng": []
   },
   "pc-result.png": {
