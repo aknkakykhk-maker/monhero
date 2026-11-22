@@ -76214,8 +76214,6 @@ const RHYTHM_SONG_RELEASE_AT=Object.freeze({
   // ハロウィン・ナイト(data/rhythm-event.js の HALLOWEEN_NIGHT_START_AT)の開始と同時
   crazy_party_night:'2026-10-04T08:00:00+09:00',
   crazy_party_night_full:'2026-10-04T08:00:00+09:00',
-  // 花の女3人のモンヒロビートイベント(2026-11-23 から7日間・台帳 r1119-101)の曲。開催前は出さない(毎日の解放はイベントの仕組みが決める)
-  zenbu_hissatsuwaza:'2026-11-23T00:00:00+09:00',
 });
 const rhythmSongReleased=(songId,nowMs=Date.now())=>{
   // イベントで日ごとに開く曲(data/rhythm-event.js の FLOWER3_SONG_SLOTS・2026-11-23)。あとから読み込まれるので呼ばれた時に引く

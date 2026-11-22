@@ -114,7 +114,7 @@ const FLOWER3_TARGET_POINT_BOOST = 7;
 const FLOWER3_SONG_SLOTS = Object.freeze([
   // 曲名は窓口から(BRAND NEW SKY / 全部必殺技でつ( `･ω･) / きみ待ち♡ループ)。id は曲を入れる会話の報告が届いたら差し替える
   Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT }),
-  Object.freeze({ slot: 2, owner: 'kiki', songId: 'flower3_kiki_song', openAt: FLOWER3_START_AT }),
+  Object.freeze({ slot: 2, owner: 'kiki', songId: 'zenbu_hissatsuwaza', openAt: FLOWER3_START_AT }),
   Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});

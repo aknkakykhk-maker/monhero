@@ -21,8 +21,7 @@ const SHOT = process.env.MH_SHOT_DIR || '';
 if (SHOT) fs.mkdirSync(SHOT, { recursive: true });
 
 // 有料の曲の数(RHYTHM_SONG_PRICES の行数。short ver. は全編につくので数えない)
-// 出しはじめる時刻(RHYTHM_SONG_RELEASE_AT)がまだ来ていない曲は、店に並ばないので数えない(2026-11-22・花の女3人のイベント曲)
-const PAID_COUNT = (() => { const m = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/39-rhythm-song-owned.jsx'), 'utf8').match(/RHYTHM_SONG_PRICES = Object\.freeze\(\{([^}]*)\}\)/); if (!m) return 3; const ids = m[1].split(',').map((x) => x.split(':')[0].trim()).filter(Boolean); const rel = (fs.readFileSync(path.join(ROOT, 'monster-hero/data/rhythm-mode.js'), 'utf8').match(/const RHYTHM_SONG_RELEASE_AT=Object\.freeze\(\{([\s\S]*?)\}\);/) || [,''])[1]; const notYet = new Set([...rel.matchAll(/^\s*(\w+):'([^']+)'/gm)].filter((r) => !(Date.now() >= Date.parse(r[2]))).map((r) => r[1])); return ids.filter((id) => !notYet.has(id)).length; })();
+const PAID_COUNT = (() => { const m = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/39-rhythm-song-owned.jsx'), 'utf8').match(/RHYTHM_SONG_PRICES = Object\.freeze\(\{([^}]*)\}\)/); return m ? m[1].split(',').filter((x) => x.trim()).length : 3; })();
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
