@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c08a13b13f75236
+// source-sha256: 2c4ff589fa9e30f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38597,6 +38597,10 @@ const RhythmSongSelect = ({
   const picked = available.find(entry => entry.id === difficultyId);
   const difficulty = (picked && unlocked(picked) ? picked : null) || openList[0] || null;
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
+  const detailBpm = (() => {
+    const grid = song && typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
+    return grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
+  })();
   const best = song && difficulty ? rhythmBestRecord(bestRecords, song.songId, difficulty.id) : null;
   const rowDifficultyId = entry => {
     const ids = (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).map(item => item.id);
@@ -39002,7 +39006,7 @@ const RhythmSongSelect = ({
     }, " イベント対象"))))));
   }))))), React.createElement("aside", {
     "data-rhythm-song-detail": true,
-    className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2",
+    className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]",
     style: {
       paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
     }
@@ -39010,12 +39014,12 @@ const RhythmSongSelect = ({
     className: "text-xs font-bold text-slate-400"
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-song-detail-grid": true,
-    className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
+    className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]"
   }, (() => {
     const tier = rhythmDetailAchieveTier(best);
     return React.createElement("div", _extends({
       "data-rhythm-song-detail-art": true,
-      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem]",
+      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]",
       style: {
         gridArea: 'art'
       }
@@ -39068,7 +39072,10 @@ const RhythmSongSelect = ({
   }, favoriteIds.has(song.songId) ? '♥' : '♡')), React.createElement("small", {
     "data-rhythm-song-meta": true,
     className: "mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0"
-  }, rhythmSongLengthLabel(song, chart), React.createElement("span", {
+  }, detailBpm ? React.createElement("span", {
+    "data-rhythm-song-bpm": true,
+    className: "mr-1.5 tabular-nums text-slate-300"
+  }, "BPM ", detailBpm) : null, rhythmSongLengthLabel(song, chart), React.createElement("span", {
     "data-rhythm-demo-level": true,
     className: "ml-1.5 text-slate-300"
   }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ", rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? ` + 刻み${rhythmChartTickCount(song, chart, difficulty.id)}` : ''))), React.createElement("div", {
@@ -39177,9 +39184,18 @@ const RhythmSongSelect = ({
         }
       }, text);
     })());
-  }))), React.createElement("div", {
+  }))), notice && noticeOpen && React.createElement("div", {
+    "data-rhythm-song-notice-landscape": true,
+    className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:290px)]:hidden",
+    style: {
+      gridArea: 'note'
+    }
+  }, React.isValidElement(notice) ? React.cloneElement(notice, {
+    oneLine: true,
+    faceSize: 28
+  }) : notice), React.createElement("div", {
     "data-rhythm-song-act": true,
-    className: "flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95",
+    className: "flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95",
     style: {
       gridArea: 'act'
     }
@@ -39187,21 +39203,25 @@ const RhythmSongSelect = ({
     type: "button",
     "data-rhythm-song-random": true,
     onClick: pickRandom,
-    className: "min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]"
-  }, "ランダム"), lockedSong(song) ? React.createElement("button", {
+    "aria-label": "ランダムに選ぶ",
+    className: "flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "🎲"), "ランダム"), lockedSong(song) ? React.createElement("button", {
     type: "button",
     "data-rhythm-song-buy": song.songId,
     onClick: () => {
       setBuyError('');
       setBuyAsk(song);
     },
-    className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]"
+    className: "min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950"
   }, "🔒 ", rhythmSongPrice(song.songId).toLocaleString(), "ビートPで買う") : React.createElement("button", {
     type: "button",
     "data-rhythm-demo-start": difficulty.id,
     disabled: playDisabled,
     onClick: () => onPlay(song, difficulty),
-    className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]"
+    className: "min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40"
   }, playLabel), actionExtra && React.createElement("div", {
     "data-rhythm-song-action-extra": true,
     className: "flex shrink-0 landscape:hidden"
@@ -39211,24 +39231,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'foot'
     }
-  }, typeof footer === 'function' ? footer(song, difficulty) : footer))), notice && noticeOpen && React.createElement("div", {
-    "data-rhythm-song-notice-landscape": true,
-    className: "mt-1.5 hidden landscape:block"
-  }, React.isValidElement(notice) ? React.cloneElement(notice, {
-    oneLine: true,
-    faceSize: 28
-  }) : notice), detailInfoPanel && song && difficulty && chart && (() => {
-    const grid = typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
-    const bpm = grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
-    const info = [bpm ? `BPM ${bpm}` : '', rhythmSongLengthLabel(song, chart), chart.totalNotes ? `${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ` : ''].filter(Boolean).join(' ・ ');
-    return React.createElement("div", {
-      "data-rhythm-song-info-panel": true,
-      className: "mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block"
-    }, info && React.createElement("p", {
-      "data-rhythm-song-info-line": true,
-      className: "whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200"
-    }, info));
-  })()), buyAsk && songLock && React.createElement("div", {
+  }, typeof footer === 'function' ? footer(song, difficulty) : footer)))), buyAsk && songLock && React.createElement("div", {
     "data-rhythm-song-buy-modal": true,
     role: "dialog",
     "aria-modal": "true",
@@ -73828,7 +73831,6 @@ function RhythmSongSelectScreen({
     onSongId: setRhythmSelectedSongId,
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
-    detailInfoPanel: true,
     onPlay: onPlaySong,
     notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",
@@ -73876,25 +73878,27 @@ function RhythmSongSelectScreen({
         "aria-label": `${name} ${active ? 'ON' : 'OFF'}`,
         title: name,
         onClick: () => onToggleRhythmSetting && onToggleRhythmSetting(key),
-        className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+        className: `flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight [container-type:inline-size] ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "flex items-center gap-1"
       }, React.createElement("span", {
         "aria-hidden": "true"
       }, icon), React.createElement("span", {
-        className: "landscape:hidden"
-      }, name), React.createElement("span", {
         className: "text-[10px]"
-      }, active ? 'ON' : 'OFF'));
+      }, active ? 'ON' : 'OFF')), React.createElement("span", {
+        className: "max-w-full truncate text-[9px] leading-none opacity-80 [@container(max-width:60px)]:hidden"
+      }, name === 'ミラー譜面' ? 'ミラー' : name));
     }), !debugAll && React.createElement("button", {
       "data-rhythm-demo-ranking": true,
       onClick: () => onOpenRanking(song),
       "aria-label": "この曲の全国ランキング",
       title: "全国ランキング",
-      className: "flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
+      className: "flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
     }, React.createElement("span", {
       "aria-hidden": "true"
     }, "🏆"), React.createElement("span", {
-      className: "landscape:hidden"
-    }, "ランキング"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
+      className: "text-[9px] leading-none"
+    }, "順位"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
       style: JA_WRAP_STYLE,
       "data-rhythm-assist-note": true,
       className: "mt-1 text-[9px] font-bold leading-snug text-emerald-200"
