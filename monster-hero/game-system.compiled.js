@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9c48b590a360ff2
+// source-sha256: 9bc715f6f68dffb4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6503,6 +6503,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_beyond_the_same_sky',
+  name: 'Beyond the Same Sky',
+  creator: 'あつ × みゅあ',
+  src: 'audio/bgm-beyond-the-same-sky.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_beyond_the_same_sky_short',
+  name: 'Beyond the Same Sky short ver.',
+  creator: 'あつ × みゅあ',
+  src: 'audio/bgm-beyond-the-same-sky-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8279,6 +8293,8 @@ const Audio_ = (() => {
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
+    "audio/bgm-beyond-the-same-sky-short.mp3": "fc0c43a87755",
+    "audio/bgm-beyond-the-same-sky.mp3": "4719843e73e2",
     "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
     "audio/bgm-black-shout.mp3": "03a627c682de",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
@@ -54188,6 +54204,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:amakakeru_tsubasa': [['excited', '1:14がいちばん強い！ サビの真ん中でぐっと来るの、アガるぢゃん♪']],
+    'listen:beyond_the_same_sky': [['excited', '2:59からいちばん強い所が3回も来るの！ 最後まで走り切るぢゃん♪']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:dr_wily_stage_1': [['excited', 'サビは0:44から！ ここから一気にいちばん強くなるの、まぢでアガるぢゃん♪']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '1:16でいちばん強くなるの！ 短いけど、ここまぢでキタ〜ってなるぢゃん♪']],
@@ -54280,6 +54297,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所、音が澄んでいてとてもきれいです♪']],
+    'listen:beyond_the_same_sky': [['normal', '2:06でふっと静かになる所、空がひらけるみたいできれいです♪']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:dr_wily_stage_1': [['normal', '1:13で一度ふつうに戻る所も、静かできれいでつ']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '0:03の静かな始まりから、少しずつ大きくなるのがきれいでつ']],
@@ -54372,6 +54390,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:amakakeru_tsubasa': [['excited', 'サビは1:01から！ ももはこの一気に駆け上がる感じが大好き♡']],
+    'listen:beyond_the_same_sky': [['excited', '0:49から一気に強くなるの！ ももはここでもうわくわくしちゃう♡']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:dr_wily_stage_1': [['excited', '1:58から2回目のサビ！！ 最後までいちばん強いまま駆け抜けるの、最高♡']],
     'listen:dr_wily_stage_1_okkussenman': [['excited', '2:31からまた強くなって、そのまま終わりまで行くの！！ 締めまで熱い♡']],
@@ -54464,6 +54483,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で駆け抜ける曲だな。空を飛ぶような速さだ']],
+    'listen:beyond_the_same_sky': [['normal', 'BPM178で4分を超える長い曲だな。息の配分が大事だ']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180は速いな。おでの冒険も駆け足になるやつだな']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '強く打つ音が77%だぞ。おでの冒険みたいに、ずっと力強いな']],
@@ -54556,6 +54576,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:amakakeru_tsubasa': [['happy', '1:43から静かに着地するの、締め方がきれいだよね笑']],
+    'listen:beyond_the_same_sky': [['happy', '3:49から静かに降りていく終わり方、余韻が残っていいよね笑']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:dr_wily_stage_1': [['happy', '2:29から静かに締めるの、余韻があっていいよね笑']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', '2:52で静かに終わるの、歌いきった感じでいいよね笑']],
@@ -54648,6 +54669,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:amakakeru_tsubasa': [['happy', '静かと強めが波みたいに来て、1:14で頂点。構成が効いてるんだよね〜']],
+    'listen:beyond_the_same_sky': [['happy', '強めの山が何度も来て、2:59・3:20・3:43で頂点が続くんだよね〜。後半勝負だよ']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:dr_wily_stage_1': [['happy', '0:44と1:58、二度サビが来る構成がいいんだよね〜。1:13で一度落とすのも効いてる']],
     'listen:dr_wily_stage_1_okkussenman': [['happy', 'ほい、盛り上がりの山は1:16に一度だけ。そこへ向けて上げる構成だね〜']],
@@ -54740,6 +54762,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:amakakeru_tsubasa': [['normal', 'BPM208で377ノーツ、Lv.29。強い音49%・軽い音6%の、勢いで押し切る配分です・・・！']],
+    'listen:beyond_the_same_sky': [['normal', 'BPM178で1060ノーツ、Lv.33。強い音41%・軽い音8%の、力強い配分です・・・！']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:dr_wily_stage_1': [['normal', 'BPM180で863ノーツ、Lv.43。強い音16%・軽い音9%の混ざり具合です・・・！']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', 'BPM180で574ノーツ、Lv.25。強い音77%・軽い音2%です・・・！']],
@@ -54832,6 +54855,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:amakakeru_tsubasa': [['normal', '0:29の静かな所は落ち着くね。息を整えてからサビへ行けるかな']],
+    'listen:beyond_the_same_sky': [['normal', '2:06の静かな所でひと息つけるかな。そのあと後半の山に備えよう']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:dr_wily_stage_1': [['normal', '1:13でふつうに戻る所、ひと息つけるね。そのあとまた強くなるしね']],
     'listen:dr_wily_stage_1_okkussenman': [['normal', '1:21からしばらくふつうの強さで進む所、落ち着いて聞けるね']],
@@ -61928,7 +61952,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   gourmet_race_64: 500,
   dr_wily_stage_1: 500,
   erfolg: 500,
-  amakakeru_tsubasa: 500
+  amakakeru_tsubasa: 500,
+  beyond_the_same_sky: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -61938,7 +61963,8 @@ const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   gourmet_race_dx: 'gourmet_race_64',
   eiyuu_no_akashi_milktea: 'eiyuu_no_akashi',
   dr_wily_stage_1_okkussenman: 'dr_wily_stage_1',
-  erfolg_piano: 'erfolg'
+  erfolg_piano: 'erfolg',
+  beyond_the_same_sky_short: 'beyond_the_same_sky'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -174528,7 +174554,15 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
-.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
+/* 月替わりの暦(育-137・194・211): 前は場面全体(inset:0)を暗い膜で覆い、モンスターまで膜の下で白く・半透明に見えた。暦・大会の札・期の帯は上の暗い板1枚にまとめ、モンスターは膜の外にはっきり出す */
+.msx .v-scene .v-clock{inset:auto;top:8px;left:50%;transform:translateX(-50%);width:min(92%,420px);justify-content:flex-start;gap:7px;padding:10px 8px 12px;border-radius:18px;background:rgba(15,13,36,.86);border:1px solid #ffffff26;box-shadow:0 6px 18px #0008}
+.msx .v-scene .v-clock .v-cal{width:136px;box-shadow:0 5px 0 #0006;transform:rotate(-2deg)}
+.msx .v-scene .v-clock .v-cal .mth{font-size:54px}.msx .v-scene .v-clock .v-cal .mth small{font-size:16px}
+.msx .v-scene .v-clock .v-phs{width:100%;margin-top:2px}
+.msx.s320 .v-scene .v-clock{gap:5px;padding:7px 6px 9px}.msx.s320 .v-scene .v-clock .v-cal{width:112px}.msx.s320 .v-scene .v-clock .v-cal .mth{font-size:40px}
+.msx.land .v-scene .v-clock{left:8px;transform:none;width:58%;gap:5px;padding:7px 6px 9px}.msx.land .v-scene .v-clock .v-cal{width:104px}.msx.land .v-scene .v-clock .v-cal .mth{font-size:38px}
+.msx.land .v-scene .v-clock .v-chip{max-width:100%;white-space:nowrap;font-size:13px!important;padding:4px 10px!important}
+.msx.land [data-msx-turn-scene] .mon,.msx.land [data-msx-turn-scene] .gr{left:80%}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -174948,6 +174982,14 @@ const MSX_CSS = `
 .msx .v-bagw .v-item{margin-top:0}
 .v-bagw .v-bgrid{flex:none;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .v-bagw > *{flex-shrink:0}
+/* 持ち物(育-231): 枠は場面の1枚だけ(内側の黄色い枠をやめる)。見出し→札→説明→使うボタンを上から詰め、空いた分で札と字を大きく */
+.msx .v-bagw{left:0;right:0;top:0;bottom:0;border:0;border-radius:inherit;box-shadow:none;background:#151130eb;padding:12px 12px;justify-content:flex-start;gap:10px}
+.msx .v-bagw .t small{font-size:12px}
+.msx .v-bagw .v-bgrid{gap:8px}.msx .v-bagw .v-bgrid div,.msx .v-bagw .v-bgrid button{padding:10px 1px 7px;min-height:96px}
+.msx .v-bagw .v-bgrid .e{font-size:34px;line-height:42px;height:42px}.msx .v-bagw .v-bgrid .v-icw{width:42px;height:42px}
+.msx .v-bagw .v-bgrid small{font-size:10.5px}.msx .v-bagw .v-bgrid i{font-size:12px}
+.msx .v-bagw .v-bsel small{font-size:11.5px}.msx .v-bagw .v-bnote,.msx .v-bagw .v-bnote .dim2{font-size:11.5px;line-height:1.6}
+.msx .v-bagw .v-big{margin-top:4px!important;min-height:48px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -184167,16 +184209,7 @@ function MsxBag({
     className: "v-bagw"
   }, React.createElement("div", {
     className: "t"
-  }, React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), t ? React.createElement("div", {
-    className: "v-bsel"
-  }, React.createElement("span", {
-    className: "e",
-    style: {
-      fontSize: 26
-    }
-  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
-    className: "lim"
-  }, t.carry ? '始める前から効いている' : '育成中、いつでも使える'))) : null, React.createElement("div", {
+  }, React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない")), React.createElement("div", {
     className: "v-bgrid"
   }, bagList.map(x => React.createElement("button", {
     type: "button",
@@ -184216,7 +184249,16 @@ function MsxBag({
     style: JA_LABEL_STYLE
   }, msxItemNameNode('虹の時渡りの砂時計')))), !bagList.length && !carryList.length ? React.createElement("div", {
     className: "msx-note"
-  }, "持ちこんだ物はありません") : null, React.createElement("div", {
+  }, "持ちこんだ物はありません") : null, t ? React.createElement("div", {
+    className: "v-bsel"
+  }, React.createElement("span", {
+    className: "e",
+    style: {
+      fontSize: 26
+    }
+  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name), React.createElement("small", null, t.desc), React.createElement("small", {
+    className: "lim"
+  }, t.carry ? '始める前から効いている' : '育成中、いつでも使える'))) : null, React.createElement("div", {
     className: "v-bnote"
   }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
     className: "dim2",
@@ -185164,6 +185206,9 @@ const MSX_R3_CSS = `
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
 .msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+/* 「修行終わり!」の題字は木の背景に埋もれない(育-188): 暗い下地と濃いふちを敷く。傾きは小さく */
+.msx .r3 .v-stamp.ok.msx-qend{color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 3px 0 #831843,0 0 10px rgba(0,0,0,.85);width:max-content;max-width:92%;margin:0 auto;padding:4px 16px 8px;border-radius:14px;background:rgba(2,6,23,.74);transform:rotate(-2deg)}
+.msx .r3 .v-stamp.ok.msx-qend small{transform:rotate(2deg)}
 .msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
 .msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
 .msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
@@ -188823,7 +188868,7 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`,
+      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok msx-qend'}`,
       style: {
         top: '5%',
         fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32
@@ -191994,7 +192039,8 @@ span.mcd{cursor:default}
 .mcd-grid{display:grid;gap:8px 6px;align-content:start;padding:6px 2px}
 .mcd-grid.s{grid-template-columns:repeat(5,minmax(0,1fr))}
 .mcd-grid.m{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}
-@media (orientation:landscape){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* 横に並べ増やすのは横向きのスマホ(高さ 520 未満・.msx.land と同じ条件)だけ。PC は遊ぶ欄が縦の幅なので縦と同じ列(育-240・122・123) */
+@media (orientation:landscape) and (max-height:519px){.mcd-grid.s{grid-template-columns:repeat(7,minmax(0,1fr))}.mcd-grid.m{grid-template-columns:repeat(6,minmax(0,1fr))}}
 `;
 const msxAsAT = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
 const msxAsScene = (AT, sc) => {
