@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 922d5b04934c551e
+// source-sha256: 311fa1c1da8bb998
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22344,9 +22344,10 @@ const AssistantBubble = ({
       overflow: 'hidden'
     } : bubbleWrapStyle()
   }, bubbleWrap(text)), (hasDetail || footerSpace > 0) && React.createElement("span", {
-    className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
+    className: "mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black",
     style: {
       color,
+      lineHeight: '13.5px',
       ...(footerSpace > 0 ? {
         paddingLeft: `${footerSpace}px`,
         minHeight: '18px',
@@ -69935,6 +69936,7 @@ function MissionsScreen({
       key: `line-${dailyLine.who}`,
       assistantId: dailyLine.who,
       line: dailyLine.text,
+      helpRef: "items/missions",
       expression: "happy",
       compact: true
     })) : React.createElement(AssistantBubble, {
@@ -276368,11 +276370,12 @@ function MonsterHeroGame() {
         className: "relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-          pointerEvents: eventReplay.ending ? 'none' : 'auto',
+          pointerEvents: 'auto',
           zIndex: 1,
           ...(eventReplay.ending ? {
             opacity: 0,
-            transition: 'opacity .5s ease-out'
+            visibility: 'hidden',
+            transition: 'opacity .5s ease-out, visibility 0s linear .5s'
           } : {})
         }
       }, React.createElement("div", {
