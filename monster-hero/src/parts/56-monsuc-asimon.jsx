@@ -34,7 +34,7 @@ function MsxAssistCard({ a, n }) {
         <div className="tx">{short}</div>
         <div className="pips" aria-label={`目盛り ${n}/${a.max}`} data-msx-assist-meter data-msx-assist-lit={lit}><small>強さの目盛り</small><i>{n}</i>/{a.max}
           <small className="nx">{n < a.max && typeof AT.valueText === 'function' ? `(次の目盛りで ${AT.valueText(a.id, n + 1)})` : '(最大)'}</small></div>
-        {note ? <div className="sc" data-msx-assist-cap>上限: {note.replace(/^[(（]|[)）]$/g, '')}</div> : null}
+        {note ? <div className="sc" data-msx-assist-cap>上限: {(() => { /* 「編成の合/計」と言葉の途中で折れていた(API 総点検① X4)。「編成の合計 ◯%まで」はひとかたまりで折る */ const t = note.replace(/^[(（]|[)）]$/g, ''); const i = t.lastIndexOf('編成の合計'); return i >= 0 ? <>{t.slice(0, i)}<span style={{ whiteSpace: 'nowrap' }}>{t.slice(i)}</span></> : t; })()}</div> : null}
         {scene ? <div className="sc">効く場面: {scene}</div> : null}
         {open ? <div className="sc">目盛り … 効果の強さ。育て終えたときのアシストポイントで上げる</div> : null}</div>
     </div>
