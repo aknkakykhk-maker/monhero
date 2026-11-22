@@ -67,6 +67,7 @@ const CHANGELOG = [
       'レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.9 ／ EXPERT Lv.18 ／ MASTER Lv.30 ／ HELL Lv.36 です。',
       'ノーツ数は 134 ／ 165 ／ 223 ／ 357 ／ 449 ／ 581 です。',
       'この曲はビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      'あつとみゅあのお話を見たあと、次に開くと、えるびんのお話が流れます。',
     ],
     assistantNotice:{ id:'update_notice_desert_crown_v1', type:'content' },
   },
