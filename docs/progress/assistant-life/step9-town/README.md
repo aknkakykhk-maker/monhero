@@ -56,6 +56,8 @@
 | 横 844×390 | [yoko-town-untyped](after/yoko-town-untyped.png) | [yoko-town](after/yoko-town.png) | [yoko-town-bottom](after/yoko-town-bottom.png) | [yoko-town-sheet](after/yoko-town-sheet.png) |
 | PC 1280×800 | [pc-town-untyped](after/pc-town-untyped.png) | [pc-town](after/pc-town.png) | [pc-town-bottom](after/pc-town-bottom.png) | [pc-town-sheet](after/pc-town-sheet.png) |
 
+切り欠きあり(iPhone 上47px・下34px・r1119-098 のあと): [tate-town-notch](after/tate-town-notch.png)(上の帯は切り欠きの下)
+
 測った数(8枚とも OK): 型の部分の字は 11・13・16・20px だけ / 主なボタン1つ(296〜529×52px・16px)/ 帯48px・タブ5つが下の端 / はみ出しなし / PC の下の空き 131px(16%)
 
 ### 突き合わせ表(作った物)
@@ -76,4 +78,4 @@
 ### 残り
 
 - 場所の窓(「見る」・地図の札を押したとき)の中は前の部品のまま(1人の行に5つのボタン・字は前の大きさ)。型の窓(`AluSheet`)へは段10〜13で
-- 横の地図の「助手ライフ」の札が横に長く伸びるのは、型に載せる前からの見え方(yoko-town-untyped も同じ)。HOME の札の置き方(横向き)の CSS で、この段では触っていない
+- 横の地図の「助手ライフ」の札が横に長く伸びるのは、型に載せる前からの見え方(yoko-town-untyped も同じ)。HOME の札の置き方(横向き)の CSS で、この段では触っていない。`assistant-life-map-check.js` の横の⑤と、その札がクリックをふさぐ時間切れも main で同じ
