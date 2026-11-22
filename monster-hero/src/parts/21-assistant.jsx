@@ -581,7 +581,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
       {open&&(()=>{
         // 説明の窓(2026-11-22 点検 #7059 HOME の助手の説明・r1119-080)
         //  ・閉じるは下の大きな1つだけ(右上の小さい「閉じる」と二重だった)
-        //  ・document.body へ出す。吹き出しの中に置くと、HOME の札に重ねた助手の顔の束が窓より手前に出て本文に重なった
+        //  ・ゲームの器(.mh-app)の直下へ出す。吹き出しの中に置くと、HOME の札に重ねた助手の顔の束が窓より手前に出て本文に重なった
         //  ・横の低い画面は顔を小さく・セリフを1行・閉じるを細くし、本文の見える高さを広げる。窓は下に余白を空けて真ん中に置く
         const low = typeof window !== 'undefined' && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
         const sheet = (
@@ -604,7 +604,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
             </div>
           </div>
         </div>);
-        return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined') ? ReactDOM.createPortal(sheet, document.body) : sheet;
+        // 出す先はゲームの器(.mh-app)。モンヒロビートで画面を自前で回しているとき(data-mh-view-rotation)も、窓がいっしょに回る
+        const host = typeof document !== 'undefined' ? document.querySelector('.mh-app') : null;
+        return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && host) ? ReactDOM.createPortal(sheet, host) : sheet;
       })()}
     </>
   );
