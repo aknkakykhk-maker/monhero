@@ -116,7 +116,7 @@ const FLOWER3_SONG_SLOTS = Object.freeze([
   // rewardLineage … その曲の部門の1〜5位へ配る超越の実の種族(社長 11-22: みゅあの曲=モッチー・ききの曲=ザン・ももの曲=ユグ)
   Object.freeze({ slot: 1, owner: 'mua', songId: 'flower3_mua_song', openAt: FLOWER3_START_AT, rewardLineage: 'mocchi' }),
   Object.freeze({ slot: 2, owner: 'kiki', songId: 'zenbu_hissatsuwaza', openAt: FLOWER3_START_AT, rewardLineage: 'zan' }),
-  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'flower3_momo_song', openAt: FLOWER3_START_AT, rewardLineage: 'yggdrasil' }),
+  Object.freeze({ slot: 3, owner: 'momosuke', songId: 'kimimachi_loop', openAt: FLOWER3_START_AT, rewardLineage: 'yggdrasil' }),
 ]);
 const FLOWER3_SONG_VERSIONS = Object.freeze({});
 // 告知の横長の絵(キービジュアル v2・社長 11-22。元は docs/progress/beat/event-flower3/assets/keyvisual-wide-v2.png を元の大きさのまま JPEG へ)。
