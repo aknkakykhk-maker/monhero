@@ -47,6 +47,14 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_kimimachi_loop_v1', type:'content' },
   },
   {
+    date: "2026-11-22 20:01", type:'update', group:'assistant', status:'new',
+    title:'フレンドとの行き来の記録が「🏠 おなじみ度」という名前になりました',
+    items:[
+      '助手ライフのフレンドの家で見られる、その人との行き来の記録(これまでの「ご縁Lv」)の名前が「🏠 おなじみ度」になりました。',
+      'たまっているスタンプと Lv はそのままです。',
+    ],
+  },
+  {
     date: "2026-11-22 19:44", type:'update', title:'助手ライフの友情で、次に見る2人がすぐ分かるようになりました', status:'new', group:'assistant',
     items:[
       '「🤝 友情」のタブの一番上に関係図、その下に、一番友情Lvが上がりそうな2人がいる組を見るボタンが出るようになりました。',
