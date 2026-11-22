@@ -130,6 +130,8 @@ const Audio_ = (() => {
     "audio/bgm-amakakeru-tsubasa.mp3": "2b283f9e6aea",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
+    "audio/bgm-battle-5-short.mp3": "7fc065210067",
+    "audio/bgm-battle-5.mp3": "a911ffe142ba",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-beyond-the-same-sky-short.mp3": "fc0c43a87755",
