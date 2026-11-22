@@ -112,8 +112,10 @@ const serve=()=>new Promise(resolve=>{
     ok('一覧と、選んでいる曲の欄が分かれている',shape.hasList&&shape.hasDetail);
     ok('スクロールするのは一覧の1か所だけ',shape.scrolls===1,`${shape.scrolls}か所`);
     ok('難易度ボタンが出る',shape.difficulties.length>=1,shape.difficulties.join('/'));
-    ok('選んでいる難易度のレベルとノーツ数が出る',/Lv\.\d+ \/ \d+ノーツ/.test(shape.level),shape.level.trim());
-    ok('自己ベストの欄がある（未プレイなら「まだ遊んでいません」）',/まだ遊んでいません/.test(shape.best),shape.best.trim());
+    // 2026-11-23 API総点検② V7: Lv. は難易度の札と一覧に出ているので、詳しい欄はノーツ数だけ
+    ok('選んでいる難易度のノーツ数が出る(Lv. は札にある)',/^\d+ノーツ$/.test(shape.level.trim()),shape.level.trim());
+    // 2026-11-23 API総点検② V8: 未プレイは「—」だけ(一覧の「未プレイ」と同じことを2か所に書かない)
+    ok('自己ベストの欄がある（未プレイなら「—」）',shape.best.trim()==='—',shape.best.trim());
     ok('決定とランダムのボタンがある',shape.start&&shape.random);
 
     // 曲を選び直すと、選んでいる曲の欄が変わる
@@ -148,10 +150,10 @@ const serve=()=>new Promise(resolve=>{
       const all=[...host.querySelectorAll('[data-rhythm-difficulty]')];
       const buttons=all.filter(button=>button.getAttribute('data-rhythm-difficulty-locked')==='0');
       const locked=all.filter(button=>button.getAttribute('data-rhythm-difficulty-locked')==='1');
-      const before=(host.querySelector('[data-rhythm-demo-level]')||{}).textContent||'';
+      const lvText=()=>{const el=host.querySelector('[data-rhythm-demo-level]');return el?`Lv.${el.getAttribute('data-level')} ${el.textContent}`:'';};const before=lvText();
       buttons[buttons.length-1].click();
       await new Promise(resolve=>setTimeout(resolve,150));
-      const after=(host.querySelector('[data-rhythm-demo-level]')||{}).textContent||'';
+      const after=lvText();
       const start=host.querySelector('[data-rhythm-demo-start]');
       // 鍵つきを押しても始まる難易度が変わらないこと(押せてしまわないこと)
       let lockedStayed=true;
@@ -330,7 +332,7 @@ const serve=()=>new Promise(resolve=>{
       &&!/data-rhythm-song-row-title[^>]*className="block truncate/.test(gameSource));
     ok('自己ベストの数字は置ける幅から字の大きさを決める',
       // 2026-10-26: 遊んでいないときの「まだ遊んでいません」も字の大きさを決めるので、遊んだときだけの条件つきの形になった
-      /data-rhythm-demo-best[\s\S]{0,300}fontSize:(?:best&&best\.played\?)?`min\(22px, calc\(100cqw/.test(gameSource));
+      /data-rhythm-demo-best[\s\S]{0,400}(?:best&&best\.played\?\{)?fontSize:(?:best&&best\.played\?)?`min\(22px, calc\(100cqw/.test(gameSource));
 
     // ---- 並べ替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
     const rowIdsNow=()=>page.evaluate(()=>[...document.getElementById('song-select-probe')
