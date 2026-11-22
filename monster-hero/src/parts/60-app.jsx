@@ -21334,8 +21334,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
           // クイックはスコアを競わないのでスコアの代わりに経験値を出す
           const bonusLabel=(value)=>`×${Math.round(value*QUICK_REWARD_MULT*100)/100}`;
+          // クイックの経験値・ダイヤの倍率は下の「クリア報酬」の箱に出ているので、ここでは敵強度だけにする
+          // (同じ数字が札に2回出ていた。API 総点検③ r1119-118)
           const rateCells=(setting)=>quick
-            ? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.xp||setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]
+            ? [['敵強度',`×${setting.power}`,false]]
             : [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]];
           const noteText=species?'初回クリアで超越の実／難易度は種族ごとに解放':quick?'経験値・ダイヤのみ1.5倍':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
           // 種族チャレンジの記録は種族×難易度で分かれる。選択中の種族のぶんだけを引く
@@ -21423,7 +21425,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <b>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
                           <small>{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'} ・ {species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small>
                         </div>
-                        <div className="mhbt-cells">{rateCells(setting).map(([label,value,boosted])=><div key={label}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>
+                        <div className="mhbt-cells">{rateCells(setting).map(([label,value,boosted],_i,all)=><div key={label} className={all.length===1?'col-span-3':undefined}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>
                         {/* 横向きの背の低い画面では札が2列になり、この行が狭くなって「初回クリアで超越の実／難易度は種族ごと…」と切れていた。その画面だけ言葉の切れ目で折る(2026-10-27 ジン部長の見回り) */}<div className="mhbt-note"><span className="truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible" style={JA_LABEL_STYLE}>{jaWrap(noteText)}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className={`mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species&&speciesRewardClaimed(key)?'opacity-70':''}`} data-psyche-reward={key} data-species-reward-claimed={species?String(speciesRewardClaimed(key)):undefined}>

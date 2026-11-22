@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b50ff0f6ecea1ab5
+// source-sha256: 9f9f044b1536e256
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81591,7 +81591,7 @@ function PickHeroAllyScreen({
     }, pickMode === 'hero' ? '勇者モンを選ぶ' : '供モンを選ぶ'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
-    }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。このモンスターの勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
+    }, helpWrap(pickMode === 'hero' ? '勇者モン＝主役。勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-[76px]"
     })), pickMode === 'ally' && React.createElement("div", {
       className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
@@ -89335,7 +89335,7 @@ function BattleScreen({
   }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
-    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
+    className: "min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
     style: {
       color: battleModeInfo(runMode).color,
       borderColor: `${battleModeInfo(runMode).color}66`,
@@ -89741,7 +89741,7 @@ function BattleScreen({
     className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-white active:scale-95"
   }, "閉じる"))), React.createElement("main", {
     "data-battle-stage": true,
-    className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
+    className: "flex-1 relative flex flex-col items-center justify-start pt-3 [@media(orientation:landscape)_and_(max-height:520px)]:pt-0.5 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
     style: {
       justifyContent: 'safe center',
       ...(enemyImageOnlyAttack ? {
@@ -89893,7 +89893,7 @@ function BattleScreen({
     "data-soul-battle-start-summary": true,
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "魂格効果 発動中", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), React.createElement("div", {
-    className: "mt-1 relative flex flex-col items-center"
+    className: "mt-1 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 relative flex flex-col items-center"
   }, React.createElement(BossMovieLayer, {
     shake: battleFx.shake !== 'OFF'
   }), enemyMotion && React.createElement(TacticsEnemyStageFx, {
@@ -90098,7 +90098,7 @@ function BattleScreen({
     "data-em-fx": !enemyIsMoo && emSpec?.[1] || undefined,
     "data-em-emo": !enemyIsMoo && emSpec?.[3] || undefined,
     "data-enemy-hurt": !enemyIsMoo && enemyHurtNow ? 'true' : undefined,
-    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
+    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} [@media(orientation:landscape)_and_(max-height:520px)]:!p-[3px] ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
     onClick: () => {
       if (isBusy || autoBattle || battleTutorialStep != null || !enemy) return;
@@ -91810,7 +91810,7 @@ function BattleScreen({
     "data-battle-hand": true,
     className: "shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm",
     style: {
-      height: 'clamp(172px,23dvh,196px)',
+      height: 'clamp(172px,24.5dvh,200px)',
       backgroundImage: 'linear-gradient(180deg, rgba(20,29,52,.94) 0%, rgba(12,18,34,.97) 52%, rgba(7,11,22,.99) 100%)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07), 0 -10px 28px rgba(0,0,0,.16)'
     }
@@ -258515,7 +258515,7 @@ function MonsterHeroGame() {
         ranked = modeHasRanking(battleMode);
       const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
       const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
@@ -258682,8 +258682,9 @@ function MonsterHeroGame() {
           className: "mhbt-score"
         }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
           className: "mhbt-cells"
-        }, rateCells(setting).map(([label, value, boosted]) => React.createElement("div", {
-          key: label
+        }, rateCells(setting).map(([label, value, boosted], _i, all) => React.createElement("div", {
+          key: label,
+          className: all.length === 1 ? 'col-span-3' : undefined
         }, label, React.createElement("b", {
           className: boosted ? 'underline decoration-2' : ''
         }, value)))), React.createElement("div", {
