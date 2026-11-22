@@ -104,7 +104,7 @@ const makeRun = async (kind) => {
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['I1V', 'mid', ['vidforce:alpha', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['I1B', 'mid', ['vidforce:bg', 'vidrate:0.35', 'cont', 'issa', 'wait:2600', 'wait:4200', 'wait:3000']], ['I1VR', 'mid', ['vidforce:alpha', 'cont', 'mark', 'issa', 'wait:5000']], ['I1BR', 'mid', ['vidforce:bg', 'cont', 'mark', 'issa', 'wait:5000']], ['P1', 'mid', ['cont', 'stats']], ['P2', 'mid', ['cont', 'stats', 'ptsup:wise', 'ptsup:pow']], ['P3', 'mid', ['cont', 'stats', 'ptsauto']], ['M1D', 'mid', ['cont', 'detail']], ['M1DT', 'mid', ['cont', 'detail', 'cell:3-1', 'wait:700']], ['M1DE', 'mid', ['cont', 'detail', 'cell:3-1', 'scrollend']], // 升を押すと、下の技の説明まで送る(M1D 2026-11-20) ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
-    ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
+    ['E1', 'mid', ['cont', 'event']], ['E1S', 'mid', ['cont', 'event', 'pow']], ['CLS', 'yosu', ['cont', 'clinic', 'pow']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
@@ -270,6 +270,7 @@ const makeRun = async (kind) => {
             if (st === 'introNext') { const b = document.querySelector('[data-msx-intro-next]'); if (!b) return false; b.click(); return true; }
             if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
             if (st === 'rest') { if (!click(/^🛌/)) return false; await new Promise((r) => setTimeout(r, 300)); const g = document.querySelector('[data-msx-care-go]'); if (g && !g.disabled) { g.click(); return true; } return false; } // 2026-11-18 Issue #6807 UI-2: 休むも選ぶ画面から実行ボタンで確定
+            if (st === 'pow') { const b = document.querySelector('[data-msx-band-pow]'); if (!b) return false; b.click(); return true; } // 上の帯の総合力の札 → 6つの能力の窓(育-215)
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
             if (st === 'cal' || st === 'calcup') { // 月替わりの暦(期の途中の月)を開く。calcup は前の月の大会の優勝の札も出す(育-137・194・211)
               const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const P = msxSuc.core.PERIODS;

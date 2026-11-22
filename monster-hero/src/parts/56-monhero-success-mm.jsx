@@ -259,12 +259,13 @@ function MsxR3Box({ onClose, fromMb = false }) {
         {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
-          <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
+          <span className="e" aria-hidden="true">🐾</span><span className="tx"><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></span></button>
         {typeof MonsucFuseSheet === 'function' ? <button type="button" className="mm-card" onClick={() => setPage('fuse')} disabled={box.mons.length < 2} data-msx-r3-fuse>
-          <span className="e" aria-hidden="true">🧬</span><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></button> : null}
+          <span className="e" aria-hidden="true">🧬</span><span className="tx"><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></span></button> : null}
+        {/* 3つのボタンは同じ形で縦に並べる。メモリアルモンスターの説明は押した先の画面の1行に任せる(育-159) */}
+        <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
+          <span className="e" aria-hidden="true">💠</span><span className="tx"><b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体</small></span></button>
       </div>
-      <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
-        <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
     foot = null; // 戻るは左上の1つ(2026-11-19 r1119-013 ⑥ B-3。下の帯にも同じ「← 戻る」があった)
@@ -426,6 +427,13 @@ const MSX_MM_CSS = `
 .msx .mm-asb{grid-column:1/-1;min-height:46px;margin-top:6px;width:100%;flex-direction:column}
 .msx .mm-keep{margin-top:4px;font-size:11px;font-weight:800;color:#c7d2fe;line-height:1.5}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
+/* 入口(育-159): 絵は上に収め、3つのボタンを同じ大きさで縦に(絵文字は左・名前と数は右) */
+.msx .mm-gate .mm-desk{flex:1 1 0;min-height:150px;max-height:52%}
+.msx .mm-gate .mm-cards{grid-template-columns:1fr;gap:8px}
+.msx .mm-gate .mm-card{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:8px 16px;text-align:left}
+.msx .mm-gate .mm-card .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.msx .mm-gate .mm-card small{font-size:12px}
+.msx .mm-gate .mm-asb{margin-top:0}
 .msx .mm-memo{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx .mm-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-tabs button{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #4a4380;font-size:13px;font-weight:900;text-align:center}
