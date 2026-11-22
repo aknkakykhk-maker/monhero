@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c8d226d0a5b63e80
+// generated-sha256: a7e68c692033bb96
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24249,12 +24249,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
   const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
-  // 鍵のかかったボタンの「◯◯で解放」は、いちばん長い文字に合わせて字の大きさをそろえる(HELL の「MASTERで解放」だけ小さくならないように)
-  const lockedFitText=song?available.filter(item=>!unlocked(item)).map(item=>`${rhythmDifficultyUnlockRequirement(item.id,song.songId)}で解放`)
-    .reduce((a,b)=>rhythmTitleFitEm(b)>rhythmTitleFitEm(a)?b:a,''):'';
+  // 鍵のかかった難易度の開け方を、難易度の札の下に1行で出す(2026-11-22 r1119-094・点検 N8・V14)。
+  //   札の中の「HARDで解放」は6pxで読めなかったので札から外し、10px以上の1行にまとめる。いちばん手前の条件だけ出す
+  const lockHint=(()=>{if(!song)return '';const locked=available.filter(item=>!unlocked(item));if(!locked.length)return '';
+    const need=rhythmDifficultyUnlockRequirement(locked[0].id,song.songId);
+    const names=locked.filter(item=>rhythmDifficultyUnlockRequirement(item.id,song.songId)===need).map(item=>item.id);
+    return need?`🔒 ${need}をクリアすると ${names.join('・')} が遊べます`:'';})();
   const picked=available.find(entry=>entry.id===difficultyId);
   const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
+  // 曲名の下の行に出す BPM(2026-11-22 r1119-094。横の「曲の情報」の帯から移した)。拍の目盛りが無い曲は出さない
+  const detailBpm=(()=>{const grid=song&&typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
+    return grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;})();
   const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
   // 行ごとに「どの難易度の話か」を1か所で決める。楽曲Lv.も、行の自己ベストのランクもこれを見る
@@ -24479,7 +24485,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。
           畳んだかどうかは覚えるので、毎回たたみ直さなくてよい。
           横画面では右の欄(aside)の下へ移す。出す中身は同じで、置く場所だけがCSSで入れ替わる。 */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{notice}</div>}
+      {/* 縦は助手の一言を1行の形にする(押すと全文が開く)。2行の吹き出しで一覧の上が約70px埋まり、曲が5曲しか見えなかった(2026-11-22 r1119-094・点検 N6)。
+          助手の吹き出し(scene を持つ物)だけ。マルチの注意書きのような文はそのまま */}
+      {notice&&noticeOpen&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2 landscape:hidden">{React.isValidElement(notice)&&notice.props&&notice.props.scene?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
       {/* ジャンル・並び替え・助手の開け閉め。ジャンルは常に並べず、押すと下から選ぶところが出る
           (2026-09-26・ユーザー指示「ジャンルは常時出すより押して選べるタイプにしたい」)。
           ALL以外で絞っているあいだは色を付けて、一覧が絞られていることが分かるようにする */}
@@ -24601,7 +24609,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail
-      className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2"
+      className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
       style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
@@ -24611,11 +24619,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               縦: ジャケット(左・2段ぶち抜き) | 曲名 / 自己ベスト → 難易度 → ランダム・決定 → アシスト・ミラー・ランキング
               横: ジャケット(左・2段ぶち抜き) | 自己ベスト / アシスト・ミラー・ランキング(小さな絵のボタン) → 曲名 → 難易度 → ランダム・決定
             横は高さが390pxしかないので、曲名を1行・ボタンを低めにして、スクロールせずに「決定」まで届くようにする */}
-        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]">
+        {/* 2026-11-22 r1119-094(社長「右側の決定の押しにくさとか空きスペースとか」・点検 N1〜N5・N14・N15):
+            横は欄の高さいっぱいに格子を伸ばし、「決定」の段を欄の下端に置く。余った高さはジャケットを大きくするのに使い、
+            それでも余るぶんは難易度と助手の一言の間に入れる(決定の下を空けない)。
+            欄の高さが540px以上(PC など)は、ジャケット・HIGH SCORE・切り替えを欄の幅いっぱいに縦へ積む。
+            ★高さは @media ではなく欄そのもの(container)で測る。🔄横(絵だけ回す)は端末が縦のままで、高さの @media が逆に効くため */}
+        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
-            return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
+            return <div data-rhythm-song-detail-art className="relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]" style={{gridArea:'art'}} {...(tier?{'data-rhythm-detail-achieve':tier.id}:{})}>
               <RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/>
               {tier&&<span key={`${song.songId}:${difficulty.id}`} aria-label={tier.label}>
                 <i aria-hidden="true" data-rhythm-achieve-frame=""/>
@@ -24637,7 +24650,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
+            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -24688,56 +24701,49 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {item.id==='HELL'
                 ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
                 :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
-              <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
+              <span className="block text-[8px] tracking-wide">{item.id}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
                   合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
                 // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
-                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
-                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block text-[10px] leading-none opacity-80"><span aria-hidden="true">🔒</span><span className="sr-only">{need}で解放</span></span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
                   style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
+          {lockHint&&<p data-rhythm-difficulty-lock-hint className="mt-1 truncate text-[10px] font-black leading-tight text-slate-400">{lockHint}</p>}
           </div>
           {/* 横向き(🔄横も)は、詳しい欄が中で送れる作り。決定の段は欄の下に貼り付けて、送らなくても見えるようにする
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
               上下の余白は付けない(付けると欄が8px伸び、小さい横画面で下の助手の吹き出しがはみ出した・rhythm-song-notice-landscape-check) */}
-          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95" style={{gridArea:'act'}}>
-            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
-              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
+          {/* 横の助手の一言は「決定」のすぐ上(欄の下のほう)に置く。決定より下に置くと、決定が欄の下端から浮いていた(2026-11-22 r1119-094) */}
+          {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+          {/* 「決定」はいちばん強いボタンにする(高さ52px・幅は段の大半)。「ランダム」は細く・弱く(2026-11-22 r1119-094・点検 N2) */}
+          <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95" style={{gridArea:'act'}}>
+            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom} aria-label="ランダムに選ぶ"
+              className="flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"><span aria-hidden="true" className="text-base leading-none">🎲</span>ランダム</button>}
             {lockedSong(song)
-              ?<button type="button" data-rhythm-song-buy={song.songId} onClick={()=>{setBuyError('');setBuyAsk(song);}}
-                className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
+              ?(()=>{const price=rhythmSongPrice(song.songId),balance=Number(songLock&&songLock.balance),short=Number.isFinite(balance)&&balance<price?price-balance:0;
+                // ビートPが足りないときは暗くして「あと◯ビートP」と出す(2026-11-22 r1119-094・点検 N9)。押すと今までどおり買う窓(足りないことの説明)が開く
+                return <button type="button" data-rhythm-song-buy={song.songId} data-rhythm-song-buy-short={short>0?'1':'0'} onClick={()=>{setBuyError('');setBuyAsk(song);}}
+                className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:[@container(min-height:540px)]:min-h-[64px] ${short>0?'border border-amber-300/40 bg-slate-900/80 text-amber-100/80':'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`}>
+                  <span className="whitespace-nowrap text-[15px]">🔒 {price.toLocaleString()}ビートPで買う</span>
+                  {short>0&&<span data-rhythm-song-buy-need className="whitespace-nowrap text-[10px] text-amber-200/80">あと {short.toLocaleString()}ビートP</span>}
+                </button>;})()
               :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>}
+              className="min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40">{playLabel}</button>}
             {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
             {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>
           {footer&&<div data-rhythm-song-footer className="min-w-0" style={{gridArea:'foot'}}>{typeof footer==='function'?footer(song,difficulty):footer}</div>}
         </div>
         </>}
-      {/* 横持ちの助手のひとことは、決定ボタンより下へ置く(2026-09-26)。上に置くと決定が画面の外へ押し出されていた */}
-      {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
-      {/* ソロの曲えらび・横画面だけ、詳しい欄の下に残る空きへ「曲の情報」を出す
-          (2026-11-18・社長「モンビーのソロで縦横ボタンで横にした場合、右下の空きが気になる。何か有効活用できないかな？」)。
-          縦画面では出さない(landscape: でだけ出す。回して横にした場合も、ビルド時に回転用の規則へ
-          写されるので同じに出る)。マルチは detailInfoPanel を渡さないので、配置には一切触らない。
-          当初は難易度ごとの記録も並べていたが、選曲画面の既存の表示と重なるため廃止し、曲の情報だけにした
-          (2026-11-18・社長指示「難易度ごとの記録は上にもあるからいらない」) */}
-      {detailInfoPanel&&song&&difficulty&&chart&&(()=>{
-        const grid=typeof rhythmSongBeatGrid==='function'?rhythmSongBeatGrid(song.songId):null;
-        const bpm=grid&&Number.isFinite(grid.beatMs)&&grid.beatMs>0?Math.round(60000/grid.beatMs):0;
-        const info=[bpm?`BPM ${bpm}`:'',rhythmSongLengthLabel(song,chart),
-          chart.totalNotes?`${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ`:''].filter(Boolean).join(' ・ ');
-        return <div data-rhythm-song-info-panel className="mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block">
-          {info&&<p data-rhythm-song-info-line className="whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200">{info}</p>}
-        </div>;
-      })()}
+      {/* 横の「曲の情報」の帯(2026-11-18)は、曲名の下の行(BPM・長さ・ノーツ数)と同じ中身の二重だったので外し、
+          曲名の下の行へ BPM をまとめた(2026-11-22 r1119-094・点検 N5)。空いた高さはジャケットと「決定」に回す */}
     </aside>
 
     {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}
@@ -45249,7 +45255,7 @@ function RhythmSongSelectScreen({
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
           <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モード選びへ戻る'} title={debugAll?'デバッグへ戻る':'モード選びへ戻る'}
             onClick={onExit}
-            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/><span className="whitespace-nowrap text-[11px] font-black">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-0.5 px-1 text-slate-300"><ArrowLeft size={20}/>{/* 幅380px未満は矢印だけ(題「曲選び」とビートPが「曲…」「0 ビ…」と切れていた・2026-11-22 r1119-094 点検 N7) */}<span className="whitespace-nowrap text-[11px] font-black max-[379px]:hidden">{debugAll?'デバッグへ戻る':'モード選びへ戻る'}</span></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -45490,7 +45496,6 @@ function RhythmSongSelectScreen({
           onSongId={setRhythmSelectedSongId}
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
-          detailInfoPanel
           onPlay={onPlaySong}
           notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
           unlockAll={debugAll}
@@ -45522,10 +45527,12 @@ function RhythmSongSelectScreen({
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
-                  className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
+                  className={`flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight [container-type:inline-size] ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+                  {/* 横でも何のボタンか分かるよう、名前を小さく添える(2026-11-22 r1119-094・点検 N10・V13。前は絵と OFF だけ) */}
+                  <span className="flex items-center gap-1"><span aria-hidden="true">{icon}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></span><span className="max-w-full truncate text-[9px] leading-none opacity-80 [@container(max-width:60px)]:hidden">{name==='ミラー譜面'?'ミラー':name}</span></button>;
               })}
               {!debugAll&&<button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
-                className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>}
+                className="flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="text-[9px] leading-none">順位</span></button>}
             </div>
             {rhythmSettings&&rhythmSettings.assistMode&&<p style={JA_WRAP_STYLE} data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">{jaWrap('アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。')}</p>}
           </>}/>
@@ -70094,6 +70101,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   // 新UIだけ: サブ画面では家へ戻り、家では従来どおり助手ライフを閉じる。
   // 段7: 新UIの家のタブは型(AluFrame)に載せた画面で出す(56-assistant-life-house-typed.jsx)。ほかのタブ・旧UIは今のまま
   //   window.__mhAssistantLifeUntypedHouse … 検査だけが立てる印(段7 の前の並びを確かめる assistant-life-top-check・benefit-check)。前の並びは段13 の片づけで消す
+  // 段9: 新UIの町を型に載せる(56-assistant-life-map.jsx の AssistantLifeTownTyped)。検査だけ window.__mhAssistantLifeUntypedTown で前の町を開く
+  const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function'
     && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => { if (uiV2 && tab !== 'house') { setRoomId(null); setCallPicker(false); setTab('house'); return; } close(); };
@@ -70381,7 +70390,13 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
         {/* 📋 居場所: HOME の画面そのものを地図に(画面いっぱい・56-assistant-life-map.jsx)。下に今までの一覧・見出し・アイコンの列 */}
-        {tab === 'where' ? (
+        {tab === 'where' && typedTown ? (
+          <AssistantLifeTownTyped life={life} ids={ids} land={land}
+            tabs={assistantLifeUiV2Tabs().map(([key, icon, label]) => ({ key, icon, label }))} tab={tab}
+            onTab={(k) => { setMapFocusPlace(null); setMapFocusAssistantId(null); setGiftOpen(false); setTab(k); setRoomId(null); }} onBack={backFromUiV2}
+            onRoom={(id) => setRoomId(id)} onGo={(fn) => { try { close(); fn(); } catch {} }} onBeat={beat} onCard={card}
+            initialPlace={mapFocusPlace} initialAssistantId={mapFocusAssistantId} initialKey={mapFocusKey}/>
+        ) : tab === 'where' ? (
           <AssistantLifeTownMap life={life} ids={ids} land={land} onGo={(fn) => { try { close(); fn(); } catch {} }} initialPlace={uiV2 ? mapFocusPlace : null} initialAssistantId={uiV2 ? mapFocusAssistantId : null} initialKey={mapFocusKey} onBack={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); }} onPick={(id) => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('house'); setRoomId(id); }} onView={uiV2 ? (id) => setRoomId(id) : null} onBeat={beat} onCard={card} nav={uiV2 ? icons : null}
             list={uiV2 ? null : <>
               {header}
@@ -70642,13 +70657,18 @@ function AssistantLifeHouseTyped({ land = false, life, ids, metSet, look, rooms,
         {g0 && onWatch ? <div style={{ marginTop: 10 }}><AluGo onClick={() => { if (onGuideClose) onGuideClose(); onWatch(); }} data-assistant-life-guide-watch>👀 見てみる — {assistantLifeTypedGroupName(g0, nameOf)}の話</AluGo></div> : null}
       </AluSheet>
     </div>) : null;
+  const goBtn = (
+    <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
+      {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
+    </AluGo>);
+  // 背の低い縦(320×568 など)は、切り欠き(上47px・下34px)で帯とタブが太り、家の絵の下の主なボタンが最初の画面に入らない。
+  //   主なボタンを「次のごほうび」のすぐ下(家の絵の上)へ(家の絵を小さくすると部屋の札が切れる・2026-11-22)
+  const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return (
-    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
+    <AluFrame title="家" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} head={low ? <>{head}{goBtn}</> : head} scene={scene} overlay={resultNode || guideNode} data-assistant-life-typed-house="1">
       {top}
       {note ? <div className="alu-card alu-t" data-assistant-life-note>{note}</div> : null}
-      <AluGo onClick={() => { if (g0 && onWatch) onWatch(); }} disabled={!g0} data-assistant-life-today-act="watch">
-        {g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'}
-      </AluGo>
+      {low ? null : goBtn}
       <AluGoalCard view={goal} onKind={(k) => { const f = kindGo[k]; if (f) f(); }}
         extra={tier ? `🎉 ${tier.label} 🤝 ×${tier.mult}` : null}
         below={dailyCard ? (
@@ -70718,7 +70738,8 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
         {lv != null ? <span className="alu-n alu-nw" data-assistant-life-bond-road-remain={next ? next.remain : undefined}>{next ? `あと ${next.remain} で Lv${next.level}` : '一番上まで来ました'}</span> : null}
         <AluCond id={id} sleeping={sleeping} hour={hour} />
       </div>
-      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{statusLine}</div> : null}
+      {/* 「· 」で区切った塊の途中では折らない(「気分: ご機 / 嫌」と折れていた・2026-11-22 r1119-098) */}
+      {statusLine ? <div className="alu-n" style={{ marginTop: 2 }} data-assistant-life-room-where>{String(statusLine).split(' · ').map((x, i) => <React.Fragment key={i}>{i ? <>{' · '}<wbr/></> : null}<span className="alu-nw">{x}</span></React.Fragment>)}</div> : null}
     </div>);
   const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
   let resultNode = null;
@@ -70740,7 +70761,7 @@ function AssistantLifeRoomTyped({ id, who, land = false, tabs, tab = 'house', on
       {play.map(p => <AssistantLifeRoomTypedRow key={p.k} {...p} on={p.on ? () => { setPlayOpen(false); p.on(); } : null} />)}
     </AluSheet>) : null;
   const sceneFn = (box) => (
-    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
+    <div style={{ position: 'relative', height: box.wide ? '100%' : Math.max(240, Math.round(box.h / 0.42 * 0.36)) }} data-assistant-life-roomview-typed-scene>{scene}</div>);
   return (
     <AluFrame title={`${who.name}の部屋`} onBack={onBack} backProps={{ 'data-assistant-life-close': undefined, 'data-assistant-life-roomview-close': '', 'data-assistant-life-room-close': '' }}
       tab={tab} onTab={onTab} tabs={tabs} head={head} scene={sceneFn} overlay={resultNode || playSheet || overlay} data-assistant-life-typed-room={id}>
@@ -71003,8 +71024,22 @@ function AssistantLifeBattleHall({ metIds }) {
 }
 
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
-function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0, friendView = null }) {
-  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0, friendView = null, typedBox = null }) {
+  // typedBox … 型の枠(段9・AssistantLifeTownTyped)の中に描くとき { w, h, scrollH?, focus? }。地図は w×h で描き、scrollH があればその高さの窓で縦に送る(focus の場所を真ん中へ)。上の帯は型の帯に任せて出さない
+  const [homeRaw, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const home = typedBox ? { ...homeRaw, w: typedBox.w, h: typedBox.h, fromHome: false } : homeRaw;
+  const typedScrollRef = React.useRef(null);
+  // 型の町(縦): 地図の窓を、主なボタンの行き先の場所(focus)が真ん中に来るまで送る(札の上の顔のぶん少し下げる)
+  React.useEffect(() => {
+    if (!typedBox || !typedBox.scrollH || !typedBox.focus) return undefined;
+    const t = setTimeout(() => {
+      const box = typedScrollRef.current; const el = box && box.querySelector(`[data-assistant-life-map-place="${typedBox.focus}"]`); if (!el) return;
+      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect();
+      box.scrollTop = Math.max(0, box.scrollTop + (er.top - br.top) - (box.clientHeight / 2 - er.height / 2 - 24));
+      if (typedBox.scrollX) box.scrollLeft = Math.max(0, box.scrollLeft + (er.left - br.left) - (box.clientWidth / 2 - er.width / 2));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [typedBox && typedBox.focus, typedBox && typedBox.scrollH]);
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   // 開いたままの地図へ、外から「この場所の窓を」と来たとき(部屋の「いま行くと得」の 行く › など)も窓を出す
   React.useEffect(() => { if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace); }, [initialKey]);
@@ -71049,6 +71084,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
       // HOME の札(押す所の見えている箱)
       const tagOf = (el) => (el.classList.contains('mh-home-facility') ? (el.querySelector(':scope > span') || el) : el);
       for (const el of S.querySelectorAll('[data-assistant-life-map-place]')) { if (el.hasAttribute('data-assistant-life-map-town')) continue; obs.push(rel(tagOf(el).getBoundingClientRect())); }
+      // 得の印も人の並びで隠さない(型の町で、行き先の札の「🎟 ごほうび×1.375」が顔の下に隠れていた・段9)
+      for (const el of S.querySelectorAll('[data-assistant-life-map-perk]')) obs.push(rel(el.getBoundingClientRect()));
       const W = S.clientWidth, H = S.clientHeight;
       const inside = (q) => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
       const best = (cands) => cands.find(q => inside(q) && obs.every(o => !hit(q, o))) || cands.filter(inside).sort((a, b) => obs.reduce((s, o) => s + area(a, o), 0) - obs.reduce((s, o) => s + area(b, o), 0))[0] || cands[0];
@@ -71121,7 +71158,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   // 得の印(2026-11-11 ナカヨシ12の改善案5。判定は「いま行くと得なこと」と同じ assistantLifePerkAt。ナカヨシ10が main に入れるまでは出さない)
   const PERK_WORD = { studio: '券なし', cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}` }; // カードの倍率は部屋・帯・カード画面と同じ字(2026-11-11 ミヤスサ点検 ③ 地図だけ ×1.5 だった)
   const perkOf = (place) => { if (ro) return false; try { return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true; } catch (_) { return false; } };
-  const perkMark = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
+  // 型の町は得の印を2種類にそろえる(🎟 券・割引 / 💗 多め・ASSISTANT_LIFE.md §3 の38)。字は注の段 11px
+  const perkMarkTyped = (place) => (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} data-assistant-life-map-perk-kind={assistantLifeTownPerkKind(place)} className="pointer-events-none absolute -right-1 -top-3 z-[2] whitespace-nowrap rounded-full px-2 text-[11px] font-black not-italic leading-[16px] shadow" style={assistantLifeTownPerkKind(place) === 'h' ? { background: '#fbcfe8', color: '#831843' } : { background: '#fde68a', color: '#78350f' }}>{assistantLifeTownPerkText(place)}</i> : null);
+  const perkMark = (place) => typedBox ? perkMarkTyped(place) : (perkOf(place) ? <i aria-hidden="true" data-assistant-life-map-perk={place} className="pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow">{PERK_WORD[place] || '得'}</i> : null);
   const facBtn = (place, cls, aria, inner) => {
     const n = (at[place] || []).length;
     return <button key={place} type="button" className={`mh-home-facility ${cls}`} aria-label={`${aria}(${n ? `${n}人` : 'だれもいない'})`} data-assistant-life-map-place={place} data-assistant-life-map-empty={n ? '0' : '1'} style={n ? undefined : { opacity: 0.55, filter: 'saturate(.5)' }} onClick={() => setSheet(place)}>{inner}{perkMark(place)}</button>;
@@ -71159,17 +71198,17 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     <AssistantLifeMapRow key={id} id={id} place={place} town={town} life={life} selected={initialAssistantId === id} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} close={() => setSheet(null)}
       onRoom={(rid) => { if (typeof onView === 'function') onView(rid); else { setSheet(null); onPick(rid); } }} onBeat={onBeat} onCard={onCard}/>);
   return (
-    <div className="absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]" data-assistant-life-where data-assistant-life-map-art={art}>
+    <div ref={typedScrollRef} className={typedBox ? 'relative bg-[#0b1020]' : 'absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]'} style={typedBox ? { height: typedBox.scrollH || typedBox.h, overflowY: typedBox.scrollH ? 'auto' : 'hidden', overflowX: typedBox.scrollX ? 'auto' : 'hidden', overscrollBehavior: 'contain' } : undefined} data-assistant-life-where data-assistant-life-map-art={art} data-assistant-life-map-typed={typedBox ? '1' : undefined}>
       {!ro && typeof AssistantMasmonRanchHost === 'function' && <AssistantMasmonRanchHost/>}
       {!ro && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
       <style>{`.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${typedBox || home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`}</style>
       {/* 地図の枠は少なくとも画面の高さ。HOME の場面が画面より低い端末(上下に帯がある iPhone など)で、
           下の一覧の見出しが地図の下にのぞいて切れて見えていた(2026-11-09 社長「画面バグってる」) */}
-      <div className="relative" style={{ minHeight: '100%' }} data-assistant-life-map-fill>
+      <div className="relative" style={typedBox ? undefined : { minHeight: '100%' }} data-assistant-life-map-fill>
       <div ref={sceneRef} className={`mh-home-scene${home.wide ? ' is-wide' : ''}`} style={sceneStyle} data-assistant-life-map data-assistant-life-map-from-home={home.fromHome ? '1' : '0'}>
         <picture className={`mh-home-background is-ready${home.wide ? ' is-wide' : ''}`} aria-hidden="true"><img className="mh-home-backdrop" src={home.src} alt=""/><img className="mh-home-main" src={home.src} alt=""/></picture>
         {/* 地図の施設ボタン(HOME と同じ class・同じ中身だが、並びは地図専用の配置)。押すと、そこにいる助手とできること。下の案内は、下のボタンと重ならないよう上に置く(2026-11-11) */}
@@ -71188,7 +71227,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <span>{ASSISTANT_LIFE_PLACE_ICON[p]} {assistantLifePlaceShow(p)}</span></button>); })}
         {assistantLifeMapOrderNow().map(crowd)}
         {/* 上の帯: 家へ戻る・題・時間帯・一覧へ */}
-        <div className={`absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`} style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
+        {!typedBox && <div className={`absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`} style={{ paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))', paddingLeft: 'calc(8px + env(safe-area-inset-left))', paddingRight: 'calc(8px + env(safe-area-inset-right))' }} data-assistant-life-map-bar>
           {/* 新UI(nav あり): 「家へ」と「一覧」の代わりに、ほかの画面と同じ4つのタブ(家・町・きずな・フレンド) */}
           {nav ? <div className="shrink-0" style={{ width: land ? 250 : 216 }} data-assistant-life-map-nav>{nav}</div>
             : <button type="button" data-assistant-life-map-back onClick={onBack} className="shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95">🏡 家へ</button>}
@@ -71197,8 +71236,8 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <p className={ro ? 'text-[10px] font-bold leading-tight text-slate-200' : 'truncate text-[10px] font-bold text-slate-200'} data-assistant-life-map-time>{assistantLifeTodLabel()} ・ {assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</p>
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}
-        </div>
-        <p className="pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100" style={{ top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))' }} data-assistant-life-map-hint>{ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'}</p>{/* 下にあるとモンヒロバトルの札にかぶっていた(2026-11-11 ミヤスサ点検 ⑥)。上のタブのすぐ下へ */}
+        </div>}
+        <p className={`pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 ${typedBox ? 'text-[11px]' : 'text-[10.5px]'} font-bold text-slate-100`} style={{ top: typedBox ? 8 : land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))' }} data-assistant-life-map-hint>{ro ? '場所を押すと、いる助手が見られます' : typedBox ? '場所を押すと、いる助手と得が出ます' : '場所を押すと、いる助手と「いま行くと得」が見られます'}</p>{/* 下にあるとモンヒロバトルの札にかぶっていた(2026-11-11 ミヤスサ点検 ⑥)。上のタブのすぐ下へ */}
       </div>
       </div>
       {list && <div ref={listRef} className="relative bg-[#0b1020]" data-assistant-life-map-below>{list}</div>}
@@ -71228,6 +71267,73 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           </div>
         </div>)}
     </div>);
+}
+
+// ===== 助手ライフの作り直し 段9: 町を型に載せる(2026-11-22 社長 r1119-097「案A 地図を大きく」・docs/progress/assistant-life/step9-town/) =====
+// 新UI(mh_assistant_life_ui_v2)の町のタブだけ。旧UI・フレンドの町は今のまま。何も保存しない。
+// 並び: 地図(縦は高さ 400px の窓で送れる・PC と横は左いっぱい。「場面の3割」は町だけ外す)→ 主なボタン「◯◯へ行く」(得のいちばん大きい場所)→ 行き先にいる助手の行(部屋へ)→ ほかの場所の行(見る)
+// 得は2種類(🎟 券・割引 / 💗 多め・ASSISTANT_LIFE.md §3 の38)。判定は今のまま assistantLifePerkRows(並びがそのまま得の大きい順)
+const ASSISTANT_LIFE_TOWN_PERK_KIND = Object.freeze({ studio: 't', cardroom: 't', market: 't', temple: 'h', battle: 'h', ranch: 'h' });
+const assistantLifeTownPerkKind = (place) => ASSISTANT_LIFE_TOWN_PERK_KIND[place] || 'h';
+const assistantLifeTownPerkText = (place) => {
+  if (assistantLifeTownPerkKind(place) === 'h') return '💗 多め';
+  const card = typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375';
+  return `🎟 ${({ studio: '券なし', cardroom: `ごほうび×${card}`, market: '1割引き' })[place] || '券・割引'}`;
+};
+const ASSISTANT_LIFE_TOWN_SCROLL_H = 400; // 縦の地図の窓の高さの上限(案A: 中身の半分ほど。小さい画面は画面の高さの47%)
+
+function AssistantLifeTownTyped({ life, ids, tabs, tab = 'where', onTab, onBack, onRoom, onGo = null, onBeat = null, onCard = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0 }) {
+  const [req, setReq] = React.useState({ place: initialPlace, key: initialKey });
+  React.useEffect(() => { if (initialKey) setReq({ place: initialPlace, key: initialKey }); }, [initialKey]);
+  const openSheet = (place) => setReq(r => ({ place, key: (r.key || 0) + 1000 }));
+  const nameOf = (id) => assistantLifeName(id);
+  const whereOf = (id) => assistantLifeWhereOf(life, id);
+  // 場所 → いる助手(家の部屋の順)
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = whereOf(id); const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  let perks = [];
+  try { perks = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : []; } catch (_) { perks = []; }
+  const top = perks[0] || null;
+  // 得が無いときの行き先: 家の外でいちばん人の多い場所(見るだけ)
+  const crowdTop = Object.keys(at).filter(p => p !== 'home').sort((a, b) => at[b].length - at[a].length)[0] || null;
+  const focus = top ? top.place : crowdTop;
+  const placeWord = (p) => (p === 'home' ? '助手の家' : assistantLifePlaceShow(p));
+  const chip = (p) => perks.some(r => r.place === p) ? <span className="alu-chip" data-assistant-life-town-perk-kind={assistantLifeTownPerkKind(p)} style={assistantLifeTownPerkKind(p) === 'h' ? { background: '#fbcfe8', borderColor: '#f472b6', color: '#831843' } : { background: '#fde68a', borderColor: '#f59e0b', color: '#78350f' }}>{assistantLifeTownPerkText(p)}</span> : null;
+  const face = (id) => (typeof AssistantFace === 'function' && assistantById(id) ? <AssistantFace who={assistantById(id)} size={44} /> : '🙂');
+  const doingOf = (id) => { const w = whereOf(id); const d = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? ASSISTANT_LIFE_DOINGS[w.doing] : null; return d ? d.label : ''; };
+  const goTop = () => { if (top && top.go && onGo) onGo(top.go); else if (focus) openSheet(focus); };
+  // 主なボタンは2行(行き先 / 得)。幅320でも行き先の名前の途中で折れない
+  const mainLabel = top ? <span style={{ display: 'block' }}><span className="alu-nw">{ASSISTANT_LIFE_PLACE_ICON[top.place] || top.icon} {placeWord(top.place)}へ行く</span><span className="alu-t" style={{ display: 'block' }}>{assistantLifeTownPerkText(top.place)}</span></span>
+    : focus ? <>{ASSISTANT_LIFE_PLACE_ICON[focus] || '📍'} {placeWord(focus)}を見る</> : <>いま町にいる助手はいません</>;
+  const others = Object.keys(at).filter(p => p !== focus).sort((a, b) => (perks.findIndex(r => r.place === a) + 1 || 99) - (perks.findIndex(r => r.place === b) + 1 || 99) || at[b].length - at[a].length);
+  const scene = (box) => {
+    const homeNow = assistantLifeMapReadHome(); // HOME の大きさを読むだけ(保存値ではない)
+    // 横(背の低い 2段組)は箱が低すぎて札が重なる。HOME の札の置き方は画面の向きで決まるので、地図は HOME と同じ大きさ(画面の大きさ)で描き、箱の中で縦横に送る
+    const tb = box.wide && box.h < 480 ? { w: homeNow.w, h: homeNow.h, scrollH: box.h, scrollX: true, focus } : box.wide ? { w: box.w, h: box.h, focus } : { w: box.w, h: Math.round(homeNow.h * box.w / Math.max(1, homeNow.w)), scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)), focus }; // 縦は画面の半分ほどまで(幅320でも主なボタンが最初から見える)
+    return (
+      <AssistantLifeTownMap life={life} ids={ids} land={land} typedBox={tb} onGo={onGo} initialPlace={req.place} initialAssistantId={initialAssistantId} initialKey={req.key}
+        onBack={onBack} onPick={onRoom} onView={onRoom} onBeat={onBeat} onCard={onCard} />);
+  };
+  return (
+    <AluFrame title="町" onBack={onBack} tab={tab} onTab={onTab} tabs={tabs} scene={scene} data-assistant-life-typed-town="1">
+      <AluGo onClick={goTop} disabled={!focus} data-assistant-life-town-go={focus || ''}>{mainLabel}</AluGo>
+      {focus ? (
+        <div className="alu-card" data-assistant-life-town-here={focus}>
+          <div className="alu-h">{placeWord(focus)}にいる助手</div>
+          {(at[focus] || []).map(id => <AluRow key={id} pic={face(id)} text={nameOf(id)} note={doingOf(id)}
+            action={<AluBtn onClick={() => onRoom(id)} data-assistant-life-town-room={id}>部屋へ</AluBtn>} />)}
+        </div>) : null}
+      {others.length ? (
+        <div className="alu-card" data-assistant-life-town-others>
+          <div className="alu-h">ほかの場所</div>
+          {others.map(p => <AluRow key={p} pic={ASSISTANT_LIFE_PLACE_ICON[p] || '📍'} text={<>{placeWord(p)} {chip(p)}</>} note={(at[p] || []).map(nameOf).join('・')}
+            action={<AluBtn onClick={() => openSheet(p)} data-assistant-life-town-see={p}>見る</AluBtn>} />)}
+        </div>) : null}
+    </AluFrame>);
 }
 
 // ---- part: 56-assistant-life-finds.jsx ----
@@ -71852,9 +71958,10 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
-        <div className="absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center" style={{ top: floorY - 120 }} data-assistant-life-roomview-away>
-          <p className="whitespace-nowrap text-[14px] font-black text-white">{away.title}</p>
-          {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
+        // 留守の札は窓(右の壁)にかからない左上へ(前は真ん中で窓に重なっていた・2026-11-22 r1119-098)
+        <div className="absolute rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-left" style={{ top: topH + 10, left: 10, maxWidth: 'calc(100% - 20px)' }} data-assistant-life-roomview-away>
+          <p className="whitespace-nowrap text-[16px] font-black text-white">{away.title}</p>
+          {away.sub && <p className="whitespace-nowrap text-[11px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
       {/* みんな寝ているときだけ、家具やベッドもふくめて部屋ぜんたいを暗くする */}
@@ -72669,19 +72776,19 @@ const ALU_CSS = `
 .alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
-.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top{flex:none;box-sizing:content-box!important;height:48px;display:flex;align-items:center;gap:8px;padding:var(--mh-sa-top,0px) calc(10px + var(--mh-sa-right,0px)) 0 calc(10px + var(--mh-sa-left,0px));background:#151130;border-bottom:1px solid #3b3566}
 .alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
-.alu-body{flex:1;min-height:0;display:flex}
+.alu-body{flex:1;min-height:0;display:flex;padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
-.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px calc(12px + var(--mh-sa-right,0px)) 0 calc(12px + var(--mh-sa-left,0px))}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px));padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
@@ -72742,7 +72849,18 @@ const useAluWide = () => {
   const [box, setBox] = React.useState({ wide: false, h: 0, w: 0 });
   React.useLayoutEffect(() => {
     const el = ref.current; if (!el) return undefined;
-    const measure = () => { const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
+    // 下のタブの下の余白: 器が画面の下の端まで届いていない(iPhone のホーム画面のアプリで、器の下に黒い帯が出ていた)ときは、
+    //   届いていないぶんを切り欠きの余白から引く(二重に取るとタブの中身が 22px になり、絵が上で切れた・2026-11-22 r1119-098)
+    const sab = () => {
+      try {
+        el.style.removeProperty('--alu-sab');
+        const tabs = el.querySelector('[data-alu-tabs]'); if (!tabs) return;
+        const sa = parseFloat(getComputedStyle(tabs).paddingBottom) || 0; if (!sa) return;
+        const gap = Math.max(0, Math.round((window.innerHeight || 0) - el.getBoundingClientRect().bottom));
+        if (gap > 0) el.style.setProperty('--alu-sab', `${Math.max(0, sa - gap)}px`);
+      } catch (_) {}
+    };
+    const measure = () => { sab(); const w = el.clientWidth, h = el.clientHeight; const wide = w >= ALU_WIDE_MIN && w > h * 1.15; setBox(b => (b.wide === wide && b.h === h && b.w === w ? b : { wide, h, w })); };
     measure();
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
     const ro = new ResizeObserver(measure); ro.observe(el); return () => ro.disconnect();

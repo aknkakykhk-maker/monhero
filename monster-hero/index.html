@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":145296,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":6452303,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96997,"data/changelog.js":1971530,"data/help.js":905658,"data/rhythm-step3-release.js":8517,"data/assistants.js":2207295,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/success-sounds.js":19367,"tailwind.css":308787,"game-system.compiled.js":12547415,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":92225,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60894,"data/lineages.js":26476,"data/breeder.js":145296,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":6452305,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96997,"data/changelog.js":1975119,"data/help.js":905932,"data/rhythm-step3-release.js":8517,"data/assistants.js":2207295,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":113841,"data/success-sounds.js":19367,"tailwind.css":312580,"game-system.compiled.js":12560003,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,11 +98,11 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = 'f7259f44ba2c';
+var GAME_BUILD = 'fdb41d562a72';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-22 17:27';
+window.__mhBuildDate = '2026-11-22 17:28';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -135,7 +135,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=4d4e919209f0" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=e7b4dbf795b2" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* ページそのものの拡大(2本指のピンチ・連続タップの拡大)を止める(2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」)。
@@ -565,9 +565,11 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     [data-rhythm-result-scroll] { container-type: size; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
     [data-rhythm-result-scroll] > * { grid-column: 2; min-width: 0; }
     [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; min-height: calc(100cqh - 16px); display: flex; flex-direction: column; justify-content: space-between; }
-    [data-rhythm-result-hero] > div[aria-hidden="true"] { display: none; }
-    [data-rhythm-result-hero] { width: 17%; max-width: 150px; }
-    [data-rhythm-result-hero]:not(:has([data-rhythm-result-hero-gains])) { display: none; }
+    /* 左の獲得の欄(マスモンの絵の欄)は出さず、同じ中身を下の札で出す。欄が幅の17%を取ると、残りで3列を組むスコアと判定の表が細くなり、
+       数字が消える・スコアが切れる・JUST MARVELOUS や CLEAR の一言が隣へ重なっていた(2026-11-22 r1119-092 社長の iPhone 横・キャンペーン中) */
+    [data-rhythm-result-hero] { display: none; }
+    [data-rhythm-result-scroll] > [data-rhythm-result-quick-run], [data-rhythm-result-scroll] > [data-rhythm-result-quick-run-failed] { display: block; }
+    [data-rhythm-result-scroll] > [data-rhythm-result-luck], [data-rhythm-result-scroll] > [data-rhythm-result-beat-points] { display: block; }
     [data-rhythm-result-jacket] { width: 44px; height: 44px; }
     [data-rhythm-result-rank] { width: 54px; height: 54px; font-size: 28px; border-width: 3px; }
     [data-rhythm-result-song] { padding: 6px 8px; }
@@ -575,9 +577,10 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     [data-rhythm-next-rank] { word-break: keep-all; overflow-wrap: normal; }
   }
   @media (orientation: landscape) and (max-height: 520px) and (min-width: 680px) {
-    [data-rhythm-result-scroll] { grid-template-columns: clamp(220px, 30%, 290px) minmax(0, 1fr) minmax(0, 1.7fr); grid-template-rows: auto 1fr; }
+    [data-rhythm-result-scroll] { grid-template-columns: clamp(196px, 26%, 290px) minmax(0, 1fr) minmax(0, 1.7fr); grid-template-rows: auto 1fr; }
     [data-rhythm-result-scroll] > * { grid-column: 2 / -1; }
     [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 2; margin: 0; min-height: auto; display: block; }
+    /* iPhone の横(切り欠きの余白で中身は約750px)でも判定の表に4桁の数が収まるよう、左の列を 220px→196px・MAX COMBO を 36%→32% にした(2026-11-22 r1119-092) */
     [data-rhythm-result-scroll] > [data-rhythm-result-summary], [data-rhythm-result-scroll] [data-rhythm-result-summary-main] { display: contents; }
     [data-rhythm-result-scroll] [data-rhythm-result-song] { grid-column: 2 / -1; grid-row: 1; align-self: start; margin: 0; }
     [data-rhythm-result-scroll] [data-rhythm-result-play-mode] { grid-column: 2 / -1; grid-row: auto; }
@@ -585,7 +588,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     [data-rhythm-result-scroll] [data-rhythm-result-score-card] { grid-column: 2; grid-row: 2; margin: 0; align-self: start; }
     [data-rhythm-result-scroll] [data-rhythm-result-summary-judgments] { grid-column: 3; grid-row: 2; margin: 0; align-self: start; }
     [data-rhythm-result-scroll]     [data-rhythm-result-scroll] [data-rhythm-result-judgment-table] { font-size: 13px; line-height: 1.1; }
-    [data-rhythm-result-scroll] [data-rhythm-result-combo] { width: 36%; }
+    [data-rhythm-result-scroll] [data-rhythm-result-combo] { width: 32%; }
     [data-rhythm-result-scroll] [data-rhythm-result-combo] > small:first-child { letter-spacing: .04em; font-size: 9px; }
   }
   @media (orientation: landscape) and (max-height: 380px) {
@@ -598,16 +601,16 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-mh-view-rotation="true"] [data-rhythm-result-scroll] { container-type: size; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); column-gap: 10px; align-content: start; padding-top: 8px; padding-bottom: 8px; }
   [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > * { grid-column: 2; min-width: 0; }
   [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 30; margin: 0 0 8px; align-self: start; min-height: calc(100cqh - 16px); display: flex; flex-direction: column; justify-content: space-between; }
-  [data-mh-view-rotation="true"] [data-rhythm-result-hero] > div[aria-hidden="true"] { display: none; }
-  [data-mh-view-rotation="true"] [data-rhythm-result-hero] { width: 17%; max-width: 150px; }
-  [data-mh-view-rotation="true"] [data-rhythm-result-hero]:not(:has([data-rhythm-result-hero-gains])) { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-result-hero] { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-rhythm-result-quick-run], [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-rhythm-result-quick-run-failed] { display: block; }
+  [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-rhythm-result-luck], [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-rhythm-result-beat-points] { display: block; }
   [data-mh-view-rotation="true"] [data-rhythm-result-jacket] { width: 44px; height: 44px; }
   [data-mh-view-rotation="true"] [data-rhythm-result-rank] { width: 54px; height: 54px; font-size: 28px; border-width: 3px; }
   [data-mh-view-rotation="true"] [data-rhythm-result-song] { padding: 6px 8px; }
   [data-mh-view-rotation="true"] [data-player-rank-gain-add] + span { white-space: nowrap; }
   [data-mh-view-rotation="true"] [data-rhythm-next-rank] { word-break: keep-all; overflow-wrap: normal; }
   @media (min-height: 680px) {
-    [data-mh-view-rotation="true"] [data-rhythm-result-scroll] { grid-template-columns: clamp(220px, 30%, 290px) minmax(0, 1fr) minmax(0, 1.7fr); grid-template-rows: auto 1fr; }
+    [data-mh-view-rotation="true"] [data-rhythm-result-scroll] { grid-template-columns: clamp(196px, 26%, 290px) minmax(0, 1fr) minmax(0, 1.7fr); grid-template-rows: auto 1fr; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > * { grid-column: 2 / -1; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-player-rank-gain] { grid-column: 1; grid-row: 1 / span 2; margin: 0; min-height: auto; display: block; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] > [data-rhythm-result-summary], [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-summary-main] { display: contents; }
@@ -617,7 +620,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-score-card] { grid-column: 2; grid-row: 2; margin: 0; align-self: start; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-summary-judgments] { grid-column: 3; grid-row: 2; margin: 0; align-self: start; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll]     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-judgment-table] { font-size: 13px; line-height: 1.1; }
-    [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-combo] { width: 36%; }
+    [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-combo] { width: 32%; }
     [data-mh-view-rotation="true"] [data-rhythm-result-scroll] [data-rhythm-result-combo] > small:first-child { letter-spacing: .04em; font-size: 9px; }
   }
   /* ランキングの「イベント」(横・背が低い画面)。上の見出し・4つのタブ・今回/前回・イベント名・詳細・部門が画面の大半を使い、順位が最初の画面に出ず、
@@ -821,14 +824,14 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      ボタンの高さを少し低くして、254px に収める。tools/ui/rhythm-multi-select-fit-check.js が重なりを見張る。
      ★素のCSSで当てる(Tailwind の landscape: に頼らない)。🔄横は、端末の高さが縦のままなので media が効かず、器(data-mh-view-rotation)で当てる */
   @media (orientation: landscape) and (max-height: 440px) {
-    [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
-    [data-rhythm-song-detail-art]:not([data-mh-view-rotation="true"] *) { width: 5.5rem; }
-    [data-rhythm-song-detail] [data-rhythm-demo-combo]:not([data-mh-view-rotation="true"] *) { display: none; }
-    [data-rhythm-song-detail] [data-rhythm-song-meta]:not([data-mh-view-rotation="true"] *) { display: none; }
-    [data-rhythm-song-detail] [data-rhythm-song-footer] button:not([data-mh-view-rotation="true"] *) { min-height: 34px; }
-    [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button:not([data-mh-view-rotation="true"] *) { height: 42px; }
-    [data-rhythm-song-detail] [data-rhythm-song-act] button:not([data-mh-view-rotation="true"] *) { min-height: 36px; }
-    [data-rhythm-song-detail]:not([data-mh-view-rotation="true"] *) { padding-top: 4px; }
+    [data-rhythm-multi] [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
+    [data-rhythm-multi] [data-rhythm-song-detail-art]:not([data-mh-view-rotation="true"] *) { width: 5.5rem; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-demo-combo]:not([data-mh-view-rotation="true"] *) { display: none; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-meta]:not([data-mh-view-rotation="true"] *) { display: none; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-footer] button:not([data-mh-view-rotation="true"] *) { min-height: 34px; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button:not([data-mh-view-rotation="true"] *) { height: 42px; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-act] button:not([data-mh-view-rotation="true"] *) { min-height: 36px; }
+    [data-rhythm-multi] [data-rhythm-song-detail]:not([data-mh-view-rotation="true"] *) { padding-top: 4px; }
   }
   /* マルチの上の帯(ボタンの列)を、幅が狭い横で1段に収める(2026-11-14 社長「吹き出し(💬)が押し出されて下に来る・ランキングボタンを曲側に」)。
      🏆 は曲の側へ移したが、幅 568px(幅320の端末の🔄横)では、残りのボタンだけでまだ入りきらず、💬が2段目へ落ちた。
@@ -842,21 +845,24 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   /* 高さが380px以下(iPhone SE・mini の横 667×375 など)は、詰めても残りの高さ(約190px)に入らないので、
      難易度の札と決定の帯をいちばん上に置き、ジャケット・自己ベスト・おまかせ(下の段)は送って見る。決定の帯は貼り付けず、難易度の札の下に並べる */
   @media (orientation: landscape) and (max-height: 380px) {
-    [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot'; }
-    [data-rhythm-song-detail] [data-rhythm-song-act]:not([data-mh-view-rotation="true"] *) { position: static; }
+    [data-rhythm-multi] [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot' 'note note'; grid-template-rows: none; }
+    [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-act]:not([data-mh-view-rotation="true"] *) { position: static; }
   }
   @media (max-width: 380px) {
-    [data-mh-view-rotation="true"] [data-rhythm-song-detail-grid] { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot'; }
-    [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-act] { position: static; }
+    [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail-grid] { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot' 'note note'; grid-template-rows: none; }
+    [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-act] { position: static; }
   }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail-grid] { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail-art] { width: 5.5rem; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-demo-combo] { display: none; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-meta] { display: none; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-footer] button { min-height: 34px; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button { height: 42px; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-act] button { min-height: 36px; }
-  [data-mh-view-rotation="true"] [data-rhythm-song-detail] { padding-top: 4px; }
+  /* 2026-11-22 r1119-094: ソロの曲えらびは、右の欄の高さに合わせて中身が伸び縮みする作り(29-rhythm-screens.jsx の container)にしたので、
+     詰める規則はマルチの曲えらび(上に席の列があって欄が低い)だけに当てる。ソロに当てていたときは、🔄横でジャケットが88px・「決定」が36pxに
+     固定され、欄の下が空いたまま「決定」が押しにくかった(社長「右側の決定の押しにくさとか空きスペースとか」) */
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail-grid] { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail-art] { width: 5.5rem; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-demo-combo] { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-meta] { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-footer] button { min-height: 34px; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button { height: 42px; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] [data-rhythm-song-act] button { min-height: 36px; }
+  [data-mh-view-rotation="true"] [data-rhythm-multi] [data-rhythm-song-detail] { padding-top: 4px; }
   /* モンヒロビートの曲えらび: 縦が低い画面(高さ700px以下)では、曲の詳細のジャケットを小さくして曲の一覧に場所を残す(2026-10-07)。
      幅320×高さ568では一覧の高さが16pxしかなく、曲を1つも選べなかった(プレイボットの小さい画面係が見つけた)。
      ★助手のひとことを畳むのは部品の側(29-rhythm-screens.jsx の noticeOpenShort)。絵を90度回しているときは横持ちの並びなので触らない */
@@ -2539,13 +2545,13 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/breeder.js?v=94e44f8d7df0" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=6811f59c3732" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=dc1a3765cd42" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=3c2c48ed26a7" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=2c49090a007d" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=e297d2fa07bf" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=83bfbd342597" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=e34863069d5d" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=a5727ec0c2f5" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=a55e16a33602" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

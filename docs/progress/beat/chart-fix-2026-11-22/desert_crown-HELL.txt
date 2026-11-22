@@ -1,0 +1,9 @@
+desert_crown/HELL: 押さえ中の交差 6 → 0・動かしたノーツ 6(ノーツ数 581 のまま)・Lv.の式 36 → 36
+  手の決まり {"sideHeightSwitch":5,"skyAfterGround":1,"besideHeldBand":0,"fastSameSide":0,"heldHandSwitch":0} → {"sideHeightSwitch":5,"skyAfterGround":1,"besideHeldBand":0,"fastSameSide":0,"heldHandSwitch":0}
+  3.292秒 TAP 幅1 位置 4.50 → 1.50(押さえ HOLD)
+  17.695秒 TAP 幅2 位置 5.00 → 1.50(押さえ HOLD)
+  17.995秒 TAP 幅2 位置 5.00 → 1.50(押さえ HOLD)
+  18.145秒 TAP 幅1.5 位置 4.75 → 1.75(押さえ HOLD)
+  79.207秒 TAP 幅2 位置 5.00 → 1.50(押さえ HOLD)
+  82.808秒 TAP(空中) 幅1.5 位置 1.75 → 5.25(押さえ 手で(--also))
+  書いた: desert-crown-v3-hell-notes

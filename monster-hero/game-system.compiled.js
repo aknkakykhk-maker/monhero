@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25cc29a246e7b874
+// source-sha256: 3a19141428ef610d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38609,10 +38609,21 @@ const RhythmSongSelect = ({
   };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
-  const lockedFitText = song ? available.filter(item => !unlocked(item)).map(item => `${rhythmDifficultyUnlockRequirement(item.id, song.songId)}で解放`).reduce((a, b) => rhythmTitleFitEm(b) > rhythmTitleFitEm(a) ? b : a, '') : '';
+  const lockHint = (() => {
+    if (!song) return '';
+    const locked = available.filter(item => !unlocked(item));
+    if (!locked.length) return '';
+    const need = rhythmDifficultyUnlockRequirement(locked[0].id, song.songId);
+    const names = locked.filter(item => rhythmDifficultyUnlockRequirement(item.id, song.songId) === need).map(item => item.id);
+    return need ? `🔒 ${need}をクリアすると ${names.join('・')} が遊べます` : '';
+  })();
   const picked = available.find(entry => entry.id === difficultyId);
   const difficulty = (picked && unlocked(picked) ? picked : null) || openList[0] || null;
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
+  const detailBpm = (() => {
+    const grid = song && typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
+    return grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
+  })();
   const best = song && difficulty ? rhythmBestRecord(bestRecords, song.songId, difficulty.id) : null;
   const rowDifficultyId = entry => {
     const ids = (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).map(item => item.id);
@@ -38823,7 +38834,10 @@ const RhythmSongSelect = ({
   }, notice && noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice": true,
     className: "shrink-0 px-2 pt-2 landscape:hidden"
-  }, notice), React.createElement("div", {
+  }, React.isValidElement(notice) && notice.props && notice.props.scene ? React.cloneElement(notice, {
+    oneLine: true,
+    faceSize: 28
+  }) : notice), React.createElement("div", {
     "data-rhythm-song-toolbar": true,
     className: "flex shrink-0 items-center gap-1.5 px-2 pt-2 landscape:w-[104px] landscape:flex-col landscape:items-stretch landscape:gap-2 landscape:pb-2 landscape:pr-0"
   }, React.createElement("button", {
@@ -39018,7 +39032,7 @@ const RhythmSongSelect = ({
     }, " イベント対象"))))));
   }))))), React.createElement("aside", {
     "data-rhythm-song-detail": true,
-    className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2",
+    className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]",
     style: {
       paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
     }
@@ -39026,12 +39040,12 @@ const RhythmSongSelect = ({
     className: "text-xs font-bold text-slate-400"
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-song-detail-grid": true,
-    className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'act_act'] landscape:[grid-template-columns:7.5rem_minmax(0,1fr)]"
+    className: "grid items-start gap-x-3 gap-y-1.5 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]"
   }, (() => {
     const tier = rhythmDetailAchieveTier(best);
     return React.createElement("div", _extends({
       "data-rhythm-song-detail-art": true,
-      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem]",
+      className: "relative w-28 shrink-0 self-start landscape:w-[7.5rem] landscape:[width:clamp(5.5rem,calc(100cqh_-_222px),min(46cqw,calc(100cqw_-_170px)))] landscape:[@container(min-height:540px)]:justify-self-center landscape:[@container(min-height:540px)]:[width:min(100%,max(7.5rem,calc(100cqh_-_360px)))]",
       style: {
         gridArea: 'art'
       }
@@ -39084,7 +39098,10 @@ const RhythmSongSelect = ({
   }, favoriteIds.has(song.songId) ? '♥' : '♡')), React.createElement("small", {
     "data-rhythm-song-meta": true,
     className: "mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0"
-  }, rhythmSongLengthLabel(song, chart), React.createElement("span", {
+  }, detailBpm ? React.createElement("span", {
+    "data-rhythm-song-bpm": true,
+    className: "mr-1.5 tabular-nums text-slate-300"
+  }, "BPM ", detailBpm) : null, rhythmSongLengthLabel(song, chart), React.createElement("span", {
     "data-rhythm-demo-level": true,
     className: "ml-1.5 text-slate-300"
   }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ", rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? ` + 刻み${rhythmChartTickCount(song, chart, difficulty.id)}` : ''))), React.createElement("div", {
@@ -39175,16 +39192,17 @@ const RhythmSongSelect = ({
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
       className: "block text-[8px] tracking-wide"
-    }, open ? item.id : `🔒${item.id}`), (() => {
+    }, item.id), (() => {
       const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
       const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
       if (!open) return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
-        className: "block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
-        style: {
-          fontSize: rhythmTitleFitSize(lockedFitText, 8, 6, 2)
-        }
-      }, need, React.createElement("wbr", null), "で解放");
+        className: "block text-[10px] leading-none opacity-80"
+      }, React.createElement("span", {
+        "aria-hidden": "true"
+      }, "🔒"), React.createElement("span", {
+        className: "sr-only"
+      }, need, "で解放"));
       return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
         className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
@@ -39193,9 +39211,21 @@ const RhythmSongSelect = ({
         }
       }, text);
     })());
-  }))), React.createElement("div", {
+  })), lockHint && React.createElement("p", {
+    "data-rhythm-difficulty-lock-hint": true,
+    className: "mt-1 truncate text-[10px] font-black leading-tight text-slate-400"
+  }, lockHint)), notice && noticeOpen && React.createElement("div", {
+    "data-rhythm-song-notice-landscape": true,
+    className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden",
+    style: {
+      gridArea: 'note'
+    }
+  }, React.isValidElement(notice) ? React.cloneElement(notice, {
+    oneLine: true,
+    faceSize: 28
+  }) : notice), React.createElement("div", {
     "data-rhythm-song-act": true,
-    className: "flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95",
+    className: "flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95",
     style: {
       gridArea: 'act'
     }
@@ -39203,21 +39233,36 @@ const RhythmSongSelect = ({
     type: "button",
     "data-rhythm-song-random": true,
     onClick: pickRandom,
-    className: "min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]"
-  }, "ランダム"), lockedSong(song) ? React.createElement("button", {
-    type: "button",
-    "data-rhythm-song-buy": song.songId,
-    onClick: () => {
-      setBuyError('');
-      setBuyAsk(song);
-    },
-    className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]"
-  }, "🔒 ", rhythmSongPrice(song.songId).toLocaleString(), "ビートPで買う") : React.createElement("button", {
+    "aria-label": "ランダムに選ぶ",
+    className: "flex min-h-[52px] w-[22%] shrink-0 flex-col landscape:[@container(min-height:540px)]:min-h-[64px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 text-[10px] font-black leading-tight text-slate-300"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "🎲"), "ランダム"), lockedSong(song) ? (() => {
+    const price = rhythmSongPrice(song.songId),
+      balance = Number(songLock && songLock.balance),
+      short = Number.isFinite(balance) && balance < price ? price - balance : 0;
+    return React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-buy": song.songId,
+      "data-rhythm-song-buy-short": short > 0 ? '1' : '0',
+      onClick: () => {
+        setBuyError('');
+        setBuyAsk(song);
+      },
+      className: `flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl font-black leading-tight landscape:[@container(min-height:540px)]:min-h-[64px] ${short > 0 ? 'border border-amber-300/40 bg-slate-900/80 text-amber-100/80' : 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950'}`
+    }, React.createElement("span", {
+      className: "whitespace-nowrap text-[15px]"
+    }, "🔒 ", price.toLocaleString(), "ビートPで買う"), short > 0 && React.createElement("span", {
+      "data-rhythm-song-buy-need": true,
+      className: "whitespace-nowrap text-[10px] text-amber-200/80"
+    }, "あと ", short.toLocaleString(), "ビートP"));
+  })() : React.createElement("button", {
     type: "button",
     "data-rhythm-demo-start": difficulty.id,
     disabled: playDisabled,
     onClick: () => onPlay(song, difficulty),
-    className: "min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]"
+    className: "min-h-[52px] min-w-0 flex-1 rounded-xl landscape:[@container(min-height:540px)]:min-h-[64px] bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-lg font-black tracking-wider text-white shadow-[0_0_14px_rgba(217,70,239,.35)] disabled:opacity-40"
   }, playLabel), actionExtra && React.createElement("div", {
     "data-rhythm-song-action-extra": true,
     className: "flex shrink-0 landscape:hidden"
@@ -39227,24 +39272,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'foot'
     }
-  }, typeof footer === 'function' ? footer(song, difficulty) : footer))), notice && noticeOpen && React.createElement("div", {
-    "data-rhythm-song-notice-landscape": true,
-    className: "mt-1.5 hidden landscape:block"
-  }, React.isValidElement(notice) ? React.cloneElement(notice, {
-    oneLine: true,
-    faceSize: 28
-  }) : notice), detailInfoPanel && song && difficulty && chart && (() => {
-    const grid = typeof rhythmSongBeatGrid === 'function' ? rhythmSongBeatGrid(song.songId) : null;
-    const bpm = grid && Number.isFinite(grid.beatMs) && grid.beatMs > 0 ? Math.round(60000 / grid.beatMs) : 0;
-    const info = [bpm ? `BPM ${bpm}` : '', rhythmSongLengthLabel(song, chart), chart.totalNotes ? `${difficulty.id} ${Number(chart.totalNotes).toLocaleString()}ノーツ` : ''].filter(Boolean).join(' ・ ');
-    return React.createElement("div", {
-      "data-rhythm-song-info-panel": true,
-      className: "mt-2 hidden rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:block"
-    }, info && React.createElement("p", {
-      "data-rhythm-song-info-line": true,
-      className: "whitespace-nowrap text-[11px] font-black tabular-nums text-slate-200"
-    }, info));
-  })()), buyAsk && songLock && React.createElement("div", {
+  }, typeof footer === 'function' ? footer(song, difficulty) : footer)))), buyAsk && songLock && React.createElement("div", {
     "data-rhythm-song-buy-modal": true,
     role: "dialog",
     "aria-modal": "true",
@@ -73489,7 +73517,7 @@ function RhythmSongSelectScreen({
   }, React.createElement(ArrowLeft, {
     size: 20
   }), React.createElement("span", {
-    className: "whitespace-nowrap text-[11px] font-black"
+    className: "whitespace-nowrap text-[11px] font-black max-[379px]:hidden"
   }, debugAll ? 'デバッグへ戻る' : 'モード選びへ戻る')), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
@@ -73854,7 +73882,6 @@ function RhythmSongSelectScreen({
     onSongId: setRhythmSelectedSongId,
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
-    detailInfoPanel: true,
     onPlay: onPlaySong,
     notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",
@@ -73902,25 +73929,27 @@ function RhythmSongSelectScreen({
         "aria-label": `${name} ${active ? 'ON' : 'OFF'}`,
         title: name,
         onClick: () => onToggleRhythmSetting && onToggleRhythmSetting(key),
-        className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+        className: `flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight [container-type:inline-size] ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      }, React.createElement("span", {
+        className: "flex items-center gap-1"
       }, React.createElement("span", {
         "aria-hidden": "true"
       }, icon), React.createElement("span", {
-        className: "landscape:hidden"
-      }, name), React.createElement("span", {
         className: "text-[10px]"
-      }, active ? 'ON' : 'OFF'));
+      }, active ? 'ON' : 'OFF')), React.createElement("span", {
+        className: "max-w-full truncate text-[9px] leading-none opacity-80 [@container(max-width:60px)]:hidden"
+      }, name === 'ミラー譜面' ? 'ミラー' : name));
     }), !debugAll && React.createElement("button", {
       "data-rhythm-demo-ranking": true,
       onClick: () => onOpenRanking(song),
       "aria-label": "この曲の全国ランキング",
       title: "全国ランキング",
-      className: "flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
+      className: "flex min-h-[44px] min-w-0 flex-col items-center justify-center rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
     }, React.createElement("span", {
       "aria-hidden": "true"
     }, "🏆"), React.createElement("span", {
-      className: "landscape:hidden"
-    }, "ランキング"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
+      className: "text-[9px] leading-none"
+    }, "順位"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
       style: JA_WRAP_STYLE,
       "data-rhythm-assist-note": true,
       className: "mt-1 text-[9px] font-bold leading-snug text-emerald-200"
@@ -119589,6 +119618,7 @@ function AssistantLifeHouse({
     setScene(null);
     assistantLifeCloseScreen();
   };
+  const typedTown = uiV2 && typeof AssistantLifeTownTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedTown);
   const typedHouse = uiV2 && tab === 'house' && typeof AssistantLifeHouseTyped === 'function' && typeof AluFrame === 'function' && !(typeof window !== 'undefined' && window.__mhAssistantLifeUntypedHouse);
   const backFromUiV2 = () => {
     if (uiV2 && tab !== 'house') {
@@ -120331,7 +120361,37 @@ function AssistantLifeHouse({
     style: {
       backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})`
     }
-  }), tab === 'where' ? React.createElement(AssistantLifeTownMap, {
+  }), tab === 'where' && typedTown ? React.createElement(AssistantLifeTownTyped, {
+    life: life,
+    ids: ids,
+    land: land,
+    tabs: assistantLifeUiV2Tabs().map(([key, icon, label]) => ({
+      key,
+      icon,
+      label
+    })),
+    tab: tab,
+    onTab: k => {
+      setMapFocusPlace(null);
+      setMapFocusAssistantId(null);
+      setGiftOpen(false);
+      setTab(k);
+      setRoomId(null);
+    },
+    onBack: backFromUiV2,
+    onRoom: id => setRoomId(id),
+    onGo: fn => {
+      try {
+        close();
+        fn();
+      } catch {}
+    },
+    onBeat: beat,
+    onCard: card,
+    initialPlace: mapFocusPlace,
+    initialAssistantId: mapFocusAssistantId,
+    initialKey: mapFocusKey
+  }) : tab === 'where' ? React.createElement(AssistantLifeTownMap, {
     life: life,
     ids: ids,
     land: land,
@@ -121194,26 +121254,28 @@ function AssistantLifeHouseTyped({
     },
     "data-assistant-life-guide-watch": true
   }, "👀 見てみる — ", assistantLifeTypedGroupName(g0, nameOf), "の話")) : null)) : null;
+  const goBtn = React.createElement(AluGo, {
+    onClick: () => {
+      if (g0 && onWatch) onWatch();
+    },
+    disabled: !g0,
+    "data-assistant-life-today-act": "watch"
+  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に');
+  const low = typeof window !== 'undefined' && window.innerHeight < 640 && window.innerWidth <= window.innerHeight;
   return React.createElement(AluFrame, {
     title: "家",
     onBack: onBack,
     tab: tab,
     onTab: onTab,
     tabs: tabs,
-    head: head,
+    head: low ? React.createElement(React.Fragment, null, head, goBtn) : head,
     scene: scene,
     overlay: resultNode || guideNode,
     "data-assistant-life-typed-house": "1"
   }, top, note ? React.createElement("div", {
     className: "alu-card alu-t",
     "data-assistant-life-note": true
-  }, note) : null, React.createElement(AluGo, {
-    onClick: () => {
-      if (g0 && onWatch) onWatch();
-    },
-    disabled: !g0,
-    "data-assistant-life-today-act": "watch"
-  }, g0 ? `👀 見る — ${assistantLifeTypedGroupName(g0, nameOf)}の話` : '👀 見る話は、次の時間に'), React.createElement(AluGoalCard, {
+  }, note) : null, low ? null : goBtn, React.createElement(AluGoalCard, {
     view: goal,
     onKind: k => {
       const f = kindGo[k];
@@ -121381,7 +121443,11 @@ function AssistantLifeRoomTyped({
       marginTop: 2
     },
     "data-assistant-life-room-where": true
-  }, statusLine) : null);
+  }, String(statusLine).split(' · ').map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement(React.Fragment, null, ' · ', React.createElement("wbr", null)) : null, React.createElement("span", {
+    className: "alu-nw"
+  }, x)))) : null);
   const playable = play.filter(p => !p.disabled && typeof p.on === 'function');
   let resultNode = null;
   if (result) {
@@ -121439,7 +121505,7 @@ function AssistantLifeRoomTyped({
   const sceneFn = box => React.createElement("div", {
     style: {
       position: 'relative',
-      height: box.wide ? '100%' : Math.max(260, Math.round(box.h / 0.42 * 0.5))
+      height: box.wide ? '100%' : Math.max(240, Math.round(box.h / 0.42 * 0.36))
     },
     "data-assistant-life-roomview-typed-scene": true
   }, scene);
@@ -122140,9 +122206,30 @@ function AssistantLifeTownMap({
   initialPlace = null,
   initialAssistantId = null,
   initialKey = 0,
-  friendView = null
+  friendView = null,
+  typedBox = null
 }) {
-  const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const [homeRaw, setHome] = React.useState(() => assistantLifeMapReadHome());
+  const home = typedBox ? {
+    ...homeRaw,
+    w: typedBox.w,
+    h: typedBox.h,
+    fromHome: false
+  } : homeRaw;
+  const typedScrollRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!typedBox || !typedBox.scrollH || !typedBox.focus) return undefined;
+    const t = setTimeout(() => {
+      const box = typedScrollRef.current;
+      const el = box && box.querySelector(`[data-assistant-life-map-place="${typedBox.focus}"]`);
+      if (!el) return;
+      const br = box.getBoundingClientRect(),
+        er = el.getBoundingClientRect();
+      box.scrollTop = Math.max(0, box.scrollTop + (er.top - br.top) - (box.clientHeight / 2 - er.height / 2 - 24));
+      if (typedBox.scrollX) box.scrollLeft = Math.max(0, box.scrollLeft + (er.left - br.left) - (box.clientWidth / 2 - er.width / 2));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [typedBox && typedBox.focus, typedBox && typedBox.scrollH]);
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
   React.useEffect(() => {
     if (initialKey && initialPlace && assistantLifeMapOrderNow().includes(initialPlace)) setSheet(initialPlace);
@@ -122200,6 +122287,7 @@ function AssistantLifeTownMap({
         if (el.hasAttribute('data-assistant-life-map-town')) continue;
         obs.push(rel(tagOf(el).getBoundingClientRect()));
       }
+      for (const el of S.querySelectorAll('[data-assistant-life-map-perk]')) obs.push(rel(el.getBoundingClientRect()));
       const W = S.clientWidth,
         H = S.clientHeight;
       const inside = q => q.left >= 3 && q.right <= W - 3 && q.top >= topMin && q.bottom <= H - 3;
@@ -122392,7 +122480,20 @@ function AssistantLifeTownMap({
       return false;
     }
   };
-  const perkMark = place => perkOf(place) ? React.createElement("i", {
+  const perkMarkTyped = place => perkOf(place) ? React.createElement("i", {
+    "aria-hidden": "true",
+    "data-assistant-life-map-perk": place,
+    "data-assistant-life-map-perk-kind": assistantLifeTownPerkKind(place),
+    className: "pointer-events-none absolute -right-1 -top-3 z-[2] whitespace-nowrap rounded-full px-2 text-[11px] font-black not-italic leading-[16px] shadow",
+    style: assistantLifeTownPerkKind(place) === 'h' ? {
+      background: '#fbcfe8',
+      color: '#831843'
+    } : {
+      background: '#fde68a',
+      color: '#78350f'
+    }
+  }, assistantLifeTownPerkText(place)) : null;
+  const perkMark = place => typedBox ? perkMarkTyped(place) : perkOf(place) ? React.createElement("i", {
     "aria-hidden": "true",
     "data-assistant-life-map-perk": place,
     className: "pointer-events-none absolute -right-1 -top-2.5 z-[2] rounded-full bg-amber-300 px-1.5 text-[10px] font-black not-italic leading-[14px] text-slate-900 shadow"
@@ -122519,16 +122620,24 @@ function AssistantLifeTownMap({
     onCard: onCard
   });
   return React.createElement("div", {
-    className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
+    ref: typedScrollRef,
+    className: typedBox ? 'relative bg-[#0b1020]' : 'absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]',
+    style: typedBox ? {
+      height: typedBox.scrollH || typedBox.h,
+      overflowY: typedBox.scrollH ? 'auto' : 'hidden',
+      overflowX: typedBox.scrollX ? 'auto' : 'hidden',
+      overscrollBehavior: 'contain'
+    } : undefined,
     "data-assistant-life-where": true,
-    "data-assistant-life-map-art": art
+    "data-assistant-life-map-art": art,
+    "data-assistant-life-map-typed": typedBox ? '1' : undefined
   }, !ro && typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), !ro && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
-.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
+.mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${typedBox || home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
 [data-assistant-life-map] .mh-home-facility:active>span,.mhl-map-town:active>span{transform:scale(.94)}`), React.createElement("div", {
     className: "relative",
-    style: {
+    style: typedBox ? undefined : {
       minHeight: '100%'
     },
     "data-assistant-life-map-fill": true
@@ -122598,7 +122707,7 @@ function AssistantLifeTownMap({
       "data-assistant-life-map-empty": n ? '0' : '1',
       onClick: () => setSheet(p)
     }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
-  }), assistantLifeMapOrderNow().map(crowd), React.createElement("div", {
+  }), assistantLifeMapOrderNow().map(crowd), !typedBox && React.createElement("div", {
     className: `absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`,
     style: {
       paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
@@ -122653,12 +122762,12 @@ function AssistantLifeTownMap({
     },
     className: "shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95"
   }, "📃 一覧 ↓")), React.createElement("p", {
-    className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
+    className: `pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 ${typedBox ? 'text-[11px]' : 'text-[10.5px]'} font-bold text-slate-100`,
     style: {
-      top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
+      top: typedBox ? 8 : land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
     },
     "data-assistant-life-map-hint": true
-  }, ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
+  }, ro ? '場所を押すと、いる助手が見られます' : typedBox ? '場所を押すと、いる助手と得が出ます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true
@@ -122738,6 +122847,188 @@ function AssistantLifeTownMap({
     "data-assistant-life-map-sheet-town": true,
     style: JA_WRAP_STYLE
   }, jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))))));
+}
+const ASSISTANT_LIFE_TOWN_PERK_KIND = Object.freeze({
+  studio: 't',
+  cardroom: 't',
+  market: 't',
+  temple: 'h',
+  battle: 'h',
+  ranch: 'h'
+});
+const assistantLifeTownPerkKind = place => ASSISTANT_LIFE_TOWN_PERK_KIND[place] || 'h';
+const assistantLifeTownPerkText = place => {
+  if (assistantLifeTownPerkKind(place) === 'h') return '💗 多め';
+  const card = typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375';
+  return `🎟 ${{
+    studio: '券なし',
+    cardroom: `ごほうび×${card}`,
+    market: '1割引き'
+  }[place] || '券・割引'}`;
+};
+const ASSISTANT_LIFE_TOWN_SCROLL_H = 400;
+function AssistantLifeTownTyped({
+  life,
+  ids,
+  tabs,
+  tab = 'where',
+  onTab,
+  onBack,
+  onRoom,
+  onGo = null,
+  onBeat = null,
+  onCard = null,
+  land = false,
+  initialPlace = null,
+  initialAssistantId = null,
+  initialKey = 0
+}) {
+  const [req, setReq] = React.useState({
+    place: initialPlace,
+    key: initialKey
+  });
+  React.useEffect(() => {
+    if (initialKey) setReq({
+      place: initialPlace,
+      key: initialKey
+    });
+  }, [initialKey]);
+  const openSheet = place => setReq(r => ({
+    place,
+    key: (r.key || 0) + 1000
+  }));
+  const nameOf = id => assistantLifeName(id);
+  const whereOf = id => assistantLifeWhereOf(life, id);
+  const at = {};
+  for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
+    if (!ids.includes(id)) continue;
+    const w = whereOf(id);
+    const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
+    (at[p] = at[p] || []).push(id);
+  }
+  let perks = [];
+  try {
+    perks = typeof assistantLifePerkRows === 'function' ? assistantLifePerkRows(life, ids, nameOf) : [];
+  } catch (_) {
+    perks = [];
+  }
+  const top = perks[0] || null;
+  const crowdTop = Object.keys(at).filter(p => p !== 'home').sort((a, b) => at[b].length - at[a].length)[0] || null;
+  const focus = top ? top.place : crowdTop;
+  const placeWord = p => p === 'home' ? '助手の家' : assistantLifePlaceShow(p);
+  const chip = p => perks.some(r => r.place === p) ? React.createElement("span", {
+    className: "alu-chip",
+    "data-assistant-life-town-perk-kind": assistantLifeTownPerkKind(p),
+    style: assistantLifeTownPerkKind(p) === 'h' ? {
+      background: '#fbcfe8',
+      borderColor: '#f472b6',
+      color: '#831843'
+    } : {
+      background: '#fde68a',
+      borderColor: '#f59e0b',
+      color: '#78350f'
+    }
+  }, assistantLifeTownPerkText(p)) : null;
+  const face = id => typeof AssistantFace === 'function' && assistantById(id) ? React.createElement(AssistantFace, {
+    who: assistantById(id),
+    size: 44
+  }) : '🙂';
+  const doingOf = id => {
+    const w = whereOf(id);
+    const d = w && typeof ASSISTANT_LIFE_DOINGS !== 'undefined' ? ASSISTANT_LIFE_DOINGS[w.doing] : null;
+    return d ? d.label : '';
+  };
+  const goTop = () => {
+    if (top && top.go && onGo) onGo(top.go);else if (focus) openSheet(focus);
+  };
+  const mainLabel = top ? React.createElement("span", {
+    style: {
+      display: 'block'
+    }
+  }, React.createElement("span", {
+    className: "alu-nw"
+  }, ASSISTANT_LIFE_PLACE_ICON[top.place] || top.icon, " ", placeWord(top.place), "へ行く"), React.createElement("span", {
+    className: "alu-t",
+    style: {
+      display: 'block'
+    }
+  }, assistantLifeTownPerkText(top.place))) : focus ? React.createElement(React.Fragment, null, ASSISTANT_LIFE_PLACE_ICON[focus] || '📍', " ", placeWord(focus), "を見る") : React.createElement(React.Fragment, null, "いま町にいる助手はいません");
+  const others = Object.keys(at).filter(p => p !== focus).sort((a, b) => (perks.findIndex(r => r.place === a) + 1 || 99) - (perks.findIndex(r => r.place === b) + 1 || 99) || at[b].length - at[a].length);
+  const scene = box => {
+    const homeNow = assistantLifeMapReadHome();
+    const tb = box.wide && box.h < 480 ? {
+      w: homeNow.w,
+      h: homeNow.h,
+      scrollH: box.h,
+      scrollX: true,
+      focus
+    } : box.wide ? {
+      w: box.w,
+      h: box.h,
+      focus
+    } : {
+      w: box.w,
+      h: Math.round(homeNow.h * box.w / Math.max(1, homeNow.w)),
+      scrollH: Math.min(ASSISTANT_LIFE_TOWN_SCROLL_H, Math.round(box.h / 0.42 * 0.47)),
+      focus
+    };
+    return React.createElement(AssistantLifeTownMap, {
+      life: life,
+      ids: ids,
+      land: land,
+      typedBox: tb,
+      onGo: onGo,
+      initialPlace: req.place,
+      initialAssistantId: initialAssistantId,
+      initialKey: req.key,
+      onBack: onBack,
+      onPick: onRoom,
+      onView: onRoom,
+      onBeat: onBeat,
+      onCard: onCard
+    });
+  };
+  return React.createElement(AluFrame, {
+    title: "町",
+    onBack: onBack,
+    tab: tab,
+    onTab: onTab,
+    tabs: tabs,
+    scene: scene,
+    "data-assistant-life-typed-town": "1"
+  }, React.createElement(AluGo, {
+    onClick: goTop,
+    disabled: !focus,
+    "data-assistant-life-town-go": focus || ''
+  }, mainLabel), focus ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-town-here": focus
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, placeWord(focus), "にいる助手"), (at[focus] || []).map(id => React.createElement(AluRow, {
+    key: id,
+    pic: face(id),
+    text: nameOf(id),
+    note: doingOf(id),
+    action: React.createElement(AluBtn, {
+      onClick: () => onRoom(id),
+      "data-assistant-life-town-room": id
+    }, "部屋へ")
+  }))) : null, others.length ? React.createElement("div", {
+    className: "alu-card",
+    "data-assistant-life-town-others": true
+  }, React.createElement("div", {
+    className: "alu-h"
+  }, "ほかの場所"), others.map(p => React.createElement(AluRow, {
+    key: p,
+    pic: ASSISTANT_LIFE_PLACE_ICON[p] || '📍',
+    text: React.createElement(React.Fragment, null, placeWord(p), " ", chip(p)),
+    note: (at[p] || []).map(nameOf).join('・'),
+    action: React.createElement(AluBtn, {
+      onClick: () => openSheet(p),
+      "data-assistant-life-town-see": p
+    }, "見る")
+  }))) : null);
 }
 const ASSISTANT_LIFE_FIND_KEY = 'mh_msx_find_v1';
 const ASSISTANT_LIFE_FIND_DAILY = 2;
@@ -124526,15 +124817,17 @@ function AssistantLifeRoomScene({
     front: true,
     onTip: layoutEdit ? null : setTip
   }), away && React.createElement("div", {
-    className: "absolute left-1/2 -translate-x-1/2 rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-center",
+    className: "absolute rounded-2xl border-2 border-pink-300 bg-slate-950/90 px-3 py-2 text-left",
     style: {
-      top: floorY - 120
+      top: topH + 10,
+      left: 10,
+      maxWidth: 'calc(100% - 20px)'
     },
     "data-assistant-life-roomview-away": true
   }, React.createElement("p", {
-    className: "whitespace-nowrap text-[14px] font-black text-white"
+    className: "whitespace-nowrap text-[16px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
-    className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
+    className: "whitespace-nowrap text-[11px] font-bold text-slate-300"
   }, away.sub)), asleep && night && !lit && React.createElement("div", {
     "aria-hidden": "true",
     "data-assistant-life-roomview-sleepdark": true,
@@ -126085,19 +126378,19 @@ const ALU_CSS = `
 .alu .alu-n{font-size:11px;font-weight:700;color:#cbd5e1;line-height:1.45}
 .alu .alu-num{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .alu .alu-nw{white-space:nowrap}
-.alu-top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#151130;border-bottom:1px solid #3b3566}
+.alu-top{flex:none;box-sizing:content-box!important;height:48px;display:flex;align-items:center;gap:8px;padding:var(--mh-sa-top,0px) calc(10px + var(--mh-sa-right,0px)) 0 calc(10px + var(--mh-sa-left,0px));background:#151130;border-bottom:1px solid #3b3566}
 .alu-top .bk{flex:none;min-width:72px;height:44px;padding:0 12px;border-radius:999px;background:#2b3348;border:1px solid #475569;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ti{flex:1;min-width:0;text-align:center;font-size:16px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .alu-top .ck{flex:none;min-width:72px;text-align:right;line-height:1.2}
 .alu-top .ck b{display:block;font-size:13px;font-weight:900;white-space:nowrap}
 .alu-top .ck small{display:block;font-size:11px;font-weight:700;color:#cbd5e1;white-space:nowrap}
-.alu-body{flex:1;min-height:0;display:flex}
+.alu-body{flex:1;min-height:0;display:flex;padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .alu-scene{flex:none;position:relative;border-radius:14px;overflow:hidden;background:#1e1a36;border:1px solid #3b3566}
-.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px 12px 0}
+.alu[data-alu-wide="1"] .alu-body{gap:12px;padding:12px calc(12px + var(--mh-sa-right,0px)) 0 calc(12px + var(--mh-sa-left,0px))}
 .alu[data-alu-wide="1"] .alu-scene{flex:1.35 1 0;min-width:0;align-self:stretch;margin-bottom:12px}
 .alu[data-alu-wide="1"] .alu-main{flex:1 1 0;padding:0 0 12px;max-width:560px}
-.alu-tabs{flex:none;display:flex;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:env(safe-area-inset-bottom)}
+.alu-tabs{flex:none;display:flex;box-sizing:content-box!important;height:56px;background:#151130;border-top:1px solid #3b3566;padding-bottom:var(--alu-sab,var(--mh-sa-bottom,0px));padding-left:var(--mh-sa-left,0px);padding-right:var(--mh-sa-right,0px)}
 .alu-tabs button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:0;color:#cbd5e1;font-size:11px;font-weight:900;white-space:nowrap}
 .alu-tabs button i{font-style:normal;font-size:16px;line-height:1.2}
 .alu-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
@@ -126179,7 +126472,19 @@ const useAluWide = () => {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
+    const sab = () => {
+      try {
+        el.style.removeProperty('--alu-sab');
+        const tabs = el.querySelector('[data-alu-tabs]');
+        if (!tabs) return;
+        const sa = parseFloat(getComputedStyle(tabs).paddingBottom) || 0;
+        if (!sa) return;
+        const gap = Math.max(0, Math.round((window.innerHeight || 0) - el.getBoundingClientRect().bottom));
+        if (gap > 0) el.style.setProperty('--alu-sab', `${Math.max(0, sa - gap)}px`);
+      } catch (_) {}
+    };
     const measure = () => {
+      sab();
       const w = el.clientWidth,
         h = el.clientHeight;
       const wide = w >= ALU_WIDE_MIN && w > h * 1.15;

@@ -118,7 +118,16 @@ function main() {
   let r;
   try { r = judge({ base: i >= 0 ? argv[i + 1] : undefined }); } catch (e) { console.log('ミハリ確認: 判定できませんでした(' + (e && e.message) + ')。迷うときは「要る」として窓口へ'); return; }
   console.log(argv.includes('--json') ? JSON.stringify(r, null, 1) : format(r));
+  if (!argv.includes('--json')) { const c = compareLine(); if (c) console.log(c); }
+}
+
+// 撮り比べ(主な画面を main と枝で撮って比べる。tools/browser/visual-compare-check.js)の前の結果を1行で出す。ここでは撮らない
+function compareLine() {
+  try {
+    const { execFileSync } = require('child_process');
+    return execFileSync(process.execPath, [path.join(__dirname, '..', 'browser', 'visual-compare-check.js'), '--status'], { encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n').pop();
+  } catch (e) { return ''; }
 }
 
 if (require.main === module) main();
-module.exports = { judge, format };
+module.exports = { judge, format, compareLine };

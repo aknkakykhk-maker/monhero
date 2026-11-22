@@ -3,7 +3,7 @@
 //   node tools/assistant/life-house-typed-shoot.js [--out <置き場>] [--2x]
 //   置き場の既定: docs/progress/assistant-life/step7-house/(<大きさ>-<場面>.png と measure.json)
 // 場面: house(開いたところ)・house-bottom(下まで送った)・daily(7日のごほうびを開いた)・guide(❓ 見かたの窓)・result(👀 見る → 場面の終わり → 結果の1枚)
-//       room(段8: 部屋を開いたところ。--room <id> 既定 atsu)・room-more(「もっと見る」を開いて下まで送った)
+//       town・town-bottom(段9: 町)・room(段8: 部屋を開いたところ。--room <id> 既定 atsu)・room-more(「もっと見る」を開いて下まで送った)
 // 測る決まりは tools/assistant/life-ui-shoot.js の measure(字の4段・主なボタン1つ・帯とタブ・はみ出し・下の空き・窓・段組み)。
 // 偽のデータでページの中だけ(Supabase は偽物)。時刻は 15:00 に固定。最後の1行が OK / NG。
 'use strict';
@@ -47,11 +47,19 @@ fs.mkdirSync(OUT, { recursive: true });
     page.on('pageerror', e => result.errors.push(`${sizeId}: ${String(e.message || e).slice(0, 160)}`));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = ['assistant_life_friend']; window.__mhKeepRoomFold = true; if (window.__untyped) window.__mhAssistantLifeUntypedHouse = true; localStorage.setItem('mh_assistant_life_ui_v2', 'true'); localStorage.setItem('mh_assistant_life_guide_seen_v1', 'true'); });
     if (UNTYPED) await page.addInitScript(() => { window.__untyped = true; });
+    // --untyped-town … 段9の前の町(型に載せる前)で撮る(比べる用・検査だけの印)
+    if (argv.includes('--untyped-town')) await page.addInitScript(() => { window.__mhAssistantLifeUntypedTown = true; });
     // --bedtry '{"headDiv":3,"bedHeads":3,"quiltDrop":0.2}' … 寝ている部屋のベッドの釣り合いの案(ページの中だけ)
     if (opt('--bedtry', '')) await page.addInitScript((t) => { window.__mhAssistantLifeBedTry = t; }, JSON.parse(opt('--bedtry', '{}')));
     // --worn kiki:kiki_twintail_v1,… … 着せ替えを着せて撮る(着替えの保存 mh_assistant_costume_*_v1 はページの中だけ)
     const WORN = Object.fromEntries((opt('--worn', '') || '').split(',').filter(Boolean).map(x => x.split(':')));
     if (Object.keys(WORN).length) await page.addInitScript((worn) => { localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(Object.values(worn))); localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify(worn)); }, WORN);
+    // --notch … iPhone の切り欠きあり(縦: 上47px・下34px / 横: 左右47px・下21px)で撮る。env() はブラウザで作れないので、ゲームの切り欠きの変数(--mh-safe-top ほか)に入れる(2026-11-22 社長の iPhone で上の帯が時刻に重なった r1119-098)
+    if (argv.includes('--notch')) await page.addInitScript(() => { const set = () => { const r = document.documentElement; const land = window.innerWidth > window.innerHeight; // 横は左右47px・下21px(2026-11-22 窓口: 全部の部への決まり)
+        r.style.setProperty('--mh-safe-top', land ? '0px' : '47px'); r.style.setProperty('--mh-safe-bottom', land ? '21px' : '34px');
+        r.style.setProperty('--mh-safe-left', land ? '47px' : '0px'); r.style.setProperty('--mh-safe-right', land ? '47px' : '0px'); }; if (document.documentElement) set(); document.addEventListener('DOMContentLoaded', set); });
+    // --short-bottom <px> … 助手ライフの器が画面の下の端まで届かない形(社長の iPhone のホーム画面のアプリで器の下に黒い帯が出ていた)を作って撮る
+    if (opt('--short-bottom', '')) await page.addInitScript((px) => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = `.mhl-root{bottom:${px}px!important}`; document.head.appendChild(st); }); }, Number(opt('--short-bottom', '0')));
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: Number(opt('--bond', '')) || null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
@@ -106,6 +114,27 @@ fs.mkdirSync(OUT, { recursive: true });
       // 段8: 部屋(型に載せた部屋。段8の前の版では型が無いので絵だけ撮る)
       await page.locator('[data-assistant-life-house-result] [data-alu-sheet-close]').first().click({ timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(400);
+      // 段9: 町(型に載せた町。地図の中の字は HOME と同じ札なので数えない)
+      if (await page.locator('[data-alu-tab="where"]').count()) {
+        await page.locator('[data-alu-tab="where"]').first().click({ timeout: 5000 });
+        if (await page.locator('[data-assistant-life-typed-town]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) {
+          await page.waitForTimeout(900);
+          await shot('town', { withScene: false });
+          await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-typed-town] [data-alu-main]'); if (m) m.scrollTop = m.scrollHeight; });
+          await shot('town-bottom', { withScene: false, skipMain: true });
+          // 「見る」→ その場所の窓(地図の窓。中身は前の部品)・「部屋へ」→ 部屋。開けたかだけ見る(測らない)
+          await page.locator('[data-assistant-life-town-see]').first().click({ timeout: 5000 });
+          if (!(await page.locator('[data-assistant-life-map-sheet]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false))) result.miss.push(`${sizeId} 町: 「見る」で場所の窓が開かない`);
+          else { await page.waitForTimeout(300); await page.screenshot({ path: path.join(OUT, `${sizeId}-town-sheet.png`) }); await page.locator('[data-assistant-life-map-sheet-close]').first().click({ timeout: 3000 }); }
+          await page.evaluate(() => { const m = document.querySelector('[data-assistant-life-typed-town] [data-alu-main]'); if (m) m.scrollTop = 0; });
+          await page.locator('[data-assistant-life-town-room]').first().click({ timeout: 5000 });
+          if (!(await page.locator('[data-assistant-life-room-sheet]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false))) result.miss.push(`${sizeId} 町: 「部屋へ」で部屋が開かない`);
+          else { await page.waitForTimeout(500); await page.locator('[data-assistant-life-typed-room] [data-alu-tab="where"], [data-alu-tab="where"]').last().click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(400); }
+        } else { await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, `${sizeId}-town-untyped.png`) }); }
+        await page.locator('[data-alu-tab="house"], [data-assistant-life-icon="house"]').first().click({ timeout: 5000 });
+        await page.locator('[data-assistant-life-typed-house]').waitFor({ timeout: 5000 });
+        await page.waitForTimeout(400);
+      }
       const RID = opt('--room', 'atsu');
       await page.locator(`[data-assistant-life-room="${RID}"]`).first().click({ timeout: 5000 });
       await page.locator(`[data-assistant-life-room-sheet="${RID}"]`).waitFor({ timeout: 5000 });
