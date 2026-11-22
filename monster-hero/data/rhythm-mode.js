@@ -1481,9 +1481,12 @@ const rhythmChartHasSky=notes=>Array.isArray(notes)&&notes.some(note=>rhythmNote
 //   いまは (縮み(y)−上端の縮み)/(判定ラインの縮み−上端の縮み) で、上端では地上と同じ所から出て、近づくにつれて空中の段へ上がる。
 //   判定ラインでの高さは前と同じ。空中の線は判定ラインより3%以上低い(rhythmSkyLiftMaxFor)ので、画面の位置は上端から下へ単調に進む(途中で上へ戻らない)。
 //   GPU の帯(シェーダーの proj・skyK)と、演奏画面の空中の面(30-rhythm-play.jsx)も同じ式を通す。調べ: docs/progress/beat/chart-fix-2026-11-22/note-appear/
+//   上端より上(yRatio<0)も同じ1次の式のまま延ばす(持ち上げは負になる)。画面の位置は「地上の位置×(1−持ち上げの比)」の1次になり、
+//   上端を越える瞬間は地上と同じ・帯の形が折れない・GPU の帯(点を粗くつなぐ)と 2D の絵がずれない(rhythm-gpu-band-check.js)
 const rhythmSkyLiftRatio=yRatio=>{
   const line=RHYTHM_JUDGMENT_LINE_Y.ratio,top=rhythmProjectionScale(0),base=rhythmProjectionScale(line);
-  return base>top?RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(rhythmClamp01(Number(yRatio)))-top)/(base-top):0;
+  if(!(base>top))return 0;
+  return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(Math.min(1,Number(yRatio)||0))-top)/(base-top);
 };
 // 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか
 const rhythmSkyLiftPx=(rect,yRatio)=>(Number(rect?.height)||0)*rhythmSkyLiftRatio(yRatio);
@@ -77339,7 +77342,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*(depth(clamp(yr,0.0,1.0))-uTop)*uRoad*sky;return vec2(x,y-lift);}'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*(depth(min(yr,1.0))-uTop)*uRoad*sky;return vec2(x,y-lift);}'+
     // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
     // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
     'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;float f=aMisc.w;'+
