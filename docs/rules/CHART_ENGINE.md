@@ -319,3 +319,7 @@ EXPERT:rhythmScrollFxChart(mhChart(…),LAMIA_SCROLL_FX),
 - 曲の終わりで止めるなら `ease` の `to` は 0 ではなく 0.1(0 のままだと拍の線を描くループが終わらない。Evans の件)
 - 検査: `node tools/mode/rhythm-scroll-fx-check.js`(全曲の表を同じ物差しで見る。毎回回す検査に入っている)
 - 置く時刻は曲の区切り・音の切れ目に合わせる(Evans はブレイクの切れ目・フィルの手前・最後のだんだん遅く)
+
+## 段変えの仕上げ(`settleLevelSwitches`・`rhythm-hell-mix.js`・2026-11-22)
+
+opt-in の後処理。SONGS に `levelSettle:true` を書いた曲だけに効き、書いていない曲・フラグ無しでは従来の測定と完全一致させる。使うときは曲の PR に同梱し、既存曲の測定が変わらない回帰記録を PR に付ける。段変えの許す数は `LEVEL_SWITCH_ALLOW`(公開 HELL 全80譜面の実績の帯ごと最大値・2026-11-22 社長決定 r1119-090)
