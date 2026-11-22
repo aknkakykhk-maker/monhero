@@ -1704,7 +1704,8 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             planBand={typeof AssistantLifePlanBand === 'function' ? <AssistantLifePlanBand ids={ids} land={land} typed/> : null}
             onTalk={() => setCallPicker(true)} onGive={() => { setGiftItemsOpen(false); setGiftOpen(true); }}
             onPlay={() => { const solo = Object.keys(life.solo || {}).find(id => !awayFriend(id) && partnerOk(id)); const id = beatIds[0] || solo || ids.find(partnerOk); if (id) setRoomId(id); }}
-            onRoom={setRoomId} onBoard={() => setBoardOpen(true)} onRelView={relView} result={aluResult} onResultClose={() => setAluResult(null)}/>
+            onRoom={setRoomId} onBoard={() => setBoardOpen(true)} onRelView={relView} result={aluResult} onResultClose={() => setAluResult(null)}
+            profileList={typeof AssistantLifeProfilePage === 'function' ? <AssistantLifeProfilePage metIds={metIds} bondLevelOf={bondLevelOf} land={land} onMasmon={setMasmonId} typed/> : null}/>
         ) : land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{tabBody}</div>
