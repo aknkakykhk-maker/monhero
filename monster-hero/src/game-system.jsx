@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e6191babf1ef6a1
+// generated-sha256: dc15a08a0fb2058b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15161,8 +15161,15 @@ const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
 // ヘルプ本文のブロックを描く。ヘルプ画面と助手の詳細で同じ見た目にするため1か所にまとめる
 // ヘルプの文は言葉の切れ目で折る(2026-10-24 窓口「部品を通さずに描いている文の多い画面」の1番目)。
 // 長い段落なので行の長さはそろえず(balance は使わない)、言葉の途中で折らないことだけを守る。文字列でないもの(絵・表の部品)はそのまま
-const helpWrap = (x) => (typeof x === 'string' && typeof jaWrap === 'function'
-  ? <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{jaWrap(x)}</span> : x);
+// 矢印でつないだ切り替わりの順(「OFF → AUTO → ∞ → OFF」)と「∞周回」は1つの塊で出し、途中で折らない
+// (2026-11-22 点検 #7059 HOME の助手の説明「OFF → / AUTO」「その∞ / 周回」と折れて順が読めなかった・r1119-080)
+const HELP_NOWRAP_RE = /((?:[A-Za-z0-9∞]+ → )+[A-Za-z0-9∞]+|∞周回)/;
+const helpWrap = (x) => {
+  if (typeof x !== 'string' || typeof jaWrap !== 'function') return x;
+  const parts = x.split(HELP_NOWRAP_RE);
+  return <span style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>{parts.length === 1 ? jaWrap(x)
+    : parts.map((t, i) => (i % 2 === 1 ? <span key={i} data-help-nowrap style={{ whiteSpace:'nowrap' }}>{t}</span> : <React.Fragment key={i}>{t ? jaWrap(t) : null}</React.Fragment>))}</span>;
+};
 const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
   // その端末で条件を満たした人だけの本文(playerFlag)は、満たしていなければ見出しごと出さない
   if(b&&b.playerFlag&&!(typeof helpPlayerFlagOn==='function'&&helpPlayerFlagOn(b.playerFlag))) return null;
@@ -15469,14 +15476,15 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {oneLine ? <>
             <span className="absolute" style={{ left:'-9px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
             <span className="absolute" style={{ left:'-6px', top:'50%', marginTop:'-7px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-            <span className="shrink-0 text-[9px] font-black tracking-widest" style={{ color }}>{who.name}</span>
+            <span className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</span>
             <span data-bubble-text data-bubble-max-lines={1} className="min-w-0 flex-1 truncate text-[10px] leading-snug text-white" style={{ whiteSpace:'nowrap', textWrap:'nowrap' }}>{text}</span>{/* index.html の text-wrap: balance が折らない指定を上書きするので、ここで直に止める */}
             {hasDetail&&<span data-bubble-more-text aria-hidden="true" className="shrink-0" style={{ color }}><ChevronRight size={12}/></span>}
           </> : <>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
-          <span className={`block font-black tracking-widest ${compact?'text-[9px]':'text-[10px]'}`} style={{ color }}>{who.name}</span>
+          {/* 名前は小さい吹き出しでも 11px(2026-11-22 点検 #7059「みゅあ」が 9px で読めない・r1119-080) */}
+          <span className="block font-black tracking-widest text-[11px]" style={{ color, lineHeight: compact ? '13px' : '15px' }}>{who.name}</span>{/* 行の高さは 9px・10px のときと同じ(吹き出しの高さを変えない。HOME の細いバナーに重なった) */}
           {/* maxLines … セリフをこの行数で切る(0なら切らない)。HOMEは吹き出しの下に施設の札があるので2行まで
               (2026-10-23 社長「MB管理に助手のコメントが被ってくる」)。全文は「タップで詳しく」で開く画面の上に出る */}
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
@@ -15496,28 +15504,36 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           </div>
         </>}
       </div>
-      {open&&(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]" style={{ borderColor:color }}>
-            <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
-              <AssistantFace who={who} size={68} accent={color} expression={face}/>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
-                <div className="text-[12px] text-white leading-relaxed" style={bubbleWrapStyle()}>{bubbleWrap(text)}</div>
+      {open&&(()=>{
+        // 説明の窓(2026-11-22 点検 #7059 HOME の助手の説明・r1119-080)
+        //  ・閉じるは下の大きな1つだけ(右上の小さい「閉じる」と二重だった)
+        //  ・ゲームの器(.mh-app)の直下へ出す。吹き出しの中に置くと、HOME の札に重ねた助手の顔の束が窓より手前に出て本文に重なった
+        //  ・横の低い画面は顔を小さく・セリフを1行・閉じるを細くし、本文の見える高さを広げる。窓は下に余白を空けて真ん中に置く
+        const low = typeof window !== 'undefined' && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+        const sheet = (
+        <div className={`fixed inset-0 flex ${low?'items-center p-2':'items-end'} justify-center`} style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000,...(low?{paddingTop:'max(8px, var(--mh-sa-top))',paddingBottom:'max(8px, var(--mh-sa-bottom))'}:{})}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`} data-assistant-help-sheet>
+          <div className={`w-full ${low?'max-w-2xl rounded-3xl border-2 max-h-full':'max-w-md rounded-t-3xl border-t-2 border-x-2 max-h-[88vh] [[data-mh-view-rotation=true]_&]:max-h-[88vw]'} bg-slate-950 flex flex-col`} style={{ borderColor:color }}>
+            <div className={`shrink-0 flex items-center border-b border-white/10 ${low?'gap-2 px-3 py-1.5':'gap-3 p-4'}`}>
+              <AssistantFace who={who} size={low?32:68} accent={color} expression={face}/>
+              <div className={`flex-1 min-w-0 ${low?'flex items-baseline gap-2':''}`}>
+                <div className="shrink-0 text-[11px] font-black tracking-widest" style={{ color }}>{who.name}</div>
+                <div className={`text-[12px] text-white leading-relaxed ${low?'min-w-0 truncate':''}`} style={low?{whiteSpace:'nowrap'}:bubbleWrapStyle()}>{low?text:bubbleWrap(text)}</div>
               </div>
-              <button onClick={()=>setOpen(false)} className="mh-hit-expand relative shrink-0 px-3 py-2 bg-white/10 rounded-full text-[11px] font-black text-slate-200 active:scale-90">閉じる</button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5">
+            <div className={`flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low?'px-4 py-3':'p-4'}`}>
               {topic
                 ? renderHelpBlocks(topic.blocks, color)
                 : (paragraphs || []).map((x,i)=><p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(x)}</p>)}
             </div>
-            <div className="shrink-0 p-4 pt-2" style={{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
-              <button onClick={()=>setOpen(false)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{ backgroundColor:color }}>閉じる</button>
+            <div className={`shrink-0 ${low?'px-3 py-2':'p-4 pt-2'}`} style={low?undefined:{ paddingBottom:'calc(1rem + var(--mh-sa-bottom))' }}>
+              <button onClick={()=>setOpen(false)} data-assistant-help-close className={`w-full ${low?'min-h-[44px]':'min-h-[48px]'} rounded-2xl font-black text-sm text-black active:scale-[.98]`} style={{ backgroundColor:color }}>閉じる</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>);
+        // 出す先はゲームの器(.mh-app)。モンヒロビートで画面を自前で回しているとき(data-mh-view-rotation)も、窓がいっしょに回る
+        const host = typeof document !== 'undefined' ? document.querySelector('.mh-app') : null;
+        return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && host) ? ReactDOM.createPortal(sheet, host) : sheet;
+      })()}
     </>
   );
 };
@@ -38358,13 +38374,37 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
   // ジャケットを重ねて見せる札で、どちらの版が手前か(札の曲 id → 手前の版の曲 id)。未指定なら持ち主の版が手前
   const [frontBySong, setFrontBySong] = React.useState({});
   // 売り場を離れる(タブを替える・交換所を出る)と、試し聴きを止めて元の BGM へ戻す
-  React.useEffect(() => () => { try { Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
+  // 試し聴きはモンヒロビートで遊ぶときと同じ鳴らし方(音ゲー設定の BGM 音量・曲ごとの音量合わせ)。2026-11-22 社長「試聴の音が遊ぶときの音量と違う」
+  const handleRef = React.useRef(null), resumeKeyRef = React.useRef(null), reqRef = React.useRef(0);
+  const stopListen = () => {
+    ++reqRef.current;
+    const h = handleRef.current; handleRef.current = null;
+    if (h) { try { h.stop(); } catch (_) { /* 止まっている */ } }
+    const key = resumeKeyRef.current; resumeKeyRef.current = null;
+    if (key) { try { Audio_.playBGM(key); } catch (_) { /* 音が無い環境 */ } }
+  };
+  React.useEffect(() => () => { try { stopListen(); Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
   if (!songs.length) return null;
   const toggleListen = async (song) => {
     try {
+      if (playingId === song.songId) { stopListen(); setPlayingId(''); return; }
+      const hadHandle = !!handleRef.current;
+      // 試し聴きの途中(読み込み中の連打も含む)なら、最初に覚えた元のBGMを引き継ぐ
+      const prevKey = resumeKeyRef.current || (Audio_.currentBgmKey ? Audio_.currentBgmKey() : null);
+      if (hadHandle) { const h = handleRef.current; handleRef.current = null; try { h.stop(); } catch (_) { /* 止まっている */ } }
+      const req = ++reqRef.current;
+      resumeKeyRef.current = prevKey || null;
       await Audio_.unlock();
-      const started = await Audio_.previewBGM(song.bgmTrackId);
-      setPlayingId(started ? song.songId : '');
+      // 保存済みの音ゲー設定を読むだけ(書き換えない)。無い・壊れているときは既定値
+      const saved = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
+      const audio = await Audio_.startRhythmTrack(song.bgmTrackId, saved.bgmVolume, { loop: true });
+      if (req !== reqRef.current || !audio) {
+        if (audio) { try { audio.stop(); } catch (_) { /* 止まっている */ } }
+        if (req === reqRef.current) { const key = resumeKeyRef.current; resumeKeyRef.current = null; if (key) Audio_.playBGM(key); setPlayingId(''); }
+        return;
+      }
+      handleRef.current = audio;
+      setPlayingId(song.songId);
     } catch (_) { setPlayingId(''); }
   };
   const anyBundle = songs.some((song) => rhythmSongHasBundle(song.songId));
@@ -86782,6 +86822,8 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
   const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
   const shown = b >= 5 ? s.stats : (ups ? { ...s.stats, [e.d.stat]: s.stats[e.d.stat] - e.d.up } : s.stats);
   const palOn = b >= 3; const pair = b >= 3;
+  // ピーク中はモンスターの後ろに炎が出る。状態だと分かるよう、名札の下に「ピーク中」の札を付ける(育-207)
+  const peakOn = !!(msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && run.s && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in');
   const nx = msxTevNextText(run, o);
   const lastI = steps.length - 1;
   const talk = st && (st.b === 3 || st.b === 4) && !sum ? st : null;
@@ -86794,6 +86836,7 @@ function MsxTrainEvent({ run, o, ctx, at = 0, go = null, onNext = null, style = 
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className={`tev-who me${pair ? ' pair' : ''}`}><div className="gr"/><MsxMonArt run={run} className="tev-art" style={{}} live/>{surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? <span className="tev-bang" aria-hidden="true">!!</span> : null}{b === 2 && surprise ? <span className="tev-q" aria-hidden="true">?</span> : null}</div>
       {m ? <div className={`tev-who pal${palOn ? ' on' : ''}${talk && /影/.test(talk.t) ? ' tsh' : ''}${surprise && b === 3 && steps[i - 1] && steps[i - 1].b === 2 ? ' back' : ''}${b === 6 ? ' bye' : ''}${b === 4 ? ' wag' : ''}`}><div className="gr"/><div className="tev-art">{palImg}</div></div> : null}
+      {peakOn && b >= 2 && b !== 6 ? <span className={`tev-pk${pair ? ' pair' : ''}`} data-msx-tev-peak>🔥 ピーク中</span> : null}
       {pair && b !== 6 ? <><span className="tev-nm me">{run.nick || ''}</span>{m ? <span className={`tev-nm pal${talk && /影/.test(talk.t) ? ' dim' : ''}`}>{name}</span> : null}</> : null}
       {b === 5 && !bk && !calm ? <div className="tev-dust" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ animationDelay: `${k * 0.07}s`, top: `${44 + (k % 3) * 6}%` }}/>)}</div> : null}
       {b >= 2 ? <MsxEvHead kind="team" label={e.story ? `編成のモンスターのイベント その${e.story}` : undefined} title={title}/> : null}
@@ -86904,6 +86947,8 @@ const MSX_TEV_CSS = `
 .msx .msx-tev.bondb .tev-who .tev-art{animation:tevHop .5s .5s ease-out 2 both}
 .msx .msx-tev .tev-nm{position:absolute;bottom:calc(24% - 28px);transform:translateX(-50%);z-index:3;padding:2px 11px;border-radius:999px;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;font-size:12px;font-weight:900;white-space:nowrap;transition:left .6s cubic-bezier(.3,1,.4,1),opacity .5s;animation:tevUp .4s .3s ease-out both}
 .msx .msx-tev .tev-nm.me{left:29%}
+.msx .msx-tev .tev-pk{position:absolute;left:50%;bottom:calc(24% - 30px);transform:translateX(-50%);z-index:3;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#c2410c,#f97316);color:#fff;border:1.5px solid #fde047;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 #0006}
+.msx .msx-tev .tev-pk.pair{left:29%;bottom:calc(24% - 56px)}
 .msx .msx-tev .tev-nm.pal{left:71%;border-color:#a78bfa}
 .msx .msx-tev .tev-nm.dim{opacity:.45}
 .msx .msx-tev .tev-next{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;padding:8px 12px;border-radius:10px;background:#0f0d24d9;color:#e2e8f0;font-size:12.5px;font-weight:800;line-height:1.55;display:flex;gap:8px;align-items:baseline;text-align:left;animation:tevUp .5s ease-out both}
@@ -90728,6 +90773,8 @@ const MSX_CSS = `
 .msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
 .msx .v-pow{display:flex;align-items:center;gap:5px;background:#0f172a;border:1px solid #f472b6aa;border-radius:11px;padding:3px 7px 3px 8px;line-height:1.1}
+.msx button.v-pow{color:inherit;font:inherit;cursor:pointer;min-height:44px;text-align:left}.msx button.v-pow:active{transform:translateY(1px)}
+.msx .msx-stsh-pow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:900;margin:4px 0 8px}.msx .msx-stsh-pow b{font-size:22px;color:#fde047}
 .msx .v-pow small{display:block;font-size:10px;color:#f9a8d4;font-weight:900;white-space:nowrap}
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
@@ -91466,7 +91513,9 @@ const MSX_CSS = `
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
-.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+/* なぞった線は丸の後ろに薄く引く(育-223: 丸の絵や「Lv.2」の札の上を白い線が走り、壊れた表示に見えた) */
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:0;opacity:.4}
+.msx .v-trs > .v-tr{z-index:1}
 .msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
@@ -91788,6 +91837,7 @@ const MSX_CSS = `
 .msx .v-scene.home .msx-roam{position:absolute;inset:0;pointer-events:none;transform-origin:50% 72%;animation:msx-roam-mv 28s linear infinite;will-change:transform}
 .msx .v-scene.home .msx-roam-f{position:absolute;inset:0;transform-origin:50% 72%;animation:msx-roam-fl 28s steps(1,end) infinite}
 .msx .v-scene.home .msx-roam-h{position:absolute;inset:0;animation:msx-roam-hp 28s linear infinite}
+.msx .v-scene.home .msx-roam .v-nm{bottom:calc(var(--mb,25%) - 18px)} /* 手前へ歩いて大きくなっても、名札が場面の下の縁にかからない(育-244) */
 @keyframes msx-roam-mv{0%{transform:translate(0%,0%) scale(1)}10%{transform:translate(24%,0%) scale(1)}14%{transform:translate(24%,0%) scale(1)}15%{transform:translate(24%,0%) scale(1)}26%{transform:translate(-4%,11%) scale(1.2)}30%{transform:translate(-4%,11%) scale(1.2)}31%{transform:translate(-4%,11%) scale(1.2)}40%{transform:translate(-22%,9%) scale(1.15)}41%{transform:translate(-22%,9%) scale(1.15)}52%{transform:translate(-18%,-4%) scale(0.92)}56%{transform:translate(-18%,-4%) scale(0.92)}57%{transform:translate(-18%,-4%) scale(0.92)}68%{transform:translate(20%,-4%) scale(0.92)}72%{transform:translate(20%,-4%) scale(0.92)}73%{transform:translate(20%,-4%) scale(0.92)}88%{transform:translate(0%,0%) scale(1)}92%{transform:translate(0%,0%) scale(1)}93%{transform:translate(0%,0%) scale(1)}100%{transform:translate(0%,0%) scale(1)}}
 @keyframes msx-roam-fl{0%{transform:scaleX(1)}10%{transform:scaleX(1)}14%{transform:scaleX(1)}15%{transform:scaleX(-1)}26%{transform:scaleX(-1)}30%{transform:scaleX(-1)}31%{transform:scaleX(1)}40%{transform:scaleX(1)}41%{transform:scaleX(-1)}52%{transform:scaleX(-1)}56%{transform:scaleX(-1)}57%{transform:scaleX(1)}68%{transform:scaleX(1)}72%{transform:scaleX(1)}73%{transform:scaleX(-1)}88%{transform:scaleX(-1)}92%{transform:scaleX(-1)}93%{transform:scaleX(1)}100%{transform:scaleX(1)}}
 @keyframes msx-roam-hp{0%{transform:translateY(0)}0.5%{transform:translateY(-3.5%)}1.6%{transform:translateY(0)}2.7%{transform:translateY(-3.5%)}3.8%{transform:translateY(0)}4.9%{transform:translateY(-3.5%)}6.0%{transform:translateY(0)}7.1%{transform:translateY(-3.5%)}8.2%{transform:translateY(0)}9.3%{transform:translateY(-3.5%)}10%{transform:translateY(0)}11.1%{transform:translateY(0)}11.5%{transform:translateY(-9%)}12.0%{transform:translateY(0)}12.2%{transform:translateY(0)}12.6%{transform:translateY(-9%)}13.1%{transform:translateY(0)}15.5%{transform:translateY(-3.5%)}16.6%{transform:translateY(0)}17.7%{transform:translateY(-3.5%)}18.8%{transform:translateY(0)}19.9%{transform:translateY(-3.5%)}21.0%{transform:translateY(0)}22.1%{transform:translateY(-3.5%)}23.2%{transform:translateY(0)}24.3%{transform:translateY(-3.5%)}25.4%{transform:translateY(0)}26%{transform:translateY(0)}31.5%{transform:translateY(-3.5%)}32.6%{transform:translateY(0)}33.7%{transform:translateY(-3.5%)}34.8%{transform:translateY(0)}35.9%{transform:translateY(-3.5%)}37.0%{transform:translateY(0)}38.1%{transform:translateY(-3.5%)}39.2%{transform:translateY(0)}40%{transform:translateY(0)}57.5%{transform:translateY(-3.5%)}58.1%{transform:translateY(0)}58.5%{transform:translateY(-9%)}58.6%{transform:translateY(0)}59.0%{transform:translateY(0)}59.2%{transform:translateY(0)}59.6%{transform:translateY(-9%)}59.7%{transform:translateY(-3.5%)}60.1%{transform:translateY(0)}60.8%{transform:translateY(0)}61.9%{transform:translateY(-3.5%)}63.0%{transform:translateY(0)}64.1%{transform:translateY(-3.5%)}65.2%{transform:translateY(0)}66.3%{transform:translateY(-3.5%)}67.4%{transform:translateY(0)}68%{transform:translateY(0)}73.5%{transform:translateY(-3.5%)}74.6%{transform:translateY(0)}75.7%{transform:translateY(-3.5%)}76.8%{transform:translateY(0)}77.9%{transform:translateY(-3.5%)}79.0%{transform:translateY(0)}80.1%{transform:translateY(-3.5%)}81.2%{transform:translateY(0)}82.3%{transform:translateY(-3.5%)}83.4%{transform:translateY(0)}84.5%{transform:translateY(-3.5%)}85.6%{transform:translateY(0)}86.7%{transform:translateY(-3.5%)}87.8%{transform:translateY(0)}88%{transform:translateY(0)}}
@@ -93828,7 +93878,9 @@ const msxTpPow = (rec, mem) => (rec && Number.isFinite(rec.score) ? rec.score : 
 // カードの下の伸びの表示。絵文字だけでは能力が分からないので名前を添え、1つずつ折れないようにする(育-234・前は「🛡️+4% 🎯 ⏎ +3%」と数だけ次の行へ落ちていた)
 const msxTpBonusText = (mem) => {
   if (!(mem && Array.isArray(mem.top) && mem.top.length)) return '';
-  return mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>);
+  // 3つ目からは「ほか◯つ」の印だけ(詳細の窓には全部出る。カードと詳細が食い違って見えないように・育-126)
+  const more = mem.top.length - 2;
+  return [...mem.top.slice(0, 2).map((k, i) => <React.Fragment key={k}>{i ? ' ' : null}<span className="msx-tp-bn">{MSX_STAT_ICON[k]}<span className="n">{MSX_STAT_NAME[k]}</span>+{Math.round((mem.bonus && mem.bonus[k]) || 0)}%</span></React.Fragment>), more > 0 ? <React.Fragment key="more"> <span className="msx-tp-more">ほか{more}つ</span></React.Fragment> : null];
 };
 
 // おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
@@ -94315,6 +94367,7 @@ const msxBandMem = { id: null, loy: 0, pop: 0, dl: 0, dp: 0, tl: 0, tp: 0 };
 const MSX_BAND_DELTA_MS = 2600;
 // hpFrom / stFrom … 休む・遊ぶ・通院の結果で、体力・ストレスの棒を前の値から伸び縮みさせる(2026-11-14 社長「休んだときのゲージの変動がない」)
 function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, gainTag = true }) {
+  const [stOpen, setStOpen] = useState(false); // 総合力の札を押すと6つの能力の窓(育-215: トレーニング以外の画面で今の能力を確かめられなかった)
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax); const hp = Math.max(0, Math.min(max, s.hp));
   const after = Math.max(0, hp - use);
@@ -94343,7 +94396,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
           <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
             <div className="n">残り<b>{v.period.left}</b>ターン</div></div>
         )}
-        <div className="v-pow"><div><small>総合力</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
+        <button type="button" className="v-pow" onClick={() => setStOpen(true)} aria-label="6つの能力を見る" data-msx-band-pow><div><small>総合力 ▸</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></button>
       </div>
       <div className="v-b2">
         <div className={`v-ga hp${after < max * 0.3 ? ' low' : ''}`}><span>❤️ 体力</span>
@@ -94355,6 +94408,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null, g
       </div>
       <div className="v-b3" data-msx-band-loy><span>🤝 忠誠 <b>{loy}</b><small>/100</small>{dTag(M.dl, M.tl)}</span><span>⭐ 人気 <b>{pop}</b>{dTag(M.dp, M.tp)}</span><span>方針 <b>{MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</b></span>
         {(() => { const l = msxLwNow(s); if (!l.length) return null; const x = l[l.length - 1]; return <span className="v-lw" data-msx-band-lw title={l.map((y) => `${msxLwWhy(y.w, true)}: ${msxLwAmt(y)}`).join(' / ')}><small>{(Number(x.t) || 0) < (Number(s.turn) || 0) && (x.w === 'turnHp' || x.w === 'turnLow') ? '前のターン ' : ''}{msxLwWhy(x.w)}で </small>{msxLwAmt(x)}{l.length > 1 ? <small>{` ほか${l.length - 1}`}</small> : null}</span>; })()}</div>
+      {stOpen ? <MsxStatSheet s={s} ev={ev} onClose={() => setStOpen(false)}/> : null}
     </div>
   );
 }
@@ -94464,6 +94518,19 @@ function MsxPartySheet({ s, tagAt, onClose }) {
           {row('aid', <img src={msxFace(s.aid, 'happy')} alt=""/>, msxAidName(s.aid), '助手', Number(s.aidBond) || 0)}
         </div>
         <button type="button" className="msx-dt-close" data-msx-party-close onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
+// 6つの能力の窓(上の帯の総合力の札から開く・育-215)。数と素質の切り替えは毎ターンの能力の札と同じ部品
+function MsxStatSheet({ s, ev, onClose }) {
+  return (
+    <div className="msx-ov msx-fade" data-msx-stat-sheet onClick={onClose}>
+      <div className="msx-sheet msx-dt msx-stsh" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <h3>いまの能力</h3>
+        <div className="msx-stsh-pow">総合力 <b>{msxFmt(ev.power)}</b><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
+        <MsxStRow who={s} stats={s.stats}/>
+        <button type="button" className="msx-dt-close" data-msx-stat-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -95198,7 +95265,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
+        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div>{/* 名札は歩く層に入れて足元に付いて行く(跳ね・向きの反転は受けない・育-244) */}<span className="v-nm">{run.nick}</span></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {/* ヒーローズファイナルの間・期末の大会の当日は、上の帯と大会のボタン・吹き出しに出るので、場面の札は出さない(r1119-033 育-49・再点検 バ-01) */}
           {v.period.key === 'final' || preOn ? null : v.period.left <= 1 ? <span className="v-chip hot" data-msx-cup-soon>🏆 このあと期末の大会</span> : null}
@@ -95207,7 +95274,6 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <MsxYosuChips s={s}/>
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {typeof MsxBuffChips === 'function' ? <MsxBuffChips s={s}/> : null}</div>
-        <span className="v-nm">{run.nick}</span>
       </div>
       {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
       <div className="v-under">
@@ -98007,12 +98073,13 @@ function MsxR3Box({ onClose, fromMb = false }) {
         {!bubOff && !fuseEl ? <div className="mm-bub" onClick={() => setBubOff(true)} role="button" data-msx-mm-bub>{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}<small className="mm-bub-x">タップで閉じる</small></div> : null}</div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
-          <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
+          <span className="e" aria-hidden="true">🐾</span><span className="tx"><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></span></button>
         {typeof MonsucFuseSheet === 'function' ? <button type="button" className="mm-card" onClick={() => setPage('fuse')} disabled={box.mons.length < 2} data-msx-r3-fuse>
-          <span className="e" aria-hidden="true">🧬</span><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></button> : null}
+          <span className="e" aria-hidden="true">🧬</span><span className="tx"><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></span></button> : null}
+        {/* 3つのボタンは同じ形で縦に並べる。メモリアルモンスターの説明は押した先の画面の1行に任せる(育-159) */}
+        <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
+          <span className="e" aria-hidden="true">💠</span><span className="tx"><b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体</small></span></button>
       </div>
-      <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
-        <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
     foot = null; // 戻るは左上の1つ(2026-11-19 r1119-013 ⑥ B-3。下の帯にも同じ「← 戻る」があった)
@@ -98174,6 +98241,13 @@ const MSX_MM_CSS = `
 .msx .mm-asb{grid-column:1/-1;min-height:46px;margin-top:6px;width:100%;flex-direction:column}
 .msx .mm-keep{margin-top:4px;font-size:11px;font-weight:800;color:#c7d2fe;line-height:1.5}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
+/* 入口(育-159): 絵は上に収め、3つのボタンを同じ大きさで縦に(絵文字は左・名前と数は右) */
+.msx .mm-gate .mm-desk{flex:1 1 0;min-height:150px;max-height:52%}
+.msx .mm-gate .mm-cards{grid-template-columns:1fr;gap:8px}
+.msx .mm-gate .mm-card{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:8px 16px;text-align:left}
+.msx .mm-gate .mm-card .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.msx .mm-gate .mm-card small{font-size:12px}
+.msx .mm-gate .mm-asb{margin-top:0}
 .msx .mm-memo{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx .mm-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-tabs button{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #4a4380;font-size:13px;font-weight:900;text-align:center}
@@ -98404,6 +98478,7 @@ span.mcd{cursor:default}
 .mcd .mcd-tag.friend{background:#e11d48}.mcd .mcd-tag.memo{background:#7c3aed}.mcd .mcd-tag.base{background:#475569}.mcd .mcd-tag.box{background:#2563eb}
 .mcd .mcd-num{font-weight:900;font-size:clamp(10px,13cqw,12px);color:#fde68a;line-height:1.1}
 .mcd .mcd-num .msx-tp-bn{display:inline-block;white-space:nowrap}
+.mcd .mcd-num .msx-tp-more{display:inline-block;white-space:nowrap;color:#cbd5e1;font-weight:800}
 .mcd .mcd-num .msx-tp-pw{display:block;white-space:nowrap;color:#e2e8f0}
 /* 狭いカード(320px 幅の5列など)では能力の名前を省き、絵と数だけにする(育-234) */
 .mcd .mcd-num:has(.msx-tp-bn){container-type:inline-size}
@@ -148575,6 +148650,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
           // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
           // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
+          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&String(activeGroup.label||'').includes(p.series)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -148621,7 +148697,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>
                   </div>
-                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5">お話の順に並んでいます。</p>
+                  {/* 「お話の順に並んでいます。」と下の「イベントの一覧へ戻る」は外した(2026-11-22 点検 #7059: 9px で読めない・戻るが二重・r1119-080) */}
+                  <div className="shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5" aria-hidden="true"/>
                   <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
                     {activeGroup.events.map(event=>{
                       const eventUnlocked=isEventReplayUnlocked(event);
@@ -148641,14 +148718,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
                           <Play size={16} className="text-fuchsia-300 shrink-0"/>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[12px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(event.title)}</b>
-                            <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
+                            {/* 行ごとに見出しと同じシリーズ名と「タップして見返す」が並び、話の名前が目立たなかった(2026-11-22 点検 #7059)。続きものは「第1話 ～鎖の箱～」だけを大きく出す */}
+                            <b className="block text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(episodeTitle(event.title))}</b>
+                            {eventReplayDateText(event)&&<small data-event-replay-date className="block text-[10px] tabular-nums text-fuchsia-300/70">{eventReplayDateText(event)}</small>}
                           </span>
                         </button>
                       );
                     })}
                   </div>
-                  <button onClick={()=>setEventReplayGroupId(null)} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">イベントの一覧へ戻る</button>
                 </>
               )}
             </div>
@@ -149642,6 +149719,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   w … 文字の欄の幅(px)・fs … 字の大きさ(px)。かたまりで折れないときは jaWrap の切れ目で、行の長さをそろえて折る
         const storyCenterCap=(w,fs)=>Math.max(4,Math.floor(w/fs-0.2));
         const storyCenter=(text,w,fs)=>{const t=String(text??'');const cap=storyCenterCap(w,fs);const ch=typeof storyChunkLines==='function'?storyChunkLines(t,cap,3):null;return <span style={ch?{...bubbleWrapStyle(),textWrap:'wrap'}:bubbleWrapStyle()}>{storyLineNodes(t,cap)}</span>;};
+        // 字間を広げた題字(「終 わ り」「鍵 の 向 こ う 側 へ」)。最後の字の後ろには字間を付けず、左右の中心をそろえる
+        //   (2026-11-22 点検 #7059 回想の締め「終わり」が左へ 8px ずれて見えた・r1119-080。前は左に字間ぶんの余白を足して合わせていた)
+        const storySpaced=(text)=>{const a=[...String(text??'')];return a.length<2?text:<>{a.slice(0,-1).join('')}<span style={{letterSpacing:0}}>{a[a.length-1]}</span></>;};
         // かたまりで並べるときは、行の長さをそろえる折り方(balance)をやめる(そろえようとして、文の途中で早めに折れていた)
         const storyLineStyle=(text,cap)=>{
           const st=bubbleWrapStyle();
@@ -149805,12 +149885,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
-          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:eventReplay.ending?'none':'auto',zIndex:1,...(eventReplay.ending?{opacity:0,transition:'opacity .5s ease-out'}:{})}}>
+            {/* 締め(終わりの札)のあいだは台詞の窓を消す(2026-11-22 点検 #7059: 半透明の幕ごしに窓の「閉じる」と題が透けて二重に見えた・r1119-080) */}
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{storyTitleNow||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
@@ -149899,7 +149980,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   :<p className="relative inline-block text-[34px] font-black leading-tight" style={{background:'linear-gradient(180deg,#fef3c7,#fbbf24 55%,#b45309)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 14px rgba(251,191,36,.55))'}}>{event.openingLogo.text}</p>}
                   {event.openingLogo.badge&&<span data-story-opening-badge className="ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100">{event.openingLogo.badge}</span>}
                 </div>
-                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
+                :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:'storyEndCard 1s ease-out .2s both'}}>{storySpaced(parts.series)}</p>}
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:'storyEndCard 1s ease-out .9s both'}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
                 {prevParts&&<p data-story-opening-prev className="mt-6 text-[11px] font-bold text-slate-400" style={{animation:'storyEndCard 1s ease-out 1.5s both'}}>{storyCenter(`前回のお話 ${prevParts.ep} ${prevParts.sub}`,Math.min(storyBoxW,384)-48,11)}</p>}
@@ -149920,6 +150001,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))):[];
             const nextEv=parts.serial&&!parts.final?(series[series.findIndex(ev=>ev.id===event.id)+1]||null):null;
             const nextParts=nextEv?storyEpisodeTitleParts(nextEv.title):null;
+            const nextPlay=!!(nextEv&&!eventReplay.live&&!eventReplay.debug&&isEventReplayUnlocked(nextEv));
             // 次が「終章」で、結果で分かれる(終章が2つある)ときは、副題を出さない(どちらになるかを先に見せない)
             if(nextParts&&nextParts.final&&series.filter(ev=>storyEpisodeTitleParts(ev.title).final).length>1) nextParts.sub='';
             const nextAt=nextEv?storyJstMs(nextEv.date):NaN;
@@ -149941,11 +150023,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-story-ending={STORY_ENDING_STYLE} onClick={(e)=>{e.stopPropagation();if(canClose())next();}}
               style={{position:'absolute',inset:0,zIndex:20,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',animation:`storyEndDim .9s ease-out ${delay}s both`}}>
               <div className="w-full max-w-sm px-6 text-center">
-                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{paddingLeft:'.3em',animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{parts.series}</p>
+                <p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:`storyEndCard 1s ease-out ${delay+.2}s both`}}>{storySpaced(parts.series)}</p>
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:`storyEndCard 1s ease-out ${delay+.35}s both`,textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>
                 {parts.sub&&<p className="mt-1 text-[16px] font-black text-fuchsia-100" style={{animation:`storyEndCard 1s ease-out ${delay+.5}s both`}}>{storyCenter(parts.sub,Math.min(storyBoxW,384)-48,16)}</p>}
-                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{paddingLeft:'.4em',animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{parts.final?'おしまい':'終わり'}</p>
-                {rich&&nextEv&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                <p data-story-ending-fin className="mt-5 text-[38px] font-black tracking-[.4em]" style={{animation:`storyEndFin 1.4s ease-out ${delay+.9}s both`,background:'linear-gradient(180deg,#fde68a,#f0abfc)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent'}}>{storySpaced(parts.final?'おしまい':'終わり')}</p>
+                {/* 回想で見ているとき、次のお話をもう見たことがあれば、そのまま次を流す主ボタンにする(2026-11-22 点検 #7059「次のお話」が押せるか分からない・r1119-080)。
+                    本編(live)と、まだ見ていないお話は今までどおり予告の札 */}
+                {rich&&nextPlay&&<button type="button" data-story-ending-play-next onClick={(e)=>{e.stopPropagation();const fromList=!!eventReplay.fromList;next();setEventReplay({id:nextEv.id,step:0,fromList});setShowEventReplayList(false);}}
+                  className="mt-5 min-h-[56px] w-full rounded-2xl bg-fuchsia-500 px-3 py-2 text-slate-950 active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
+                  <span className="block text-[15px] font-black">▶ {nextParts.ep}を見る</span>
+                  {nextParts.sub&&<span className="block text-[12px] font-black">{storyCenter(nextParts.sub,Math.min(storyBoxW,384)-80,12)}</span>}
+                </button>}
+                {rich&&nextEv&&!nextPlay&&<div data-story-ending-next className="mx-auto mt-5 rounded-2xl border border-fuchsia-300/40 bg-slate-900/80 px-3 py-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>
                   <p className="text-[11px] font-black text-fuchsia-200">次のお話</p>
                   <p className="text-[14px] font-black text-white">{storyCenter(`${nextParts.series&&nextParts.series!==parts.series?`${nextParts.series} `:''}${nextParts.ep} ${nextParts.sub}`,Math.min(storyBoxW,384)-80,14)}</p>
                   {/* 残り時間は本編(HOME で流れたとき)だけ。回想では題名だけ(2026-11-03 社長) */}
@@ -149964,7 +150053,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
                   <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
                 </div>}
-                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className="mt-4 min-h-[48px] w-full rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
+                <button type="button" data-story-ending-close onClick={(e)=>{e.stopPropagation();next();}} className={`mt-4 w-full rounded-2xl text-sm font-black active:scale-[.98] ${nextPlay?'min-h-[44px] border border-white/20 bg-slate-900 text-slate-200':'min-h-[48px] bg-slate-700 text-white'}`} style={{animation:`storyEndCard 1s ease-out ${delay+(rich?2:1.4)}s both`}}>閉じる</button>
               </div>
             </div>);
           })()}
