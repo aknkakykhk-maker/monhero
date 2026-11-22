@@ -275,22 +275,14 @@ function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
 }
 
 function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
-  // 大きさの釣り合い(2026-11-22 社長「寝顔はききだけじゃなくて全部だめ」「サイズ感も合ってない」): ベッドの長さ=寝ている体の長さ=頭の長さ(Lh)の4つぶん。
-  //   頭・枕・布団・ベッドは全部この1つの単位 U(=Lh/1.32・立ち絵と同じ顔の単位)から決める。頭は枕の上に収め、布団は顎から右へ・体の厚みくらいの低さで掛ける
-  // 釣り合いの案を比べる止め絵のためだけの印(tools/assistant/life-house-typed-shoot.js --bedtry)。社長が選んだら既定の数に焼き込み、この印は外す
-  const T = (typeof window !== 'undefined' && window.__mhAssistantLifeBedTry) || {};
-  const base = Math.min(W * 0.86, 360);
-  const Lh = base / (T.headDiv || 4.6), bw = Math.min(base, Lh * (T.bedHeads || 4.6)), left = W / 2 - bw / 2;
-  const BU = Lh / 1.32; // 頭の長さ(倒した頭の横の長さ)と単位。体はベッドいっぱい=頭4.6個ぶん(2026-11-22 社長「顔だけ浮いてない？」で頭を少し小さく)
-  const bottom = floorY + Math.round(0.55 * BU), mattTop = bottom - Math.round(0.6 * BU);
+  const bw = Math.min(W * 0.8, 340), left = W / 2 - bw / 2, bottom = floorY + 58, mattTop = bottom - 50;
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
-  const pillow = { left: left + 0.26 * BU, top: mattTop - 0.42 * BU, w: Lh * 1.2, h: 0.52 * BU };
-  const headCy = pillow.top + pillow.h * 0.82 - (BU * 1.2) / 2; // 倒した頭の真ん中。頭の下側を枕に沈める(枕より上に浮かせない)
+  const pillow = { left: left + 22, top: mattTop - 20, w: Math.min(110, bw * 0.34), h: 36 };
   const [boxes, setBoxes] = React.useState({});
   const items = sleepers.map(pid => { const a = assistantById(pid); if (!a) return null; const src = assistantLifeSleepSrc(pid, assistantFullImage(a, 'normal')); return { pid, who: a, src, face: assistantLifeRoomFaceOf(pid, src) }; }).filter(Boolean);
   const key = items.map(x => x.src).join('|');
   React.useEffect(() => { let alive = true; Promise.all(items.map(x => (typeof assistantLifeStandBox === 'function' ? assistantLifeStandBox(x.src) : Promise.resolve(null)))).then(bs => { if (!alive) return; const o = {}; items.forEach((x, i) => { o[x.src] = bs[i] || { t: 0, b: 1, l: 0, r: 1, ar: 0.7 }; }); setBoxes(o); }); return () => { alive = false; }; }, [key]);
-  const F = BU / 2.63; // 顔の大きさ(m=1 の人の目から顎)。ベッドの大きさから決める(U0(F) = BU)
+  const F = Math.min(30, W * 0.078); // 顔の大きさ(m=1 の人の目から顎)。閉じた目が見える大きさ
   const night = look === 'night';
   return (
     <div aria-hidden="true" data-assistant-life-roomview-front="bed" className="pointer-events-none absolute inset-0">
@@ -298,11 +290,11 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
       <span style={{ position: 'absolute', left: left - 6, top: bottom - 6, width: bw + 12, height: 18, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)' }}/>
       {[left + 8, left + bw - 20].map((x, i) => <span key={i} style={{ position: 'absolute', left: x, top: bottom - 14, width: 12, height: 16, borderRadius: 3, background: '#5c3a1f' }}/>)}
       {/* 頭板(左)と足板(右) */}
-      <span style={{ position: 'absolute', left, top: mattTop - 0.95 * BU, width: 0.2 * BU, height: bottom - mattTop + 0.95 * BU, borderRadius: '9px 9px 3px 3px', background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)', boxShadow: '2px 0 4px #0004' }}/>
-      <span style={{ position: 'absolute', left: left + bw - 0.18 * BU, top: mattTop - 0.3 * BU, width: 0.18 * BU, height: bottom - mattTop + 0.3 * BU, borderRadius: '8px 8px 3px 3px', background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)' }}/>
+      <span style={{ position: 'absolute', left, top: mattTop - 64, width: 18, height: 118, borderRadius: '9px 9px 3px 3px', background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)', boxShadow: '2px 0 4px #0004' }}/>
+      <span style={{ position: 'absolute', left: left + bw - 16, top: mattTop - 22, width: 16, height: 76, borderRadius: '8px 8px 3px 3px', background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)' }}/>
       {/* 敷き布団の台 */}
-      <span style={{ position: 'absolute', left: left + 0.16 * BU, top: mattTop + 0.24 * BU, width: bw - 0.32 * BU, height: 0.3 * BU, borderRadius: 4, background: 'linear-gradient(#8a5a33,#6b4426)' }}/>
-      <span style={{ position: 'absolute', left: left + 0.16 * BU, top: mattTop, width: bw - 0.32 * BU, height: 0.26 * BU, borderRadius: 6, background: '#f8fafc' }}/>
+      <span style={{ position: 'absolute', left: left + 14, top: mattTop + 18, width: bw - 26, height: 26, borderRadius: 4, background: 'linear-gradient(#8a5a33,#6b4426)' }}/>
+      <span style={{ position: 'absolute', left: left + 14, top: mattTop + 2, width: bw - 26, height: 20, borderRadius: 6, background: '#f8fafc' }}/>
       {/* 枕 */}
       <span data-assistant-life-roomview-pillow style={{ position: 'absolute', left: pillow.left, top: pillow.top, width: pillow.w, height: pillow.h, borderRadius: 16, background: 'linear-gradient(#ffffff,#e2e8f0)', boxShadow: 'inset 0 -4px 0 #cbd5e1, 0 2px 3px #0003' }}/>
       {/* 眼鏡の人が寝ているときは、頭板の横の小さな台に外した眼鏡を置く(2026-11-11 社長) */}
@@ -323,7 +315,7 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         //   上へ 0.38U・左右へ 0.18U ずつ広げ、枠の縁を広く薄く消す(広げすぎると絵の髪・羽まで出て頭が大きく見える・2026-11-15 社長)。頭の位置は変えない(広げた分だけ枠の中心をずらす)
         const ex = 0.38 * U, ey = 0.18 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
         // 倒すと縦横が入れかわる(見た目の幅 ch・高さ cw)。頭の後ろを枕の左端に、下端を枕の6割の高さに沈める
-        const cx = pillow.left + ch0 / 2 + Lh * 0.06 + i * 14 - ex / 2, cy = headCy - i * 6; // 頭の下側を枕に沈め、頭の左右は枕の中
+        const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2, cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
         const fadeAt = `${(((0.82 * ch0 + ex) / ch) * 100).toFixed(1)}%`; // 顎の側(布団の側)の消え始めは、これまでと同じ位置
         const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
         const imgLeft = r.left + cw / 2;
@@ -341,25 +333,24 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
-        const U = U0(F), ch = U * 1.32;
-        // 顎の少し手前(首の消えている所)から右へ掛ける。頭・顔にはかぶせない(2026-11-22 社長「頭が枕からはみ出して布団の左端に重なる」)
-        //   → 2026-11-22 社長「顔だけ浮いてない？」: 首とあごの下は布団の中。布団の上端(左の端)を頭の真ん中の少し下まで上げ、首・あごの下・絵の切れ目を覆う。
-        //     顔(目・口)には かぶせない。そこから胸・腰・ひざ・足先へ低く下がる(壁のように立てない)
-        const qx = items.length ? pillow.left + Lh * 0.06 + ch * 0.72 : pillow.left + pillow.w * 0.9;
-        const qTop = items.length ? headCy + U * 1.2 * (Number.isFinite(T.quiltDrop) ? T.quiltDrop : 0.04) : mattTop - 0.5 * U;
-        const qw = Math.max(60, left + bw - 0.16 * U - qx), qh = Math.max(30, mattTop + 0.42 * U - qTop);
+        const U = U0(F), ch = U * 1.32, cw = U * 1.2;
+        const headLeft = pillow.left + 2, cy = pillow.top + pillow.h * 0.6 - cw / 2;
+        const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62; // 閉じた目が見える所から右(顎の側)を覆う(2026-11-08 社長「目を閉じる」)
+        // 胴体(胸〜腰)がいちばん高く、腰で少し下がり、ひざの山・すねで下がり・足先でまたふくらむ(2026-11-08 社長「足の方とか胴体分を意識して膨らませたい」)
+        const qTop = items.length ? cy - cw * 0.42 : mattTop - 30; // 胴体のいちばん高い所は頭の上の端くらい
+        const qw = Math.max(60, left + bw - 14 - qx), qh = Math.max(50, mattTop + 34 - qTop);
         const pid = `mhlq-${id}`;
         const X = (r) => (qw * r).toFixed(1), Y = (r) => (qh * r).toFixed(1);
-        // 肩(首を覆う所)がいちばん高く、胸から腰へ下がり、ひざで少しふくらみ、すね・足先は低い
-        const d = `M0,${qh} L0,${Y(0.16)} Q0,${Y(0.0)} ${X(0.05)},${Y(0.0)}`
-          + ` C${X(0.14)},${Y(0.0)} ${X(0.2)},${Y(0.1)} ${X(0.28)},${Y(0.3)}`      // 肩から胸へ下がる
-          + ` C${X(0.36)},${Y(0.46)} ${X(0.46)},${Y(0.48)} ${X(0.54)},${Y(0.5)}`   // 腰
-          + ` C${X(0.62)},${Y(0.52)} ${X(0.66)},${Y(0.4)} ${X(0.72)},${Y(0.42)}`   // ひざの山
-          + ` C${X(0.8)},${Y(0.45)} ${X(0.86)},${Y(0.58)} ${X(0.92)},${Y(0.54)}`   // すね
-          + ` C${X(0.96)},${Y(0.5)} ${X(1.0)},${Y(0.52)} ${X(1.0)},${Y(0.62)}`     // 足先
-          + ` L${qw},${qh} Z`;
+        const d = `M0,${qh} L0,${Y(0.42)} Q0,${Y(0.3)} ${X(0.05)},${Y(0.28)}`
+          + ` C${X(0.1)},${Y(0.26)} ${X(0.12)},${Y(0.06)} ${X(0.22)},${Y(0.02)}`   // 肩から胸へ
+          + ` C${X(0.32)},${Y(-0.01)} ${X(0.4)},${Y(0.04)} ${X(0.46)},${Y(0.16)}`  // 胸〜腰のいちばん高いふくらみ
+          + ` C${X(0.5)},${Y(0.24)} ${X(0.54)},${Y(0.26)} ${X(0.58)},${Y(0.22)}`   // 腰のくぼみ
+          + ` C${X(0.64)},${Y(0.12)} ${X(0.7)},${Y(0.1)} ${X(0.75)},${Y(0.18)}`    // ひざの山
+          + ` C${X(0.79)},${Y(0.26)} ${X(0.83)},${Y(0.34)} ${X(0.87)},${Y(0.3)}`   // すね
+          + ` C${X(0.9)},${Y(0.18)} ${X(0.96)},${Y(0.14)} ${X(0.99)},${Y(0.3)}`    // 足先のふくらみ
+          + ` L${qw},${Y(0.62)} L${qw},${qh} Z`;
         // しわ(くぼみから下へ流れる影)
-        const folds = [[0.5, 0.5, 0.48, 0.85], [0.84, 0.56, 0.85, 0.9], [0.66, 0.44, 0.7, 0.8], [0.16, 0.08, 0.14, 0.55]];
+        const folds = [[0.5, 0.24, 0.47, 0.75], [0.8, 0.3, 0.82, 0.8], [0.6, 0.2, 0.66, 0.6], [0.2, 0.06, 0.16, 0.5]];
         return (
           <svg data-assistant-life-roomview-quilt width={qw} height={qh} viewBox={`0 0 ${qw} ${qh}`} style={{ position: 'absolute', left: qx, top: qTop, overflow: 'visible', filter: 'drop-shadow(0 4px 5px #0006)' }}>
             <defs>
@@ -370,12 +361,12 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
             <path d={d} fill={`url(#${pid}-s)`}/>
             {folds.map(([x1, y1, x2, y2], i) => <path key={i} d={`M${X(x1)},${Y(y1)} Q${X((x1 + x2) / 2 + 0.02)},${Y((y1 + y2) / 2)} ${X(x2)},${Y(y2)}`} fill="none" stroke="#000" strokeOpacity=".16" strokeWidth="3" strokeLinecap="round"/>)}
             {/* ふくらみの上の光 */}
-            <path d={`M${X(0.06)},${Y(0.04)} C${X(0.12)},${Y(0.02)} ${X(0.18)},${Y(0.08)} ${X(0.22)},${Y(0.18)}`} fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round"/>
-            <path d={`M${X(0.66)},${Y(0.45)} C${X(0.69)},${Y(0.42)} ${X(0.72)},${Y(0.42)} ${X(0.75)},${Y(0.45)}`} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d={`M${X(0.18)},${Y(0.07)} C${X(0.26)},${Y(0.02)} ${X(0.36)},${Y(0.03)} ${X(0.42)},${Y(0.1)}`} fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round"/>
+            <path d={`M${X(0.66)},${Y(0.15)} C${X(0.69)},${Y(0.12)} ${X(0.72)},${Y(0.13)} ${X(0.74)},${Y(0.17)}`} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth="2.5" strokeLinecap="round"/>
             {/* 顔の側の折り返し */}
-            <path d={`M3,${qh} L3,${Y(0.16)} Q3,${Y(0.03)} ${X(0.05)},${Y(0.03)}`} fill="none" stroke="#ffffff" strokeOpacity=".85" strokeWidth="9" strokeLinecap="round"/>
+            <path d={`M3,${qh} L3,${Y(0.42)} Q3,${Y(0.31)} ${X(0.05)},${Y(0.3)}`} fill="none" stroke="#ffffff" strokeOpacity=".85" strokeWidth="9" strokeLinecap="round"/>
           </svg>); })()}
-      {items.length > 0 && <span style={{ position: 'absolute', left: pillow.left + pillow.w * 0.3, top: pillow.top - BU * 1.25, fontSize: 22 }}>💤</span>}
+      {items.length > 0 && <span style={{ position: 'absolute', left: pillow.left + pillow.w * 0.3, top: pillow.top - U0(F) * 1.2, fontSize: 22 }}>💤</span>}
     </div>);
 }
 const U0 = (F) => F * 2.63;

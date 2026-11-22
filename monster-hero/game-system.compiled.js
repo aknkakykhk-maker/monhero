@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8bdaa2dc015516be
+// source-sha256: 46cf31d0ecf3434a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122788,22 +122788,17 @@ function AssistantLifeRoomBed({
   sleepers = [],
   look
 }) {
-  const T = typeof window !== 'undefined' && window.__mhAssistantLifeBedTry || {};
-  const base = Math.min(W * 0.86, 360);
-  const Lh = base / (T.headDiv || 4.6),
-    bw = Math.min(base, Lh * (T.bedHeads || 4.6)),
-    left = W / 2 - bw / 2;
-  const BU = Lh / 1.32;
-  const bottom = floorY + Math.round(0.55 * BU),
-    mattTop = bottom - Math.round(0.6 * BU);
+  const bw = Math.min(W * 0.8, 340),
+    left = W / 2 - bw / 2,
+    bottom = floorY + 58,
+    mattTop = bottom - 50;
   const quilt = ASSISTANT_LIFE_ROOM_QUILT[id] || ASSISTANT_LIFE_ROOM_QUILT.mua;
   const pillow = {
-    left: left + 0.26 * BU,
-    top: mattTop - 0.42 * BU,
-    w: Lh * 1.2,
-    h: 0.52 * BU
+    left: left + 22,
+    top: mattTop - 20,
+    w: Math.min(110, bw * 0.34),
+    h: 36
   };
-  const headCy = pillow.top + pillow.h * 0.82 - BU * 1.2 / 2;
   const [boxes, setBoxes] = React.useState({});
   const items = sleepers.map(pid => {
     const a = assistantById(pid);
@@ -122837,7 +122832,7 @@ function AssistantLifeRoomBed({
       alive = false;
     };
   }, [key]);
-  const F = BU / 2.63;
+  const F = Math.min(30, W * 0.078);
   const night = look === 'night';
   return React.createElement("div", {
     "aria-hidden": "true",
@@ -122868,9 +122863,9 @@ function AssistantLifeRoomBed({
     style: {
       position: 'absolute',
       left,
-      top: mattTop - 0.95 * BU,
-      width: 0.2 * BU,
-      height: bottom - mattTop + 0.95 * BU,
+      top: mattTop - 64,
+      width: 18,
+      height: 118,
       borderRadius: '9px 9px 3px 3px',
       background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)',
       boxShadow: '2px 0 4px #0004'
@@ -122878,30 +122873,30 @@ function AssistantLifeRoomBed({
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + bw - 0.18 * BU,
-      top: mattTop - 0.3 * BU,
-      width: 0.18 * BU,
-      height: bottom - mattTop + 0.3 * BU,
+      left: left + bw - 16,
+      top: mattTop - 22,
+      width: 16,
+      height: 76,
       borderRadius: '8px 8px 3px 3px',
       background: 'linear-gradient(90deg,#a06a3c,#7a4a2a)'
     }
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + 0.16 * BU,
-      top: mattTop + 0.24 * BU,
-      width: bw - 0.32 * BU,
-      height: 0.3 * BU,
+      left: left + 14,
+      top: mattTop + 18,
+      width: bw - 26,
+      height: 26,
       borderRadius: 4,
       background: 'linear-gradient(#8a5a33,#6b4426)'
     }
   }), React.createElement("span", {
     style: {
       position: 'absolute',
-      left: left + 0.16 * BU,
-      top: mattTop,
-      width: bw - 0.32 * BU,
-      height: 0.26 * BU,
+      left: left + 14,
+      top: mattTop + 2,
+      width: bw - 26,
+      height: 20,
       borderRadius: 6,
       background: '#f8fafc'
     }
@@ -122980,8 +122975,8 @@ function AssistantLifeRoomBed({
       cw = cw0 + ey * 2,
       ch = ch0 + ex,
       y0 = -0.22 * U - ex;
-    const cx = pillow.left + ch0 / 2 + Lh * 0.06 + i * 14 - ex / 2,
-      cy = headCy - i * 6;
+    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
+      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
     const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
     const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
     const imgLeft = r.left + cw / 2;
@@ -123037,16 +123032,19 @@ function AssistantLifeRoomBed({
     }));
   }), (() => {
     const U = U0(F),
-      ch = U * 1.32;
-    const qx = items.length ? pillow.left + Lh * 0.06 + ch * 0.72 : pillow.left + pillow.w * 0.9;
-    const qTop = items.length ? headCy + U * 1.2 * (Number.isFinite(T.quiltDrop) ? T.quiltDrop : 0.04) : mattTop - 0.5 * U;
-    const qw = Math.max(60, left + bw - 0.16 * U - qx),
-      qh = Math.max(30, mattTop + 0.42 * U - qTop);
+      ch = U * 1.32,
+      cw = U * 1.2;
+    const headLeft = pillow.left + 2,
+      cy = pillow.top + pillow.h * 0.6 - cw / 2;
+    const qx = items.length ? headLeft + 1.0 * U : pillow.left + pillow.w * 0.62;
+    const qTop = items.length ? cy - cw * 0.42 : mattTop - 30;
+    const qw = Math.max(60, left + bw - 14 - qx),
+      qh = Math.max(50, mattTop + 34 - qTop);
     const pid = `mhlq-${id}`;
     const X = r => (qw * r).toFixed(1),
       Y = r => (qh * r).toFixed(1);
-    const d = `M0,${qh} L0,${Y(0.16)} Q0,${Y(0.0)} ${X(0.05)},${Y(0.0)}` + ` C${X(0.14)},${Y(0.0)} ${X(0.2)},${Y(0.1)} ${X(0.28)},${Y(0.3)}` + ` C${X(0.36)},${Y(0.46)} ${X(0.46)},${Y(0.48)} ${X(0.54)},${Y(0.5)}` + ` C${X(0.62)},${Y(0.52)} ${X(0.66)},${Y(0.4)} ${X(0.72)},${Y(0.42)}` + ` C${X(0.8)},${Y(0.45)} ${X(0.86)},${Y(0.58)} ${X(0.92)},${Y(0.54)}` + ` C${X(0.96)},${Y(0.5)} ${X(1.0)},${Y(0.52)} ${X(1.0)},${Y(0.62)}` + ` L${qw},${qh} Z`;
-    const folds = [[0.5, 0.5, 0.48, 0.85], [0.84, 0.56, 0.85, 0.9], [0.66, 0.44, 0.7, 0.8], [0.16, 0.08, 0.14, 0.55]];
+    const d = `M0,${qh} L0,${Y(0.42)} Q0,${Y(0.3)} ${X(0.05)},${Y(0.28)}` + ` C${X(0.1)},${Y(0.26)} ${X(0.12)},${Y(0.06)} ${X(0.22)},${Y(0.02)}` + ` C${X(0.32)},${Y(-0.01)} ${X(0.4)},${Y(0.04)} ${X(0.46)},${Y(0.16)}` + ` C${X(0.5)},${Y(0.24)} ${X(0.54)},${Y(0.26)} ${X(0.58)},${Y(0.22)}` + ` C${X(0.64)},${Y(0.12)} ${X(0.7)},${Y(0.1)} ${X(0.75)},${Y(0.18)}` + ` C${X(0.79)},${Y(0.26)} ${X(0.83)},${Y(0.34)} ${X(0.87)},${Y(0.3)}` + ` C${X(0.9)},${Y(0.18)} ${X(0.96)},${Y(0.14)} ${X(0.99)},${Y(0.3)}` + ` L${qw},${Y(0.62)} L${qw},${qh} Z`;
+    const folds = [[0.5, 0.24, 0.47, 0.75], [0.8, 0.3, 0.82, 0.8], [0.6, 0.2, 0.66, 0.6], [0.2, 0.06, 0.16, 0.5]];
     return React.createElement("svg", {
       "data-assistant-life-roomview-quilt": true,
       width: qw,
@@ -123111,21 +123109,21 @@ function AssistantLifeRoomBed({
       strokeWidth: "3",
       strokeLinecap: "round"
     })), React.createElement("path", {
-      d: `M${X(0.06)},${Y(0.04)} C${X(0.12)},${Y(0.02)} ${X(0.18)},${Y(0.08)} ${X(0.22)},${Y(0.18)}`,
+      d: `M${X(0.18)},${Y(0.07)} C${X(0.26)},${Y(0.02)} ${X(0.36)},${Y(0.03)} ${X(0.42)},${Y(0.1)}`,
       fill: "none",
       stroke: "#fff",
       strokeOpacity: ".5",
       strokeWidth: "3",
       strokeLinecap: "round"
     }), React.createElement("path", {
-      d: `M${X(0.66)},${Y(0.45)} C${X(0.69)},${Y(0.42)} ${X(0.72)},${Y(0.42)} ${X(0.75)},${Y(0.45)}`,
+      d: `M${X(0.66)},${Y(0.15)} C${X(0.69)},${Y(0.12)} ${X(0.72)},${Y(0.13)} ${X(0.74)},${Y(0.17)}`,
       fill: "none",
       stroke: "#fff",
       strokeOpacity: ".45",
       strokeWidth: "2.5",
       strokeLinecap: "round"
     }), React.createElement("path", {
-      d: `M3,${qh} L3,${Y(0.16)} Q3,${Y(0.03)} ${X(0.05)},${Y(0.03)}`,
+      d: `M3,${qh} L3,${Y(0.42)} Q3,${Y(0.31)} ${X(0.05)},${Y(0.3)}`,
       fill: "none",
       stroke: "#ffffff",
       strokeOpacity: ".85",
@@ -123136,7 +123134,7 @@ function AssistantLifeRoomBed({
     style: {
       position: 'absolute',
       left: pillow.left + pillow.w * 0.3,
-      top: pillow.top - BU * 1.25,
+      top: pillow.top - U0(F) * 1.2,
       fontSize: 22
     }
   }, "💤"));
