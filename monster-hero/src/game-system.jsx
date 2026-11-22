@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 69ac6312ee3ca96b
+// generated-sha256: 3fd4916b8919c52f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38373,7 +38373,8 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
     try {
       if (playingId === song.songId) { stopListen(); setPlayingId(''); return; }
       const hadHandle = !!handleRef.current;
-      const prevKey = hadHandle ? resumeKeyRef.current : (Audio_.currentBgmKey ? Audio_.currentBgmKey() : null);
+      // 試し聴きの途中(読み込み中の連打も含む)なら、最初に覚えた元のBGMを引き継ぐ
+      const prevKey = resumeKeyRef.current || (Audio_.currentBgmKey ? Audio_.currentBgmKey() : null);
       if (hadHandle) { const h = handleRef.current; handleRef.current = null; try { h.stop(); } catch (_) { /* 止まっている */ } }
       const req = ++reqRef.current;
       resumeKeyRef.current = prevKey || null;
