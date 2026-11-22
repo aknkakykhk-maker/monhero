@@ -44,6 +44,8 @@
 
 ## 手で書く所(ここだけ人が書く。無ければ「なし」)
 
+- **追記(11/22 夕方・段9と急ぎの直しのあと)**: ①上の帯の切り欠き(#7180)と社長の iPhone の部屋の崩れ2〜6(#7181)は公開済み(r1119-098。止め絵と見逃した理由 `docs/progress/assistant-life/room-shacho-2026-11-22/README.md`)。撮影は今後 `life-house-typed-shoot.js --notch`(切り欠き 上47・下34)・`--short-bottom 48`(器が下の端まで届かない iPhone のホーム画面のアプリ)でも撮る ②段9(町・案A r1119-097)は **PR #7184 でミハリの確認待ち**(gate「要る」は更新履歴のため)。部品 `56-assistant-life-map.jsx` の `AssistantLifeTownTyped`(地図は `AssistantLifeTownMap` の `typedBox`)・止め絵 `docs/progress/assistant-life/step9-town/README.md` ③段7の更新履歴 PR #7171 もミハリの確認待ち ④**次は段10(友情: 喧嘩を rel の1つに・台本を data/ へ・大)**。新しい会話で始める ⑤残り: 町の「見る」の場所の窓の中は前の部品(1人の行に5つのボタン)・横の地図の「助手ライフ」の札が横に伸びてクリックをふさぐ(HOME の CSS・main でも `assistant-life-map-check` の横⑤が NG)・歩く点検の段7からの3件(声をかける・贈る・道具に届かない) ⑥「戻る」が押せないときの別の出口: Safari・Chrome はブラウザの戻る(左端のスワイプ)で画面の戻るが押される。iPhone のホーム画面のアプリは履歴を足さないので無い
+
 - **追記(11/22 夕・段7の残り)**: 段8(#7155)はミハリがマージ済み。段7の残り3つ(家の絵の中の札の字を11pxに・7日のごほうびと予定を型の行に・「❓ 見かた」を型の窓にして家の一番下から開き直せる)は #7163 でマージ・公開済み(gate 要らない)。止め絵と突き合わせ表 `docs/progress/assistant-life/step7-house/README.md`。測る道具 `life-ui-shoot.js` の measure に `withScene`(絵の中の字も数える・家の撮影は既定で数える・部屋の撮影は数えない)。**次は段9(町 `-map`)**: 仕様書 §8 の表は「得を2種類・下のタブ」だけで、段7のような案(step9-plan.md)と社長の選択がまだ無い → 先に案を作り窓口経由で社長に選んでもらう。更新履歴は #7163 の分を窓口に文案で渡した(まだ changelog.js に入れていない)
 
 - やりかけ(どのファイルのどこまで・次の1手): 段8(部屋を型に載せる)は PR #7155(枝 `claude/assistant-life-step8-room`)でミハリの確認待ち(gate「要る」)。部品は `56-assistant-life-house-typed.jsx` の `AssistantLifeRoomTyped`、呼ぶ所は `56-assistant-life-house.jsx` の `AssistantLifeRoomSheet` の「段8:」の枝。止め絵 `docs/progress/assistant-life/step8-room/`。**次は段7の残り**(家の絵の中の札の字 8.5〜10.5px・「📅 予定」「🧺 7日のごほうび」を開いた中身が前の部品・「❓ 見かた」を家から開き直せない)→ 段9(町 `-map`)。段8の残り: 「📖 ◯◯のこと」は段12で・喧嘩の札/施設の得/家具の窓は前の部品の字のまま(段10・13)
