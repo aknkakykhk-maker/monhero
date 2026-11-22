@@ -1,0 +1,8 @@
+listen:desert_crown | mua excited 1:07からいちばん強いの！ 最後までずっと全開なのー♪
+listen:desert_crown | kiki normal 頭の静かなところ、砂の上をゆっくり歩くみたいできれいでつ
+listen:desert_crown | momosuke excited 1:07と2:02がいちばん強いよ♡ 後半はずっと最高潮だよ♡
+listen:desert_crown | dra happy BPM100でじっくり進む旅だな。2分半、砂漠を越えるぞ
+listen:desert_crown | atsu happy 2:02からもう一回いちばん強くなって、そのまま締めるのいいね
+listen:desert_crown | kyuko happy 静か→ふつう→強めって少しずつ上がって、1:07で爆発する構成なんだよね〜
+listen:desert_crown | sorashido normal BPM100です。強く打つ音が40%・・・！ どっしりした音です
+listen:desert_crown | erubin normal 始まりの静かなところ、落ち着いて入っていけるね

@@ -1001,6 +1001,28 @@
       "決めごと": "モンヒロビートの演奏画面の直しと新曲の追加のたびに、重さ(止まり)の検査を回す",
       "守らせ方": "人が守る",
       "理由": "検査の道具はこれからビート部が作る。できたら run-checks に入れて『道具』へ移す"
+    },
+    {
+      "id": "hq-no-approval-wait",
+      "台帳": {
+        "日付": "2026-11-22",
+        "ことば": "部は何個もあって定期的に変わるのに毎回オレがやるの？"
+      },
+      "決めごと": "窓口の会話は「自動」モード。部の会話は create_session に permission_mode auto を付けて作る(newsession の出力に出る)。許可の画面や答え待ちを理由に作業を止めない",
+      "守らせ方": "道具",
+      "理由": "r1119-086: 予約で届ける道にも許可の画面が出た。会話を「自動」にすれば出ない。newsession.js が permission_mode: auto を出す",
+      "仕組み": [
+        "tools/team/newsession.js"
+      ],
+      "動き": [
+        "newsession の出力に permission_mode: auto が出る"
+      ],
+      "要る": [
+        {
+          "どこ": "tools/team/newsession.js",
+          "語": "permission_mode: auto"
+        }
+      ]
     }
   ]
 }
