@@ -18,7 +18,7 @@ const MONSTER_STAGE_SIZE = Object.freeze({
   Monol: 1.4, Golem: 1.45,
 });
 // 大きさ1の子の中身の高さ = 絵の枠の高さ × これ(大きい子が枠の上へ少し出る余地を残す)。中身の幅は枠の幅 × MONSTER_STAGE_MAX_W まで
-const MONSTER_STAGE_REF = 0.8;
+const MONSTER_STAGE_REF = 1;   // 2026-11-21 社長「モンスターが小さい」: 0.8 → 1(ふつうの子が #7092 より前の大きさ以上に。比はそのまま)
 const MONSTER_STAGE_MAX_W = 1.5;
 const monsterStageSizeOf = (id) => {
   const v = id && Object.prototype.hasOwnProperty.call(MONSTER_STAGE_SIZE, id) ? Number(MONSTER_STAGE_SIZE[id]) : 1;
