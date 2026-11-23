@@ -27,6 +27,9 @@ fs.mkdirSync(OUT,{recursive:true});
 //   SKY_LIFT=nov22 … 11/22〜11/23 の式(上端で0・判定ラインまで一定の割合で上がる)
 //   案を並べた止め絵: docs/progress/beat/sky-rise-2026-11-23/
 const SKY_LIFT=process.env.SKY_LIFT||'';
+// 前の版と比べる(2026-11-23・台帳 r1119-149): RHYTHM_REV=origin/main で、配る rhythm-mode.js だけをその版の中身にする(git から読むだけ。ファイルは作らない)
+const RHYTHM_REV=process.env.RHYTHM_REV||'';let revCache=null;
+const revSource=()=>revCache||(revCache=require('child_process').execFileSync('git',['show',`${RHYTHM_REV}:monster-hero/data/rhythm-mode.js`],{cwd:ROOT,maxBuffer:64<<20}).toString('utf8'));
 const skyLiftPatched=src=>{
  const rep=(a,b)=>{if(!src.includes(a))throw new Error('差し替える所が見つからない: '+a.slice(0,80));src=src.replace(a,b);};
  const js="rise=u>=1?1:u*(2-u);",sh="float skyRise(float y){float u=y/uSkyRise;return u>=1.0?1.0:u*(2.0-u);}";
@@ -43,6 +46,7 @@ const skyLiftPatched=src=>{
  const server=http.createServer((req,res)=>{const f=path.join(ROOT,decodeURIComponent(req.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}
   const t={'.js':'text/javascript','.html':'text/html','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.mp3':'audio/mpeg','.m4a':'audio/mp4','.json':'application/json'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t});
   if(SKY_LIFT&&/data[\\/]rhythm-mode\.js$/.test(f)){res.end(skyLiftPatched(fs.readFileSync(f,'utf8')));return;}
+  if(RHYTHM_REV&&/data[\\/]rhythm-mode\.js$/.test(f)){res.end(revSource());return;}
   fs.createReadStream(f).pipe(res);}).listen(PORT);
  const b=await require('playwright').chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const MOBILE=process.env.MOBILE!=='0'; // PC で撮るときは MOBILE=0(端末の真似をしない)

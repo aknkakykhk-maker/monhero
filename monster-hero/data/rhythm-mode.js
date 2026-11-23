@@ -82668,8 +82668,8 @@ const RHYTHM_NOTE_SWATCH_KINDS=Object.freeze([
   Object.freeze({id:'END_FLICK',label:'終点フリック',words:Object.freeze(['終点フリック'])}),
   Object.freeze({id:'MONSTER',label:'モンスターノーツ',words:Object.freeze(['モンスターノーツ'])}),
   Object.freeze({id:'SKY_TAP',label:'SKY TAP',words:Object.freeze(['SKY TAP','SKYTAP','スカイタップ','空のタップ','空中のタップ'])}),
-  Object.freeze({id:'SKY_SLIDE_L',label:'SKY SLIDE(左手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
-  Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(右手)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
+  Object.freeze({id:'SKY_SLIDE_L',label:'SKY SLIDE(空中を通る所)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
+  Object.freeze({id:'SKY_SLIDE_R',label:'SKY SLIDE(地上を通る所)',words:Object.freeze(['SKY SLIDE','SKYSLIDE','スカイスライド','空のスライド','空中のスライド'])}),
   Object.freeze({id:'SKY_LINE',label:'空の判定ライン',words:Object.freeze(['空の判定ライン','上の判定ライン','空中の判定ライン'])}),
 ]);
 // ノーツの形(2026-11-07 社長「本オープンにむけて、ノーツの形も何種類か作って選べるようにしたい」)。演奏の設定 noteShape で選ぶ。
@@ -84737,7 +84737,8 @@ const rhythmBuildCanvasRenderer=()=>{
         else if(kind==='SKY_TAP')drawGlassBox({cx:36,cy:30,w:62,h:HEAD_H},o);
         else if(kind==='SKY_SLIDE_L'||kind==='SKY_SLIDE_R'){
           const hand=kind==='SKY_SLIDE_L'?'L':'R',th=rhythmSkyTheme(),note={type:'SLIDE',hand};
-          drawSkySlideZ(slideQuads(hand==='L'?24:48,44,hand==='L'?44:28,8,8,1),{...o,skySlideRgb:th.rgb,skySlideCore:th.core,skyHand:hand},note);
+          // 見本は L=空中を通る所(空中の色)・R=地上を通る所(地上の色)。帯の色は手ではなく通る所で決まる(r1119-149)
+          drawSkySlideZ(slideQuads(hand==='L'?24:48,44,hand==='L'?44:28,8,8,hand==='L'?1:0),{...o,skySlideRgb:th.rgb,skySlideCore:th.core,skyHand:hand},note);
         }else if(kind==='SKY_LINE'){
           // 上の判定ライン(空の判定ライン)。演奏画面と同じ値(RHYTHM_SKY_LOOK.line の帯と芯)で、横いっぱいに引く
           const L=RHYTHM_SKY_LOOK.line,y=28;
