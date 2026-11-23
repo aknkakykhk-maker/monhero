@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8339386eda1306a
+// source-sha256: 415102a8cb457f46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43763,7 +43763,7 @@ const rhythmSetText = (el, text) => {
   }
   el.textContent = value;
 };
-const RHYTHM_LISTEN_HIDE_CSS = '[data-rhythm-judgment-display],[data-rhythm-sky-judgment-display],[data-rhythm-combo],[data-rhythm-combo-box],[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]),[data-rhythm-ability-badge]{visibility:hidden!important}';
+const RHYTHM_LISTEN_HIDE_CSS = '[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-ability-badge]{visibility:hidden!important}[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]){display:none!important}';
 const rhythmListenClock = ms => {
   const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
@@ -44849,13 +44849,13 @@ const RhythmTapTest = ({
   const [view, setView] = useState(initialView);
   const [hudSongDim, setHudSongDim] = useState(false);
   useEffect(() => {
-    if (view.status !== 'playing' || settings.hudSongFade === false) {
+    if (view.status !== 'playing' || settings.hudSongFade === false || listenMode) {
       setHudSongDim(false);
       return undefined;
     }
     const timer = setTimeout(() => setHudSongDim(true), 4000);
     return () => clearTimeout(timer);
-  }, [view.status, settings.hudSongFade]);
+  }, [view.status, settings.hudSongFade, listenMode]);
   const [countdownStep, setCountdownStep] = useState(null);
   const countdownTimerRef = useRef(null);
   const countdownResolveRef = useRef(null);
@@ -49147,7 +49147,7 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     decoding: "async",
     draggable: false,
-    className: "h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6",
+    className: listenMode ? "h-16 w-16 shrink-0 rounded-lg border border-white/30 object-cover landscape:h-14 landscape:w-14" : "h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6",
     style: {
       boxShadow: '0 1px 6px rgba(2,6,23,.8)'
     }
@@ -49155,7 +49155,7 @@ const RhythmTapTest = ({
     "data-rhythm-hud-song": true,
     className: "min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none",
     style: {
-      maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
+      maxWidth: hudArtSrc && !isLandscape ? listenMode ? 'calc(31cqw - 70px)' : 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
       WebkitLineClamp: isLandscape ? '2' : hudSongLong ? '5' : '3',
       WebkitBoxOrient: 'vertical',
