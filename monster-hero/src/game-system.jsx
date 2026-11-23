@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 050ba52fc1e2a4cd
+// generated-sha256: 37ebbfde6493cc0c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15597,6 +15597,34 @@ const useBubbleCollapse = (collapseKey) => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, (next) => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+// ── 💬▲▼ を全画面に(2026-11-23 台帳 r1119-135・社長「💬▲▼を全画面に」) ──
+// モンヒロビートの曲えらびの「💬▲/▼」(29-rhythm-screens.jsx)と同じ形のボタンで、画面ごとにひとことを畳む・開く。
+// 覚えるのは今の mh_bubble_collapsed_v1(畳んだ画面の名前だけ入れる。無い・壊れていれば今の見た目=開いている)。既存の値の意味は変えない
+//   ・collapseKey を渡した吹き出し(マーケット・神殿・編成・カード売り場)は、その名前のまま(覚えている値を引き継ぐ)
+//   ・collapseKey を渡さない吹き出しは、場面から画面の名前を決める(下の表。同じ画面で場面が変わるものは1つにまとめる)
+//   ・畳まないもの: HOME(「隠す」r1119-081 のまま)・はじめての案内/一度きりの案内・文を直接渡す吹き出し・最初から開く吹き出し・
+//     モンヒロビートの曲えらび(rhythmHome。上の欄に💬▲▼が元からある)
+// 設定「助手のひとこと」の3択は今のまま先に効く(「出さない」なら畳む・開くより先に隠れる)
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([
+  [/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'],
+  [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'],
+  [/^(transcendence|masuEnhance)$/, 'masuEnhance'],
+]);
+const assistantBubbleFoldKey = (scene) => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+// 💬▲(開いている・押すと畳む)/ 💬▼(畳んでいる・押すと開く)。形はモンヒロビートの曲えらびと同じ
+const BubbleFoldButton = ({ open, onToggle, size = 'md', className = '', ...attrs }) => (
+  <button type="button" onClick={(ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); onToggle(); }} aria-pressed={!!open}
+    aria-label={open ? 'ひとことをたたむ' : 'ひとことを開く'} title={open ? '助手のひとことを畳む' : '助手のひとことを出す'} {...attrs}
+    className={`mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`}>
+    <span aria-hidden="true">💬</span><span aria-hidden="true">{open ? '▲' : '▼'}</span>
+  </button>
+);
 // 助手の吹き出し。どの画面でもこれ1つ置けばよい。
 //   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
 //   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
@@ -15604,19 +15632,21 @@ const useBubbleCollapse = (collapseKey) => {
 //   accent      … 画面のテーマ色に合わせたいとき(省略すると助手ごとの色)
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
-//   collapseKey … 渡すと吹き出しを小さくたためる(たたんだことを mh_bubble_collapsed_v1 に覚える)。画面ごとに別のキー
+//   collapseKey … 畳む・開く(💬▲▼)を覚える名前(mh_bubble_collapsed_v1)。渡さなければ場面から決める(assistantBubbleFoldKey)・null なら畳まない
 //   collapseHidden … たたんだら札も出さず何も描かない(ひらく入口が画面の別の所にあるとき。ヘルプの上の助手の顔)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
 // 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=undefined, collapseHidden=false, oneLine=false, menu=null }) => {
   const [open, setOpen] = useState(defaultOpen);
   // menu … [{ key, label, onClick }]。渡すと、吹き出しを押したときに小さなメニュー(渡した項目+「📖 詳しく見る」)を出す。
   //   HOME は吹き出しの中に「💬 おしゃべり」と「タップで詳しく」の2つの押し所があり、違いが分からなかった(r1119-050 窓-36)。押し所を吹き出し1つにまとめ、機能は減らさない
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  // 畳む・開くの名前。渡されたらそれ(null なら畳まない)、渡されなければ場面から(文を直接渡す・最初から開くものは畳まない)
+  const foldKey = collapseKey !== undefined ? collapseKey : (line || defaultOpen ? null : assistantBubbleFoldKey(scene));
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
@@ -15696,21 +15726,18 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   if (bubbleHidden) return null;
-  // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
-  if (collapseKey && collapsed) {
+  // 畳んでいる間は、右に「💬▼」のボタンだけ(押すと開く。モンヒロビートの曲えらびと同じ形・r1119-135)
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return (
-      <div data-bubble-collapsed className="w-full flex items-center gap-2">
-        <AssistantFace who={who} size={32} accent={color} expression={face}/>
-        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことを開く`}
-          className="mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95"
-          style={{ borderColor:color, color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>💬 {who.name}のひとこと ▾</button>
+      <div data-bubble-collapsed className="w-full flex items-center justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setCollapsed(false)} size="sm"/>
       </div>
     );
   }
   return (
     <>
-      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${collapseKey?'relative':''}`}>
+      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${foldKey?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
@@ -15741,8 +15768,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
-        {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
-          className="mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90">▴</button>}
+        {/* 開いている間は、吹き出しの右に「💬▲」(押すと畳む・画面ごとに覚える。r1119-135) */}
+        {foldKey&&!collapseHidden&&<BubbleFoldButton open onToggle={() => setCollapsed(true)} size="sm" className="self-center" data-bubble-collapse=""/>}
         {useMenu&&menuOpen&&<>
           {/* 外を押すとメニューが閉じる(幕は透明。後ろの施設をうっかり押さない) */}
           <div className="fixed inset-0" style={{ zIndex:60 }} onClick={()=>setMenuOpen(false)} data-bubble-menu-backdrop aria-hidden="true"/>
@@ -43681,6 +43708,7 @@ const missionRewardChipText = (r) => { const t = giftRewardText(r); const e = MI
 function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll, ownedItems = null }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
   // 助手の1日1行の案内(デイリーのタブ)。いま選んでいる助手が話す。AI の文が無ければ決まった台詞
+  //   畳む・開くはひとことと同じ「💬▲▼」で、ミッションの画面で1つ(mh_bubble_collapsed_v1 の screen:missions。r1119-135)
   const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
   const aiLines = useMissionDailyLines();
   const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
@@ -43699,7 +43727,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact collapseKey="screen:missions"/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
@@ -66804,6 +66832,9 @@ const assistantPeerLineText = (line, talk) => {
 // replay … 関係図・アルバムから見返すときの台本(1日の数に入れず、仲良し度も上げない。返事は選び直せる)
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
+  // 💬▲▼ で畳む・開く(2026-11-23 台帳 r1119-135)。画面ごとに覚える(今の mh_bubble_collapsed_v1 に peer:<画面> を足す。無ければ開いている)。
+  //   畳んでいる間も掛け合いは始まり、右下に「💬▼」だけ出る(押すと開いて続きから読める)。見返しは畳まない
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
@@ -66930,6 +66961,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(
+      <div data-assistant-peer-folded className="flex justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setPeerFolded(false)} data-assistant-peer-fold=""/>
+      </div>);
+  }
   const { talk } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
@@ -66982,8 +67019,11 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+        {scene && !cur.replay && <BubbleFoldButton open onToggle={() => setPeerFolded(true)} size="sm" data-assistant-peer-fold=""/>}
         <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
           className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
+        </span>
       </div>
     </div>);
 }
@@ -151301,8 +151341,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20) */}
-            <button type="button" onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label={helpAssistantOpen?'ひとことをたたむ':'ひとことを開く'} data-help-bubble-toggle className="shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95">{helpAssistantOpen?'たたむ ▲':'💬 ひとこと'}</button>
+            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20)。2026-11-23 から全画面と同じ「💬▲▼」の形(r1119-135) */}
+            <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
