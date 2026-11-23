@@ -13,15 +13,15 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 // ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
-const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=26508bc26c81";
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=33d1b7eaa678";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
-const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=23c208ab892e";
+const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=511fe55c9a67";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
-const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=63697ba8a884";
+const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=ad0afb356c2c";
 // えるびん(2026-11-05)。顔アイコンをそのまま使う(きゅうこ・ソラシドと同じ形)
-const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=cff970be9e3f";
+const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=f5bc030bddd1";
 // お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。
 //   1080×1080 の正方形で、大事なものは真ん中に寄せてある(縦の画面は左右、横の低い画面は上下が切れても見える)。ほかのお話でも使ってよい
 const STORY_BG_DESERT_PALACE = "images/story-bg/desert_palace.jpg?v=890ff3607962";     // 石油王の世界: 砂漠の夕方と白い宮殿・ラクダ
@@ -1235,7 +1235,7 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
 //   (2026-10-27 社長「解放されるまでマーケットに出ない？ 出てないなら出して入手条件かくようにして」。前は勝つまで並べなかった)
 const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
 // 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
-const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=ece421b1dd7c";
+const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=d860998677ef";
 const muaCardMasterCostume = Object.freeze({
   id: 'mua_card_master_v1', assistantId: 'mua',
   name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
@@ -1254,7 +1254,7 @@ const muaCardMasterCostume = Object.freeze({
 //   売り場は無い(price も saleWindows も持たない)。starter:true の服は、はじめから持っている扱いにする
 //   (normalizeOwnedAssistantCostumes が足す。保存キーは増やさず、読み込みで書き戻さない)。
 //   絵は登場のお話と同じ images/assistant/sekiyuou/。えるびんの公開の印(assistantErubin)と一緒に出る
-const ERUBIN_SEKIYUOU_COSTUME_ART = "images/assistant/sekiyuou/face/erubin_happy.PNG?v=f73323a07081";
+const ERUBIN_SEKIYUOU_COSTUME_ART = "images/assistant/sekiyuou/face/erubin_happy.PNG?v=16fd7e4ade9e";
 const erubinSekiyuouCostume = Object.freeze({
   id: 'erubin_sekiyuou_v1', assistantId: 'erubin',
   name: '石油王', desc: 'えるびんが砂漠から着てきた服。白い頭布と、金の刺しゅうの入った民族衣装です。',
@@ -1266,7 +1266,7 @@ const erubinSekiyuouCostume = Object.freeze({
 // ソラシドの服『補正』(2026-11-15 社長「新しい絵をデフォルト=馬骨、今の物を補正」)。いままでのソラシドの絵。はじめから全員が持っている(starter)。
 //   保存は増やさない: 持っている服(owned)には書かない(starter は読み込みのたびに足される)・着ている服(worn)は選んだ人だけ { sorashido: 'sorashido_hosei_v1' }。
 //   既定の服(worn に何も無い)は新しい絵『馬骨』。移行の処理は無い(いままでソラシドの服を持っていた人はいない)
-const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=582960b1b0a7";
+const SORASHIDO_HOSEI_COSTUME_ART = "images/assistant/hosei/face/sorashido_happy.PNG?v=c3d47c8149ad";
 const sorashidoHoseiCostume = Object.freeze({
   id: 'sorashido_hosei_v1', assistantId: 'sorashido',
   name: '補正', desc: 'いままでのソラシドの服。着物の姿です。',
@@ -1280,7 +1280,7 @@ const ASSISTANT_DEFAULT_OUTFIT_NAMES = Object.freeze({ sorashido: '馬骨' });
 const assistantDefaultOutfitName = (assistantId) => ASSISTANT_DEFAULT_OUTFIT_NAMES[assistantId] || '元の服';
 // きゅうこの冬服(2026-11-16 社長「これを実装して販売してほしい」)。売り場はダイヤショップ 100,000(ほかの衣装と同じ)。
 //   絵は images/assistant/winter/(立ち絵は stand-winter、全身画は fullbody/kyuko_winter)。お話「冬支度」でも着る(STORY_OUTFIT_DIRS の winter)
-const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=7dc991931f72";
+const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=68164abb8a1b";
 const kyukoWinterCostume = Object.freeze({
   id: 'kyuko_winter_v1', assistantId: 'kyuko',
   name: '冬の装い', desc: 'きゅうこの冬服。淡いピンクのケーブル編みカーディガンとおそろいのマフラー、ファー付きの冬ブーツです。',
@@ -1291,7 +1291,7 @@ const kyukoWinterCostume = Object.freeze({
 });
 // ききのツインテール(2026-11-20 社長)。売り場はダイヤショップ 100,000(ほかの衣装と同じ。買い物の出し分けは無い)。
 //   絵は images/assistant/twintail/(立ち絵は stand-twintail、全身画は fullbody/kiki_twintail)。お話「イメチェン」でも着る(STORY_OUTFIT_DIRS の twintail)
-const KIKI_TWINTAIL_COSTUME_ART = "images/assistant/twintail/face/kiki_happy.PNG?v=f2e519677acb";
+const KIKI_TWINTAIL_COSTUME_ART = "images/assistant/twintail/face/kiki_happy.PNG?v=6873308bf005";
 const kikiTwintailCostume = Object.freeze({
   id: 'kiki_twintail_v1', assistantId: 'kiki',
   name: 'ツインテール', desc: 'ききの新しい髪型の着せ替え。曲「僕たちのページは晴れ模様」のジャケット絵で結んでもらった、大きなうさ耳リボンのツインテールです。',

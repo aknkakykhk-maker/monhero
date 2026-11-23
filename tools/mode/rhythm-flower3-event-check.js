@@ -24,7 +24,7 @@ const make = (published, { versions = null, replays = [] } = {}) => {
     RHYTHM_SONGS: published.map(songId => ({ songId })), storeGet: async (k, d) => d };
   vm.createContext(ctx);
   const ev = versions ? eventSrc.replace('const FLOWER3_SONG_VERSIONS = Object.freeze({});', `const FLOWER3_SONG_VERSIONS = Object.freeze(${JSON.stringify(versions)});`) : eventSrc;
-  vm.runInContext(`${releasedSrc}\n${ev}\n${ownedSrc}\nthis.api = { RHYTHM_EVENTS, RHYTHM_EVENT_POINT_CAMPAIGNS, rhythmLimitedEventAt, rhythmEventPointCampaignAt, rhythmSongReleased, rhythmSongPrice, rhythmSongLocked, rhythmEventHasSong, flower3StoryIdsAt, FLOWER3_SONG_SLOTS, FLOWER3_EVENT_ID, rhythmWeekStartMs, rhythmEventPointAwardAt };`, ctx);
+  vm.runInContext(`${releasedSrc}\n${ev}\n${ownedSrc}\nthis.api = { RHYTHM_EVENTS, RHYTHM_EVENT_POINT_CAMPAIGNS, rhythmLimitedEventAt, rhythmEventPointCampaignAt, rhythmSongReleased, rhythmSongPrice, rhythmSongLocked, rhythmEventHasSong, flower3StoryIdsAt, FLOWER3_STORIES, FLOWER3_SONG_SLOTS, FLOWER3_EVENT_ID, rhythmWeekStartMs, rhythmEventPointAwardAt };`, ctx);
   return ctx.api;
 };
 const T = (s) => Date.parse(s);
@@ -70,8 +70,10 @@ check('D. 終わったらビートPで買う曲(500)', all.rhythmSongPrice(ids[2
 check('D. ふつうの無料曲は無料のまま', all.rhythmSongPrice('monster_hero', T('2026-12-01T00:00:00+09:00')) === 0);
 
 // E
-check('E. 本文の入っている話だけ・時刻が来たら流す', all.flower3StoryIdsAt(T('2026-11-24T09:59:00+09:00')).length === 0
+check('E. 本文の入っている話だけ・時刻(各日の4:00)が来たら流す', all.flower3StoryIdsAt(T('2026-11-24T03:59:00+09:00')).length === 0
+  && all.flower3StoryIdsAt(T('2026-11-24T04:00:00+09:00')).join() === 'flower3_2026_ep2'
   && all.flower3StoryIdsAt(T('2026-11-26T05:00:00+09:00')).join() === 'flower3_2026_ep2');
+check('E. 第2〜7話は各日の4:00(10:00ではない)', all.FLOWER3_STORIES.filter(s => s.part >= 2 && s.part <= 7).every(s => /T04:00:00\+09:00$/.test(s.at)));
 
 // F(100万点=200P・2分以内の曲。いつもの貯まり方は 200×0.2=40P)
 const mid = T('2026-11-26T12:00:00+09:00');
