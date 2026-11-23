@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78646d2cd1d98ce9
+// generated-sha256: 9f78d4c6e7396f39
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -44762,8 +44762,8 @@ function BreederMarketScreen({
 
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
-        <div className="relative grid grid-cols-2 gap-2.5 pt-1 pb-2">
-          {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
+        {/* 入口は1列の横長の札にして画面の下まで並べる(r1119-155 案A。2列だと下半分が空いていた)。名前は1行 */}
+        <div data-market-top-list className="relative grid min-h-full grid-cols-1 auto-rows-fr gap-2.5 pt-1 pb-2">
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:costumeItems.length?'円盤石・アシスト・アイテム・着替えが買える':'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
@@ -44777,15 +44777,18 @@ function BreederMarketScreen({
               data-market-section={section.key}
               aria-label={section.label}
               onClick={()=>setMarketSection(section.key)}
-              className={`relative min-h-[112px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[.98]`}
+              className={`relative flex min-h-[76px] items-center gap-3.5 rounded-2xl border ${section.border} bg-slate-950/70 py-3 pl-4 pr-9 text-left active:scale-[.98] [@media(orientation:portrait)]:gap-4`}
             >
-              <div className="flex items-center gap-2.5">
-                <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
-                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block whitespace-nowrap">{line}</span>):section.label}</span>
-              </div>
-              <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:' '}</div>
-              <div className="mt-0.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(section.hint)}</div>
-              <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
+              <span aria-hidden="true" className="shrink-0 text-[34px] leading-none [@media(orientation:portrait)_and_(min-height:700px)]:text-[46px]">{section.emoji}</span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className={`whitespace-nowrap text-[15px] font-black leading-tight ${section.title} [@media(orientation:portrait)_and_(min-height:700px)]:text-[17px]`}>{section.label}</span>
+                <span className="text-[11px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(section.hint)}</span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end">
+                <span className="text-[10px] font-black text-slate-400">所持</span>
+                <span className="font-mono text-[22px] font-black leading-tight text-white [@media(orientation:portrait)_and_(min-height:700px)]:text-[28px]">{section.value!==null?section.value:' '}</span>
+              </span>
+              <span aria-hidden="true" className={`absolute right-3 top-1/2 -translate-y-1/2 text-xl font-black ${section.arrow}`}>›</span>
             </button>
           ))}
         </div>
