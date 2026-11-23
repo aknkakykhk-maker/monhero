@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8487ce99b4b51568
+// generated-sha256: 48bf2d5d2db2bc96
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28535,10 +28535,12 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
+  // 自動の手には譜面のノーツそのものを渡す(2026-11-23 r1119-145)。読み取り口 rhythmNotes の控えには払う向き(flickDir)・終点フリック・
+  // スライドの点の空中の高さが無く、左右のフリック(ダブルフリック)を上へ払い、空中スライドを地上で押して MISS になっていた(音も鳴らなかった)
   useEffect(()=>{
     if(!previewHands||typeof window==='undefined'||typeof rhythmPreviewHandsStart!=='function')return undefined;
     let stop=null;
-    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current);clearInterval(wait);}},100);
+    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current,{notes:chart&&Array.isArray(chart.notes)?chart.notes:null});clearInterval(wait);}},100);
     return()=>{clearInterval(wait);if(stop)stop();};
   },[previewHands]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
@@ -29293,7 +29295,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 //   ホールド・スライド … 押さえたまま帯をなぞり、終わりで離す(終点フリックは終わりで上へ払う)
 // 使うのは見本(from:'preview')の演奏だけ。曲の時刻は演奏画面の読み取り口(window.__mhTestHooks.rhythmSongMs)から読む。
 // 返す stop() で止める(画面を閉じたとき・流し直すとき)。
-const rhythmPreviewHandsStart = (area) => {
+const rhythmPreviewHandsStart = (area, opts = null) => {
   if (typeof window === 'undefined' || !area) return () => {};
   const hooks = () => window.__mhTestHooks || {};
   let stopped = false, raf = 0, k = 0, ids = 900;
@@ -29319,7 +29321,10 @@ const rhythmPreviewHandsStart = (area) => {
     const c = toClient(p.x, p.y);
     try { area.dispatchEvent(new window.PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: c.x, clientY: c.y, buttons: type === 'pointerup' ? 0 : 1 })); } catch (_) {}
   };
-  const notes = (() => { try { return ((hooks().rhythmNotes && hooks().rhythmNotes()) || []).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
+  // ノーツは演奏画面が渡す譜面のノーツ(opts.notes)を使う。読み取り口の控え(rhythmNotes)は、払う向き・終点フリック・スライドの点の空中の高さを
+  // 持たないので、それだけで叩くと左右のフリックを上へ払い、空中スライドを地上で押して MISS になる(2026-11-23 r1119-145)。控えは渡されないときだけ
+  const notes = (() => { try { const src = opts && Array.isArray(opts.notes) ? opts.notes : ((hooks().rhythmNotes && hooks().rhythmNotes()) || []);
+    return src.filter(n => n && Number.isFinite(Number(n.timeMs))).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
   const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
   const flickVec = n => { const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : ''; return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1]; };
   const events = [], follows = [];
