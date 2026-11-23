@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82e7af7e88a2ddf4
+// generated-sha256: 2b94690ed831486f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6560,19 +6560,20 @@ const Audio_ = (() => {
     }
   };
   // key … 覚えておく鍵。ふつうは素のパス、場面のBGMを軽く持つときは末尾に '#light'(BGM_LIGHT_SUFFIX)
-  const loadBuffer = (key) => {
+  // data … 取ってきた中身(ArrayBuffer)が手元にあれば渡す(長い曲かどうかを先に見るため、モンヒロビートが先に取る)。無ければ取りに行く
+  const loadBuffer = (key, data = null) => {
     if (buffers.has(key)) return Promise.resolve(buffers.get(key));
     if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
-    if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    if (!ctx || (!data && typeof fetch !== 'function')) return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then((data) => decode(ctx, data)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
+    })).then((bytes) => decode(ctx, bytes)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
       .then((buffer) => { buffers.set(key, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(key));
     loadingBuffers.set(key, request);
@@ -6748,6 +6749,192 @@ const Audio_ = (() => {
       return true;
     } catch (e) { return false; }
   };
+  // ★長い曲は、音源を区切って順に広げて鳴らす(2026-11-23 r1119-125 社長「長い曲も鳴るように直す」)。
+  //   きっかけ: ワルキューレの原曲(約11分32秒)をスマホで始めると「音源を再生できません」で0:00のまま。
+  //   演奏の前に音源を丸ごと decodeAudioData で広げると、48kHz・2ch で約250MBになり、スマホのメモリで
+  //   広げ切れずに失敗していた(Playwright でブラウザのメモリを 1.5〜1.8GB に絞ると、この曲だけ EncodingError。
+  //   6分半の曲・ショート版は同じ条件で通る)。
+  //   直し方: LONG_SONG_SEC より長い mp3 だけ、フレームの切れ目で約 LONG_CHUNK_SEC 秒ずつに区切り、
+  //   鳴る少し前に広げて Web Audio の時刻どおりにつなげる。鳴り終えた区切りは捨てる(持つのは2〜3区切りぶん)。
+  //   ・区切りは前後に LONG_PRE/POST_FRAMES フレーム余分に広げる(頭の数フレームは前のフレームの情報が無く崩れるため)
+  //   ・区切りの頭が曲のどこに当たるかは、広げ方(ブラウザ)ごとにずれ方が決まっているので、最初に1回、
+  //     曲の頭の区切りと短い試しの区切りの波形を突き合わせて測る(longAlignLag)。続く区切りも前の区切りと突き合わせて置く
+  //   ・つなぎ目は LONG_FADE_SEC だけ重ねて入れ替える(同じ波形どうしなので音量は変わらない。音切れ・二重鳴りを出さない)
+  //   ・曲の時刻(判定・譜面の進み)は丸ごとのときと同じ式(再生を始めた ctx の時刻と offset)で、区切りに関係なく進む
+  //   これより短い曲は、これまでどおり丸ごと広げる(長さは mp3 のフレームの数から先に分かる)
+  const LONG_SONG_SEC = 480, LONG_START_LEAD_SEC = 0.03, LONG_CHUNK_SEC = 20, LONG_PRE_FRAMES = 16, LONG_POST_FRAMES = 16, LONG_FADE_SEC = 0.02;
+  // 長い曲の mp3 の中身(圧縮したまま。1曲で十数MB)。いちばん新しい1曲だけ持つ
+  const longSongBytes = new Map();
+  const MP3_BITRATE = { 1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], 2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160] };
+  const MP3_RATE = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+  const mp3FrameAt = (u8, i) => {
+    if (i + 4 > u8.length || u8[i] !== 0xFF || (u8[i + 1] & 0xE0) !== 0xE0) return null;
+    const ver = (u8[i + 1] >> 3) & 3, layer = (u8[i + 1] >> 1) & 3;
+    if (ver === 1 || layer !== 1) return null;
+    const bri = u8[i + 2] >> 4, sri = (u8[i + 2] >> 2) & 3, pad = (u8[i + 2] >> 1) & 1;
+    if (bri === 0 || bri === 15 || sri === 3) return null;
+    const sr = MP3_RATE[ver][sri], spf = ver === 3 ? 1152 : 576;
+    return { len: Math.floor((spf / 8) * MP3_BITRATE[ver === 3 ? 1 : 2][bri] * 1000 / sr) + pad, sr, spf };
+  };
+  // mp3 のフレームの位置の一覧。mp3 でなければ null
+  const parseMp3Frames = (u8) => {
+    let i = 0;
+    if (u8.length > 10 && u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) i = 10 + (((u8[6] & 127) << 21) | ((u8[7] & 127) << 14) | ((u8[8] & 127) << 7) | (u8[9] & 127)) + ((u8[5] & 0x10) ? 10 : 0);
+    const offs = []; let sr = 0, spf = 0, end = i;
+    while (i + 4 <= u8.length) {
+      const f = mp3FrameAt(u8, i);
+      if (f && f.len > 4 && (!sr || (f.sr === sr && f.spf === spf))) {
+        const next = i + f.len;
+        // 偽の同期を拾わない: 次のフレームの頭もそろっているか(最後は末尾・ID3v1 の 128 バイト)
+        if (next <= u8.length && (next === u8.length || u8.length - next <= 128 || mp3FrameAt(u8, next))) { offs.push(i); sr = f.sr; spf = f.spf; end = next; i = next; continue; }
+      }
+      i++;
+    }
+    return offs.length ? { offsets: Uint32Array.from(offs), end, sr, spf } : null;
+  };
+  const fetchSongBytes = async (url) => {
+    const hit = longSongBytes.get(url); if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let map = null; try { map = parseMp3Frames(bytes); } catch (e) { map = null; }
+    const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
+    const entry = { url, bytes, map, long };
+    if (long) { longSongBytes.clear(); longSongBytes.set(url, entry); }
+    return entry;
+  };
+  // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
+  const monoRange = (buf, from, len) => {
+    const out = new Float32Array(len), c0 = buf.getChannelData(0), c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) { const k = from + i; if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k]; }
+    return out;
+  };
+  const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
+    const D = 8; len -= len % D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D), B = monoRange(bBuf, j0, len);
+    const dec = (x) => { const m = Math.floor(x.length / D), o = new Float32Array(m); for (let i = 0; i < m; i++) { let t = 0; for (let k = 0; k < D; k++) t += x[i * D + k]; o[i] = t; } return o; };
+    const Ad = dec(A), Bd = dec(B), RD = R / D;
+    let best = -Infinity, bestD = 0;
+    for (let d = -RD; d <= RD; d++) { let t = 0; const o = d + RD + 1; for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i]; if (t > best) { best = t; bestD = d; } }
+    const Lc = L0 + bestD * D, W = 12, len2 = Math.min(len, 8192), j1 = j0 + Math.floor((len - len2) / 2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W), B2 = monoRange(bBuf, j1, len2);
+    const sc = []; for (let L = -W; L <= W; L++) { let t = 0; for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i]; sc.push(t); }
+    let bi = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
+    let frac = 0; if (bi > 0 && bi < sc.length - 1) { const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1]; if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den; }
+    let ea = 0, eb = 0; for (let i = 0; i < len2; i++) { const x = A2[i + bi]; ea += x * x; eb += B2[i] * B2[i]; }
+    return { lag: Lc + (bi - W) + frac, corr: ea > 0 && eb > 0 ? sc[bi] / Math.sqrt(ea * eb) : 0, rms: Math.sqrt(eb / len2) };
+  };
+  const longAligned = (r) => r && r.corr >= 0.97 && r.rms > 1e-3;
+  // 長い曲を区切って鳴らす仕組みを用意する。曲の頭の区切りと最後の区切りを広げて、長さと区切りの置き場所を決める
+  const openLongSong = async (ctx, entry) => {
+    const { bytes, map } = entry, n = map.offsets.length, fsec = map.spf / map.sr;
+    const per = Math.max(64, Math.round(LONG_CHUNK_SEC / fsec));
+    const bounds = [0]; for (let b = per; b < n - per / 4; b += per) bounds.push(b);
+    const count = bounds.length;
+    const byteRange = (k) => {
+      const a = k === 0 ? 0 : map.offsets[Math.max(0, bounds[k] - LONG_PRE_FRAMES)];
+      const e = k + 1 >= count ? bytes.length : (bounds[k + 1] + LONG_POST_FRAMES < n ? map.offsets[bounds[k + 1] + LONG_POST_FRAMES] : bytes.length);
+      return [a, e];
+    };
+    let C = 0, aligned = false;
+    const stats = { log: [], chunks: count, chunkSec: per * fsec, decoded: 0, seams: 0, seamMaxDevMs: 0, late: 0, failed: 0, probeCorr: 0 };
+    const theoryStart = (k) => (k === 0 ? 0 : (bounds[k] - LONG_PRE_FRAMES) * fsec + C);
+    const seamSec = (k) => bounds[k] * fsec + C;
+    const chunks = new Map(), pending = new Map();
+    const getChunk = (k) => {
+      if (chunks.has(k)) return Promise.resolve(chunks.get(k));
+      if (pending.has(k)) return pending.get(k);
+      const [a, e] = byteRange(k);
+      const p = decode(ctx, bytes.slice(a, e).buffer).then((buffer) => {
+        stats.decoded++; decodedBytes += bufferBytes(buffer); decodedCount += 1;
+        let startSec = theoryStart(k);
+        // 前の区切りが手元にあれば、つなぎ目のまわりの波形を突き合わせて置き場所を確かめる
+        const prev = chunks.get(k - 1);
+        if (k > 0 && prev && aligned) {
+          const r = buffer.sampleRate, s = seamSec(k);
+          const m = longAlignLag(prev.buffer, buffer, Math.round((s - 0.2 - startSec) * r), Math.round(0.4 * r), Math.round((startSec - prev.startSec) * r), 960);
+          if (longAligned(m)) { const got = prev.startSec + m.lag / r, dev = Math.abs(got - startSec); stats.seams++; stats.seamMaxDevMs = Math.max(stats.seamMaxDevMs, dev * 1000); if (dev < 0.02 && dev * r >= 0.5) startSec = got; }
+        }
+        const c = { buffer, startSec }; chunks.set(k, c); return c;
+      }).finally(() => pending.delete(k));
+      pending.set(k, p);
+      return p;
+    };
+    const head = (await getChunk(0)).buffer, rate = head.sampleRate;
+    // 区切りの頭のずれ方(C)を測る: 曲の頭の区切りの中で音のいちばん大きい所から短く広げ、頭の区切りと突き合わせる
+    {
+      const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
+      let bestP = -1, bestE = 0;
+      for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
+        const from = Math.round(p * fsec * rate), seg = monoRange(head, from, Math.round(0.5 * rate)); let e = 0;
+        for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
+        if (e > bestE) { bestE = e; bestP = p; }
+      }
+      if (bestP >= 0) {
+        try {
+          const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
+          const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
+          stats.probeCorr = Math.round(m.corr * 1000) / 1000;
+          if (longAligned(m)) { const lag = Math.abs(m.lag - Math.round(m.lag)) < 0.25 ? Math.round(m.lag) : m.lag; C = lag / rate - bestP * fsec; aligned = true; }
+        } catch (e) {}
+      }
+    }
+    stats.offsetMs = Math.round(C * 10000) / 10;
+    // 曲の長さ: 最後の区切りを広げて測る(持ち続けない)
+    let duration = head.duration;
+    if (count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    let session = 0, live = [], timer = null, play = null;
+    const chunkIndexAt = (s) => { let k = 0; while (k + 1 < count && s >= seamSec(k + 1)) k++; return k; };
+    const dropLive = (x) => { stopSource(x.src); try { x.gain.disconnect(); } catch (e) {} };
+    const halt = () => { session++; if (timer) clearInterval(timer); timer = null; live.forEach(dropLive); live = []; play = null; };
+    const scheduleChunk = (k, first) => {
+      const c = chunks.get(k); if (!c || !play) return false;
+      const g = ctx.createGain(), src = ctx.createBufferSource(), my = session;
+      src.buffer = c.buffer; src.connect(g); g.connect(play.out);
+      let fromSong = first ? play.o : seamSec(k) - LONG_FADE_SEC / 2;
+      let when = play.t0 + (fromSong - play.o);
+      // 広げるのが間に合わなかったとき(本来は起きない)は、いまの位置から入れる
+      if (!first && when < ctx.currentTime) { stats.late++; fromSong += ctx.currentTime - when; when = ctx.currentTime; }
+      // 入れる時刻は出口のサンプルの切れ目にそろえる(端数の時刻で入れると、区切りの音が 1 サンプル未満ずれて補間される)
+      if (!first) { const wr = Math.round(when * ctx.sampleRate) / ctx.sampleRate; fromSong += wr - when; when = wr; }
+      if (first) g.gain.value = 1;
+      else {
+        g.gain.setValueAtTime(0, when); g.gain.linearRampToValueAtTime(1, when + LONG_FADE_SEC);
+        const prev = live.find((x) => x.k === k - 1);
+        if (prev) { prev.gain.gain.setValueAtTime(1, when); prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC); try { prev.src.stop(when + LONG_FADE_SEC + 0.01); } catch (e) {} }
+      }
+      if (k === count - 1) src.onended = () => { if (my === session && play) { const done = play.onEnd; halt(); done(); } };
+      src.start(when, Math.max(0, fromSong - c.startSec));
+      stats.log.push({ k, first, marginMs: Math.round((when - ctx.currentTime) * 10000) / 10, devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100 }); if (stats.log.length > 8) stats.log.shift();
+      live.push({ k, src, gain: g });
+      return true;
+    };
+    const tick = () => {
+      if (!play) return;
+      const my = session, s = play.o + (ctx.currentTime - play.t0), cur = Math.max(chunkIndexAt(Math.max(s, play.o)), live.length ? live[0].k : 0), next = cur + 1;
+      if (next < count && !live.some((x) => x.k === next)) {
+        getChunk(next).then(() => { if (my === session && play && !live.some((x) => x.k === next) && live.some((x) => x.k === next - 1)) scheduleChunk(next, false); }).catch(() => { stats.failed++; });
+      }
+      live = live.filter((x) => { if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
+      for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some((x) => x.k === k)) chunks.delete(k);
+    };
+    return {
+      duration, head, stats: () => ({ ...stats, held: chunks.size }),
+      ready: (o) => getChunk(chunkIndexAt(o)),
+      // o 秒の位置から鳴らし始め、鳴り始める ctx の時刻を返す(曲の時刻の起点にする)。区切りがまだ広がっていなければ false。
+      // 「いまの時刻」で入れると、ブラウザがその時刻をもう過ぎていて数ms〜十数ms遅れて鳴り始めることがある
+      // (Chromium で seek のあとにたまに 512 サンプル遅れた)。続く区切りはこの起点から時刻を決めるので、
+      // 少し先(LONG_START_LEAD_SEC)のサンプルの切れ目に予約して、起点と鳴り始めを必ず一致させる
+      playFrom: (o, out, onEnd) => {
+        halt(); const k = chunkIndexAt(o); if (!chunks.has(k)) return false;
+        const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
+        play = { t0, o, out, onEnd }; scheduleChunk(k, true);
+        timer = setInterval(tick, 250); tick(); return t0;
+      },
+      halt,
+      release: () => { halt(); chunks.clear(); },
+    };
+  };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
@@ -6763,16 +6950,34 @@ const Audio_ = (() => {
     currentKey=null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers();
     resumeAudioCtxNoWait();
     try {
-      const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
-      rememberSongBuffer(track.src);
-      if(!ctx) return null;
-      rhythmBuffersInUse.add(buffer);
+      // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げず、区切って鳴らす(openLongSong)。
+      // すでに丸ごと広げてある曲(BGMで鳴らした等)はそれを使う。丸ごと広げるのに失敗した mp3 も、区切って鳴らしに回す
+      let buffer=null,long=null,dctx=null;
+      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function')buffer=await loadBuffer(track.src);
+      else{
+        const entry=await fetchSongBytes(track.src);dctx=getAudioCtx();
+        if(!dctx)return null;
+        if(entry.long)long=await openLongSong(dctx,entry);
+        else{
+          try{buffer=await loadBuffer(track.src,entry.map?entry.bytes.buffer.slice(0):entry.bytes.buffer);}
+          catch(e){if(!entry.map)throw e;long=await openLongSong(dctx,entry);}
+        }
+      }
+      const ctx=await ensureAudioCtxRunning();
+      if(buffer)rememberSongBuffer(track.src);
+      if(!ctx||(long&&ctx!==dctx)){if(long)long.release();return null;}
+      if(buffer)rhythmBuffersInUse.add(buffer);
+      const duration=buffer?buffer.duration:long.duration;
       // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
       // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
       let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null,outputLatencySeconds=0;
       const dropGainEntry=()=>{if(gainEntry){activeRhythmGains.delete(gainEntry);gainEntry=null;}};
+      // いま鳴らしている音を止める(区切って鳴らす曲は、区切りの音をまとめて止める)
+      const haltSource=()=>{const old=source;source=null;stopSource(old);if(long)long.halt();};
+      // 区切って鳴らす曲は、鳴らし始める位置の区切りを先に広げておく(丸ごとの曲は何もしない)
+      const prepareAt=async(offset)=>{if(long){try{await long.ready(offset);}catch{}}};
       const startSource=offset=>{
-        if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
+        if(stopped||offset>=duration){naturallyEnded=true;return false;}
         const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain();
         // 上限は RHYTHM_VOLUME_MAX(=200)ぶん。100までは今までとまったく同じ値。
         // ★100より上は曲の波形をそのまま持ち上げるので、音源のピーク(-1 dBTP)を
@@ -6783,9 +6988,17 @@ const Audio_ = (() => {
         // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
         // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
+        outputLatencySeconds=rhythmAudioOutputLatencyMs(ctx)/1000;
+        if(long){
+          rhythmGain.connect(masterOut||ctx.destination);
+          // 曲の終わりまで鳴ったら、輪にする試聴は頭から鳴らし直す。演奏は終わりにする
+          const t0=long.playFrom(offset,rhythmGain,()=>{if(!playing||stopped)return;if(loop){startSource(0);return;}playing=false;naturallyEnded=true;});
+          if(t0===false){dropGainEntry();return false;}
+          offsetSeconds=offset; startedAt=t0; playing=true;
+          return true;
+        }
         nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
-        outputLatencySeconds=rhythmAudioOutputLatencyMs(ctx)/1000;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
       };
@@ -6794,8 +7007,8 @@ const Audio_ = (() => {
       // 見た目も判定も同じこの値から出ているので、ここ1か所でそろう。
       // 鳴らしはじめの遅延ぶんは Math.max(0,…) が 0 に留める(音が出る前にノーツが動き出さない)
       // 曲の頭の無音の長さ(ms)。mp3 の先頭の遅れがブラウザで違わないかを、診断で比べるために1回だけ測る
-      const headMs=(()=>{try{const d=buffer.getChannelData(0);const n=Math.min(d.length,Math.floor(buffer.sampleRate*1.5));for(let i=0;i<n;i++){if(Math.abs(d[i])>.01)return Math.round(i/buffer.sampleRate*1000);}return -1;}catch{return null;}})();
-      const rawSongTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)));
+      const headMs=(()=>{try{const hb=buffer||long.head;const d=hb.getChannelData(0);const n=Math.min(d.length,Math.floor(hb.sampleRate*1.5));for(let i=0;i<n;i++){if(Math.abs(d[i])>.01)return Math.round(i/hb.sampleRate*1000);}return -1;}catch{return null;}})();
+      const rawSongTimeSeconds=()=>Math.min(duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)));
       // 曲の時計の元になる ctx.currentTime は、128サンプルごとの階段状に進む(約3〜20msの段)。同じ値が続くコマは、曲が止まって見える。
       // 直し方 smoothSongClock を入れた端末では、段の間を performance.now() でなめらかに埋める
       // (段の値へゆっくり寄せ、離れすぎたら段の値に戻す。入れていない端末では、これまでどおり段の値そのまま)。2026-10-07
@@ -6817,12 +7030,12 @@ const Audio_ = (() => {
         if(!(smoothPerf>0)){smoothSong=raw;smoothPerf=p;return raw;}
         let next=smoothSong+(p-smoothPerf)/1000;
         if(Math.abs(raw-next)>.05)next=raw;else next+=(raw-next)*.15;
-        smoothSong=Math.min(buffer.duration,Math.max(smoothSong,next));smoothPerf=p;
+        smoothSong=Math.min(duration,Math.max(smoothSong,next));smoothPerf=p;
         return smoothSong;
       };
       // atMs … 曲の途中から鳴らす(観戦で、見ている画面の位置から流す。2026-11-15 r1115-190)。既定は頭から
       const atSeconds=Math.max(0,(Number(options?.atMs)||0)/1000);
-      if(autoStart)startSource(atSeconds<buffer.duration?atSeconds:0);
+      if(autoStart){const at=atSeconds<duration?atSeconds:0;await prepareAt(at);startSource(at);}
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
         // すでに鳴っている・止めたあとなら何もしない(二重に鳴らさない)
@@ -6832,15 +7045,15 @@ const Audio_ = (() => {
         // 元の時計(なめらかにする前)。診断で「止まったコマ」を数えるためだけに使う(2026-11-11。画面・判定は songTimeMs のまま)
         rawSongTimeMs:()=>rawSongTimeSeconds()*1000,
         // 端末の音の事情(診断用)。出力遅延・基準遅延・getOutputTimestamp の有無・サンプルレート・曲の頭の無音
-        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs}),
-        durationMs:buffer.duration*1000,
-        ended:()=>naturallyEnded||songTimeSeconds()>=buffer.duration,
+        info:()=>({outLatMs:Math.round(outputLatencySeconds*1000),baseLatMs:Math.round((Number(ctx.baseLatency)||0)*1000),hasTs:typeof ctx.getOutputTimestamp==='function',tsLatMs:tsLatMs(),rate:Math.round(Number(ctx.sampleRate)||0),headMs,...(long?{chunked:long.stats()}:{})}),
+        durationMs:duration*1000,
+        ended:()=>naturallyEnded||songTimeSeconds()>=duration,
         paused:()=>!playing&&!stopped&&!naturallyEnded,
-        pause:()=>{if(!playing||stopped)return;offsetSeconds=songTimeSeconds();playing=false;const old=source;source=null;stopSource(old);},
-        resume:async()=>{if(playing||stopped||naturallyEnded)return playing;await ensureAudioCtxRunning();return startSource(offsetSeconds);},
+        pause:()=>{if(!playing||stopped)return;offsetSeconds=songTimeSeconds();playing=false;haltSource();},
+        resume:async()=>{if(playing||stopped||naturallyEnded)return playing;await ensureAudioCtxRunning();await prepareAt(offsetSeconds);if(playing||stopped||naturallyEnded)return playing;return startSource(offsetSeconds);},
         // 位置を ms へ移して鳴らし直す(観戦で画面とずれたときに合わせ直す。止めたあと・終わったあとは何もしない)
-        seek:async(ms)=>{if(stopped)return false;const at=Math.max(0,(Number(ms)||0)/1000);if(at>=buffer.duration)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=at;smoothPerf=0;await ensureAudioCtxRunning();if(stopped)return false;return startSource(at);},
-        restart:async()=>{if(stopped)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=0;await ensureAudioCtxRunning();return startSource(0);},
+        seek:async(ms)=>{if(stopped)return false;const at=Math.max(0,(Number(ms)||0)/1000);if(at>=duration)return false;playing=false;naturallyEnded=false;haltSource();offsetSeconds=at;smoothPerf=0;await ensureAudioCtxRunning();await prepareAt(at);if(stopped||playing||offsetSeconds!==at)return playing;return startSource(at);},
+        restart:async()=>{if(stopped)return false;playing=false;naturallyEnded=false;haltSource();offsetSeconds=0;await ensureAudioCtxRunning();await prepareAt(0);if(stopped||playing)return playing;return startSource(0);},
         // 譜面より音源のほうが長い曲を途中で終わらせるとき、最後の少しだけ音量を落とす。
         // (2026-09-06) デュラハンの2曲は音源がバトルのBGMと同じファイルなので切れない。
         // 何もしないと曲の途中でぶつっと止まるため、終わりの手前からなめらかに消す。
@@ -6857,7 +7070,7 @@ const Audio_ = (() => {
           }catch{return false;}
           return true;
         },
-        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();rhythmBuffersInUse.delete(buffer);},
+        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();if(long)long.release();if(buffer)rhythmBuffersInUse.delete(buffer);},
       };
     } catch(e){ return null; }
   };
@@ -39485,8 +39698,9 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
 
 // 画面の説明文(見出しの下に1〜2行)。各画面が同じ指定を手で書き写していたのでまとめる。
 // 補足は 10px より小さくしない(8px は実機では模様にしか見えない)。
+// 文字だけのときは言葉の切れ目で折る(M/B管理「編成画面で選／ぶと」と言葉の途中で折れていた・API 総点検③ r1119-118)
 const ScreenLead = ({ children }) => (
-  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
+  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400" style={typeof children === 'string' ? JA_LABEL_STYLE : undefined}>{typeof children === 'string' ? jaWrap(children) : children}</p>
 );
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -39497,10 +39711,12 @@ const ScreenLead = ({ children }) => (
 const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
   <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-1.5 px-4 py-12 text-center">
     <span aria-hidden="true" className="leading-none" style={{fontSize:'40px'}}>{emoji}</span>
+    {/* 1行に収まる文は真ん中、2行以上に折れる文は左そろえ(中央そろえのまま折れて2行目の頭がずれていた・API 総点検③ r1119-118)。
+        中身を inline-block にすると、1行のときは文の幅に縮んで真ん中に置かれ、折れたときだけ左そろえに見える */}
     {(Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => (
       <p key={index} className={index === 0
         ? 'text-[12px] font-black leading-relaxed text-slate-300'
-        : 'text-[10px] font-bold leading-relaxed text-slate-500'}>{line}</p>
+        : 'text-[10px] font-bold leading-relaxed text-slate-500'}><span className="inline-block max-w-full text-left align-top">{line}</span></p>
     ))}
     {action && <div className="mt-2 w-full">{action}</div>}
   </div>
@@ -41635,7 +41851,7 @@ const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => (
     <div className="flex items-center gap-3 mt-2">
-      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400">{desc}</p></div>
+      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</p></div>
       <div className="flex shrink-0 gap-1">
         {['on', 'off'].map(v => (
           <button key={v} type="button" data-time-of-day-setting={`${key}-${v}`} aria-pressed={st.settings[key] === v} onClick={() => timeOfDaySetSettings({ [key]: v })}
@@ -42775,7 +42991,7 @@ function AssetDownloadPage({ onBack }) {
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -42820,7 +43036,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
             <div data-battle-screen-setting>
               <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_SCREEN_STYLE_LABELS.map(option => (
                   <button key={option.id} type="button" data-battle-screen-style={option.id}
@@ -42836,7 +43052,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
             <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
               <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_CARD_LOOKS.map(option => (
                   <button key={option.id} type="button" data-battle-card-look={option.id}
@@ -42912,7 +43128,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「出さない」を選んでも、すぐ上の「ゲームを更新」からいつでも更新できる。 */}
         <div data-update-notice-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">新しいバージョンのお知らせ</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')}</p>
           {/* 選ばれている側にも枠を持たせる。tailwind の preflight が border:0 を敷いているので、
               片方だけ border クラスが無いと、選ぶたびに中身が1pxずれる */}
           <div className="mt-2 grid grid-cols-3 gap-2">
@@ -42926,13 +43142,13 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -42950,7 +43166,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
@@ -42968,7 +43184,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
           <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
             <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
                 <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
@@ -43058,8 +43274,8 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', desc: 'タイトル画面の絵', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', desc: 'ホーム画面の背景', value: homeArt, set: onChangeHomeArt },
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -43085,7 +43301,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
-          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
           <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
@@ -46535,7 +46751,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" wrapTitle accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -145016,7 +145232,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
-   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button><button className="mh-dialog-close" data-mh-back onClick={closeBgmArrangement}>閉じる</button></div></div>
+   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button>{/* 閉じるは窓の下の固い帯に置く(浮いた丸ボタンが一覧の「試聴」「デフォルト中」と曲名の欄に重なって押せなかった。2026-11-23 API 総点検③ settings-bgm) */}<div data-bgm-close-band className="sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"><button className="mh-dialog-close" data-mh-back style={{position:'static',margin:0,boxShadow:'0 3px 0 #0009'}} onClick={closeBgmArrangement}>閉じる</button></div></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowBackup(false)}>閉じる</button></div></div>
   ) : null;
@@ -145624,7 +145840,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="AUTO設定" accent="text-indigo-300" note="AUTOで戦うときの方針と供モンを決めておく" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
               <section data-auto-settings-section="policy" className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
+              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1" style={JA_LABEL_STYLE}>{jaWrap('WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。')}</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[12px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`mh-range-label text-white ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-70'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
@@ -148279,7 +148495,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">{/* 数はすぐ上の「編成中 8/8」に出ているので、ボタンは決定か残りの数だけ(API 総点検③ r1119-118) */}{draftMonsterRoster.length<STARTER_MONSTER_IDS.length?`あと${STARTER_MONSTER_IDS.length-draftMonsterRoster.length}体選ぶ`:'決定'}</button></div>
                 </div>
               </>
             ):(
@@ -148420,7 +148636,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })}
               </div>
             </div>
-            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">{/* 選んだ数は上の「0 / 5」と枠に出ているので、ボタンは「決定」だけ(API 総点検③ r1119-118) */}決定</button></div>
           </div>);
         })()}
 
@@ -150195,10 +150411,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
         const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
+        //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
+        //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
+        const storyStill=typeof line.still==='string'&&typeof STORY_SCENE_IMAGES!=='undefined'?line.still:null;
+        const storyStillImg=storyStill?(STORY_SCENE_IMAGES[storyStill]||null):null;
+        const storyStillTate=storyStillImg?(STORY_SCENE_IMAGES[`${storyStill}_tate`]||null):null;
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -150221,10 +150443,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
-        const stageGuest=stageLine?assistantById(stageLine.stage||stageLine.who):null;
-        const stageName=stageLine?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
+        const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
+        const stageName=stageLine&&stageGuest?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
         const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
-        const speakingGuest=isGuestWho(line.who);
+        // 一枚絵の行はステージを出さないので、ゲストの台詞も下の欄に出す
+        const speakingGuest=isGuestWho(line.who)&&!storyStillImg;
         let bubbleIdx=-1;
         for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
         const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
@@ -150239,7 +150462,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
-        const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -150382,11 +150605,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-still-on={storyStillImg?'':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
             style={{'--story-bg':`url("${storySceneImg}")`}}/>}
+          {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
+            style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
+            {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -150442,7 +150668,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -155192,6 +155418,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -155204,6 +155460,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

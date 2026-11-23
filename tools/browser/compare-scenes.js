@@ -99,7 +99,7 @@ const SCENES = [
   { id: 'life-bond', area: '助手ライフ', name: '助手ライフ(友情)', kind: 'walk', go: lifeTab('friends'), hide: LIFE_MOVE },
   { id: 'life-friend', area: '助手ライフ', name: '助手ライフ(フレンド)', kind: 'walk', go: lifeTab('visit'), hide: LIFE_MOVE },
   { id: 'life-profile', area: '助手ライフ', name: '助手ライフ(紹介)', kind: 'walk', go: lifeProfile, hide: LIFE_MOVE },
-  { id: 'life-masmon', area: '助手ライフ', name: '助手ライフ(マスモン)', kind: 'walk', go: lifeTabOr('masmon', 'profile'), hide: LIFE_MOVE },
+  { id: 'life-masmon', area: '助手ライフ', name: '助手ライフ(マスモン)', kind: 'walk', go: lifeTabOr('masmon', 'profile'), hide: LIFE_MOVE + ',[data-assistant-life-masmon-card],[data-assistant-life-masmon-go]' },  // マスモンの育ち・姿は実時間で進み、時計を止めても同じ版どうしで揺れた(2026-11-23)ので、この1枚と応援ボタン(名前が入る)だけ隠す(その下の行・タブは撮る)
   // ---- モンヒロビート ----
   { id: 'beat-top', area: 'モンヒロビート', name: 'モンヒロビート(入口)', kind: 'walk' },
   { id: 'beat-songs', area: 'モンヒロビート', name: '曲えらび', kind: 'walk' },

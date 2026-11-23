@@ -13,7 +13,8 @@ const DIR = path.join(__dirname, '..', '..', 'monster-hero', 'images', 'assistan
 const DEFAULT_MAX = 300; // 表に無い絵(新しく足した絵)は、これを超える白の塊があれば止める
 // 絵ごとの許す大きさ(画素)。いまの服の白の最大に、ゆとりを付けたもの
 const ALLOWED = {
-  'kiki': 500, 'sorashido': 500, 'kiki_halloween': 1000, 'kyuko': 2500, 'momosuke': 1500,
+  'kiki': 500, 'sorashido': 700, // ソラシド 700: 2026-11-23 全身画の作り直し(#7292・高さ2560)で白い靴底が 6815画素(背景の残りではない)
+  'kiki_halloween': 1000, 'kyuko': 2500, 'momosuke': 1500,
   'mua_halloween': 1000, 'mua_card-master': 1400,
   // 2026-11-15 r1115-143: 減色をやめたら、服の白(ももすけハロウィンの耳の白い毛・ソラシド補正の白い着物)がまだらに分かれず1つの塊になった。目で見て背景の残りではないことを確かめた
   'momosuke_halloween': 400, 'sorashido_hosei': 600,

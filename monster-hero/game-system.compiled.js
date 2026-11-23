@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f9f044b1536e256
+// source-sha256: 3968419ee8dad252
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8681,19 +8681,19 @@ const Audio_ = (() => {
       buffers.delete(old);
     }
   };
-  const loadBuffer = key => {
+  const loadBuffer = (key, data = null) => {
     if (buffers.has(key)) return Promise.resolve(buffers.get(key));
     if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
-    if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    if (!ctx || !data && typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
-    const request = fetch(audioUrlWithKey(url), {
+    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then(data => decode(ctx, data)).then(decoded => {
+    })).then(bytes => decode(ctx, bytes)).then(decoded => {
       decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
       return light ? lightenBuffer(decoded) : decoded;
@@ -8992,6 +8992,401 @@ const Audio_ = (() => {
       return false;
     }
   };
+  const LONG_SONG_SEC = 480,
+    LONG_START_LEAD_SEC = 0.03,
+    LONG_CHUNK_SEC = 20,
+    LONG_PRE_FRAMES = 16,
+    LONG_POST_FRAMES = 16,
+    LONG_FADE_SEC = 0.02;
+  const longSongBytes = new Map();
+  const MP3_BITRATE = {
+    1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+  };
+  const MP3_RATE = {
+    3: [44100, 48000, 32000],
+    2: [22050, 24000, 16000],
+    0: [11025, 12000, 8000]
+  };
+  const mp3FrameAt = (u8, i) => {
+    if (i + 4 > u8.length || u8[i] !== 0xFF || (u8[i + 1] & 0xE0) !== 0xE0) return null;
+    const ver = u8[i + 1] >> 3 & 3,
+      layer = u8[i + 1] >> 1 & 3;
+    if (ver === 1 || layer !== 1) return null;
+    const bri = u8[i + 2] >> 4,
+      sri = u8[i + 2] >> 2 & 3,
+      pad = u8[i + 2] >> 1 & 1;
+    if (bri === 0 || bri === 15 || sri === 3) return null;
+    const sr = MP3_RATE[ver][sri],
+      spf = ver === 3 ? 1152 : 576;
+    return {
+      len: Math.floor(spf / 8 * MP3_BITRATE[ver === 3 ? 1 : 2][bri] * 1000 / sr) + pad,
+      sr,
+      spf
+    };
+  };
+  const parseMp3Frames = u8 => {
+    let i = 0;
+    if (u8.length > 10 && u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) i = 10 + ((u8[6] & 127) << 21 | (u8[7] & 127) << 14 | (u8[8] & 127) << 7 | u8[9] & 127) + (u8[5] & 0x10 ? 10 : 0);
+    const offs = [];
+    let sr = 0,
+      spf = 0,
+      end = i;
+    while (i + 4 <= u8.length) {
+      const f = mp3FrameAt(u8, i);
+      if (f && f.len > 4 && (!sr || f.sr === sr && f.spf === spf)) {
+        const next = i + f.len;
+        if (next <= u8.length && (next === u8.length || u8.length - next <= 128 || mp3FrameAt(u8, next))) {
+          offs.push(i);
+          sr = f.sr;
+          spf = f.spf;
+          end = next;
+          i = next;
+          continue;
+        }
+      }
+      i++;
+    }
+    return offs.length ? {
+      offsets: Uint32Array.from(offs),
+      end,
+      sr,
+      spf
+    } : null;
+  };
+  const fetchSongBytes = async url => {
+    const hit = longSongBytes.get(url);
+    if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), {
+      cache: 'force-cache'
+    });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let map = null;
+    try {
+      map = parseMp3Frames(bytes);
+    } catch (e) {
+      map = null;
+    }
+    const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
+    const entry = {
+      url,
+      bytes,
+      map,
+      long
+    };
+    if (long) {
+      longSongBytes.clear();
+      longSongBytes.set(url, entry);
+    }
+    return entry;
+  };
+  const monoRange = (buf, from, len) => {
+    const out = new Float32Array(len),
+      c0 = buf.getChannelData(0),
+      c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) {
+      const k = from + i;
+      if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k];
+    }
+    return out;
+  };
+  const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
+    const D = 8;
+    len -= len % D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D),
+      B = monoRange(bBuf, j0, len);
+    const dec = x => {
+      const m = Math.floor(x.length / D),
+        o = new Float32Array(m);
+      for (let i = 0; i < m; i++) {
+        let t = 0;
+        for (let k = 0; k < D; k++) t += x[i * D + k];
+        o[i] = t;
+      }
+      return o;
+    };
+    const Ad = dec(A),
+      Bd = dec(B),
+      RD = R / D;
+    let best = -Infinity,
+      bestD = 0;
+    for (let d = -RD; d <= RD; d++) {
+      let t = 0;
+      const o = d + RD + 1;
+      for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i];
+      if (t > best) {
+        best = t;
+        bestD = d;
+      }
+    }
+    const Lc = L0 + bestD * D,
+      W = 12,
+      len2 = Math.min(len, 8192),
+      j1 = j0 + Math.floor((len - len2) / 2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W),
+      B2 = monoRange(bBuf, j1, len2);
+    const sc = [];
+    for (let L = -W; L <= W; L++) {
+      let t = 0;
+      for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i];
+      sc.push(t);
+    }
+    let bi = 0;
+    for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
+    let frac = 0;
+    if (bi > 0 && bi < sc.length - 1) {
+      const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1];
+      if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den;
+    }
+    let ea = 0,
+      eb = 0;
+    for (let i = 0; i < len2; i++) {
+      const x = A2[i + bi];
+      ea += x * x;
+      eb += B2[i] * B2[i];
+    }
+    return {
+      lag: Lc + (bi - W) + frac,
+      corr: ea > 0 && eb > 0 ? sc[bi] / Math.sqrt(ea * eb) : 0,
+      rms: Math.sqrt(eb / len2)
+    };
+  };
+  const longAligned = r => r && r.corr >= 0.97 && r.rms > 1e-3;
+  const openLongSong = async (ctx, entry) => {
+    const {
+        bytes,
+        map
+      } = entry,
+      n = map.offsets.length,
+      fsec = map.spf / map.sr;
+    const per = Math.max(64, Math.round(LONG_CHUNK_SEC / fsec));
+    const bounds = [0];
+    for (let b = per; b < n - per / 4; b += per) bounds.push(b);
+    const count = bounds.length;
+    const byteRange = k => {
+      const a = k === 0 ? 0 : map.offsets[Math.max(0, bounds[k] - LONG_PRE_FRAMES)];
+      const e = k + 1 >= count ? bytes.length : bounds[k + 1] + LONG_POST_FRAMES < n ? map.offsets[bounds[k + 1] + LONG_POST_FRAMES] : bytes.length;
+      return [a, e];
+    };
+    let C = 0,
+      aligned = false;
+    const stats = {
+      log: [],
+      chunks: count,
+      chunkSec: per * fsec,
+      decoded: 0,
+      seams: 0,
+      seamMaxDevMs: 0,
+      late: 0,
+      failed: 0,
+      probeCorr: 0
+    };
+    const theoryStart = k => k === 0 ? 0 : (bounds[k] - LONG_PRE_FRAMES) * fsec + C;
+    const seamSec = k => bounds[k] * fsec + C;
+    const chunks = new Map(),
+      pending = new Map();
+    const getChunk = k => {
+      if (chunks.has(k)) return Promise.resolve(chunks.get(k));
+      if (pending.has(k)) return pending.get(k);
+      const [a, e] = byteRange(k);
+      const p = decode(ctx, bytes.slice(a, e).buffer).then(buffer => {
+        stats.decoded++;
+        decodedBytes += bufferBytes(buffer);
+        decodedCount += 1;
+        let startSec = theoryStart(k);
+        const prev = chunks.get(k - 1);
+        if (k > 0 && prev && aligned) {
+          const r = buffer.sampleRate,
+            s = seamSec(k);
+          const m = longAlignLag(prev.buffer, buffer, Math.round((s - 0.2 - startSec) * r), Math.round(0.4 * r), Math.round((startSec - prev.startSec) * r), 960);
+          if (longAligned(m)) {
+            const got = prev.startSec + m.lag / r,
+              dev = Math.abs(got - startSec);
+            stats.seams++;
+            stats.seamMaxDevMs = Math.max(stats.seamMaxDevMs, dev * 1000);
+            if (dev < 0.02 && dev * r >= 0.5) startSec = got;
+          }
+        }
+        const c = {
+          buffer,
+          startSec
+        };
+        chunks.set(k, c);
+        return c;
+      }).finally(() => pending.delete(k));
+      pending.set(k, p);
+      return p;
+    };
+    const head = (await getChunk(0)).buffer,
+      rate = head.sampleRate;
+    {
+      const probeLen = 48,
+        lo = LONG_PRE_FRAMES + 8,
+        hi = Math.min(bounds[1] || n, n) - probeLen - 8;
+      let bestP = -1,
+        bestE = 0;
+      for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
+        const from = Math.round(p * fsec * rate),
+          seg = monoRange(head, from, Math.round(0.5 * rate));
+        let e = 0;
+        for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
+        if (e > bestE) {
+          bestE = e;
+          bestP = p;
+        }
+      }
+      if (bestP >= 0) {
+        try {
+          const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
+          const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
+          stats.probeCorr = Math.round(m.corr * 1000) / 1000;
+          if (longAligned(m)) {
+            const lag = Math.abs(m.lag - Math.round(m.lag)) < 0.25 ? Math.round(m.lag) : m.lag;
+            C = lag / rate - bestP * fsec;
+            aligned = true;
+          }
+        } catch (e) {}
+      }
+    }
+    stats.offsetMs = Math.round(C * 10000) / 10;
+    let duration = head.duration;
+    if (count > 1) {
+      const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer);
+      stats.decoded++;
+      duration = theoryStart(count - 1) + last.duration;
+    }
+    let session = 0,
+      live = [],
+      timer = null,
+      play = null;
+    const chunkIndexAt = s => {
+      let k = 0;
+      while (k + 1 < count && s >= seamSec(k + 1)) k++;
+      return k;
+    };
+    const dropLive = x => {
+      stopSource(x.src);
+      try {
+        x.gain.disconnect();
+      } catch (e) {}
+    };
+    const halt = () => {
+      session++;
+      if (timer) clearInterval(timer);
+      timer = null;
+      live.forEach(dropLive);
+      live = [];
+      play = null;
+    };
+    const scheduleChunk = (k, first) => {
+      const c = chunks.get(k);
+      if (!c || !play) return false;
+      const g = ctx.createGain(),
+        src = ctx.createBufferSource(),
+        my = session;
+      src.buffer = c.buffer;
+      src.connect(g);
+      g.connect(play.out);
+      let fromSong = first ? play.o : seamSec(k) - LONG_FADE_SEC / 2;
+      let when = play.t0 + (fromSong - play.o);
+      if (!first && when < ctx.currentTime) {
+        stats.late++;
+        fromSong += ctx.currentTime - when;
+        when = ctx.currentTime;
+      }
+      if (!first) {
+        const wr = Math.round(when * ctx.sampleRate) / ctx.sampleRate;
+        fromSong += wr - when;
+        when = wr;
+      }
+      if (first) g.gain.value = 1;else {
+        g.gain.setValueAtTime(0, when);
+        g.gain.linearRampToValueAtTime(1, when + LONG_FADE_SEC);
+        const prev = live.find(x => x.k === k - 1);
+        if (prev) {
+          prev.gain.gain.setValueAtTime(1, when);
+          prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC);
+          try {
+            prev.src.stop(when + LONG_FADE_SEC + 0.01);
+          } catch (e) {}
+        }
+      }
+      if (k === count - 1) src.onended = () => {
+        if (my === session && play) {
+          const done = play.onEnd;
+          halt();
+          done();
+        }
+      };
+      src.start(when, Math.max(0, fromSong - c.startSec));
+      stats.log.push({
+        k,
+        first,
+        marginMs: Math.round((when - ctx.currentTime) * 10000) / 10,
+        devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100
+      });
+      if (stats.log.length > 8) stats.log.shift();
+      live.push({
+        k,
+        src,
+        gain: g
+      });
+      return true;
+    };
+    const tick = () => {
+      if (!play) return;
+      const my = session,
+        s = play.o + (ctx.currentTime - play.t0),
+        cur = Math.max(chunkIndexAt(Math.max(s, play.o)), live.length ? live[0].k : 0),
+        next = cur + 1;
+      if (next < count && !live.some(x => x.k === next)) {
+        getChunk(next).then(() => {
+          if (my === session && play && !live.some(x => x.k === next) && live.some(x => x.k === next - 1)) scheduleChunk(next, false);
+        }).catch(() => {
+          stats.failed++;
+        });
+      }
+      live = live.filter(x => {
+        if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) {
+          dropLive(x);
+          return false;
+        }
+        return true;
+      });
+      for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some(x => x.k === k)) chunks.delete(k);
+    };
+    return {
+      duration,
+      head,
+      stats: () => ({
+        ...stats,
+        held: chunks.size
+      }),
+      ready: o => getChunk(chunkIndexAt(o)),
+      playFrom: (o, out, onEnd) => {
+        halt();
+        const k = chunkIndexAt(o);
+        if (!chunks.has(k)) return false;
+        const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
+        play = {
+          t0,
+          o,
+          out,
+          onEnd
+        };
+        scheduleChunk(k, true);
+        timer = setInterval(tick, 250);
+        tick();
+        return t0;
+      },
+      halt,
+      release: () => {
+        halt();
+        chunks.clear();
+      }
+    };
+  };
   const startRhythmTrack = async (key, rhythmVolumePct = 100, options = null) => {
     const autoStart = options?.autoStart !== false;
     const loop = options?.loop === true;
@@ -9004,11 +9399,30 @@ const Audio_ = (() => {
     stopOthers();
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src),
-        ctx = await ensureAudioCtxRunning();
-      rememberSongBuffer(track.src);
-      if (!ctx) return null;
-      rhythmBuffersInUse.add(buffer);
+      let buffer = null,
+        long = null,
+        dctx = null;
+      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') buffer = await loadBuffer(track.src);else {
+        const entry = await fetchSongBytes(track.src);
+        dctx = getAudioCtx();
+        if (!dctx) return null;
+        if (entry.long) long = await openLongSong(dctx, entry);else {
+          try {
+            buffer = await loadBuffer(track.src, entry.map ? entry.bytes.buffer.slice(0) : entry.bytes.buffer);
+          } catch (e) {
+            if (!entry.map) throw e;
+            long = await openLongSong(dctx, entry);
+          }
+        }
+      }
+      const ctx = await ensureAudioCtxRunning();
+      if (buffer) rememberSongBuffer(track.src);
+      if (!ctx || long && ctx !== dctx) {
+        if (long) long.release();
+        return null;
+      }
+      if (buffer) rhythmBuffersInUse.add(buffer);
+      const duration = buffer ? buffer.duration : long.duration;
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
@@ -9023,8 +9437,21 @@ const Audio_ = (() => {
           gainEntry = null;
         }
       };
+      const haltSource = () => {
+        const old = source;
+        source = null;
+        stopSource(old);
+        if (long) long.halt();
+      };
+      const prepareAt = async offset => {
+        if (long) {
+          try {
+            await long.ready(offset);
+          } catch {}
+        }
+      };
       const startSource = offset => {
-        if (stopped || offset >= buffer.duration) {
+        if (stopped || offset >= duration) {
           naturallyEnded = true;
           return false;
         }
@@ -9038,6 +9465,27 @@ const Audio_ = (() => {
         };
         activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value = enabled ? raw : 0;
+        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
+        if (long) {
+          rhythmGain.connect(masterOut || ctx.destination);
+          const t0 = long.playFrom(offset, rhythmGain, () => {
+            if (!playing || stopped) return;
+            if (loop) {
+              startSource(0);
+              return;
+            }
+            playing = false;
+            naturallyEnded = true;
+          });
+          if (t0 === false) {
+            dropGainEntry();
+            return false;
+          }
+          offsetSeconds = offset;
+          startedAt = t0;
+          playing = true;
+          return true;
+        }
         nextSource.buffer = buffer;
         nextSource.loop = loop;
         nextSource.connect(rhythmGain);
@@ -9046,7 +9494,6 @@ const Audio_ = (() => {
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
         playing = true;
-        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
         nextSource.onended = () => {
           if (source === nextSource && playing) {
             playing = false;
@@ -9059,17 +9506,18 @@ const Audio_ = (() => {
       };
       const headMs = (() => {
         try {
-          const d = buffer.getChannelData(0);
-          const n = Math.min(d.length, Math.floor(buffer.sampleRate * 1.5));
+          const hb = buffer || long.head;
+          const d = hb.getChannelData(0);
+          const n = Math.min(d.length, Math.floor(hb.sampleRate * 1.5));
           for (let i = 0; i < n; i++) {
-            if (Math.abs(d[i]) > .01) return Math.round(i / buffer.sampleRate * 1000);
+            if (Math.abs(d[i]) > .01) return Math.round(i / hb.sampleRate * 1000);
           }
           return -1;
         } catch {
           return null;
         }
       })();
-      const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
+      const rawSongTimeSeconds = () => Math.min(duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
       const tsLatSamples = [];
@@ -9105,12 +9553,16 @@ const Audio_ = (() => {
         }
         let next = smoothSong + (p - smoothPerf) / 1000;
         if (Math.abs(raw - next) > .05) next = raw;else next += (raw - next) * .15;
-        smoothSong = Math.min(buffer.duration, Math.max(smoothSong, next));
+        smoothSong = Math.min(duration, Math.max(smoothSong, next));
         smoothPerf = p;
         return smoothSong;
       };
       const atSeconds = Math.max(0, (Number(options?.atMs) || 0) / 1000);
-      if (autoStart) startSource(atSeconds < buffer.duration ? atSeconds : 0);
+      if (autoStart) {
+        const at = atSeconds < duration ? atSeconds : 0;
+        await prepareAt(at);
+        startSource(at);
+      }
       return {
         start: () => {
           if (playing || stopped || naturallyEnded) return playing;
@@ -9125,48 +9577,50 @@ const Audio_ = (() => {
           hasTs: typeof ctx.getOutputTimestamp === 'function',
           tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
-          headMs
+          headMs,
+          ...(long ? {
+            chunked: long.stats()
+          } : {})
         }),
-        durationMs: buffer.duration * 1000,
-        ended: () => naturallyEnded || songTimeSeconds() >= buffer.duration,
+        durationMs: duration * 1000,
+        ended: () => naturallyEnded || songTimeSeconds() >= duration,
         paused: () => !playing && !stopped && !naturallyEnded,
         pause: () => {
           if (!playing || stopped) return;
           offsetSeconds = songTimeSeconds();
           playing = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
         },
         resume: async () => {
           if (playing || stopped || naturallyEnded) return playing;
           await ensureAudioCtxRunning();
+          await prepareAt(offsetSeconds);
+          if (playing || stopped || naturallyEnded) return playing;
           return startSource(offsetSeconds);
         },
         seek: async ms => {
           if (stopped) return false;
           const at = Math.max(0, (Number(ms) || 0) / 1000);
-          if (at >= buffer.duration) return false;
+          if (at >= duration) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = at;
           smoothPerf = 0;
           await ensureAudioCtxRunning();
-          if (stopped) return false;
+          await prepareAt(at);
+          if (stopped || playing || offsetSeconds !== at) return playing;
           return startSource(at);
         },
         restart: async () => {
           if (stopped) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = 0;
           await ensureAudioCtxRunning();
+          await prepareAt(0);
+          if (stopped || playing) return playing;
           return startSource(0);
         },
         fadeOut: ms => {
@@ -9192,7 +9646,8 @@ const Audio_ = (() => {
           source = null;
           stopSource(old);
           dropGainEntry();
-          rhythmBuffersInUse.delete(buffer);
+          if (long) long.release();
+          if (buffer) rhythmBuffersInUse.delete(buffer);
         }
       };
     } catch (e) {
@@ -64165,8 +64620,9 @@ const ScreenHead = ({
 const ScreenLead = ({
   children
 }) => React.createElement("p", {
-  className: "mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
-}, children);
+  className: "mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400",
+  style: typeof children === 'string' ? JA_LABEL_STYLE : undefined
+}, typeof children === 'string' ? jaWrap(children) : children);
 const ScreenEmpty = ({
   emoji = '📭',
   lines = [],
@@ -64182,7 +64638,9 @@ const ScreenEmpty = ({
 }, emoji), (Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => React.createElement("p", {
   key: index,
   className: index === 0 ? 'text-[12px] font-black leading-relaxed text-slate-300' : 'text-[10px] font-bold leading-relaxed text-slate-500'
-}, line)), action && React.createElement("div", {
+}, React.createElement("span", {
+  className: "inline-block max-w-full text-left align-top"
+}, line))), action && React.createElement("div", {
   className: "mt-2 w-full"
 }, action));
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
@@ -67589,8 +68047,9 @@ const TimeOfDaySettingsPanel = () => {
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-slate-200"
   }, title), React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-400"
-  }, desc)), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, ['on', 'off'].map(v => React.createElement("button", {
     key: v,
@@ -69452,8 +69911,9 @@ function AssetDownloadPage({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "自動ダウンロード"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -69524,8 +69984,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "タクティクスバトル画面"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_SCREEN_STYLE_LABELS.map(option => React.createElement("button", {
       key: option.id,
@@ -69544,8 +70005,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "行動カードの見た目"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
       key: option.id,
@@ -69679,8 +70141,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "新しいバージョンのお知らせ"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, UPDATE_NOTICE_STYLE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69694,15 +70157,17 @@ function SettingsScreen({
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。'))), React.createElement("div", {
     "data-assistant-bubble-setting": true,
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69721,8 +70186,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "ホームの助手コメント"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69749,8 +70215,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手どうしの会話を自動で進める"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69893,13 +70360,11 @@ function ScreenThemeModal({
   const rows = [{
     id: 'title',
     label: 'タイトル画面',
-    desc: 'タイトル画面の絵',
     value: titleArt,
     set: onChangeTitleArt
   }, {
     id: 'home',
     label: 'ホーム画面',
-    desc: 'ホーム画面の背景',
     value: homeArt,
     set: onChangeHomeArt
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
@@ -69966,7 +70431,7 @@ function ScreenThemeModal({
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-white"
-  }, row.label), React.createElement("small", {
+  }, row.label), row.desc && row.desc !== row.label && React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -75360,6 +75825,7 @@ function MasuMonsScreen({
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
     title: "マスモン一覧(バトル)",
+    wrapTitle: true,
     accent: "text-pink-400",
     note: "マスモン＝自分で育てたモンスター。絆・状態を見る",
     onBack: onBack,
@@ -255189,11 +255655,19 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "デフォルトに戻す"), React.createElement("div", {
+    "data-bgm-close-band": true,
+    className: "sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"
+  }, React.createElement("button", {
     className: "mh-dialog-close",
     "data-mh-back": true,
+    style: {
+      position: 'static',
+      margin: 0,
+      boxShadow: '0 3px 0 #0009'
+    },
     onClick: closeBgmArrangement
-  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
+  }, "閉じる")))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
@@ -256758,8 +257232,9 @@ function MonsterHeroGame() {
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
       }, "2. 供モン事前設定"), React.createElement("p", {
-        className: "text-[11px] leading-relaxed text-slate-400 mt-1"
-      }, "WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。")), draftAutoSettings.allies.map((ally, index) => React.createElement("div", {
+        className: "text-[11px] leading-relaxed text-slate-400 mt-1",
+        style: JA_LABEL_STYLE
+      }, jaWrap('WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。'))), draftAutoSettings.allies.map((ally, index) => React.createElement("div", {
         key: index,
         className: `${SCREEN_PANEL_CLASS} space-y-2`
       }, React.createElement("label", {
@@ -256788,7 +257263,7 @@ function MonsterHeroGame() {
           slot
         }),
         "aria-pressed": ally.slot === slot,
-        className: `min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-50'}`
+        className: `min-h-[44px] min-w-0 rounded-xl border text-[12px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `mh-range-label text-white ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-70'}`
       }, ally.slot === slot && '✓', label))))))), React.createElement("section", {
         "data-auto-settings-section": "quickRun",
         className: "space-y-3"
@@ -263305,7 +263780,7 @@ function MonsterHeroGame() {
       onClick: confirmMonsterRoster,
       disabled: draftMonsterRoster.length !== STARTER_MONSTER_IDS.length,
       className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
-    }, "決定 (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")")))) : React.createElement(React.Fragment, null, React.createElement("div", {
+    }, draftMonsterRoster.length < STARTER_MONSTER_IDS.length ? `あと${STARTER_MONSTER_IDS.length - draftMonsterRoster.length}体選ぶ` : '決定')))) : React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, React.createElement("span", {
       className: "text-[10px] font-black text-purple-300 shrink-0 leading-tight"
@@ -263582,7 +264057,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: savePastureSettings,
         className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
-      }, "決定（", draftHomePastureIds.length, "体）")));
+      }, "決定")));
     })(), gameState === 'RHYTHM_MASU_BEAT' && React.createElement(MasuBeatScreen, {
       masuMons: masuMons,
       songs: rhythmDemoSongs(RHYTHM_SONGS),
@@ -266736,17 +267211,22 @@ function MonsterHeroGame() {
         }
       }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
+      const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
+      const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          const src = l && STORY_SCENE_IMAGES[l.bg];
-          if (src && !pre.has(src)) {
-            pre.add(src);
-            try {
-              const im = new Image();
-              im.src = src;
-            } catch (e) {}
-          }
+          [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
+            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            if (src && !pre.has(src)) {
+              pre.add(src);
+              try {
+                const im = new Image();
+                im.src = src;
+              } catch (e) {}
+            }
+          });
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -266799,10 +267279,10 @@ function MonsterHeroGame() {
         }
       }
       const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
-      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
-      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageGuest = stageLine && !storyStillImg ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
-      const speakingGuest = isGuestWho(line.who);
+      const speakingGuest = isGuestWho(line.who) && !storyStillImg;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -266828,7 +267308,7 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -267013,6 +267493,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-still-on": storyStillImg ? '' : undefined,
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
@@ -267035,7 +267516,30 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), React.createElement("button", {
+      }), storyStillImg && React.createElement("div", {
+        key: `still:${storyStill}`,
+        "data-story-still": storyStill,
+        "data-story-still-has-tate": storyStillTate ? '' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-still': `url("${storyStillImg}")`,
+          ...(storyStillTate ? {
+            '--story-still-tate': `url("${storyStillTate}")`
+          } : {})
+        }
+      }, React.createElement("div", {
+        "data-story-still-area": true
+      }, React.createElement("img", {
+        "data-story-still-img": true,
+        src: storyStillImg,
+        alt: "",
+        draggable: false
+      })), storyStillTate && React.createElement("img", {
+        "data-story-still-tate": true,
+        src: storyStillTate,
+        alt: "",
+        draggable: false
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -267189,7 +267693,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
+          top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -267199,7 +267703,7 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
         }
       }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
@@ -273504,6 +274008,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -273516,6 +274050,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

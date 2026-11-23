@@ -10,6 +10,17 @@
   1. 静的: コード・データ・CSS・HTML に道筋もファイル名も出てこず、名前を組み立てる規則(助手の絵・カードの絵・全身絵など)に照らしても作られない
   2. 動かして: 撮影の道具(`tools/browser/visual-shoot.js` ほか)で主な画面を開いたとき、読み込まれた物の記録に出てこない
 
+## 使っていない物の探し方(道具)
+
+```
+node tools/image/unused-images.js             要約だけ画面に出し、一覧を docs/progress/dev/r1123-008/unused-images.md に書く
+node tools/image/unused-images.js --why <語>  その画像の判定と理由
+node tools/image/unused-images.js --selftest  道具の自己点検
+```
+
+道具は上の 1(静的)だけを見る。画像は動かさない。「使っていない候補」に出た物を、2(動かして)でも確かめてからここへ移す。
+「要確認」に出た物は残す(2026-11-22 r1123-008)。
+
 ## 戻し方
 
 ```
