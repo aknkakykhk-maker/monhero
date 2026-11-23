@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8845793fa3b1051
+// source-sha256: 0f1e408be1e37914
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119730,9 +119730,24 @@ function AssistantLifeRoomSheet({
   }));
 }
 const ASSISTANT_LIFE_STAND_BOX = new Map();
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master']);
+const assistantLifeStandFrameSrc = src => {
+  const s = String(src || '');
+  const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  if (!m || !ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || m[3] === 'normal') return src;
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+};
 const assistantLifeStandBox = src => new Promise(res => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) {
     res(ASSISTANT_LIFE_STAND_BOX.get(src));
+    return;
+  }
+  const frameSrc = assistantLifeStandFrameSrc(src);
+  if (frameSrc !== src) {
+    assistantLifeStandBox(frameSrc).then(box => {
+      ASSISTANT_LIFE_STAND_BOX.set(src, box);
+      res(box);
+    });
     return;
   }
   const im = new Image();

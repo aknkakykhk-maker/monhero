@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 398ee58dec59b270
+// generated-sha256: 3bc1b35a3d810f50
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70321,8 +70321,19 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 //   絵の描かれている範囲(透明でない所)を一度だけ測り、見た目の高さ(頭の上〜絵の下)を場面の高さの fig にそろえる。
 //   下は絵の下の端を、場面の下から 22%(横で低い画面は台詞の窓の上 150px)の床にそろえる(2026-11-08 ミハリ: 横で顔が台詞の窓の裏に隠れた)。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
 const ASSISTANT_LIFE_STAND_BOX = new Map();
+// 8表情を同じ枠・同じ顔の位置で切り出した組(tools/assistant/life-stand-from-fullbody.py)。表情ごとに見えている体の範囲が違う(normal だけ手を頭の上へ上げている)ので、
+//   どの表情も同じ組の normal の範囲で置く(表情を替えても顔が動かない)。2026-11-23 r1119-137 カードマスターの立ち絵を新しい全身画から作り直したとき
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master']);
+const assistantLifeStandFrameSrc = (src) => {
+  const s = String(src || '');
+  const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  if (!m || !ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || m[3] === 'normal') return src;
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+};
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
+  const frameSrc = assistantLifeStandFrameSrc(src);
+  if (frameSrc !== src) { assistantLifeStandBox(frameSrc).then((box) => { ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box); }); return; }
   const im = new Image();
   im.onload = () => {
     // 測れないとき(iPhone で canvas が使えない・上限を超えて真っ白になるなど)も、絵の縦横の比だけは本物を使う。
