@@ -150,6 +150,8 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/src\/parts\/(10-core|30-rhythm-play|60-app|77-screen-rhythm-multi)\.jsx$|^tools\/ui\/rhythm-multi-play-guard-check\.js$/, checks: ['ui/rhythm-multi-play-guard-check.js'], why: 'マルチの演奏中に、押していないのに画面が外へ替わろうとしたら止まるか(r1115-006)' },
   { re: /^monster-hero\/src\/parts\/(30-rhythm-play|43-player-rank-ui)\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-result-landscape-check\.js$/, checks: ['ui/rhythm-result-landscape-check.js'], why: '横のリザルトの最初の画面に、曲名・点数・判定の数が出るか(点検 V3)' },
   { re: /^monster-hero\/src\/parts\/58-screen-rhythm\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-event-ranking-landscape-check\.js$/, checks: ['ui/rhythm-event-ranking-landscape-check.js'], why: '横の全国ランキング(イベント)の最初の画面に順位が見えるか(点検 V4)' },
+  // モンヒロビートのオプションで「戻る」・タブ・保存がいつでも押せるか(2026-11-23 r1119-147 社長「戻れなくなった。何回目だよ」)
+  { re: /^monster-hero\/(src\/parts\/(10-core|29-rhythm-screens)\.jsx|data\/rhythm-mode\.js|index\.html)$|^tools\/ui\/rhythm-options-reach-check\.js$/, checks: ['ui/rhythm-options-reach-check.js'], why: 'モンヒロビートのオプションで戻る・タブ・保存の上に何も重ならず、ずれても戻るか(全タブ×縦横🔄×機種×判定ライン端)' },
   { re: /^monster-hero\/src\/parts\/(29-rhythm-screens|77-screen-rhythm-multi|80-screen-rhythm-buddy)\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-multi-select-fit-check\.js$/, checks: ['ui/rhythm-multi-select-fit-check.js'], why: 'マルチの曲えらびの吹き出し・決定の帯が切れず重ならないか' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },

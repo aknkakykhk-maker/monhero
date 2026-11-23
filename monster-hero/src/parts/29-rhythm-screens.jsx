@@ -57,7 +57,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue)||(hellReleased&&JSON.stringify(hellDraft)!==JSON.stringify(hellSaved));
   const set=(key,next)=>{setDraft(current=>normalizeRhythmSettings({...current,[key]:next}));setMessage('');};
   // タブを変えたら先頭から見せる(前のタブの位置に残ると、開いた先が途中から見える)
-  const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
+  // ページのずれ(iPhone で画面ごと上へずれて「戻る」が状態表示の下に入る)を、開いた時・タブを替えた時・保存した時にも確かめて戻す(r1119-147)
+  const fixPageOffset=()=>{try{if(typeof MH_PAGE_OFFSET_GUARD!=='undefined')MH_PAGE_OFFSET_GUARD.check();}catch(_){}};
+  useEffect(()=>{fixPageOffset();},[]);
+  const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}fixPageOffset();};
   const label='text-[13px] font-bold';
   const note='text-[10px] leading-relaxed text-slate-400';
   const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200';
@@ -99,6 +102,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
       {(!wide||slider)&&<input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
         min={min} max={max} step={step} value={value}
         onChange={e=>put(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
+        // 指を離したらフォーカスを外す。残ると iPhone のページのずれを戻す見張りが「入力中」と見て止まっていた(r1119-147)
+        onPointerUp={e=>{try{e.currentTarget.blur();}catch(_){}}} onTouchEnd={e=>{try{e.currentTarget.blur();}catch(_){}}}
         className="mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
         style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>}
     </div>;
@@ -156,7 +161,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   const fxField=item=><div key={item.key} data-rhythm-fx-item={item.key} className={`${item.options.length>=4?'col-span-2':''}`}>{field(<span className="inline-flex items-center gap-1.5"><span data-rhythm-fx-weight={item.weight} className={`rounded px-1 text-[10px] font-black ${FX_WEIGHT[item.weight][1]}`}>{FX_WEIGHT[item.weight][0]}</span>{item.label}</span>,fxSegments(item),RHYTHM_FX_HELP[item.key])}</div>;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setHellDraft({hit:'far',text:'below',lane:RHYTHM_SKY_LANE_LOOK_DEFAULT});setMessage('画面上の値を戻しました（未保存）');};
-  const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
+  const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');fixPageOffset();};
   const requestBack=()=>{if(dirty){setLeaveAsk(true);return;}onBack();};
   const saveAndBack=async()=>{saveHell();await onSave(draft);setLeaveAsk(false);onBack();};
   // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
@@ -176,7 +181,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     if(dirty){const saved=await onSave(draft);setDraft(saved);}
     onCalibrate();
   };
-  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)'}}>
+  // 端末を回した横は左右に切り欠き(ノッチ)が来るので、左右の安全域も取る(縦・🔄横では0。r1119-147 の検査で見つけた)
+  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingLeft:'var(--mh-sa-left, 0px)',paddingRight:'var(--mh-sa-right, 0px)'}}>
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
@@ -268,9 +274,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
 {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
               '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
-{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138・社長「スカイノーツは設定で元々のとさっきのいまの選べるようにしといてね」) */}
-{field('空のノーツの上がり方',segments('skyRise',RHYTHM_SKY_RISE_LABELS),
-              'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。',{full:true})}
+{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138 → r1119-146 社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ」・C は外した)。説明文の頭に、選んでいるタイプの見え方を出す */}
+{field('空のノーツの上がり方',<>{segments('skyRiseType',RHYTHM_SKY_RISE_TYPE_LABELS)}
+                <p data-rhythm-sky-rise-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType]||RHYTHM_SKY_RISE_TYPE_NOTES.A)}</p></>,
+              `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`,{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
@@ -746,6 +753,153 @@ const RhythmSongName=({song,clip=false})=>{
   if(!sub)return <span style={chunk}>{title}</span>;
   return <><span style={chunk}>{title}</span>{' '}<span style={chunk}>{sub}</span></>;
 };
+// ===== 歌詞カードを大きく見る幕(2026-11-23 r1119-150 社長「大きく見るおしたらでかすぎてみづらい」) =====
+//   前は幅 900px の原寸で開き、絵が画面からはみ出して全体が見えなかった。はじめは画面に全体が収まる大きさで出し、
+//   2本の指で広げる・縮める(最大5倍)、広げたら1本の指で動かす、2回たたくと 2.5倍 ⇔ 全体 を切り替える。
+//   「🔄 横」で絵を回しているときも、指の位置は RHYTHM_VIEW_ROTATION.point で絵の向きへ直してから使う
+const RhythmLyricZoomView=({src,onClose})=>{
+  const [view,setView]=React.useState({s:1,x:0,y:0});
+  const viewRef=React.useRef(view);
+  const boxRef=React.useRef(null);
+  const pts=React.useRef(new Map());
+  const gesture=React.useRef(null);
+  const lastTap=React.useRef({t:0,x:0,y:0});
+  const toView=(e)=>{
+    const r=typeof RHYTHM_VIEW_ROTATION!=='undefined'&&RHYTHM_VIEW_ROTATION&&typeof RHYTHM_VIEW_ROTATION.point==='function'?RHYTHM_VIEW_ROTATION.point(e.clientX,e.clientY):null;
+    return r&&Number.isFinite(r.x)&&Number.isFinite(r.y)?{x:r.x,y:r.y}:{x:e.clientX,y:e.clientY};
+  };
+  const center=()=>{
+    const el=boxRef.current;if(!el)return{x:0,y:0};
+    const b=el.getBoundingClientRect();
+    return toView({clientX:b.left+b.width/2,clientY:b.top+b.height/2});
+  };
+  const apply=(v)=>{
+    const s=Math.max(1,Math.min(5,Number.isFinite(v.s)?v.s:1));
+    let next={s:1,x:0,y:0};
+    if(s>1.001){
+      // 動かせる幅は、枠ではなく実際に描かれている絵(上下・左右の黒い余白を除く)の大きさで決める。絵の外の黒だけが見える所まで動かさない
+      const el=boxRef.current;const w=el?el.clientWidth:0,h=el?el.clientHeight:0;
+      const img=el?el.querySelector('img'):null;
+      const k=img&&img.naturalWidth&&img.naturalHeight?Math.min(w/img.naturalWidth,h/img.naturalHeight):0;
+      const dw=k?img.naturalWidth*k:w,dh=k?img.naturalHeight*k:h;
+      const mx=Math.max(0,(dw*s-w)/2),my=Math.max(0,(dh*s-h)/2);
+      next={s,x:Math.max(-mx,Math.min(mx,v.x||0)),y:Math.max(-my,Math.min(my,v.y||0))};
+    }
+    viewRef.current=next;setView(next);
+  };
+  const begin=()=>{
+    const list=[...pts.current.values()];const v=viewRef.current;
+    if(list.length>=2){
+      const [a,b]=list;const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};const c=center();
+      gesture.current={kind:'pinch',d0:Math.max(10,Math.hypot(a.x-b.x,a.y-b.y)),s0:v.s,q:{x:(m.x-c.x-v.x)/v.s,y:(m.y-c.y-v.y)/v.s},c};
+    }else if(list.length===1){
+      gesture.current={kind:'pan',p0:list[0],x0:v.x,y0:v.y};
+    }else gesture.current=null;
+  };
+  const down=(e)=>{
+    const p=toView(e);pts.current.set(e.pointerId,p);
+    try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+    if(pts.current.size===1){
+      const now=Date.now(),lt=lastTap.current;
+      if(now-lt.t<320&&Math.hypot(p.x-lt.x,p.y-lt.y)<40){
+        lastTap.current={t:0,x:0,y:0};
+        if(viewRef.current.s>1.05)apply({s:1,x:0,y:0});
+        else{const c=center();const s=2.5;apply({s,x:(p.x-c.x)*(1-s),y:(p.y-c.y)*(1-s)});}
+        gesture.current=null;return;
+      }
+      lastTap.current={t:now,x:p.x,y:p.y};
+    }
+    begin();
+  };
+  const move=(e)=>{
+    if(!pts.current.has(e.pointerId))return;
+    pts.current.set(e.pointerId,toView(e));
+    const g=gesture.current;if(!g)return;
+    const list=[...pts.current.values()];
+    if(g.kind==='pinch'&&list.length>=2){
+      const [a,b]=list;const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      const s=Math.max(1,Math.min(5,g.s0*Math.hypot(a.x-b.x,a.y-b.y)/g.d0));
+      apply({s,x:m.x-g.c.x-s*g.q.x,y:m.y-g.c.y-s*g.q.y});
+    }else if(g.kind==='pan'&&list.length===1&&viewRef.current.s>1){
+      apply({s:viewRef.current.s,x:g.x0+list[0].x-g.p0.x,y:g.y0+list[0].y-g.p0.y});
+    }
+  };
+  const up=(e)=>{if(!pts.current.delete(e.pointerId))return;begin();};
+  return <div data-rhythm-song-lyric-full role="dialog" aria-modal="true" aria-label="歌詞カード"
+    className="fixed inset-0 z-[9001] bg-black"
+    style={{position:'fixed',inset:0,zIndex:9001,backgroundColor:'#000',overflow:'hidden'}}>
+    <div ref={boxRef} data-rhythm-song-lyric-full-box
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+      className="absolute overflow-hidden"
+      style={{position:'absolute',top:'max(8px, var(--mh-sa-top, 0px))',bottom:'max(8px, var(--mh-sa-bottom, 0px))',left:'max(8px, var(--mh-sa-left, 0px))',right:'max(8px, var(--mh-sa-right, 0px))',touchAction:'none',overflow:'hidden'}}>
+      <img src={src} alt="歌詞カード" draggable={false} data-rhythm-song-lyric-full-img
+        className="block h-full w-full select-none object-contain"
+        style={{width:'100%',height:'100%',objectFit:'contain',transform:`translate(${view.x}px, ${view.y}px) scale(${view.s})`,transformOrigin:'50% 50%',willChange:'transform',userSelect:'none',WebkitUserSelect:'none',pointerEvents:'none'}}/>
+    </div>
+    <p aria-hidden="true" className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-white/60"
+      style={{position:'absolute',left:0,right:0,bottom:'max(8px, var(--mh-sa-bottom, 0px))'}}>{view.s>1?'2回たたくと全体に戻ります':'2本の指で広げる・2回たたくと大きくなります'}</p>
+    <button type="button" data-rhythm-song-lyric-full-close onClick={onClose}
+      className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
+      style={{position:'absolute',top:'max(12px, var(--mh-sa-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
+  </div>;
+};
+// 文字を置き場所に収める(2026-11-23 r1119-142 社長「曲名のあとのてんてんがあるやつとないやつなんなの？てかできるだけちゃんとおさめてほしい」)。
+// 見積もり(rhythmTitleFitSize)と CSS の line-clamp だけで切っていたので、iPhone では収まっている曲名にも「…」が付き、
+// 本当に長い曲名は大きい字のまま切れていた。ここでは実際に描いた幅と高さを測って、次の順で収める。
+//   ① 1行のまま maxPx → minPx まで1pxずつ小さくする / ② 入らなければ lines 行まで折る(また maxPx から小さくする)
+//   ③ それでも入らないときだけ、最後の行を「…」にする(本当に収まらないとき)
+// 測り直すのは、文字・置き場所の幅・高さが変わったとき。字の大きさは要素の style に直に入れる(描き直しを待たない)
+const useRhythmFitText=(ref,{text,maxPx,minPx,lines=2,maxH=0})=>{
+  const [fit,setFit]=React.useState({px:maxPx,lines:1,clip:false});
+  const measure=React.useCallback(()=>{
+    const el=ref.current;
+    if(!el||!el.clientWidth)return;
+    const keep={fontSize:el.style.fontSize,whiteSpace:el.style.whiteSpace,clamp:el.style.webkitLineClamp,display:el.style.display};
+    const restore=()=>{el.style.fontSize=keep.fontSize;el.style.whiteSpace=keep.whiteSpace;el.style.webkitLineClamp=keep.clamp;el.style.display=keep.display;};
+    el.style.webkitLineClamp='unset';el.style.display='block';
+    const fits=(px,n)=>{
+      el.style.fontSize=`${px}px`;
+      el.style.whiteSpace=n===1?'nowrap':'normal';
+      const lh=parseFloat(getComputedStyle(el).lineHeight)||px*1.25;
+      return el.scrollWidth<=el.clientWidth+1&&el.scrollHeight<=Math.ceil(lh*n)+1&&(!maxH||el.scrollHeight<=maxH+1);
+    };
+    let found=null;
+    for(let n=1;n<=Math.max(1,lines)&&!found;n++){
+      for(let px=maxPx;px>=minPx;px--){if(fits(px,n)){found={px,lines:n,clip:false};break;}}
+    }
+    restore();
+    const next=found||{px:minPx,lines:Math.max(1,lines),clip:true};
+    setFit(prev=>prev.px===next.px&&prev.lines===next.lines&&prev.clip===next.clip?prev:next);
+  },[ref,maxPx,minPx,lines,maxH]);
+  React.useLayoutEffect(()=>{measure();},[measure,text]);
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el||typeof ResizeObserver==='undefined')return undefined;
+    let last='';
+    const ro=new ResizeObserver(()=>{const box=`${el.clientWidth}`;if(box!==last){last=box;measure();}});
+    ro.observe(el);
+    // 字の読み込みで幅が変わる(iPhone の太字)ので、読み込み後にも測る
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>measure()).catch(()=>{});
+    return()=>ro.disconnect();
+  },[measure]);
+  const style={fontSize:`${fit.px}px`,whiteSpace:fit.lines===1?'nowrap':'normal',overflow:'hidden'};
+  if(fit.clip){
+    if(fit.lines===1)style.textOverflow='ellipsis';
+    else{style.display='-webkit-box';style.WebkitBoxOrient='vertical';style.WebkitLineClamp=String(fit.lines);}
+  }
+  return {fit,style};
+};
+// 曲名(詳しい欄)と版の札の名前を、上の useRhythmFitText で収めて描く
+const RhythmFitTitle=({song,maxPx,minPx,lines,maxH=0,className=''})=>{
+  const ref=React.useRef(null);
+  const {fit,style}=useRhythmFitText(ref,{text:rhythmSongFullName(song),maxPx,minPx,lines,maxH});
+  return <b ref={ref} data-rhythm-song-title data-rhythm-title-fit={fit.clip?'clip':`${fit.px}px/${fit.lines}`} className={className} style={style}><RhythmSongName song={song}/></b>;
+};
+const RhythmFitLabel=({text,maxPx,minPx,lines=2,className=''})=>{
+  const ref=React.useRef(null);
+  const {fit,style}=useRhythmFitText(ref,{text,maxPx,minPx,lines});
+  return <span ref={ref} data-rhythm-label-fit={fit.clip?'clip':`${fit.px}px/${fit.lines}`} className={className} style={style}>{text}</span>;
+};
 const RhythmSongArt=({song,large=false,marked=true,onZoom=null,listenMark=false})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
@@ -1213,7 +1367,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
                 onClick={()=>setSongId(item.songId)}
                 className={`flex min-h-[36px] min-w-0 ${viewWide?'max-w-[6.5rem] px-2 text-[11px]':'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
-                <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
+                <RhythmFitLabel text={rhythmSongVersionLabel(item.songId)||'原曲'} maxPx={viewWide?11:12} minPx={8} lines={2} className="block min-w-0 text-center leading-[1.15]"/>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})();
   // 横の一言が欄に収まるかを測る(上の noteFit)。曲・難易度・開け閉め・欄の大きさが変わったら、詰めない形から測り直す
   const noteFitShow=!!notice&&noticeOpen&&viewWide;
@@ -1412,9 +1566,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           <div className="min-w-0" style={{gridArea:'title'}}>
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
             {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
-            <div className="flex items-start gap-1.5 [container-type:inline-size]">
-              <b data-rhythm-song-title className={`line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white ${viewWide&&versionsOf(song).length>1?'landscape:line-clamp-2 landscape:h-auto landscape:max-h-[2.5em] landscape:text-[12px]':'landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]'}`}
-                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,viewWide&&versionsOf(song).length>1?44+76*versionsOf(song).length:44)}}><RhythmSongName song={song}/></b>
+            {/* 版の札は、曲名の横に入らない時だけ次の行へ回す(曲名を最低9remは取る。2026-11-23 r1119-142) */}
+            <div className="flex flex-wrap items-start gap-x-1.5 gap-y-1 [container-type:inline-size]">
+              {/* 曲名は実際に測って収める(2026-11-23 r1119-142 社長「曲名のあとのてんてんがあるやつとないやつなんなの？」)。
+                  字を小さくし、入らなければ2行に折り、それでも入らないときだけ「…」。縦の低い画面(高さ700以下)は一覧の場所を残すため1行のまま */}
+              {(()=>{const wideVer=viewWide&&versionsOf(song).length>1,shortTate=!viewWide&&isShortScreen;
+                // 縦は2行ぶん(43px)の高さの中で3行まで(題と副題が別のかたまりなので)。縦の低い画面は1行、入らない曲名だけ2〜3行
+                return <RhythmFitTitle key={song.songId} song={song} maxPx={shortTate?15:wideVer?14:viewWide?16:17} minPx={shortTate?10:10} lines={3}
+                  maxH={shortTate?38:viewWide?0:43}
+                  className={`block min-w-0 flex-1 overflow-hidden font-black leading-[1.25] text-white ${viewWide||shortTate?'':'h-[43px]'} ${wideVer?'basis-[9rem]':''}`}/>;})()}
               {viewWide&&versionTabs}
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
                 aria-label={favoriteIds.has(song.songId)?'お気に入りから外す':'お気に入りに入れる'}
@@ -1552,8 +1712,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     {artZoom&&song&&(()=>{const reserve=150+(song.credit&&song.credit.text?44:0)+(song.credit&&changelogSafeLink(song.credit.link)?52:0);return <div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
       className="fixed inset-0 z-[9000] flex flex-col items-center justify-center overflow-y-auto p-4 landscape:flex-row landscape:gap-6"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',overflowY:'auto','--mh-art-max-h':`min(74%, calc(100% - ${reserve}px))`,
-        // 歌詞カードのページの絵の高さは、この幕の高さ(cqh)で決める(ページの枠の中では % が効かないため)。ページの印と案内のぶん(約70px)を引く
-        containerType:'size','--mh-art-page-h':`min(66cqh, calc(100cqh - ${reserve+70}px))`}}
+        // 歌詞カードのページの絵の高さは、この幕の高さ(cqh)で決める(ページの枠の中では % が効かないため)。
+        // 2026-11-23 r1119-150: 歌詞の無い曲のジャケットと同じ大きさ(縦 74%・横 88%)にそろえる。ページの印は絵の下ではなく曲名の列へ移した
+        containerType:'size','--mh-art-page-h-p':`min(74cqh, calc(100cqh - ${reserve}px))`}}
       onClick={()=>setArtZoom(false)}>
       {/* 横長の幕では、絵を左に大きく、曲名・紹介・ボタンを右へ並べる(縦に積むと絵が小さくなるため) */}
       {(()=>{
@@ -1566,8 +1727,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         // 歌詞カードのある曲: ジャケット → 歌詞カード を横に並べ、指で横に送るか ◀ ▶・●○ で移る。
         //   歌詞カードは字が細かいので、押すと原寸で開き、上下左右に動かして読める
         const pages=[{src:artSrc,alt:`${rhythmSongFullName(song)}のジャケット`},...lyrics.map((src,i)=>({src,alt:`${rhythmSongFullName(song)}の歌詞カード${lyrics.length>1?` ${i+1}`:''}`,lyric:true}))];
-        const cur=Math.min(artPage,pages.length-1);
-        return <div data-rhythm-song-art-pages onClick={e=>e.stopPropagation()} className="flex w-full max-w-[92%] shrink-0 flex-col items-center landscape:max-w-[55%]">
+        return <div data-rhythm-song-art-pages onClick={e=>e.stopPropagation()} className="flex w-full max-w-[92%] shrink-0 flex-col items-center [--mh-art-page-h:var(--mh-art-page-h-p)] landscape:max-w-[55%] landscape:[--mh-art-page-h:88cqh]">
           <div ref={artPagesRef} data-rhythm-song-art-pager
             onScroll={e=>{const el=e.currentTarget;const i=Math.round(el.scrollLeft/Math.max(1,el.clientWidth));if(i!==artPage)setArtPage(i);}}
             className="flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
@@ -1582,19 +1742,28 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 :<img src={page.src} alt={page.alt} className="max-h-[var(--mh-art-page-h)] min-h-[120px] w-auto max-w-full rounded-2xl border border-white/25 object-contain"/>}
             </div>)}
           </div>
-          {/* ページの印と ◀ ▶。いま何枚目か・全部で何枚かが分かるように */}
-          <div data-rhythm-song-art-dots className="mt-2 flex items-center gap-2">
+        </div>;
+      })()}
+      <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
+      {/* ページの印と ◀ ▶(歌詞カードのある曲だけ)。絵の下に置くと絵が小さくなるので、曲名の列のいちばん上に置く(2026-11-23 r1119-150)。
+          縦の画面では絵のすぐ下、横の画面では右の列の上になる */}
+      {(()=>{
+        const lyrics=typeof rhythmSongLyricCards==='function'?rhythmSongLyricCards(song):[];
+        if(!lyrics.length)return null;
+        const pages=[{src:'art',lyric:false},...lyrics.map(src=>({src,lyric:true}))];
+        const cur=Math.min(artPage,pages.length-1);
+        return <div data-rhythm-song-art-dots onClick={e=>e.stopPropagation()} className="mt-1 flex flex-col items-center landscape:mt-0 landscape:mb-1">
+          <div className="flex items-center gap-1.5">
             <button type="button" data-rhythm-song-art-prev disabled={cur<=0} onClick={()=>goArtPage(cur-1)} aria-label="前のページ"
-              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">◀</button>
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-white/10 text-xs font-black text-white disabled:opacity-30">◀</button>
             {pages.map((page,i)=><button key={page.src} type="button" onClick={()=>goArtPage(i)} aria-label={`${i+1}ページ目(${page.lyric?'歌詞カード':'ジャケット'})`} aria-current={i===cur?'true':undefined}
-              className={`min-h-[44px] px-1 text-base leading-none ${i===cur?'text-white':'text-white/40'}`}>{i===cur?'●':'○'}</button>)}
+              className={`min-h-[40px] px-1 text-sm leading-none ${i===cur?'text-white':'text-white/40'}`}>{i===cur?'●':'○'}</button>)}
             <button type="button" data-rhythm-song-art-next disabled={cur>=pages.length-1} onClick={()=>goArtPage(cur+1)} aria-label="次のページ"
-              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/10 text-sm font-black text-white disabled:opacity-30">▶</button>
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-white/10 text-xs font-black text-white disabled:opacity-30">▶</button>
           </div>
           <p style={JA_WRAP_STYLE} className="text-[10px] font-bold text-slate-400">{jaWrap(cur===0?'横に送ると歌詞カード':'歌詞カードを押すと大きく見られます')}</p>
         </div>;
       })()}
-      <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
       <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"><RhythmSongName song={song}/></b>
       {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
           (2026-09-14・ユーザー「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)。
@@ -1634,14 +1803,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       </div>
     </div>;})()}
     {/* 歌詞カードを原寸で見る幕。上下左右に動かして読む。閉じると拡大画面(歌詞カードのページ)に戻る */}
-    {artZoom&&lyricFull&&<div data-rhythm-song-lyric-full role="dialog" aria-modal="true" aria-label="歌詞カード"
-      className="fixed inset-0 z-[9001] overflow-auto bg-black"
-      style={{position:'fixed',inset:0,zIndex:9001,backgroundColor:'#000',overflow:'auto',WebkitOverflowScrolling:'touch'}}>
-      <img src={lyricFull} alt="歌詞カード" className="block h-auto max-w-none" style={{width:'max(100%, 900px)'}}/>
-      <button type="button" data-rhythm-song-lyric-full-close onClick={()=>setLyricFull(null)}
-        className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
-        style={{position:'fixed',top:'max(12px, var(--mh-sa-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
-    </div>}
+    {artZoom&&lyricFull&&<RhythmLyricZoomView src={lyricFull} onClose={()=>setLyricFull(null)}/>}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
