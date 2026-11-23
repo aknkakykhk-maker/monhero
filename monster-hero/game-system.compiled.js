@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 439bcb6e971376b6
+// source-sha256: 810b78a0b117dcd9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -47230,6 +47230,15 @@ const RhythmTapTest = ({
         note._rhythmCanvasSettled = true;
       }
     });
+    if (run.charge && specialFx && typeof rhythmMarkChargeNotes === 'function') {
+      const zones = rhythmMarkChargeNotes(notes, specialFx);
+      run.charge.zones = zones;
+      run.charge.key = '';
+      zones.forEach((q, k) => {
+        run.charge.fin[k] = q.finaleMs < target - 30;
+        run.charge.hits[k] = run.charge.fin[k] || target < q.from ? 0 : notes.filter(n => n._mhZone === k && n._mhCharge === 1 && n.done).length;
+      });
+    }
     run.notes = notes;
     run.scanFrom = 0;
     run._stageNoteIndex = notes.findIndex(note => !note.done);

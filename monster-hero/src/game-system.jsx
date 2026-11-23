@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f37482390afa4f80
+// generated-sha256: 406d20ab54d88a5b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28703,6 +28703,10 @@ scheduleTick();};
     RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.outsideStartInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();run.activePointerSkyFeedback?.clear();liveTouchSkySubLanesRef.current=[];setPressedLanes([]);
     const notes=makeRuntimeNotes(run.tickRules);
     notes.forEach(note=>{if((Number(note.timeMs)||0)<target-30){note.done=true;note._rhythmCanvasSettled=true;}});
+    /* その譜面だけの演出(r1119-141): 作り直したノーツに印を付け直し、溜めた数と弾けた印を移った先に合わせる(ミハリ: 送った後にききノーツが出なかった)。
+       移った先より前に終わった区間は弾けたことにする・移った先の区間はそこまでのききノーツを取れた数にする(鑑賞は自動の手が全部取る)・後の区間は空から */
+    if(run.charge&&specialFx&&typeof rhythmMarkChargeNotes==='function'){const zones=rhythmMarkChargeNotes(notes,specialFx);run.charge.zones=zones;run.charge.key='';
+      zones.forEach((q,k)=>{run.charge.fin[k]=q.finaleMs<target-30;run.charge.hits[k]=run.charge.fin[k]||target<q.from?0:notes.filter(n=>n._mhZone===k&&n._mhCharge===1&&n.done).length;});}
     run.notes=notes;run.scanFrom=0;run._stageNoteIndex=notes.findIndex(note=>!note.done);if(run._stageNoteIndex<0)run._stageNoteIndex=notes.length;
     laneRefs.current.forEach?.(el=>{if(el)el._rhythmHidden=false;});
     if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSlideBands(notes);

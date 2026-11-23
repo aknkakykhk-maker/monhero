@@ -60,3 +60,13 @@ AUTO_TAP=1 STEP=20 PREFIX=b1 SHOT_AT=34.3,36.5,37.95,38.22,38.40 SONG='全部必
 ```
 LISTEN=1 AUTO_TAP=1 STEP=20 PREFIX=b1 SHOT_AT=37.95,38.40 SONG='全部必殺技でつ( `･ω･)' SONG_ID=zenbu_hissatsuwaza DIFF=HELL FROM=33.3 OUT=<置き場> node tools/mode/rhythm-note-appear-scan.js
 ```
+
+## 鑑賞で送った・戻したあとも出す(ミハリの指摘)
+
+鑑賞の「+10秒」「-10秒」(`listenSeek`)はノーツを作り直すが、印(`rhythmMarkChargeNotes`)を付け直していなかったので、1回押すと以後ききノーツ・両端の光・必殺ノーツが出なかった。
+作り直したあとに印を付け直し、溜めた数と弾けた印を移った先に合わせる(前に終わった区間は弾けたことに・移った先の区間はそこまで取れた数に・後の区間は空から)。
+止め絵 `6-listen-after-seek.jpg`(「+10秒」を11回押してから 1:53〜 を実時間で撮った。止めた時計は送り戻しとかみ合わないので `REAL_SHOTS=1` を足した):
+
+```
+REAL_SHOTS=1 LISTEN=1 PRE_CLICK='+10秒:11' PREFIX=s SHOT_AT=114.5,117.3,117.7,117.85 SONG='全部必殺技でつ( `･ω･)' SONG_ID=zenbu_hissatsuwaza DIFF=HELL FROM=0 OUT=<置き場> node tools/mode/rhythm-note-appear-scan.js
+```

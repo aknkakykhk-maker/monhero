@@ -108,6 +108,17 @@ const skyLiftPatched=src=>{
   const songEnd=(window.__mhSong.ctx&&0)||0;return {area:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)},canvas:cv};});
  const songLen=await page.evaluate(()=>{const s=window.__mhSong;return s?null:null;});
  const raf=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+ // REAL_SHOTS=1 PRE_CLICK=… SHOT_AT=…: 時計を止めずに実時間で流し、PRE_CLICK のボタンを押してから、曲の時刻が SHOT_AT に来たら撮る
+ //   (鑑賞の「+10秒」は止めた時計とかみ合わないため。撮る時刻は数十ms ずれる)
+ if(process.env.REAL_SHOTS==='1'){await page.evaluate(()=>{window.__mhFrozen=null;});await page.waitForTimeout(600);
+  const [label,times]=(process.env.PRE_CLICK||':0').split(':');for(let i=0;i<(Number(times)||0);i++){await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(x=>(x.innerText||'').replace(/\s+/g,'').includes(t));if(b)b.click();},label);await page.waitForTimeout(350);}
+  for(const x of (process.env.SHOT_AT||'').split(',').map(Number).filter(Number.isFinite)){
+   await page.waitForFunction(ms=>{const f=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs;const v=f?f():null;return v!=null&&v>=ms;},x*1000-25,{timeout:180000,polling:10});
+   const at=await page.evaluate(()=>Math.round(window.__mhTestHooks.rhythmSongMs()));await page.screenshot({path:path.join(OUT,`${process.env.PREFIX||'real'}-${Math.round(x*1000)}.png`)});console.log('撮った',x,'実際',at);}
+  await b.close();server.close();return;}
+ // PRE_CLICK=<ボタンの字>:<回数>(例 '+10秒:3'): 止めた時計で進める前に、そのボタンを押す(鑑賞の送り戻しの後も演出が出るかを撮る・r1119-141)
+ if(process.env.PRE_CLICK){const [label,times]=process.env.PRE_CLICK.split(':');for(let i=0;i<(Number(times)||1);i++){
+   const ok=await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(x=>(x.innerText||'').replace(/\s+/g,'').includes(t));if(!b)return false;b.click();return true;},label);console.log('押した',label,ok);await page.waitForTimeout(400);}}
  // AUTO_TAP=1 SHOT_AT=<秒>,…: FROM から STEP ずつ止めた時計を進め、ノーツの時刻が来たら判定ラインのその位置を押して離す(タップだけ。
  //   スライドの押さえは続けないので取り逃しになる)。SHOT_AT の時刻のコマを PREFIX-<ms>.png で撮る(演出の止め絵用・2026-11-23 r1119-141)
  if(process.env.AUTO_TAP==='1'&&process.env.SHOT_AT){const shots=process.env.SHOT_AT.split(',').map(Number).filter(Number.isFinite).sort((x,y)=>x-y);
