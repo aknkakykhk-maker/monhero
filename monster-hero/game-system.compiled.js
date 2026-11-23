@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38d4783a64e88ee5
+// source-sha256: 55ccc1e3171e0019
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7545,6 +7545,12 @@ const RHYTHM_FX_ITEMS = Object.freeze([{
   label: 'フルコンボの大きな表示',
   weight: 'l',
   options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'resultCount',
+  group: 'combo',
+  label: '結果の画面の演出',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
 }]);
 const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item => item.key));
 const RHYTHM_FX_GROUP_ICONS = Object.freeze({
@@ -7576,7 +7582,8 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。'
+  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
+  resultCount: '曲が終わったあとの結果の画面で、スコア・判定の数・MAX COMBO が0から数え上がり、決まった瞬間に光る演出です。既定は「おまかせ」（演出量・軽量モード・端末の「視差効果を減らす」などに関係なく出ます）。\n止めたいときは「出さない」にしてください。初めから結果の数字が出ます。タップでいつでも飛ばせます。判定・スコアは変わりません。'
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -44253,7 +44260,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
   restAt: 1900,
   endAt: 2400
 });
-const rhythmResultCountAnimOn = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && !(typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
 const rhythmResultCrossMs = (previous, score) => {
   const prev = Number(previous) || 0,
