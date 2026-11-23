@@ -1,0 +1,57 @@
+{
+ "_note": "2026-11-23 差し替え前の公開版(monster-hero/images/assistant/fullbody/)から測った値。体=アルファ24より大の範囲。H=画像の高さ・top=体の上端・body=体の高さ・side=体の左の余白",
+ "base": {
+  "H": 1835,
+  "top": 6,
+  "body": 1823,
+  "side": 8
+ },
+ "angry": {
+  "H": 1792,
+  "top": 4,
+  "body": 1786,
+  "side": 6
+ },
+ "crying": {
+  "H": 1788,
+  "top": 6,
+  "body": 1776,
+  "side": 6
+ },
+ "excited": {
+  "H": 1824,
+  "top": 2,
+  "body": 1821,
+  "side": 6
+ },
+ "happy": {
+  "H": 1824,
+  "top": 2,
+  "body": 1822,
+  "side": 6
+ },
+ "normal": {
+  "H": 1824,
+  "top": 4,
+  "body": 1818,
+  "side": 6
+ },
+ "surprise": {
+  "H": 1792,
+  "top": 2,
+  "body": 1786,
+  "side": 49
+ },
+ "troubled": {
+  "H": 1792,
+  "top": 3,
+  "body": 1785,
+  "side": 6
+ },
+ "wink": {
+  "H": 1824,
+  "top": 5,
+  "body": 1816,
+  "side": 6
+ }
+}
