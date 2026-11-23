@@ -87,7 +87,7 @@ const seed = () => {
   const again = await stateOf();
   check('③ 読み込み直しても、ビートP交換所はたたんだまま', again.collapsed && !again.hasText, JSON.stringify(again));
 
-  check('「ひらく」を押せる', await click(/ひとことをひらく/));
+  check('「💬▼」(ひとことを開く)を押せる', await click(/ひとことを(ひらく|開く)/));
   await page.waitForTimeout(600);
   const reopened = await stateOf();
   check('④ ひらくと元に戻り、記録から消える', !reopened.collapsed && reopened.hasText && (await raw()) === '{}', String(await raw()));

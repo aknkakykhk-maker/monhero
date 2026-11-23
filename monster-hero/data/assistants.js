@@ -12730,14 +12730,15 @@ const FLOWER3_EP7 = [
   { who:'kiki', e:'normal', t:'……はい。私の音で、弾ききりまつ。' },
 ];
 // 第8話「花ひらく夜」(11/30 0:00・閉幕)
+// 3曲目「きみ待ち♡ループ」〜踊りきった所の3行は、5人の演奏の一枚絵(still・r1119-115)。立ち絵を消して絵を見せ、次の行からいつもの背景に戻る
 const FLOWER3_EP8 = [
   { bg:'monhero_night', who:'mua', e:'excited', fxText:'広場いっぱいに、ランタンの明かりがともる', t:'みんなー！ 来てくれてありがとー！ 最初の曲、いっくよー！' },
   { who:'momosuke', e:'excited', bgm:'melo_brand_new_sky', fxText:'「BRAND NEW SKY」が、冬の空へ鳴りひびく', t:'みゅあねぇ、空まで届いてる♡' },
   { who:'kiki', e:'normal', bgm:'melo_zenbu_hissatsuwaza', fxText:'2曲目。ききの必殺技に、パンドラの歌声が重なる', t:'……まちがえずに、弾けまちた。' },
   { who:'pandora', e:'normal', monsters:[{ id:'Pandora', pose:'in' }], t:'……歌えた。外で、ちゃんと' },
-  { who:'momosuke', e:'excited', bgm:'melo_kimimachi_loop', fxText:'最後は「きみ待ち♡ループ」。広場のみんなが跳ねる', t:'ぱんぷきん、ステップいくよ♡' },
-  { who:'pumpkin', e:'happy', t:'うん！ 1、2、1、2！' },
-  { who:'momosuke', e:'happy', t:'さいごまで、おどりきった〜♡ ……ももがはじめて作った曲で、みんなが跳ねてくれた' },
+  { who:'momosuke', e:'excited', bgm:'melo_kimimachi_loop', still:'flower3_finale_live', fxText:'最後は「きみ待ち♡ループ」。広場のみんなが跳ねる', t:'ぱんぷきん、ステップいくよ♡' },
+  { who:'pumpkin', e:'happy', still:'flower3_finale_live', t:'うん！ 1、2、1、2！' },
+  { who:'momosuke', e:'happy', still:'flower3_finale_live', t:'さいごまで、おどりきった〜♡ ……ももがはじめて作った曲で、みんなが跳ねてくれた' },
   { who:'mua', e:'happy', t:'{name}、ほんとにありがと！ どの曲もいっぱい遊んでくれて、まぢでうれしかった✨' },
   { who:'kiki', e:'normal', t:'イベントは、これでおしまいでつ。ランキングに入った人には、ギフトでごほうびが届きまつ。' },
   { who:'momosuke', e:'normal', t:'この曲たちは、これからは曲えらびやビートP交換所で買える曲になるよ♡' },
