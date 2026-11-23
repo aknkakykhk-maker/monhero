@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "36347977abe2",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":460748505,"count":1563},"card":{"bytes":38085297,"count":1046},"all":{"bytes":810390867,"count":2775},"core":{"bytes":25774401,"count":25}},
+  "id": "b88d316bbd0d",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":459889298,"count":1563},"card":{"bytes":38085297,"count":1046},"all":{"bytes":809531660,"count":2775},"core":{"bytes":25774400,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -518,14 +518,14 @@
     "images/assistant/sorashido_surprise.PNG": {"v":"87af1514b2ca","size":50852,"pack":"battle"},
     "images/assistant/sorashido_troubled.PNG": {"v":"93d545bfb813","size":49526,"pack":"battle"},
     "images/assistant/sorashido_wink.PNG": {"v":"1805f8ab7994","size":45115,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_angry.png": {"v":"66afcbe1fed8","size":1294801,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_crying.png": {"v":"15a1d25f2571","size":1275781,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_excited.png": {"v":"1769d4a1095d","size":1311610,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_happy.png": {"v":"9a007f4556ad","size":1345469,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_normal.png": {"v":"82047e1586e3","size":1325224,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_surprise.png": {"v":"964436125e44","size":1301363,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_troubled.png": {"v":"09e646dc954b","size":1266053,"pack":"battle"},
-    "images/assistant/stand-card-master/myua_wink.png": {"v":"c2f7ac74504b","size":1267799,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_angry.png": {"v":"a4c5923dcc8e","size":1125774,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_crying.png": {"v":"1c1c1e6b2095","size":1309940,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_excited.png": {"v":"d48e4a722f4d","size":1136789,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_happy.png": {"v":"b4486a3734bc","size":1182054,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_normal.png": {"v":"c2d89721002f","size":1443528,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_surprise.png": {"v":"8afa32667752","size":1129117,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_troubled.png": {"v":"f1c2b1ed6e19","size":1108684,"pack":"battle"},
+    "images/assistant/stand-card-master/myua_wink.png": {"v":"eb0595af6b43","size":1093007,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_angry.png": {"v":"237ea75cfd89","size":235142,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_crying.png": {"v":"51c109d8a031","size":206572,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_excited.png": {"v":"2852611bf36e","size":266901,"pack":"battle"},
@@ -2780,7 +2780,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"675adfc4cc9b","size":319093,"pack":"core"},
+    "tailwind.css": {"v":"e107f1442ebe","size":319093,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2802,6 +2802,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"182876effb07","size":12402868,"pack":"core"}
+    "game-system.compiled.js": {"v":"7aec59995db3","size":12402867,"pack":"core"}
   }
 }
