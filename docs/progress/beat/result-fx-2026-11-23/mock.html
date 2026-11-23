@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>結果の演出の案</title>
+<!-- モンヒロビートの「フルコンボ以上の終わりの演出」と「結果画面の出方」の案の試作(台帳 r1119-143)。
+     ゲーム本体ではない。shoot.js が ?p=A&o=tate のように開き、コマごとに動きを止めて撮る。
+     動かすのは transform と opacity だけ(本番に入れるときも同じにする)。 -->
+<style>
+:root{--mar:#fbbf24;--exc:#e879f9;--gre:#f87171;--goo:#a3e635;--bad:#60a5fa;--mis:#94a3b8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b1020;color:#fff;font-family:"WenQuanYi Zen Hei",sans-serif;padding:14px}
+h1{font-size:20px;margin:0 0 4px}
+.lead{font-size:12px;color:#cbd5e1;margin-bottom:10px;line-height:1.5}
+.row{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+.rowhead{writing-mode:vertical-rl;font-size:13px;font-weight:900;color:#fde68a;padding:4px 2px;background:#1e293b;border-radius:6px;align-self:stretch;text-align:center}
+.cell{display:flex;flex-direction:column;gap:4px}
+.cap{font-size:12px;font-weight:900;color:#e2e8f0}
+.cap small{color:#94a3b8;font-weight:700;margin-left:4px}
+.box{overflow:hidden;border-radius:10px;border:1px solid #334155}
+.f{position:relative;overflow:hidden;background:#020617;transform-origin:0 0}
+.tate .f{width:390px;height:844px}.yoko .f{width:844px;height:390px}
+.abs{position:absolute}
+/* ---------- 演奏の終わりの画面(道と判定ライン) ---------- */
+.play{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 100%,#1e1b4b 0%,#020617 70%)}
+.play svg{position:absolute;inset:0;width:100%;height:100%}
+.hud{position:absolute;top:52px;left:14px;font-size:11px;font-weight:900;color:#cbd5e1;letter-spacing:.1em}
+.hud b{display:block;font-size:20px;color:#fff;letter-spacing:0}
+.yoko .hud{top:12px;left:60px}
+.combo{position:absolute;left:0;right:0;top:46%;text-align:center;font-weight:900;color:rgba(255,255,255,.18);font-size:56px;line-height:1}
+.combo small{display:block;font-size:14px;letter-spacing:.3em}
+.yoko .combo{top:34%;font-size:40px}
+.jl{position:absolute;left:0;right:0;top:80%;height:0}
+.yoko .jl{top:84%}
+.center{position:absolute;left:50%;top:44%;width:0;height:0}
+.yoko .center{top:46%}
+.title{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);white-space:nowrap;text-align:center;font-weight:900;font-style:italic}
+.yoko .title{top:46%}
+.title b{display:block;font-size:52px;line-height:1.05;background:linear-gradient(180deg,#fff 0%,#fde68a 38%,#fb923c 75%,#f59e0b 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 8px rgba(2,6,23,.9))}
+.am .title b{background:linear-gradient(90deg,#f0abfc,#fde68a,#86efac,#67e8f9,#c4b5fd,#f0abfc);-webkit-background-clip:text;background-clip:text}
+.title small{display:block;margin-top:6px;font-size:13px;letter-spacing:.3em;color:#e2e8f0;font-style:normal}
+.tate .title b{font-size:46px}
+.tate .am .title b{font-size:36px}
+.tate .am.pC .band b{font-size:30px}
+/* ---------- 案A 光の柱と花火 ---------- */
+.pA .aline{position:absolute;left:0;right:0;top:-3px;height:6px;background:linear-gradient(90deg,transparent,#fff 20%,#fde68a 50%,#fff 80%,transparent);box-shadow:0 0 18px #fde68a;animation:aLine .35s ease-out both}
+@keyframes aLine{from{transform:scaleX(0);opacity:1}70%{opacity:1}to{transform:scaleX(1);opacity:.85}}
+.pA .pillar{position:absolute;bottom:0;width:13%;height:620px;margin-left:-6.5%;transform-origin:50% 100%;background:linear-gradient(0deg,rgba(253,230,138,.85),rgba(251,146,60,.35) 45%,transparent);animation:aPillar 1.3s cubic-bezier(.2,.8,.3,1) both}
+.yoko .pA .pillar{height:330px;width:6.5%;margin-left:-3.25%}
+.am.pA .pillar{background:linear-gradient(0deg,var(--c),rgba(255,255,255,.25) 50%,transparent)}
+@keyframes aPillar{0%{transform:scaleY(0);opacity:1}35%{transform:scaleY(1);opacity:1}100%{transform:scaleY(1);opacity:0}}
+.pA .rays{position:absolute;left:-260px;top:-260px;width:520px;height:520px;border-radius:50%;background:repeating-conic-gradient(rgba(253,230,138,.28) 0 7deg,transparent 7deg 22deg);-webkit-mask:radial-gradient(circle,#000 20%,transparent 70%);mask:radial-gradient(circle,#000 20%,transparent 70%);animation:aRaysIn .4s .35s ease-out both,aRaysSpin 6s .35s linear infinite}
+.am.pA .rays{background:repeating-conic-gradient(rgba(240,171,252,.32) 0 6deg,transparent 6deg 15deg,rgba(103,232,249,.3) 15deg 21deg,transparent 21deg 30deg)}
+@keyframes aRaysIn{from{opacity:0}to{opacity:1}}
+@keyframes aRaysSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.pA .title{animation:slam .55s .35s cubic-bezier(.2,1.4,.4,1) both}
+.title small{animation:fadeUp .4s .75s ease-out both}
+@keyframes slam{0%{opacity:0;transform:translate(-50%,-50%) scale(2.2) rotate(-5deg)}55%{opacity:1;transform:translate(-50%,-50%) scale(.94) rotate(1deg)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.spark{position:absolute;left:0;top:0;width:var(--s);height:var(--s);margin:calc(var(--s)/-2);border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);animation:spark .95s var(--d) cubic-bezier(.1,.7,.3,1) both}
+@keyframes spark{0%{transform:translate(0,0) scale(.3);opacity:0}15%{opacity:1}100%{transform:translate(var(--x),var(--y)) scale(1);opacity:0}}
+.flash{position:absolute;inset:0;background:#fff;animation:flash .5s .28s ease-out both}
+@keyframes flash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
+.ring{position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border:3px solid var(--c);animation:ring 1.1s var(--d) cubic-bezier(.15,.7,.3,1) both}
+@keyframes ring{from{transform:scale(.1);opacity:1}to{transform:scale(4.2);opacity:0}}
+/* ---------- 案B ステージのライト ---------- */
+.pB .spot{position:absolute;top:-40px;width:180px;height:900px;margin-left:-90px;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,255,255,.55),var(--c) 40%,transparent 90%);clip-path:polygon(45% 0,55% 0,100% 100%,0 100%);opacity:.0;animation:bSpot 1.6s var(--d) cubic-bezier(.3,.7,.3,1) both}
+.yoko .pB .spot{height:460px;width:150px;margin-left:-75px}
+@keyframes bSpot{0%{opacity:0;transform:rotate(var(--r0))}25%{opacity:.75}70%{opacity:.75;transform:rotate(var(--r1))}100%{opacity:.5;transform:rotate(var(--r1))}}
+.pB .wave{position:absolute;left:-150px;top:-30px;width:300px;height:60px;border-radius:50%;border:3px solid rgba(253,230,138,.9);animation:bWave 1s var(--d) ease-out both}
+.am.pB .wave{border-color:rgba(165,243,252,.9)}
+@keyframes bWave{from{transform:scale(.2);opacity:1}to{transform:scale(2.6) translateY(-40px);opacity:0}}
+.pB .title{animation:bRise .6s .3s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes bRise{0%{opacity:0;transform:translate(-50%,10%)}100%{opacity:1;transform:translate(-50%,-50%)}}
+.pB .title .shine{position:absolute;top:0;bottom:22px;left:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);transform:skewX(-20deg);mix-blend-mode:overlay;animation:bShine .7s .85s ease-in-out both}
+@keyframes bShine{from{transform:translateX(-60px) skewX(-20deg);opacity:1}to{transform:translateX(360px) skewX(-20deg);opacity:1}}
+.conf{position:absolute;top:0;width:7px;height:11px;background:var(--c);animation:conf 2.4s var(--d) linear both}
+@keyframes conf{0%{transform:translateY(-30px) rotate(0);opacity:0}8%{opacity:1}100%{transform:translateY(var(--h)) rotate(540deg);opacity:1}}
+/* ---------- 案C 判定の帯がめくれて結果へ ---------- */
+.pC .dot{position:absolute;left:0;top:0;width:14px;height:14px;margin:-7px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);animation:cDot .45s var(--d) cubic-bezier(.5,0,.8,.4) both}
+@keyframes cDot{from{transform:translate(var(--x),var(--y));opacity:1}to{transform:translate(0,0);opacity:0}}
+.pC .band{position:absolute;left:0;right:0;top:-46px;height:92px;background:linear-gradient(180deg,rgba(180,83,9,.0),rgba(245,158,11,.9) 30%,rgba(251,191,36,.95) 50%,rgba(245,158,11,.9) 70%,rgba(180,83,9,0));animation:cBand .4s .35s cubic-bezier(.2,.9,.3,1) both;overflow:hidden}
+.am.pC .band{background:linear-gradient(90deg,rgba(240,171,252,.95),rgba(253,230,138,.95),rgba(134,239,172,.95),rgba(103,232,249,.95),rgba(196,181,253,.95))}
+@keyframes cBand{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.pC .band .glint{position:absolute;top:0;bottom:0;left:0;width:90px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);animation:cGlint .6s .75s ease-in-out both}
+.am.pC .band .glint.g2{animation-delay:1.1s}
+@keyframes cGlint{from{transform:translateX(-120px)}to{transform:translateX(900px)}}
+.pC .band b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;font-style:italic;color:#1c1003;text-shadow:0 2px 0 rgba(255,255,255,.6);animation:cWord .35s .55s cubic-bezier(.2,1.4,.4,1) both}
+.am.pC .band b{color:#3b0764}
+@keyframes cWord{from{opacity:0;transform:scale(1.6)}to{opacity:1;transform:none}}
+.pC .bandsub{position:absolute;left:0;right:0;top:54px;text-align:center;font-size:13px;font-weight:900;letter-spacing:.25em;color:#fde68a;animation:fadeUp .4s .8s ease-out both}
+.pC .wipe{position:absolute;inset:0;animation:cWipe .45s 1.45s cubic-bezier(.6,0,.4,1) both}
+@keyframes cWipe{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+.pC .under{position:absolute;inset:0;background:#0f172a}
+.pC .under::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(0deg,rgba(251,191,36,.25),transparent)}
+.am.pC .under::after{background:linear-gradient(0deg,rgba(240,171,252,.3),transparent)}
+
+/* ---------- 結果の画面(共通の並び: 曲の札 → スコア → 判定 → 経験値 → ボタン) ---------- */
+.res{position:absolute;inset:0;background:linear-gradient(180deg,#111827,#020617);padding:50px 14px 0}
+.yoko .res{padding:10px 56px 0}
+.res .bg{position:absolute;inset:0;background:radial-gradient(90% 50% at 50% 30%,rgba(251,191,36,.16),transparent 70%)}
+.am .res .bg{background:radial-gradient(90% 50% at 50% 30%,rgba(240,171,252,.2),transparent 70%)}
+.card{position:relative;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(15,23,42,.88)}
+.song{display:flex;align-items:center;gap:10px;padding:8px}
+.jacket{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#38bdf8,#6366f1 50%,#f472b6);flex-shrink:0}
+.song b{font-size:15px;display:block}
+.song small{font-size:11px;font-weight:900;color:#c084fc}
+.song small i{color:#cbd5e1;font-style:normal;margin-left:6px}
+.score{margin-top:8px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.score .l{flex:1;min-width:0}
+.score .lab{font-size:11px;font-weight:900;font-style:italic;letter-spacing:.25em;color:#cbd5e1}
+.score .num{display:block;font-size:46px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.score .best{font-size:11px;font-weight:900;color:#94a3b8;margin-top:4px}
+.score .best b{color:#bef264}
+.rankw{position:relative;width:84px;height:84px;flex-shrink:0}
+.rank{position:absolute;inset:0;border-radius:50%;border:4px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;font-style:italic;color:#fef08a;box-shadow:0 0 26px rgba(245,208,254,.7),0 0 54px rgba(217,70,239,.35)}
+.am .rank{color:#f0abfc;box-shadow:0 0 30px rgba(254,240,138,.9),0 0 64px rgba(251,191,36,.45)}
+.ribbon{position:absolute;right:-6px;bottom:-12px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:900;font-style:italic;white-space:nowrap;color:#1c1003;background:linear-gradient(90deg,#fde68a,#f59e0b);box-shadow:0 0 14px rgba(251,191,36,.8);transform:rotate(-8deg)}
+.am .ribbon{color:#3b0764;background:linear-gradient(90deg,#f0abfc,#fde68a,#86efac,#67e8f9)}
+.judg{margin-top:8px;padding:8px 12px}
+.jr{position:relative;display:flex;align-items:center;height:27px;font-size:15px;font-weight:900;font-style:italic}
+.jr .bar{position:absolute;left:0;top:4px;bottom:4px;border-radius:6px;background:var(--c);opacity:.22;transform-origin:0 50%;width:var(--w)}
+.jr .nm{position:relative;flex:1;color:var(--c)}
+.jr .ct{position:relative;font-variant-numeric:tabular-nums;font-family:monospace;font-size:17px}
+.jr.zero{opacity:.45}
+.jr.just .nm{background:linear-gradient(90deg,#f0abfc,#fde68a,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.combo2{display:flex;justify-content:space-between;margin-top:4px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1);font-size:13px;font-weight:900}
+.combo2 b{font-size:18px}
+.fs{font-size:11px;color:#94a3b8;font-weight:900;margin-top:2px}
+.xp{margin-top:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:900;color:#94a3b8;border-radius:12px;background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.08)}
+.xp .g{flex:1;height:5px;border-radius:9px;background:#1e293b;overflow:hidden}
+.xp .g i{display:block;height:100%;width:100%;background:#22d3ee;transform-origin:0 50%;transform:scaleX(.62)}
+.btns{position:absolute;left:0;right:0;bottom:0;padding:10px 14px 30px;display:flex;gap:8px;background:linear-gradient(0deg,#020617 70%,transparent)}
+.btns span{flex:1;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;background:#334155}
+.btns span.main{flex:1.6;background:#a21caf}
+.yoko .btns{left:auto;right:56px;width:44%;padding:6px 0 10px}
+.yoko .btns span{height:42px;font-size:14px}
+/* 横: 曲の札を上に、下を「スコア | 判定」に分ける */
+.yoko .grid{display:grid;grid-template-columns:1fr 1.15fr;gap:8px;margin-top:8px}
+.yoko .score{margin-top:0;flex-wrap:wrap}
+.yoko .score .num{font-size:40px}
+.yoko .judg{margin-top:0;padding:4px 10px}
+.yoko .jr{height:20px;font-size:12px}.yoko .jr .ct{font-size:13px}
+.yoko .combo2{font-size:11px;padding-top:3px;margin-top:2px}.yoko .combo2 b{font-size:13px}
+.yoko .fs{display:none}
+.yoko .song{padding:6px}.yoko .jacket{width:44px;height:44px}
+.yoko .rankw{width:72px;height:72px}.yoko .rank{font-size:34px}
+.yoko .xp{margin-top:6px}
+
+/* ---- 結果の出方: 案A 下から順に + 数え上げ + ランクのはんこ ---- */
+.pA .res .card,.pA .res .xp{animation:aIn .45s var(--d) cubic-bezier(.2,.9,.3,1) both}
+@keyframes aIn{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:none}}
+.pA .res .num{position:relative}
+.pA .res .sweep{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.pA .res .sweep i{position:absolute;top:0;bottom:0;width:50px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:cGlint .5s 1.5s ease-in-out both}
+.pA .res .rank{animation:stamp .45s 1.55s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes stamp{0%{opacity:0;transform:scale(2.4) rotate(-18deg)}60%{opacity:1;transform:scale(.9) rotate(3deg)}100%{opacity:1;transform:none}}
+.pA .res .rankw .ring{left:50%;top:50%;margin:-60px 0 0 -60px;--c:#fde68a;animation-duration:.9s}
+.pA .res .ribbon{animation:ribbon .4s 1.85s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes ribbon{from{opacity:0;transform:translateX(30px) rotate(-8deg) scale(1.4)}to{opacity:1;transform:rotate(-8deg)}}
+.pA .res .jr{animation:aRow .35s var(--d) ease-out both}
+@keyframes aRow{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.pA .res .jr .bar{animation:barIn .6s var(--d) ease-out both}
+@keyframes barIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.pA .res .xp{--d:2.1s}
+
+/* ---- 結果の出方: 案B まずスコアだけを真ん中で → 縮んで並びへ ---- */
+.pB .res .song{animation:fadeIn .4s 1.95s ease-out both}
+.pB .res .score{position:relative;z-index:3;animation:bScore .55s 1.8s cubic-bezier(.5,0,.2,1) both}
+.tate .pB .res .score{--bx:0px;--by:250px;--bs:1.1;transform-origin:50% 50%}
+.yoko .pB .res .score{--bx:190px;--by:70px;--bs:1.2;transform-origin:50% 50%}
+@keyframes bScore{from{transform:translate(var(--bx),var(--by)) scale(var(--bs))}to{transform:none}}
+.pB .res .score{border-color:transparent}
+.pB .res .rank{animation:stamp .45s 1.25s cubic-bezier(.2,1.5,.4,1) both}
+.pB .res .ribbon{animation:ribbon .4s 1.45s cubic-bezier(.2,1.4,.4,1) both}
+.pB .res .rankw .ring{left:50%;top:50%;margin:-60px 0 0 -60px;--c:#fde68a;animation-duration:.9s}
+.pB .res .judg{animation:fadeIn .3s 2.05s ease-out both}
+.pB .res .jr .bar{animation:barIn .5s var(--d) ease-out both}
+.pB .res .xp{animation:fadeIn .4s 2.9s ease-out both}
+.pB .res .btns{animation:fadeIn .3s 2.4s ease-out both}
+.pB .res .spot2{position:absolute;left:50%;top:0;width:340px;height:640px;margin-left:-170px;background:radial-gradient(50% 40% at 50% 55%,rgba(253,230,138,.22),transparent 70%);animation:bSpotOut 2.2s ease-out both}
+.yoko .pB .res .spot2{height:390px;width:600px;margin-left:-300px}
+@keyframes bSpotOut{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ---- 結果の出方: 案C 判定を数えるたびにスコアへ粒が飛ぶ ---- */
+.pC .res{animation:cResIn .45s cubic-bezier(.6,0,.4,1) both}
+@keyframes cResIn{from{transform:translateY(100%)}to{transform:none}}
+.pC .res .jr{animation:cRow .3s var(--d) ease-out both}
+@keyframes cRow{from{opacity:.25}to{opacity:1}}
+.pC .res .jr.zero{animation:none}
+.pC .res .jr .bar{animation:barIn .45s var(--d) ease-out both}
+.pC .res .fly{position:absolute;right:30px;top:12px;width:12px;height:12px;margin:-6px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);animation:cFly .5s var(--d) cubic-bezier(.5,0,.7,.6) both}
+@keyframes cFly{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(.4)}}
+.pC .res .num{animation:cPop .18s var(--d2) ease-out 6 alternate both}
+@keyframes cPop{from{transform:scale(1)}to{transform:scale(1.04)}}
+.pC .res .rank{animation:cUp .5s 2.0s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes cUp{0%{opacity:0;transform:translateY(40px) scale(.5)}100%{opacity:1;transform:none}}
+.pC .res .ribbon{animation:ribbon .4s 2.25s cubic-bezier(.2,1.4,.4,1) both}
+.pC .res .rankw .ring{left:50%;top:50%;margin:-60px 0 0 -60px;--c:#fde68a;--d:2.1s;animation-duration:.9s}
+.pC .res .fcline{position:absolute;left:8px;right:8px;border-radius:8px;border:2px solid #fbbf24;box-shadow:0 0 14px rgba(251,191,36,.7);animation:fadeIn .35s 2.3s ease-out both}
+.am.pC .res .fcline{border-color:#f0abfc;box-shadow:0 0 14px rgba(240,171,252,.8)}
+.pC .res .fcline small{position:absolute;right:6px;top:-9px;padding:0 6px;border-radius:5px;background:#020617;font-size:10px;font-weight:900;color:#fde68a;font-style:normal}
+.pC .res .xp{animation:fadeIn .4s 2.6s ease-out both}
+
+/* ---- 今(比べのため・出る時の動きはない) ---- */
+.pNow .play{background:#020617}.pNow .play svg,.pNow .hud,.pNow .combo{display:none}
+.pNow .title{animation:slam .6s cubic-bezier(.2,1.4,.4,1) both}
+.pNow .title small{animation:none}
+.pNow .title b{font-size:52px}
+</style></head><body>
+<script>
+const Q=new URLSearchParams(location.search),P=Q.get('p')||'A',O=Q.get('o')||'tate';
+const NAME={A:'案A 光の柱と花火',B:'案B ステージのライト → スコアを真ん中で',C:'案C 判定の帯がめくれる → 判定がスコアへ',Now:'今(比べ)'}[P];
+const LANE_TATE={top:[.36,.64],ytop:.10,bot:[-.05,1.05]},LANE_YOKO={top:[.43,.57],ytop:0,bot:[.2,.8]};
+const L=O==='tate'?LANE_TATE:LANE_YOKO,W=O==='tate'?390:844,H=O==='tate'?844:390,JY=O==='tate'?.80:.84;
+const laneX=(i,y)=>{const t=(y-L.ytop)/(1-L.ytop),a=L.top[0]+(L.bot[0]-L.top[0])*t,b=L.top[1]+(L.bot[1]-L.top[1])*t;return a+(b-a)*i;};
+const DATA={fc:{score:968310,best:951200,rank:'SS',title:'FULL COMBO!',sub:'MAX COMBO 980',rows:[['JUST MARVELOUS',402,'just'],['MARVELOUS',812,'mar'],['EXCELLENT',143,'exc'],['GREAT',21,'gre'],['GOOD',4,'goo'],['BAD',0,'bad'],['MISS',0,'mis']],combo:980,fs:'FAST 31 / SLOW 18'},
+            am:{score:1000000,best:968310,rank:'M',title:'ALL MARVELOUS!!',sub:'MAX COMBO 980',rows:[['JUST MARVELOUS',688,'just'],['MARVELOUS',980,'mar'],['EXCELLENT',0,'exc'],['GREAT',0,'gre'],['GOOD',0,'goo'],['BAD',0,'bad'],['MISS',0,'mis']],combo:980,fs:'FAST 0 / SLOW 0'}};
+const C={just:'#fde68a',mar:'#fbbf24',exc:'#e879f9',gre:'#f87171',goo:'#a3e635',bad:'#60a5fa',mis:'#94a3b8'};
+const RAIN=['#f0abfc','#fde68a','#86efac','#67e8f9','#c4b5fd','#fb7185'];
+function cnt(to,at,dur){return `<span data-cnt data-to="${to}" data-at="${at}" data-dur="${dur}">${to.toLocaleString()}</span>`;}
+function laneSvg(){const y0=L.ytop*100;let s=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${L.top[0]*100},${y0} ${L.top[1]*100},${y0} ${L.bot[1]*100},100 ${L.bot[0]*100},100" fill="rgba(30,41,59,.75)" stroke="rgba(148,163,184,.5)" stroke-width=".3"/>`;
+  for(let i=1;i<6;i++){const a=L.top[0]+(L.top[1]-L.top[0])*i/6,b=L.bot[0]+(L.bot[1]-L.bot[0])*i/6;s+=`<line x1="${a*100}" y1="${y0}" x2="${b*100}" y2="100" stroke="rgba(148,163,184,.18)" stroke-width=".25"/>`;}
+  return s+'</svg>';}
+function endScene(tier){const d=DATA[tier],am=tier==='am';let fx='';
+  const cx=W/2,cy=(O==='tate'?.44:.46)*H;
+  if(P==='A'){fx+=`<div class="jl"><div class="aline"></div>`;
+    for(let i=0;i<6;i++){const x=laneX((i+.5)/6,JY)*100;fx+=`<div class="pillar" style="left:${x}%;--c:${RAIN[i]};animation-delay:${150+Math.abs(i-2.5)*60}ms"></div>`;}
+    fx+=`</div>`;
+    if(am)fx+=`<div class="flash"></div>`;
+    fx+=`<div class="center"><div class="rays"></div>`;
+    if(am)for(let i=0;i<3;i++)fx+=`<div class="ring" style="--c:${['#fff','#f0abfc','#67e8f9'][i]};--d:${330+i*160}ms"></div>`;
+    const n=am?30:16;for(let i=0;i<n;i++){const ang=i*137.5*Math.PI/180,r=110+(i%5)*34;fx+=`<i class="spark" style="--x:${Math.round(Math.cos(ang)*r*1.2)}px;--y:${Math.round(Math.sin(ang)*r)}px;--d:${450+(i%6)*50}ms;--s:${5+(i%4)*2}px;--c:${am?RAIN[i%6]:(i%3?'#fde68a':'#fff')}"></i>`;}
+    fx+=`</div>`;}
+  if(P==='B'){const sp=am?[[.12,'-38deg','-8deg','rgba(240,171,252,.5)',100],[.88,'38deg','8deg','rgba(103,232,249,.5)',100],[.32,'25deg','-14deg','rgba(253,230,138,.5)',300],[.68,'-25deg','14deg','rgba(134,239,172,.5)',300]]:[[.15,'-35deg','-10deg','rgba(253,230,138,.45)',100],[.85,'35deg','10deg','rgba(253,230,138,.45)',220]];
+    for(const s of sp)fx+=`<div class="spot" style="left:${s[0]*100}%;--r0:${s[1]};--r1:${s[2]};--c:${s[3]};--d:${s[4]}ms"></div>`;
+    fx+=`<div class="jl"><div class="abs" style="left:50%;top:0">`;for(let i=0;i<(am?3:2);i++)fx+=`<div class="wave" style="--d:${80+i*220}ms"></div>`;fx+=`</div></div>`;
+    if(am)for(let i=0;i<34;i++)fx+=`<i class="conf" style="left:${(i*29)%100}%;--c:${RAIN[i%6]};--d:${350+(i*53)%700}ms;--h:${H+40}px"></i>`;}
+  if(P==='C'){const pts=[[.2,.25,'mar'],[.8,.3,'exc'],[.35,.55,'gre'],[.65,.6,'mar'],[.15,.7,'goo'],[.85,.65,'mar']];
+    fx+=`<div class="wipe"><div class="under"></div><div class="playwrap" style="position:absolute;inset:0">${'%PLAY%'}`;
+    fx+=`<div class="jl">`;for(const [i,p] of pts.entries()){const x=(p[0]-.5)*W,y=(p[1]-JY)*H;fx+=`<i class="dot" style="left:50%;--x:${x}px;--y:${y}px;--c:${am?RAIN[i]:C[p[2]]};--d:${i*40}ms"></i>`;}
+    fx+=`<div class="band"><i class="glint"></i>${am?'<i class="glint g2"></i>':''}<b>${d.title}</b></div><div class="bandsub">${d.sub}</div></div></div></div>`;
+    return `<div class="play"></div>${fx}`;}
+  const title=P==='C'?'':`<div class="title">${P==='B'?'<i class="shine"></i>':''}<b>${d.title}</b>${P==='Now'?`<small>${d.sub}</small>`:`<small>${d.sub}</small>`}</div>`;
+  return `${playLayer()}${fx}${title}`;}
+function playLayer(){return `<div class="play">${laneSvg()}<div class="hud">SCORE<b>968,310</b></div><div class="combo">980<small>COMBO</small></div></div>`;}
+function resScene(tier){const d=DATA[tier],am=tier==='am';
+  const at={A:{score:[300,1200],row:i=>400+i*110,rowDur:550},B:{score:[250,950],row:i=>2050+i*90,rowDur:450},C:{score:[350,1500],row:i=>350+i*200,rowDur:450},Now:{score:[0,0],row:()=>0,rowDur:0}}[P];
+  const max=Math.max(...d.rows.slice(1).map(r=>r[1]));
+  const rows=d.rows.map((r,i)=>{const w=r[2]==='just'?r[1]/max:r[1]/max;return `<div class="jr ${r[2]==='just'?'just':''} ${r[1]===0?'zero':''}" style="--c:${C[r[2]]};--d:${at.row(i)}ms"><i class="bar" style="--w:${Math.max(0,w*100)}%"></i><span class="nm">${r[0]}</span><span class="ct">${P==='Now'?r[1]:cnt(r[1],at.row(i),at.rowDur)}</span>${P==='C'&&r[1]>0?`<i class="fly" style="--c:${C[r[2]]};--d:${at.row(i)+150}ms;--x:${O==='tate'?-40:-260}px;--y:${O==='tate'?-(120+i*27):-(10+i*20)}px"></i>`:''}</div>`;}).join('');
+  const fcTop=O==='tate'?(8+27*5):(4+20*5);
+  const ring=P==='Now'?'':`<div class="ring" style="--d:${P==='A'?1550:P==='B'?1250:2050}ms"></div>`;
+  const scoreNum=P==='Now'?d.score.toLocaleString():cnt(d.score,at.score[0],at.score[1]);
+  const song=`<div class="card song" style="--d:0ms"><div class="jacket"></div><div><b>Beyond the Same Sky</b><small>MASTER<i>Lv.36</i></small></div></div>`;
+  const score=`<div class="card score" style="--d:100ms"><div class="l"><div class="lab">SCORE ${am?'<span style="color:#fde68a;margin-left:6px;letter-spacing:0">✨ NEW RECORD</span>':''}</div><span class="num">${scoreNum}${P==='A'?'<span class="sweep"><i></i></span>':''}</span><div class="best">BEST ${d.best.toLocaleString()} <b>+${(d.score-d.best).toLocaleString()}</b></div></div><div class="rankw">${ring}<div class="rank">${d.rank}</div><div class="ribbon">${am?'ALL MARVELOUS':'FULL COMBO'}</div></div></div>`;
+  const judg=`<div class="card judg" style="--d:200ms">${rows}<div class="combo2"><span>MAX COMBO</span><b>${P==='Now'?d.combo:cnt(d.combo,P==='B'?2100:P==='C'?1900:500,P==='Now'?0:700)}</b></div><div class="fs">${d.fs}</div>${P==='C'?`<div class="fcline" style="top:${fcTop}px;height:${O==='tate'?58:44}px"><small>BAD 0・MISS 0</small></div>`:''}</div>`;
+  const xp=`<div class="xp" style="--d:${P==='A'?2100:0}ms"><span>ビートランク 12</span><span class="g"><i></i></span><span>経験値 +1,240</span></div>`;
+  const nowCelebrate=P==='Now'?`<div style="text-align:center;margin-top:8px"><b style="font-size:26px;font-weight:900;color:#fde68a">${d.title}</b><div style="font-size:10px;color:#fde68a">${am?'全てMARVELOUS。文句なしの完璧です':'一度もコンボを切らずに完走しました'}</div></div>`:'';
+  const btn=`<div class="btns"><span class="main">曲選びへ戻る</span><span>もう一度</span></div>`;
+  const spot=P==='B'?'<div class="spot2"></div>':'';
+  let body;
+  if(O==='tate'){
+    // 今の縦は、経験値の棒がスコア・判定のすぐ下に来て、称号の文字は判定の下に出る(r1119-108)
+    body=P==='Now'?`${song}${score.replace(/<div class="ribbon">.*?<\/div>/,'')}${judg}${xp}${nowCelebrate}`:`${song}${score}${judg}${xp}`;
+  } else body=`${song}<div class="grid"><div>${P==='Now'?score.replace(/<div class="ribbon">.*?<\/div>/,''):score}${xp}</div>${judg}</div>`;
+  return `<div class="res"><div class="bg"></div>${spot}${body}${btn}</div>`;}
+// 行: [見出し, 種類, 段, [コマの時刻ms...]]
+const ROWS={
+ A:[['FCで終わる','end','fc',[150,450,800,1400]],['AMで終わる','end','am',[150,400,800,1400]],['結果(FC)','res','fc',[250,900,1700,2700]],['結果(AM)','res','am',[600,2700]]],
+ B:[['FCで終わる','end','fc',[200,550,1000,1500]],['AMで終わる','end','am',[200,550,1000,1600]],['結果(FC)','res','fc',[600,1350,1950,3000]],['結果(AM)','res','am',[1350,3000]]],
+ C:[['FCで終わる','end','fc',[200,600,1100,1650]],['AMで終わる','end','am',[200,600,1200,1650]],['結果(FC)','res','fc',[250,900,1700,2800]],['結果(AM)','res','am',[1100,2800]]],
+ Now:[['今 FCで終わる','end','fc',[100,300,1200]],['今 結果','res','fc',[0]],['今 AMで終わる','end','am',[1200]]],
+};
+const sc=O==='tate'?.46:.42;
+document.body.className=O;
+document.write(`<h1>${NAME}(${O==='tate'?'縦 390×844':'横 844×390'})</h1><div class="lead">モンヒロビートの「フルコンボ以上で曲が終わった時」と「結果の画面」の案。各コマの下の秒は、曲が終わってから(結果の行は結果の画面が出てから)の時刻。動かすのは transform と opacity だけ。FC=FULL COMBO・AM=ALL MARVELOUS(ALL EXCELLENT はその間)。</div>`);
+for(const [head,kind,tier,times] of ROWS[P]){
+  let h=`<div class="row"><div class="rowhead">${head}</div>`;
+  for(const t of times){const inner=kind==='end'?endScene(tier).replace('%PLAY%',playLayer()):resScene(tier);
+    h+=`<div class="cell"><div class="box" style="width:${W*sc}px;height:${H*sc}px"><div class="f p${P} ${tier}" data-t="${t}" style="transform:scale(${sc})"><div class="p${P} ${tier}" style="position:absolute;inset:0">${inner}</div></div></div><div class="cap">${(t/1000).toFixed(2)}秒${t===times[times.length-1]&&kind==='res'?'<small>(止まった形)</small>':''}</div></div>`;}
+  document.write(h+'</div>');}
+// コマごとに動きを止める。数え上げの文字もその時刻の値にする
+window.freeze=()=>{for(const f of document.querySelectorAll('.f[data-t]')){const t=Number(f.dataset.t);
+  for(const a of f.getAnimations({subtree:true})){a.pause();a.currentTime=t;}
+  for(const el of f.querySelectorAll('[data-cnt]')){const to=+el.dataset.to,at=+el.dataset.at,dur=+el.dataset.dur;let k=dur>0?Math.min(1,Math.max(0,(t-at)/dur)):1;k=1-Math.pow(1-k,3);el.textContent=Math.round(to*k).toLocaleString();}}
+  document.body.dataset.frozen='1';};
+</script>
+</body></html>
