@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 54fedf0441f01ee1
+// generated-sha256: 4ed5a232255afa7a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88,7 +88,15 @@ const MH_MULTI_PLAY_GUARD=(()=>{
 // 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
 const MH_PAGE_OFFSET_GUARD=(()=>{
   if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
-  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  // 「文字を打っている間」だけ戻さない。キーボードが出ない入力(スライダー・チェック・ボタンなど)は入れない。
+  // 【2026-11-23 社長「設定行ったらかぶってて戻れなくなった。このバグも何回目だよ」(台帳 r1119-147)】
+  //   モンヒロビートのオプションで判定ラインのスライダー(input type=range)を動かすと、フォーカスがスライダーに残る。
+  //   それまでは INPUT を全部「入力中」と数えていたので、その間に iPhone がページを状態表示の高さ(47px)ぶんずらしても戻さず、
+  //   🔄横の器ごと上へずれて、左上の「戻る」が状態表示の下に入って押せなくなっていた(保存を押しても戻らない)。
+  const NO_KEYBOARD=new Set(['range','checkbox','radio','button','submit','reset','color','file','image','hidden']);
+  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();
+    if(tag==='INPUT')return !NO_KEYBOARD.has(String(el.type||'text').toLowerCase());
+    return tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
   // いまのずれ。どれも0(倍率は1)が正しい
   const state=()=>{
@@ -23815,7 +23823,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue)||(hellReleased&&JSON.stringify(hellDraft)!==JSON.stringify(hellSaved));
   const set=(key,next)=>{setDraft(current=>normalizeRhythmSettings({...current,[key]:next}));setMessage('');};
   // タブを変えたら先頭から見せる(前のタブの位置に残ると、開いた先が途中から見える)
-  const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
+  // ページのずれ(iPhone で画面ごと上へずれて「戻る」が状態表示の下に入る)を、開いた時・タブを替えた時・保存した時にも確かめて戻す(r1119-147)
+  const fixPageOffset=()=>{try{if(typeof MH_PAGE_OFFSET_GUARD!=='undefined')MH_PAGE_OFFSET_GUARD.check();}catch(_){}};
+  useEffect(()=>{fixPageOffset();},[]);
+  const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}fixPageOffset();};
   const label='text-[13px] font-bold';
   const note='text-[10px] leading-relaxed text-slate-400';
   const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200';
@@ -23857,6 +23868,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
       {(!wide||slider)&&<input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
         min={min} max={max} step={step} value={value}
         onChange={e=>put(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
+        // 指を離したらフォーカスを外す。残ると iPhone のページのずれを戻す見張りが「入力中」と見て止まっていた(r1119-147)
+        onPointerUp={e=>{try{e.currentTarget.blur();}catch(_){}}} onTouchEnd={e=>{try{e.currentTarget.blur();}catch(_){}}}
         className="mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
         style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>}
     </div>;
@@ -23914,7 +23927,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
   const fxField=item=><div key={item.key} data-rhythm-fx-item={item.key} className={`${item.options.length>=4?'col-span-2':''}`}>{field(<span className="inline-flex items-center gap-1.5"><span data-rhythm-fx-weight={item.weight} className={`rounded px-1 text-[10px] font-black ${FX_WEIGHT[item.weight][1]}`}>{FX_WEIGHT[item.weight][0]}</span>{item.label}</span>,fxSegments(item),RHYTHM_FX_HELP[item.key])}</div>;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setHellDraft({hit:'far',text:'below',lane:RHYTHM_SKY_LANE_LOOK_DEFAULT});setMessage('画面上の値を戻しました（未保存）');};
-  const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
+  const saveDraft=async()=>{saveHell();const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');fixPageOffset();};
   const requestBack=()=>{if(dirty){setLeaveAsk(true);return;}onBack();};
   const saveAndBack=async()=>{saveHell();await onSave(draft);setLeaveAsk(false);onBack();};
   // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
@@ -23934,7 +23947,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     if(dirty){const saved=await onSave(draft);setDraft(saved);}
     onCalibrate();
   };
-  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)'}}>
+  // 端末を回した横は左右に切り欠き(ノッチ)が来るので、左右の安全域も取る(縦・🔄横では0。r1119-147 の検査で見つけた)
+  return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingLeft:'var(--mh-sa-left, 0px)',paddingRight:'var(--mh-sa-right, 0px)'}}>
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}

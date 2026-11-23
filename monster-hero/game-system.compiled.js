@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b70885e069e4a218
+// source-sha256: 415102a8cb457f46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117,11 +117,13 @@ const MH_PAGE_OFFSET_GUARD = (() => {
     state: () => null,
     check: () => {}
   };
+  const NO_KEYBOARD = new Set(['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file', 'image', 'hidden']);
   const editing = () => {
     const el = document.activeElement;
     if (!el) return false;
     const tag = String(el.tagName || '').toUpperCase();
-    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+    if (tag === 'INPUT') return !NO_KEYBOARD.has(String(el.type || 'text').toLowerCase());
+    return tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
   };
   const num = v => {
     const n = Number(v);
@@ -38018,6 +38020,14 @@ const RhythmOptions = ({
     }));
     setMessage('');
   };
+  const fixPageOffset = () => {
+    try {
+      if (typeof MH_PAGE_OFFSET_GUARD !== 'undefined') MH_PAGE_OFFSET_GUARD.check();
+    } catch (_) {}
+  };
+  useEffect(() => {
+    fixPageOffset();
+  }, []);
   const changeTab = id => {
     setTab(id);
     try {
@@ -38025,6 +38035,7 @@ const RhythmOptions = ({
         top: 0
       });
     } catch (_) {}
+    fixPageOffset();
   };
   const label = 'text-[13px] font-bold';
   const note = 'text-[10px] leading-relaxed text-slate-400';
@@ -38082,6 +38093,16 @@ const RhythmOptions = ({
       step: step,
       value: value,
       onChange: e => put(key, rhythmSnapOptionValue(e.target.value, min, max, step)),
+      onPointerUp: e => {
+        try {
+          e.currentTarget.blur();
+        } catch (_) {}
+      },
+      onTouchEnd: e => {
+        try {
+          e.currentTarget.blur();
+        } catch (_) {}
+      },
       className: "mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950",
       style: {
         background: `linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`
@@ -38221,6 +38242,7 @@ const RhythmOptions = ({
     const saved = await onSave(draft);
     setDraft(saved);
     setMessage('保存しました');
+    fixPageOffset();
   };
   const requestBack = () => {
     if (dirty) {
@@ -38256,7 +38278,9 @@ const RhythmOptions = ({
     "data-rhythm-options": true,
     className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
     style: {
-      paddingTop: 'var(--mh-sa-top)'
+      paddingTop: 'var(--mh-sa-top)',
+      paddingLeft: 'var(--mh-sa-left, 0px)',
+      paddingRight: 'var(--mh-sa-right, 0px)'
     }
   }, React.createElement("div", {
     "data-rhythm-options-bar": true,
