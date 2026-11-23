@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d8dfc786511ca90
+// generated-sha256: b3880f13224d94da
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151608,12 +151608,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="shrink-0 text-lg leading-none">{t.emoji}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{t.title}</span>
-                      <span className="block text-[10px] text-slate-300 leading-tight mt-0.5">みゅあと一緒に、実際に動かして遊び方を覚えられます</span>
+                      <span className="block text-[10px] text-slate-300 leading-tight mt-0.5" style={JA_LABEL_STYLE}>{jaWrap('みゅあと一緒に、実際に動かして遊び方を覚えられます')}</span>
                     </span>
                     <ChevronRight size={16} className="shrink-0 text-slate-400"/>
                   </button>
                 );})()}
-                <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{HELP_GUIDE_INTRO}</p>
+                {/* 導入文は文節で折る(API 総点検③: 「全てまとめてあ/ります」と言葉の途中で折れていた) */}
+                <p className="text-[11px] text-slate-400 leading-relaxed mb-3" style={JA_WRAP_STYLE}>{jaWrap(HELP_GUIDE_INTRO)}</p>
                 {HELP_GUIDE.length===0&&<div className="text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed">ヘルプの内容を読み込めませんでした。<br/>通信環境を確認して、ページを再読み込みしてください。</div>}
                 {HELP_GUIDE.map(c=>(
                   <button key={c.id} onClick={()=>{setHelpCatId(c.id);setHelpTopicId(null);}} className="w-full rounded-2xl border-2 px-4 py-3.5 flex items-center gap-3 text-left active:scale-95" style={{borderColor:c.color,backgroundColor:'rgba(15,23,42,0.85)'}}>
