@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5cb7c5b16f6a605
+// source-sha256: 8e748074891158a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67592,8 +67592,9 @@ const TimeOfDaySettingsPanel = () => {
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-slate-200"
   }, title), React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-400"
-  }, desc)), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, ['on', 'off'].map(v => React.createElement("button", {
     key: v,
@@ -69455,8 +69456,9 @@ function AssetDownloadPage({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "自動ダウンロード"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -69527,8 +69529,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "タクティクスバトル画面"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_SCREEN_STYLE_LABELS.map(option => React.createElement("button", {
       key: option.id,
@@ -69547,8 +69550,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "行動カードの見た目"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
       key: option.id,
@@ -69682,8 +69686,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "新しいバージョンのお知らせ"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, UPDATE_NOTICE_STYLE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69697,15 +69702,17 @@ function SettingsScreen({
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。'))), React.createElement("div", {
     "data-assistant-bubble-setting": true,
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69724,8 +69731,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "ホームの助手コメント"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69752,8 +69760,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手どうしの会話を自動で進める"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69896,13 +69905,11 @@ function ScreenThemeModal({
   const rows = [{
     id: 'title',
     label: 'タイトル画面',
-    desc: 'タイトル画面の絵',
     value: titleArt,
     set: onChangeTitleArt
   }, {
     id: 'home',
     label: 'ホーム画面',
-    desc: 'ホーム画面の背景',
     value: homeArt,
     set: onChangeHomeArt
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
@@ -69969,7 +69976,7 @@ function ScreenThemeModal({
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-white"
-  }, row.label), React.createElement("small", {
+  }, row.label), row.desc && row.desc !== row.label && React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -255193,11 +255200,19 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "デフォルトに戻す"), React.createElement("div", {
+    "data-bgm-close-band": true,
+    className: "sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"
+  }, React.createElement("button", {
     className: "mh-dialog-close",
     "data-mh-back": true,
+    style: {
+      position: 'static',
+      margin: 0,
+      boxShadow: '0 3px 0 #0009'
+    },
     onClick: closeBgmArrangement
-  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
+  }, "閉じる")))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
