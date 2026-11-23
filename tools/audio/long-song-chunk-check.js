@@ -10,9 +10,9 @@
 //   ・短い曲(ショート版)は、これまでどおり丸ごと広げる(区切らない)
 //   ・長い曲は区切って鳴らし、持っている区切りは3つまで
 //   ・曲の長さが丸ごとのときと同じ
-//   ・頭・つなぎ目の前後・途中・終わりで、「曲の時刻」と「鳴っている音」の関係が、丸ごとのときと同じ(ずれ 1ms 未満)
+//   ・頭・つなぎ目の前後・途中・終わりで、「曲の時刻」の式どおりの音が鳴っている(手本とのずれ 1ms 未満)
 //   ・つなぎ目の前後で、時刻が飛ばない(0.5ms 未満)
-//   ・つなぎ目のまわりで、手本との差が他の所と同じくらい小さい(音切れ・二重鳴りが無い)
+//   ・つなぎ目のまわりで、手本との差が小さい(音切れ・二重鳴りが無い)
 //   ・一時停止・再開、10秒戻す(seek)のあとも時刻がずれない。終わりまで鳴ると ended になる
 // 実時間で鳴らすので1分半ほどかかる。
 const http = require('http');
@@ -203,23 +203,22 @@ const pageTools = () => {
     }, LONG_ID);
     check('途中から鳴らせる(マルチの観戦)', extra.atStarted && extra.atSec > 300 && extra.atSec < 301.5, `${extra.atSec}`);
     check('輪にする試聴は、終わりまで鳴ると頭から鳴り直す', extra.loopPlaying && !extra.loopEnded && extra.loopSec > 0.3 && extra.loopSec < 2, `${extra.loopSec}`);
-    // 比べる相手: 同じ曲を丸ごと広げて鳴らしたとき(先に丸ごと読んでおくと、これまでの鳴らし方になる)
-    await page.evaluate(async (id) => Audio_.prepareBGM(id, 60000), LONG_ID);
-    const whole = await measure('丸ごと');
-    if (whole.fail) throw new Error(whole.fail);
-    check('丸ごと読んである曲は、これまでどおり丸ごと鳴らす', !whole.chunked);
+    // 比べる相手は「曲の時刻」の式どおりの位置に置いた手本そのもの(右の音)。丸ごと広げて鳴らしたときも、
+    // この測り方で全部の位置が 0.000ms だった(2026-11-23 #7319)。長い曲はいまは丸ごと広げない(先読みでも)ので、
+    // 丸ごとの回とは比べず、手本とのずれそのものを見る
+    check('長い曲は、先読み(prepareBGM)しても丸ごと広げない', await page.evaluate(async (id) => { const before = Audio_.diagnose().decodedMB; const ok = await Audio_.prepareBGM(id, 60000); return ok && Audio_.diagnose().decodedMB - before < 5; }, LONG_ID));
 
-    console.log('\n  位置                       区切り(ms)  丸ごと(ms)   差(ms)  手本との差(区切り/丸ごと)');
+    console.log('\n  位置                       ずれ(ms)  手本との差');
     let maxDiff = 0, maxResidRatio = 0;
-    chunk.points.forEach((p, i) => {
-      const w = whole.points[i]; const d = p.ms - w.ms; maxDiff = Math.max(maxDiff, Number.isFinite(d) ? Math.abs(d) : Infinity);
-      if (w.rms > 0.01) maxResidRatio = Math.max(maxResidRatio, Number.isFinite(p.resid) ? p.resid - w.resid : Infinity);
-      console.log(`  ${p.name.padEnd(12, '　')} ${p.ms.toFixed(3).padStart(9)} ${w.ms.toFixed(3).padStart(11)} ${d.toFixed(3).padStart(9)}   ${p.resid.toFixed(4)} / ${w.resid.toFixed(4)}${p.lo !== undefined ? `  音の大きさ ${p.lo.toFixed(2)}〜${p.hi.toFixed(2)}` : ''}`);
+    chunk.points.forEach((p) => {
+      maxDiff = Math.max(maxDiff, Number.isFinite(p.ms) ? Math.abs(p.ms) : Infinity);
+      if (p.rms > 0.01) maxResidRatio = Math.max(maxResidRatio, Number.isFinite(p.resid) ? p.resid : Infinity);
+      console.log(`  ${p.name.padEnd(12, '　')} ${p.ms.toFixed(3).padStart(9)}   ${p.resid.toFixed(4)}${p.lo !== undefined ? `  音の大きさ ${p.lo.toFixed(2)}〜${p.hi.toFixed(2)}` : ''}`);
     });
     console.log('');
     if (process.env.LONG_LOG) console.log(JSON.stringify({ log17: chunk.log17, logLast: chunk.logLast }));
     check('どの位置も音のある所で測れた', chunk.points.every((p) => p.rms > 0.01), chunk.points.filter((p) => !(p.rms > 0.01)).map((p) => p.name).join(' / '));
-    check('どの位置でも、曲の時刻と鳴っている音の関係が丸ごとのときと同じ(差 1ms 未満)', maxDiff < 1, `いちばん大きい差 ${maxDiff.toFixed(3)}ms`);
+    check('どの位置でも、曲の時刻どおりの音が鳴っている(手本とのずれ 1ms 未満)', maxDiff < 1, `いちばん大きい差 ${maxDiff.toFixed(3)}ms`);
     const jumps = [];
     for (let i = 0; i + 1 < chunk.points.length; i++) {
       const a = chunk.points[i], b = chunk.points[i + 1];
@@ -228,7 +227,7 @@ const pageTools = () => {
     check('つなぎ目の前後で時刻が飛ばない(0.5ms 未満)', jumps.length >= 4 && jumps.every((j) => j < 0.5), jumps.map((j) => j.toFixed(3)).join(' / '));
     const seamPts = chunk.points.filter((p) => p.lo !== undefined);
     check('つなぎ目で音が切れない・重ならない(1ms ごとの大きさが手本の 0.7〜1.4 倍)', seamPts.every((p) => p.lo > 0.7 && p.hi < 1.4), seamPts.map((p) => `${p.lo.toFixed(2)}〜${p.hi.toFixed(2)}`).join(' / '));
-    check('つなぎ目のまわりの手本との差が、丸ごとのときと同じくらい(差 0.05 未満)', maxResidRatio < 0.05, maxResidRatio.toFixed(4));
+    check('どの位置も、手本との差が小さい(0.05 未満)', maxResidRatio < 0.05, maxResidRatio.toFixed(4));
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 300));
