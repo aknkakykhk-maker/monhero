@@ -33,6 +33,10 @@
    "date": "2026-11-13T04:01:59+09:00",
    "subject": "あつ・ソラシドの全身画8表情(あつはすその切れを描き足し・ソラシドは髪のふちのもやを直す) (#5817)"
   },
+  "24e588f2": {
+   "date": "2026-11-23T14:35:22+09:00",
+   "subject": "えるびん石油王：承認済みポーズ違い版へ差し替え"
+  },
   "29c7158ae": {
    "date": "2026-11-13T02:59:40+09:00",
    "subject": "ききの全身画8表情(ふだん・ハロウィン)を入れる (#5796)"
@@ -60,10 +64,6 @@
   "3ed340183": {
    "date": "2026-11-21T03:30:03+09:00",
    "subject": "Add files via upload"
-  },
-  "402c536c1": {
-   "date": "2026-11-21T22:23:34+09:00",
-   "subject": "みゅあ カードマスター立ち絵8表情を差し替え"
   },
   "42fb3f2ab": {
    "date": "2026-11-18T06:01:54+09:00",
@@ -97,9 +97,9 @@
    "date": "2026-11-11T15:00:57+00:00",
    "subject": "助手紹介の立ち絵を社長の全身画に差し替える(10枚・まだ公開しない)"
   },
-  "55e71c92d": {
-   "date": "2026-11-22T18:56:00+09:00",
-   "subject": "みゅあ(カードマスター)の全身イラストを差し替え: 透過の不具合修正"
+  "5459e3f5": {
+   "date": "2026-11-23T12:14:57+09:00",
+   "subject": "えるびん通常：承認済みポーズ違い版へ差し替え"
   },
   "577ea1976": {
    "date": "2026-11-21T22:22:21+09:00",
@@ -213,9 +213,9 @@
    "date": "2026-11-21T21:51:07+09:00",
    "subject": "みゅあ ハロウィン立ち絵8表情の差し替え"
   },
-  "bd547ce08": {
-   "date": "2026-11-21T11:24:12+09:00",
-   "subject": "みゅあ作り直し: 全身絵差し替え（便4）"
+  "be464a17": {
+   "date": "2026-11-23T05:31:05+00:00",
+   "subject": "みゅあカードマスター全身9枚の髪まわりのフチを直し、wink もそろえる(r1119-137 続き)"
   },
   "bf5f3397a": {
    "date": "2026-11-15T04:12:21+00:00",
@@ -224,6 +224,10 @@
   "c2ef58dac": {
    "date": "2026-09-05T21:27:31+09:00",
    "subject": "ももすけの絵の差し替えと、起動の読み込み削減（7.2MB→5.3MB） (#1092)"
+  },
+  "c5a5bca3": {
+   "date": "2026-11-23T13:24:25+09:00",
+   "subject": "助手部ナカヨシ: ソラシド通常の立ち絵を、頭・腕が切れない枠で作り直す (r1119-122 ②) (#7344)"
   },
   "d09cb3dcd": {
    "date": "2026-11-18T06:05:32+09:00",
@@ -240,6 +244,10 @@
   "ddf1e5a77": {
    "date": "2026-11-15T04:25:33+00:00",
    "subject": "立ち絵は元の画素のまま切る(2倍の補間をやめる・社長の案A)・前後の止め絵"
+  },
+  "de30e4c7": {
+   "date": "2026-11-23T06:32:06+00:00",
+   "subject": "カードマスターの立ち絵を新しい全身画から作り直し、場面の置き方を直す(r1119-137 続き)"
   },
   "e23eba59e": {
    "date": "2026-11-23T09:35:29+09:00",
@@ -268,10 +276,6 @@
   "f24fe446e": {
    "date": "2026-11-18T06:00:31+09:00",
    "subject": "統合バッチ: 画像・音声1"
-  },
-  "f90620422": {
-   "date": "2026-11-21T03:41:29+09:00",
-   "subject": "Add files via upload"
   },
   "ffdba7903": {
    "date": "2026-11-20T16:03:40+09:00",
@@ -401,24 +405,24 @@
   "monster-hero/images/assistant/fullbody/atsu__surprise.png": "1ca9c4b8962a 691e2a3d2",
   "monster-hero/images/assistant/fullbody/atsu__troubled.png": "a371e1dc0119 691e2a3d2",
   "monster-hero/images/assistant/fullbody/atsu__wink.png": "bbbe25ee4feb 691e2a3d2",
-  "monster-hero/images/assistant/fullbody/erubin.png": "ec0ab16f69d3 f24fe446e",
-  "monster-hero/images/assistant/fullbody/erubin__angry.png": "638d4c6fbb38 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__crying.png": "123d988cbcff bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__excited.png": "3b1e960c1222 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__happy.png": "0997b4da42c6 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__normal.png": "9ec81528af7c bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__surprise.png": "558365cf62bf bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__troubled.png": "bee0e06af781 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin__wink.png": "42ab8849d12e bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou.png": "04c16356e98e f24fe446e",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__angry.png": "747c3fb88236 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__crying.png": "35955d022dc4 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__excited.png": "37d6a769f8ca bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__happy.png": "3de06c1ac491 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__normal.png": "6042e14c9bd6 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__surprise.png": "d8f86b54d68a bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__troubled.png": "94c60bc32544 bf5f3397a",
-  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__wink.png": "528645b884b7 bf5f3397a",
+  "monster-hero/images/assistant/fullbody/erubin.png": "53151f391384 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__angry.png": "78c5b33a3e72 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__crying.png": "4a3d910221b0 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__excited.png": "41a577806386 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__happy.png": "c2bf6d4155bf 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__normal.png": "53151f391384 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__surprise.png": "a7f530e0410a 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__troubled.png": "b74af2b429cd 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin__wink.png": "9e63dd274a66 5459e3f5",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou.png": "d7a90f466101 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__angry.png": "b5d502946127 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__crying.png": "57c4bf5e542a 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__excited.png": "1895959f042a 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__happy.png": "83072b6b1ca3 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__normal.png": "d7a90f466101 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__surprise.png": "4069ec6089fc 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__troubled.png": "cfe39271eeee 24e588f2",
+  "monster-hero/images/assistant/fullbody/erubin_sekiyuou__wink.png": "892ed6087de4 24e588f2",
   "monster-hero/images/assistant/fullbody/kiki.png": "00c41822055b f24fe446e",
   "monster-hero/images/assistant/fullbody/kiki__angry.png": "ca43fdaf5347 f24fe446e",
   "monster-hero/images/assistant/fullbody/kiki__crying.png": "b44dc6d630ea f24fe446e",
@@ -491,15 +495,15 @@
   "monster-hero/images/assistant/fullbody/mua__surprise.png": "0e83e562927f 7ce3fcf07",
   "monster-hero/images/assistant/fullbody/mua__troubled.png": "542a2fae49e1 7ce3fcf07",
   "monster-hero/images/assistant/fullbody/mua__wink.png": "5f05d0bab1e3 7ce3fcf07",
-  "monster-hero/images/assistant/fullbody/mua_card-master.png": "073ae9da3980 bd547ce08",
-  "monster-hero/images/assistant/fullbody/mua_card-master__angry.png": "2fef7df5f5f1 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__crying.png": "e90214b78891 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__excited.png": "2cba00c728b4 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__happy.png": "884510e74e84 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__normal.png": "6535ce3e0277 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__surprise.png": "b5f2e0df5de9 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__troubled.png": "f5477164fb6f 55e71c92d",
-  "monster-hero/images/assistant/fullbody/mua_card-master__wink.png": "773e5ef77ad7 55e71c92d",
+  "monster-hero/images/assistant/fullbody/mua_card-master.png": "ffeb8ce519dd be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__angry.png": "77f2588865bc be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__crying.png": "5a569edbd11e be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__excited.png": "ddee29d99964 be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__happy.png": "20609e3d86f2 be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__normal.png": "fdebc364013c be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__surprise.png": "445ef597a00a be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__troubled.png": "13bef5ee125c be464a17",
+  "monster-hero/images/assistant/fullbody/mua_card-master__wink.png": "564508ff9a2c be464a17",
   "monster-hero/images/assistant/fullbody/mua_halloween.png": "8e5d962da0a9 0ebaba2e1",
   "monster-hero/images/assistant/fullbody/mua_halloween__angry.png": "398b30f8a9ce 9ecc9bc30",
   "monster-hero/images/assistant/fullbody/mua_halloween__crying.png": "aa149ebe176b 9ecc9bc30",
@@ -658,14 +662,14 @@
   "monster-hero/images/assistant/sorashido_surprise.PNG": "f3938a5f2689 ffdba7903",
   "monster-hero/images/assistant/sorashido_troubled.PNG": "d5e33ce90840 4c8aa98d0",
   "monster-hero/images/assistant/sorashido_wink.PNG": "b089664e9d4b 4c8aa98d0",
-  "monster-hero/images/assistant/stand-card-master/myua_angry.png": "8ef0257ec8b8 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_crying.png": "f77a5a47f94b 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_excited.png": "f6ad45f1d5d4 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_happy.png": "92eb0f9ccfcf 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_normal.png": "ac87804e2524 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_surprise.png": "b62d442e7dba 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_troubled.png": "01d471086ffb 402c536c1",
-  "monster-hero/images/assistant/stand-card-master/myua_wink.png": "b85ecbd95965 402c536c1",
+  "monster-hero/images/assistant/stand-card-master/myua_angry.png": "6c40e97bdef8 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_crying.png": "9aca7a5d44c3 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_excited.png": "def4664d6562 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_happy.png": "15eb7ba7ce76 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_normal.png": "f226c18b2900 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_surprise.png": "63de9fbd9e23 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_troubled.png": "1f1cca5b11a1 de30e4c7",
+  "monster-hero/images/assistant/stand-card-master/myua_wink.png": "f87a25716d84 de30e4c7",
   "monster-hero/images/assistant/stand-halloween/kiki_angry.png": "ef6bfdfdd3aa ddf1e5a77",
   "monster-hero/images/assistant/stand-halloween/kiki_crying.png": "b81e20c8d947 ddf1e5a77",
   "monster-hero/images/assistant/stand-halloween/kiki_excited.png": "5ac3a076cf56 ddf1e5a77",
@@ -706,14 +710,14 @@
   "monster-hero/images/assistant/stand-normal/atsu_surprise.png": "2b1febfd5ea4 691e2a3d2",
   "monster-hero/images/assistant/stand-normal/atsu_troubled.png": "f872d62acddc 691e2a3d2",
   "monster-hero/images/assistant/stand-normal/atsu_wink.png": "8b85f304e737 691e2a3d2",
-  "monster-hero/images/assistant/stand-normal/erubin_angry.png": "fc3777b36a33 ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_crying.png": "611f02841822 ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_excited.png": "b90a233b64c4 ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_happy.png": "7d23ef832e13 ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_normal.png": "f7f0b3a994c3 ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_surprise.png": "f7d60b766aec ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_troubled.png": "9fa009627b5c ddf1e5a77",
-  "monster-hero/images/assistant/stand-normal/erubin_wink.png": "a21e918bc3fc ddf1e5a77",
+  "monster-hero/images/assistant/stand-normal/erubin_angry.png": "9256d6740c5f (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_crying.png": "419f6ef1e85d (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_excited.png": "582905b2061f (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_happy.png": "9324c232f4b4 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_normal.png": "6f638f7f7750 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_surprise.png": "9102da90d57d (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_troubled.png": "4a6190b9d362 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-normal/erubin_wink.png": "67cd9e143cae (まだコミットしていない)",
   "monster-hero/images/assistant/stand-normal/kiki_angry.png": "4fb1b1a43fe6 bf5f3397a",
   "monster-hero/images/assistant/stand-normal/kiki_crying.png": "649a57cf9715 bf5f3397a",
   "monster-hero/images/assistant/stand-normal/kiki_excited.png": "53e0384702af bf5f3397a",
@@ -746,22 +750,22 @@
   "monster-hero/images/assistant/stand-normal/myua_surprise.png": "201ce1e715b2 8b7083819",
   "monster-hero/images/assistant/stand-normal/myua_troubled.png": "56ad804c42d9 8b7083819",
   "monster-hero/images/assistant/stand-normal/myua_wink.png": "7efe2018d243 8b7083819",
-  "monster-hero/images/assistant/stand-normal/sorashido_angry.png": "fe1a477ea0e9 f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_crying.png": "8e35bb0b10e2 f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_excited.png": "c7709c386476 f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_happy.png": "7ed46ef0a587 f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_normal.png": "52c3dc5dd3dd f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_surprise.png": "b9d5c654a106 f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_troubled.png": "bbfe18b3ff1c f90620422",
-  "monster-hero/images/assistant/stand-normal/sorashido_wink.png": "7778bcd8ab63 f90620422",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_angry.png": "46562f7a7bb4 ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_crying.png": "d150250537d1 ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_excited.png": "cff1de3e0419 ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_happy.png": "7bb90ff285dc ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_normal.png": "41bac0058b4b ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_surprise.png": "9bea58da6605 ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_troubled.png": "180952e0b186 ddf1e5a77",
-  "monster-hero/images/assistant/stand-sekiyuou/erubin_wink.png": "9a04678cc012 ddf1e5a77",
+  "monster-hero/images/assistant/stand-normal/sorashido_angry.png": "3ccf0d982dd0 c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_crying.png": "d1bc9ddee2cd c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_excited.png": "5d69833127f0 c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_happy.png": "c9e14bc360f0 c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_normal.png": "49ee14beebe8 c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_surprise.png": "fb2c11d23d7a c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_troubled.png": "2b67a26a21b4 c5a5bca3",
+  "monster-hero/images/assistant/stand-normal/sorashido_wink.png": "55c1e2450010 c5a5bca3",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_angry.png": "8d0c4a222bda (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_crying.png": "694aeaf5ae28 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_excited.png": "a27717907195 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_happy.png": "6c7c951e835d (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_normal.png": "acd7a633a13d (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_surprise.png": "53e720c3b792 (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_troubled.png": "64e900f4334a (まだコミットしていない)",
+  "monster-hero/images/assistant/stand-sekiyuou/erubin_wink.png": "842fd069d3f3 (まだコミットしていない)",
   "monster-hero/images/assistant/stand-twintail/kiki_angry.png": "317137e2c8d8 0e0e0a1ca",
   "monster-hero/images/assistant/stand-twintail/kiki_crying.png": "ed198ef729fd 0e0e0a1ca",
   "monster-hero/images/assistant/stand-twintail/kiki_excited.png": "cb7e8c12f339 0e0e0a1ca",
