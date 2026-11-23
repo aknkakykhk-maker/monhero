@@ -790,6 +790,9 @@ def main():
     for name, make, scale in jobs:
         if only and name != only and not name.startswith(only + '__'):
             continue
+        if name == 'mua_card-master' or name.startswith('mua_card-master__'):
+            # 2026-11-23 r1119-137: カードマスターの9枚は生成元(raw)から抜き直した。作り直しは tools/assistant/life-card-master-recut.py
+            continue
         im = fit(make(), scale=scale() if scale else None)
         if '__' in name and scale:  # 表情の絵(1枚ずつの元絵・2×2のシート)だけ
             im = drop_specks(im)
