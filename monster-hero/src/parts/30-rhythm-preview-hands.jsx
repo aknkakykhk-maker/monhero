@@ -5,7 +5,7 @@
 //   ホールド・スライド … 押さえたまま帯をなぞり、終わりで離す(終点フリックは終わりで上へ払う)
 // 使うのは見本(from:'preview')の演奏だけ。曲の時刻は演奏画面の読み取り口(window.__mhTestHooks.rhythmSongMs)から読む。
 // 返す stop() で止める(画面を閉じたとき・流し直すとき)。
-const rhythmPreviewHandsStart = (area) => {
+const rhythmPreviewHandsStart = (area, opts = null) => {
   if (typeof window === 'undefined' || !area) return () => {};
   const hooks = () => window.__mhTestHooks || {};
   let stopped = false, raf = 0, k = 0, ids = 900;
@@ -31,7 +31,10 @@ const rhythmPreviewHandsStart = (area) => {
     const c = toClient(p.x, p.y);
     try { area.dispatchEvent(new window.PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: 'mouse', isPrimary: false, clientX: c.x, clientY: c.y, buttons: type === 'pointerup' ? 0 : 1 })); } catch (_) {}
   };
-  const notes = (() => { try { return ((hooks().rhythmNotes && hooks().rhythmNotes()) || []).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
+  // ノーツは演奏画面が渡す譜面のノーツ(opts.notes)を使う。読み取り口の控え(rhythmNotes)は、払う向き・終点フリック・スライドの点の空中の高さを
+  // 持たないので、それだけで叩くと左右のフリックを上へ払い、空中スライドを地上で押して MISS になる(2026-11-23 r1119-145)。控えは渡されないときだけ
+  const notes = (() => { try { const src = opts && Array.isArray(opts.notes) ? opts.notes : ((hooks().rhythmNotes && hooks().rhythmNotes()) || []);
+    return src.filter(n => n && Number.isFinite(Number(n.timeMs))).slice().sort((a, b) => a.timeMs - b.timeMs); } catch (_) { return []; } })();
   const isLong = n => (n.type === 'HOLD' || n.type === 'SLIDE') && Number(n.endTimeMs) > Number(n.timeMs);
   const flickVec = n => { const d = typeof rhythmFlickDir === 'function' ? rhythmFlickDir(n) : ''; return d === 'left' ? [-1, 0] : d === 'right' ? [1, 0] : [0, -1]; };
   const events = [], follows = [];
