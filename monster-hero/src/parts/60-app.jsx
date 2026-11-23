@@ -22165,6 +22165,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           multiLiveBoard={rhythmSettings.multiLiveBoard!==false}
           onChangeMultiLiveBoard={async(on)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLiveBoard:on===true});setRhythmSettings(saved);}}
+          multiMemberBubble={rhythmSettings.multiMemberBubble!==false}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
             // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)

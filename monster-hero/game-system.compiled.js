@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d26f50f41f538b87
+// source-sha256: cfd6eed0388e46cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7198,6 +7198,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   multiLightLook: true,
   multiLook: 'LIGHT',
   multiLiveBoard: true,
+  multiMemberBubble: true,
   modeSelectArt: true,
   modeSelectComment: true,
   noteSeType: 'STANDARD',
@@ -7537,6 +7538,7 @@ const normalizeRhythmSettings = value => {
     livePartnerVisible: bool('livePartnerVisible'),
     multiLightLook: bool('multiLightLook'),
     multiLiveBoard: bool('multiLiveBoard'),
+    multiMemberBubble: bool('multiMemberBubble'),
     modeSelectArt: bool('modeSelectArt'),
     modeSelectComment: bool('modeSelectComment'),
     multiLook: RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook) ? source.multiLook : source.multiLightLook === false ? 'OWN' : 'LIGHT',
@@ -38683,7 +38685,7 @@ const RhythmOptions = ({
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
-  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')), field('みんなで対戦の演奏中に、みんなのスコアを出す', toggle('multiLiveBoard')))), React.createElement("section", {
+  }, "試す")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay')), field('みんなで対戦の演奏中に、みんなのスコアを出す', toggle('multiLiveBoard')), field('部屋のメンバーの吹き出しを出す', toggle('multiMemberBubble'), '切にしても、発言はチャットの欄で読めます。'))), React.createElement("section", {
     className: card
   }, React.createElement("details", {
     "data-rhythm-option-help": true,
@@ -102368,6 +102370,7 @@ function RhythmMultiScreenBody({
   onChangeMultiLook = null,
   multiLiveBoard = true,
   onChangeMultiLiveBoard = null,
+  multiMemberBubble = true,
   onBack,
   onStartPlay,
   modeSelect = null,
@@ -102475,6 +102478,7 @@ function RhythmMultiScreenBody({
     }
     return '';
   };
+  const cardBubbleOf = id => multiMemberBubble ? chatBubbleOf(id) : '';
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
   const [rankingOpen, setRankingOpen] = React.useState(false);
@@ -104317,7 +104321,7 @@ function RhythmMultiScreenBody({
       onClick: leaveRoom
     }, "モード選びへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
       onOpen: openBuddyInfo,
-      bubbleOf: chatBubbleOf,
+      bubbleOf: cardBubbleOf,
       members: members,
       hostId: view ? view.hostId : '',
       selfId: view ? view.selfId : '',
@@ -104556,7 +104560,7 @@ function RhythmMultiScreenBody({
         key: r ? r.m.id : `b${i}`,
         className: "relative min-w-0"
       }, r ? React.createElement(RhythmMultiResultBubble, {
-        text: chatBubbleOf(r.m.id)
+        text: cardBubbleOf(r.m.id)
       }) : null);
     })), Array.from({
       length: resultCols
@@ -104784,7 +104788,7 @@ function RhythmMultiScreenBody({
       className: shell
     }, header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom), React.createElement(RhythmMultiMemberCards, {
       onOpen: openBuddyInfo,
-      bubbleOf: chatBubbleOf,
+      bubbleOf: cardBubbleOf,
       members: members,
       hostId: view.hostId,
       selfId: view.selfId,
@@ -104888,7 +104892,7 @@ function RhythmMultiScreenBody({
       timer: room.left
     }), React.createElement(RhythmMultiMemberCards, {
       onOpen: openBuddyInfo,
-      bubbleOf: chatBubbleOf,
+      bubbleOf: cardBubbleOf,
       members: members,
       hostId: view.hostId,
       selfId: view.selfId,
@@ -105032,7 +105036,7 @@ function RhythmMultiScreenBody({
     exitLabel: 'ルームを出る'
   }), React.createElement(RhythmMultiMemberCards, {
     onOpen: openBuddyInfo,
-    bubbleOf: chatBubbleOf,
+    bubbleOf: cardBubbleOf,
     members: members,
     hostId: view.hostId,
     selfId: view.selfId,
@@ -261070,6 +261074,7 @@ function MonsterHeroGame() {
         });
         setRhythmSettings(saved);
       },
+      multiMemberBubble: rhythmSettings.multiMemberBubble !== false,
       onChangeMultiLook: async id => {
         const saved = await saveRhythmSettings({
           ...rhythmSettings,
