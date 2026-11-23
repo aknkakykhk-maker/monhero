@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e748074891158a0
+// source-sha256: 3e46b33ee006b2f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22176,6 +22176,36 @@ const useBubbleCollapse = collapseKey => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([[/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'], [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'], [/^(transcendence|masuEnhance)$/, 'masuEnhance']]);
+const assistantBubbleFoldKey = scene => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+const BubbleFoldButton = ({
+  open,
+  onToggle,
+  size = 'md',
+  className = '',
+  ...attrs
+}) => React.createElement("button", _extends({
+  type: "button",
+  onClick: ev => {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    onToggle();
+  },
+  "aria-pressed": !!open,
+  "aria-label": open ? 'ひとことをたたむ' : 'ひとことを開く',
+  title: open ? '助手のひとことを畳む' : '助手のひとことを出す'
+}, attrs, {
+  className: `mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`
+}), React.createElement("span", {
+  "aria-hidden": "true"
+}, "💬"), React.createElement("span", {
+  "aria-hidden": "true"
+}, open ? '▲' : '▼'));
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -22192,14 +22222,15 @@ const AssistantBubble = ({
   defaultOpen = false,
   footerSpace = 0,
   maxLines = 0,
-  collapseKey = null,
+  collapseKey = undefined,
   collapseHidden = false,
   oneLine = false,
   menu = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  const foldKey = collapseKey !== undefined ? collapseKey : line || defaultOpen ? null : assistantBubbleFoldKey(scene);
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -22289,32 +22320,21 @@ const AssistantBubble = ({
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
-  if (collapseKey && collapsed) {
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return React.createElement("div", {
       "data-bubble-collapsed": true,
-      className: "w-full flex items-center gap-2"
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 32,
-      accent: color,
-      expression: face
-    }), React.createElement("button", {
-      type: "button",
-      onClick: () => setCollapsed(false),
-      "aria-label": `${who.name}のひとことを開く`,
-      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
-      style: {
-        borderColor: color,
-        color,
-        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
-      }
-    }, "💬 ", who.name, "のひとこと ▾"));
+      className: "w-full flex items-center justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setCollapsed(false),
+      size: "sm"
+    }));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
     "data-bubble-one-line": oneLine ? '' : undefined,
-    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${collapseKey ? 'relative' : ''}`
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -22441,13 +22461,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
-  }))))), collapseKey && React.createElement("button", {
-    type: "button",
-    onClick: () => setCollapsed(true),
-    "aria-label": "ひとことをたたむ",
-    "data-bubble-collapse": true,
-    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
-  }, "▴"), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))))), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setCollapsed(true),
+    size: "sm",
+    className: "self-center",
+    "data-bubble-collapse": ""
+  }), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "fixed inset-0",
     style: {
       zIndex: 60
@@ -70422,7 +70442,8 @@ function MissionsScreen({
       line: dailyLine.text,
       helpRef: "items/missions",
       expression: "happy",
-      compact: true
+      compact: true,
+      collapseKey: "screen:missions"
     })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
@@ -111455,6 +111476,7 @@ function AssistantPeerTalk({
   onReplayEnd = null,
   today = null
 }) {
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
@@ -111650,6 +111672,16 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(React.createElement("div", {
+      "data-assistant-peer-folded": true,
+      className: "flex justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setPeerFolded(false),
+      "data-assistant-peer-fold": ""
+    })));
+  }
   const {
     talk
   } = cur;
@@ -111738,7 +111770,14 @@ function AssistantPeerTalk({
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
-  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
+  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, scene && !cur.replay && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setPeerFolded(true),
+    size: "sm",
+    "data-assistant-peer-fold": ""
+  }), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
     onClick: ev => {
@@ -111746,7 +111785,7 @@ function AssistantPeerTalk({
       finish(cur);
     },
     className: "min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "閉じる"))));
+  }, "閉じる")))));
 }
 const ASSISTANT_PEER_PHOTO_W = 400,
   ASSISTANT_PEER_PHOTO_H = 300;
@@ -268477,13 +268516,11 @@ function MonsterHeroGame() {
         style: {
           color: accent
         }
-      }, headTitle)), React.createElement("button", {
-        type: "button",
-        onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
-        "data-help-bubble-toggle": true,
-        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
-      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
+      }, headTitle)), React.createElement(BubbleFoldButton, {
+        open: helpAssistantOpen,
+        onToggle: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
+        "data-help-bubble-toggle": ""
+      })), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
