@@ -133,9 +133,17 @@ const checkChart = (c) => {
 const kindOf = n => { const sk = (G.rhythmNoteIsSlide(n) ? (Array.isArray(n.slidePoints) && n.slidePoints.some(p => Number(p.sky) > 0)) : Number(n.skyHeight) > 0) ? '空中' : '';
   return `${sk}${n.type}${n.flickDir ? '(' + n.flickDir + ')' : ''}${n.endFlick ? '(終点フリック)' : ''}`; };
 let total = 0, badCharts = 0; const kinds = {};
+// フリックの種類ごとの、取れた数 / 全数(2026-11-23 社長「鑑賞で横フリックも押せてないね」)
+const flickKind = n => { const sky = Number(n.skyHeight) > 0 ? '空中の' : '';
+  if (n.type === 'FLICK') return `${sky}${n.flickDir === 'left' ? '左フリック' : n.flickDir === 'right' ? '右フリック' : '上フリック(向き自由)'}`;
+  if ((n.type === 'HOLD' || n.type === 'SLIDE') && G.rhythmNoteWantsEndFlick(n)) return '終点フリック';
+  return null; };
+const flickAll = {}, flickMiss = {};
 const t0 = Date.now();
 for (const c of charts) {
   const fails = checkChart(c);
+  for (const n of c.notes) { const k = flickKind(n); if (k) flickAll[k] = (flickAll[k] || 0) + 1; }
+  for (const i of new Set(fails.map(f => f.index))) { const k = flickKind(c.notes[i]); if (k) flickMiss[k] = (flickMiss[k] || 0) + 1; }
   if (!fails.length) continue;
   badCharts++; total += fails.length;
   const ks = {}; for (const f of fails) { const k = kindOf(c.notes[f.index]); ks[k] = (ks[k] || 0) + 1; kinds[k] = (kinds[k] || 0) + 1; }
@@ -143,4 +151,5 @@ for (const c of charts) {
   if (LIST) for (const f of fails) console.log(`    ${(c.notes[f.index].timeMs / 1000).toFixed(2)}秒 #${f.index} ${kindOf(c.notes[f.index])}: ${f.what}`);
 }
 console.log(`${total ? '✗' : '✓'} 曲鑑賞の自動の手: ${charts.length} 譜面を確かめた / 取り逃しのある譜面 ${badCharts} / 取り逃し ${total}${total ? ` (${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(' / ')})` : ''} / ${((Date.now() - t0) / 1000).toFixed(0)}秒${OLD ? ' 〔直す前の渡し方〕' : ''}`);
+console.log(`  フリックの種類ごと(取れた数 / 全数): ${Object.keys(flickAll).sort().map(k => `${k} ${flickAll[k] - (flickMiss[k] || 0)}/${flickAll[k]}`).join(' ・ ')}`);
 process.exitCode = total ? 1 : 0;
