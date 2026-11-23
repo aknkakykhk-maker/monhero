@@ -198,6 +198,10 @@ const serve = () => new Promise(resolve => {
     }
     // プロフィールへ(HOMEの左上のブリーダー表示から入る)
     await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+    await page.waitForSelector('[data-profile-door="records"]', { timeout: 15000 });
+    // 2026-11-23 プロフィール案B: 名刺のページから扉「記録」を押して進む
+    await page.evaluate(() => document.querySelector('[data-profile-door="records"]')?.click());
+    await page.waitForTimeout(700);
     await page.waitForSelector('[data-profile-battle-records]', { timeout: 15000 });
     await page.waitForTimeout(400);
     const hasEntry = await page.evaluate(() => !!document.querySelector('[data-profile-rhythm-history]'));

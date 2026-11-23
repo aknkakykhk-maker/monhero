@@ -182,7 +182,7 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
     checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
   { re: /^(monster-hero\/images\/assistant\/stand-[a-z0-9-]+\/.+\.png|monster-hero\/images\/assistant\/fullbody\/.+\.png|monster-hero\/data\/assistants\.js|tools\/assistant\/life-stand-[a-z-]+\.(py|js|json))$/,
-    checks: ['assistant/life-stand-edge-check.js'], why: '全身画から切り出した立ち絵の上・左・右の端で、頭・腕が切れていないか(r1119-122)' },
+    checks: ['assistant/life-stand-edge-check.js', 'assistant/life-stand-stale-check.js'], why: '全身画から切り出した立ち絵の上・左・右の端で、頭・腕が切れていないか(r1119-122)・全身画を替えたのに立ち絵が古いまま(r1119-153)' },
   // 助手の絵・原本・保管庫・絵を作る道具を触ったら、目録(キャラごとの CATALOG.md)が現行と合っているかを見る(2026-11-23 r1119-124・r1119-128)。
   // 旧版と最新版の取り違えを防ぐ: 絵を替えたのに目録が古い・正本が無い・現行が正本より古い・旧版が元の場所へ戻った、で落ちる
   { re: /^(monster-hero\/images\/assistant\/.+|tools\/art-sources\/assistants\/.+|archive\/old-art\/.+|tools\/image\/assistant-art-(catalog|ledger).*|tools\/assistant\/(art_source|life-fullbody-art|life-expression-sheets|life-stand-from-fullbody|sorashido-umahone-busts)\.py|tools\/assistant\/life-sleep-faces-make\.js)$/,
