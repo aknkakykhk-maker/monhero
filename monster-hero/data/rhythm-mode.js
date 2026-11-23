@@ -82720,8 +82720,9 @@ const rhythmBuildCanvasRenderer=()=>{
     // ふつうのノーツと同じ作り(板の形・角の丸み・光り方・質感)で、色だけ空中用の明るい赤。暗いれんが色ではなく光らせる。違いは位置と床の影で出す
     SKY:    headOf(SKY_NOTE_COLOR),
     // ききのチャージノーツ(全部必殺技でつ HELL の4か所・2026-11-23 r1119-141)。タップだけをききのピンクにする(スライド・フリックは今の色のまま)。
-    // ★上フリックの色が淡いピンク(#f472b6)なので、それより濃いマゼンタにして金の縁を付ける(矢印の無いフリックに見えないように)
-    CHARGE: {...headOf({hi:'#fff0fa',mid:'#ec4899',lo:'#a21caf',rgb:'236,72,153'}),ring:'#fcd34d'},
+    // ★上フリックもピンク(#f472b6)なので、金の縁と頭の「ききのリボン」で見分ける(矢印の無いフリックに見えないように)。
+    //   社長「もうちょいピンク色に」「ききのリボンがぴょこんとついたような」(2026-11-23)
+    CHARGE: {...headOf({hi:'#fff1f8',mid:'#fb6fb6',lo:'#e11d74',rgb:'251,111,182'}),ring:'#fde68a'},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
@@ -82933,6 +82934,8 @@ const rhythmBuildCanvasRenderer=()=>{
   // モンスターノーツ1個につき毎フレーム12個の配列ができていた
   // (表示中3体・60fpsで毎秒2,160個)。FLICKと終端バーも同じ形。
   // 捨てられるだけのゴミなので、ここへ出して作り直さないようにする。**見た目は変わらない。**
+  const KIKI_FINALE_GLOWS=Object.freeze([[14,'rgba(244,114,182,.85)'],[8,'rgba(255,255,255,.6)'],[18,'rgba(236,72,153,.55)']]);
+  const KIKI_FINALE_DOTS=Object.freeze([[.06,.4,'rgba(255,255,255,.9)'],[.94,.6,'rgba(253,224,71,.85)'],[.3,.95,'rgba(249,168,212,.9)'],[.7,.05,'rgba(255,255,255,.9)']]);
   const AURA_OUTER_GLOWS=Object.freeze([[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']]);
   const AURA_OUTER_DOTS=Object.freeze([[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]);
   const AURA_INNER_GLOWS=Object.freeze([[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]);
@@ -82975,13 +82978,28 @@ const rhythmBuildCanvasRenderer=()=>{
   const SKY_END_FLICK_ARROW_GLOWS=Object.freeze([[9,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.9)`],[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   // 空中のタップ・フリック(skyHeight が数で >0)を、ふつうのノーツと同じ板で描くか(既定 'plate')。旧スタイルは localStorage で選べる
   const isSkyPlate=note=>!!note&&Number(note.skyHeight)>0&&skyTapStyle()==='plate';
-  // 「必殺！」の印の絵(1回だけ焼く・正方形の真ん中に字)。作れない所(テストの仮の画面など)では null
-  let finaleLabel;
-  const finaleLabelBitmap=()=>{if(finaleLabel!==undefined)return finaleLabel;finaleLabel=null;
-    try{if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=c.height=160;const g=c.getContext('2d');if(!g)return null;
-      g.font='900 50px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
-      g.lineWidth=10;g.strokeStyle='#831843';g.strokeText('必殺！',80,80);g.fillStyle='#fff1f7';g.fillText('必殺！',80,80);
-      g.lineWidth=2;g.strokeStyle='#f9a8d4';g.strokeText('必殺！',80,80);finaleLabel=c;}catch(e){finaleLabel=null;}return finaleLabel;};
+  // ききノーツの絵(r1119-141・1回だけ焼く・正方形)。作れない所(テストの仮の画面など)では null
+  //   リボン: ききの頭のリボン(輪が2つ+結び目)。剣: 必殺ノーツの上に置くピンクの剣(社長「必殺よりピンクの剣をノーツの上に」)
+  const kikiBitmaps={};
+  const kikiBitmap=name=>{if(name in kikiBitmaps)return kikiBitmaps[name];kikiBitmaps[name]=null;
+    try{if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=c.height=160;const g=c.getContext('2d');if(!g)return null;g.lineJoin='round';
+      if(name==='ribbon'){
+        const loop=(x,rot)=>{g.save();g.translate(x,96);g.rotate(rot);const gr=g.createLinearGradient(0,-26,0,26);gr.addColorStop(0,'#ffd1e8');gr.addColorStop(.5,'#ff7ab8');gr.addColorStop(1,'#e11d74');
+          g.beginPath();g.ellipse(0,-22,22,34,0,0,Math.PI*2);g.fillStyle=gr;g.fill();g.lineWidth=6;g.strokeStyle='#9d174d';g.stroke();
+          g.beginPath();g.ellipse(0,-24,9,18,0,0,Math.PI*2);g.fillStyle='rgba(157,23,77,.55)';g.fill();g.restore();};
+        loop(52,-.45);loop(108,.45);
+        g.beginPath();g.arc(80,112,15,0,Math.PI*2);g.fillStyle='#ff5fa8';g.fill();g.lineWidth=6;g.strokeStyle='#9d174d';g.stroke();
+        g.beginPath();g.arc(75,107,5,0,Math.PI*2);g.fillStyle='rgba(255,255,255,.85)';g.fill();
+      }else{
+        g.translate(80,82);g.rotate(-.18);g.shadowBlur=18;g.shadowColor='rgba(244,114,182,.95)';
+        const bl=g.createLinearGradient(-12,0,12,0);bl.addColorStop(0,'#f472b6');bl.addColorStop(.5,'#fff1f8');bl.addColorStop(1,'#ec4899');
+        g.beginPath();g.moveTo(0,-74);g.lineTo(12,-54);g.lineTo(12,28);g.lineTo(-12,28);g.lineTo(-12,-54);g.closePath();g.fillStyle=bl;g.fill();g.shadowBlur=0;g.lineWidth=4;g.strokeStyle='#9d174d';g.stroke();
+        g.beginPath();g.moveTo(0,-62);g.lineTo(0,22);g.lineWidth=2.5;g.strokeStyle='rgba(255,255,255,.95)';g.stroke();
+        g.beginPath();g.roundRect?g.roundRect(-30,28,60,12,6):g.rect(-30,28,60,12);g.fillStyle='#fcd34d';g.fill();g.lineWidth=3.5;g.strokeStyle='#92400e';g.stroke();
+        g.fillStyle='#be185d';g.fillRect(-7,40,14,24);g.strokeStyle='#831843';g.lineWidth=3;g.strokeRect(-7,40,14,24);
+        g.beginPath();g.arc(0,70,8,0,Math.PI*2);g.fillStyle='#fcd34d';g.fill();g.strokeStyle='#92400e';g.stroke();
+      }
+      kikiBitmaps[name]=c;}catch(e){kikiBitmaps[name]=null;}return kikiBitmaps[name];};
   const headStyle=(note,failed,monster)=>{
     if(failed)return HEADS.FAILED;
     if(monster)return HEADS.MONSTER;
@@ -83031,6 +83049,8 @@ const rhythmBuildCanvasRenderer=()=>{
       pushHeadGlow(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),w,h,alpha*pulse);
       pushHeadGlow(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),w,h,alpha);
     }
+    // 必殺ノーツ(r1119-141)は、ききノーツが光っている感じに、ピンクの光の縁を脈打たせる(焼いた絵を貼るだけ)
+    if(finale)pushHeadGlow(auraSprite('kikiFinale',7,5,9999,'rgba(253,207,232,.95)',KIKI_FINALE_GLOWS,KIKI_FINALE_DOTS),w,h,alpha*(.55+.45*(0.5-0.5*Math.cos((frameNow/320)*Math.PI))));
     // デバッグの「スライドの帯の描き方(検証用)」→ GPU のときは、板の本体(下の縁取り〜押さえている最中の白)を GPU で1回で描く(rhythmCreateGpuPlate)
     // 試作(floor3d): 地上の粒は床に貼り付けた台形で描く(空中・マスモンの粒は今まで)
     const floorHead=floor3d&&!isSkyPlate(note)&&!monster;
@@ -84845,9 +84865,11 @@ const rhythmBuildCanvasRenderer=()=>{
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
         if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
-      // 必殺ノーツの「必殺！」の印(r1119-141)。ノーツのすぐ上にくっつけて一緒に流す(叩いたら消える)。顔と同じく最後にまとめて貼る
-      if(note._mhLabel&&geo.head&&!o.failed&&o.pop===null){const bm=finaleLabelBitmap();if(bm){const size=Math.max(30,geo.head.w/Math.max(1,Number(note.subLaneWidth)||2)*2*sizeScale*2.2);/* 幅の広い必殺ノーツ(A の左右)でも、字は1枚分の大きさ */
-        faces.push(bm,cssW/2,geo.head.cy-HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale*1.9/2-size*.2,size,Math.min(1,o.alpha));}}
+      // ききノーツ(r1119-141): 頭にききのリボンをぴょこんと付ける。必殺ノーツは上にピンクの剣を置き(リボンは右上へ)、叩いたら消える。顔と同じく最後にまとめて貼る
+      if(note._mhCharge&&geo.head&&!o.failed&&o.pop===null&&rhythmNoteVisualType(note)==='TAP'){
+        const fin=note._mhCharge===2,nh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale*(fin?1.9:1),nw=geo.head.w*sizeScale*(fin&&(Number(note.subLaneWidth)||2)<=4?2.6:1),a=Math.min(1,o.alpha);
+        const rb=kikiBitmap('ribbon');if(rb){const size=Math.max(14,nh*3.2);faces.push(rb,geo.head.cx+(fin?nw*.36:0),geo.head.cy-nh/2-size*.12,size,a);}
+        if(note._mhLabel){const sw=kikiBitmap('sword');if(sw){const size=Math.max(30,geo.head.w/Math.max(1,Number(note.subLaneWidth)||2)*2*sizeScale*1.75);/* 奥から来るノーツに大きくかぶらない大きさ */faces.push(sw,cssW/2,geo.head.cy-nh/2-size*.36,size,a);}}}
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
         const hrgb=o.skyHand==='L'?RHYTHM_SKY_LOOK.arc.left:RHYTHM_SKY_LOOK.arc.right,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
