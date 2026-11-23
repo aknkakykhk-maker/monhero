@@ -3393,6 +3393,37 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める。
+       縦の画面は社長の選択「C 流して全体へ」: 絵を範囲の高さいっぱいに映して左から右へゆっくり流し、最後に全体へ引いて止まる。
+       動きを減らす設定・2行目から(settled = タップで送った)は、はじめから全体で止める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    @supports (width: 1cqw) {
+      @media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+        [data-story-still]:not([data-story-still-settled]) [data-story-still-img] { animation: storyStillPan 7s ease-in-out .3s both; }
+      }
+    }
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    @keyframes storyStillPan {
+      0%, 10% { width: 200cqh; height: 100cqh; top: 0; left: 0; transform: none; }
+      68% { width: 200cqh; height: 100cqh; top: 0; left: calc(100cqw - 200cqh); transform: none; }
+      100% { width: 100cqw; height: 50cqw; top: calc(50cqh - 25cqw); left: 0; transform: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -3405,6 +3436,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

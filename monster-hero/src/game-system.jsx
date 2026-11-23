@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82e7af7e88a2ddf4
+// generated-sha256: ebfd814d9274b74b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -150195,10 +150195,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
         const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
+        //   絵は同じ STORY_SCENE_IMAGES。縦の画面は大きく映して左から右へ流し、絵の全体へ引いて止まる(70-bootstrap.jsx の [data-story-still])。
+        //   続けて同じ絵の行は流し直さない(key を絵の名前にする)。2行目からは流れの途中でも全体で止める(settled = タップで送ったら全体へ飛ぶ)
+        const storyStill=typeof line.still==='string'&&typeof STORY_SCENE_IMAGES!=='undefined'?line.still:null;
+        const storyStillImg=storyStill?(STORY_SCENE_IMAGES[storyStill]||null):null;
+        let storyStillFrom=step;
+        if(storyStillImg){while(storyStillFrom>0&&script[storyStillFrom-1]&&script[storyStillFrom-1].still===storyStill)storyStillFrom--;}
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+          script.forEach(l=>{[l&&l.bg,l&&l.still].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -150221,10 +150228,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
-        const stageGuest=stageLine?assistantById(stageLine.stage||stageLine.who):null;
-        const stageName=stageLine?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
+        const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
+        const stageName=stageLine&&stageGuest?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
         const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
-        const speakingGuest=isGuestWho(line.who);
+        // 一枚絵の行はステージを出さないので、ゲストの台詞も下の欄に出す
+        const speakingGuest=isGuestWho(line.who)&&!storyStillImg;
         let bubbleIdx=-1;
         for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
         const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
@@ -150239,7 +150247,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
-        const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -150382,11 +150390,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-still-on={storyStillImg?'':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
             style={{'--story-bg':`url("${storySceneImg}")`}}/>}
+          {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-settled={step>storyStillFrom?'':undefined} aria-hidden="true"
+            style={{'--story-still':`url("${storyStillImg}")`}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div></div>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -150442,7 +150452,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -155192,6 +155202,37 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める。
+       縦の画面は社長の選択「C 流して全体へ」: 絵を範囲の高さいっぱいに映して左から右へゆっくり流し、最後に全体へ引いて止まる。
+       動きを減らす設定・2行目から(settled = タップで送った)は、はじめから全体で止める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    @supports (width: 1cqw) {
+      @media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+        [data-story-still]:not([data-story-still-settled]) [data-story-still-img] { animation: storyStillPan 7s ease-in-out .3s both; }
+      }
+    }
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    @keyframes storyStillPan {
+      0%, 10% { width: 200cqh; height: 100cqh; top: 0; left: 0; transform: none; }
+      68% { width: 200cqh; height: 100cqh; top: 0; left: calc(100cqw - 200cqh); transform: none; }
+      100% { width: 100cqw; height: 50cqw; top: calc(50cqh - 25cqw); left: 0; transform: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -155204,6 +155245,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

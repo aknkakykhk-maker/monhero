@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f9f044b1536e256
+// source-sha256: 2a09f5ff8d05978a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -266736,17 +266736,25 @@ function MonsterHeroGame() {
         }
       }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
+      const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
+      let storyStillFrom = step;
+      if (storyStillImg) {
+        while (storyStillFrom > 0 && script[storyStillFrom - 1] && script[storyStillFrom - 1].still === storyStill) storyStillFrom--;
+      }
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          const src = l && STORY_SCENE_IMAGES[l.bg];
-          if (src && !pre.has(src)) {
-            pre.add(src);
-            try {
-              const im = new Image();
-              im.src = src;
-            } catch (e) {}
-          }
+          [l && l.bg, l && l.still].forEach(k => {
+            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            if (src && !pre.has(src)) {
+              pre.add(src);
+              try {
+                const im = new Image();
+                im.src = src;
+              } catch (e) {}
+            }
+          });
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -266799,10 +266807,10 @@ function MonsterHeroGame() {
         }
       }
       const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
-      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
-      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageGuest = stageLine && !storyStillImg ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
-      const speakingGuest = isGuestWho(line.who);
+      const speakingGuest = isGuestWho(line.who) && !storyStillImg;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -266828,7 +266836,7 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -267013,6 +267021,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-still-on": storyStillImg ? '' : undefined,
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
@@ -267035,7 +267044,22 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), React.createElement("button", {
+      }), storyStillImg && React.createElement("div", {
+        key: `still:${storyStill}`,
+        "data-story-still": storyStill,
+        "data-story-still-settled": step > storyStillFrom ? '' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-still': `url("${storyStillImg}")`
+        }
+      }, React.createElement("div", {
+        "data-story-still-area": true
+      }, React.createElement("img", {
+        "data-story-still-img": true,
+        src: storyStillImg,
+        alt: "",
+        draggable: false
+      }))), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -267189,7 +267213,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
+          top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -267199,7 +267223,7 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
         }
       }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
@@ -273504,6 +273528,37 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める。
+       縦の画面は社長の選択「C 流して全体へ」: 絵を範囲の高さいっぱいに映して左から右へゆっくり流し、最後に全体へ引いて止まる。
+       動きを減らす設定・2行目から(settled = タップで送った)は、はじめから全体で止める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    @supports (width: 1cqw) {
+      @media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+        [data-story-still]:not([data-story-still-settled]) [data-story-still-img] { animation: storyStillPan 7s ease-in-out .3s both; }
+      }
+    }
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    @keyframes storyStillPan {
+      0%, 10% { width: 200cqh; height: 100cqh; top: 0; left: 0; transform: none; }
+      68% { width: 200cqh; height: 100cqh; top: 0; left: calc(100cqw - 200cqh); transform: none; }
+      100% { width: 100cqw; height: 50cqw; top: calc(50cqh - 25cqw); left: 0; transform: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -273516,6 +273571,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

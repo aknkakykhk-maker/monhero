@@ -25110,10 +25110,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
         const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
+        //   絵は同じ STORY_SCENE_IMAGES。縦の画面は大きく映して左から右へ流し、絵の全体へ引いて止まる(70-bootstrap.jsx の [data-story-still])。
+        //   続けて同じ絵の行は流し直さない(key を絵の名前にする)。2行目からは流れの途中でも全体で止める(settled = タップで送ったら全体へ飛ぶ)
+        const storyStill=typeof line.still==='string'&&typeof STORY_SCENE_IMAGES!=='undefined'?line.still:null;
+        const storyStillImg=storyStill?(STORY_SCENE_IMAGES[storyStill]||null):null;
+        let storyStillFrom=step;
+        if(storyStillImg){while(storyStillFrom>0&&script[storyStillFrom-1]&&script[storyStillFrom-1].still===storyStill)storyStillFrom--;}
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+          script.forEach(l=>{[l&&l.bg,l&&l.still].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -25136,10 +25143,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
-        const stageGuest=stageLine?assistantById(stageLine.stage||stageLine.who):null;
-        const stageName=stageLine?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
+        const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
+        const stageName=stageLine&&stageGuest?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
         const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
-        const speakingGuest=isGuestWho(line.who);
+        // 一枚絵の行はステージを出さないので、ゲストの台詞も下の欄に出す
+        const speakingGuest=isGuestWho(line.who)&&!storyStillImg;
         let bubbleIdx=-1;
         for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
         const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
@@ -25154,7 +25162,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
-        const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -25297,11 +25305,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-still-on={storyStillImg?'':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
             style={{'--story-bg':`url("${storySceneImg}")`}}/>}
+          {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-settled={step>storyStillFrom?'':undefined} aria-hidden="true"
+            style={{'--story-still':`url("${storyStillImg}")`}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div></div>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -25357,7 +25367,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
