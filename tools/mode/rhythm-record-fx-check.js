@@ -47,7 +47,7 @@ check('アシストモードは更新にならない(これまでどおり記録
 check('全画面の重ね(data-rhythm-record-fx)はもう出さない', !play.includes('data-rhythm-record-fx') && !html.includes('data-rhythm-record-fx'));
 check('数え上げの effect は印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[resultCountId\]\);/.test(play));
 check('数字は React を通さず、要素の文字を書き換えて数える(毎フレーム描き直さない)', play.includes("if(item.el.textContent!==text)item.el.textContent=text;"));
-check('タップで止まった形へ飛び、新記録の音は待たずに鳴らす', play.includes("root.addEventListener('pointerdown',skip,{passive:true});") && play.includes('if(recordSeFireRef.current)recordSeFireRef.current();'));
+check('タップで止まった形へ飛び、新記録の音は待たずに鳴らす', play.includes("root.addEventListener('pointerdown',skipCount,{passive:true});") && play.includes('if(recordSeFireRef.current)recordSeFireRef.current();'));
 check('新記録の音は、数え上げが前の自己ベストを越える時刻に鳴らす', play.includes('rhythmResultCrossMs(previousBestScore,score)??RHYTHM_RESULT_COUNT.janAt'));
 check('専用の効果音(playNewRecord)があり、既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読む',
   rhythm.includes('const playNewRecord=()=>{') && /const playNewRecord=[\s\S]{0,400}if\(!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)\)return false;/.test(rhythm) && /playFullCombo,playNewRecord,/.test(rhythm));

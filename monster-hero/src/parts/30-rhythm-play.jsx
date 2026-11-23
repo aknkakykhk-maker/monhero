@@ -2523,14 +2523,14 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
         if(!over&&wait&&((prev>0&&v>prev)||(!(prev>0)&&t>=T.janAt))){over=true;wait.removeAttribute('data-record-wait');}}
     };
     const finish=()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=0;draw(1e9);if(wait)wait.removeAttribute('data-record-wait');root.setAttribute('data-rhythm-count-anim','done');
-      root.removeEventListener('pointerdown',skip);};
-    const skip=()=>{if(root.getAttribute('data-rhythm-count-anim')!=='1')return;finish();if(recordSeFireRef.current)recordSeFireRef.current();};
+      root.removeEventListener('pointerdown',skipCount);};
+    const skipCount=()=>{if(root.getAttribute('data-rhythm-count-anim')!=='1')return;finish();if(recordSeFireRef.current)recordSeFireRef.current();};
     if(typeof requestAnimationFrame!=='function'){finish();return undefined;}
     draw(0);
     const step=now=>{if(!start)start=now;const t=now-start;draw(t);if(t<T.endAt)raf=requestAnimationFrame(step);else finish();};
     raf=requestAnimationFrame(step);
-    root.addEventListener('pointerdown',skip,{passive:true});
-    return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);root.removeEventListener('pointerdown',skip);};
+    root.addEventListener('pointerdown',skipCount,{passive:true});
+    return ()=>{if(raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);root.removeEventListener('pointerdown',skipCount);};
   },[resultCountId]);
   /* 新記録の音は、結果の画面に出たところで1回(演出が出ない設定・初めてのクリアでも。2026-11-20 音の点検 F7)。依存は印(id)だけ */
   const recordSeId=view.status==='result'&&view.result&&view.result.recordSe?view.result.recordSe.id:null;

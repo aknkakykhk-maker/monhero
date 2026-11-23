@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34aacf57b8de403d
+// source-sha256: 56906a820a33fdfd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45809,9 +45809,9 @@ const RhythmTapTest = ({
       draw(1e9);
       if (wait) wait.removeAttribute('data-record-wait');
       root.setAttribute('data-rhythm-count-anim', 'done');
-      root.removeEventListener('pointerdown', skip);
+      root.removeEventListener('pointerdown', skipCount);
     };
-    const skip = () => {
+    const skipCount = () => {
       if (root.getAttribute('data-rhythm-count-anim') !== '1') return;
       finish();
       if (recordSeFireRef.current) recordSeFireRef.current();
@@ -45828,12 +45828,12 @@ const RhythmTapTest = ({
       if (t < T.endAt) raf = requestAnimationFrame(step);else finish();
     };
     raf = requestAnimationFrame(step);
-    root.addEventListener('pointerdown', skip, {
+    root.addEventListener('pointerdown', skipCount, {
       passive: true
     });
     return () => {
       if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
-      root.removeEventListener('pointerdown', skip);
+      root.removeEventListener('pointerdown', skipCount);
     };
   }, [resultCountId]);
   const recordSeId = view.status === 'result' && view.result && view.result.recordSe ? view.result.recordSe.id : null;
