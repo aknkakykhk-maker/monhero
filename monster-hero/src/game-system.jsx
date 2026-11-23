@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91a85ff63a97db93
+// generated-sha256: 67e40901afc2a025
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -50520,9 +50520,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
@@ -50920,7 +50929,9 @@ function HomeScreen({
         {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
           {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
-            <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
+            {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
+                幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}
+            <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
           </button>}
           {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
             <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
