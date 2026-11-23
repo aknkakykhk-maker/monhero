@@ -1,16 +1,15 @@
-// ハイスコアを更新したときの演出(結果画面の上に重ねる)を、曲を最後まで遊んで確かめる(2026-10-06)。
+// ハイスコアを更新したときの演出を、曲を最後まで遊んで確かめる(2026-10-06。2026-11-23 に結果の数え上げへまとめた・台帳 r1119-143 案A)。
 //
 //   node tools/mode/rhythm-record-fx-check.js              # 約3分
-//   SHOT=/tmp/record-fx node tools/mode/rhythm-record-fx-check.js   # 演出の途中の画面写真も撮る(/tmp/record-fx-1.png …)
+//   SHOT=/tmp/record-fx node tools/mode/rhythm-record-fx-check.js   # 途中の画面写真も撮る(/tmp/record-fx-1.png …)
 //
-// ユーザー指示「ハイスコア更新したときはもっとちゃんと演出がほしい」。
+// 社長「数字が上がる演出でじゃん！」「ハイスコアと比較して超えるかどうか」。
 // 前のBESTを1点にしておき、曲の前半だけ適当にタップして、最後まで流す。1つでも当たればスコアは1点を超えて「更新」になる。
 // 見るもの:
-//   ・結果が出たとき、画面に重なる演出が出る(題名・数字のカウントアップ・伸びた点数・前回のBEST)
-//   ・数字は最後に新しいスコアで止まる。演出はタップを下の画面へ通し、約3秒で外れる
-//   ・演出が引いたあとも、スコアのカードに金色の札・伸びた点数・前回のBESTが残る
-//   ・結果へ項目があとから足されても(効果音とタイマーが走り直さないよう)演出の印は変わらない
-//   ・出さない場面(初めての記録・失敗・練習・タイミング合わせ・演出量MINIMAL・軽量モード)の条件
+//   ・結果の画面でスコアが0から数え上がり、止まった形では新しいスコアになる(全画面の重ねは出ない)
+//   ・自己ベストの印の付いた棒と「前の自己ベストから +○○」が出て、スコアの札が金色・NEW RECORD の札・伸びた点・前回のBESTが残る
+//   ・数え終わると data-rhythm-count-anim が done になる
+//   ・数え上げを出さない場面(練習・タイミング合わせ・演出量MINIMAL・軽量モード・動きを減らす)の条件
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -39,23 +38,23 @@ const seed = (song) => {
 const play = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
 const html = fs.readFileSync(path.join(ROOT, 'monster-hero/index.html'), 'utf8');
 const rhythm = fs.readFileSync(path.join(ROOT, 'monster-hero/data/rhythm-mode.js'), 'utf8');
-const cond = play.match(/const recordFx=([^\n]*)\n\s*\?\{id:/)?.[1] || '';
-check('演出を出す条件を取り出せる', cond.length > 0);
-check('更新したとき(前のBESTがあって、それを超えた)だけ出す', cond.includes('isNewRecord&&previousBestScore>0'));
-check('失敗(ライフ0のまま完走)では出さない', cond.includes('!failed'));
-check('練習・タイミング合わせでは出さない', cond.includes('!tutorial&&!calibrating'));
-check('演出量MINIMAL・軽量モードでは出さない(重くしない)', cond.includes('!settings.lightweightMode&&settings.effectAmount!==\'MINIMAL\''));
+const cond = play.match(/const countAnim=([^\n]*)\?\{id:/)?.[1] || '';
+check('数え上げの条件を取り出せる', cond.length > 0);
+check('練習・タイミング合わせでは数え上げない', cond.includes('!tutorial&&!calibrating'));
+check('演出量MINIMAL・軽量モード・動きを減らす設定では数え上げない(止まった形)',
+  cond.includes('rhythmResultCountAnimOn(settings)') && /const rhythmResultCountAnimOn=settings=>!!settings&&!settings\.lightweightMode&&settings\.effectAmount!=='MINIMAL'\s*&&!\(typeof window!=='undefined'&&typeof window\.matchMedia==='function'&&window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\);/.test(play));
 check('アシストモードは更新にならない(これまでどおり記録に残らない)', /const isNewRecord=!assistOn&&score>run\.startBestScore;/.test(play));
-check('効果音・タイマーは、演出の印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[recordFxId\]\);/.test(play));
-check('数字は React を通さず、ref の文字を書き換えて数え上げる(毎フレーム描き直さない)', play.includes('recordScoreRef') && play.includes('el.textContent=Math.round(value).toLocaleString()'));
-check('動きを減らす設定では、数え上げず最後の数字をそのまま出す', play.includes("window.matchMedia('(prefers-reduced-motion: reduce)').matches"));
-check('演出はタップを通す(下のボタンを待たずに押せる)', /data-rhythm-record-fx aria-hidden="true" className="pointer-events-none/.test(play));
+check('全画面の重ね(data-rhythm-record-fx)はもう出さない', !play.includes('data-rhythm-record-fx') && !html.includes('data-rhythm-record-fx'));
+check('数え上げの effect は印(id)だけを依存にする(結果へ項目が足されても走り直さない)', /\},\[resultCountId\]\);/.test(play));
+check('数字は React を通さず、要素の文字を書き換えて数える(毎フレーム描き直さない)', play.includes("if(item.el.textContent!==text)item.el.textContent=text;"));
+check('タップで止まった形へ飛び、新記録の音は待たずに鳴らす', play.includes("root.addEventListener('pointerdown',skip,{passive:true});") && play.includes('if(recordSeFireRef.current)recordSeFireRef.current();'));
+check('新記録の音は、数え上げが前の自己ベストを越える時刻に鳴らす', play.includes('rhythmResultCrossMs(previousBestScore,score)??RHYTHM_RESULT_COUNT.janAt'));
 check('専用の効果音(playNewRecord)があり、既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読む',
   rhythm.includes('const playNewRecord=()=>{') && /const playNewRecord=[\s\S]{0,400}if\(!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)\)return false;/.test(rhythm) && /playFullCombo,playNewRecord,/.test(rhythm));
-check('光・火花・題名は transform と opacity だけを動かす(ぼかしの半径・サイズ・位置は動かさない)',
-  (() => { const body = html.slice(html.indexOf('[data-rhythm-record-fx]{animation'), html.indexOf('@keyframes mhRhythmJudgmentRowRainbow')); const frames = [...body.matchAll(/@keyframes mhRhythmRecord\w+\{[\s\S]*?\}\s*\}/g)].map((m) => m[0]); return frames.length >= 5 && frames.every((f) => !/blur\(|width|height|top:|left:|margin/.test(f)); })());
-check('動きを減らす設定では、光の筋・火花を出さず、弾みも止める', /prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-record-fx\]\{animation:none\}\s*\[data-rhythm-record-fx-rays\],\[data-rhythm-record-fx-spark\]\{display:none\}/.test(html));
-check('演出量MINIMAL・軽量モードでは、念のためCSSでも隠す', /\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-record-fx\],\s*\n\s*\[data-rhythm-result\]\[data-rhythm-lightweight="true"\] \[data-rhythm-record-fx\]\{display:none\}/.test(html));
+check('結果とお祝いの動きは transform と opacity だけ(ぼかしの半径・大きさ・位置は動かさない)',
+  (() => { const frames = [...html.matchAll(/@keyframes mhRhythm(?:Result(?:In|Row|Jan|JanFlash|Stamp|Ribbon)|Celebrate(?:Line|Pillar|Flash|Spin|Ring|Spark|Title|Up))\{[\s\S]*?\}\s*\}/g)].map((m) => m[0]);
+    return frames.length >= 14 && frames.every((f) => { const props = [...f.replace(/^@keyframes \w+\{/, '').matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]); return props.every((x) => x === 'transform' || x === 'opacity'); }); })());
+check('動きを減らす設定では、札の弾みを止める', /prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-new-record\]\{animation:none;opacity:1\}/.test(html));
 
 (async () => {
   let playwright;
@@ -121,37 +120,30 @@ check('演出量MINIMAL・軽量モードでは、念のためCSSでも隠す', 
     const shot = async (n) => { if (process.env.SHOT) await page.screenshot({ path: `${process.env.SHOT}-${n}.png` }); };
     const read = () => page.evaluate(() => {
       const q = (s) => document.querySelector(s);
-      const fx = q('[data-rhythm-record-fx]');
       return {
-        fx: !!fx, pointer: fx ? getComputedStyle(fx).pointerEvents : null,
-        title: q('[data-rhythm-record-fx-title]')?.innerText || '', count: q('[data-rhythm-record-fx-score]')?.textContent || '',
-        gain: q('[data-rhythm-record-fx-gain]')?.innerText || '', prev: q('[data-rhythm-record-fx-prev]')?.innerText || '',
-        sparks: document.querySelectorAll('[data-rhythm-record-fx-spark]').length,
-        score: q('[data-rhythm-result-score]')?.innerText || '', cardNew: q('[data-rhythm-result-score-card]')?.getAttribute('data-new-record'),
+        fx: !!q('[data-rhythm-record-fx]'), anim: q('[data-rhythm-result]')?.getAttribute('data-rhythm-count-anim') || '',
+        score: q('[data-rhythm-result-score]')?.textContent || '', cardNew: q('[data-rhythm-result-score-card]')?.getAttribute('data-new-record'),
+        wait: q('[data-rhythm-result-score-card]')?.hasAttribute('data-record-wait'), vs: !!q('[data-rhythm-result-vs-best]'), diff: q('[data-rhythm-best-diff]')?.textContent || '',
         badge: q('[data-rhythm-new-record]')?.innerText || '', chip: q('[data-rhythm-record-gain]')?.innerText || '', cardPrev: q('[data-rhythm-record-prev]')?.innerText || '',
       };
     });
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(200);
     const early = await read(); await shot(1);
     await page.waitForTimeout(700);
     const mid = await read(); await shot(2);
-    await page.waitForTimeout(1500);
-    const late = await read(); await shot(3);
-    await page.waitForTimeout(1500);
-    const after = await read(); await shot(4);
+    await page.waitForTimeout(2200);
+    const after = await read(); await shot(3);
 
     check('検査のために、ライフが減らないよう書き換えて配れている(本体の書き方が変わったらここで気づく)', patched);
-    const scoreNum = Number((after.score || '').replace(/[^0-9]/g, ''));
-    check('更新したので、結果の上に演出が重なって出る(題名・火花)', early.fx && /NEW RECORD!/.test(early.title) && early.sparks >= 12, JSON.stringify({ fx: early.fx, title: early.title, sparks: early.sparks }));
-    check('演出はタップを下の画面へ通す', early.pointer === 'none', String(early.pointer));
-    check('数字は前のBEST(1)から数え始める', /^[0-9,]+$/.test(early.count) && Number(early.count.replace(/,/g, '')) < scoreNum, `${early.count} → ${scoreNum}`);
-    check('数字が数え上げられていく(途中の値が、最初と最後のあいだにある)', (() => { const v = Number(mid.count.replace(/,/g, '')); return v >= Number(early.count.replace(/,/g, '')) && v <= scoreNum; })(), `${early.count} → ${mid.count} → ${late.count}`);
-    check('数字は最後に新しいスコアで止まる', late.fx && Number(late.count.replace(/,/g, '')) === scoreNum, `${late.count} / ${scoreNum}`);
-    check('伸びた点数(+新スコア−1)と前回のBEST(1)を出す', late.gain.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前回のベスト\s*1\s*$/.test(late.prev.replace(/\s+/g, ' ')), `${late.gain} / ${late.prev}`);
-    check('約3秒で演出が外れる', after.fx === false);
-    check('演出が引いたあとも、スコアのカードに金色の札・伸びた点数・前回のBESTが残る',
-      after.cardNew === '1' && /NEW RECORD/.test(after.badge) && after.chip.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前回のベスト\s*1\s*$/.test(after.cardPrev.replace(/\s+/g, ' ')), JSON.stringify({ c: after.cardNew, b: after.badge, g: after.chip, p: after.cardPrev }));
-    check('結果のスコアの数字は、演出中も最初から新しいスコアで出ている(演出に左右されない)', Number((early.score || '').replace(/[^0-9]/g, '')) === scoreNum);
+    const num = (t) => Number(String(t || '').replace(/[^0-9]/g, ''));
+    const scoreNum = num(after.score);
+    check('全画面の重ねは出ない', !early.fx && !after.fx);
+    check('結果が出た直後は数え上げの途中(印が "1"・数字は最後のスコアより小さい)', early.anim === '1' && num(early.score) < scoreNum, `${early.anim} ${early.score} → ${scoreNum}`);
+    check('数字が数え上げられていく(途中の値が、最初と最後のあいだにある)', num(mid.score) >= num(early.score) && num(mid.score) <= scoreNum, `${early.score} → ${mid.score} → ${after.score}`);
+    check('数え終わると止まった形になる(印が done)', after.anim === 'done', after.anim);
+    check('自己ベストの棒と「前の自己ベストから +○○」が出る', after.vs && after.diff.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前の自己ベストから/.test(after.diff), after.diff);
+    check('越えたあとは、スコアのカードが金色・NEW RECORD の札・伸びた点数・前回のBESTが残る',
+      after.cardNew === '1' && !after.wait && /NEW RECORD/.test(after.badge) && after.chip.replace(/[^0-9]/g, '') === String(scoreNum - 1) && /前回のベスト\s*1\s*$/.test(after.cardPrev.replace(/\s+/g, ' ')), JSON.stringify({ c: after.cardNew, w: after.wait, b: after.badge, g: after.chip, p: after.cardPrev }));
     check('実行時エラーが出ていない', errors.length === 0, errors[0] || '');
     await page.close();
   } finally {

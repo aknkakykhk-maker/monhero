@@ -3445,28 +3445,53 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     tone('triangle',1567.98,2349.32,now,.07,.016);
     return true;
   };
-  const playFullCombo=()=>{
+  // 称号の音。tier は 'fc'(FULL COMBO)/ 'ae'(ALL EXCELLENT)/ 'am'(ALL MARVELOUS)。省くと 'fc'。
+  // 上の段ほど音を重ねて華やかにする(2026-11-23 社長「3段で音も変える」・台帳 r1119-143)。土台はどの段も同じ上昇アルペジオ。
+  //   fc … E5 → G5 → B5 → E6 の上昇アルペジオ(最後の音だけ長く伸ばして締める)。これまでの音そのまま
+  //   ae … fc に、締めの音へ重ねて高いきらめき(E7・B7)を2回
+  //   am … ae に、E5・G#5・B5・E6 の和音を長く伸ばし、花火(ぼんっ と ぱちぱち。雑音を絞った音)を足す
+  // 音の作りはタップ音と同じもの(context)・同じ設定(ON/OFF・タップ音量・全体ミュート)を使う。音の素材ファイルは使わない
+  const playFullCombo=(tier='fc')=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const now=audio.currentTime,level=rhythmNoteSeLevel(.05,settings.volume/100);
-    // E5 → G5 → B5 → E6 の上昇アルペジオ。最後の音だけ長く伸ばして締める。
-    [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>{
-      const start=now+index*.09,sustain=index===notes.length-1?.42:.16;
+    const voice=(type,freq,start,sustain,gainScale=1)=>{
       const oscillator=audio.createOscillator(),gain=audio.createGain();
-      oscillator.type='triangle';
+      oscillator.type=type;
       oscillator.frequency.setValueAtTime(freq,start);
       gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(level,start+.012);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0002,level*gainScale),start+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
       oscillator.connect(gain);
       gain.connect(output(audio));
       oscillator.start(start);
       oscillator.stop(start+sustain+.02);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
-    });
+    };
+    [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>voice('triangle',freq,now+index*.09,index===notes.length-1?.42:.16));
+    if(tier!=='ae'&&tier!=='am')return true;
+    // きらめき。締めの音(.27秒)に重ねて2回(高い音は小さめ)
+    [[.29,2637.02],[.31,3951.07],[.45,2637.02],[.47,3951.07]].forEach(([at,freq])=>voice('sine',freq,now+at,.18,.4));
+    if(tier!=='am')return true;
+    // 和音を長く(締めの音と同じ頭から)。低い E4 で厚みを足す
+    [[659.25,.6],[830.61,.55],[987.77,.55],[1318.51,.7]].forEach(([freq,scale])=>voice('triangle',freq,now+.27,.95,scale));
+    voice('sine',329.63,now+.27,.9,.5);
+    // 花火: ぼんっ(低めに絞った雑音)のあと、ぱちぱち(高い所だけの短い雑音)を数回
+    const burst=(start,type,freq,length,scale)=>{
+      const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+      source.buffer=noise(audio);source.loop=length>.07;filter.type=type;filter.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0002,level*scale),start+.006);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+length);
+      source.connect(filter);filter.connect(gain);gain.connect(output(audio));
+      source.start(start);source.stop(start+length+.02);
+      source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
+    };
+    burst(now+.3,'bandpass',420,.35,.9);
+    [.52,.58,.66,.71,.8,.9].forEach((at,index)=>burst(now+at,'highpass',4200+index*300,.04,.35));
     return true;
   };
   // ハイスコアを更新したときの、結果画面に重ねる演出で鳴らす1回だけの合成音(2026-10-06・ユーザー指示「ハイスコア更新したときは
