@@ -3665,7 +3665,7 @@ function RhythmWatchRoomList({ songs = [], friendIds = null, resolveIconUrl = nu
 function RhythmMultiScreen(props) {
   return (<><RhythmMultiScreenBody {...props} /><RhythmWatchScreen songs={props.songs} resolveIconUrl={props.resolveIconUrl} /></>);
 }
-function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
+function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, multiMemberBubble = true, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
   useRhythmOwnedSongs();
@@ -3727,6 +3727,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     }
     return '';
   };
+  // メンバー札の上の吹き出しは、設定「部屋のメンバーの吹き出しを出す」が切なら出さない(2026-11-23 r1119-135)。チャットの欄(chatList)はそのまま
+  const cardBubbleOf = (id) => (multiMemberBubble ? chatBubbleOf(id) : '');
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
   const [rankingOpen, setRankingOpen] = React.useState(false);
@@ -4777,7 +4779,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>モード選びへ戻る</button>
           </section></div>
           : <>
-            <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
+            <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
               badgeOf={(m) => ({ text: view && m.id === view.hostId ? 'ホスト' : '入室', cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950', sub: `Lv.${m.level}` })} />
             {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
                 高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
@@ -4919,7 +4921,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
             {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
-              return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
+              return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={cardBubbleOf(r.m.id)} /> : null}</span>;
             })}
           </li>
           {Array.from({ length: resultCols }).map((_, i) => {
@@ -5055,7 +5057,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     return (
       <main data-rhythm-multi data-rhythm-multi-step="waiting" className={shell}>
         {header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom)}
-        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
+        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.playing ? { text: 'ライブ中', cls: 'bg-amber-400 text-slate-950' } : { text: '待機中', cls: 'bg-slate-600 text-white' })} />
         <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="shrink-0 px-2 pt-1" />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
@@ -5111,7 +5113,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <main data-rhythm-multi data-rhythm-multi-step="ready" className={shell}>
         {/* 部屋主の「すぐ開始」は下の準備完了のボタンへまとめた(2026-11-22 r1119-094・点検 N36「次に押す物が2つ」) */}
         {header('難易度選択', leaveRoom, { timer: room.left })}
-        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
+        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.readyRound === room.round ? { text: '準備完了', cls: 'bg-emerald-400 text-slate-950', sub: m.diff } : { text: '準備中', cls: 'bg-slate-600 text-white', sub: m.diff })} />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           {drawnSong && (
@@ -5184,7 +5186,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
       {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る', buddy: true, selectTime: true, exitLabel: 'ルームを出る' })}
-      <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
+      <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}
         difficulties={difficultyList}
