@@ -83822,7 +83822,7 @@ const rhythmBuildCanvasRenderer=()=>{
         ctx.globalCompositeOperation='lighter';core(5,handRgb,.4);core(2,'255,255,255',.55);ctx.globalCompositeOperation='source-over';}
       ctx.globalAlpha=1;return;}
     // 帯の色(r1119-149): 芯の出る時刻の範囲の中=空中の色・外=地上の色。区切りを4つに割り、両端の色の縦のグラデーションで塗る(GPU の mode 9 と同じ式)
-    const colorSpans=rhythmSlideSkyCoreSpans(note),bySpans=rhythmSlideSkyCoreSpansUsable(colorSpans),byHand=rhythmSkySlideByHand();
+    const colorSpans=rhythmSlideSkyCoreSpans(note),bySpans=rhythmSlideSkyCoreSpansUsable(colorSpans),byHand=!opts.skyColorByHeight&&rhythmSkySlideByHand(); // ヘルプの見本(skyColorByHeight)は分け方の設定を見ず、いつも空中・地上で塗る(文と合わせる)
     const fillSkyQuad=(q,l0,r0,l1,r1)=>{const t0=Number(q.t0),t1=Number(q.t1);
       // オプション「左右の手で色分け」: 前の見た目(帯は全部手の色)
       if(byHand){ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();return;}
@@ -84825,7 +84825,7 @@ const rhythmBuildCanvasRenderer=()=>{
         else if(kind==='SKY_SLIDE_L'||kind==='SKY_SLIDE_R'){
           const hand=kind==='SKY_SLIDE_L'?'L':'R',th=rhythmSkyTheme(),note={type:'SLIDE',hand};
           // 見本は L=空中を通る所(空中の色)・R=地上を通る所(地上の色)。帯の色は手ではなく通る所で決まる(r1119-149)
-          drawSkySlideZ(slideQuads(hand==='L'?24:48,44,hand==='L'?44:28,8,8,hand==='L'?1:0),{...o,skySlideRgb:th.rgb,skySlideCore:th.core,skyHand:hand},note);
+          drawSkySlideZ(slideQuads(hand==='L'?24:48,44,hand==='L'?44:28,8,8,hand==='L'?1:0),{...o,skySlideRgb:th.rgb,skySlideCore:th.core,skyHand:hand,skyColorByHeight:true},note);
         }else if(kind==='SKY_LINE'){
           // 上の判定ライン(空の判定ライン)。演奏画面と同じ値(RHYTHM_SKY_LOOK.line の帯と芯)で、横いっぱいに引く
           const L=RHYTHM_SKY_LOOK.line,y=28;
