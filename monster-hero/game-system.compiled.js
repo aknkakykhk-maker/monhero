@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f953dacc47b635a
+// source-sha256: 67e10980d5bfca0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84382,9 +84382,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 const HOME_RAID_JACK_CSS = `
@@ -85169,9 +85178,11 @@ function HomeScreen({
     className: "mh-home-event-banner",
     onClick: openChangelog,
     "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
+  }, homeEventCampaign.banner.title2) : null), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: "mh-home-tour-banner",
