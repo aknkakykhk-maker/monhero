@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2438414bbf12fcd7
+// source-sha256: d5717b0538967775
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87074,7 +87074,7 @@ const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 5
 [data-battle-speed] > [data-battle-stage] { grid-row: 3; min-height: 0 !important; overflow: hidden !important; }
 [data-battle-speed] > [data-battle-buffs] { grid-row: 4; }
 [data-battle-speed] > [data-tactics-board-band] { grid-row: 5; padding-top: 2px !important; padding-bottom: 2px !important; }
-[data-battle-speed] > [data-tactics-ex-intro] { grid-row: 6; }
+[data-battle-speed] > [data-tactics-ex-intro], [data-battle-speed] > [data-quick-rhythm-intro] { grid-column: 2; grid-row: 6; position: relative; z-index: 45; border-left: 1px solid rgba(255,255,255,.14); }
 [data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
 [data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
 [data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
@@ -91241,9 +91241,9 @@ function BattleScreen({
   }, debugBattle && React.createElement("span", {
     className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
   }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
-    className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
+    className: `text-[10px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
-    className: "min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
+    className: "min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight [@media(orientation:landscape)_and_(max-height:520px)_and_(max-width:700px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)_and_(max-width:700px)]:leading-tight",
     style: {
       color: battleModeInfo(runMode).color,
       borderColor: `${battleModeInfo(runMode).color}66`,
