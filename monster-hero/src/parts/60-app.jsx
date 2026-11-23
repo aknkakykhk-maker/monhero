@@ -3062,6 +3062,8 @@ function MonsterHeroGame() {
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
+  // イベント回想のジャンル(2026-11-23 案B)。窓の中だけの状態で保存しない
+  const [eventReplayGenreId, setEventReplayGenreId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   // お話の締め(終わりの札)が出ていないときは、音を元に戻す(札のあいだだけ小さくする。閉じ方を問わず戻す)
   const eventReplayEnding = !!(eventReplay && eventReplay.ending);
@@ -23040,7 +23042,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenCallStylePicker={()=>{setTempCallStyle((assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call)||assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
-            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
+            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setEventReplayGenreId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
@@ -24144,8 +24146,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             再生を終える・スキップすると、2ページ目(同じまとまり)へ戻る(fromList)。続けて次のお話を選べる */}
         {showEventReplayList&&(()=>{
           const groups=eventReplayGroups();
-          const activeGroup=groups.find(group=>group.id===eventReplayGroupId)||null;
-          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);};
+          // 1ページ目はジャンルの扉(案B)。期間イベントは2ページ目がシリーズの札、3ページ目がそのお話。ほかのジャンルは2ページ目がお話
+          const genres=eventReplayGenreList();
+          const activeGenre=genres.find(genre=>genre.id===eventReplayGenreId)||null;
+          // シリーズの中は、そのジャンルの話だけ(ビートPのまとまりの交換所の案内は遊びの案内へ分けたため)
+          const activeGroup=(activeGenre&&activeGenre.series.find(group=>group.id===eventReplayGroupId))||groups.find(group=>group.id===eventReplayGroupId)||null;
+          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);setEventReplayGenreId(null);};
           const rangeText=(group)=>{
             const first=eventReplayDateText(group.events[0]),last=eventReplayDateText(group.events[group.events.length-1]);
             return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
@@ -24160,16 +24166,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&(seriesInLabel(p.series)||p.series===sharedSeries)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-5 max-[359px]:p-3 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             {/* 横向き(背の低い画面)では窓が低く、話が3つしか見えなかった(2026-10-26 ダメダシの見回り)。窓を広げて余白を詰め、2列に並べる */}
-            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3">
-              {!activeGroup&&(
+            <div data-event-replay-page={activeGroup?'episodes':activeGenre?(activeGenre.id==='event'?'panels':'genre'):'genres'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 max-[359px]:p-3 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3">
+              {!activeGroup&&!activeGenre&&(
                 <>
-                  {/* 1ページ目: イベント単位のパネル */}
+                  {/* 1ページ目: ジャンルの扉4枚(2026-11-23 案B)。まとまりの札はジャンルの中へ */}
                   <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
-                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
-                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
-                    {groups.map(group=>{
+                  <p className="shrink-0 text-[10px] text-slate-400 text-center mb-3 leading-tight">見たいジャンルを選んでください</p>
+                  <div data-event-replay-genres className="min-h-0 flex-1 overflow-y-auto mh-scroll grid grid-cols-2 gap-2 content-start mb-3 [@media(max-height:500px)]:grid-cols-4">
+                    {genres.map(genre=>{
+                      const seen=genre.events.filter(isEventReplayUnlocked).length,total=genre.events.length;
+                      const faces=genre.id==='assistant'?[...new Map(genre.events.flatMap(eventReplayWhoOf).map(w=>[w.id,w])).values()].slice(0,6):[];
+                      const arts=genre.id==='song'?genre.events.map(event=>{const info=EVENT_REPLAY_SONG_STORIES[event.id];const song=info&&typeof RHYTHM_SONGS!=='undefined'?RHYTHM_SONGS.find(x=>x&&x.songId===info.songId):null;return song&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';}).filter(Boolean).slice(0,4):[];
+                      const marks=genre.id==='event'?genre.series.map(g=>g.emoji):genre.id==='play'?[...new Set(genre.events.map(e=>eventReplayPlayAreaOf(e).label.split(' ')[0]))]:[];
+                      return (
+                        <button key={genre.id} type="button" data-event-replay-genre={genre.id} onClick={()=>{setEventReplayGroupId(null);setEventReplayGenreId(genre.id);}}
+                          className="flex min-h-[118px] min-w-0 flex-col justify-between gap-1.5 rounded-2xl px-2.5 py-2.5 max-[359px]:px-2 text-left active:scale-[.97]"
+                          style={{border:`1.5px solid ${genre.color}88`,backgroundColor:`${genre.color}18`}}>
+                          <span className="block min-w-0">
+                            <b className="flex items-center gap-1 text-[14px] font-black leading-tight text-white max-[359px]:text-[13px]"><span aria-hidden="true">{genre.emoji}</span><span className="whitespace-nowrap">{genre.label}</span></b>
+                            <small className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(genre.note)}</small>
+                          </span>
+                          {faces.length>0&&<span className="flex flex-wrap gap-0.5" aria-hidden="true">{faces.map(w=><AssistantFace key={w.id} who={w} size={24} accent={w.accent} expression="happy"/>)}</span>}
+                          {arts.length>0&&<span className="flex gap-1" aria-hidden="true">{arts.map(src=><img key={src} src={src} alt="" draggable={false} className="h-8 w-8 rounded-md object-cover"/>)}</span>}
+                          {marks.length>0&&<span className="block truncate text-[16px] leading-none" aria-hidden="true">{marks.slice(0,6).join(' ')}</span>}
+                          <span className="flex w-full items-center gap-1.5">
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><span className="block h-full rounded-full" style={{width:`${total?Math.round(seen/total*100):0}%`,backgroundColor:genre.color}}/></span>
+                            <small className="shrink-0 text-[10px] font-black tabular-nums" style={{color:genre.color}}>{seen}/{total}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                </>
+              )}
+              {!activeGroup&&activeGenre&&(
+                <>
+                  {/* 2ページ目: そのジャンルの中身。期間イベントはシリーズの札、ほかはお話(古い順) */}
+                  <div className="shrink-0 mb-3 flex items-center gap-2 [@media(max-height:500px)]:mb-1.5">
+                    <button type="button" data-event-replay-genre-back aria-label="ジャンルの一覧へ戻る" onClick={()=>setEventReplayGenreId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
+                    <span className="min-w-0 flex-1 text-center">
+                      <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" className="mr-1">{activeGenre.emoji}</span>{jaWrap(activeGenre.label)}</b>
+                      <small className="block text-[10px] font-black tabular-nums" style={{color:activeGenre.color}}>見たお話 {activeGenre.events.filter(isEventReplayUnlocked).length}/{activeGenre.events.length}</small>
+                    </span>
+                    <span className="w-[76px] shrink-0 max-[359px]:w-0" aria-hidden="true"/>
+                  </div>
+                  {activeGenre.id==='event'?(
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0">
+                    {activeGenre.series.map(group=>{
                       const seen=seenOf(group),total=group.events.length;
                       return (
                         <button key={group.id} type="button" data-event-replay-group={group.id} onClick={()=>setEventReplayGroupId(group.id)}
@@ -24190,6 +24236,42 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       );
                     })}
                   </div>
+                  ):(
+                  <div data-event-replay-genre-list={activeGenre.id} className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0">
+                    {activeGenre.events.map((event,index)=>{
+                      const area=activeGenre.id==='play'?eventReplayPlayAreaOf(event):null;
+                      const prevArea=activeGenre.id==='play'&&index>0?eventReplayPlayAreaOf(activeGenre.events[index-1]):null;
+                      const head=area&&(!prevArea||prevArea.id!==area.id)?<p key={`h-${event.id}`} data-event-replay-area={area.id} className="pt-1 text-[11px] font-black text-sky-200 [@media(max-height:500px)]:col-span-2">{area.label}</p>:null;
+                      const unlocked=isEventReplayUnlocked(event);
+                      const date=eventReplayDateText(event);
+                      const info=EVENT_REPLAY_SONG_STORIES[event.id];
+                      const song=activeGenre.id==='song'&&info&&typeof RHYTHM_SONGS!=='undefined'?RHYTHM_SONGS.find(x=>x&&x.songId===info.songId):null;
+                      const art=song&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+                      const who=activeGenre.id==='assistant'||activeGenre.id==='song'?eventReplayWhoOf(event):[];
+                      if(!unlocked) return <React.Fragment key={event.id}>{head}
+                        <div className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                          <span className="text-lg" aria-hidden="true">🔒</span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                            <small className="block text-[10px] text-slate-500">{date&&<span data-event-replay-date className="tabular-nums">{date}・</span>}まだ見ていません</small>
+                          </span>
+                        </div></React.Fragment>;
+                      return <React.Fragment key={event.id}>{head}
+                        <button type="button" data-event-replay-episode={event.id} onClick={()=>{setEventReplay({id:event.id,step:0,fromList:true});setShowEventReplayList(false);}}
+                          className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border"
+                          style={{borderColor:`${activeGenre.color}80`,backgroundColor:`${activeGenre.color}14`}}>
+                          {art?<img src={art} alt="" draggable={false} className="h-12 w-12 shrink-0 rounded-lg object-cover"/>
+                            :who.length>0?<span className="flex shrink-0 -space-x-2">{who.slice(0,2).map(w=><AssistantFace key={w.id} who={w} size={34} accent={w.accent} expression="happy"/>)}</span>
+                            :<Play size={16} className="shrink-0" style={{color:activeGenre.color}}/>}
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(event.title)}</b>
+                            {date&&<small data-event-replay-date className="block text-[10px] tabular-nums text-slate-400">{date}</small>}
+                          </span>
+                          {art&&who.length>0&&<span className="flex shrink-0 -space-x-2" aria-hidden="true">{who.slice(0,2).map(w=><AssistantFace key={w.id} who={w} size={26} accent={w.accent} expression="happy"/>)}</span>}
+                        </button></React.Fragment>;
+                    })}
+                  </div>
+                  )}
                   <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
                 </>
               )}
@@ -24197,13 +24279,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <>
                   {/* 2ページ目: そのまとまりのお話(お話の順) */}
                   <div className="shrink-0 mb-1 flex items-center gap-2">
-                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
+                    <button type="button" data-event-replay-back aria-label="シリーズの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
                       {sharedSeries&&!seriesInLabel(sharedSeries)&&<small data-event-replay-series className="block text-[10px] font-black leading-tight text-slate-300" style={JA_LABEL_STYLE}>{titleWrap(sharedSeries)}</small>}
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
-                    <span className="w-[76px] shrink-0" aria-hidden="true"/>
+                    <span className="w-[76px] shrink-0 max-[359px]:w-0" aria-hidden="true"/>
                   </div>
                   {/* 「お話の順に並んでいます。」と下の「イベントの一覧へ戻る」は外した(2026-11-22 点検 #7059: 9px で読めない・戻るが二重・r1119-080) */}
                   <div className="shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5" aria-hidden="true"/>

@@ -96,7 +96,16 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
 check('一覧は2ページ: 1ページ目はイベント単位のパネル(押すとそのまとまりのお話へ)、2ページ目はお話の一覧',
   has('eventReplayGroups()') && has('data-event-replay-group={group.id}') && has('setEventReplayGroupId(group.id)') && has('data-event-replay-episodes') && has('data-event-replay-back'));
 check('パネルに「見た数/全部」を出す', has('{seen}/{total}') && has('見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}'));
-check('開くたびに1ページ目(パネル)から始める', has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}'));
+check('開くたびに1ページ目(ジャンルの扉)から始める', has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setEventReplayGenreId(null);setShowEventReplayList(true);}}'));
+// 2026-11-23 案B(社長): 1ページ目はジャンルの扉4枚(期間イベント・助手のお話・曲のお話・遊びの案内)。期間イベントはシリーズの札→お話、ほかはお話の一覧
+check('1ページ目はジャンルの扉で、ジャンルの中へ進める', has('eventReplayGenreList()') && has('data-event-replay-genre={genre.id}') && has('setEventReplayGenreId(genre.id)') && has('data-event-replay-genre-back') && has('data-event-replay-genre-list={activeGenre.id}'));
+check('まとまりには、どれもジャンル(genre)が書いてある(書き忘れると期間イベントに入る)', (() => {
+  const at = source.indexOf('const EVENT_REPLAY_GROUPS = Object.freeze([');
+  const end = source.indexOf(']);', at);
+  if (at < 0 || end < 0) return false;
+  const rows = source.slice(at, end).split('\n').filter(line => /^\s*\{ id:'/.test(line));
+  return rows.length > 0 && rows.every(line => /genre:'(event|assistant|song|play)'/.test(line));
+})());
 check('一覧から始めた再生は、終わる・スキップすると同じまとまりのお話の一覧へ戻る',
   has('setEventReplay({id:event.id,step:0,fromList:true})') && (source.match(/if\(eventReplay\.fromList\) setShowEventReplayList\(true\);/g) || []).length === 2);
 check('お話の一覧の窓は、見出しと下のボタンを固定して中身だけスクロールする',
@@ -140,9 +149,10 @@ check('本編を待たずに見られるイベントを作れる',
 // ★見出しの字の大きさまで固定すると、見た目を整えるたびにここだけが落ちる
 //   (text-[11px] → text-[13px] にしたときに落ちた)。ここで見るのは「入口があるか」だけ
 check('プロフィールに「イベント回想」の入口がある',
-  /<b className="[^"]*">イベント回想<\/b>/.test(source)
-    && has('onClick={onOpenEventReplayList}')
-    && has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}'));
+  // 2026-11-23 案B: プロフィールの扉「思い出」(イベント回想 見た数/全部)から開く
+  has("id: 'memories', emoji: '📖', label: '思い出', note: `イベント回想 ${seen}/${replays.length}`")
+    && has('onClick: onOpenEventReplayList')
+    && has('onOpenEventReplayList={()=>{setEventReplayGroupId(null);setEventReplayGenreId(null);setShowEventReplayList(true);}}'));
 
 // --- 一覧(ロック表示) ---
 check('未閲覧は「？？？」でロック表示になる(タップできない)', (() => {

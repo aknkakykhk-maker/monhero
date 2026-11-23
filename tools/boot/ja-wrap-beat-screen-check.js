@@ -79,7 +79,7 @@ const SCREENS_EXTRA = [
   ['曲えらび・全国ランキング(イベント)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!イベント'], { emptyDb: true }],
   ['曲えらび・HELL の鍵', ['!ソロライブ', '#[data-rhythm-song-row]|Grievous Lady', '#[data-rhythm-difficulty="HELL"]']],
   ['ノーツ図鑑', ['!遊びかた', '!ノーツ図鑑']],
-  ['これまでの記録(プロフィールから)', ['@HOME', '%プロフィールを開く', '#[data-profile-rhythm-history]']],
+  ['これまでの記録(プロフィールから)', ['@HOME', '%プロフィールを開く', '#[data-profile-door="records"]', '#[data-profile-rhythm-history]']],
 ];
 // 3つ目の { emptyDb: true } は、Supabase への読み込みに空の一覧を返す(イベントの期間・報酬・部門まで出た形を数える)。書き込みは止めたまま
 // 道筋の1手の書き方: '!字'(字を含むボタン)・'=字'(字がそれだけのボタン)・'#セレクタ'(と '|字' でその字を含むもの)・'%名前'(aria-label)。
