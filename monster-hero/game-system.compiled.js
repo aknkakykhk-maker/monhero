@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfdb4325f5e8dc80
+// source-sha256: 8f953dacc47b635a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8681,19 +8681,27 @@ const Audio_ = (() => {
       buffers.delete(old);
     }
   };
-  const loadBuffer = key => {
+  const loadBuffer = (key, data = null) => {
     if (buffers.has(key)) return Promise.resolve(buffers.get(key));
     if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
-    if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    if (!ctx || !data && typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
-    const request = fetch(audioUrlWithKey(url), {
+    const request = (data ? Promise.resolve(data) : longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then(data => decode(ctx, data)).then(decoded => {
+    })).then(bytes => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) {
+        const entry = longEntryOf(url, new Uint8Array(bytes));
+        if (entry.long) throw longSongError(entry);
+      }
+      return decode(ctx, bytes);
+    }).then(decoded => {
       decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
       return light ? lightenBuffer(decoded) : decoded;
@@ -8769,6 +8777,66 @@ const Audio_ = (() => {
     }
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || bgmSource && bgmSourceKey === key) return;
+    let long = null;
+    try {
+      long = await openLongSong(ctx, entry);
+    } catch (e) {
+      return;
+    }
+    if (stale() || bgmSource && bgmSourceKey === key || !bgmGain) {
+      long.release();
+      return;
+    }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = {
+      buffer: null,
+      longSong: long,
+      onended: null,
+      stop: () => long.release(),
+      disconnect: () => {}
+    };
+    bgmSource = holder;
+    bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null;
+      bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) {
+        bgmOnce = null;
+        try {
+          o.onEnd && o.onEnd();
+        } catch (e) {}
+      }
+    };
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) {
+      try {
+        await long.ready(fromSec);
+      } catch (e) {}
+      if (stale() || bgmSource !== holder) {
+        if (bgmSource !== holder) long.release();
+        return;
+      }
+    }
+    const t0 = long.playFrom(fromSec, bgmGain, () => {
+      const f = holder.onended;
+      if (f) f();
+    }, {
+      loop: once ? false : track.loop !== false
+    });
+    if (t0 === false) {
+      stopOthers();
+      return;
+    }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = key => {
     const track = resolveTrack(key);
     if (!track) {
@@ -8797,10 +8865,12 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
     return loadBuffer(bufKey).then(buffer => {
       rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
-    }).catch(() => {
+    }).catch(e => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) {
         bgmOnce = null;
@@ -8864,22 +8934,66 @@ const Audio_ = (() => {
     previewKey = track.id;
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+      let buffer = null,
+        longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) {
+        try {
+          buffer = await loadBuffer(track.src);
+          rememberSongBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          longEntry = e.longEntry;
+        }
+      }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning();
       if (!ctx) return false;
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) {
+        long = await openLongSong(ctx, longEntry);
+        if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) {
+          long.release();
+          return false;
+        }
+      }
       applyTrackGain(track);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = track.loop !== false;
-      source.connect(bgmGain);
-      previewSource = source;
-      source.onended = () => {
-        if (previewSource === source) stopPreview(true);
-      };
-      source.start(0);
+      let source;
+      if (long) {
+        source = {
+          buffer: null,
+          longSong: long,
+          onended: null,
+          stop: () => long.release(),
+          disconnect: () => {}
+        };
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        if (long.playFrom(0, bgmGain, () => {
+          const f = source.onended;
+          if (f) f();
+        }, {
+          loop: track.loop !== false
+        }) === false) {
+          if (previewSource === source) {
+            previewSource = null;
+            previewKey = null;
+          }
+          return false;
+        }
+      } else {
+        source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = track.loop !== false;
+        source.connect(bgmGain);
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        source.start(0);
+      }
       if (ctx.state !== 'running') {
         await ensureAudioCtxRunning();
       }
@@ -8992,6 +9106,465 @@ const Audio_ = (() => {
       return false;
     }
   };
+  const LONG_SONG_SEC = 480,
+    LONG_START_LEAD_SEC = 0.03,
+    LONG_CHUNK_SEC = 20,
+    LONG_PRE_FRAMES = 16,
+    LONG_POST_FRAMES = 16,
+    LONG_FADE_SEC = 0.02;
+  const longSongBytes = new Map();
+  const MP3_BITRATE = {
+    1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+  };
+  const MP3_RATE = {
+    3: [44100, 48000, 32000],
+    2: [22050, 24000, 16000],
+    0: [11025, 12000, 8000]
+  };
+  const mp3FrameAt = (u8, i) => {
+    if (i + 4 > u8.length || u8[i] !== 0xFF || (u8[i + 1] & 0xE0) !== 0xE0) return null;
+    const ver = u8[i + 1] >> 3 & 3,
+      layer = u8[i + 1] >> 1 & 3;
+    if (ver === 1 || layer !== 1) return null;
+    const bri = u8[i + 2] >> 4,
+      sri = u8[i + 2] >> 2 & 3,
+      pad = u8[i + 2] >> 1 & 1;
+    if (bri === 0 || bri === 15 || sri === 3) return null;
+    const sr = MP3_RATE[ver][sri],
+      spf = ver === 3 ? 1152 : 576;
+    return {
+      len: Math.floor(spf / 8 * MP3_BITRATE[ver === 3 ? 1 : 2][bri] * 1000 / sr) + pad,
+      sr,
+      spf
+    };
+  };
+  const parseMp3Frames = u8 => {
+    let i = 0;
+    if (u8.length > 10 && u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) i = 10 + ((u8[6] & 127) << 21 | (u8[7] & 127) << 14 | (u8[8] & 127) << 7 | u8[9] & 127) + (u8[5] & 0x10 ? 10 : 0);
+    const offs = [];
+    let sr = 0,
+      spf = 0,
+      end = i;
+    while (i + 4 <= u8.length) {
+      const f = mp3FrameAt(u8, i);
+      if (f && f.len > 4 && (!sr || f.sr === sr && f.spf === spf)) {
+        const next = i + f.len;
+        if (next <= u8.length && (next === u8.length || u8.length - next <= 128 || mp3FrameAt(u8, next))) {
+          offs.push(i);
+          sr = f.sr;
+          spf = f.spf;
+          end = next;
+          i = next;
+          continue;
+        }
+      }
+      i++;
+    }
+    return offs.length ? {
+      offsets: Uint32Array.from(offs),
+      end,
+      sr,
+      spf
+    } : null;
+  };
+  const longEntryOf = (url, bytes) => {
+    let map = null;
+    try {
+      map = parseMp3Frames(bytes);
+    } catch (e) {
+      map = null;
+    }
+    const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
+    const entry = {
+      url,
+      bytes,
+      map,
+      long
+    };
+    if (long) {
+      longSongBytes.clear();
+      longSongBytes.set(url, entry);
+    }
+    return entry;
+  };
+  const longSongError = entry => {
+    const e = new Error('long song: play in chunks');
+    e.longEntry = entry;
+    return e;
+  };
+  const fetchSongBytes = async url => {
+    const hit = longSongBytes.get(url);
+    if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), {
+      cache: 'force-cache'
+    });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
+  };
+  const monoRange = (buf, from, len) => {
+    const out = new Float32Array(len),
+      c0 = buf.getChannelData(0),
+      c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) {
+      const k = from + i;
+      if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k];
+    }
+    return out;
+  };
+  const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
+    const D = 8;
+    len -= len % D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D),
+      B = monoRange(bBuf, j0, len);
+    const dec = x => {
+      const m = Math.floor(x.length / D),
+        o = new Float32Array(m);
+      for (let i = 0; i < m; i++) {
+        let t = 0;
+        for (let k = 0; k < D; k++) t += x[i * D + k];
+        o[i] = t;
+      }
+      return o;
+    };
+    const Ad = dec(A),
+      Bd = dec(B),
+      RD = R / D;
+    let best = -Infinity,
+      bestD = 0;
+    for (let d = -RD; d <= RD; d++) {
+      let t = 0;
+      const o = d + RD + 1;
+      for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i];
+      if (t > best) {
+        best = t;
+        bestD = d;
+      }
+    }
+    const Lc = L0 + bestD * D,
+      W = 12,
+      len2 = Math.min(len, 8192),
+      j1 = j0 + Math.floor((len - len2) / 2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W),
+      B2 = monoRange(bBuf, j1, len2);
+    const sc = [];
+    for (let L = -W; L <= W; L++) {
+      let t = 0;
+      for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i];
+      sc.push(t);
+    }
+    let bi = 0;
+    for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
+    let frac = 0;
+    if (bi > 0 && bi < sc.length - 1) {
+      const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1];
+      if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den;
+    }
+    let ea = 0,
+      eb = 0;
+    for (let i = 0; i < len2; i++) {
+      const x = A2[i + bi];
+      ea += x * x;
+      eb += B2[i] * B2[i];
+    }
+    return {
+      lag: Lc + (bi - W) + frac,
+      corr: ea > 0 && eb > 0 ? sc[bi] / Math.sqrt(ea * eb) : 0,
+      rms: Math.sqrt(eb / len2)
+    };
+  };
+  const longAligned = r => r && r.corr >= 0.97 && r.rms > 1e-3;
+  const openLongSong = async (ctx, entry) => {
+    const {
+        bytes,
+        map
+      } = entry,
+      n = map.offsets.length,
+      fsec = map.spf / map.sr;
+    const per = Math.max(64, Math.round(LONG_CHUNK_SEC / fsec));
+    const bounds = [0];
+    for (let b = per; b < n - per / 4; b += per) bounds.push(b);
+    const count = bounds.length;
+    const byteRange = k => {
+      const a = k === 0 ? 0 : map.offsets[Math.max(0, bounds[k] - LONG_PRE_FRAMES)];
+      const e = k + 1 >= count ? bytes.length : bounds[k + 1] + LONG_POST_FRAMES < n ? map.offsets[bounds[k + 1] + LONG_POST_FRAMES] : bytes.length;
+      return [a, e];
+    };
+    let C = 0,
+      aligned = false;
+    const stats = {
+      log: [],
+      chunks: count,
+      chunkSec: per * fsec,
+      decoded: 0,
+      seams: 0,
+      seamMaxDevMs: 0,
+      late: 0,
+      failed: 0,
+      probeCorr: 0
+    };
+    const theoryStart = k => k === 0 ? 0 : (bounds[k] - LONG_PRE_FRAMES) * fsec + C;
+    const seamSec = k => bounds[k] * fsec + C;
+    const chunks = new Map(),
+      pending = new Map();
+    const getChunk = k => {
+      if (chunks.has(k)) return Promise.resolve(chunks.get(k));
+      if (pending.has(k)) return pending.get(k);
+      const [a, e] = byteRange(k);
+      const p = decode(ctx, bytes.slice(a, e).buffer).then(buffer => {
+        stats.decoded++;
+        decodedBytes += bufferBytes(buffer);
+        decodedCount += 1;
+        let startSec = theoryStart(k);
+        const prev = chunks.get(k - 1);
+        if (k > 0 && prev && aligned) {
+          const r = buffer.sampleRate,
+            s = seamSec(k);
+          const m = longAlignLag(prev.buffer, buffer, Math.round((s - 0.2 - startSec) * r), Math.round(0.4 * r), Math.round((startSec - prev.startSec) * r), 960);
+          if (longAligned(m)) {
+            const got = prev.startSec + m.lag / r,
+              dev = Math.abs(got - startSec);
+            stats.seams++;
+            stats.seamMaxDevMs = Math.max(stats.seamMaxDevMs, dev * 1000);
+            if (dev < 0.02 && dev * r >= 0.5) startSec = got;
+          }
+        }
+        const c = {
+          buffer,
+          startSec
+        };
+        chunks.set(k, c);
+        return c;
+      }).finally(() => pending.delete(k));
+      pending.set(k, p);
+      return p;
+    };
+    const head = (await getChunk(0)).buffer,
+      rate = head.sampleRate;
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) {
+      C = meta.C;
+      aligned = meta.aligned;
+      stats.probeCorr = meta.probeCorr;
+    }
+    {
+      const probeLen = 48,
+        lo = LONG_PRE_FRAMES + 8,
+        hi = Math.min(bounds[1] || n, n) - probeLen - 8;
+      let bestP = -1,
+        bestE = 0;
+      for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
+        const from = Math.round(p * fsec * rate),
+          seg = monoRange(head, from, Math.round(0.5 * rate));
+        let e = 0;
+        for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
+        if (e > bestE) {
+          bestE = e;
+          bestP = p;
+        }
+      }
+      if (bestP >= 0 && !meta) {
+        try {
+          const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
+          const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
+          stats.probeCorr = Math.round(m.corr * 1000) / 1000;
+          if (longAligned(m)) {
+            const lag = Math.abs(m.lag - Math.round(m.lag)) < 0.25 ? Math.round(m.lag) : m.lag;
+            C = lag / rate - bestP * fsec;
+            aligned = true;
+          }
+        } catch (e) {}
+      }
+    }
+    stats.offsetMs = Math.round(C * 10000) / 10;
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) {
+      const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer);
+      stats.decoded++;
+      duration = theoryStart(count - 1) + last.duration;
+    }
+    if (!meta) entry.longMeta = {
+      rate,
+      C,
+      aligned,
+      probeCorr: stats.probeCorr,
+      duration
+    };
+    let session = 0,
+      live = [],
+      timer = null,
+      play = null;
+    const chunkIndexAt = s => {
+      let k = 0;
+      while (k + 1 < count && s >= seamSec(k + 1)) k++;
+      return k;
+    };
+    const dropLive = x => {
+      stopSource(x.src);
+      try {
+        x.gain.disconnect();
+      } catch (e) {}
+    };
+    const halt = () => {
+      session++;
+      if (timer) clearInterval(timer);
+      timer = null;
+      live.forEach(dropLive);
+      live = [];
+      play = null;
+    };
+    const scheduleChunk = (k, first) => {
+      const c = chunks.get(k);
+      if (!c || !play) return false;
+      const g = ctx.createGain(),
+        src = ctx.createBufferSource(),
+        my = session;
+      src.buffer = c.buffer;
+      src.connect(g);
+      g.connect(play.out);
+      let fromSong = first ? play.o : seamSec(k) - LONG_FADE_SEC / 2;
+      let when = play.t0 + (fromSong - play.o);
+      if (!first && when < ctx.currentTime) {
+        stats.late++;
+        fromSong += ctx.currentTime - when;
+        when = ctx.currentTime;
+      }
+      if (!first) {
+        const wr = Math.round(when * ctx.sampleRate) / ctx.sampleRate;
+        fromSong += wr - when;
+        when = wr;
+      }
+      if (first) g.gain.value = 1;else {
+        g.gain.setValueAtTime(0, when);
+        g.gain.linearRampToValueAtTime(1, when + LONG_FADE_SEC);
+        const prev = live.find(x => x.k === k - 1);
+        if (prev) {
+          prev.gain.gain.setValueAtTime(1, when);
+          prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC);
+          try {
+            prev.src.stop(when + LONG_FADE_SEC + 0.01);
+          } catch (e) {}
+        }
+      }
+      if (k === count - 1) src.onended = () => {
+        if (my === session && play && !play.loopAt) {
+          const done = play.onEnd;
+          halt();
+          done();
+        }
+      };
+      src.start(when, Math.max(0, fromSong - c.startSec));
+      stats.log.push({
+        k,
+        first,
+        marginMs: Math.round((when - ctx.currentTime) * 10000) / 10,
+        devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100
+      });
+      if (stats.log.length > 8) stats.log.shift();
+      live.push({
+        k,
+        src,
+        gain: g
+      });
+      return true;
+    };
+    const tick = () => {
+      if (!play) return;
+      const my = session,
+        s = play.o + (ctx.currentTime - play.t0),
+        cur = Math.max(chunkIndexAt(Math.max(s, play.o)), live.length ? live[0].k : 0),
+        next = cur + 1;
+      if (next < count && !live.some(x => x.k === next)) {
+        getChunk(next).then(() => {
+          if (my === session && play && !live.some(x => x.k === next) && live.some(x => x.k === next - 1)) scheduleChunk(next, false);
+        }).catch(() => {
+          stats.failed++;
+        });
+      }
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find(x => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(),
+              src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer;
+            src.connect(g);
+            g.connect(play.out);
+            g.gain.value = 1;
+            play.loopAt = endAt;
+            lastLive.src.onended = null;
+            try {
+              lastLive.src.stop(endAt);
+            } catch (e) {}
+            src.start(endAt, 0);
+            live.push({
+              k: 0,
+              src,
+              gain: g,
+              loopNew: true
+            });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt;
+        play.o = 0;
+        play.loopAt = null;
+        live = live.filter(x => {
+          if (x.loopNew) {
+            x.loopNew = false;
+            return true;
+          }
+          dropLive(x);
+          return false;
+        });
+        return;
+      }
+      live = live.filter(x => {
+        if (x.loopNew) return true;
+        if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) {
+          dropLive(x);
+          return false;
+        }
+        return true;
+      });
+      for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some(x => x.k === k)) chunks.delete(k);
+    };
+    return {
+      duration,
+      head,
+      stats: () => ({
+        ...stats,
+        held: chunks.size
+      }),
+      ready: o => getChunk(chunkIndexAt(o)),
+      playFrom: (o, out, onEnd, opts = null) => {
+        halt();
+        const k = chunkIndexAt(o);
+        if (!chunks.has(k)) return false;
+        const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
+        play = {
+          t0,
+          o,
+          out,
+          onEnd,
+          loop: !!(opts && opts.loop),
+          loopAt: null
+        };
+        scheduleChunk(k, true);
+        timer = setInterval(tick, 250);
+        tick();
+        return t0;
+      },
+      halt,
+      release: () => {
+        halt();
+        chunks.clear();
+      }
+    };
+  };
   const startRhythmTrack = async (key, rhythmVolumePct = 100, options = null) => {
     const autoStart = options?.autoStart !== false;
     const loop = options?.loop === true;
@@ -9004,11 +9577,39 @@ const Audio_ = (() => {
     stopOthers();
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src),
-        ctx = await ensureAudioCtxRunning();
-      rememberSongBuffer(track.src);
-      if (!ctx) return null;
-      rhythmBuffersInUse.add(buffer);
+      let buffer = null,
+        long = null,
+        dctx = null;
+      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') {
+        try {
+          buffer = await loadBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          dctx = getAudioCtx();
+          if (!dctx) return null;
+          long = await openLongSong(dctx, e.longEntry);
+        }
+      } else {
+        const entry = await fetchSongBytes(track.src);
+        dctx = getAudioCtx();
+        if (!dctx) return null;
+        if (entry.long) long = await openLongSong(dctx, entry);else {
+          try {
+            buffer = await loadBuffer(track.src, entry.map ? entry.bytes.buffer.slice(0) : entry.bytes.buffer);
+          } catch (e) {
+            if (!entry.map) throw e;
+            long = await openLongSong(dctx, entry);
+          }
+        }
+      }
+      const ctx = await ensureAudioCtxRunning();
+      if (buffer) rememberSongBuffer(track.src);
+      if (!ctx || long && ctx !== dctx) {
+        if (long) long.release();
+        return null;
+      }
+      if (buffer) rhythmBuffersInUse.add(buffer);
+      const duration = buffer ? buffer.duration : long.duration;
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
@@ -9023,8 +9624,21 @@ const Audio_ = (() => {
           gainEntry = null;
         }
       };
+      const haltSource = () => {
+        const old = source;
+        source = null;
+        stopSource(old);
+        if (long) long.halt();
+      };
+      const prepareAt = async offset => {
+        if (long) {
+          try {
+            await long.ready(offset);
+          } catch {}
+        }
+      };
       const startSource = offset => {
-        if (stopped || offset >= buffer.duration) {
+        if (stopped || offset >= duration) {
           naturallyEnded = true;
           return false;
         }
@@ -9038,6 +9652,27 @@ const Audio_ = (() => {
         };
         activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value = enabled ? raw : 0;
+        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
+        if (long) {
+          rhythmGain.connect(masterOut || ctx.destination);
+          const t0 = long.playFrom(offset, rhythmGain, () => {
+            if (!playing || stopped) return;
+            if (loop) {
+              startSource(0);
+              return;
+            }
+            playing = false;
+            naturallyEnded = true;
+          });
+          if (t0 === false) {
+            dropGainEntry();
+            return false;
+          }
+          offsetSeconds = offset;
+          startedAt = t0;
+          playing = true;
+          return true;
+        }
         nextSource.buffer = buffer;
         nextSource.loop = loop;
         nextSource.connect(rhythmGain);
@@ -9046,7 +9681,6 @@ const Audio_ = (() => {
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
         playing = true;
-        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
         nextSource.onended = () => {
           if (source === nextSource && playing) {
             playing = false;
@@ -9059,17 +9693,18 @@ const Audio_ = (() => {
       };
       const headMs = (() => {
         try {
-          const d = buffer.getChannelData(0);
-          const n = Math.min(d.length, Math.floor(buffer.sampleRate * 1.5));
+          const hb = buffer || long.head;
+          const d = hb.getChannelData(0);
+          const n = Math.min(d.length, Math.floor(hb.sampleRate * 1.5));
           for (let i = 0; i < n; i++) {
-            if (Math.abs(d[i]) > .01) return Math.round(i / buffer.sampleRate * 1000);
+            if (Math.abs(d[i]) > .01) return Math.round(i / hb.sampleRate * 1000);
           }
           return -1;
         } catch {
           return null;
         }
       })();
-      const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
+      const rawSongTimeSeconds = () => Math.min(duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
       const tsLatSamples = [];
@@ -9105,12 +9740,16 @@ const Audio_ = (() => {
         }
         let next = smoothSong + (p - smoothPerf) / 1000;
         if (Math.abs(raw - next) > .05) next = raw;else next += (raw - next) * .15;
-        smoothSong = Math.min(buffer.duration, Math.max(smoothSong, next));
+        smoothSong = Math.min(duration, Math.max(smoothSong, next));
         smoothPerf = p;
         return smoothSong;
       };
       const atSeconds = Math.max(0, (Number(options?.atMs) || 0) / 1000);
-      if (autoStart) startSource(atSeconds < buffer.duration ? atSeconds : 0);
+      if (autoStart) {
+        const at = atSeconds < duration ? atSeconds : 0;
+        await prepareAt(at);
+        startSource(at);
+      }
       return {
         start: () => {
           if (playing || stopped || naturallyEnded) return playing;
@@ -9125,48 +9764,50 @@ const Audio_ = (() => {
           hasTs: typeof ctx.getOutputTimestamp === 'function',
           tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
-          headMs
+          headMs,
+          ...(long ? {
+            chunked: long.stats()
+          } : {})
         }),
-        durationMs: buffer.duration * 1000,
-        ended: () => naturallyEnded || songTimeSeconds() >= buffer.duration,
+        durationMs: duration * 1000,
+        ended: () => naturallyEnded || songTimeSeconds() >= duration,
         paused: () => !playing && !stopped && !naturallyEnded,
         pause: () => {
           if (!playing || stopped) return;
           offsetSeconds = songTimeSeconds();
           playing = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
         },
         resume: async () => {
           if (playing || stopped || naturallyEnded) return playing;
           await ensureAudioCtxRunning();
+          await prepareAt(offsetSeconds);
+          if (playing || stopped || naturallyEnded) return playing;
           return startSource(offsetSeconds);
         },
         seek: async ms => {
           if (stopped) return false;
           const at = Math.max(0, (Number(ms) || 0) / 1000);
-          if (at >= buffer.duration) return false;
+          if (at >= duration) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = at;
           smoothPerf = 0;
           await ensureAudioCtxRunning();
-          if (stopped) return false;
+          await prepareAt(at);
+          if (stopped || playing || offsetSeconds !== at) return playing;
           return startSource(at);
         },
         restart: async () => {
           if (stopped) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = 0;
           await ensureAudioCtxRunning();
+          await prepareAt(0);
+          if (stopped || playing) return playing;
           return startSource(0);
         },
         fadeOut: ms => {
@@ -9192,7 +9833,8 @@ const Audio_ = (() => {
           source = null;
           stopSource(old);
           dropGainEntry();
-          rhythmBuffersInUse.delete(buffer);
+          if (long) long.release();
+          if (buffer) rhythmBuffersInUse.delete(buffer);
         }
       };
     } catch (e) {
@@ -9212,7 +9854,7 @@ const Audio_ = (() => {
     return Promise.race([loadBuffer(bufKey).then(() => {
       rememberSongBuffer(bufKey);
       return true;
-    }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    }).catch(e => !!(e && e.longEntry)), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {
@@ -15252,6 +15894,10 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   const pinUntil = Date.parse(entry.pinUntil || '');
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
+const changelogPinnedEntries = (nowMs = Date.now()) => {
+  const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
 };
 const changelogSafeLink = link => {
   const url = link && typeof link.url === 'string' ? link.url.trim() : '';
@@ -22176,6 +22822,36 @@ const useBubbleCollapse = collapseKey => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([[/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'], [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'], [/^(transcendence|masuEnhance)$/, 'masuEnhance']]);
+const assistantBubbleFoldKey = scene => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+const BubbleFoldButton = ({
+  open,
+  onToggle,
+  size = 'md',
+  className = '',
+  ...attrs
+}) => React.createElement("button", _extends({
+  type: "button",
+  onClick: ev => {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    onToggle();
+  },
+  "aria-pressed": !!open,
+  "aria-label": open ? 'ひとことをたたむ' : 'ひとことを開く',
+  title: open ? '助手のひとことを畳む' : '助手のひとことを出す'
+}, attrs, {
+  className: `mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`
+}), React.createElement("span", {
+  "aria-hidden": "true"
+}, "💬"), React.createElement("span", {
+  "aria-hidden": "true"
+}, open ? '▲' : '▼'));
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -22192,14 +22868,15 @@ const AssistantBubble = ({
   defaultOpen = false,
   footerSpace = 0,
   maxLines = 0,
-  collapseKey = null,
+  collapseKey = undefined,
   collapseHidden = false,
   oneLine = false,
   menu = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  const foldKey = collapseKey !== undefined ? collapseKey : line || defaultOpen ? null : assistantBubbleFoldKey(scene);
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -22289,32 +22966,21 @@ const AssistantBubble = ({
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
-  if (collapseKey && collapsed) {
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return React.createElement("div", {
       "data-bubble-collapsed": true,
-      className: "w-full flex items-center gap-2"
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 32,
-      accent: color,
-      expression: face
-    }), React.createElement("button", {
-      type: "button",
-      onClick: () => setCollapsed(false),
-      "aria-label": `${who.name}のひとことを開く`,
-      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
-      style: {
-        borderColor: color,
-        color,
-        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
-      }
-    }, "💬 ", who.name, "のひとこと ▾"));
+      className: "w-full flex items-center justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setCollapsed(false),
+      size: "sm"
+    }));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
     "data-bubble-one-line": oneLine ? '' : undefined,
-    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${collapseKey ? 'relative' : ''}`
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -22441,13 +23107,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
-  }))))), collapseKey && React.createElement("button", {
-    type: "button",
-    onClick: () => setCollapsed(true),
-    "aria-label": "ひとことをたたむ",
-    "data-bubble-collapse": true,
-    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
-  }, "▴"), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))))), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setCollapsed(true),
+    size: "sm",
+    className: "self-center",
+    "data-bubble-collapse": ""
+  }), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "fixed inset-0",
     style: {
       zIndex: 60
@@ -38841,6 +39507,11 @@ const RhythmSongSelect = ({
   React.useEffect(() => {
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
+  const firstRowSongId = rows.length ? rows[0].entry.songId : '';
+  const songInGenre = !song || genre.id === 'all' || genreMatches(song);
+  React.useEffect(() => {
+    if (!songInGenre && firstRowSongId) setSongId(firstRowSongId);
+  }, [songInGenre, firstRowSongId, genre.id]);
   const pickRandom = () => {
     const pool = list.filter(item => !lockedSong(item));
     if (!pool.length) return;
@@ -38849,8 +39520,39 @@ const RhythmSongSelect = ({
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
-  const loopEnabled = rows.length >= 2;
+  const [loopFits, setLoopFits] = React.useState(true);
+  const loopEnabled = rows.length >= 2 && loopFits;
   const listRef = React.useRef(null);
+  const rowsKey = rows.map(row => row.entry.songId).join('|');
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el || rows.length < 2) return;
+    const measure = () => {
+      const node = listRef.current;
+      if (!node || !node.clientHeight) return;
+      const ul = node.querySelector('ul');
+      if (!ul) return;
+      const looped = node.getAttribute('data-rhythm-song-loop') === '1';
+      const cs = typeof getComputedStyle === 'function' ? getComputedStyle(node) : null;
+      const pad = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+      const one = ul.offsetHeight / (looped ? 3 : 1),
+        room = node.clientHeight - pad;
+      setLoopFits(prev => prev ? one > room - 4 : one > room + 2);
+    };
+    measure();
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+      try {
+        observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+      } catch (e) {
+        observer = null;
+      }
+    }
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [rowsKey, loopEnabled]);
   const loopReadyRef = React.useRef(false);
   const settleRef = React.useRef(null);
   const restoreTopRef = React.useRef(typeof listScrollTop === 'number' && listScrollTop > 0 ? listScrollTop : null);
@@ -39316,7 +40018,7 @@ const RhythmSongSelect = ({
       className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, item.id === 'HELL' ? React.createElement("b", {
       "data-rhythm-hell-level": true,
-      className: "block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]"
+      className: `block text-[21px] tabular-nums landscape:text-[19px]${open ? ' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]' : ''}`
     }, song.difficulties[item.id].level) : React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
@@ -67592,8 +68294,9 @@ const TimeOfDaySettingsPanel = () => {
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-slate-200"
   }, title), React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-400"
-  }, desc)), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, ['on', 'off'].map(v => React.createElement("button", {
     key: v,
@@ -69455,8 +70158,9 @@ function AssetDownloadPage({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "自動ダウンロード"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -69527,8 +70231,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "タクティクスバトル画面"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_SCREEN_STYLE_LABELS.map(option => React.createElement("button", {
       key: option.id,
@@ -69547,8 +70252,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "行動カードの見た目"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
       key: option.id,
@@ -69682,8 +70388,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "新しいバージョンのお知らせ"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, UPDATE_NOTICE_STYLE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69697,15 +70404,17 @@ function SettingsScreen({
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。'))), React.createElement("div", {
     "data-assistant-bubble-setting": true,
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69724,8 +70433,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "ホームの助手コメント"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69752,8 +70462,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手どうしの会話を自動で進める"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69896,13 +70607,11 @@ function ScreenThemeModal({
   const rows = [{
     id: 'title',
     label: 'タイトル画面',
-    desc: 'タイトル画面の絵',
     value: titleArt,
     set: onChangeTitleArt
   }, {
     id: 'home',
     label: 'ホーム画面',
-    desc: 'ホーム画面の背景',
     value: homeArt,
     set: onChangeHomeArt
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
@@ -69969,7 +70678,7 @@ function ScreenThemeModal({
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-white"
-  }, row.label), React.createElement("small", {
+  }, row.label), row.desc && row.desc !== row.label && React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -70415,7 +71124,8 @@ function MissionsScreen({
       line: dailyLine.text,
       helpRef: "items/missions",
       expression: "happy",
-      compact: true
+      compact: true,
+      collapseKey: "screen:missions"
     })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
@@ -111448,6 +112158,7 @@ function AssistantPeerTalk({
   onReplayEnd = null,
   today = null
 }) {
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
@@ -111643,6 +112354,16 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(React.createElement("div", {
+      "data-assistant-peer-folded": true,
+      className: "flex justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setPeerFolded(false),
+      "data-assistant-peer-fold": ""
+    })));
+  }
   const {
     talk
   } = cur;
@@ -111731,7 +112452,14 @@ function AssistantPeerTalk({
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
-  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
+  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, scene && !cur.replay && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setPeerFolded(true),
+    size: "sm",
+    "data-assistant-peer-fold": ""
+  }), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
     onClick: ev => {
@@ -111739,7 +112467,7 @@ function AssistantPeerTalk({
       finish(cur);
     },
     className: "min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "閉じる"))));
+  }, "閉じる")))));
 }
 const ASSISTANT_PEER_PHOTO_W = 400,
   ASSISTANT_PEER_PHOTO_H = 300;
@@ -119198,10 +119926,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.84
     },
     sorashido: {
-      top: 0.0331,
-      eye: 0.2899,
-      chin: 0.4299,
-      m: 1.042
+      top: 0.0029,
+      eye: 0.273,
+      chin: 0.4302,
+      m: 1.169
     },
     erubin: {
       top: 0.0042,
@@ -234597,19 +235325,43 @@ function MonsterHeroGame() {
   }))));
   const {
     changelogUnreadIds,
-    changelogUnread
+    changelogUnread,
+    changelogPinnedIds
   } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogSeenAnyTab.has(id))]));
-    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length > 0]));
+    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const pinnedSet = new Set(pinnedIds);
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
+    unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
+    const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length > 0]));
     return {
       changelogUnreadIds: unreadIds,
-      changelogUnread: unread
+      changelogUnread: unread,
+      changelogPinnedIds: pinnedSet
     };
-  }, [changelogSeen]);
-  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
+  }, [changelogSeen, showChangelog]);
+  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
   const markChangelogTabSeen = type => {
-    const ids = CHANGELOG_IDS_BY_TYPE[type];
+    if (type === 'event') {
+      if (!changelogUnreadIds.event.length) return;
+      const byTab = {};
+      CHANGELOG_ENTRIES.forEach(entry => {
+        if (!changelogUnreadIds.event.includes(entry.id)) return;
+        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+        (byTab[tab] = byTab[tab] || []).push(entry.id);
+      });
+      const next = {};
+      Object.keys(byTab).forEach(tab => {
+        next[tab] = Array.from(new Set([...(changelogSeen[tab] || []).filter(id => CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
+        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
+      });
+      setChangelogSeen(prev => ({
+        ...prev,
+        ...next
+      }));
+      return;
+    }
+    const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
     if (!ids.length || !changelogUnreadIds[type].length) return;
     const merged = Array.from(new Set([...(changelogSeen[type] || []).filter(id => CHANGELOG_ALL_IDS.has(id)), ...ids]));
     setChangelogSeen(prev => ({
@@ -254731,6 +255483,9 @@ function MonsterHeroGame() {
     key: 'update',
     label: '更新情報'
   }, {
+    key: 'event',
+    label: 'イベント'
+  }, {
     key: 'issue',
     label: '不具合情報'
   }].map(t => React.createElement("button", {
@@ -254749,10 +255504,14 @@ function MonsterHeroGame() {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
   }, "更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。") : (() => {
-    const rows = changelogRowsOfTab(changelogTab);
-    const unreadHere = new Set(changelogUnreadIds[changelogTab]);
+    const rows = changelogTab === 'event' ? [] : changelogRowsOfTab(changelogTab);
+    const unreadHere = new Set(changelogUnreadIds[changelogTab] || []);
     let shownDay = null;
-    const pinnedEvents = changelogTab === 'update' ? CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry)) : [];
+    const pinnedEvents = changelogTab === 'event' ? changelogPinnedEntries() : [];
+    if (changelogTab === 'event' && pinnedEvents.length === 0) return React.createElement("p", {
+      className: "mh-changelog-empty",
+      "data-changelog-event-empty": true
+    }, "いま開催中・開催予定のイベントはありません。");
     return [...pinnedEvents.map(c => React.createElement("details", {
       key: `pinned-${c.id}`,
       "data-changelog-pinned": true,
@@ -255193,11 +255952,19 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "デフォルトに戻す"), React.createElement("div", {
+    "data-bgm-close-band": true,
+    className: "sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"
+  }, React.createElement("button", {
     className: "mh-dialog-close",
     "data-mh-back": true,
+    style: {
+      position: 'static',
+      margin: 0,
+      boxShadow: '0 3px 0 #0009'
+    },
     onClick: closeBgmArrangement
-  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
+  }, "閉じる")))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
@@ -266741,17 +267508,22 @@ function MonsterHeroGame() {
         }
       }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
+      const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
+      const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          const src = l && STORY_SCENE_IMAGES[l.bg];
-          if (src && !pre.has(src)) {
-            pre.add(src);
-            try {
-              const im = new Image();
-              im.src = src;
-            } catch (e) {}
-          }
+          [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
+            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            if (src && !pre.has(src)) {
+              pre.add(src);
+              try {
+                const im = new Image();
+                im.src = src;
+              } catch (e) {}
+            }
+          });
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -266804,10 +267576,10 @@ function MonsterHeroGame() {
         }
       }
       const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
-      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
-      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageGuest = stageLine && !storyStillImg ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
-      const speakingGuest = isGuestWho(line.who);
+      const speakingGuest = isGuestWho(line.who) && !storyStillImg;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -266833,7 +267605,7 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -267018,6 +267790,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-still-on": storyStillImg ? '' : undefined,
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
@@ -267040,7 +267813,30 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), React.createElement("button", {
+      }), storyStillImg && React.createElement("div", {
+        key: `still:${storyStill}`,
+        "data-story-still": storyStill,
+        "data-story-still-has-tate": storyStillTate ? '' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-still': `url("${storyStillImg}")`,
+          ...(storyStillTate ? {
+            '--story-still-tate': `url("${storyStillTate}")`
+          } : {})
+        }
+      }, React.createElement("div", {
+        "data-story-still-area": true
+      }, React.createElement("img", {
+        "data-story-still-img": true,
+        src: storyStillImg,
+        alt: "",
+        draggable: false
+      })), storyStillTate && React.createElement("img", {
+        "data-story-still-tate": true,
+        src: storyStillTate,
+        alt: "",
+        draggable: false
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -267194,7 +267990,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
+          top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -267204,7 +268000,7 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
         }
       }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
@@ -268433,13 +269229,11 @@ function MonsterHeroGame() {
         style: {
           color: accent
         }
-      }, headTitle)), React.createElement("button", {
-        type: "button",
-        onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
-        "data-help-bubble-toggle": true,
-        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
-      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
+      }, headTitle)), React.createElement(BubbleFoldButton, {
+        open: helpAssistantOpen,
+        onToggle: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
+        "data-help-bubble-toggle": ""
+      })), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
@@ -273509,6 +274303,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -273521,6 +274345,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
@@ -275516,7 +276342,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 8px;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

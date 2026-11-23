@@ -179,6 +179,12 @@ const FORCE_CHECKS = [
     checks: ['assistant/life-fullbody-edge-check.js', 'assistant/life-fullbody-pocket-check.js'], why: '助手の全身画のふちの透過が2値(ギザギザ)に戻っていないか・囲まれた背景の残り' },
   { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
     checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
+  { re: /^(monster-hero\/images\/assistant\/stand-[a-z0-9-]+\/.+\.png|monster-hero\/images\/assistant\/fullbody\/.+\.png|monster-hero\/data\/assistants\.js|tools\/assistant\/life-stand-[a-z-]+\.(py|js|json))$/,
+    checks: ['assistant/life-stand-edge-check.js'], why: '全身画から切り出した立ち絵の上・左・右の端で、頭・腕が切れていないか(r1119-122)' },
+  // 助手の絵・原本・保管庫・絵を作る道具を触ったら、目録(キャラごとの CATALOG.md)が現行と合っているかを見る(2026-11-23 r1119-124・r1119-128)。
+  // 旧版と最新版の取り違えを防ぐ: 絵を替えたのに目録が古い・正本が無い・現行が正本より古い・旧版が元の場所へ戻った、で落ちる
+  { re: /^(monster-hero\/images\/assistant\/.+|tools\/art-sources\/assistants\/.+|archive\/old-art\/.+|tools\/image\/assistant-art-(catalog|ledger).*|tools\/assistant\/(art_source|life-fullbody-art|life-expression-sheets|life-stand-from-fullbody|sorashido-umahone-busts)\.py|tools\/assistant\/life-sleep-faces-make\.js)$/,
+    checks: ['image/assistant-art-catalog-check.js'], why: '助手の絵の目録(正本・現行・旧版)が現行と合っているか(r1119-124)' },
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
   { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
     checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },

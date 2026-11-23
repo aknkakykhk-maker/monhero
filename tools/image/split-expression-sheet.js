@@ -1,7 +1,7 @@
 // 「表情が1枚に並んだシート」を、表情ごとの透過PNGへ切り分ける。
 //
 //   node tools/image/split-expression-sheet.js [シート] [出力フォルダ] [接頭辞]
-//   (既定: tools/art-sources/assistants/dra-expressions-sheet.png → 同じフォルダへ dra_*.PNG)
+//   (既定: tools/art-sources/assistants/dra/normal/bust/dra-expressions-sheet.png → 同じフォルダへ dra_*.PNG)
 //
 // ドラの表情集(2026-09-17に受け取った1536x1024・8種)を切り分けるために作った。
 // 同じ作りのシート(4列2行・背景透過・見出しとラベルが入っている)なら、
@@ -20,8 +20,8 @@ let sharp = null;
 try { sharp = require('sharp'); } catch { /* 無ければ減色せずに書き出す */ }
 
 const REPO = path.resolve(__dirname, '../..');
-const SRC = process.argv[2] || path.join(REPO, 'tools/art-sources/assistants/dra-expressions-sheet.png');
-const OUT = process.argv[3] || path.dirname(SRC);
+const SRC = process.argv[2] || path.join(REPO, 'tools/art-sources/assistants/dra/normal/bust/dra-expressions-sheet.png');
+const OUT = process.argv[3] || path.join(path.dirname(SRC), 'cut'); // 原本と同じフォルダへは書かない(正本と切り出しを混ぜない・2026-11-23)
 const PREFIX = process.argv[4] || 'dra';
 
 const HALF = 192;                                  // 切り出す正方形の半径(px) → 384x384

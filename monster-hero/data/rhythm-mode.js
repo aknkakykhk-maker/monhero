@@ -1481,12 +1481,17 @@ const rhythmChartHasSky=notes=>Array.isArray(notes)&&notes.some(note=>rhythmNote
 //   いまは (縮み(y)−上端の縮み)/(判定ラインの縮み−上端の縮み) で、上端では地上と同じ所から出て、近づくにつれて空中の段へ上がる。
 //   判定ラインでの高さは前と同じ。空中の線は判定ラインより3%以上低い(rhythmSkyLiftMaxFor)ので、画面の位置は上端から下へ単調に進む(途中で上へ戻らない)。
 //   GPU の帯(シェーダーの proj・skyK)と、演奏画面の空中の面(30-rhythm-play.jsx)も同じ式を通す。調べ: docs/progress/beat/chart-fix-2026-11-22/note-appear/
-//   上端より上(yRatio<0)も同じ1次の式のまま延ばす(持ち上げは負になる)。画面の位置は「地上の位置×(1−持ち上げの比)」の1次になり、
-//   上端を越える瞬間は地上と同じ・帯の形が折れない・GPU の帯(点を粗くつなぐ)と 2D の絵がずれない(rhythm-gpu-band-check.js)
+// ★上がり方を早める(2026-11-23 台帳 r1119-123・社長の選択「案B 1/4」)。上の式は判定ラインまで一定の割合で上がり、空中ノーツが遅く見えた
+//   (いちか「スカイノーツの速度が変わってる」)。いまは上端で0から ease-out で上がり、上端〜判定ラインの RHYTHM_SKY_RISE_AT(1/4)の所で
+//   11/22 より前の高さ(奥の縮み(y)/判定ラインの縮み)に上がり切り、そこから先は前の式と同じ。上端で0・判定ラインでの高さは変わらない。
+//   上端より上(yRatio<0)も同じ式で延ばす(持ち上げは負になり、画面の外のまま)。GPU の帯のシェーダー(rhythmSkyRise・uSkyRise)も同じ式。
+//   比べた案と止め絵: docs/progress/beat/sky-rise-2026-11-23/
+const RHYTHM_SKY_RISE_AT=.25;
 const rhythmSkyLiftRatio=yRatio=>{
-  const line=RHYTHM_JUDGMENT_LINE_Y.ratio,top=rhythmProjectionScale(0),base=rhythmProjectionScale(line);
-  if(!(base>top))return 0;
-  return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(Math.min(1,Number(yRatio)||0))-top)/(base-top);
+  const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
+  if(!(base>0))return 0;
+  const y=Math.min(1,Number(yRatio)||0),u=y/(line*RHYTHM_SKY_RISE_AT),rise=u>=1?1:u*(2-u);
+  return RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base*rise;
 };
 // 画面の高さ yRatio の位置で、高さ1のノーツを何px持ち上げるか
 const rhythmSkyLiftPx=(rect,yRatio)=>(Number(rect?.height)||0)*rhythmSkyLiftRatio(yRatio);
@@ -81332,15 +81337,16 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
   const BAND_VS='attribute vec4 aPrev;attribute vec4 aCur;attribute vec4 aNext;attribute vec3 aSky;attribute vec4 aMisc;'+
     'uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;'+
     'uniform float uSnow;uniform float uTnow;uniform float uTravel;uniform float uSpawnY;uniform float uTravelPx;uniform float uHalfH;uniform float uW;uniform float uH;'+
-    'uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;uniform float uMinHw;uniform float uCore;'+
+    'uniform float uSkyRise;uniform float uLanes;uniform float uTop;uniform float uCurve;uniform float uRoad;uniform float uFar;uniform float uSkyK;uniform float uGround;uniform float uSize;uniform float uHw;uniform float uG0;uniform float uG1;uniform float uPhase;uniform float uMinHw;uniform float uCore;'+
     'varying float vT;varying float vSky;varying float vWave;varying float vG;'+
     // rhythmProjectionDepth と同じ
+    'float skyRise(float y){float u=y/uSkyRise;return u>=1.0?1.0:u*(2.0-u);}'+
     'float depth(float y){y=min(1.0,y);if(y<0.0&&uCurve==1.0)return max(0.0,uTop+(1.0-uTop)*y);return uTop+(1.0-uTop)*pow(clamp(y,0.0,1.0),uCurve);}'+
     // rhythmProjectTravelProgress と同じ
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*(depth(min(yr,1.0))-uTop)*uRoad*sky;return vec2(x,y-lift);}'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:uSkyK*depth(min(yr,1.0))*uRoad*skyRise(yr)*sky;return vec2(x,y-lift);}'+
     // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
     // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
     'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;float f=aMisc.w;'+
@@ -81384,7 +81390,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'band link');
   }catch(e){return null;}
   const edgeSpanBuf=new Float32Array(16);
-  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uZ','uEdgeT','uEdgeN']
+  const U={};['uM0','uM1','uView','uSnow','uTnow','uTravel','uSpawnY','uTravelPx','uHalfH','uW','uH','uLanes','uTop','uCurve','uRoad','uFar','uSkyK','uGround','uSize','uHw','uG0','uG1','uMode','uColor','uColor2','uAlpha','uPhase','uMinHw','uCore','uSkyRise','uZ','uEdgeT','uEdgeN']
     .forEach(name=>{U[name]=gl.getUniformLocation(prog,name);});
   // 頂点1つ = 前(4)・いま(4)・次(4)・高さ(前・いま・次の3)・[線のどちら側(±1、0=ずらさない), 丸の向き cos, sin, 使わない](4)
   const REC=19,STRIDE=REC*4,DISC_SEG=12;
@@ -81503,7 +81509,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     if(uniformsFor!==cur){uniformsFor=cur;const u=cur.u,m=host.matrix(),view=host.view();
       gl.uniform3f(U.uM0,m[0],m[2],m[4]);gl.uniform3f(U.uM1,m[1],m[3],m[5]);gl.uniform2f(U.uView,view[0],view[1]);
       gl.uniform1f(U.uSnow,u.snow);gl.uniform1f(U.uTnow,u.tnow);gl.uniform1f(U.uTravel,u.travel);gl.uniform1f(U.uSpawnY,u.spawnY);gl.uniform1f(U.uTravelPx,u.travelPx);gl.uniform1f(U.uHalfH,u.halfH);
-      gl.uniform1f(U.uW,u.w);gl.uniform1f(U.uH,u.h);gl.uniform1f(U.uLanes,RHYTHM_LANE_COUNT);gl.uniform1f(U.uTop,RHYTHM_PROJECTION_CAMERA.top);gl.uniform1f(U.uCurve,RHYTHM_PROJECTION_CURVE);
+      gl.uniform1f(U.uW,u.w);gl.uniform1f(U.uH,u.h);gl.uniform1f(U.uLanes,RHYTHM_LANE_COUNT);gl.uniform1f(U.uTop,RHYTHM_PROJECTION_CAMERA.top);gl.uniform1f(U.uSkyRise,RHYTHM_JUDGMENT_LINE_Y.ratio*RHYTHM_SKY_RISE_AT);gl.uniform1f(U.uCurve,RHYTHM_PROJECTION_CURVE);
       gl.uniform1f(U.uRoad,RHYTHM_ROAD_WIDTH.factor);gl.uniform1f(U.uFar,RHYTHM_PROJECTION_CAMERA.far||RHYTHM_TRAVEL_FAR_SCALE);gl.uniform1f(U.uSkyK,u.skyK);gl.uniform1f(U.uSize,u.size);}
   };
   // 頂点の並びの指定は、入れ物が変わったときだけし直す(スマホのブラウザは命令1回ごとの手間が大きい)
@@ -81530,8 +81536,8 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       const t=now();e.usedAt=t;e.pinned=false;sweep(t);
       const nowMs=Math.max(e.t0,Math.min(e.t1,Number(travel.chartNowMs)||e.t0));
       if(!(nowMs<e.t1))return false;
-      // 空中の持ち上げは rhythmSkyLiftRatio と同じ(上端で0・シェーダーは (depth−uTop)×uRoad×skyK)
-      const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio)-rhythmProjectionScale(0);
+      // 空中の持ち上げは rhythmSkyLiftRatio と同じ(シェーダーは depth×uRoad×skyRise×skyK・上がり切る所は uSkyRise)
+      const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio);
       const c={e,u:{snow:rhythmScrollPos(Number(travel.visualTime),note.scrollGroup)-e.s0,tnow:nowMs-e.t0,travel:Number(travel.travelMs),spawnY:Number(travel.spawnY),travelPx:Number(travel.travelPx),halfH:Number(halfH)||0,
         w:Number(rect.width)||0,h:Number(rect.height)||1,skyK:base>0?(Number(rect.height)||0)*RHYTHM_SKY_LIFT.ratio/base:0,size:Number(size)||1}};
       // いまの位置で切る。rhythmSlideSegmentQuads と同じく、押さえている帯は「いまの位置から次の譜面の点まで」をその場で刻み直し、
