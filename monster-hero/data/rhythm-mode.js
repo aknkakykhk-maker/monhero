@@ -84815,7 +84815,10 @@ const rhythmBuildCanvasRenderer=()=>{
       const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
       if(skyGlass){
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
-        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();
+          // 左右のフリックは、その向きの三角で描く(2026-11-23 r1119-145 社長「スカイスライドでなんか上フリックある？」。向きに関係なく上向きで描いていて、空中の左右フリックが上フリックに見えた)
+          {const fd=rhythmFlickDir(note),my=ay-aw/2;if(fd==='right'){ctx.moveTo(ax+aw/2,my);ctx.lineTo(ax-aw/2,my-aw);ctx.lineTo(ax-aw/2,my+aw);}else if(fd==='left'){ctx.moveTo(ax-aw/2,my);ctx.lineTo(ax+aw/2,my-aw);ctx.lineTo(ax+aw/2,my+aw);}else{ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);}}
+          ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
