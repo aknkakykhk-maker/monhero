@@ -92,25 +92,13 @@ const skyLiftPatched=src=>{
  await page.waitForTimeout(400);
  const selected=await page.evaluate(()=>({diff:document.querySelector('[data-rhythm-demo-difficulty][aria-pressed=true],[aria-pressed=true][data-rhythm-difficulty]')?.innerText||''}));
  if(process.env.DEBUG_SHOT)await page.screenshot({path:path.join(OUT,"select.png")});console.error("曲:",picked,"難易度:",diffOk,JSON.stringify(selected));
-<<<<<<< HEAD
- // 鑑賞(自動演奏)で撮るときは START=listen(2026-11-23 r1119-149 HELL の案内の動画)。既定は演奏を始めるボタン
- if(process.env.START==="listen"){ // 曲の詳細のジャケット → 鑑賞の欄で難易度を選んで「鑑賞」
-  await page.evaluate(()=>document.querySelector("[data-rhythm-song-art-zoom]")?.click());
-  await page.waitForSelector("[data-rhythm-listen-start]",{timeout:15000});
-  await page.evaluate(d=>document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
-  await page.evaluate(()=>document.querySelector("[data-rhythm-listen-start]").click());
- }else{
-  await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
-  await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
- }
-=======
  await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
  // LISTEN=1: 曲の鑑賞(ジャケット → 鑑賞の難易度 → 鑑賞する)で始める。ノーツは鑑賞の自動の手が叩く(AUTO_TAP でも道具は押さない)
- if(process.env.LISTEN==='1'){await page.evaluate(()=>[...document.querySelectorAll('button[aria-label]')].find(b=>/ジャケットを大きく見る/.test(b.getAttribute('aria-label')))?.click());
+ if(process.env.LISTEN==='1'||process.env.START==='listen'){ // START=listen は LISTEN=1 と同じ(r1119-149 の案内の動画で使った名前)
+ await page.evaluate(()=>[...document.querySelectorAll('button[aria-label]')].find(b=>/ジャケットを大きく見る/.test(b.getAttribute('aria-label')))?.click());
   await page.waitForSelector('[data-rhythm-listen-start]',{timeout:15000});await page.evaluate(d=>document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
   await page.evaluate(()=>document.querySelector('[data-rhythm-listen-start]').click());}
  else await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
->>>>>>> origin/main
  await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
  await page.waitForFunction(()=>!!window.__mhSong,null,{timeout:60000});
  await page.waitForFunction(()=>typeof RHYTHM_CANVAS_RENDERER!=='undefined',null,{timeout:30000});
