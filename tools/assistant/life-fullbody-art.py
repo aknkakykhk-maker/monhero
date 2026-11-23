@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""社長の全身画(tools/art-sources/assistant-fullbody/received-v1/)を、配信用の立ち絵に仕上げる(助手部ナカヨシ)。
+"""社長の全身画(tools/art-sources/assistants/<キャラ>/<服>/fullbody/。場所は art_source.py が引く)を、配信用の立ち絵に仕上げる(助手部ナカヨシ)。
 
   ・背景のぼかし(薄い半透明の光・灰色のもや)と、ふちの小さな点(ごみ)を取る
   ・ふちの画素の色を、体の内側の色で塗り直す(白・黒の色のにじみを消す)
@@ -18,7 +18,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-SRC = os.path.join(ROOT, 'tools/art-sources/assistant-fullbody/received-v1')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import art_source  # 原本の場所を引く・正本が「現行そのもの」の組(旧版が元の組)は作らない(台帳 r1119-128)
 OUT = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
 # キー → 受け取った絵。キーは「助手id」か「助手id:服の名前」。
 #   表情の絵(8表情: angry・crying・excited・happy・normal・surprise・troubled・wink)が届いたら、キーの後ろに @表情 を付けて足す
@@ -64,7 +65,7 @@ GRID_SHEETS = {
 
 def split_cells(file, cut_y, cut_x):
     """2×2 のシートを、空いた行 cut_y と空いた列 cut_x(上の段・下の段で違うときは (上, 下))で4つに分ける。"""
-    a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
+    a = np.array(Image.open(art_source.src(file)).convert('RGBA'))
     h, w = a.shape[:2]
     xs = cut_x if isinstance(cut_x, tuple) else (cut_x, cut_x)
     out = []
@@ -302,7 +303,7 @@ def dehaze_hair(arr, head_frac=0.15, band=10):
 
 def seam_cells(file, row_cuts, per_row):
     """シートを段の切れ目で分け、各段を縫い目で per_row 人に分ける。元の大きさのまま、ほかの人を消した絵を返す。"""
-    a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
+    a = np.array(Image.open(art_source.src(file)).convert('RGBA'))
     h, w = a.shape[:2]
     al = a[..., 3].astype(np.float32)
     ys = [0] + list(row_cuts) + [h]
@@ -731,17 +732,21 @@ def main():
         if key not in made:
             # 表情の絵は、記号(うずまき・びっくりマーク)が体から離れているので、小さな塊も残す(ごみは別に消える量で)
             #   表情の絵の元絵はふちが硬め(半透明が少ない)なので、書き出しで約 0.6 画素になる量でぼかす
-            made[key] = clean(os.path.join(SRC, ART[key]), min_frac=0.004 if '@' in key else 0.03, seeds=POCKETS.get(key),
+            made[key] = clean(art_source.src(ART[key]), min_frac=0.004 if '@' in key else 0.03, seeds=POCKETS.get(key),
                               soft=1.2 if '@' in key else None,
                               flood=key in FLOOD, boxes=AUTO_POCKETS.get(key), halo=key in HALO)
         return made[key]
 
     for key in ART:
+        if art_source.refuse(art_source.group_of(key, 'fullbody')):
+            continue
         name = key.replace('@', '__').replace(':', '_')
         # 表情の絵(キーに @)は、表情なしの絵と同じ倍率で縮める(立ち姿の大きさをそろえる)
         base = key.split('@')[0] if '@' in key else None
         jobs.append((name, lambda key=key: make_art(key), (lambda base=base: fit_scale(make_art(base))) if base else None))
     for key, sheets in SEAM_SHEETS.items():
+        if art_source.refuse(art_source.group_of(key, 'fullbody')):
+            continue
         if only and key.replace(':', '_') != only:
             continue
         cells = [(e, arr) for file, rows, exprs, per_row in sheets for e, arr in zip(exprs, seam_cells(file, rows, per_row))]
@@ -749,7 +754,7 @@ def main():
         if key in SELF_BASE:
             ratio = 1.0  # 元の絵のまま(ふつうの体が枠に収まる倍率より縮めない)
         else:
-            ratio = body_height(np.array(Image.open(os.path.join(SRC, ART[key])).convert('RGBA'))) / float(np.median([body_height(a) for _, a in cells]))
+            ratio = body_height(np.array(Image.open(art_source.src(ART[key])).convert('RGBA'))) / float(np.median([body_height(a) for _, a in cells]))
         print('%s: シートの体を表情なしの絵の %.2f 倍の大きさとして縮める' % (key, ratio))
         for e, arr in cells:
             if True:
@@ -761,6 +766,8 @@ def main():
                              lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, raw=True) if key in RAW_SHEETS else clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
     for key, sheets in GRID_SHEETS.items():
+        if art_source.refuse(art_source.group_of(key, 'fullbody')):
+            continue
         if only and key.replace(':', '_') != only:
             continue
         base_name = key.replace(':', '_')
@@ -775,6 +782,8 @@ def main():
                          lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0, halo=(key == 'erubin:sekiyuou')),
                          (lambda base_arr=base_arr: fit_scale(Image.fromarray(base_arr)))))
     for key, sheets in SPLIT_SHEETS.items():
+        if art_source.refuse(art_source.group_of(key, 'fullbody')):
+            continue
         base_name = key.replace(':', '_')
         for file, exprs, cy, cx in sheets:
             for e, arr in zip(exprs, split_cells(file, cy, cx)):
@@ -789,6 +798,9 @@ def main():
                 jobs.append(('%s__%s' % (base, e), lambda c=c: drop_border_bits(c), None))
     for name, make, scale in jobs:
         if only and name != only and not name.startswith(only + '__'):
+            continue
+        if name == 'mua_card-master' or name.startswith('mua_card-master__'):
+            # 2026-11-23 r1119-137: カードマスターの9枚は生成元(raw)から抜き直した。作り直しは tools/assistant/life-card-master-recut.py
             continue
         im = fit(make(), scale=scale() if scale else None)
         if '__' in name and scale:  # 表情の絵(1枚ずつの元絵・2×2のシート)だけ

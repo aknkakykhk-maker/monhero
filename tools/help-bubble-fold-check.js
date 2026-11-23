@@ -37,7 +37,9 @@ const seed = () => {
   page.on('pageerror', (e) => fatal.push(e.message));
   const click = (re) => page.evaluate((src) => {
     const r = new RegExp(src);
-    const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent !== null && r.test((x.getAttribute('aria-label') || x.innerText || '').replace(/\s+/g, ' ').trim()));
+    // ヘルプの中のボタンを先に探す(2026-11-23 r1119-135: 後ろの画面の吹き出しにも同じ名前の「💬▲▼」が付いたため)
+    const hit = (list) => list.find((x) => x.offsetParent !== null && r.test((x.getAttribute('aria-label') || x.innerText || '').replace(/\s+/g, ' ').trim()));
+    const b = hit([...document.querySelectorAll('[data-mh-help] button')]) || hit([...document.querySelectorAll('button')]);
     if (b) { b.scrollIntoView({ block: 'center' }); b.click(); return true; }
     return false;
   }, re.source);

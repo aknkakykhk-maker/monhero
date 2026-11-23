@@ -3163,7 +3163,7 @@ function MonsterHeroGame() {
   // 更新履歴で詳細を開いている項目のID(1つだけ)。一覧は見出しだけを並べ、押した項目だけ本文を出す
   // (2026-09-05・ユーザー指示「更新情報の内容が細かすぎる。簡潔に表示して、タップすると詳細が見れるように」)
   const [changelogOpenId, setChangelogOpenId] = useState(null);
-  const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
+  const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'event'=イベント(r1119-113) / 'issue'=不具合情報
   const [changelogSeen, setChangelogSeen] = useState({ update: [], issue: [] }); // タブごとの既読ID一覧(端末に保存)
   const displayedChangelogTabRef = useRef(null); // 表示中のタブは、そこから離れるまで未読のまま保つ
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
@@ -3452,15 +3452,39 @@ function MonsterHeroGame() {
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
   // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
-  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+  // 「イベント」タブ(2026-11-23 r1119-113)。開催中・開催予定の札はこのタブにだけ出す。
+  //   印(!)は、まだ見ていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
+  //   札になっている項目は、更新情報タブを見ただけでは既読にしない(イベントタブを開くまで印を残す)。
+  //   開催中かは時刻で変わるので、窓を開くたびに数え直す(showChangelog を依存に入れている)
+  const { changelogUnreadIds, changelogUnread, changelogPinnedIds } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
-    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
-  }, [changelogSeen]);
-  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
+    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const pinnedSet = new Set(pinnedIds);
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
+    unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
+    const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet };
+  }, [changelogSeen, showChangelog]);
+  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
   const markChangelogTabSeen = (type) => {
-    const ids = CHANGELOG_IDS_BY_TYPE[type];
+    if (type === 'event') {
+      // 札の項目を、その項目が属するタブの既読へ足す(更新情報の項目なら mh_changelog_seen_ids_update)
+      if (!changelogUnreadIds.event.length) return;
+      const byTab = {};
+      CHANGELOG_ENTRIES.forEach(entry => {
+        if (!changelogUnreadIds.event.includes(entry.id)) return;
+        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+        (byTab[tab] = byTab[tab] || []).push(entry.id);
+      });
+      const next = {};
+      Object.keys(byTab).forEach(tab => {
+        next[tab] = Array.from(new Set([...(changelogSeen[tab]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
+        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
+      });
+      setChangelogSeen(prev => ({ ...prev, ...next }));
+      return;
+    }
+    const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
     if (!ids.length || !changelogUnreadIds[type].length) return;
     // いま出ているIDで上書きすると、振り分けが変わって別のタブへ移ったIDが消え、
     // 移った先で未読へ戻る。すでに残っているIDへ足す形にする
@@ -19799,7 +19823,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見た目は .mh-title-dialog--changelog(70-bootstrap.jsx)。見出しの帯・タブ・一覧(ここだけ送る)・閉じるの4段で、閉じるはいつも同じ所。
           横・小さい横は、左の列に見出し・タブ・閉じる、右の列に一覧。お知らせの中身と既読の印は変えていない */}
       <div className="mh-title-dialog mh-title-dialog--changelog" role="dialog" aria-modal="true" aria-label="更新履歴"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
-        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
+        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
@@ -19810,13 +19834,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = changelogRowsOfTab(changelogTab);
-            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
+            // 「イベント」タブ(r1119-113)は札だけを並べる。更新情報・不具合情報は一番上から日付ごとの項目
+            const rows = changelogTab==='event' ? [] : changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]||[]);
             let shownDay = null;
             // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
             // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
-            const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
+            // 2026-11-23 r1119-113 社長「更新内容が見づらい」→ 札は「イベント」タブへ移した(開催中が上・開催予定が下。changelogPinnedEntries)
+            const pinnedEvents = changelogTab==='event' ? changelogPinnedEntries() : [];
+            if (changelogTab==='event' && pinnedEvents.length===0) return <p className="mh-changelog-empty" data-changelog-event-empty>いま開催中・開催予定のイベントはありません。</p>;
             return [...pinnedEvents.map(c=>(
               <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
                 style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
@@ -25965,8 +25992,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20) */}
-            <button type="button" onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label={helpAssistantOpen?'ひとことをたたむ':'ひとことを開く'} data-help-bubble-toggle className="shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95">{helpAssistantOpen?'たたむ ▲':'💬 ひとこと'}</button>
+            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20)。2026-11-23 から全画面と同じ「💬▲▼」の形(r1119-135) */}
+            <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
