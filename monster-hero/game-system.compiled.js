@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73ab8dbcf78c1b15
+// source-sha256: 36157e2dc3d18851
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -257875,8 +257875,9 @@ function MonsterHeroGame() {
         size: 16,
         className: "shrink-0 text-violet-300/80"
       })), React.createElement("small", {
-        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60"
-      }, desc));
+        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60",
+        style: JA_LABEL_STYLE
+      }, typeof desc === 'string' ? jaWrap(desc) : desc));
       return React.createElement("div", {
         "data-mh-screen": true,
         className: SCREEN_SHELL_CLASS
@@ -257891,7 +257892,7 @@ function MonsterHeroGame() {
         scene: "temple",
         compact: true
       })), React.createElement("div", {
-        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`
+        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`
       }, templeLink(React.createElement(PlusCircle, {
         size: 18
       }), '再生', 'ベースモンから新しいマスモンを再生する', () => {
@@ -257921,7 +257922,11 @@ function MonsterHeroGame() {
         setGameState('MASU_REBIRTH');
       }), templeLink(React.createElement(RotateCcw, {
         size: 18
-      }), '転生', 'Lvを99下げて強化Pを獲得し、育成を振り直す', () => {
+      }), '転生', jaWrapParts('Lvを99下げて', React.createElement("span", {
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, "強化Pを"), '獲得し、育成を振り直す'), () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
         setReincarnateTimes(1);
@@ -265813,9 +265818,16 @@ function MonsterHeroGame() {
         return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
       };
       const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      const sharedSeries = (() => {
+        if (!activeGroup) return '';
+        const ps = activeGroup.events.map(e => storyEpisodeTitleParts(e.title));
+        const s0 = ps[0] && ps[0].series;
+        return s0 && ps.every(p => p.serial && p.series === s0) ? s0 : '';
+      })();
+      const seriesInLabel = series => !!series && !!activeGroup && String(activeGroup.label || '').includes(series);
       const episodeTitle = t => {
         const p = storyEpisodeTitleParts(t);
-        return p.serial && p.series && activeGroup && String(activeGroup.label || '').includes(p.series) ? `${p.ep} ${p.sub}`.trim() : t;
+        return p.serial && p.series && activeGroup && (seriesInLabel(p.series) || p.series === sharedSeries) ? `${p.ep} ${p.sub}`.trim() : t;
       };
       const titleWrap = t => String(t || '').split(/(\s+)/).map((x, i) => !x || /^\s+$/.test(x) ? x : [...x].length <= 12 ? React.createElement("span", {
         key: i,
@@ -265916,7 +265928,11 @@ function MonsterHeroGame() {
         "aria-hidden": "true",
         "data-event-replay-head-emoji": true,
         className: "block text-[16px] leading-none mb-0.5"
-      }, activeGroup.emoji), jaWrap(activeGroup.label)), React.createElement("small", {
+      }, activeGroup.emoji), jaWrap(activeGroup.label)), sharedSeries && !seriesInLabel(sharedSeries) && React.createElement("small", {
+        "data-event-replay-series": true,
+        className: "block text-[10px] font-black leading-tight text-slate-300",
+        style: JA_LABEL_STYLE
+      }, titleWrap(sharedSeries)), React.createElement("small", {
         className: "block text-[10px] font-black tabular-nums",
         style: {
           color: activeGroup.color
