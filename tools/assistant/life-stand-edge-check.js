@@ -13,14 +13,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const IMG = path.join(ROOT, 'monster-hero', 'images', 'assistant');
 const LIM = 32; // これより濃い画素が端にあれば「触れている」
 const REST = {
-  // 全身画そのものが右の端で切れている(作り直しても直らない・全身画の作り直し待ち)
-  'stand-normal/kyuko_angry.png': 1, 'stand-normal/kyuko_normal.png': 1,
-  // 表情の並んだ絵(シート)から作った物で、全身画とは絵が違う(life-expression-sheets.py)
-  'stand-normal/myua_angry.png': 1, 'stand-normal/myua_crying.png': 1,
-  // (stand-card-master は 2026-11-23 r1119-137 で新しい全身画から作り直したので外した)
-  // 全身画から作り直せるが、表情ごとに姿勢が違い、場面で顔がずれる表情が出る(2026-11-23 窓口に相談中)
-  'stand-hosei/sorashido_angry.png': 1, 'stand-hosei/sorashido_crying.png': 1, 'stand-hosei/sorashido_excited.png': 1, 'stand-hosei/sorashido_happy.png': 1,
-  'stand-hosei/sorashido_normal.png': 1, 'stand-hosei/sorashido_surprise.png': 1, 'stand-hosei/sorashido_troubled.png': 1, 'stand-hosei/sorashido_wink.png': 1,
+  // 2026-11-23 r1119-153 で全身画がある組を全部、最新の全身画から切り直し、切れの残りは無くなった
 };
 
 function standDirs() {

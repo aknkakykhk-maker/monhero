@@ -56,7 +56,9 @@ check('表情ごとの画像ファイルが実在する', EXPECTED_EXPRESSIONS.e
 }));
 check('吹き出しには軽い顔アイコンを使う(元絵は重いため)', (() => {
   // 元絵(助手の登録の imageDir の絵)の重さで比べる。立ち絵を軽い切り出しへ差し替えた助手(みゅあ・2026-11-11)も、元絵は残してある
-  const full = fs.statSync(path.join(root, 'monster-hero', `${mua.imageDir}/${mua.imagePrefix}_normal.PNG`)).size;
+  //   2026-11-23 r1119-153: 顔アイコンも立ち絵も最新の全身画から切り(色を減らさない)、大きい絵は立ち絵(assistantFullImage)になったので、重いほうの元絵と比べる
+  const full = Math.max(fs.statSync(path.join(root, 'monster-hero', `${mua.imageDir}/${mua.imagePrefix}_normal.PNG`)).size,
+    fs.statSync(path.join(root, 'monster-hero', a.assistantFullImage(mua, 'normal'))).size);
   const face = fs.statSync(path.join(root, 'monster-hero', a.assistantFaceImage(mua, 'normal'))).size;
   return face * 4 < full;
 })(), `顔 ${Math.round(fs.statSync(path.join(root, 'monster-hero', a.assistantFaceImage(mua, 'normal'))).size/1024)}KB`);

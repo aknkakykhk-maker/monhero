@@ -21,9 +21,7 @@ const FB = path.join(IMG, 'fullbody');
 const MADE = path.join(__dirname, 'life-stand-made.json');
 const EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];
 const REST = {
-  mua: '表情の並んだ絵から作った立ち絵(life-expression-sheets.py)',
-  'mua:halloween': '表情の並んだ絵から作った立ち絵(life-expression-sheets.py)',
-  'sorashido:hosei': '作り直すと顔がずれる表情があり、窓口に相談中(life-stand-from-fullbody.py の hold)',
+  // 2026-11-23 r1119-153 で全身画がある組は全部、全身画から切るようにした(みゅあ ふだん・ハロウィン、ソラシド 補正も)
 };
 
 const hash = (files) => {
