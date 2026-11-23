@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4975c4cf7371295
+// source-sha256: 22ec371d2bfb8e4f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120926,11 +120926,11 @@ function AssistantLifeRoomSheet({
   }));
 }
 const ASSISTANT_LIFE_STAND_BOX = new Map();
-const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master']);
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin', 'stand-normal/kiki', 'stand-halloween/kiki']);
 const assistantLifeStandFrameSrc = src => {
   const s = String(src || '');
   const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
-  if (!m || !ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || m[3] === 'normal') return src;
+  if (!m || m[3] === 'normal' || !(ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || ASSISTANT_LIFE_STAND_SAME_FRAME.includes(`${m[1]}/${m[2]}`))) return src;
   return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
 };
 const assistantLifeStandBox = src => new Promise(res => {
@@ -121119,10 +121119,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       above: 0.7
     },
     kiki: {
-      top: 0.0835,
-      eye: 0.3343,
+      top: 0.0877,
+      eye: 0.3355,
       chin: 0.4298,
-      m: 0.711
+      m: 0.702
     },
     atsu: {
       top: 0.0727,
@@ -121143,18 +121143,18 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 1.169
     },
     erubin: {
-      top: 0.0042,
-      eye: 0.25,
-      chin: 0.4292,
-      m: 1.333
+      top: 0.0109,
+      eye: 0.2535,
+      chin: 0.4303,
+      m: 1.316
     }
   },
   'stand-sekiyuou': {
     erubin: {
-      top: 0.0042,
-      eye: 0.2489,
-      chin: 0.4293,
-      m: 1.343
+      top: 0.0137,
+      eye: 0.2531,
+      chin: 0.4299,
+      m: 1.315
     }
   },
   'stand-hosei': {
@@ -121181,10 +121181,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       above: 0.95
     },
     kiki: {
-      top: 0.1499,
-      eye: 0.3353,
-      chin: 0.4304,
-      m: 0.708,
+      top: 0.149,
+      eye: 0.3347,
+      chin: 0.43,
+      m: 0.709,
       above: 0.95
     }
   },
