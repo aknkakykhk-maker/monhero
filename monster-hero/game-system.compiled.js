@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d5717b0538967775
+// source-sha256: 38d4783a64e88ee5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43898,7 +43898,7 @@ const rhythmSetText = (el, text) => {
   }
   el.textContent = value;
 };
-const RHYTHM_LISTEN_HIDE_CSS = '[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-ability-badge]{visibility:hidden!important}[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]){display:none!important}';
+const RHYTHM_LISTEN_HIDE_CSS = '[data-rhythm-pace],[data-rhythm-timing-meter],[data-rhythm-song-clock],[data-rhythm-hud-right],[data-rhythm-ability-badge]{visibility:hidden!important}[data-rhythm-hud-left]>:not([data-rhythm-hud-songline]){display:none!important}[data-rhythm-hud-right]{position:absolute!important;right:0}';
 const rhythmListenClock = ms => {
   const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
@@ -43916,6 +43916,40 @@ const rhythmListenHudWrite = on => {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_LISTEN_HUD_KEY, on ? '1' : '0');
   } catch {}
+};
+const RhythmListenSongTitle = ({
+  song,
+  difficulty,
+  isLandscape
+}) => {
+  const ref = React.useRef(null);
+  const text = `♪ ${rhythmSongFullName(song)}`;
+  const {
+    fit,
+    style
+  } = useRhythmFitText(ref, {
+    text,
+    maxPx: isLandscape ? 13 : 14,
+    minPx: 9,
+    lines: 2
+  });
+  return React.createElement("div", {
+    "data-rhythm-listen-songbox": true,
+    className: "flex min-w-0 flex-1 flex-col items-start gap-1"
+  }, React.createElement("div", {
+    ref: ref,
+    "data-rhythm-hud-song": true,
+    "data-rhythm-listen-title-fit": fit.clip ? 'clip' : `${fit.px}px/${fit.lines}`,
+    className: "block w-full min-w-0 font-black text-slate-100",
+    style: {
+      ...style,
+      lineHeight: '1.25',
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, text), !isLandscape && React.createElement("span", {
+    "data-rhythm-listen-badge": true,
+    className: "max-w-full truncate rounded-full border border-teal-700 bg-slate-900/85 px-2 py-0.5 text-[10px] font-black leading-tight text-teal-200"
+  }, "🎧 鑑賞中・", difficulty && difficulty.id));
 };
 const RhythmListenBar = ({
   runRef,
@@ -43968,7 +44002,8 @@ const RhythmListenBar = ({
       top: 'calc(var(--mh-safe-top,0px) + 8px)',
       right: 'calc(var(--mh-safe-right,0px) + 10px)'
     }
-  }, React.createElement("span", {
+  }, isLandscape && React.createElement("span", {
+    "data-rhythm-listen-badge": true,
     className: "max-w-[220px] truncate rounded-full border border-teal-700 bg-slate-900/85 px-2.5 py-1 text-[11px] font-black text-teal-200"
   }, "🎧 鑑賞中・", difficulty && difficulty.id), React.createElement("button", {
     type: "button",
@@ -49538,7 +49573,14 @@ const RhythmTapTest = ({
   }, React.createElement("div", {
     ref: hudLeftRef,
     "data-rhythm-hud-left": true,
-    className: "min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"
+    className: "min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]",
+    style: listenMode ? isLandscape ? {
+      maxWidth: '38cqw',
+      width: '38cqw'
+    } : {
+      maxWidth: 'calc(100cqw - 84px)',
+      width: 'calc(100cqw - 84px)'
+    } : undefined
   }, React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
   }, React.createElement(RhythmHudScore, {
@@ -49571,7 +49613,11 @@ const RhythmTapTest = ({
     style: {
       boxShadow: '0 1px 6px rgba(2,6,23,.8)'
     }
-  }), React.createElement("div", {
+  }), listenMode ? React.createElement(RhythmListenSongTitle, {
+    song: song,
+    difficulty: difficulty,
+    isLandscape: isLandscape
+  }) : React.createElement("div", {
     "data-rhythm-hud-song": true,
     className: "min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none",
     style: {

@@ -338,12 +338,34 @@ def run(key, cfg, marks, opts):
         print('   確かめ絵: %s' % marks_image(key, base, mk, frame))
     if cfg.get('face'):
         fc = cfg['face']
-        side = int(round(f * fc['side']))
-        cy = mk['eye'] + 0.35 * f  # 目と鼻のあいだ
-        fx0, fy0 = int(round(cx - side / 2.0)), int(round(cy - side * (0.5 + fc['down'])))
+        if fc.get('head'):
+            # 頭で決める(2026-11-23 r1119-153): 一辺 = 頭のてっぺんから顎までの head 倍。上は てっぺんより up だけ上。
+            #   横は、目の高さで いちばん長くつながった不透明な所(頭)の真ん中(目の大きい絵柄・上げた腕・羽に引かれない)
+            hh = mk['chin'] - mk['top']
+            side = int(round(hh * fc['head']))
+            row = base[int(round(mk['eye'])), :, 3] > ALPHA
+            best, run0 = (0, 0, 0), None
+            for x in range(len(row) + 1):
+                on = x < len(row) and row[x]
+                if on and run0 is None:
+                    run0 = x
+                if not on and run0 is not None:
+                    if x - run0 > best[0]:
+                        best = (x - run0, run0, x)
+                    run0 = None
+            hx = (best[1] + best[2]) / 2.0 if best[0] else cx
+            fx0, fy0 = int(round(hx - side / 2.0)), int(round(mk['top'] - hh * fc.get('up', 0.12)))
+        else:
+            side = int(round(f * fc['side']))
+            cy = mk['eye'] + 0.35 * f  # 目と鼻のあいだ
+            fx0, fy0 = int(round(cx - side / 2.0)), int(round(cy - side * (0.5 + fc['down'])))
         ft = 0
         for e, a, d in zip(EXPR, ims, ds):
-            ft += save_png(place(a, (fx0, fy0, fx0 + side, fy0 + side), d), os.path.join(ROOT, 'monster-hero/images/assistant/face', '%s_%s.PNG' % (cfg['prefix'], e)))
+            fim = place(a, (fx0, fy0, fx0 + side, fy0 + side), d)
+            if fc.get('px') and side > fc['px']:
+                # 吹き出しの顔は 48〜72px で出る。重くしないよう px へ縮める(引き伸ばしはしない・r1119-153 社長「場面の大きさに合う解像度で」)
+                fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(side)))
+            ft += save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant/face', '%s_%s.PNG' % (cfg['prefix'], e)))
         print('   顔アイコン: 一辺 %d 計%dKB' % (side, ft))
 
 
