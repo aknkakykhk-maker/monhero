@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: de3926651f445ed0
+// source-sha256: 0952bde6e8ae388b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43776,6 +43776,20 @@ const rhythmListenClock = ms => {
   const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
+const RHYTHM_LISTEN_HUD_KEY = 'mh_rhythm_listen_hud_v1';
+const rhythmListenHudRead = settings => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_LISTEN_HUD_KEY) : null;
+    if (v === '1') return true;
+    if (v === '0') return false;
+  } catch {}
+  return !!settings && (settings.judgmentTextDisplay !== false || settings.comboDisplay !== false);
+};
+const rhythmListenHudWrite = on => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_LISTEN_HUD_KEY, on ? '1' : '0');
+  } catch {}
+};
 const RhythmListenBar = ({
   runRef,
   song,
@@ -43784,7 +43798,9 @@ const RhythmListenBar = ({
   onPause,
   onClose,
   isLandscape,
-  paused = false
+  paused = false,
+  hudOn = true,
+  onToggleHud = null
 }) => {
   const [now, setNow] = useState({
     ms: 0,
@@ -43806,6 +43822,18 @@ const RhythmListenBar = ({
   }, [runRef]);
   const pct = now.total > 0 ? Math.max(0, Math.min(100, now.ms / now.total * 100)) : 0;
   const btn = 'flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  const hudToggle = typeof onToggleHud === 'function' ? React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-hud": hudOn ? 'on' : 'off',
+    "aria-pressed": hudOn,
+    onClick: onToggleHud,
+    "aria-label": hudOn ? '判定の文字とコンボ数を隠す' : '判定の文字とコンボ数を出す',
+    className: `flex min-h-[44px] min-w-[60px] flex-col items-center justify-center rounded-xl border px-1.5 leading-none ${hudOn ? 'border-cyan-300 bg-cyan-900/80 text-cyan-50' : 'border-slate-600 bg-slate-800/90 text-slate-400'}`
+  }, React.createElement("small", {
+    className: "text-[9px] font-black"
+  }, "判定・コンボ"), React.createElement("b", {
+    className: "mt-1 text-[13px] font-black"
+  }, hudOn ? '入' : '切')) : null;
   return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), !paused && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-listen-top": true,
     className: "pointer-events-auto absolute z-[35] flex items-center gap-1.5",
@@ -43827,8 +43855,7 @@ const RhythmListenBar = ({
     className: "pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5",
     style: {
       right: 'calc(var(--mh-safe-right,0px) + 8px)',
-      top: '50%',
-      transform: 'translateY(-62%)'
+      top: 'calc(var(--mh-safe-top,0px) + 62px)'
     }
   }, React.createElement("span", {
     "data-rhythm-listen-time": true,
@@ -43863,7 +43890,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")) : React.createElement("div", {
+  }, "+10秒"), hudToggle) : React.createElement("div", {
     "data-rhythm-listen-bar": true,
     className: "pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2",
     style: {
@@ -43905,7 +43932,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")))));
+  }, "+10秒"), hudToggle))));
 };
 const RhythmLineAdjustPanel = ({
   adjust,
@@ -44093,10 +44120,26 @@ const RhythmTapTest = ({
   const previewHands = !!(lineAdjust && (lineAdjust.preview || lineAdjust.listen));
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
-  const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
-    ...settingsIn,
-    judgmentLineHeight: lineHeightOverride
-  }, [settingsIn, lineHeightOverride]);
+  const [listenHud, setListenHud] = useState(() => rhythmListenHudRead(settingsIn));
+  const toggleListenHud = useCallback(() => setListenHud(v => {
+    const next = !v;
+    rhythmListenHudWrite(next);
+    return next;
+  }), []);
+  const settingsBase = useMemo(() => {
+    const lined = lineHeightOverride === null || !settingsIn ? settingsIn : {
+      ...settingsIn,
+      judgmentLineHeight: lineHeightOverride
+    };
+    return listenMode && lined ? {
+      ...lined,
+      judgmentTextDisplay: listenHud,
+      comboDisplay: listenHud,
+      ...(listenHud ? {} : {
+        fastSlowDisplay: false
+      })
+    } : lined;
+  }, [settingsIn, lineHeightOverride, listenMode, listenHud]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
   useState(() => {
     try {
@@ -49204,7 +49247,9 @@ const RhythmTapTest = ({
     onPause: pause,
     onClose: onExit,
     isLandscape: isLandscape,
-    paused: view.status === 'paused'
+    paused: view.status === 'paused',
+    hudOn: listenHud,
+    onToggleHud: toggleListenHud
   }) : lineAdjust && React.createElement(RhythmLineAdjustPanel, {
     adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),

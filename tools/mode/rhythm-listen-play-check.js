@@ -15,6 +15,8 @@ const SONG = arg('song', 'monster_hero'), DIFF = arg('diff', 'EXPERT'), LIST = a
 const FROM = Number(arg('from', 0)), TO = Number(arg('to', 1e12));
 // --shot <ms> --out <png> … その時刻になった瞬間の画面を撮って終わる(止めると一時停止の窓が出るので止めない)(見た目を見比べるとき用)。--portrait で縦持ち(390×844)
 const SHOT = arg('shot') != null ? Number(arg('shot')) : null, OUT = arg('out'), PORTRAIT = argv.includes('--portrait');
+// --click-hud … 鑑賞が始まったら「判定・コンボ」入/切を1回押す(r1119-151 追記の確かめ用。押す前と後の状態を出す)
+const CLICK_HUD = argv.includes('--click-hud');
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
@@ -84,6 +86,13 @@ const seed = (songId) => `(() => {
   const info = await page.evaluate(() => { const n = window.__mhTestHooks.rhythmNotes() || []; return { types: n.map(x => x.type), count: n.length, last: n.reduce((m, x) => Math.max(m, Number(x.endTimeMs) || 0, Number(x.timeMs) || 0), 0) }; });
   const end = Math.min(info.last, TO);
   console.log(`鑑賞: ${SONG} ${DIFF} ノーツ ${info.count} / 最後 ${(info.last / 1000).toFixed(1)}秒`);
+  if (CLICK_HUD) {
+    await page.waitForSelector('[data-rhythm-listen-hud]', { timeout: 30000 });
+    const before = await page.evaluate(() => document.querySelector('[data-rhythm-listen-hud]').getAttribute('data-rhythm-listen-hud'));
+    await page.evaluate(() => document.querySelector('[data-rhythm-listen-hud]').click()); await page.waitForTimeout(300);
+    const after = await page.evaluate(() => ({ btn: document.querySelector('[data-rhythm-listen-hud]').getAttribute('data-rhythm-listen-hud'), saved: localStorage.getItem('mh_rhythm_listen_hud_v1'), opt: JSON.parse(localStorage.getItem('mh_rhythm_settings_v1') || '{}') }));
+    console.log(`  判定・コンボ: ${before} → ${after.btn}(覚えた値 ${after.saved}・オプションの判定文字表示 ${after.opt.judgmentTextDisplay}・コンボ数 ${after.opt.comboDisplay})`);
+  }
   // 曲が流れ始めるのを待ち、--from があればそこまで「+10秒」で跳ぶ
   await page.waitForFunction(() => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) > 0, null, { timeout: 30000, polling: 100 });
   while (FROM > 0) { const ms = await page.evaluate(() => window.__mhTestHooks.rhythmSongMs()); if (ms >= FROM - 10500) break;
