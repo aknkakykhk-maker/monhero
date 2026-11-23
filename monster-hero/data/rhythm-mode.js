@@ -3214,6 +3214,9 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // 開始のタップ音と同じ音だと「指を置いた音」と区別が付かず、取れたのか分からない
   // (実機で「取れた手ごたえがほしい」という報告があった)。音量・ON/OFF・全体ミュートはタップ音と同じ設定を読む
   const playClear=(judgment=null)=>{const settings=readSettings();return voice(settings,'end',judgment,settings.endVolume/100);};
+  // 必殺ノーツ(全部必殺技でつ HELL・r1119-141)を取ったとき。触れた瞬間のタップ音に、少し強いタップ音と「キン」を重ねる(社長「普段のタップ音より少し強調した音」)。
+  // 音の素材は足さない。タップ音のセット・タップ音量・ノーツの効果音OFF・全体ミュートに従う(voice の中で止まる)
+  const playAccent=(judgment=null)=>{const settings=readSettings();const a=voice(settings,'tap',judgment,1.35);voice(settings,'end',judgment,(Number(settings.endVolume)||0)/100*1.1);return a;};
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{if(typeof performance!=='undefined')lastNoteSeAt=performance.now();const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
@@ -3533,7 +3536,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playAccent,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -82727,7 +82730,8 @@ const rhythmBuildCanvasRenderer=()=>{
     // ききのチャージノーツ(全部必殺技でつ HELL の4か所・2026-11-23 r1119-141)。タップだけをききのピンクにする(スライド・フリックは今の色のまま)。
     // ★上フリックもピンク(#f472b6)なので、金の縁と頭の「ききのリボン」で見分ける(矢印の無いフリックに見えないように)。
     //   社長「もうちょいピンク色に」「ききのリボンがぴょこんとついたような」(2026-11-23)
-    CHARGE: {...headOf({hi:'#fff1f8',mid:'#fb6fb6',lo:'#e11d74',rgb:'251,111,182'}),ring:'#fde68a'},
+    //   社長「ききノーツが少し見づらい」(2026-11-23): 道の紫の上で埋もれないよう、明るいピンク・明るい金の縁・強めの光にした
+    CHARGE: {...headOf({hi:'#fff5fa',mid:'#ff8ccb',lo:'#ff3d9a',rgb:'255,110,185'}),ring:'#fff0a8',glow:[[16,'rgba(255,110,185,.9)'],[6,'rgba(255,240,248,.55)'],[12,'rgba(255,110,185,.6)']]},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
@@ -84876,7 +84880,7 @@ const rhythmBuildCanvasRenderer=()=>{
       // ききノーツ(r1119-141): 頭にききのリボンをぴょこんと付ける。必殺ノーツは上にピンクの剣を置き(リボンは右上へ)、叩いたら消える。顔と同じく最後にまとめて貼る
       if(note._mhCharge&&geo.head&&!o.failed&&o.pop===null&&rhythmNoteVisualType(note)==='TAP'){
         const fin=note._mhCharge===2,nh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale*(fin?1.9:1),nw=geo.head.w*sizeScale*(fin&&(Number(note.subLaneWidth)||2)<=4?2.6:1),a=Math.min(1,o.alpha);
-        const rb=kikiBitmap('ribbon');if(rb){const size=Math.max(14,nh*3.2);faces.push(rb,geo.head.cx+(fin?nw*.36:0),geo.head.cy-nh/2-size*.12,size,a);}
+        const rb=kikiBitmap('ribbon');if(rb){const size=Math.max(18,nh*4.2);faces.push(rb,geo.head.cx+(fin?nw*.36:0),geo.head.cy-nh/2-size*.12,size,a);}
         if(note._mhLabel){const sw=kikiBitmap('sword');if(sw){const size=Math.max(30,geo.head.w/Math.max(1,Number(note.subLaneWidth)||2)*2*sizeScale*1.75);/* 奥から来るノーツに大きくかぶらない大きさ */faces.push(sw,cssW/2,geo.head.cy-nh/2-size*.36,size,a);}}}
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){

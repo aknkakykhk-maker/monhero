@@ -1558,18 +1558,25 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 動かすのは玉(b)と駆け下りる光(em)の2つだけ・transform と opacity だけ。ノーツより下の層に置くので、ノーツを隠さない。軽量モードでも出す
   // 曲の鑑賞(listenMode)でも、ふつうに遊ぶ時と同じに出す(2026-11-23 社長「鑑賞でききの曲みたけど変わってないよ」)。練習・判定ラインの合わせ・オプションの見本では出さない
   const specialFx=(!tutorial||(listenMode&&!tutorialProp))&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
-  const chargeOrbRef=useRef(null),chargeBlastRef=useRef(null),chargeHitRef=useRef(null);
+  // 溜まる見た目は道の左右の端の光(社長「必殺ゲージ見にくい。レーン端をどんどん光らせて必殺で真ん中にくるかんじ」・前は道の奥の光の玉)
+  const chargeEdgeLRef=useRef(null),chargeEdgeRRef=useRef(null),chargeBlastRef=useRef(null),chargeHitRef=useRef(null);
+  const chargeEdgeClip=useMemo(()=>specialFx&&typeof rhythmSpanPolygon==='function'?{l:rhythmSpanPolygon(-.2,.16),r:rhythmSpanPolygon(RHYTHM_LANE_COUNT-.16,RHYTHM_LANE_COUNT+.2)}:null,[specialFx]);
   chargeHitRef.current=(note,judgment)=>{const run=runRef.current,c=run&&run.charge;if(!c)return;const z=note._mhZone,zone=c.zones[z];if(!zone)return;
     if(note._mhCharge===1){if(judgment!=='MISS')c.hits[z]=(c.hits[z]||0)+1;return;}
     if(c.fin[z])return;c.fin[z]=true;// 必殺ノーツが同時に2つある所(A)は、先に判定された方で1回だけ
     const blast=chargeBlastRef.current;if(!blast||typeof blast.animate!=='function')return;
+    // 両端に溜まった光を真ん中へ寄せる(横に縮めて、真ん中で消える)。取り逃したときは、その場で消えるだけ
+    for(const el of [chargeEdgeLRef.current,chargeEdgeRRef.current]){if(!el||typeof el.animate!=='function')continue;const o0=Number(el.style.opacity)||0;
+      el.animate(judgment==='MISS'?[{opacity:o0},{opacity:0}]:[{opacity:o0,transform:'scaleX(1)'},{offset:.75,opacity:1,transform:'scaleX(.06)'},{opacity:0,transform:'scaleX(.02)'}],{duration:judgment==='MISS'?260:200,easing:'ease-in'});}
     const r=Math.min(1,(c.hits[z]||0)/Math.max(1,zone.n)),s0=.3+.9*r,H=blast.parentElement?blast.parentElement.clientHeight:0;
     const dy=Math.max(0,(Number.isFinite(run._hitY)?run._hitY:H*.8)-H*.04),tf=(y,sx,sy)=>`translate(-50%,-50%) translateY(${y.toFixed(1)}px) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
     // 取り逃したら、その場で小さくしぼむ
-    if(judgment==='MISS'){blast.animate([{opacity:.9,transform:tf(0,s0,s0)},{opacity:0,transform:tf(0,.1,.1)}],{duration:320,easing:'ease-in'});return;}
+    if(judgment==='MISS')return;
     // 溜めた量で大きさが変わる。道を駆け下りる(約0.16秒)→ 判定ラインで横に弾けて消える(B の次のノーツが来る前に引く)
     const big=1.2+2.8*r;
-    blast.animate([{opacity:1,transform:tf(0,s0,s0)},{offset:.36,opacity:1,transform:tf(dy,s0*.8,s0*1.7)},{offset:.5,opacity:.95,transform:tf(dy,big*1.6,big*.5)},{opacity:0,transform:tf(dy,big*2.4,big*.7)}],{duration:440,easing:'linear'});
+    try{if(typeof RHYTHM_NOTE_SE_RUNTIME.playAccent==='function')RHYTHM_NOTE_SE_RUNTIME.playAccent(judgment);}catch{}
+    // 両端の光が真ん中へ寄りきったところ(0.15秒後)から、道の奥で弾けて判定まで駆け下りる
+    blast.animate([{opacity:1,transform:tf(0,s0,s0)},{offset:.36,opacity:1,transform:tf(dy,s0*.8,s0*1.7)},{offset:.5,opacity:.95,transform:tf(dy,big*1.6,big*.5)},{opacity:0,transform:tf(dy,big*2.4,big*.7)}],{duration:440,delay:150,easing:'linear',fill:'backwards'});
   };
   // 光の筋が流れる速さは、曲の2拍で1周(拍の表が無い曲は 900ms)
   const climaxCycleMs=(()=>{const grid=climaxFxOn?rhythmSongBeatGrid(song.songId):null;return grid?Math.round(Math.min(1400,Math.max(500,grid.beatMs*2))):900;})();
@@ -2566,10 +2573,10 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
 // 盛り上がりの光。いまが盛り上がる区間なら、その強さで点ける(重いときの自動調整で切られたら消す)
 {const climaxEl=climaxRef.current;if(climaxEl){const level=settingsLiveRef.current.climaxFx===true?rhythmSongClimaxAt(song.songId,visualTime):0;
   if(run._climaxLevel!==level){run._climaxLevel=level;climaxEl.setAttribute('data-on',level>0?'1':'0');climaxEl.style.opacity=level>0?String(level):'0';}}}
-// その譜面だけの演出(チャージの光の玉)。区間の中だけ出し、取った数で大きさを変える(変わったときだけ触る)
-{const orb=chargeOrbRef.current,c=run.charge;if(orb&&c){run._hitY=travel.hitY;let z=-1;for(let k=0;k<c.zones.length;k++){const q=c.zones[k];if(visualTime<q.from-400&&(c.fin[k]||c.hits[k])){c.fin[k]=false;c.hits[k]=0;}/* 鑑賞の「-10秒」で区間より前へ戻ったら、溜め直す */if(!c.fin[k]&&visualTime>=q.from-400&&visualTime<=q.finaleMs+250){z=k;break;}}
+// その譜面だけの演出(道の両端の光)。区間の中だけ出し、取った数でだんだん強く光らせる(変わったときだけ触る)
+{const el=chargeEdgeLRef.current,er=chargeEdgeRRef.current,c=run.charge;if(el&&er&&c){run._hitY=travel.hitY;let z=-1;for(let k=0;k<c.zones.length;k++){const q=c.zones[k];if(visualTime<q.from-400&&(c.fin[k]||c.hits[k])){c.fin[k]=false;c.hits[k]=0;}/* 鑑賞の「-10秒」で区間より前へ戻ったら、溜め直す */if(!c.fin[k]&&visualTime>=q.from-400&&visualTime<=q.finaleMs+250){z=k;break;}}
   const r=z>=0?Math.min(1,(c.hits[z]||0)/Math.max(1,c.zones[z].n)):0,key=z>=0?`${z}:${c.hits[z]||0}`:'off';
-  if(c.key!==key){c.key=key;orb.style.opacity=z>=0?(.5+.5*r).toFixed(3):'0';orb.style.transform=`translate(-50%,-50%) scale(${(z>=0?.3+.9*r:.2).toFixed(3)})`;}}}
+  if(c.key!==key){c.key=key;const op=z>=0?(.1+.9*r).toFixed(3):'0';el.style.opacity=op;er.style.opacity=op;}}}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -3670,7 +3677,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {RHYTHM_GRAND_STAGE_CONFETTI.map((c,k)=><i key={k} style={{left:`${c.x}%`,background:c.color,animationDuration:`${c.dur}s`,animationDelay:`${c.delay}s`,top:settings.effectAmount==='MINIMAL'||settings.lightweightMode?`${c.y}%`:undefined}}/>)}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{specialFx&&<i data-rhythm-charge-fx aria-hidden="true"><b ref={chargeOrbRef}/><em ref={chargeBlastRef}/></i>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{specialFx&&<i data-rhythm-charge-fx aria-hidden="true"><b ref={chargeEdgeLRef} data-edge="l" style={chargeEdgeClip?{clipPath:chargeEdgeClip.l}:undefined}/><b ref={chargeEdgeRRef} data-edge="r" style={chargeEdgeClip?{clipPath:chargeEdgeClip.r}:undefined}/><em ref={chargeBlastRef}/></i>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
