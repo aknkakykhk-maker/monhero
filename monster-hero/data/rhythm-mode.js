@@ -79516,6 +79516,8 @@ const RHYTHM_SONG_LYRIC_CARDS=Object.freeze({
   rebellion:Object.freeze(['images/song-lyrics/rebellion-1.jpg?v=91279274a51d']),
   stay_with_me:Object.freeze(['images/song-lyrics/stay_with_me-1.jpg?v=0a877cbeae9b']),
   battle_5:Object.freeze(['images/song-lyrics/battle_5-1.jpg?v=5cb3f982a55b']),
+  // 2026-11-23 ももすけ「きみ待ち♡ループ」(社長から 11-22 に届いていたのに登録が抜けていた・r1119-150)
+  kimimachi_loop:Object.freeze(['images/song-lyrics/kimimachi_loop-1.jpg?v=5f6b4846afa3']),
 });
 const rhythmSongLyricCards=song=>{
   const id=song&&typeof song.songId==='string'?song.songId.replace(/_hell_debug$/,'').replace(/_short$/,''):'';
