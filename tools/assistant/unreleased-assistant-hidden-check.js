@@ -114,6 +114,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.waitForTimeout(1500);
     found.push(...await leaks('プロフィール'));
     // 着替えの窓(助手のタブを全部押す)
+    // 2026-11-23 プロフィール案B: 名刺のページから扉「見た目」を押して進む
+    await page.evaluate(() => document.querySelector('[data-profile-door="looks"]')?.click());
+    await page.waitForTimeout(700);
     const costumeOpened = await page.evaluate(() => { const b = document.querySelector('[data-profile-tile="costume"]'); if (b) b.click(); return !!b; });
     await page.waitForTimeout(1000);
     if (costumeOpened) {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b334001db7f1cec9
+// generated-sha256: 69aa33e36ce8cffb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -561,23 +561,23 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
   // 花の女3人のイベント(2026-11-23〜11-30・台帳 r1119-101)。お話の本文は社長の OK のあと data/assistants.js へ group:'flower3' で入れる
-  { id:'flower3', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
-  { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
+  { id:'flower3', genre:'event', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
+  { id:'pandora_wings', genre:'event', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   // モンヒロサクセスのお話(2026-11-14 第1話・β版の前の予告から)
-  { id:'monsuc', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
+  { id:'monsuc', genre:'play', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
   // ききが初めて作った曲のお話(2026-11-15 社長 r1115-102。新曲 Sparkling Pink Overture と一緒に出る)
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076。新曲 Beyond the Same Sky と一緒に出る)
-  { id:'wof_song', emoji:'🌌', label:'あつとみゅあの歌', note:'W.o.F のころの思い出の歌のお話', color:'#a78bfa' },
+  { id:'wof_song', genre:'song', emoji:'🌌', label:'あつとみゅあの歌', note:'W.o.F のころの思い出の歌のお話', color:'#a78bfa' },
   // えるびんの歌のお話(2026-11-21 社長 r1119-079。新曲 Desert Crown と一緒に出る)
-  { id:'erubin_song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
-  { id:'kiki_song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
-  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
-  { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
-  { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
-  { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
-  { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
+  { id:'erubin_song', genre:'song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
+  { id:'kiki_song', genre:'song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
+  { id:'halloween', genre:'event', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
+  { id:'update', genre:'play', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
+  { id:'beat_point', genre:'event', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
+  { id:'symphony', genre:'event', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
+  { id:'cup', genre:'event', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
   // あつ・きゅうこの加入のお話も、ここへ並べる(2026-10-23 社長「あつときゅうこは助手のお話のほうがいいんじゃない？」。前は「新しい遊びのお話」)
-  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけ・あつ・きゅうことの出会い', color:'#f472b6' },
+  { id:'assistant', genre:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけ・あつ・きゅうことの出会い', color:'#f472b6' },
 ]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
@@ -591,6 +591,69 @@ const eventReplayGroups = (keep = eventReplayReleased) => {
   return EVENT_REPLAY_GROUPS
     .map(group => ({ ...group, events: asc.filter(event => groupOf(event) === group.id) }))
     .filter(group => group.events.length > 0);
+};
+// ── イベント回想のジャンル(2026-11-23 社長が案Bを選んだ・台帳 r1119-027) ──
+// 一覧の1ページ目はジャンルの扉4枚。まとまり(EVENT_REPLAY_GROUPS)の genre で分け、まとまりと違うジャンルへ入れる話だけ下の表で個別に決める。
+// 期間イベントはまとまり(シリーズ)の札、助手のお話は助手の顔、曲のお話はジャケット、遊びの案内は遊びごとの見出しで並べる。
+// 保存はしない(見たかどうかは今までの回想の印を読むだけ)。まとまりを足すときは genre を書く(無ければ期間イベント)
+const EVENT_REPLAY_GENRES = Object.freeze([
+  { id:'event', emoji:'📅', label:'期間イベント', note:'開催したイベントのお話', color:'#fb923c' },
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'出会いと季節の小話', color:'#f472b6' },
+  { id:'song', emoji:'🎵', label:'曲のお話', note:'新しい曲ができるまで', color:'#a78bfa' },
+  { id:'play', emoji:'🆕', label:'遊びの案内', note:'新しい遊びができた日', color:'#38bdf8' },
+]);
+const EVENT_REPLAY_GENRE_OF_EVENT = Object.freeze({
+  // 「新しい遊びのお話」に入っていた助手の小話
+  kyuko_winter_2026_11:'assistant', kiki_twintail_2026_11:'assistant',
+  // ビートPのまとまりのうち、交換所の案内は遊びの案内(もう1話のキャンペーンは期間イベント)
+  beat_point_always_2026_09_24:'play',
+});
+// 曲のお話: どの曲か(ジャケットは曲の絵をそのまま使う)と、歌った助手
+const EVENT_REPLAY_SONG_STORIES = Object.freeze({
+  sparkling_pink_kiki_story:{ songId:'sparkling_pink_overture', who:['kiki'] },
+  desert_crown_story:{ songId:'desert_crown', who:['erubin'] },
+  beyond_same_sky_story:{ songId:'beyond_the_same_sky', who:['atsu','mua'] },
+});
+// 遊びの案内の見出し(話の id の頭で決める。知らない物は「そのほか」)
+const EVENT_REPLAY_PLAY_AREAS = Object.freeze([
+  { id:'beat', test:/^(rhythm_|beat_point_)/, label:'🎵 モンヒロビート' },
+  { id:'tactics', test:/^tactics_/, label:'⚔️ タクティクスバトル' },
+  { id:'card', test:/^card_/, label:'🃏 MFバトルカード' },
+  { id:'monsuc', test:/^monsuc_/, label:'🌱 モンヒロサクセス' },
+  { id:'assistant', test:/^assistant_/, label:'🤝 助手と遊ぶ' },
+  { id:'other', test:/.*/, label:'✨ そのほか' },
+]);
+const eventReplayGenreOf = (event) => {
+  if (!event) return 'event';
+  if (EVENT_REPLAY_GENRE_OF_EVENT[event.id]) return EVENT_REPLAY_GENRE_OF_EVENT[event.id];
+  const group = EVENT_REPLAY_GROUPS.find(g => g.id === event.group) || EVENT_REPLAY_GROUPS.find(g => g.id === EVENT_REPLAY_GROUP_FALLBACK);
+  return (group && group.genre) || 'event';
+};
+const eventReplayPlayAreaOf = (event) => EVENT_REPLAY_PLAY_AREAS.find(a => a.test.test(String((event && event.id) || ''))) || EVENT_REPLAY_PLAY_AREAS[EVENT_REPLAY_PLAY_AREAS.length - 1];
+// 助手のお話・曲のお話に出す顔(話の id の頭の助手名・曲の表の助手)。分からなければ空
+const eventReplayWhoOf = (event) => {
+  const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
+  const ids = song ? song.who : [String((event && event.id) || '').split('_')[0]];
+  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id)) : [];
+  return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
+};
+// ジャンルごとのまとまりと話(どちらも古い順)。話の無いジャンルは出さない。
+// 期間イベントは「まとまりごと」に、それ以外は話を1列に並べる(まとまりの中の話がジャンルをまたぐときは、その話だけ別のジャンルへ)
+const eventReplayGenreList = (keep = eventReplayReleased) => {
+  const groups = eventReplayGroups(keep);
+  return EVENT_REPLAY_GENRES.map(genre => {
+    const events = [];
+    const series = [];
+    groups.forEach(group => {
+      const mine = group.events.filter(event => eventReplayGenreOf(event) === genre.id);
+      if (!mine.length) return;
+      events.push(...mine);
+      series.push({ ...group, events: mine });
+    });
+    const ms = (event) => eventReplayDateMs(event) || 0;
+    events.sort((a, b) => ms(a) - ms(b));
+    return { ...genre, series, events };
+  }).filter(genre => genre.events.length > 0);
 };
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
@@ -42721,7 +42784,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}@media (min-width:768px) and (min-height:601px){.mh-gfx-chips{right:max(10px,calc((100vw - 600px) / 2 + 10px))}.mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 600px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips{right:max(10px,calc((100vw - 1024px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 1024px) / 2 + 10px))}}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -44689,7 +44752,7 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:costumeItems.length?'円盤石・アシスト・アイテム・着替えが買える':'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
@@ -45109,6 +45172,83 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
     </ModalFrame>
   );
 };
+// ── プロフィール 案B(2026-11-23 社長「B．文字列注意ね」・台帳 r1119-028) ──
+// 上のページは「名刺・いちばんの記録・見せる欄・扉・持ちもの」。扉の先は記録・助手・見た目のページと、イベント回想(思い出)の窓。
+// 保存データ・ランキングには触らない(読むだけ)。開いているページは遊んでいるあいだだけ覚える(保存しない)
+const profilePageMemo = { page: 'top' };
+// 見出し「プロフィール」が幅320と横持ちで「プロフィー」と切れていた(戻るボタンと時計に挟まれる)。この画面だけ字を少し小さくする
+const PROFILE_HEAD_STYLE = Object.freeze({ fontSize: '16px', paddingRight: '2px' });
+const PROFILE_SUB_PAGES = Object.freeze({
+  records: { title: '記録', accent: 'text-amber-300' },
+  assistant: { title: '助手', accent: 'text-pink-300' },
+  looks: { title: '見た目', accent: 'text-indigo-300' },
+});
+// 名刺の称号。いまある称号は助手とのセッション Lv.100 の「セッションマスター」。持っていなければ何も出さない(読むだけ)
+function ProfileTitleChip() {
+  const state = typeof useRhythmAssistSessionState === 'function' ? useRhythmAssistSessionState() : null;
+  if (!state || typeof rhythmAssistSessionEnabled !== 'function' || !rhythmAssistSessionEnabled()) return null;
+  const list = typeof rhythmAssistSessionBadges === 'function' ? rhythmAssistSessionBadges(state) : [];
+  if (!Array.isArray(list) || !list.some((x) => x && x.master)) return null;
+  return (
+    <div data-profile-title className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2.5 py-1.5">
+      <span className="whitespace-nowrap text-[10px] font-black text-amber-300">🎖 称号</span>
+      <b className="min-w-0 text-[12px] font-black leading-tight text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('セッションマスター')}</b>
+    </div>
+  );
+}
+// いちばんの記録 3つ。チャレンジモードの最高スコア・モンヒロビートのフルコンボの譜面の数・いちばん仲良しの助手(どれも保存済みの値を読むだけ)
+function ProfileHighlights({ highScores, rhythmAchRows, assistantBonds, assistantChoices }) {
+  const best = highestModeScore(highScores || {}, Object.keys(DIFFICULTY_SETTINGS));
+  const fc = (Array.isArray(rhythmAchRows) ? rhythmAchRows : []).reduce((sum, row) => sum + (Number(row && row.fc) || 0), 0);
+  let top = null;
+  (Array.isArray(assistantChoices) ? assistantChoices : []).forEach((who) => {
+    const lv = assistantBondLevelOf(normalizeAssistantBond((assistantBonds || {})[who.id]).points);
+    if (!top || lv > top.lv) top = { who, lv };
+  });
+  const cell = (key, label, value, tone) => (
+    <div key={key} data-profile-highlight={key} className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center ${tone}`}>
+      <small className="block text-[10px] font-black leading-tight" style={JA_LABEL_STYLE}>{jaWrap(label)}</small>
+      <b className="block max-w-full text-[13px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{value}</b>
+    </div>
+  );
+  return (
+    <div className="mb-3 grid grid-cols-3 gap-2" data-profile-highlights>
+      {cell('challenge', 'チャレンジ最高', best > 0 ? <span className="font-mono">{best.toLocaleString()}</span> : '記録なし', 'border-amber-400/40 bg-amber-950/40 text-amber-300')}
+      {cell('beat', 'フルコンボ', fc > 0 ? `${fc}譜面` : '記録なし', 'border-violet-400/40 bg-violet-950/40 text-violet-300')}
+      {cell('bond', '一番の仲良し', top ? <><span className="inline-block">{top.who.name}</span> <span className="inline-block whitespace-nowrap">Lv.{top.lv}</span></> : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300')}
+    </div>
+  );
+}
+// 扉(案B)。記録・助手・見た目はプロフィールの中のページ、思い出はイベント回想の窓、フレンド・アイテムは今までの画面を開く
+function ProfileDoors({ setPage, friendsEnabled, friendRequestCount, onOpenFriends, onOpenItems, ownedItems, onOpenEventReplayList, isEventReplayUnlocked }) {
+  const replays = typeof eventReplayList === 'function' ? eventReplayList() : [];
+  const seen = replays.filter(isEventReplayUnlocked).length;
+  const requests = Number(friendRequestCount) || 0;
+  const items = Object.values(ownedItems || {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const doors = [
+    { id: 'records', emoji: '🏆', label: '記録', note: '遊びごとの記録', color: '#fbbf24', onClick: () => setPage('records') },
+    { id: 'assistant', emoji: '💬', label: '助手', note: '仲良し度・関係図', color: '#f472b6', onClick: () => setPage('assistant') },
+    replays.length > 0 && { id: 'memories', emoji: '📖', label: '思い出', note: `イベント回想 ${seen}/${replays.length}`, color: '#e879f9', onClick: onOpenEventReplayList },
+    { id: 'looks', emoji: '🎨', label: '見た目', note: 'アイコン・フレーム・着替え', color: '#818cf8', onClick: () => setPage('looks') },
+    friendsEnabled && { id: 'friends', emoji: '👥', label: 'フレンド', note: requests > 0 ? `申請が${requests}件` : '申請・一覧', color: '#f9a8d4', onClick: onOpenFriends, badge: requests },
+    { id: 'items', emoji: '📦', label: 'アイテム', note: `${items}個`, color: '#2dd4bf', onClick: onOpenItems },
+  ].filter(Boolean);
+  return (
+    <div className="mb-3 grid grid-cols-3 gap-2" data-profile-doors>
+      {doors.map((d) => (
+        <button key={d.id} type="button" data-profile-door={d.id} onClick={d.onClick}
+          {...(d.id === 'friends' ? { 'data-profile-friends': true, 'data-friend-requests': requests } : {})}
+          className="relative flex min-h-[76px] min-w-0 flex-col items-start justify-between gap-1 rounded-2xl border-[1.5px] px-2 py-2 text-left active:scale-[.97]"
+          style={{ borderColor: `${d.color}88`, backgroundColor: `${d.color}1a` }}>
+          <b className="flex items-center gap-1 text-[14px] font-black leading-tight text-white max-[359px]:text-[13px]"><span aria-hidden="true">{d.emoji}</span><span className="whitespace-nowrap">{d.label}</span></b>
+          <small {...(d.id === 'friends' ? { 'data-profile-friends-note': true } : {})} className={`block w-full text-[10px] font-bold leading-tight ${d.badge ? 'text-rose-200' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{jaWrap(d.note)}</small>
+          {d.badge > 0 && <span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99, d.badge)}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ProfileScreen({
   onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
@@ -45142,6 +45282,12 @@ function ProfileScreen({
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
   // 仲良し度のごほうび一覧を開いているか(画面の中だけの状態。保存しない)
   const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
+  // 案B(2026-11-23 社長): 上のページ(名刺と扉)と、扉の先の「記録・助手・見た目」のページ。画面の中だけの状態で保存しない。
+  // 詳しい記録や図鑑などの別の画面から戻ったときに同じページへ戻れるよう、遊んでいるあいだだけ覚えておく(HOME へ戻ると上のページ)
+  const [page, setPageRaw] = React.useState(() => (!onboarded || onboardingPreview) ? 'top' : (profileBattleMode ? 'records' : profilePageMemo.page));
+  const listRef = React.useRef(null);
+  const setPage = (next) => { profilePageMemo.page = next; setPageRaw(next); if (listRef.current) listRef.current.scrollTop = 0; };
+  const subPage = PROFILE_SUB_PAGES[page] || null;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -45160,10 +45306,10 @@ function ProfileScreen({
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS} style={onboardingPreview?{paddingTop:'3.25rem'}:undefined}>
         {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
-        <ScreenHead title="プロフィール" accent="text-indigo-400" right={typeof TimeOfDayClock==='function'?<TimeOfDayClock/>:null}
-          onBack={(onboarded&&!onboardingPreview)?onBack:null} backLabel="ホームへ戻る"/>
+        <ScreenHead title={subPage?subPage.title:'プロフィール'} accent={subPage?subPage.accent:'text-indigo-400'} accentStyle={PROFILE_HEAD_STYLE} right={typeof TimeOfDayClock==='function'?<TimeOfDayClock/>:null}
+          onBack={(onboarded&&!onboardingPreview)?(subPage?()=>setPage('top'):()=>{ profilePageMemo.page='top'; onBack(); }):null} backLabel={subPage?'プロフィールへ戻る':'ホームへ戻る'}/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="profile" compact/></div>
-        <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+        <div ref={listRef} data-profile-page={page} className={`${SCREEN_LIST_CLASS} pb-4`}>
         {/* はじめての設定。ここで名前とアイコンを決めてもらい、そのまま村の案内へ続ける。
             進み具合(どちらが決まっているか)に応じて、みゅあが次にやることを教える */}
         {(!onboarded||onboardingPreview)&&(()=>{
@@ -45184,6 +45330,7 @@ function ProfileScreen({
             <div className="text-[10px] text-slate-400 text-center mt-1.5">名前もアイコンも、あとからこの画面でいつでも変えられます</div>
           </div>);
         })()}
+        {page==='top'&&<div data-profile-top><div className="min-w-0">
         {/* ① 名刺: アイコン・名前・Lv・XP を横に並べて、画面の高さを食わないようにする。
             アイコンを押すと選択画面、名前を押すと書き換え。フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
         <div className={`${SCREEN_PANEL_CLASS} mb-3`} data-profile-card>
@@ -45195,7 +45342,7 @@ function ProfileScreen({
             </button>
             <div className="min-w-0 flex-1">
               <button onClick={()=>onOpenNameEdit(breederName)} className="flex min-h-[40px] max-w-full items-center gap-1.5 active:scale-95">
-                <span className="truncate text-lg font-black text-white">{breederName}</span><Edit3 size={13} className="shrink-0 text-slate-400"/>
+                <span data-profile-name className="min-w-0 break-words text-left text-lg font-black leading-tight text-white max-[359px]:text-base" style={JA_LABEL_STYLE}>{jaWrap(breederName)}</span><Edit3 size={13} className="shrink-0 text-slate-400"/>
               </button>
               <div className="flex items-center gap-1.5"><Crown size={14} className="text-amber-300"/><span className="text-base font-black text-indigo-200">LV.{breederLevel.level}</span></div>
               <div className="mt-1.5">
@@ -45204,8 +45351,65 @@ function ProfileScreen({
               </div>
             </div>
           </div>
+          <ProfileTitleChip/>
+          {onboarded&&!onboardingPreview&&friendsEnabled&&(
+            <div className="mt-2">
+            <button type="button" data-profile-message onClick={onOpenMessageEditor} className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
+              <span className="text-lg" aria-hidden="true">💬</span>
+              <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
+              <Edit3 size={13} className="shrink-0 text-slate-400"/>
+            </button>
+            </div>
+          )}
+        </div>
+        {/* いちばんの記録(案B)。保存済みの記録を読むだけ */}
+        {onboarded&&!onboardingPreview&&<ProfileHighlights highScores={highScores} rhythmAchRows={rhythmAchRows} assistantBonds={assistantBonds} assistantChoices={assistantChoices}/>}
+        </div>
+        <div className="min-w-0">
+        {/* ①-2 見せる札(2026-10-29 社長が案Bを選んだ)。フレンドにも同じ形で見える物を、名刺のすぐ下に並べる。
+            ひとことは名刺の下の1行、好きなモンスターとバトルカードのデッキは同じ形の札で横に2枚(デッキの札は 95 の CardShareDeckTile) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
+          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+          return (
+          <section className="mb-3" data-profile-showcase>
+            <div className="mb-1"><ScreenSectionLabel>見せる欄（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
+                <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
+                {face?<ProfileAvatar src={face.src} id={face.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
+                {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
+              </button>
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
+            </div>
+          </section>);
+        })()}
+        {onboarded&&!onboardingPreview&&<ProfileDoors setPage={setPage} friendsEnabled={friendsEnabled} friendRequestCount={friendRequestCount}
+          onOpenFriends={onOpenFriends} onOpenItems={onOpenItems} ownedItems={ownedItems} onOpenEventReplayList={onOpenEventReplayList} isEventReplayUnlocked={isEventReplayUnlocked}/>}
+        {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
+            (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
+        <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
+            <CompactCount value={gold} className="text-[13px] font-black text-amber-300 font-mono"/>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
+            <CompactCount value={breederPoints} className="text-[13px] font-black text-amber-200 font-mono"/>
+          </div>
+          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
+            {/* ほかの端末でも遊んでいれば、その合計を出す(2026-10-06。この端末のぶんだけだと、端末を替えたときに減って見えた) */}
+            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))}</span>
+          </div>
+        </div>
+        </div></div>}
+        {/* 見た目(案B の扉): 性別・アイコン・フレーム・図鑑・着替え */}
+        {page==='looks'&&(
+          <div className={`${SCREEN_PANEL_CLASS} mb-3`} data-profile-looks>
           {onSelectBreederGender&&!onboardingPreview&&(
-            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5" data-profile-gender>
+            <div className="mb-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5" data-profile-gender>
               <div className="flex items-center gap-2">
                 <small className="shrink-0 text-[11px] font-black leading-tight text-sky-300">性別</small>
                 <div className="grid flex-1 grid-cols-3 gap-1.5" role="radiogroup" aria-label="性別">
@@ -45252,49 +45456,9 @@ function ProfileScreen({
               )}
             </div>);
           })()}
-        </div>
-        {/* ①-2 見せる札(2026-10-29 社長が案Bを選んだ)。フレンドにも同じ形で見える物を、名刺のすぐ下に並べる。
-            ひとことは名刺の下の1行、好きなモンスターとバトルカードのデッキは同じ形の札で横に2枚(デッキの札は 95 の CardShareDeckTile) */}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
-          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-          return (
-          <section className="mb-3" data-profile-showcase>
-            <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
-              <span className="text-lg" aria-hidden="true">💬</span>
-              <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
-              <Edit3 size={13} className="shrink-0 text-slate-400"/>
-            </button>
-            <div className="mb-1"><ScreenSectionLabel>見せる欄（フレンドにもこう見えます）</ScreenSectionLabel></div>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
-                <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
-                {face?<ProfileAvatar src={face.src} id={face.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
-                <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
-                {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
-              </button>
-              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
-            </div>
-          </section>);
-        })()}
-        {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
-            (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
-        <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
-          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
-            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
-            <CompactCount value={gold} className="text-[13px] font-black text-amber-300 font-mono"/>
           </div>
-          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
-            <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
-            <CompactCount value={breederPoints} className="text-[13px] font-black text-amber-200 font-mono"/>
-          </div>
-          <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
-            <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
-            {/* ほかの端末でも遊んでいれば、その合計を出す(2026-10-06。この端末のぶんだけだと、端末を替えたときに減って見えた) */}
-            <span className="text-[13px] font-black text-white font-mono">{formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))}</span>
-          </div>
-        </div>
-        <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
+        )}
+        {page==='records'&&<details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間の詳しい記録</summary>
           <div className="mt-2 flex flex-col items-center gap-1">
             <div className="flex items-center gap-2 text-[11px] font-black text-indigo-300">
@@ -45310,28 +45474,10 @@ function ProfileScreen({
               <div data-profile-playtime-devices className="text-[10px] text-sky-300 font-bold">ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは {formatPlaytime(playtimeView.totalMs)}）</div>
             )}
           </div>
-        </details>
-        {/* ④ よく使う入口。フレンド(申請が届くと赤いバッジ)とアイテムを同じ大きさで並べる。フレンドは公開前は出さない */}
-        <div className={`mb-4 grid gap-2 ${(onboarded&&!onboardingPreview&&friendsEnabled)?'grid-cols-2':'grid-cols-1'}`} data-profile-links>
-          {onboarded&&!onboardingPreview&&friendsEnabled&&(
-            <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative flex min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
-              <Users size={18} className="text-pink-300 shrink-0"/>
-              <span className="flex-1 min-w-0 text-left">
-                <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-                <small data-profile-friends-note className={`block text-[10px] leading-tight [word-break:keep-all] [overflow-wrap:anywhere] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
-              </span>
-              {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
-            </button>
-          )}
-          <button onClick={onOpenItems} className="flex min-h-[64px] items-center gap-2 rounded-2xl border border-teal-500/40 bg-teal-950/40 px-3 py-2.5 active:scale-[.98]">
-            <Package size={18} className="shrink-0 text-teal-400"/>
-            <span className="flex-1 min-w-0 text-left"><b className="block text-[13px] font-black text-teal-200">アイテム</b><small className="block truncate text-[10px] text-teal-300">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</small></span>
-          </button>
-        </div>
-        {onboarded&&!onboardingPreview&&<div className="mb-2"><ScreenSectionLabel>助手</ScreenSectionLabel></div>}
+        </details>}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
-        {onboarded&&!onboardingPreview&&(()=>{
+        {page==='assistant'&&onboarded&&!onboardingPreview&&(()=>{
           const stage=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(assistantBondLevelNow,selectedAssistantId):null;
           const next=(typeof assistantBondNext==='function')?assistantBondNext(assistantBond.points):null;
           const from=stage?stage.need:0;
@@ -45342,16 +45488,16 @@ function ProfileScreen({
               <div className="flex items-center gap-2">
                 <AssistantFace who={activeAssistant} size={40} accent={accent} expression={assistantBondLevelNow>=4?'excited':assistantBondLevelNow>=2?'happy':'normal'}/>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-black tracking-widest" style={{color:accent}}>{activeAssistant.name}との仲良し度</div>
-                  <div className="text-[12px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
+                  <div className="text-[11px] font-black tracking-widest" style={{color:accent}}><span className="inline-block">{activeAssistant.name}との</span><span className="inline-block">仲良し度</span></div>
+                  <div className="flex flex-wrap gap-x-2 text-[12px] font-black text-white"><span className="whitespace-nowrap">Lv.{assistantBondLevelNow}</span>{stage&&stage.title?<span className="whitespace-nowrap">{stage.title}</span>:null}</div>
                 </div>
                 {/* 会話で呼び方を決めた人は、Lv6 より前でも押せる(元に戻すため・2026-11-08) */}{(assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)||!!talkedCallname)?(
-                  <button type="button" data-profile-call-style onClick={onOpenCallStylePicker} className="shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95">
+                  <button type="button" data-profile-call-style onClick={onOpenCallStylePicker} className="min-w-0 max-w-[45%] min-h-[44px] rounded-xl px-2 text-right active:scale-95">
                     <div className="text-[10px] text-slate-400 flex items-center justify-end gap-0.5">呼び方<Edit3 size={12}/></div>
-                    <div className="text-[12px] font-black" style={{color:accent}}>{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div>
+                    <div className="text-[12px] font-black leading-tight" style={{color:accent,...JA_LABEL_STYLE}}>{jaWrap(assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div>
                   </button>
                 ):(
-                  <div className="shrink-0 px-2 text-right"><div className="text-[10px] text-slate-400">呼び方</div><div className="text-[12px] font-black" style={{color:accent}}>{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+                  <div className="min-w-0 max-w-[45%] px-2 text-right"><div className="text-[10px] text-slate-400">呼び方</div><div className="text-[12px] font-black leading-tight" style={{color:accent,...JA_LABEL_STYLE}}>{jaWrap(assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
                 )}
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
@@ -45422,7 +45568,7 @@ function ProfileScreen({
           );
         })()}
         {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
-        {(()=>{
+        {page==='records'&&(()=>{
           const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
           // タクティクスバトルのモードは、遊べるようになったものから同じ並びへ加わる
           // (β版ではタクティクスプロだけ)。判定は battleModePlayable の1か所に任せる
@@ -45479,17 +45625,17 @@ function ProfileScreen({
         })()}
         {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
             フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
-        {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
+        {page==='records'&&onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
         {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
-        {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
+        {page==='records'&&onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
         {/* MFバトルカード 公式杯の記録(2026-10-31 社長・案B)。終わった大会が1つも無いあいだは出さない。押すと一覧、そこから大会の画面(戻るとプロフィール) */}
-        {onboarded&&!onboardingPreview&&typeof CardTourHistoryButton==='function'&&typeof onCardShareGo==='function'&&<CardTourHistoryButton onOpen={(tourId,tab)=>onCardShareGo({kind:'tour',tourId,tab})}/>}
+        {page==='records'&&onboarded&&!onboardingPreview&&typeof CardTourHistoryButton==='function'&&typeof onCardShareGo==='function'&&<CardTourHistoryButton onOpen={(tourId,tab)=>onCardShareGo({kind:'tour',tourId,tab})}/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
             ★見るだけ。報酬の受け取りには一切関わらない。
             ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
-        {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
+        {page==='records'&&onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
           <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
             <Trophy size={16} className="text-amber-300 shrink-0"/>
             <span className="flex-1 min-w-0 text-left">
@@ -45500,24 +45646,7 @@ function ProfileScreen({
           </button>
         )}
         {/* 助手とのセッション(2026-11-07 ビート部マモリ): セッションLv.50 の札・Lv.100 の称号「セッションマスター」。公開の印が偽・まだだれも Lv.50 でないあいだは出さない */}
-        {onboarded&&!onboardingPreview&&typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges/>}
-        {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
-            見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
-        {onboarded&&!onboardingPreview&&(()=>{
-          const list=eventReplayList();
-          if(list.length===0) return null;
-          const unlockedCount=list.filter(isEventReplayUnlocked).length;
-          return (
-            <button type="button" onClick={onOpenEventReplayList} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/40 px-3 py-2.5 active:scale-[.98]">
-              <Sparkles size={16} className="text-fuchsia-300 shrink-0"/>
-              <span className="flex-1 min-w-0 text-left">
-                <b className="block text-[13px] font-black text-fuchsia-100">イベント回想</b>
-                <small className="block text-[10px] text-fuchsia-300">見たことのある会話をもう一度見られます（{unlockedCount}/{list.length}）</small>
-              </span>
-              <ChevronRight size={16} className="shrink-0 text-fuchsia-400"/>
-            </button>
-          );
-        })()}
+        {page==='records'&&onboarded&&!onboardingPreview&&typeof RhythmAssistSessionProfileBadges==='function'&&<RhythmAssistSessionProfileBadges/>}
         </div>
       </div>
   );
@@ -128961,6 +129090,8 @@ function MonsterHeroGame() {
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   // イベント回想の2ページ目に開いているまとまりの id(null なら1ページ目=パネルの一覧)
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
+  // イベント回想のジャンル(2026-11-23 案B)。窓の中だけの状態で保存しない
+  const [eventReplayGenreId, setEventReplayGenreId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   // お話の締め(終わりの札)が出ていないときは、音を元に戻す(札のあいだだけ小さくする。閉じ方を問わず戻す)
   const eventReplayEnding = !!(eventReplay && eventReplay.ending);
@@ -148939,7 +149070,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenCallStylePicker={()=>{setTempCallStyle((assistantCallnames[selectedAssistantId]&&assistantCallnames[selectedAssistantId].call)||assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
-            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
+            onOpenEventReplayList={()=>{setEventReplayGroupId(null);setEventReplayGenreId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
@@ -150043,8 +150174,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             再生を終える・スキップすると、2ページ目(同じまとまり)へ戻る(fromList)。続けて次のお話を選べる */}
         {showEventReplayList&&(()=>{
           const groups=eventReplayGroups();
-          const activeGroup=groups.find(group=>group.id===eventReplayGroupId)||null;
-          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);};
+          // 1ページ目はジャンルの扉(案B)。期間イベントは2ページ目がシリーズの札、3ページ目がそのお話。ほかのジャンルは2ページ目がお話
+          const genres=eventReplayGenreList();
+          const activeGenre=genres.find(genre=>genre.id===eventReplayGenreId)||null;
+          // シリーズの中は、そのジャンルの話だけ(ビートPのまとまりの交換所の案内は遊びの案内へ分けたため)
+          const activeGroup=(activeGenre&&activeGenre.series.find(group=>group.id===eventReplayGroupId))||groups.find(group=>group.id===eventReplayGroupId)||null;
+          const closeList=()=>{setShowEventReplayList(false);setEventReplayGroupId(null);setEventReplayGenreId(null);};
           const rangeText=(group)=>{
             const first=eventReplayDateText(group.events[0]),last=eventReplayDateText(group.events[group.events.length-1]);
             return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
@@ -150059,16 +150194,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&(seriesInLabel(p.series)||p.series===sharedSeries)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-5 max-[359px]:p-3 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             {/* 横向き(背の低い画面)では窓が低く、話が3つしか見えなかった(2026-10-26 ダメダシの見回り)。窓を広げて余白を詰め、2列に並べる */}
-            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3">
-              {!activeGroup&&(
+            <div data-event-replay-page={activeGroup?'episodes':activeGenre?(activeGenre.id==='event'?'panels':'genre'):'genres'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 max-[359px]:p-3 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3">
+              {!activeGroup&&!activeGenre&&(
                 <>
-                  {/* 1ページ目: イベント単位のパネル */}
+                  {/* 1ページ目: ジャンルの扉4枚(2026-11-23 案B)。まとまりの札はジャンルの中へ */}
                   <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
-                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
-                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
-                    {groups.map(group=>{
+                  <p className="shrink-0 text-[10px] text-slate-400 text-center mb-3 leading-tight">見たいジャンルを選んでください</p>
+                  <div data-event-replay-genres className="min-h-0 flex-1 overflow-y-auto mh-scroll grid grid-cols-2 gap-2 content-start mb-3 [@media(max-height:500px)]:grid-cols-4">
+                    {genres.map(genre=>{
+                      const seen=genre.events.filter(isEventReplayUnlocked).length,total=genre.events.length;
+                      const faces=genre.id==='assistant'?[...new Map(genre.events.flatMap(eventReplayWhoOf).map(w=>[w.id,w])).values()].slice(0,6):[];
+                      const arts=genre.id==='song'?genre.events.map(event=>{const info=EVENT_REPLAY_SONG_STORIES[event.id];const song=info&&typeof RHYTHM_SONGS!=='undefined'?RHYTHM_SONGS.find(x=>x&&x.songId===info.songId):null;return song&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';}).filter(Boolean).slice(0,4):[];
+                      const marks=genre.id==='event'?genre.series.map(g=>g.emoji):genre.id==='play'?[...new Set(genre.events.map(e=>eventReplayPlayAreaOf(e).label.split(' ')[0]))]:[];
+                      return (
+                        <button key={genre.id} type="button" data-event-replay-genre={genre.id} onClick={()=>{setEventReplayGroupId(null);setEventReplayGenreId(genre.id);}}
+                          className="flex min-h-[118px] min-w-0 flex-col justify-between gap-1.5 rounded-2xl px-2.5 py-2.5 max-[359px]:px-2 text-left active:scale-[.97]"
+                          style={{border:`1.5px solid ${genre.color}88`,backgroundColor:`${genre.color}18`}}>
+                          <span className="block min-w-0">
+                            <b className="flex items-center gap-1 text-[14px] font-black leading-tight text-white max-[359px]:text-[13px]"><span aria-hidden="true">{genre.emoji}</span><span className="whitespace-nowrap">{genre.label}</span></b>
+                            <small className="mt-0.5 block text-[10px] font-bold leading-tight text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(genre.note)}</small>
+                          </span>
+                          {faces.length>0&&<span className="flex flex-wrap gap-0.5" aria-hidden="true">{faces.map(w=><AssistantFace key={w.id} who={w} size={24} accent={w.accent} expression="happy"/>)}</span>}
+                          {arts.length>0&&<span className="flex gap-1" aria-hidden="true">{arts.map(src=><img key={src} src={src} alt="" draggable={false} className="h-8 w-8 rounded-md object-cover"/>)}</span>}
+                          {marks.length>0&&<span className="block truncate text-[16px] leading-none" aria-hidden="true">{marks.slice(0,6).join(' ')}</span>}
+                          <span className="flex w-full items-center gap-1.5">
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><span className="block h-full rounded-full" style={{width:`${total?Math.round(seen/total*100):0}%`,backgroundColor:genre.color}}/></span>
+                            <small className="shrink-0 text-[10px] font-black tabular-nums" style={{color:genre.color}}>{seen}/{total}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                </>
+              )}
+              {!activeGroup&&activeGenre&&(
+                <>
+                  {/* 2ページ目: そのジャンルの中身。期間イベントはシリーズの札、ほかはお話(古い順) */}
+                  <div className="shrink-0 mb-3 flex items-center gap-2 [@media(max-height:500px)]:mb-1.5">
+                    <button type="button" data-event-replay-genre-back aria-label="ジャンルの一覧へ戻る" onClick={()=>setEventReplayGenreId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
+                    <span className="min-w-0 flex-1 text-center">
+                      <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" className="mr-1">{activeGenre.emoji}</span>{jaWrap(activeGenre.label)}</b>
+                      <small className="block text-[10px] font-black tabular-nums" style={{color:activeGenre.color}}>見たお話 {activeGenre.events.filter(isEventReplayUnlocked).length}/{activeGenre.events.length}</small>
+                    </span>
+                    <span className="w-[76px] shrink-0 max-[359px]:w-0" aria-hidden="true"/>
+                  </div>
+                  {activeGenre.id==='event'?(
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0">
+                    {activeGenre.series.map(group=>{
                       const seen=seenOf(group),total=group.events.length;
                       return (
                         <button key={group.id} type="button" data-event-replay-group={group.id} onClick={()=>setEventReplayGroupId(group.id)}
@@ -150089,6 +150264,42 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       );
                     })}
                   </div>
+                  ):(
+                  <div data-event-replay-genre-list={activeGenre.id} className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0">
+                    {activeGenre.events.map((event,index)=>{
+                      const area=activeGenre.id==='play'?eventReplayPlayAreaOf(event):null;
+                      const prevArea=activeGenre.id==='play'&&index>0?eventReplayPlayAreaOf(activeGenre.events[index-1]):null;
+                      const head=area&&(!prevArea||prevArea.id!==area.id)?<p key={`h-${event.id}`} data-event-replay-area={area.id} className="pt-1 text-[11px] font-black text-sky-200 [@media(max-height:500px)]:col-span-2">{area.label}</p>:null;
+                      const unlocked=isEventReplayUnlocked(event);
+                      const date=eventReplayDateText(event);
+                      const info=EVENT_REPLAY_SONG_STORIES[event.id];
+                      const song=activeGenre.id==='song'&&info&&typeof RHYTHM_SONGS!=='undefined'?RHYTHM_SONGS.find(x=>x&&x.songId===info.songId):null;
+                      const art=song&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+                      const who=activeGenre.id==='assistant'||activeGenre.id==='song'?eventReplayWhoOf(event):[];
+                      if(!unlocked) return <React.Fragment key={event.id}>{head}
+                        <div className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                          <span className="text-lg" aria-hidden="true">🔒</span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                            <small className="block text-[10px] text-slate-500">{date&&<span data-event-replay-date className="tabular-nums">{date}・</span>}まだ見ていません</small>
+                          </span>
+                        </div></React.Fragment>;
+                      return <React.Fragment key={event.id}>{head}
+                        <button type="button" data-event-replay-episode={event.id} onClick={()=>{setEventReplay({id:event.id,step:0,fromList:true});setShowEventReplayList(false);}}
+                          className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border"
+                          style={{borderColor:`${activeGenre.color}80`,backgroundColor:`${activeGenre.color}14`}}>
+                          {art?<img src={art} alt="" draggable={false} className="h-12 w-12 shrink-0 rounded-lg object-cover"/>
+                            :who.length>0?<span className="flex shrink-0 -space-x-2">{who.slice(0,2).map(w=><AssistantFace key={w.id} who={w} size={34} accent={w.accent} expression="happy"/>)}</span>
+                            :<Play size={16} className="shrink-0" style={{color:activeGenre.color}}/>}
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(event.title)}</b>
+                            {date&&<small data-event-replay-date className="block text-[10px] tabular-nums text-slate-400">{date}</small>}
+                          </span>
+                          {art&&who.length>0&&<span className="flex shrink-0 -space-x-2" aria-hidden="true">{who.slice(0,2).map(w=><AssistantFace key={w.id} who={w} size={26} accent={w.accent} expression="happy"/>)}</span>}
+                        </button></React.Fragment>;
+                    })}
+                  </div>
+                  )}
                   <button onClick={closeList} className="shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
                 </>
               )}
@@ -150096,13 +150307,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <>
                   {/* 2ページ目: そのまとまりのお話(お話の順) */}
                   <div className="shrink-0 mb-1 flex items-center gap-2">
-                    <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
+                    <button type="button" data-event-replay-back aria-label="シリーズの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
                       {sharedSeries&&!seriesInLabel(sharedSeries)&&<small data-event-replay-series className="block text-[10px] font-black leading-tight text-slate-300" style={JA_LABEL_STYLE}>{titleWrap(sharedSeries)}</small>}
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
-                    <span className="w-[76px] shrink-0" aria-hidden="true"/>
+                    <span className="w-[76px] shrink-0 max-[359px]:w-0" aria-hidden="true"/>
                   </div>
                   {/* 「お話の順に並んでいます。」と下の「イベントの一覧へ戻る」は外した(2026-11-22 点検 #7059: 9px で読めない・戻るが二重・r1119-080) */}
                   <div className="shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5" aria-hidden="true"/>
@@ -151903,12 +152114,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
-            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
+            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)',paddingLeft:'max(.75rem, calc((100% - 48rem) / 2))',paddingRight:'max(.75rem, calc((100% - 48rem) / 2))'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
               <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={null} maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
-          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
+          {/* PC など広い画面では札と吹き出しが横いっぱいに伸び、題名と「›」が離れていた(API 総点検③)。中身の幅を48remで止める */}
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000',paddingLeft:'max(1rem, calc((100% - 48rem) / 2))',paddingRight:'max(1rem, calc((100% - 48rem) / 2))'}}>
             {!cat&&(
               <div className="space-y-2.5">
                 {/* ヘルプを開いてすぐ目に入る場所に、バトルのれんしゅうへの導線を置く。
