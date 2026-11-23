@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73ab8dbcf78c1b15
+// source-sha256: 7da4fafe5e317f00
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44183,7 +44183,62 @@ const RhythmTapTest = ({
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
   const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
-  const specialFxRef = useRef(null);
+  const chargeOrbRef = useRef(null),
+    chargeBlastRef = useRef(null),
+    chargeHitRef = useRef(null);
+  chargeHitRef.current = (note, judgment) => {
+    const run = runRef.current,
+      c = run && run.charge;
+    if (!c) return;
+    const z = note._mhZone,
+      zone = c.zones[z];
+    if (!zone) return;
+    if (note._mhCharge === 1) {
+      if (judgment !== 'MISS') c.hits[z] = (c.hits[z] || 0) + 1;
+      return;
+    }
+    if (c.fin[z]) return;
+    c.fin[z] = true;
+    const blast = chargeBlastRef.current;
+    if (!blast || typeof blast.animate !== 'function') return;
+    const r = Math.min(1, (c.hits[z] || 0) / Math.max(1, zone.n)),
+      s0 = .3 + .9 * r,
+      H = blast.parentElement ? blast.parentElement.clientHeight : 0;
+    const dy = Math.max(0, (Number.isFinite(run._hitY) ? run._hitY : H * .8) - H * .04),
+      tf = (y, sx, sy) => `translate(-50%,-50%) translateY(${y.toFixed(1)}px) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
+    if (judgment === 'MISS') {
+      blast.animate([{
+        opacity: .9,
+        transform: tf(0, s0, s0)
+      }, {
+        opacity: 0,
+        transform: tf(0, .1, .1)
+      }], {
+        duration: 320,
+        easing: 'ease-in'
+      });
+      return;
+    }
+    const big = 1.2 + 2.8 * r;
+    blast.animate([{
+      opacity: 1,
+      transform: tf(0, s0, s0)
+    }, {
+      offset: .36,
+      opacity: 1,
+      transform: tf(dy, s0 * .8, s0 * 1.7)
+    }, {
+      offset: .5,
+      opacity: .95,
+      transform: tf(dy, big * 1.6, big * .5)
+    }, {
+      opacity: 0,
+      transform: tf(dy, big * 2.4, big * .7)
+    }], {
+      duration: 440,
+      easing: 'linear'
+    });
+  };
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45058,6 +45113,7 @@ const RhythmTapTest = ({
     rhythmFloatingNoteRemove(note);
     note.done = true;
     note._rhythmFinalJudgment = judgment;
+    if (note._mhCharge && chargeHitRef.current) chargeHitRef.current(note, judgment);
     note._rhythmDeltaMs = typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
     const preciseHit = rhythmJudgmentIsPrecise(judgment, deltaMs);
     if (calibrating && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
@@ -45911,12 +45967,24 @@ const RhythmTapTest = ({
         }
       }
       {
-        const fxEl = specialFxRef.current;
-        if (fxEl && specialFx) {
-          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
-          if (run._specialFxOn !== on) {
-            run._specialFxOn = on;
-            fxEl.setAttribute('data-on', on);
+        const orb = chargeOrbRef.current,
+          c = run.charge;
+        if (orb && c) {
+          run._hitY = travel.hitY;
+          let z = -1;
+          for (let k = 0; k < c.zones.length; k++) {
+            const q = c.zones[k];
+            if (!c.fin[k] && visualTime >= q.from - 400 && visualTime <= q.finaleMs + 250) {
+              z = k;
+              break;
+            }
+          }
+          const r = z >= 0 ? Math.min(1, (c.hits[z] || 0) / Math.max(1, c.zones[z].n)) : 0,
+            key = z >= 0 ? `${z}:${c.hits[z] || 0}` : 'off';
+          if (c.key !== key) {
+            c.key = key;
+            orb.style.opacity = z >= 0 ? (.5 + .5 * r).toFixed(3) : '0';
+            orb.style.transform = `translate(-50%,-50%) scale(${(z >= 0 ? .3 + .9 * r : .2).toFixed(3)})`;
           }
         }
       }
@@ -46661,6 +46729,12 @@ const RhythmTapTest = ({
       generation,
       startBest,
       startBestScore: startBest.bestScore
+    };
+    if (specialFx && typeof rhythmMarkChargeNotes === 'function') runRef.current.charge = {
+      zones: rhythmMarkChargeNotes(runRef.current.notes, specialFx),
+      hits: [],
+      fin: [],
+      key: ''
     };
     laneRefs.current.forEach(el => {
       if (el) {
@@ -48851,11 +48925,13 @@ const RhythmTapTest = ({
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
   })), specialFx && React.createElement("i", {
-    ref: specialFxRef,
-    "data-rhythm-special-fx": true,
-    "data-on": "0",
+    "data-rhythm-charge-fx": true,
     "aria-hidden": "true"
-  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
+  }, React.createElement("b", {
+    ref: chargeOrbRef
+  }), React.createElement("em", {
+    ref: chargeBlastRef
+  })), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",

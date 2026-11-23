@@ -60779,7 +60779,7 @@ const zenbuHissatsuwazaV4HellNotes=((t,h,f,s,T,F,S)=>[
   t(36299,1,2,0),t(36454,2,2,0),t(36609,3,2,0),t(36764,2,2,0),
   t(36919,1,2,0),t(37075,2,2,0),t(37230,3,2,0),t(37385,2,2,0),
   t(37540,1,2,0),t(37695,2,2,0),t(37850,3,2,0),t(38005,2,2,0),
-  t(38161,1,2,0),t(38471,1,3,0),t(38548,3,3,0),t(38781,2,2,0),
+  t(38161,5,2,0),t(38471,1,3,0),t(38548,3,3,0),t(38781,2,2,0),
   t(38859,5,3,0),t(38936,3,4,0),f(39091,1,3),h(39402,2,2,39867),
   t(40022,2,2,0),t(40100,4,2,0),t(40333,5,3,0),t(40410,7,3,0),
   t(40488,6,3,0),h(40643,5,3,41729),t(40953,1,3,0),f(41108,0,4,0),
@@ -60870,7 +60870,7 @@ const zenbuHissatsuwazaV4HellNotes=((t,h,f,s,T,F,S)=>[
   t(89358,0,2,0),t(89436,10,2,0),t(89514,0,2,0),t(89591,10,2,0),
   t(89669,0,2,0),t(89746,10,2,0),t(89824,0,2,0),t(89901,10,2,0),
   t(89979,0,2,0),t(90057,10,2,0),t(90134,0,2,0),t(90212,10,2,0),
-  t(90289,0,2,0),t(90367,10,2,0),t(90444,0,2,0),
+  t(90289,0,2,0),t(90367,10,2,0),t(90444,5,2,0),
   t(90600,8,2,0),S(90600,92927,[[90600,0,2,0,0],[91841,2,2,0,0],[92927,0,2,0,0]],0,'L'),t(90755,9,2,0),t(90910,10,2,4),
   t(91065,9,2,0),t(91220,8,2,0),t(91375,9,2,0),t(91530,10,2,0),
   t(91686,9,2,0),t(91841,8,2,0),t(91996,9,2,0),t(92151,10,2,0),
@@ -60878,7 +60878,7 @@ const zenbuHissatsuwazaV4HellNotes=((t,h,f,s,T,F,S)=>[
   t(93082,3,2,0),S(93082,95409,[[93082,5,2,0,0],[94323,3,2,0,0],[95409,5,2,0,0]],0,'R'),t(93237,2,2,0),t(93392,1,2,0),
   t(93547,2,2,0),t(93703,3,2,0),t(93858,2,2,0),t(94013,1,2,0),
   t(94168,2,2,0),t(94323,3,2,0),t(94478,2,2,0),t(94633,1,2,0),
-  t(94789,2,2,0),t(94944,3,2,0),t(95099,2,2,0),t(95254,1,2,0),
+  t(94789,2,2,0),t(94944,3,2,0),t(95099,2,2,0),t(95254,5,2,0),
   f(95564,1,4),t(95875,2,2,0),t(95875,6,2,0),t(96030,5,4,0),
   t(96185,7,3,0),t(96340,8,4,0),t(96340,3,3,0),h(96495,8,4,97736),
   t(96805,3,4,0),t(96961,4,3,0),t(97116,4,3,0),t(97271,3,4,0),
@@ -79844,9 +79844,23 @@ const rhythmRankingPeriodVersion=()=>1;
 // 自己ベストも別のキー(mh_rhythm_best_chart_reset_v1)へ分ける(13-bgm-and-rhythm-settings.jsx の RHYTHM_BEST_CHART_RESET_KEY)。
 // ★印は '2'(刻みの数え方の鍵 RHYTHM_RANKING_VERSION_TAG)と重ねない。古い版のアプリは今までの鍵で送るので、旧の記録の側に入る
 const RHYTHM_CHART_RESETS=Object.freeze({'zenbu_hissatsuwaza|HELL':'r2'});
-// その譜面だけの演出の区間(2026-11-23・台帳 r1119-136 案D・社長「ヘルスカイなしだからなにか特別な感じに」)。
-// 区間に入ると道の色が変わり、「必殺技！」の文字が一度だけ出る(見た目だけ。判定・スコアには触らない)。時刻は譜面の時刻(ms)
-const RHYTHM_CHART_SPECIAL_FX=Object.freeze({'zenbu_hissatsuwaza|HELL':Object.freeze({fromMs:112900,toMs:118000,label:'必殺技！'})});
+// その譜面だけの演出の区間(2026-11-23・台帳 r1119-136 案D で始め、r1119-141 で作り替え)。時刻は譜面の時刻(ms)。
+//   前は A の区間で道の色を変え「必殺技！」の字を出していた → 社長「文字は邪魔・安っぽい」でやめた
+// 2026-11-23 r1119-141 社長: 作り込んだ4か所(B 0:33〜・C 1:23〜・B 1:30〜・A 1:53〜)それぞれで、ききのピンクの「チャージノーツ」を叩くほど
+//   道の奥の光の玉が溜まり、各所の最後の大きな「必殺ノーツ」(「必殺！」の印付き)を叩くと、溜めた光が道を判定まで駆け下りて弾ける。玉は各所ごとに空から溜め直す。
+//   見た目だけ(判定・点・譜面の数は変えない)。zones は [始まりms, 終わりms](終わりは各所の最後のノーツのすぐあと)
+const RHYTHM_CHART_SPECIAL_FX=Object.freeze({'zenbu_hissatsuwaza|HELL':Object.freeze({zones:Object.freeze([[33450,38300],[83100,90500],[90560,95300],[112900,117700]])})});
+// 演奏のノーツ(makeRuntimeNotes の結果)に印を付ける。区間の中は _mhCharge=1、各区間でいちばん遅い時刻のノーツ(必殺ノーツ)は 2。
+// 必殺ノーツが同時に2つある所(A の左右)は、1つ目にだけ「必殺！」の印(_mhLabel)を付ける。返すのは区間ごとのチャージノーツの数
+const rhythmMarkChargeNotes=(notes,fx)=>{
+  const zones=fx&&Array.isArray(fx.zones)?fx.zones:[];if(!Array.isArray(notes)||!zones.length)return [];
+  return zones.map(([from,to],z)=>{
+    const inZone=notes.filter(n=>n&&Number.isFinite(n.timeMs)&&n.timeMs>=from&&n.timeMs<=to);if(!inZone.length)return {from,to,n:0,finaleMs:to};
+    const last=Math.max(...inZone.map(n=>n.timeMs));let labeled=false,n=0;
+    for(const note of inZone){note._mhZone=z;if(note.timeMs===last){note._mhCharge=2;if(!labeled){note._mhLabel=true;labeled=true;}}else{note._mhCharge=1;n++;}}
+    return {from,to,n,finaleMs:last};
+  });
+};
 const rhythmChartSpecialFx=(songId,difficultyId)=>RHYTHM_CHART_SPECIAL_FX[`${songId}|${difficultyId}`]||null;
 const rhythmChartResetTag=(songId,difficultyId)=>RHYTHM_CHART_RESETS[`${songId}|${difficultyId}`]||null;
 const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
@@ -82704,6 +82718,9 @@ const rhythmBuildCanvasRenderer=()=>{
     // 空中のノーツ(2026-10-10 社長「空中ノーツが四角すぎて違和感がある。普通のノーツのようにうまく表現できない？」)。
     // ふつうのノーツと同じ作り(板の形・角の丸み・光り方・質感)で、色だけ空中用の明るい赤。暗いれんが色ではなく光らせる。違いは位置と床の影で出す
     SKY:    headOf(SKY_NOTE_COLOR),
+    // ききのチャージノーツ(全部必殺技でつ HELL の4か所・2026-11-23 r1119-141)。タップだけをききのピンクにする(スライド・フリックは今の色のまま)。
+    // ★上フリックの色が淡いピンク(#f472b6)なので、それより濃いマゼンタにして金の縁を付ける(矢印の無いフリックに見えないように)
+    CHARGE: {...headOf({hi:'#fff0fa',mid:'#ec4899',lo:'#a21caf',rgb:'236,72,153'}),ring:'#fcd34d'},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
@@ -82957,11 +82974,19 @@ const rhythmBuildCanvasRenderer=()=>{
   const SKY_END_FLICK_ARROW_GLOWS=Object.freeze([[9,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.9)`],[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
   // 空中のタップ・フリック(skyHeight が数で >0)を、ふつうのノーツと同じ板で描くか(既定 'plate')。旧スタイルは localStorage で選べる
   const isSkyPlate=note=>!!note&&Number(note.skyHeight)>0&&skyTapStyle()==='plate';
+  // 「必殺！」の印の絵(1回だけ焼く・正方形の真ん中に字)。作れない所(テストの仮の画面など)では null
+  let finaleLabel;
+  const finaleLabelBitmap=()=>{if(finaleLabel!==undefined)return finaleLabel;finaleLabel=null;
+    try{if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=c.height=160;const g=c.getContext('2d');if(!g)return null;
+      g.font='900 50px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+      g.lineWidth=10;g.strokeStyle='#831843';g.strokeText('必殺！',80,80);g.fillStyle='#fff1f7';g.fillText('必殺！',80,80);
+      g.lineWidth=2;g.strokeStyle='#f9a8d4';g.strokeText('必殺！',80,80);finaleLabel=c;}catch(e){finaleLabel=null;}return finaleLabel;};
   const headStyle=(note,failed,monster)=>{
     if(failed)return HEADS.FAILED;
     if(monster)return HEADS.MONSTER;
     if(isSkyPlate(note))return HEADS.SKY;
     const type=rhythmNoteVisualType(note);
+    if(note._mhCharge&&type==='TAP')return HEADS.CHARGE;
     if(type==='FLICK'){const dir=rhythmFlickDir(note);if(dir==='left')return HEADS.LEFT;if(dir==='right')return HEADS.RIGHT;}
     return HEADS[type]||HEADS.TAP;
   };
@@ -82986,14 +83011,16 @@ const rhythmBuildCanvasRenderer=()=>{
     const {failed,monster,wide,brightness,depthScale,alpha,pop,pressed}=opts;
     const style=headStyle(note,failed,monster);
     const sizeMul=sizeScale*(pop?1+1.1*easeOut(pop):1);
-    const w=geo.head.w*sizeMul,h=HEAD_H*HEAD_THICK*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
+    // 必殺ノーツ(r1119-141)は見た目だけ大きく描く(判定の幅はそのまま)。もとが細い(幅2〜4)ときだけ横にも広げる
+    const finale=note._mhCharge===2&&!failed,finW=finale&&(Number(note.subLaneWidth)||2)<=4?2.6:1,finH=finale?1.9:1;
+    const w=geo.head.w*sizeMul*finW,h=HEAD_H*HEAD_THICK*depthScale*sizeMul*finH,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
     // 光の絵(3分割で貼るもの)を、描く順に並べる。使い回しの入れ物へ入れる(ノーツごとに配列を作らない)
     headGlowCount=0;
     const customHead=CUSTOM_HEAD&&!monster;
     if(style.glow.length&&!failed&&!customHead){
-      if(glowLevel==='WEAK')pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':note.type),style.radius,style.glow),w,h,alpha);
+      if(glowLevel==='WEAK')pushHeadGlow(glowSprite(monster?'MONSTER':(style===HEADS.SKY?'SKY':style===HEADS.CHARGE?'CHARGE':note.type),style.radius,style.glow),w,h,alpha);
       else if(glowLevel==='STRONG')pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.12,h*1.6,alpha);
       else pushHeadGlow(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),w*1.04,h*1.25,alpha);
     }
@@ -84817,6 +84844,9 @@ const rhythmBuildCanvasRenderer=()=>{
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
         if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
+      // 必殺ノーツの「必殺！」の印(r1119-141)。ノーツのすぐ上にくっつけて一緒に流す(叩いたら消える)。顔と同じく最後にまとめて貼る
+      if(note._mhLabel&&geo.head&&!o.failed&&o.pop===null){const bm=finaleLabelBitmap();if(bm){const size=Math.max(30,geo.head.w/Math.max(1,Number(note.subLaneWidth)||2)*2*sizeScale*2.2);/* 幅の広い必殺ノーツ(A の左右)でも、字は1枚分の大きさ */
+        faces.push(bm,cssW/2,geo.head.cy-HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale*1.9/2-size*.2,size,Math.min(1,o.alpha));}}
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ手の色にする(指の下で「どっちの手か」が分かるように)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
         const hrgb=o.skyHand==='L'?RHYTHM_SKY_LOOK.arc.left:RHYTHM_SKY_LOOK.arc.right,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;

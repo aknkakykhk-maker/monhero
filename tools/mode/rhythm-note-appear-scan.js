@@ -104,6 +104,23 @@ const skyLiftPatched=src=>{
   const songEnd=(window.__mhSong.ctx&&0)||0;return {area:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)},canvas:cv};});
  const songLen=await page.evaluate(()=>{const s=window.__mhSong;return s?null:null;});
  const raf=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+ // AUTO_TAP=1 SHOT_AT=<秒>,…: FROM から STEP ずつ止めた時計を進め、ノーツの時刻が来たら判定ラインのその位置を押して離す(タップだけ。
+ //   スライドの押さえは続けないので取り逃しになる)。SHOT_AT の時刻のコマを PREFIX-<ms>.png で撮る(演出の止め絵用・2026-11-23 r1119-141)
+ if(process.env.AUTO_TAP==='1'&&process.env.SHOT_AT){const shots=process.env.SHOT_AT.split(',').map(Number).filter(Number.isFinite).sort((x,y)=>x-y);
+  const cv=info.canvas[0]||{x:0,y:0},tapped=new Set(),end=shots[shots.length-1];let si=0;
+  // 叩いたときに始まる動き(element.animate)に、始まった曲の時刻を覚えさせ、すぐ止めておく(実時間で終わって消えないように。撮るときにその経過へ合わせる)
+  await page.evaluate(()=>{if(Element.prototype.__mhAnimHooked)return;const orig=Element.prototype.animate;Element.prototype.animate=function(k,o){const a=orig.call(this,k,o);a._mhSongMs=window.__mhNowMs||0;a.pause();return a;};Element.prototype.__mhAnimHooked=true;});
+  for(let sec=Math.max(FROM,cur);sec<=end+1e-6;sec=Math.round((sec+STEP/1000)*1000)/1000){
+   await page.evaluate(s=>{window.__mhHook();window.__mhDraws=[];window.__mhFreezeSong(s);window.__mhNowMs=s*1000;},sec);await raf();
+   const draws=await page.evaluate(()=>{const d=window.__mhDraws;window.__mhDraws=[];return d;});
+   for(const d of draws){if(tapped.has(d.i)||d.t>sec*1000+1||d.t<sec*1000-STEP*2||d.type==='SLIDE'||d.type==='HOLD')continue;tapped.add(d.i);
+    await page.mouse.move(cv.x+d.cx,cv.y+d.cy);await page.mouse.down();await page.mouse.up();}
+   while(si<shots.length&&shots[si]<=sec+1e-6){await raf();
+    // 叩いたときに始まる動き(element.animate)は実時間で進むので、撮る時刻に合わせて止める(始まった曲の時刻からの経過。終わった動きは消す)
+    await page.evaluate(now=>{for(const a of (document.getAnimations?document.getAnimations():[])){if(!Number.isFinite(a._mhSongMs))continue;const ms=now-a._mhSongMs;
+      const dur=Number(a.effect&&a.effect.getTiming&&a.effect.getTiming().duration)||0;if(ms>dur){a.cancel();continue;}a.pause();a.currentTime=Math.max(0,ms);}},shots[si]*1000);
+    await page.screenshot({path:path.join(OUT,`${process.env.PREFIX||'shot'}-${Math.round(shots[si]*1000)}.png`)});si++;}}
+  console.log('押した数',tapped.size);if(process.env.DUMP_AT){const want=process.env.DUMP_AT.split(',').map(Number);console.log(JSON.stringify(await page.evaluate(w=>{const r=window.__mhTestHooks&&window.__mhTestHooks.rhythmNoteResults?window.__mhTestHooks.rhythmNoteResults():[];const ns=window.__mhTestHooks.rhythmNotes();return ns.filter(n=>w.some(t=>Math.abs(n.timeMs-t)<2)).map(n=>({t:n.timeMs,sub:n.subLane,type:n.type,j:(r[n.index]||{}).judgment}));},want)));}await b.close();server.close();return;}
  const notes=new Map();let emptyRun=0,firstStep=true;
  // 画面に入った = 頭の真ん中が canvas の上端より下(cy>=TOP)。TOP は既定0(横持ちの上の帯で隠れる分は TOP で足す)
  const TOP=Number(process.env.TOP||0);
