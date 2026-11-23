@@ -231,6 +231,22 @@ const MEASURE = () => {
       check(`${name}: 「この曲で決定」の帯が、難易度の札に重ならない`, !worst.overlap, worst.overlap);
       check(`${name}: 「この曲で決定」が画面の中に見える`, !worst.inside, worst.inside);
       check(`${name}: 上の帯が1段に収まり、💬が落ちない(🏆は曲の側)`, !worst.header, worst.header);
+      // 決定は難易度の札のすぐ下に置き、余った高さは決定の下へ回す(2026-11-23 r1119-142 追記2 社長「決定が下に食い込んでる」→「両方やる」)。
+      // 測るのは見た目の向きで(🔄横は回した器の中の座標に直す)。難易度と決定を上へ並べる低い画面(決定が難易度の下に無い)は除く
+      const actGap = await page.evaluate(() => {
+        const vis = (s) => [...document.querySelectorAll(s)].find((e) => e.getBoundingClientRect().width > 0);
+        const d = vis('[data-rhythm-multi] [data-rhythm-difficulty-row]'), a = vis('[data-rhythm-multi] [data-rhythm-song-act]'), as = vis('[data-rhythm-multi] [data-rhythm-song-detail]');
+        if (!d || !a || !as) return null;
+        const R = (e) => (typeof RHYTHM_VIEW_ROTATION === 'object' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(e) : null) || e.getBoundingClientRect();
+        const n = vis('[data-rhythm-multi] [data-rhythm-song-notice-landscape]');   // 一言が難易度と決定のあいだにあるときは、その下から測る
+        const dr = n ? { bottom: Math.max(R(d).bottom, R(n).bottom) } : R(d), ar = R(a), sr = R(as);
+        if (as.scrollHeight > as.clientHeight + 1) return { scroll: true };
+        return { between: Math.round(ar.top - dr.bottom), below: Math.round(sr.bottom - ar.bottom), wide: matchMedia('(orientation: landscape)').matches || RHYTHM_VIEW_ROTATION.active() };
+      });
+      if (actGap && !actGap.scroll && actGap.wide && actGap.between >= 0) {
+        check(`${name}: 「この曲で決定」は難易度の札のすぐ下(すき間12px以内)`, actGap.between <= 12, JSON.stringify(actGap));
+        check(`${name}: 「この曲で決定」の下が欄の端から離れている(12px以上)`, actGap.below >= 12, JSON.stringify(actGap));
+      }
       await page.close();
     }
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
