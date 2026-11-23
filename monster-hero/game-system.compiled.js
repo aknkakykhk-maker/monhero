@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36157e2dc3d18851
+// source-sha256: 2201da09cf8cddfc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -269391,14 +269391,16 @@ function MonsterHeroGame() {
             color: c.color
           }
         }, t.title), React.createElement("span", {
-          className: "block text-[10px] text-slate-300 leading-tight mt-0.5"
-        }, "みゅあと一緒に、実際に動かして遊び方を覚えられます")), React.createElement(ChevronRight, {
+          className: "block text-[10px] text-slate-300 leading-tight mt-0.5",
+          style: JA_LABEL_STYLE
+        }, jaWrap('みゅあと一緒に、実際に動かして遊び方を覚えられます'))), React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0 text-slate-400"
         }));
       })(), React.createElement("p", {
-        className: "text-[11px] text-slate-400 leading-relaxed mb-3"
-      }, HELP_GUIDE_INTRO), HELP_GUIDE.length === 0 && React.createElement("div", {
+        className: "text-[11px] text-slate-400 leading-relaxed mb-3",
+        style: JA_WRAP_STYLE
+      }, jaWrap(HELP_GUIDE_INTRO)), HELP_GUIDE.length === 0 && React.createElement("div", {
         className: "text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed"
       }, "ヘルプの内容を読み込めませんでした。", React.createElement("br", null), "通信環境を確認して、ページを再読み込みしてください。"), HELP_GUIDE.map(c => React.createElement("button", {
         key: c.id,
