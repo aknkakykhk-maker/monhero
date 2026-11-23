@@ -566,6 +566,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
 {/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
 {field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
+{/* 部屋のメンバー札の上の吹き出し(2026-11-23 r1119-135)。切でもチャットの欄には残る */}
+{field('部屋のメンバーの吹き出しを出す',toggle('multiMemberBubble'),'切にしても、発言はチャットの欄で読めます。')}
 </div>
 </section>
 <section className={card}>
