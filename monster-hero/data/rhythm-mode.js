@@ -1330,7 +1330,7 @@ const RHYTHM_NOTE_OUTLINE_COLOR='rgba(2,6,23,.88)';
 const RHYTHM_HELL_VIS_PRESETS=Object.freeze({
   now:Object.freeze({}),
   v1:Object.freeze({box:'b2',arc:Object.freeze({alpha:.72}),shadow:Object.freeze({alpha:.14,lineAlpha:.12}),line:Object.freeze({span:'sky'})}),
-  v2:Object.freeze({box:'b3',arc:Object.freeze({alpha:.82}),shadow:Object.freeze({alpha:.1,lineAlpha:0}),line:Object.freeze({span:'sky',coreRgb:'196,181,253',corePx:3,bandPx:8,bandAlpha:.45})}),
+  v2:Object.freeze({box:'b3',arc:Object.freeze({right:'244,114,182',air:'244,114,182',alpha:.82}),shadow:Object.freeze({alpha:.1,lineAlpha:0}),line:Object.freeze({span:'sky',coreRgb:'196,181,253',corePx:3,bandPx:8,bandAlpha:.45})}),
 });
 const RHYTHM_HELL_VIS_DEFAULT='v2';
 const RHYTHM_HELL_VIS_LABELS=Object.freeze({now:'前の見た目',v1:'案1 控えめに見やすく',v2:'案2 はっきり(既定)'});
@@ -1352,7 +1352,7 @@ const RHYTHM_HELL_SKY_TEXT={id:(()=>{try{const v=typeof localStorage!=='undefine
 const rhythmHellVisMerged=(()=>{const memo={};return (key,base)=>{const id=RHYTHM_HELL_VIS.id,k=id+':'+key;if(memo[k])return memo[k];
   const over=(RHYTHM_HELL_VIS_PRESETS[id]||{})[key];return memo[k]=over?Object.freeze({...base,...over}):base;};})();
 const RHYTHM_SKY_LOOK_BASE=Object.freeze({
-  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'250,204,21',right:'250,204,21',ground:'203,213,225',air:'250,204,21',centerLane:3}),
+  arc:Object.freeze({rgb:'214,224,240',alpha:.58,minHalfWidthPx:4.5,edgeAlpha:.6,edgePx:1.2,left:'37,99,235',right:'236,72,153',ground:'37,99,235',air:'236,72,153',centerLane:3}),
   shadow:Object.freeze({rgb:'6,3,20',alpha:.22,radiusPx:3,insetPx:3,lineAlpha:.28,fadeRatio:.14}),
   line:Object.freeze({bandRgb:'150,118,235',bandAlpha:.38,bandPx:6,coreRgb:'165,135,245',coreAlpha:.95,corePx:2,marginPct:4,span:'road'}),
 });
@@ -1367,12 +1367,14 @@ const RHYTHM_SKY_LOOK=Object.freeze({
   floor:Object.freeze({topRgb:'48,34,108',topAlpha:.55,bottomRgb:'66,46,146',bottomAlpha:.88}),
 });
 // 空中スライドの手(2026-10-11・社長「参考どおり左右で色分け」)。譜面の note.hand('L'|'R')に従う。手が書いてないときは推測せず、
-// 空中スライドの帯の色は、通っている高さで決める(2026-11-23 社長の決め・台帳 r1119-149)。地上を通る所=白銀(arc.ground)・空中を通る所=金(arc.air)。
-// 行き来する所はなめらかに移す。高さは区切りの両端の平均(2D の q.sky・GPU の vSky と同じ)。GPU の帯の mode 9 と同じ式(rhythm-gpu-band-check)
-// 手(左右)の色分けはやめた(left・right は air と同じ値。前に作った試し描きの道が読むので名前は残す)
-const rhythmSkySlideMixK=sky=>{const v=Math.max(0,Math.min(1,(Number(sky)||0)*1.25));return v*v*(3-2*v);};
-const rhythmSkySlideRgbAt=(()=>{const memo=new Map();return (A,sky)=>{const k=Math.round(rhythmSkySlideMixK(sky)*32)/32,key=A.ground+'|'+A.air+'|'+k;let v=memo.get(key);
-  if(!v){const g=String(A.ground||A.rgb).split(',').map(Number),a=String(A.air||A.rgb).split(',').map(Number);v=g.map((x,i)=>Math.round(x+(a[i]-x)*k)).join(',');memo.set(key,v);}return v;};})();
+// 空中スライドの帯の色は、手(左右)ではなく通っている所で決める(2026-11-23 社長の決め・台帳 r1119-149)。
+// 白い芯が出ている所(rhythmSlideSkyCoreSpans の時刻の範囲)=空中の色(arc.air・桃)、出ていない所=地上の色(arc.ground・青)。
+// 切り替わりは芯の出始め・消える時刻をまん中に、前後 RHYTHM_SKY_COLOR_BLEND_MS ずつでなめらかに移す。2D と GPU の帯(mode 9)で同じ式
+// 芯を時刻で切れないとき(範囲が9つ以上)は、芯と同じく区切りの高さ(.05 を越えたら空中)で決める
+const RHYTHM_SKY_COLOR_BLEND_MS=45;
+const rhythmSkySlideAirK=(spans,t)=>{let d=-Infinity;for(const [a,b] of spans){const v=Math.min(t-a,b-t);if(v>d)d=v;}
+  const x=Math.max(0,Math.min(1,.5+d/(2*RHYTHM_SKY_COLOR_BLEND_MS)));return x*x*(3-2*x);};
+const rhythmSkySlideMixRgb=(A,k)=>{const g=String(A.ground||A.rgb).split(',').map(Number),a=String(A.air||A.rgb).split(',').map(Number);return g.map((x,i)=>Math.round(x+(a[i]-x)*k)).join(',');};
 // スライドの点のレーンの平均が真ん中(RHYTHM_SKY_LOOK.arc.centerLane)より左なら 'L'・そうでなければ 'R' の1つだけで決める
 const rhythmSkyHandOf=note=>{
   if(note&&(note.hand==='L'||note.hand==='R'))return note.hand;
@@ -81608,8 +81610,10 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'else if(uMode==2){float a=clamp(vSky*1.4,0.0,1.0);if(a<=0.02)discard;c=vec4(2.0/255.0,0.0,10.0/255.0,0.85*(uZ>0.5?0.18+0.22*a:0.25+0.45*a));}'+
     'else if(uMode==3){float a=air();if(a<=0.05)discard;c=vec4(uColor2.rgb,0.2*a);}'+
     'else if(uMode==4){float a=air();if(a<=0.05)discard;c=vec4(uColor.rgb,uColor.a*a*0.6);}'+
-    // 空中スライドの帯を高さで2色に(mode 9・r1119-149)。2D の rhythmSkySlideRgbAt と同じ式(1/32 刻み)
-    'else if(uMode==9){float k=clamp(vSky*1.25,0.0,1.0);k=k*k*(3.0-2.0*k);k=floor(k*32.0+0.5)/32.0;c=vec4(mix(uColor.rgb,uColor2.rgb,k),uColor.a);}'+
+    // 空中スライドの帯の色(mode 9・r1119-149)。芯(mode 7)と同じ時刻の範囲の中=uColor2(空中)・外=uColor(地上)。境の前後 RHYTHM_SKY_COLOR_BLEND_MS で移す。
+    // 2D の rhythmSkySlideAirK と同じ式。範囲が渡されないときは芯と同じく区切りの高さ(.05)で決める
+    'else if(uMode==9){float k;if(uEdgeN>0){float d=-1e9;for(int i=0;i<8;i++){if(i>=uEdgeN)break;d=max(d,min(vT-uEdgeT[i].x,uEdgeT[i].y-vT));}'+
+    'k=clamp(0.5+d/'+(2*RHYTHM_SKY_COLOR_BLEND_MS).toFixed(1)+',0.0,1.0);k=k*k*(3.0-2.0*k);}else k=vSky>0.05?1.0:0.0;c=vec4(mix(uColor.rgb,uColor2.rgb,k),uColor.a);}'+
     // 芯(mode 7)は、範囲を渡されたときは白い縁と同じく時刻で切る(rhythmSlideSkyCoreSpans)。渡されないときは区切りの高さで
     'else if(uMode==7){if(uEdgeN>0){bool on=false;for(int i=0;i<8;i++){if(i>=uEdgeN)break;if(vT>=uEdgeT[i].x&&vT<=uEdgeT[i].y)on=true;}if(!on)discard;}else if(vSky<=0.05)discard;}'+
     'else if(uMode==8){bool on=false;for(int i=0;i<8;i++){if(i>=uEdgeN)break;if(vT>=uEdgeT[i].x&&vT<=uEdgeT[i].y)on=true;}if(!on)discard;c=uColor;}'+
@@ -81833,7 +81837,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
       u1f('uHw',Number(o.hw)||0);u4f('uColor',rgba(o.color||'rgba(0,0,0,0)'));if(o.color2)u4f('uColor2',rgba(o.color2));
       u1f('uAlpha',Number.isFinite(Number(o.alpha))?Math.max(0,Math.min(1,Number(o.alpha))):1);u1f('uGround',o.ground?1:0);u1f('uMinHw',Number(o.minHw)||0);u1f('uCore',o.core?1:0);u1f('uZ',o.z?1:0);
       if(mode===5){u1f('uG0',Number(o.g0)||0);u1f('uG1',Number(o.g1)||0);}if(mode===6)u1f('uPhase',Number(o.phase)||0);
-      if(mode===8||mode===7){const spans=Array.isArray(o.spans)?o.spans:[],now=cur.u.tnow+e.t0,n=mode===7&&!rhythmSlideSkyCoreSpansUsable(spans)?0:Math.min(8,spans.length),buf=edgeSpanBuf;buf.fill(0);
+      if(mode===8||mode===7||mode===9){const spans=Array.isArray(o.spans)?o.spans:[],now=cur.u.tnow+e.t0,n=(mode===7||mode===9)&&!rhythmSlideSkyCoreSpansUsable(spans)?0:Math.min(8,spans.length),buf=edgeSpanBuf;buf.fill(0);
         for(let i=0;i<n;i++){buf[i*2]=spans[i][0]-now;buf[i*2+1]=spans[i][1]-now;}gl.uniform2fv(U.uEdgeT,buf);gl.uniform1i(U.uEdgeN,n);}
       if(o.stencil){const ref=host.nextStencil();gl.stencilFunc(gl.NOTEQUAL,ref,0xff);}else gl.stencilFunc(gl.ALWAYS,0,0xff);
       if(o.additive)gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
@@ -83111,7 +83115,7 @@ const rhythmBuildCanvasRenderer=()=>{
   // ノーツの色のままだと暗い道の上で「光っている」より「塗られている」に見えた。SLIDE だけ紫へ少し寄せて見分けを残す。
   // ノーツ本体・帯・終わりの横棒の色分けは変えない
   // SKY_L/SKY_R=案Zの空中スライドを押さえている指の下(帯と同じ手の色。左=青・右=桃)
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255',SKY_L:RHYTHM_SKY_LOOK.arc.left,SKY_R:RHYTHM_SKY_LOOK.arc.right});
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255',SKY_L:RHYTHM_SKY_LOOK.arc.air,SKY_R:RHYTHM_SKY_LOOK.arc.air}); // 空中スライドの火花は手で分けず空中の色(r1119-149)
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -83716,8 +83720,8 @@ const rhythmBuildCanvasRenderer=()=>{
     const {alpha}=opts,A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;ctx.globalAlpha=alpha;
     // 半幅は max(最小半幅, 譜面の幅の投影の半幅)。細くなりすぎる所だけ、中心を保って広げる
     const widen=(l,r)=>{const m=A.minHalfWidthPx,c=(l+r)/2,h=(r-l)/2;return h>=m?[l,r]:[c-m,c+m];};
-    const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky};});
-    // 空中スライドは、通っている高さの色で中まで塗る(地上=白銀・空中=金・rhythmSkySlideRgbAt・r1119-149。前は手の色)
+    const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1,sky:q.sky,t0:q.t0,t1:q.t1};});
+    // 空中スライドは、通っている高さの色で中まで塗る(白い芯のある所=空中の色・ない所=地上の色・fillSkyQuad・r1119-149。前は手の色)
     const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
     // 段階A: 空中の区切りは丸い管で描く(地上に近い区切りは下の今の帯のまま)
     const tube3d=sky3dApi()!=null;
@@ -83733,11 +83737,18 @@ const rhythmBuildCanvasRenderer=()=>{
         // 芯は 2D でも足し算で重ねる(GPU の帯の additive と同じ。glowBegin は WebGL のときだけ足し算にするので、ここでは使わない)
         ctx.globalCompositeOperation='lighter';core(5,handRgb,.4);core(2,'255,255,255',.55);ctx.globalCompositeOperation='source-over';}
       ctx.globalAlpha=1;return;}
+    // 帯の色(r1119-149): 芯の出る時刻の範囲の中=空中の色・外=地上の色。区切りを4つに割り、両端の色の縦のグラデーションで塗る(GPU の mode 9 と同じ式)
+    const colorSpans=rhythmSlideSkyCoreSpans(note),bySpans=rhythmSlideSkyCoreSpansUsable(colorSpans);
+    const fillSkyQuad=(q,l0,r0,l1,r1)=>{const t0=Number(q.t0),t1=Number(q.t1);
+      if(!bySpans||!Number.isFinite(t0)||!Number.isFinite(t1)||!(t1>t0)){ctx.fillStyle=`rgba(${(Number(q.sky)||0)>.05?A.air:A.ground},${A.alpha})`;ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();return;}
+      for(let j=0;j<4;j++){const a=j/4,b=(j+1)/4,ka=rhythmSkySlideAirK(colorSpans,t0+(t1-t0)*a),kb=rhythmSkySlideAirK(colorSpans,t0+(t1-t0)*b),ya=q.y0+(q.y1-q.y0)*a,yb=q.y0+(q.y1-q.y0)*b;
+        if(Math.abs(ka-kb)<.002||Math.abs(yb-ya)<.5)ctx.fillStyle=`rgba(${rhythmSkySlideMixRgb(A,(ka+kb)/2)},${A.alpha})`;
+        else{const gr=ctx.createLinearGradient(0,ya,0,yb);gr.addColorStop(0,`rgba(${rhythmSkySlideMixRgb(A,ka)},${A.alpha})`);gr.addColorStop(1,`rgba(${rhythmSkySlideMixRgb(A,kb)},${A.alpha})`);ctx.fillStyle=gr;}
+        ctx.beginPath();ctx.moveTo(l0+(l1-l0)*a,ya);ctx.lineTo(r0+(r1-r0)*a,ya);ctx.lineTo(r0+(r1-r0)*b,yb);ctx.lineTo(l0+(l1-l0)*b,yb);ctx.closePath();ctx.fill();}};
     quads.forEach(q=>{
       if((Number(q.sky)||0)>.05)return;
       const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);
-      ctx.fillStyle=`rgba(${rhythmSkySlideRgbAt(A,q.sky)},${A.alpha})`;
-      ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();
+      fillSkyQuad(q,l0,r0,l1,r1);
     });
     if(tube3d&&air.length&&drawSkyTube3d(quads,opts,handRgb)){ctx.globalAlpha=1;return;}
     // 試作2: 帯の真下の床の影と帯のあいだに、手の色の薄い幕と縦の導線(浮いたリボンに見える)。影は geo.slideShadow(床の位置)
@@ -83757,7 +83768,7 @@ const rhythmBuildCanvasRenderer=()=>{
     }
     // 試作(floor3d): 空中の帯に厚み。暗い同じ形を少し下へずらして先に塗る(帯の下の面が見える)
     if(floor3d&&!floor3d3&&air.length){ctx.fillStyle='rgba(30,41,59,.7)';air.forEach(q=>{const d0=Math.max(2,floorThick(q.y0,1)*.9),d1=Math.max(2,floorThick(q.y1,1)*.9);ctx.beginPath();ctx.moveTo(q.l0,q.y0+d0);ctx.lineTo(q.r0,q.y0+d0);ctx.lineTo(q.r1,q.y1+d1);ctx.lineTo(q.l1,q.y1+d1);ctx.closePath();ctx.fill();});}
-    air.forEach(q=>{ctx.fillStyle=`rgba(${rhythmSkySlideRgbAt(A,q.sky)},${A.alpha})`;ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    air.forEach(q=>fillSkyQuad(q,q.l0,q.r0,q.l1,q.r1));
     // 左右の縁を白く(床の紫の上でも地上スライドの紫の帯と見分けられる)
     // 白い縁は、高さが RHYTHM_SKY_EDGE_FROM を越えている時刻の範囲(rhythmSlideSkyEdgeSpans)だけに描く(2026-10-12)。
     // 区切りの平均で決めると、区切りの長さぶん(十数画素)GPU の帯(mode 8)と描き始め・描き終わりがずれていた。
@@ -83931,7 +83942,7 @@ const rhythmBuildCanvasRenderer=()=>{
       // 空中スライドのZ版(drawSkySlideZ と同じ値): 手の色で全体を塗り、空中の所だけ白い縁と白い芯
       const A=RHYTHM_SKY_LOOK.arc,C=RHYTHM_SKY_LOOK.core;
       const handRgb=opts.skyHand==='L'?A.left:opts.skyHand==='R'?A.right:A.rgb;
-      band.pass('fill',{mode:9,color:`rgba(${A.ground||handRgb},${A.alpha})`,color2:`rgba(${A.air||handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
+      band.pass('fill',{mode:9,color:`rgba(${A.ground||handRgb},${A.alpha})`,color2:`rgba(${A.air||handRgb},${A.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true,spans:rhythmSlideSkyCoreSpans(note)});
       band.pass('edges',{mode:8,hw:A.edgePx/2,color:`rgba(255,255,255,${A.edgeAlpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true,spans:rhythmSlideSkyEdgeSpans(note)});
       band.pass('fill',{mode:7,hw:C.widthPx/2,core:true,additive:true,color:`rgba(${C.rgb},${C.alpha})`,alpha,stencil:true,spans:rhythmSlideSkyCoreSpans(note)});
       if(dim)band.pass('fill',{mode:0,color:`rgba(${RHYTHM_SLIDE_DIM.rgb},${RHYTHM_SLIDE_DIM.alpha})`,alpha,minHw:A.minHalfWidthPx,stencil:true});
@@ -84824,9 +84835,9 @@ const rhythmBuildCanvasRenderer=()=>{
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
         if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
-      // 案Z: 空中のスライドを押している間、頭の板も帯と同じ色にする(今の高さの色・r1119-149。前は手の色)
+      // 案Z: 空中のスライドを押している間、頭の板も帯と同じ色にする(今の時刻の帯の色・r1119-149。前は手の色)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
-        const nowT=Number(geo.slideGpu?.travel?.chartNowMs),hrgb=Number.isFinite(nowT)?rhythmSkySlideRgbAt(RHYTHM_SKY_LOOK.arc,rhythmSlideSkyAt(note,nowT)):RHYTHM_SKY_LOOK.arc.air,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
+        const nowT=Number(geo.slideGpu?.travel?.chartNowMs),hA=RHYTHM_SKY_LOOK.arc,hSp=rhythmSlideSkyCoreSpans(note),hrgb=Number.isFinite(nowT)?rhythmSkySlideMixRgb(hA,rhythmSlideSkyCoreSpansUsable(hSp)?rhythmSkySlideAirK(hSp,nowT):(rhythmSlideSkyAt(note,nowT)>.05?1:0)):hA.air,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
         ctx.globalAlpha=o.alpha*trackDim;roundRectPath(ctx,hd.cx-hw/2,hd.cy-hh/2,hw,hh,7*sizeScale);ctx.fillStyle=`rgba(${hrgb},.55)`;ctx.fill();
         ctx.lineWidth=2.4*sizeScale;ctx.strokeStyle=`rgba(${hrgb},1)`;ctx.stroke();ctx.globalAlpha=1;
       }
