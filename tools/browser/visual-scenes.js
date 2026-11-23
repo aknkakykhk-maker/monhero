@@ -42,8 +42,10 @@ const via = (steps, { keepLast = false } = {}) => async (s) => {
 const openReplay = async (s, end) => {
   if (!(await via([/^プロフィールを開く$/])(s))) return false;
   const click = (sel, re) => s.page.evaluate(([q, r]) => { const b = [...document.querySelectorAll(q)].find((x) => !r || new RegExp(r).test(x.innerText || '')); if (!b) return false; b.scrollIntoView({ block: 'center' }); b.click(); return true; }, [sel, re]).catch(() => false);
-  if (!(await click('button', 'イベント回想'))) return false;
+  // 2026-11-23 プロフィール案B: 扉「思い出」→ ジャンル「期間イベント」→ シリーズ。案B より前の版(撮り比べの main 側)は一番下の「イベント回想」から
+  if (!(await click('[data-profile-door="memories"]')) && !(await click('button', 'イベント回想'))) return false;
   await s.wait(900);
+  if (await click('[data-event-replay-genre="event"]')) await s.wait(700);
   if (!(await click('[data-event-replay-group]'))) return false;
   await s.wait(900);
   if (!end) return true;
