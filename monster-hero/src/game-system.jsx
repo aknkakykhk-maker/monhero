@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 92ad760dd08a2203
+// generated-sha256: 6ae254e20e293f66
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70960,7 +70960,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949 }, sorashido: { top: 0.0041, eye: 0.2876, chin: 0.4526, m: 1.228 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
+  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
   'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376 } },
   'stand-hosei': { sorashido: { top: 0.0263, eye: 0.3096, chin: 0.452, m: 1.059 } },
   'stand-halloween': { mua: { top: 0.2281, eye: 0.4663, chin: 0.539, m: 0.541, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, above: 0.95 }, kiki: { top: 0.1731, eye: 0.3825, chin: 0.4899, m: 0.799, above: 0.95 } },
