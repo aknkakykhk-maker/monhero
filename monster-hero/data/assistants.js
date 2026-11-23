@@ -12589,7 +12589,7 @@ const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パ
 
 // ===== イベント「咲かせて！ハナウタ・ノート ～花の3人、曲づくりに夢中！～」(2026-11-23 10:00〜11-30 0:00)のお話 =====
 // 台本 docs/progress/event-flower3/script.md(社長 11-22: みゅあの話も足す → 第2〜4話を きき・もも・みゅあ の曲ができるまで、パンドラ・ぱんぷきんの話を後ろへ。台帳 r1119-101 追記で OK 済み)。
-// 出る時刻は data/rhythm-event.js の FLOWER3_STORIES(第1話は開幕・第2〜7話は毎日10:00・第8話は閉幕)。ももすけだけ初めての曲づくり。クリスマス前の空気を少し
+// 出る時刻は data/rhythm-event.js の FLOWER3_STORIES(第1話は開幕・第2〜7話は各日の4:00・第8話は閉幕)。ももすけだけ初めての曲づくり。クリスマス前の空気を少し
 // 第1話「3人の作曲ブーム」(11/23 10:00・開幕)
 const FLOWER3_EP1 = [
   { bg:'monhero_plaza', who:'mua', e:'excited', t:'ねえねえ{name}、聞いて！ 今日から、モンヒロビートのイベントはじまったよ〜！' },
@@ -13132,12 +13132,12 @@ const EVENT_REPLAYS = [
   { id: 'pandora_wings_2026_ep8', date: '2026-11-09 04:00', title: '鍵の向こう側へ 第8話・終章 ～鍵の向こう側へ～', script: PANDORA_WINGS_EP8, calls: PANDORA_WINGS_EP8_CALLS, unlockedKey: 'pandoraWingsEp8Seen', group: 'pandora_wings' },
   // 咲かせて！ハナウタ・ノート(2026-11-23〜)。第1話は開幕・第8話は閉幕のお話(60-app.jsx)、第2〜7話は時刻で流れる(data/rhythm-event.js の flower3StoryIdsAt)
   { id: 'flower3_2026_ep1', date: '2026-11-23 10:00', title: '咲かせて！ハナウタ・ノート 第1話 ～3人の作曲ブーム～', script: FLOWER3_EP1, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep1Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep2', date: '2026-11-24 10:00', title: '咲かせて！ハナウタ・ノート 第2話 ～全部必殺技の夜～', script: FLOWER3_EP2, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep2Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep3', date: '2026-11-25 10:00', title: '咲かせて！ハナウタ・ノート 第3話 ～はじめての曲と、ステップの先生～', script: FLOWER3_EP3, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep3Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep4', date: '2026-11-26 10:00', title: '咲かせて！ハナウタ・ノート 第4話 ～新しい空～', script: FLOWER3_EP4, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep4Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep5', date: '2026-11-27 10:00', title: '咲かせて！ハナウタ・ノート 第5話 ～箱とカボチャ～', script: FLOWER3_EP5, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep5Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep6', date: '2026-11-28 10:00', title: '咲かせて！ハナウタ・ノート 第6話 ～ちがう色～', script: FLOWER3_EP6, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep6Seen', group: 'flower3' },
-  { id: 'flower3_2026_ep7', date: '2026-11-29 10:00', title: '咲かせて！ハナウタ・ノート 第7話 ～ランタンの前で～', script: FLOWER3_EP7, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep7Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep2', date: '2026-11-24 04:00', title: '咲かせて！ハナウタ・ノート 第2話 ～全部必殺技の夜～', script: FLOWER3_EP2, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep2Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep3', date: '2026-11-25 04:00', title: '咲かせて！ハナウタ・ノート 第3話 ～はじめての曲と、ステップの先生～', script: FLOWER3_EP3, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep3Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep4', date: '2026-11-26 04:00', title: '咲かせて！ハナウタ・ノート 第4話 ～新しい空～', script: FLOWER3_EP4, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep4Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep5', date: '2026-11-27 04:00', title: '咲かせて！ハナウタ・ノート 第5話 ～箱とカボチャ～', script: FLOWER3_EP5, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep5Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep6', date: '2026-11-28 04:00', title: '咲かせて！ハナウタ・ノート 第6話 ～ちがう色～', script: FLOWER3_EP6, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep6Seen', group: 'flower3' },
+  { id: 'flower3_2026_ep7', date: '2026-11-29 04:00', title: '咲かせて！ハナウタ・ノート 第7話 ～ランタンの前で～', script: FLOWER3_EP7, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep7Seen', group: 'flower3' },
   { id: 'flower3_2026_ep8', date: '2026-11-30 00:00', title: '咲かせて！ハナウタ・ノート 第8話・終章 ～花ひらく夜～', script: FLOWER3_EP8, calls: FLOWER3_CALLS, unlockedKey: 'flower3Ep8Seen', group: 'flower3' },
   // モンヒロビート本オープン(2026-11-07)。予告は rhythmGrandOpenTeaser、本編は rhythmGrandOpen の印が真になるまで回想にも出さない。
   //   date は公開の日が決まったら合わせる。見たかは mh_rhythm_event_story_v1 の id

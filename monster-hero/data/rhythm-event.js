@@ -440,17 +440,17 @@ const PANDORA_WINGS_STORIES = Object.freeze([
   Object.freeze({ id: 'pandora_wings_2026_ep7', part: 7, at: '2026-11-08T04:00:00+09:00' }),
   Object.freeze({ id: 'pandora_wings_2026_ep8', part: 8, at: '2026-11-09T04:00:00+09:00' }),
 ]);
-// 花の女3人のイベントのお話(パンドラと同じ形: 第1話は開幕・第2〜7話は毎朝4:00・第8話は閉幕)。
+// 花の女3人のイベントのお話(パンドラと同じ形: 第1話は開幕・第2〜7話は各日の4:00(ゲームの日付変更線)・第8話は閉幕)。
 //   id は assistants.js の EVENT_REPLAYS の id と同じ。あとから変えない。本文は社長の「この文で」をもらった話から EVENT_REPLAYS へ入れる
 //   (入っていない話は流れない)
 const FLOWER3_STORIES = Object.freeze([
   Object.freeze({ id: 'flower3_2026_ep1', part: 1, at: FLOWER3_START_AT }),
-  Object.freeze({ id: 'flower3_2026_ep2', part: 2, at: '2026-11-24T10:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep3', part: 3, at: '2026-11-25T10:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep4', part: 4, at: '2026-11-26T10:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep5', part: 5, at: '2026-11-27T10:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep6', part: 6, at: '2026-11-28T10:00:00+09:00' }),
-  Object.freeze({ id: 'flower3_2026_ep7', part: 7, at: '2026-11-29T10:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep2', part: 2, at: '2026-11-24T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep3', part: 3, at: '2026-11-25T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep4', part: 4, at: '2026-11-26T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep5', part: 5, at: '2026-11-27T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep6', part: 6, at: '2026-11-28T04:00:00+09:00' }),
+  Object.freeze({ id: 'flower3_2026_ep7', part: 7, at: '2026-11-29T04:00:00+09:00' }),
   Object.freeze({ id: 'flower3_2026_ep8', part: 8, at: FLOWER3_END_AT }),
 ]);
 // 本文が回想の一覧に入っているお話か(静的なデータ。時刻ではない)
