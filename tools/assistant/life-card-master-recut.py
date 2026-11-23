@@ -135,27 +135,37 @@ def key_magenta(C):
     F = fill_from(C, fg, rounds=30, sigma=1.5)
     sF = np.clip(sat(F), -60, 25)
     a = np.clip((sM - s) / np.maximum(sM - sF, 60), 0, 1)
-    a = np.clip((a - 0.08) / 0.89, 0, 1)  # 背景の揺れと、フチの薄いもや(暗い背景で灰色の輪に見える)を落とす
+    # 2026-11-23 社長「髪周りがまだ汚くない？」: 半透明の帯を細くする(薄い所 0.22 までは捨て、0.75 で不透明)。暗い背景で明るい輪に見えないように
+    a = np.clip((a - 0.22) / 0.53, 0, 1)
+    a = a * a * (3 - 2 * a)
     a[(far > 150) & (s < 45)] = 1.0  # 背景から遠い・マゼンタ気が小さい(縞のピンク・赤い手袋など)は不透明
     a[far < 30] = 0.0
     # 色: 混ざりを戻した色。薄い所は体の色へ寄せる
     U = Mloc + (C - Mloc) / np.maximum(a, 0.05)[..., None]
     U = np.clip(U, 0, 255)
     U = F + np.clip(U - F, -70, 70)
-    t = np.clip((a - 0.25) / 0.5, 0, 1)[..., None]
+    # フチの色は内側の体の色で置き換える(ほぼ不透明の所だけ、混ざりを戻した色を少し使う)
+    t = np.clip((a - 0.85) / 0.15, 0, 1)[..., None]
     t = t * t * (3 - 2 * t)
     col = np.where((a >= 0.999)[..., None], C, U * t + F * (1 - t))
     # 色の滲み: 内側の体よりマゼンタ寄りの分を戻す(G を min(R,B) - 体の傾き まで上げる)。フチの帯だけ
     band = dilate(a < 0.98, 6) & (a > 0)
-    g_floor = np.minimum(col[..., 0], col[..., 2]) - (np.maximum(sF, 0) + 4)
+    g_floor = np.minimum(col[..., 0], col[..., 2]) - (np.clip(sF, 0, 8) + 4)  # 細いアホ毛のピンクも戻す(手袋・耳の赤・ピンクは少し明るむだけ)
     g2 = np.where(band, np.maximum(col[..., 1], g_floor), col[..., 1])
     col = np.dstack([col[..., 0], g2, col[..., 2]])
+    # 外周の白いにじみ: 透明から2画素以内で、3画素内側の体より明るい画素は、内側の色へ寄せる(暗い背景で白い線に見えない)
+    inner = erode(a >= 0.99, 3)
+    Fi = fill_from(col, inner, rounds=20, sigma=1.5)
+    rim = dilate(a < 0.5, 2) & (a > 0)
+    lum = lambda X: X[..., 0] * 0.3 + X[..., 1] * 0.59 + X[..., 2] * 0.11
+    lighter = rim & (lum(col) > lum(Fi) + 8)
+    col = np.where(lighter[..., None], Fi * 0.85 + col * 0.15, col)
     return np.dstack([np.clip(col, 0, 255), a * 255.0])
 
 
 def drop_specks(rgba):
     """体から離れた小さな点(背景のノイズ)を消す: 体の芯(不透明を3画素削った所)から、つながっている所だけ残す。"""
-    m = rgba[..., 3] > 4
+    m = rgba[..., 3] > 24  # 薄いかけら(浮いた細い線・点)はつながりに数えない
     keep = erode(rgba[..., 3] > 200, 3) & m
     while True:
         p = np.pad(keep, 1)
