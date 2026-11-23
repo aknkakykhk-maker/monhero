@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2bc53437989ede2
+// source-sha256: d37bdf373ecf1509
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6913,6 +6913,8 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP', '深い']]);
+const RHYTHM_SKY_RISE_LABELS = Object.freeze([['NOW', '今の（早め）'], ['OLD', '元の']]);
+const RHYTHM_SKY_RISE_MODES = Object.freeze(RHYTHM_SKY_RISE_LABELS.map(([id]) => id));
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
@@ -7260,6 +7262,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   stageEffect: 'SIMPLE',
   roadWidth: 'WIDE',
   roadDepth: 'NORMAL',
+  skyRise: 'NOW',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -7551,6 +7554,7 @@ const normalizeRhythmSettings = value => {
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
     roadWidth: RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth) ? source.roadWidth : DEFAULT_RHYTHM_SETTINGS.roadWidth,
     roadDepth: RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth) ? source.roadDepth : DEFAULT_RHYTHM_SETTINGS.roadDepth,
+    skyRise: RHYTHM_SKY_RISE_MODES.includes(source.skyRise) ? source.skyRise : DEFAULT_RHYTHM_SETTINGS.skyRise,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -38500,6 +38504,8 @@ const RhythmOptions = ({
     full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
+  }), field('空のノーツの上がり方', segments('skyRise', RHYTHM_SKY_RISE_LABELS), 'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。', {
+    full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
     className: card
@@ -43685,6 +43691,9 @@ const RhythmTapTest = ({
     } catch (e) {}
     try {
       if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settingsIn?.noteShape);
+    } catch (e) {}
+    try {
+      if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRise);
     } catch (e) {}
     return 0;
   });
@@ -257906,8 +257915,9 @@ function MonsterHeroGame() {
         size: 16,
         className: "shrink-0 text-violet-300/80"
       })), React.createElement("small", {
-        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60"
-      }, desc));
+        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60",
+        style: JA_LABEL_STYLE
+      }, typeof desc === 'string' ? jaWrap(desc) : desc));
       return React.createElement("div", {
         "data-mh-screen": true,
         className: SCREEN_SHELL_CLASS
@@ -257922,7 +257932,7 @@ function MonsterHeroGame() {
         scene: "temple",
         compact: true
       })), React.createElement("div", {
-        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`
+        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`
       }, templeLink(React.createElement(PlusCircle, {
         size: 18
       }), '再生', 'ベースモンから新しいマスモンを再生する', () => {
@@ -257952,7 +257962,11 @@ function MonsterHeroGame() {
         setGameState('MASU_REBIRTH');
       }), templeLink(React.createElement(RotateCcw, {
         size: 18
-      }), '転生', 'Lvを99下げて強化Pを獲得し、育成を振り直す', () => {
+      }), '転生', jaWrapParts('Lvを99下げて', React.createElement("span", {
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, "強化Pを"), '獲得し、育成を振り直す'), () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
         setReincarnateTimes(1);
@@ -265844,9 +265858,16 @@ function MonsterHeroGame() {
         return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
       };
       const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      const sharedSeries = (() => {
+        if (!activeGroup) return '';
+        const ps = activeGroup.events.map(e => storyEpisodeTitleParts(e.title));
+        const s0 = ps[0] && ps[0].series;
+        return s0 && ps.every(p => p.serial && p.series === s0) ? s0 : '';
+      })();
+      const seriesInLabel = series => !!series && !!activeGroup && String(activeGroup.label || '').includes(series);
       const episodeTitle = t => {
         const p = storyEpisodeTitleParts(t);
-        return p.serial && p.series && activeGroup && String(activeGroup.label || '').includes(p.series) ? `${p.ep} ${p.sub}`.trim() : t;
+        return p.serial && p.series && activeGroup && (seriesInLabel(p.series) || p.series === sharedSeries) ? `${p.ep} ${p.sub}`.trim() : t;
       };
       const titleWrap = t => String(t || '').split(/(\s+)/).map((x, i) => !x || /^\s+$/.test(x) ? x : [...x].length <= 12 ? React.createElement("span", {
         key: i,
@@ -265947,7 +265968,11 @@ function MonsterHeroGame() {
         "aria-hidden": "true",
         "data-event-replay-head-emoji": true,
         className: "block text-[16px] leading-none mb-0.5"
-      }, activeGroup.emoji), jaWrap(activeGroup.label)), React.createElement("small", {
+      }, activeGroup.emoji), jaWrap(activeGroup.label)), sharedSeries && !seriesInLabel(sharedSeries) && React.createElement("small", {
+        "data-event-replay-series": true,
+        className: "block text-[10px] font-black leading-tight text-slate-300",
+        style: JA_LABEL_STYLE
+      }, titleWrap(sharedSeries)), React.createElement("small", {
         className: "block text-[10px] font-black tabular-nums",
         style: {
           color: activeGroup.color

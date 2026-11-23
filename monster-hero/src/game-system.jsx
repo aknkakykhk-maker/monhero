@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b8e92ad37e81aeb1
+// generated-sha256: 1b841a0868fc1a6d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5221,6 +5221,10 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控�
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','ふつう'],['NARROW','細い']]);
 // 道の奥行き(2026-10-27 社長の選択「案A」: 案3のカメラを寝かせる形をオプションで選べるように)。「深い」は道が奥へ長く伸び、遠くのノーツほど小さく、手前で速く近づく
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','深い']]);
+// 空中ノーツの上がり方(2026-11-23 台帳 r1119-138・社長「スカイノーツは設定で元々のとさっきのいまの選べるようにしといてね」)。
+//   NOW は今の上がり方(#7303 案B 1/4・既定)、OLD は元の上がり方(#7303 より前)。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE
+const RHYTHM_SKY_RISE_LABELS = Object.freeze([['NOW','今の（早め）'],['OLD','元の']]);
+const RHYTHM_SKY_RISE_MODES = Object.freeze(RHYTHM_SKY_RISE_LABELS.map(([id])=>id));
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -5536,6 +5540,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ★2026-10-27 社長「もとの見た目に直して」で、オプションの「道の奥行き」を画面から外した(深いカメラはデバッグの試作 c3b に戻した)。
   //   選んだ人の保存値は消さずに読み直すだけにする(保存の決まり)。いまはどこからも使わない
   roadDepth:'NORMAL',
+  // 空中ノーツの上がり方(2026-11-23 r1119-138)。新しい項目なので、保存値に無い・壊れている人は今の上がり方(NOW)で補われる。見た目だけに効く
+  skyRise:'NOW',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -5703,6 +5709,7 @@ const normalizeRhythmSettings = value => {
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     roadWidth:RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth)?source.roadWidth:DEFAULT_RHYTHM_SETTINGS.roadWidth,
     roadDepth:RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth)?source.roadDepth:DEFAULT_RHYTHM_SETTINGS.roadDepth,
+    skyRise:RHYTHM_SKY_RISE_MODES.includes(source.skyRise)?source.skyRise:DEFAULT_RHYTHM_SETTINGS.skyRise,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
@@ -24010,6 +24017,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
 {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
               '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
+{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138・社長「スカイノーツは設定で元々のとさっきのいまの選べるようにしといてね」) */}
+{field('空のノーツの上がり方',segments('skyRise',RHYTHM_SKY_RISE_LABELS),
+              'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
@@ -26821,7 +26831,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // ノーツの色の組(B5・2026-11-07)。演奏画面を開いた最初の1回だけ当てる(描き先を取り付けるより前。演奏中は作り直さない)
   useState(()=>{try{if(typeof rhythmApplyNotePalette==='function')rhythmApplyNotePalette(settingsIn?.notePalette);}catch(e){}
     // ノーツの形(2026-11-07)も同じ時に当てる
-    try{if(typeof rhythmApplyNoteShape==='function')rhythmApplyNoteShape(settingsIn?.noteShape);}catch(e){}return 0;});
+    try{if(typeof rhythmApplyNoteShape==='function')rhythmApplyNoteShape(settingsIn?.noteShape);}catch(e){}
+    // 空中ノーツの上がり方(2026-11-23 r1119-138)も同じ時に当てる。見た目だけで、演奏の途中では切り替わらない
+    try{if(typeof RHYTHM_SKY_RISE_MODE==='object')RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRise);}catch(e){}return 0;});
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
@@ -146176,21 +146188,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
                 <ChevronRight size={16} className="shrink-0 text-violet-300/80"/>
               </span>
-              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60">{desc}</small>
+              {/* 説明は文節で折る(API 総点検③: 「振り/直す」の途中で折れていた) */}
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60" style={JA_LABEL_STYLE}>{typeof desc==='string'?jaWrap(desc):desc}</small>
             </button>
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="神殿" accent="text-violet-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
-            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080) */}
-            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`}>
+            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080)。行は中身の高さ(auto-rows-max: 縮められて説明が下の札に重なっていた・API 総点検③) */}
+            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`}>
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
               {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
-              {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
+              {templeLink(<RotateCcw size={18}/>,'転生',jaWrapParts('Lvを99下げて',<span style={{whiteSpace:'nowrap'}}>強化Pを</span>,'獲得し、育成を振り直す'),()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
               {templeLink(<Crown size={18}/>,'魂格進化','魂格を進めてLv上限をさらに解放する',()=>{setSoulRankSelectedId(null);setSoulRankError('');setGameState('MASU_SOUL_RANK');},{'data-soul-rank-link':true})}
             </div>
@@ -149719,7 +149732,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
           // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
           // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
-          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&String(activeGroup.label||'').includes(p.series)?`${p.ep} ${p.sub}`.trim():t;};
+          // まとまりの話がみな同じ作品名の続きものなら、その作品名(まとまりの名前に入っていなくても)を札から外し、見出しの下に1回だけ出す
+          // (API 総点検③: 「花の女3人の新曲」の札8枚すべてに「咲かせて！ハナウタ・ノート」が繰り返し出て、作品名の途中でも折れていた)
+          const sharedSeries=(()=>{if(!activeGroup)return '';const ps=activeGroup.events.map(e=>storyEpisodeTitleParts(e.title));const s0=ps[0]&&ps[0].series;return s0&&ps.every(p=>p.serial&&p.series===s0)?s0:'';})();
+          const seriesInLabel=(series)=>!!series&&!!activeGroup&&String(activeGroup.label||'').includes(series);
+          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&(seriesInLabel(p.series)||p.series===sharedSeries)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -149762,6 +149779,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
+                      {sharedSeries&&!seriesInLabel(sharedSeries)&&<small data-event-replay-series className="block text-[10px] font-black leading-tight text-slate-300" style={JA_LABEL_STYLE}>{titleWrap(sharedSeries)}</small>}
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>

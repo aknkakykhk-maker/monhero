@@ -20608,21 +20608,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
                 <ChevronRight size={16} className="shrink-0 text-violet-300/80"/>
               </span>
-              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60">{desc}</small>
+              {/* 説明は文節で折る(API 総点検③: 「振り/直す」の途中で折れていた) */}
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60" style={JA_LABEL_STYLE}>{typeof desc==='string'?jaWrap(desc):desc}</small>
             </button>
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="神殿" accent="text-violet-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
-            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080) */}
-            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`}>
+            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080)。行は中身の高さ(auto-rows-max: 縮められて説明が下の札に重なっていた・API 総点検③) */}
+            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`}>
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
               {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
-              {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
+              {templeLink(<RotateCcw size={18}/>,'転生',jaWrapParts('Lvを99下げて',<span style={{whiteSpace:'nowrap'}}>強化Pを</span>,'獲得し、育成を振り直す'),()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
               {templeLink(<Crown size={18}/>,'魂格進化','魂格を進めてLv上限をさらに解放する',()=>{setSoulRankSelectedId(null);setSoulRankError('');setGameState('MASU_SOUL_RANK');},{'data-soul-rank-link':true})}
             </div>
@@ -24151,7 +24152,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
           // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
           // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
-          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&String(activeGroup.label||'').includes(p.series)?`${p.ep} ${p.sub}`.trim():t;};
+          // まとまりの話がみな同じ作品名の続きものなら、その作品名(まとまりの名前に入っていなくても)を札から外し、見出しの下に1回だけ出す
+          // (API 総点検③: 「花の女3人の新曲」の札8枚すべてに「咲かせて！ハナウタ・ノート」が繰り返し出て、作品名の途中でも折れていた)
+          const sharedSeries=(()=>{if(!activeGroup)return '';const ps=activeGroup.events.map(e=>storyEpisodeTitleParts(e.title));const s0=ps[0]&&ps[0].series;return s0&&ps.every(p=>p.serial&&p.series===s0)?s0:'';})();
+          const seriesInLabel=(series)=>!!series&&!!activeGroup&&String(activeGroup.label||'').includes(series);
+          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&(seriesInLabel(p.series)||p.series===sharedSeries)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -24194,6 +24199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
+                      {sharedSeries&&!seriesInLabel(sharedSeries)&&<small data-event-replay-series className="block text-[10px] font-black leading-tight text-slate-300" style={JA_LABEL_STYLE}>{titleWrap(sharedSeries)}</small>}
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>

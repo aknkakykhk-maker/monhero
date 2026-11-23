@@ -268,6 +268,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
 {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
               '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
+{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138・社長「スカイノーツは設定で元々のとさっきのいまの選べるようにしといてね」) */}
+{field('空のノーツの上がり方',segments('skyRise',RHYTHM_SKY_RISE_LABELS),
+              'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
