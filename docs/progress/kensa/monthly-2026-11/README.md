@@ -114,3 +114,93 @@ node tools/maintenance.js --hygiene-only                               # 衛生�
 node tools/browser/visual-compare-check.js --head-only                 # 撮り比べ(枝だけ)
 node tools/playbot/playbot.js --team battle|rhythm|patrol|guard        # 遊ぶ点検
 ```
+
+## 追記(窓口からの追加依頼・2026-11-23 昼)
+
+### 撮り比べの揺れ(助手ライフ マスモン)
+- `--self`(同じ版どうし)で、縦 0.3〜2.8%・横 2.2〜9.4% の違いが毎回出る。止め絵を見ると、**同じマスモン(もち隊長)でもレベルと見た目が違う**(Lv.26 と Lv.24・別の姿)。つまり画面を撮る道具の揺れではなく、**ゲームが開くたびにマスモンの育ち(実時間で進む `amgTick`・`Date.now()` 基準)と姿を決めており、撮り比べの時計の固定と乱数の種が効いていない**
+- 試した直し: タブを開く直前に乱数の種を入れ直す → **効かなかったので戻した**(コードは変えていない)。
+- 次の手: ①`__vcFreeze` でこの場面だけ時計を止める ②マスモンの枠(`.rounded` の1枚目・立ち絵とレベル)を `hide` に足す。①を先に試す(検査部の次の作業)
+
+### main でも落ちている検査(最新 main で 1 本ずつ回し直した結果)
+依頼で名指しされた 4 本: `boot/home-screen-guide-check.js` = **NG**(実物を最後まで確かめられない・クリックがタイムアウト) / `ui/rotation-height-check.js` = **NG**(`56-monhero-success-manual.jsx:334` の `createPortal(…, document.body)` が確認済み一覧に無い) / `assistant/life-success-entry-check.js` = **NG**(「みゅあは『みゅあ編で』」が出ない) / `mode/rhythm-touch-bridge-check.js` = **通った**(初回は負荷での時間切れ)。
+
+NG のまま(63 本・時間切れ 6 本)。部の受け持ちは上の表のとおり:
+- `assistant/assistant-life-quick-lose-check.js`
+- `landscape-screens-check.js`
+- `assistant/assistant-life-clarity-check.js`
+- `home-layout-check.js`
+- `assistant/assistant-art-scenes-check.js`
+- `assistant/assistant-life-ux3-check.js`
+- `assistant/life-peer-label-check.js`
+- `assistant/assistant-life-quick-run-browser-check.js`
+- `assistant/sorashido-story-check.js`
+- `assistant/assistant-life-browser-check.js`
+- `assistant/assistant-life-friend-browser-check.js`
+- `assistant/assistant-life-scene-stand-browser-check.js`
+- `assistant/assistant-life-furn-browser-check.js`
+- `battle/battle-tutorial-tactics-check.js`
+- `battle/battle-tutorial-split-browser-check.js`
+- `assistant/assistant-masmon-battle-row-check.js`
+- `assistant/assistant-life-sheet-close-check.js`
+- `assistant/assistant-life-map-check.js`
+- `assistant/life-fullbody-edge-check.js`
+- `assistant/assistant-life-ux-check.js`
+- `assistant/assistant-life-taste-check.js`
+- `battle/quick-run-anywhere-strip-overlap-check.js`
+- `assistant/assistant-masmon-cheer-check.js`
+- `audio/auto-bgm-picker-browser-check.js`
+- `battle/wave-result-layout-check.js`
+- `boot/changelog-order-check.js`
+- `assistant/life-fullbody-pocket-check.js`
+- `assistant/assistant-life-solo-browser-check.js`
+- `boot/home-screen-guide-check.js`
+- `assistant/life-success-entry-check.js`
+- `battle/battle-tutorial-v2-check.js`
+- `audio/bgm-check.js`
+- `battle/card-icon-check.js`
+- `boot/ja-wrap-beat-multi-check.js`
+- `battle/battle-check.js`
+- `boot/ja-wrap-beat-tutorial-check.js`
+- `boot/quiet-boot-seed-coverage-check.js`
+- `card/card-bind-browser-check.js`
+- `boot/ja-wrap-lines-check.js`
+- `boot/ja-wrap-beat-screen-check.js`
+- `boot/ja-wrap-beat-extra-check.js`
+- `browser/feature-check.js`
+- `card/card-life-limit-browser-check.js`
+- `card/card-battle-settings-browser-check.js`
+- `card/card-bubble-text-check.js`
+- `card/card-deck-drop-dead-browser-check.js`
+- `card/card-life-reward-browser-check.js`
+- `card/card-rules-check.js`
+- `card/card-double-tap-browser-check.js`
+- `mode/raid-jack-home-say-tap-check.js`
+- `image/art-content-box-check.js`
+- `masu/masu-enhance-layer-check.js`
+- `card/card-foe-style-browser-check.js`
+- `masu/unique-boost-screens-check.js`
+- `mode/extreme-browser-check.js`
+- `market/market-bubble-collapse-check.js`
+- `mode/rhythm-chart-v3-check.js`
+- `mode/rhythm-hell-level-check.js`
+- `masu/masu-growth-breakdown-check.js`
+- `ranking/power-ranking-browser-check.js`
+- `ranking/power-ranking-check.js`
+- `mode/rhythm-result-effect-check.js`
+- `mode/rhythm-multi-layout-check.js`
+- `ui/rotation-height-check.js`
+- `team/team-tools-check.js`
+- `mode/rhythm-song-shop-check.js`
+- `ui/time-of-day-clock-browser-check.js`
+- `success/success-layout-check.js`
+- `mode/rhythm-gpu-band-check.js`
+
+(通った 17 本: assistant-face・kiki-intro・rules-index・life-rel-scene・life-profile-faces・card-focus-browser・visual-compare・card-battle-browser・raid-jack-home-aura・card-shop-two-tabs・rhythm-option-preview・rhythm-landscape-layout・rhythm-song-list-scroll・ghost-browser・screen-render-cost・rhythm-multi-assist-result・rhythm-touch-bridge)
+
+直せる物はこの会話では直していない。多くは「検査が古い」か「画面が変わった」の仕分けが先で、受け持つ部が画面を見て決めるため(M11・H4)。
+
+### 画像の片付け(孤立画像)について
+窓口の追加依頼(使っていない画像を `docs/archive/unused-images-2026-11/` へ)は、**台帳 r1119-121・r1119-124 で開発部(土台)の仕事になっている**ため重ねて動かさず、**何も移していない**(移した 0 枚・保留 0 枚・減った大きさ 0MB)。調べて分かったこと:
+- `maintenance.js` の孤立画像の検査は、いまの main で候補 **0 枚**(`data/` の一覧にどの画像の名前も書かれているため、名前の照合では何も見つからない)
+- 生成の一覧(`asset-manifest.json`・compiled など)を除いて名前だけで数えると候補 1,770 枚(349.5MB)になるが、カードバトルの絵 1,018 枚(`card-battle/l`・`s`)や助手の表情・立ち絵のように**名前を組み立てて読む物が大半**で、**この数は使わない物の数ではない**。実行時に読まれた画像の記録との照合(r1119-064 の方法)が要る
