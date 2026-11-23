@@ -83604,6 +83604,14 @@ const rhythmBuildCanvasRenderer=()=>{
     ctx.fillStyle=`rgba(${L.fill},.55)`;ctx.fillRect(x0,y0,W,H);ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x0,y0,W,H*.55);
     ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.3;box();ctx.globalAlpha=1;
   };
+  // 空中のフリックの印を箱の真ん中へ重ねる(上の案Zの箱の描き方の続き。r1119-148 案A)。箱の幅に合わせて大きさを決め、奥の小さい箱でも潰れすぎないよう下限を持つ
+  const drawSkyFlickMark=(note,hd,opts)=>{
+    if(!hd)return;
+    const {faceH,thick,W}=skyBoxDims(hd,opts),dir=rhythmFlickDir(note);
+    const sprite=dir?sideChevronSprite(dir):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+    const k=Math.max(.45,(W*(dir?.72:.34))/sprite.tw),aw=(sprite.tw+sprite.margin*2)*k,ah=(sprite.th+sprite.margin*2)*k,cy=hd.cy-faceH/2+(faceH+thick)/2;
+    ctx.globalAlpha=Number(opts.alpha)>=0?Number(opts.alpha):1;ctx.drawImage(sprite.canvas,hd.cx-aw/2,cy-ah/2,aw,ah);ctx.globalAlpha=1;
+  };
   const drawGlassBox=(hd,opts)=>{
     if(case3){drawSkyPlateGlow(hd,opts);return;}
     if(drawSkyCube3d(hd,opts))return;
@@ -84868,10 +84876,10 @@ const rhythmBuildCanvasRenderer=()=>{
       const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
       if(skyGlass){
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
-        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();
-          // 左右のフリックは、その向きの三角で描く(2026-11-23 r1119-145 社長「スカイスライドでなんか上フリックある？」。向きに関係なく上向きで描いていて、空中の左右フリックが上フリックに見えた)
-          {const fd=rhythmFlickDir(note),my=ay-aw/2;if(fd==='right'){ctx.moveTo(ax+aw/2,my);ctx.lineTo(ax-aw/2,my-aw);ctx.lineTo(ax-aw/2,my+aw);}else if(fd==='left'){ctx.moveTo(ax-aw/2,my);ctx.lineTo(ax+aw/2,my-aw);ctx.lineTo(ax+aw/2,my+aw);}else{ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);}}
-          ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+        // 空中のフリックの印(2026-11-23 r1119-148 社長の選択「案A 地上と同じ山形」)。前は箱の上の小さな白い三角だけで、空中のタップと見分けにくかった。
+        // 地上の横フリックと同じ山形(地上と同じ色 RHYTHM_NOTE_COLORS.LEFT/RIGHT)、上フリックは地上と同じ桃色の矢印を、箱の真ん中へ大きく重ねる。
+        // 絵は地上と同じ焼いた絵(sideChevronSprite・arrowSprite)を貼るだけなので、2D でも GPU(webgl の描き口)でも同じに出る
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK')drawSkyFlickMark(note,geo.head,o);
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
       // ききノーツ(r1119-141): 頭にききのリボンをぴょこんと付ける。必殺ノーツは上にピンクの剣を置き(リボンは右上へ)、叩いたら消える。顔と同じく最後にまとめて貼る
       if(note._mhCharge&&geo.head&&!o.failed&&o.pop===null&&rhythmNoteVisualType(note)==='TAP'){
