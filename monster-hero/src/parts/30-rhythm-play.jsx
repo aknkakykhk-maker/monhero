@@ -2982,10 +2982,12 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
+  // 自動の手には譜面のノーツそのものを渡す(2026-11-23 r1119-145)。読み取り口 rhythmNotes の控えには払う向き(flickDir)・終点フリック・
+  // スライドの点の空中の高さが無く、左右のフリック(ダブルフリック)を上へ払い、空中スライドを地上で押して MISS になっていた(音も鳴らなかった)
   useEffect(()=>{
     if(!previewHands||typeof window==='undefined'||typeof rhythmPreviewHandsStart!=='function')return undefined;
     let stop=null;
-    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current);clearInterval(wait);}},100);
+    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current,{notes:chart&&Array.isArray(chart.notes)?chart.notes:null});clearInterval(wait);}},100);
     return()=>{clearInterval(wait);if(stop)stop();};
   },[previewHands]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);

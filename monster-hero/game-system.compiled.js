@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5bfbbb73cb0e2f7
+// source-sha256: 923165d0bc85a0da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -46918,7 +46918,9 @@ const RhythmTapTest = ({
       if (stop) return;
       const ms = window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs ? window.__mhTestHooks.rhythmSongMs() : null;
       if (ms != null && playAreaRef.current) {
-        stop = rhythmPreviewHandsStart(playAreaRef.current);
+        stop = rhythmPreviewHandsStart(playAreaRef.current, {
+          notes: chart && Array.isArray(chart.notes) ? chart.notes : null
+        });
         clearInterval(wait);
       }
     }, 100);
@@ -49273,7 +49275,7 @@ const RhythmTapTest = ({
     onClick: abort
   }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : listenMode ? '鑑賞をやめて曲選びへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
 };
-const rhythmPreviewHandsStart = area => {
+const rhythmPreviewHandsStart = (area, opts = null) => {
   if (typeof window === 'undefined' || !area) return () => {};
   const hooks = () => window.__mhTestHooks || {};
   let stopped = false,
@@ -49354,7 +49356,8 @@ const rhythmPreviewHandsStart = area => {
   };
   const notes = (() => {
     try {
-      return (hooks().rhythmNotes && hooks().rhythmNotes() || []).slice().sort((a, b) => a.timeMs - b.timeMs);
+      const src = opts && Array.isArray(opts.notes) ? opts.notes : hooks().rhythmNotes && hooks().rhythmNotes() || [];
+      return src.filter(n => n && Number.isFinite(Number(n.timeMs))).slice().sort((a, b) => a.timeMs - b.timeMs);
     } catch (_) {
       return [];
     }
