@@ -36,7 +36,8 @@ const empty=api.speciesChallengeProfileSummary(null);
 assert(empty.bestScore===0&&empty.bestSpeciesId===null&&empty.bestDifficultyId===null&&empty.clearedCount===0&&empty.totalCount===231,'未記録を安全に0/231へ正規化する');
 
 const profileStart=source.indexOf('{/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}');
-const profileEnd=source.indexOf('{/* イベント回想:',profileStart);
+// 2026-11-23 案B: いちばん下の回想の入口は扉「思い出」へ移した。記録のページの終わり(助手とのセッション)までを見る
+const profileEnd=source.indexOf('{/* 助手とのセッション(',profileStart);
 const profile=source.slice(profileStart,profileEnd);
 assert(profile.includes('SPECIES_CHALLENGE_MODE')&&profile.includes('data-profile-mode={mode.id}'),'プロフィールに種族チャレンジを既存モードカードとして追加する');
 // ★クラシックとタクティクス、どちらの種族チャレンジも同じ集計関数を通す(2026-09-20)。

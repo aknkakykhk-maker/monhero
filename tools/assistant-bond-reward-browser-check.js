@@ -146,6 +146,9 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
       await page.waitForTimeout(500);
       if (!more) break;
     }
+    // 2026-11-23 プロフィール案B: 名刺のページから扉「助手」を押して進む
+    await page.evaluate(() => document.querySelector('[data-profile-door="assistant"]')?.click());
+    await page.waitForTimeout(700);
     const prof = await page.evaluate(() => document.body.innerText);
     check('④ プロフィールに Lv25 が出る', /Lv\.25/.test(prof));
     // ごほうび一覧

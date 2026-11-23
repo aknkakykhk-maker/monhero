@@ -105,6 +105,9 @@ const openAssistantList = async (page) => {
   await page.evaluate(() => document.querySelector('button[aria-label="プロフィールを開く"]')?.click());
   await page.waitForTimeout(1500);
   await dismiss(page);
+  // 2026-11-23 プロフィール案B: 名刺のページから扉「助手」を押して進む
+  await page.evaluate(() => document.querySelector('[data-profile-door="assistant"]')?.click());
+  await page.waitForTimeout(700);
   await page.evaluate(() => document.querySelector('button[aria-pressed="false"][class*="min-h-[52px]"]')?.click());
   await page.waitForTimeout(1000);
 };
@@ -195,6 +198,9 @@ const pickerText = (page) => page.evaluate(() => {
       await shot(page, '09-profile-atsu');
       // HOME へ戻って吹き出しを見る
       await dismiss(page);
+      // 2026-11-23 プロフィール案B: 助手のページからは、いったん名刺のページへ戻ってから HOME へ
+      await page.evaluate(() => document.querySelector('button[aria-label="プロフィールへ戻る"]')?.click());
+      await page.waitForTimeout(600);
       await page.evaluate(() => (document.querySelector('button[aria-label="ホームへ戻る"]') || document.querySelector('button[aria-label="戻る"]'))?.click());
       await page.waitForTimeout(2000);
       await dismiss(page);

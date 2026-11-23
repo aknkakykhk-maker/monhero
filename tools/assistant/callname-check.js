@@ -227,6 +227,9 @@ const browser = async () => {
       await page.waitForTimeout(800);
       check('⑨ つぎの画面で、呼び方が変わった知らせが1回出る', await page.locator('[data-assistant-callname-toast]').count() === 1);
       // ⑫ プロフィール
+      // 2026-11-23 プロフィール案B: 名刺のページから扉「助手」を押して進む
+      await page.evaluate(() => document.querySelector('[data-profile-door="assistant"]')?.click());
+      await page.waitForTimeout(700);
       await page.locator('[data-profile-call-style]').first().waitFor({ timeout: 8000 }).catch(() => {});
       // プロフィールで1回だけ出る案内(飾り枠など)を読み進めてから押す
       for (let i = 0; i < 12; i++) { const n = page.getByRole('button', { name: /^(次へ|閉じる|OK|(?:分|わ)かった！?)$/ }).first(); if (!(await n.count()) || !(await n.isVisible().catch(() => false))) break; await n.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(250); }

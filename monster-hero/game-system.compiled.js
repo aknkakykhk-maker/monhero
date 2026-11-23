@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d2738a90f0f8002
+// source-sha256: 2438414bbf12fcd7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -715,72 +715,84 @@ const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
   id: 'flower3',
+  genre: 'event',
   emoji: '🌸',
   label: '花の女3人の新曲',
   note: 'みゅあ・きき・ももの曲作りのお話',
   color: '#f9a8d4'
 }, {
   id: 'pandora_wings',
+  genre: 'event',
   emoji: '🗝️',
   label: '鍵の向こう側へ',
   note: 'パンドラとふたつの翼のお話',
   color: '#c084fc'
 }, {
   id: 'monsuc',
+  genre: 'play',
   emoji: '🌱',
   label: 'モンヒロサクセス',
   note: '新しい育成場のお話',
   color: '#4ade80'
 }, {
   id: 'wof_song',
+  genre: 'song',
   emoji: '🌌',
   label: 'あつとみゅあの歌',
   note: 'W.o.F のころの思い出の歌のお話',
   color: '#a78bfa'
 }, {
   id: 'erubin_song',
+  genre: 'song',
   emoji: '🏜️',
   label: 'えるびんの歌',
   note: 'えるびんが初めて作った曲のお話',
   color: '#d6b47a'
 }, {
   id: 'kiki_song',
+  genre: 'song',
   emoji: '🎹',
   label: 'ききの初めての曲',
   note: 'ききが初めて作った曲のお話',
   color: '#f9a8d4'
 }, {
   id: 'halloween',
+  genre: 'event',
   emoji: '🎃',
   label: 'ハロウィン・ナイト',
   note: 'レイドバトルとジャックのお話',
   color: '#fb923c'
 }, {
   id: 'update',
+  genre: 'play',
   emoji: '✨',
   label: '新しい遊びのお話',
   note: '新しい遊びができたときの案内',
   color: '#e879f9'
 }, {
   id: 'beat_point',
+  genre: 'event',
   emoji: '🎵',
   label: 'ビートP',
   note: 'ビートPと交換所のお話',
   color: '#34d399'
 }, {
   id: 'symphony',
+  genre: 'event',
   emoji: '🎼',
   label: '異世界交響祭',
   note: 'モンヒロビートの大会',
   color: '#38bdf8'
 }, {
   id: 'cup',
+  genre: 'event',
   emoji: '🏆',
   label: '週末ゲリラ杯',
   note: 'モンヒロビートの大会',
   color: '#fbbf24'
 }, {
   id: 'assistant',
+  genre: 'assistant',
   emoji: '💬',
   label: '助手のお話',
   note: 'きき・ももすけ・あつ・きゅうことの出会い',
@@ -799,6 +811,111 @@ const eventReplayGroups = (keep = eventReplayReleased) => {
     ...group,
     events: asc.filter(event => groupOf(event) === group.id)
   })).filter(group => group.events.length > 0);
+};
+const EVENT_REPLAY_GENRES = Object.freeze([{
+  id: 'event',
+  emoji: '📅',
+  label: '期間イベント',
+  note: '開催したイベントのお話',
+  color: '#fb923c'
+}, {
+  id: 'assistant',
+  emoji: '💬',
+  label: '助手のお話',
+  note: '出会いと季節の小話',
+  color: '#f472b6'
+}, {
+  id: 'song',
+  emoji: '🎵',
+  label: '曲のお話',
+  note: '新しい曲ができるまで',
+  color: '#a78bfa'
+}, {
+  id: 'play',
+  emoji: '🆕',
+  label: '遊びの案内',
+  note: '新しい遊びができた日',
+  color: '#38bdf8'
+}]);
+const EVENT_REPLAY_GENRE_OF_EVENT = Object.freeze({
+  kyuko_winter_2026_11: 'assistant',
+  kiki_twintail_2026_11: 'assistant',
+  beat_point_always_2026_09_24: 'play'
+});
+const EVENT_REPLAY_SONG_STORIES = Object.freeze({
+  sparkling_pink_kiki_story: {
+    songId: 'sparkling_pink_overture',
+    who: ['kiki']
+  },
+  desert_crown_story: {
+    songId: 'desert_crown',
+    who: ['erubin']
+  },
+  beyond_same_sky_story: {
+    songId: 'beyond_the_same_sky',
+    who: ['atsu', 'mua']
+  }
+});
+const EVENT_REPLAY_PLAY_AREAS = Object.freeze([{
+  id: 'beat',
+  test: /^(rhythm_|beat_point_)/,
+  label: '🎵 モンヒロビート'
+}, {
+  id: 'tactics',
+  test: /^tactics_/,
+  label: '⚔️ タクティクスバトル'
+}, {
+  id: 'card',
+  test: /^card_/,
+  label: '🃏 MFバトルカード'
+}, {
+  id: 'monsuc',
+  test: /^monsuc_/,
+  label: '🌱 モンヒロサクセス'
+}, {
+  id: 'assistant',
+  test: /^assistant_/,
+  label: '🤝 助手と遊ぶ'
+}, {
+  id: 'other',
+  test: /.*/,
+  label: '✨ そのほか'
+}]);
+const eventReplayGenreOf = event => {
+  if (!event) return 'event';
+  if (EVENT_REPLAY_GENRE_OF_EVENT[event.id]) return EVENT_REPLAY_GENRE_OF_EVENT[event.id];
+  const group = EVENT_REPLAY_GROUPS.find(g => g.id === event.group) || EVENT_REPLAY_GROUPS.find(g => g.id === EVENT_REPLAY_GROUP_FALLBACK);
+  return group && group.genre || 'event';
+};
+const eventReplayPlayAreaOf = event => EVENT_REPLAY_PLAY_AREAS.find(a => a.test.test(String(event && event.id || ''))) || EVENT_REPLAY_PLAY_AREAS[EVENT_REPLAY_PLAY_AREAS.length - 1];
+const eventReplayWhoOf = event => {
+  const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
+  const ids = song ? song.who : [String(event && event.id || '').split('_')[0]];
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id)) : [];
+  return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
+};
+const eventReplayGenreList = (keep = eventReplayReleased) => {
+  const groups = eventReplayGroups(keep);
+  return EVENT_REPLAY_GENRES.map(genre => {
+    const events = [];
+    const series = [];
+    groups.forEach(group => {
+      const mine = group.events.filter(event => eventReplayGenreOf(event) === genre.id);
+      if (!mine.length) return;
+      events.push(...mine);
+      series.push({
+        ...group,
+        events: mine
+      });
+    });
+    const ms = event => eventReplayDateMs(event) || 0;
+    events.sort((a, b) => ms(a) - ms(b));
+    return {
+      ...genre,
+      series,
+      events
+    };
+  }).filter(genre => genre.events.length > 0);
 };
 const SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const SPECIES_CHALLENGE_UNLOCK_TEXT = 'チャレンジ Master以上クリアで解放';
@@ -73648,6 +73765,172 @@ const AssistantBondRewardList = ({
     onClick: onClose
   }))));
 };
+const profilePageMemo = {
+  page: 'top'
+};
+const PROFILE_HEAD_STYLE = Object.freeze({
+  fontSize: '16px',
+  paddingRight: '2px'
+});
+const PROFILE_SUB_PAGES = Object.freeze({
+  records: {
+    title: '記録',
+    accent: 'text-amber-300'
+  },
+  assistant: {
+    title: '助手',
+    accent: 'text-pink-300'
+  },
+  looks: {
+    title: '見た目',
+    accent: 'text-indigo-300'
+  }
+});
+function ProfileTitleChip() {
+  const state = typeof useRhythmAssistSessionState === 'function' ? useRhythmAssistSessionState() : null;
+  if (!state || typeof rhythmAssistSessionEnabled !== 'function' || !rhythmAssistSessionEnabled()) return null;
+  const list = typeof rhythmAssistSessionBadges === 'function' ? rhythmAssistSessionBadges(state) : [];
+  if (!Array.isArray(list) || !list.some(x => x && x.master)) return null;
+  return React.createElement("div", {
+    "data-profile-title": true,
+    className: "mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap text-[10px] font-black text-amber-300"
+  }, "🎖 称号"), React.createElement("b", {
+    className: "min-w-0 text-[12px] font-black leading-tight text-amber-100",
+    style: JA_LABEL_STYLE
+  }, jaWrap('セッションマスター')));
+}
+function ProfileHighlights({
+  highScores,
+  rhythmAchRows,
+  assistantBonds,
+  assistantChoices
+}) {
+  const best = highestModeScore(highScores || {}, Object.keys(DIFFICULTY_SETTINGS));
+  const fc = (Array.isArray(rhythmAchRows) ? rhythmAchRows : []).reduce((sum, row) => sum + (Number(row && row.fc) || 0), 0);
+  let top = null;
+  (Array.isArray(assistantChoices) ? assistantChoices : []).forEach(who => {
+    const lv = assistantBondLevelOf(normalizeAssistantBond((assistantBonds || {})[who.id]).points);
+    if (!top || lv > top.lv) top = {
+      who,
+      lv
+    };
+  });
+  const cell = (key, label, value, tone) => React.createElement("div", {
+    key: key,
+    "data-profile-highlight": key,
+    className: `flex min-h-[58px] min-w-0 flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center ${tone}`
+  }, React.createElement("small", {
+    className: "block text-[10px] font-black leading-tight",
+    style: JA_LABEL_STYLE
+  }, jaWrap(label)), React.createElement("b", {
+    className: "block max-w-full text-[13px] font-black leading-tight text-white",
+    style: JA_LABEL_STYLE
+  }, value));
+  return React.createElement("div", {
+    className: "mb-3 grid grid-cols-3 gap-2",
+    "data-profile-highlights": true
+  }, cell('challenge', 'チャレンジ最高', best > 0 ? React.createElement("span", {
+    className: "font-mono"
+  }, best.toLocaleString()) : '記録なし', 'border-amber-400/40 bg-amber-950/40 text-amber-300'), cell('beat', 'フルコンボ', fc > 0 ? `${fc}譜面` : '記録なし', 'border-violet-400/40 bg-violet-950/40 text-violet-300'), cell('bond', '一番の仲良し', top ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "inline-block"
+  }, top.who.name), " ", React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, "Lv.", top.lv)) : '―', 'border-pink-400/40 bg-pink-950/40 text-pink-300'));
+}
+function ProfileDoors({
+  setPage,
+  friendsEnabled,
+  friendRequestCount,
+  onOpenFriends,
+  onOpenItems,
+  ownedItems,
+  onOpenEventReplayList,
+  isEventReplayUnlocked
+}) {
+  const replays = typeof eventReplayList === 'function' ? eventReplayList() : [];
+  const seen = replays.filter(isEventReplayUnlocked).length;
+  const requests = Number(friendRequestCount) || 0;
+  const items = Object.values(ownedItems || {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const doors = [{
+    id: 'records',
+    emoji: '🏆',
+    label: '記録',
+    note: '遊びごとの記録',
+    color: '#fbbf24',
+    onClick: () => setPage('records')
+  }, {
+    id: 'assistant',
+    emoji: '💬',
+    label: '助手',
+    note: '仲良し度・関係図',
+    color: '#f472b6',
+    onClick: () => setPage('assistant')
+  }, replays.length > 0 && {
+    id: 'memories',
+    emoji: '📖',
+    label: '思い出',
+    note: `イベント回想 ${seen}/${replays.length}`,
+    color: '#e879f9',
+    onClick: onOpenEventReplayList
+  }, {
+    id: 'looks',
+    emoji: '🎨',
+    label: '見た目',
+    note: 'アイコン・フレーム・着替え',
+    color: '#818cf8',
+    onClick: () => setPage('looks')
+  }, friendsEnabled && {
+    id: 'friends',
+    emoji: '👥',
+    label: 'フレンド',
+    note: requests > 0 ? `申請が${requests}件` : '申請・一覧',
+    color: '#f9a8d4',
+    onClick: onOpenFriends,
+    badge: requests
+  }, {
+    id: 'items',
+    emoji: '📦',
+    label: 'アイテム',
+    note: `${items}個`,
+    color: '#2dd4bf',
+    onClick: onOpenItems
+  }].filter(Boolean);
+  return React.createElement("div", {
+    className: "mb-3 grid grid-cols-3 gap-2",
+    "data-profile-doors": true
+  }, doors.map(d => React.createElement("button", _extends({
+    key: d.id,
+    type: "button",
+    "data-profile-door": d.id,
+    onClick: d.onClick
+  }, d.id === 'friends' ? {
+    'data-profile-friends': true,
+    'data-friend-requests': requests
+  } : {}, {
+    className: "relative flex min-h-[76px] min-w-0 flex-col items-start justify-between gap-1 rounded-2xl border-[1.5px] px-2 py-2 text-left active:scale-[.97]",
+    style: {
+      borderColor: `${d.color}88`,
+      backgroundColor: `${d.color}1a`
+    }
+  }), React.createElement("b", {
+    className: "flex items-center gap-1 text-[14px] font-black leading-tight text-white max-[359px]:text-[13px]"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, d.emoji), React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, d.label)), React.createElement("small", _extends({}, d.id === 'friends' ? {
+    'data-profile-friends-note': true
+  } : {}, {
+    className: `block w-full text-[10px] font-bold leading-tight ${d.badge ? 'text-rose-200' : 'text-slate-300'}`,
+    style: JA_LABEL_STYLE
+  }), jaWrap(d.note)), d.badge > 0 && React.createElement("span", {
+    "data-friend-badge": true,
+    "aria-hidden": "true",
+    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
+  }, Math.min(99, d.badge)))));
+}
 function ProfileScreen({
   onCardShareGo = null,
   activeAssistant,
@@ -73717,6 +74000,14 @@ function ProfileScreen({
 }) {
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
   const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
+  const [page, setPageRaw] = React.useState(() => !onboarded || onboardingPreview ? 'top' : profileBattleMode ? 'records' : profilePageMemo.page);
+  const listRef = React.useRef(null);
+  const setPage = next => {
+    profilePageMemo.page = next;
+    setPageRaw(next);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  };
+  const subPage = PROFILE_SUB_PAGES[page] || null;
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -73737,17 +74028,23 @@ function ProfileScreen({
       paddingTop: '3.25rem'
     } : undefined
   }, React.createElement(ScreenHead, {
-    title: "プロフィール",
-    accent: "text-indigo-400",
+    title: subPage ? subPage.title : 'プロフィール',
+    accent: subPage ? subPage.accent : 'text-indigo-400',
+    accentStyle: PROFILE_HEAD_STYLE,
     right: typeof TimeOfDayClock === 'function' ? React.createElement(TimeOfDayClock, null) : null,
-    onBack: onboarded && !onboardingPreview ? onBack : null,
-    backLabel: "ホームへ戻る"
+    onBack: onboarded && !onboardingPreview ? subPage ? () => setPage('top') : () => {
+      profilePageMemo.page = 'top';
+      onBack();
+    } : null,
+    backLabel: subPage ? 'プロフィールへ戻る' : 'ホームへ戻る'
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, React.createElement(AssistantBubble, {
     scene: "profile",
     compact: true
   })), React.createElement("div", {
+    ref: listRef,
+    "data-profile-page": page,
     className: `${SCREEN_LIST_CLASS} pb-4`
   }, (!onboarded || onboardingPreview) && (() => {
     const hasName = !!(onboardingName || '').trim();
@@ -73780,7 +74077,11 @@ function ProfileScreen({
     }, "決定！"), React.createElement("div", {
       className: "text-[10px] text-slate-400 text-center mt-1.5"
     }, "名前もアイコンも、あとからこの画面でいつでも変えられます"));
-  })(), React.createElement("div", {
+  })(), page === 'top' && React.createElement("div", {
+    "data-profile-top": true
+  }, React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("div", {
     className: `${SCREEN_PANEL_CLASS} mb-3`,
     "data-profile-card": true
   }, React.createElement("div", {
@@ -73811,8 +74112,10 @@ function ProfileScreen({
     onClick: () => onOpenNameEdit(breederName),
     className: "flex min-h-[40px] max-w-full items-center gap-1.5 active:scale-95"
   }, React.createElement("span", {
-    className: "truncate text-lg font-black text-white"
-  }, breederName), React.createElement(Edit3, {
+    "data-profile-name": true,
+    className: "min-w-0 break-words text-left text-lg font-black leading-tight text-white max-[359px]:text-base",
+    style: JA_LABEL_STYLE
+  }, jaWrap(breederName)), React.createElement(Edit3, {
     size: 13,
     className: "shrink-0 text-slate-400"
   })), React.createElement("div", {
@@ -73833,8 +74136,113 @@ function ProfileScreen({
     }
   })), React.createElement("div", {
     className: "mt-0.5 text-[10px] text-slate-400 font-mono"
-  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), onSelectBreederGender && !onboardingPreview && React.createElement("div", {
-    className: "mt-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5",
+  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")))), React.createElement(ProfileTitleChip, null), onboarded && !onboardingPreview && friendsEnabled && React.createElement("div", {
+    className: "mt-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-profile-message": true,
+    onClick: onOpenMessageEditor,
+    className: "flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "text-lg",
+    "aria-hidden": "true"
+  }, "💬"), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-black text-pink-300"
+  }, "ひとこと"), React.createElement("b", {
+    className: "block break-words text-[12px] font-black leading-snug text-white",
+    style: JA_LABEL_STYLE
+  }, profileMessage ? `「${profileMessage}」` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません"))), React.createElement(Edit3, {
+    size: 13,
+    className: "shrink-0 text-slate-400"
+  })))), onboarded && !onboardingPreview && React.createElement(ProfileHighlights, {
+    highScores: highScores,
+    rhythmAchRows: rhythmAchRows,
+    assistantBonds: assistantBonds,
+    assistantChoices: assistantChoices
+  })), React.createElement("div", {
+    className: "min-w-0"
+  }, onboarded && !onboardingPreview && friendsEnabled && (() => {
+    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
+    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
+    return React.createElement("section", {
+      className: "mb-3",
+      "data-profile-showcase": true
+    }, React.createElement("div", {
+      className: "mb-1"
+    }, React.createElement(ScreenSectionLabel, null, "見せる欄（フレンドにもこう見えます）")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      "data-profile-favorite-masu": true,
+      onClick: onOpenFavoritePicker,
+      className: "flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]"
+    }, React.createElement("small", {
+      className: "text-[10px] font-black text-amber-300",
+      style: JA_LABEL_STYLE
+    }, jaWrap('好きなモンスター')), face ? React.createElement(ProfileAvatar, {
+      src: face.src,
+      id: face.id,
+      className: "h-14 w-14 shrink-0"
+    }) : React.createElement("span", {
+      className: "flex h-14 w-14 items-center justify-center text-3xl",
+      "aria-hidden": "true"
+    }, "💗"), React.createElement("b", {
+      className: "block w-full break-words text-[13px] font-black leading-tight text-white"
+    }, base ? base.name : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")), base && React.createElement("small", {
+      className: "text-[10px] font-black text-pink-300"
+    }, "絆Lv.", masuBondLevelInfo(favoriteMasu).level)), typeof CardShareDeckTile === 'function' && React.createElement(CardShareDeckTile, {
+      mode: "self",
+      onOpen: () => {
+        if (typeof onCardShareGo === 'function') onCardShareGo({
+          kind: 'register'
+        });
+      }
+    })));
+  })(), onboarded && !onboardingPreview && React.createElement(ProfileDoors, {
+    setPage: setPage,
+    friendsEnabled: friendsEnabled,
+    friendRequestCount: friendRequestCount,
+    onOpenFriends: onOpenFriends,
+    onOpenItems: onOpenItems,
+    ownedItems: ownedItems,
+    onOpenEventReplayList: onOpenEventReplayList,
+    isEventReplayUnlocked: isEventReplayUnlocked
+  }), React.createElement("div", {
+    className: "mb-3 grid grid-cols-3 gap-2",
+    "data-profile-stats": true
+  }, React.createElement("div", {
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
+  }, React.createElement(Gem, {
+    size: 11
+  }), "ダイヤ"), React.createElement(CompactCount, {
+    value: gold,
+    className: "text-[13px] font-black text-amber-300 font-mono"
+  })), React.createElement("div", {
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
+  }, React.createElement(Coins, {
+    size: 11
+  }), "ブリーダーP"), React.createElement(CompactCount, {
+    value: breederPoints,
+    className: "text-[13px] font-black text-amber-200 font-mono"
+  })), React.createElement("div", {
+    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center"
+  }, React.createElement("span", {
+    className: "flex items-center gap-1 text-[9px] font-bold text-indigo-300"
+  }, React.createElement(Timer, {
+    size: 11
+  }), "プレイ時間"), React.createElement("span", {
+    className: "text-[13px] font-black text-white font-mono"
+  }, formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))))))), page === 'looks' && React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} mb-3`,
+    "data-profile-looks": true
+  }, onSelectBreederGender && !onboardingPreview && React.createElement("div", {
+    className: "mb-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-1.5",
     "data-profile-gender": true
   }, React.createElement("div", {
     className: "flex items-center gap-2"
@@ -73919,91 +74327,7 @@ function ProfileScreen({
     }, "着替え"), React.createElement("b", {
       className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
     }, wornCostume ? wornCostume.name : typeof assistantDefaultOutfitName === 'function' ? assistantDefaultOutfitName(selectedAssistantId) : '元の服'))));
-  })()), onboarded && !onboardingPreview && friendsEnabled && (() => {
-    const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
-    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
-    return React.createElement("section", {
-      className: "mb-3",
-      "data-profile-showcase": true
-    }, React.createElement("button", {
-      type: "button",
-      "data-profile-message": true,
-      onClick: onOpenMessageEditor,
-      className: "mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]"
-    }, React.createElement("span", {
-      className: "text-lg",
-      "aria-hidden": "true"
-    }, "💬"), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-black text-pink-300"
-    }, "ひとこと"), React.createElement("b", {
-      className: "block break-words text-[12px] font-black leading-snug text-white",
-      style: JA_LABEL_STYLE
-    }, profileMessage ? `「${profileMessage}」` : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "書いていません"))), React.createElement(Edit3, {
-      size: 13,
-      className: "shrink-0 text-slate-400"
-    })), React.createElement("div", {
-      className: "mb-1"
-    }, React.createElement(ScreenSectionLabel, null, "見せる欄（フレンドにもこう見えます）")), React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, React.createElement("button", {
-      type: "button",
-      "data-profile-favorite-masu": true,
-      onClick: onOpenFavoritePicker,
-      className: "flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]"
-    }, React.createElement("small", {
-      className: "text-[10px] font-black text-amber-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('好きなモンスター')), face ? React.createElement(ProfileAvatar, {
-      src: face.src,
-      id: face.id,
-      className: "h-14 w-14 shrink-0"
-    }) : React.createElement("span", {
-      className: "flex h-14 w-14 items-center justify-center text-3xl",
-      "aria-hidden": "true"
-    }, "💗"), React.createElement("b", {
-      className: "block w-full break-words text-[13px] font-black leading-tight text-white"
-    }, base ? base.name : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "選んでいません")), base && React.createElement("small", {
-      className: "text-[10px] font-black text-pink-300"
-    }, "絆Lv.", masuBondLevelInfo(favoriteMasu).level)), typeof CardShareDeckTile === 'function' && React.createElement(CardShareDeckTile, {
-      mode: "self",
-      onOpen: () => {
-        if (typeof onCardShareGo === 'function') onCardShareGo({
-          kind: 'register'
-        });
-      }
-    })));
-  })(), React.createElement("div", {
-    className: "mb-3 grid grid-cols-3 gap-2",
-    "data-profile-stats": true
-  }, React.createElement("div", {
-    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
-  }, React.createElement("span", {
-    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
-  }, React.createElement(Gem, {
-    size: 11
-  }), "ダイヤ"), React.createElement(CompactCount, {
-    value: gold,
-    className: "text-[13px] font-black text-amber-300 font-mono"
-  })), React.createElement("div", {
-    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center"
-  }, React.createElement("span", {
-    className: "flex items-center gap-1 text-[9px] font-bold text-amber-400"
-  }, React.createElement(Coins, {
-    size: 11
-  }), "ブリーダーP"), React.createElement(CompactCount, {
-    value: breederPoints,
-    className: "text-[13px] font-black text-amber-200 font-mono"
-  })), React.createElement("div", {
-    className: "flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center"
-  }, React.createElement("span", {
-    className: "flex items-center gap-1 text-[9px] font-bold text-indigo-300"
-  }, React.createElement(Timer, {
-    size: 11
-  }), "プレイ時間"), React.createElement("span", {
-    className: "text-[13px] font-black text-white font-mono"
-  }, formatPlaytime(Math.max(playtimeView.totalMs, Number(playtimeAllDevicesMs) || 0))))), React.createElement("details", {
+  })()), page === 'records' && React.createElement("details", {
     "data-profile-playtime": true,
     className: "mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2"
   }, React.createElement("summary", {
@@ -74025,44 +74349,7 @@ function ProfileScreen({
   }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'), (Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs && React.createElement("div", {
     "data-profile-playtime-devices": true,
     className: "text-[10px] text-sky-300 font-bold"
-  }, "ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは ", formatPlaytime(playtimeView.totalMs), "）"))), React.createElement("div", {
-    className: `mb-4 grid gap-2 ${onboarded && !onboardingPreview && friendsEnabled ? 'grid-cols-2' : 'grid-cols-1'}`,
-    "data-profile-links": true
-  }, onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
-    type: "button",
-    "data-profile-friends": true,
-    "data-friend-requests": Number(friendRequestCount) || 0,
-    onClick: onOpenFriends,
-    className: `relative flex min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount) > 0 ? 'border-rose-400/80 bg-rose-950/50' : 'border-pink-400/40 bg-pink-950/40'}`
-  }, React.createElement(Users, {
-    size: 18,
-    className: "text-pink-300 shrink-0"
-  }), React.createElement("span", {
-    className: "flex-1 min-w-0 text-left"
-  }, React.createElement("b", {
-    className: "block text-[13px] font-black text-pink-100"
-  }, "フレンド"), React.createElement("small", {
-    "data-profile-friends-note": true,
-    className: `block text-[10px] leading-tight [word-break:keep-all] [overflow-wrap:anywhere] ${Number(friendRequestCount) > 0 ? 'font-black text-rose-200' : 'text-pink-300'}`
-  }, Number(friendRequestCount) > 0 ? `申請が${Number(friendRequestCount)}件届いています` : '申請・プロフィール')), Number(friendRequestCount) > 0 && React.createElement("span", {
-    "data-friend-badge": true,
-    "aria-hidden": "true",
-    className: "absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg"
-  }, Math.min(99, Number(friendRequestCount)))), React.createElement("button", {
-    onClick: onOpenItems,
-    className: "flex min-h-[64px] items-center gap-2 rounded-2xl border border-teal-500/40 bg-teal-950/40 px-3 py-2.5 active:scale-[.98]"
-  }, React.createElement(Package, {
-    size: 18,
-    className: "shrink-0 text-teal-400"
-  }), React.createElement("span", {
-    className: "flex-1 min-w-0 text-left"
-  }, React.createElement("b", {
-    className: "block text-[13px] font-black text-teal-200"
-  }, "アイテム"), React.createElement("small", {
-    className: "block truncate text-[10px] text-teal-300"
-  }, Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "個")))), onboarded && !onboardingPreview && React.createElement("div", {
-    className: "mb-2"
-  }, React.createElement(ScreenSectionLabel, null, "助手")), onboarded && !onboardingPreview && (() => {
+  }, "ほかの端末で遊んだぶんも合わせた合計です（この端末だけでは ", formatPlaytime(playtimeView.totalMs), "）"))), page === 'assistant' && onboarded && !onboardingPreview && (() => {
     const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
     const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
     const from = stage ? stage.need : 0;
@@ -74087,32 +74374,42 @@ function ProfileScreen({
       style: {
         color: accent
       }
-    }, activeAssistant.name, "との仲良し度"), React.createElement("div", {
-      className: "text-[12px] font-black text-white"
-    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) || !!talkedCallname ? React.createElement("button", {
+    }, React.createElement("span", {
+      className: "inline-block"
+    }, activeAssistant.name, "との"), React.createElement("span", {
+      className: "inline-block"
+    }, "仲良し度")), React.createElement("div", {
+      className: "flex flex-wrap gap-x-2 text-[12px] font-black text-white"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "Lv.", assistantBondLevelNow), stage && stage.title ? React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, stage.title) : null)), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) || !!talkedCallname ? React.createElement("button", {
       type: "button",
       "data-profile-call-style": true,
       onClick: onOpenCallStylePicker,
-      className: "shrink-0 min-h-[44px] rounded-xl px-2 text-right active:scale-95"
+      className: "min-w-0 max-w-[45%] min-h-[44px] rounded-xl px-2 text-right active:scale-95"
     }, React.createElement("div", {
       className: "text-[10px] text-slate-400 flex items-center justify-end gap-0.5"
     }, "呼び方", React.createElement(Edit3, {
       size: 12
     })), React.createElement("div", {
-      className: "text-[12px] font-black",
+      className: "text-[12px] font-black leading-tight",
       style: {
-        color: accent
+        color: accent,
+        ...JA_LABEL_STYLE
       }
-    }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))) : React.createElement("div", {
-      className: "shrink-0 px-2 text-right"
+    }, jaWrap(assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))) : React.createElement("div", {
+      className: "min-w-0 max-w-[45%] px-2 text-right"
     }, React.createElement("div", {
       className: "text-[10px] text-slate-400"
     }, "呼び方"), React.createElement("div", {
-      className: "text-[12px] font-black",
+      className: "text-[12px] font-black leading-tight",
       style: {
-        color: accent
+        color: accent,
+        ...JA_LABEL_STYLE
       }
-    }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), React.createElement("div", {
+    }, jaWrap(assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))))), React.createElement("div", {
       className: "mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"
     }, React.createElement("i", {
       className: "block h-full rounded-full",
@@ -74219,7 +74516,7 @@ function ProfileScreen({
       peerItems: peerItems,
       onUseItem: onUsePeerItem
     }))));
-  })(), (() => {
+  })(), page === 'records' && (() => {
     const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
     const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, ...[TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE].filter(mode => battleModePlayable(mode.id))];
     const selected = modes.find(mode => mode.id === profileBattleMode) || null;
@@ -74359,16 +74656,16 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "未記録"));
     })))));
-  })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
+  })(), page === 'records' && onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
     rows: rhythmAchRows,
     who: "self"
-  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && typeof CardTourHistoryButton === 'function' && typeof onCardShareGo === 'function' && React.createElement(CardTourHistoryButton, {
+  }), page === 'records' && onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), page === 'records' && onboarded && !onboardingPreview && typeof CardTourHistoryButton === 'function' && typeof onCardShareGo === 'function' && React.createElement(CardTourHistoryButton, {
     onOpen: (tourId, tab) => onCardShareGo({
       kind: 'tour',
       tourId,
       tab
     })
-  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  }), page === 'records' && onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -74385,28 +74682,7 @@ function ProfileScreen({
   }, "終わった週間ランキング・イベントの順位を見られます（", rhythmHistoryCount, "件）")), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-amber-400"
-  })), onboarded && !onboardingPreview && typeof RhythmAssistSessionProfileBadges === 'function' && React.createElement(RhythmAssistSessionProfileBadges, null), onboarded && !onboardingPreview && (() => {
-    const list = eventReplayList();
-    if (list.length === 0) return null;
-    const unlockedCount = list.filter(isEventReplayUnlocked).length;
-    return React.createElement("button", {
-      type: "button",
-      onClick: onOpenEventReplayList,
-      className: "mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/40 px-3 py-2.5 active:scale-[.98]"
-    }, React.createElement(Sparkles, {
-      size: 16,
-      className: "text-fuchsia-300 shrink-0"
-    }), React.createElement("span", {
-      className: "flex-1 min-w-0 text-left"
-    }, React.createElement("b", {
-      className: "block text-[13px] font-black text-fuchsia-100"
-    }, "イベント回想"), React.createElement("small", {
-      className: "block text-[10px] text-fuchsia-300"
-    }, "見たことのある会話をもう一度見られます（", unlockedCount, "/", list.length, "）")), React.createElement(ChevronRight, {
-      size: 16,
-      className: "shrink-0 text-fuchsia-400"
-    }));
-  })()));
+  })), page === 'records' && onboarded && !onboardingPreview && typeof RhythmAssistSessionProfileBadges === 'function' && React.createElement(RhythmAssistSessionProfileBadges, null)));
 }
 const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';
 const useDexIdleMotion = () => {
@@ -235772,6 +236048,7 @@ function MonsterHeroGame() {
   const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   const [showEventReplayList, setShowEventReplayList] = useState(false);
   const [eventReplayGroupId, setEventReplayGroupId] = useState(null);
+  const [eventReplayGenreId, setEventReplayGenreId] = useState(null);
   const [eventReplay, setEventReplay] = useState(null);
   const eventReplayEnding = !!(eventReplay && eventReplay.ending);
   useEffect(() => {
@@ -264710,6 +264987,7 @@ function MonsterHeroGame() {
       onSelectBattleMode: setProfileBattleMode,
       onOpenEventReplayList: () => {
         setEventReplayGroupId(null);
+        setEventReplayGenreId(null);
         setShowEventReplayList(true);
       },
       onOpenSpeciesRecords: mode => openSpeciesChallengeRecords('PROFILE', {
@@ -266655,10 +266933,13 @@ function MonsterHeroGame() {
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showEventReplayList && (() => {
       const groups = eventReplayGroups();
-      const activeGroup = groups.find(group => group.id === eventReplayGroupId) || null;
+      const genres = eventReplayGenreList();
+      const activeGenre = genres.find(genre => genre.id === eventReplayGenreId) || null;
+      const activeGroup = activeGenre && activeGenre.series.find(group => group.id === eventReplayGroupId) || groups.find(group => group.id === eventReplayGroupId) || null;
       const closeList = () => {
         setShowEventReplayList(false);
         setEventReplayGroupId(null);
+        setEventReplayGenreId(null);
       };
       const rangeText = group => {
         const first = eventReplayDateText(group.events[0]),
@@ -266687,7 +266968,7 @@ function MonsterHeroGame() {
         key: i
       }, jaWrap(x)));
       return React.createElement("div", {
-        className: "fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2",
+        className: "fixed inset-0 flex flex-col items-center justify-center p-5 max-[359px]:p-3 [@media(max-height:500px)]:p-2",
         style: {
           position: 'fixed',
           inset: 0,
@@ -266695,16 +266976,121 @@ function MonsterHeroGame() {
           zIndex: 90000
         }
       }, React.createElement("div", {
-        "data-event-replay-page": activeGroup ? 'episodes' : 'panels',
-        className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3"
-      }, !activeGroup && React.createElement(React.Fragment, null, React.createElement("h3", {
+        "data-event-replay-page": activeGroup ? 'episodes' : activeGenre ? activeGenre.id === 'event' ? 'panels' : 'genre' : 'genres',
+        className: "bg-slate-900 border border-white/15 rounded-3xl p-5 max-[359px]:p-3 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3"
+      }, !activeGroup && !activeGenre && React.createElement(React.Fragment, null, React.createElement("h3", {
         className: "shrink-0 text-base font-black text-white mb-1 text-center"
       }, "イベント回想"), React.createElement("p", {
-        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
-      }, "見たいイベントを選んでください。", React.createElement("br", null), "見たことのある会話を、何度でも見返せます。"), React.createElement("div", {
+        className: "shrink-0 text-[10px] text-slate-400 text-center mb-3 leading-tight"
+      }, "見たいジャンルを選んでください"), React.createElement("div", {
+        "data-event-replay-genres": true,
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll grid grid-cols-2 gap-2 content-start mb-3 [@media(max-height:500px)]:grid-cols-4"
+      }, genres.map(genre => {
+        const seen = genre.events.filter(isEventReplayUnlocked).length,
+          total = genre.events.length;
+        const faces = genre.id === 'assistant' ? [...new Map(genre.events.flatMap(eventReplayWhoOf).map(w => [w.id, w])).values()].slice(0, 6) : [];
+        const arts = genre.id === 'song' ? genre.events.map(event => {
+          const info = EVENT_REPLAY_SONG_STORIES[event.id];
+          const song = info && typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(x => x && x.songId === info.songId) : null;
+          return song && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+        }).filter(Boolean).slice(0, 4) : [];
+        const marks = genre.id === 'event' ? genre.series.map(g => g.emoji) : genre.id === 'play' ? [...new Set(genre.events.map(e => eventReplayPlayAreaOf(e).label.split(' ')[0]))] : [];
+        return React.createElement("button", {
+          key: genre.id,
+          type: "button",
+          "data-event-replay-genre": genre.id,
+          onClick: () => {
+            setEventReplayGroupId(null);
+            setEventReplayGenreId(genre.id);
+          },
+          className: "flex min-h-[118px] min-w-0 flex-col justify-between gap-1.5 rounded-2xl px-2.5 py-2.5 max-[359px]:px-2 text-left active:scale-[.97]",
+          style: {
+            border: `1.5px solid ${genre.color}88`,
+            backgroundColor: `${genre.color}18`
+          }
+        }, React.createElement("span", {
+          className: "block min-w-0"
+        }, React.createElement("b", {
+          className: "flex items-center gap-1 text-[14px] font-black leading-tight text-white max-[359px]:text-[13px]"
+        }, React.createElement("span", {
+          "aria-hidden": "true"
+        }, genre.emoji), React.createElement("span", {
+          className: "whitespace-nowrap"
+        }, genre.label)), React.createElement("small", {
+          className: "mt-0.5 block text-[10px] font-bold leading-tight text-slate-300",
+          style: JA_LABEL_STYLE
+        }, jaWrap(genre.note))), faces.length > 0 && React.createElement("span", {
+          className: "flex flex-wrap gap-0.5",
+          "aria-hidden": "true"
+        }, faces.map(w => React.createElement(AssistantFace, {
+          key: w.id,
+          who: w,
+          size: 24,
+          accent: w.accent,
+          expression: "happy"
+        }))), arts.length > 0 && React.createElement("span", {
+          className: "flex gap-1",
+          "aria-hidden": "true"
+        }, arts.map(src => React.createElement("img", {
+          key: src,
+          src: src,
+          alt: "",
+          draggable: false,
+          className: "h-8 w-8 rounded-md object-cover"
+        }))), marks.length > 0 && React.createElement("span", {
+          className: "block truncate text-[16px] leading-none",
+          "aria-hidden": "true"
+        }, marks.slice(0, 6).join(' ')), React.createElement("span", {
+          className: "flex w-full items-center gap-1.5"
+        }, React.createElement("span", {
+          className: "h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"
+        }, React.createElement("span", {
+          className: "block h-full rounded-full",
+          style: {
+            width: `${total ? Math.round(seen / total * 100) : 0}%`,
+            backgroundColor: genre.color
+          }
+        })), React.createElement("small", {
+          className: "shrink-0 text-[10px] font-black tabular-nums",
+          style: {
+            color: genre.color
+          }
+        }, seen, "/", total)));
+      })), React.createElement("button", {
+        onClick: closeList,
+        className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+      }, "閉じる")), !activeGroup && activeGenre && React.createElement(React.Fragment, null, React.createElement("div", {
+        className: "shrink-0 mb-3 flex items-center gap-2 [@media(max-height:500px)]:mb-1.5"
+      }, React.createElement("button", {
+        type: "button",
+        "data-event-replay-genre-back": true,
+        "aria-label": "ジャンルの一覧へ戻る",
+        onClick: () => setEventReplayGenreId(null),
+        className: "flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"
+      }, React.createElement(ArrowLeft, {
+        size: 18
+      }), React.createElement("span", {
+        className: "text-[11px] font-black"
+      }, "戻る")), React.createElement("span", {
+        className: "min-w-0 flex-1 text-center"
+      }, React.createElement("b", {
+        className: "block text-[14px] font-black text-white leading-tight",
+        style: JA_LABEL_STYLE
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mr-1"
+      }, activeGenre.emoji), jaWrap(activeGenre.label)), React.createElement("small", {
+        className: "block text-[10px] font-black tabular-nums",
+        style: {
+          color: activeGenre.color
+        }
+      }, "見たお話 ", activeGenre.events.filter(isEventReplayUnlocked).length, "/", activeGenre.events.length)), React.createElement("span", {
+        className: "w-[76px] shrink-0 max-[359px]:w-0",
+        "aria-hidden": "true"
+      })), activeGenre.id === 'event' ? React.createElement("div", {
         "data-event-replay-groups": true,
-        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2"
-      }, groups.map(group => {
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0"
+      }, activeGenre.series.map(group => {
         const seen = seenOf(group),
           total = group.events.length;
         return React.createElement("button", {
@@ -266752,6 +267138,95 @@ function MonsterHeroGame() {
           size: 16,
           className: "shrink-0 text-slate-500"
         }));
+      })) : React.createElement("div", {
+        "data-event-replay-genre-list": activeGenre.id,
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0"
+      }, activeGenre.events.map((event, index) => {
+        const area = activeGenre.id === 'play' ? eventReplayPlayAreaOf(event) : null;
+        const prevArea = activeGenre.id === 'play' && index > 0 ? eventReplayPlayAreaOf(activeGenre.events[index - 1]) : null;
+        const head = area && (!prevArea || prevArea.id !== area.id) ? React.createElement("p", {
+          key: `h-${event.id}`,
+          "data-event-replay-area": area.id,
+          className: "pt-1 text-[11px] font-black text-sky-200 [@media(max-height:500px)]:col-span-2"
+        }, area.label) : null;
+        const unlocked = isEventReplayUnlocked(event);
+        const date = eventReplayDateText(event);
+        const info = EVENT_REPLAY_SONG_STORIES[event.id];
+        const song = activeGenre.id === 'song' && info && typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS.find(x => x && x.songId === info.songId) : null;
+        const art = song && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+        const who = activeGenre.id === 'assistant' || activeGenre.id === 'song' ? eventReplayWhoOf(event) : [];
+        if (!unlocked) return React.createElement(React.Fragment, {
+          key: event.id
+        }, head, React.createElement("div", {
+          className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60"
+        }, React.createElement("span", {
+          className: "text-lg",
+          "aria-hidden": "true"
+        }, "🔒"), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("b", {
+          className: "block text-[12px] font-black text-slate-400"
+        }, "？？？"), React.createElement("small", {
+          className: "block text-[10px] text-slate-500"
+        }, date && React.createElement("span", {
+          "data-event-replay-date": true,
+          className: "tabular-nums"
+        }, date, "・"), "まだ見ていません"))));
+        return React.createElement(React.Fragment, {
+          key: event.id
+        }, head, React.createElement("button", {
+          type: "button",
+          "data-event-replay-episode": event.id,
+          onClick: () => {
+            setEventReplay({
+              id: event.id,
+              step: 0,
+              fromList: true
+            });
+            setShowEventReplayList(false);
+          },
+          className: "w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border",
+          style: {
+            borderColor: `${activeGenre.color}80`,
+            backgroundColor: `${activeGenre.color}14`
+          }
+        }, art ? React.createElement("img", {
+          src: art,
+          alt: "",
+          draggable: false,
+          className: "h-12 w-12 shrink-0 rounded-lg object-cover"
+        }) : who.length > 0 ? React.createElement("span", {
+          className: "flex shrink-0 -space-x-2"
+        }, who.slice(0, 2).map(w => React.createElement(AssistantFace, {
+          key: w.id,
+          who: w,
+          size: 34,
+          accent: w.accent,
+          expression: "happy"
+        }))) : React.createElement(Play, {
+          size: 16,
+          className: "shrink-0",
+          style: {
+            color: activeGenre.color
+          }
+        }), React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, React.createElement("b", {
+          className: "block text-[13px] font-black text-white",
+          style: JA_LABEL_STYLE
+        }, titleWrap(event.title)), date && React.createElement("small", {
+          "data-event-replay-date": true,
+          className: "block text-[10px] tabular-nums text-slate-400"
+        }, date)), art && who.length > 0 && React.createElement("span", {
+          className: "flex shrink-0 -space-x-2",
+          "aria-hidden": "true"
+        }, who.slice(0, 2).map(w => React.createElement(AssistantFace, {
+          key: w.id,
+          who: w,
+          size: 26,
+          accent: w.accent,
+          expression: "happy"
+        })))));
       })), React.createElement("button", {
         onClick: closeList,
         className: "shrink-0 w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
@@ -266760,7 +267235,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         type: "button",
         "data-event-replay-back": true,
-        "aria-label": "イベントの一覧へ戻る",
+        "aria-label": "シリーズの一覧へ戻る",
         onClick: () => setEventReplayGroupId(null),
         className: "flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"
       }, React.createElement(ArrowLeft, {
@@ -266786,7 +267261,7 @@ function MonsterHeroGame() {
           color: activeGroup.color
         }
       }, "見たお話 ", seenOf(activeGroup), "/", activeGroup.events.length)), React.createElement("span", {
-        className: "w-[76px] shrink-0",
+        className: "w-[76px] shrink-0 max-[359px]:w-0",
         "aria-hidden": "true"
       })), React.createElement("div", {
         className: "shrink-0 mb-3 [@media(max-height:500px)]:mb-1.5",
