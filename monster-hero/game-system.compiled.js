@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d78352f0de61f9f
+// source-sha256: d7ec4d5283d61f4a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -217217,7 +217217,8 @@ const CardRankingBoard = ({
     className: "mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-3`
+    "data-card-ranking-list": true,
+    className: `${SCREEN_LIST_CLASS} space-y-1.5 overflow-x-hidden pb-3`
   }, kind === 'multi' && !cardPvpOpen() && React.createElement("div", {
     "data-card-ranking-multi": true,
     className: "mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center"
@@ -217233,7 +217234,7 @@ const CardRankingBoard = ({
     style: JA_LABEL_STYLE
   }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます'))), kind === 'rank' && typeof PlayerRankBoard === 'function' && React.createElement("div", {
     "data-card-ranking-rank": true,
-    className: "-mx-3"
+    className: "[&>[data-player-rank-board]]:px-0"
   }, React.createElement(PlayerRankBoard, {
     kind: "card",
     fetchTop: () => sbFetchPlayerRanks('card'),

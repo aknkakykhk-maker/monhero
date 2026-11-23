@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6ae254e20e293f66
+// generated-sha256: b5dca16cc53c0b7f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -117873,7 +117873,8 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         </div>
       )}
       {!cardRankOwnTab(kind) && !sendOn && <p data-card-ranking-preview className="mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')}</p>}
-      <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-3`}>
+      {/* 縦に流す一覧。横には動かさない(中身が広がっても横へずれない・r1119-157。見張り tools/card/card-hscroll-browser-check.js) */}
+      <div data-card-ranking-list className={`${SCREEN_LIST_CLASS} space-y-1.5 overflow-x-hidden pb-3`}>
         {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
         {kind === 'multi' && !cardPvpOpen() && (
           <div data-card-ranking-multi className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center">
@@ -117885,7 +117886,8 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         )}
         {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。ほかのタブと同じ見た目(あなたの欄・メダル・同じ点数は同じ順位) */}
         {kind === 'rank' && typeof PlayerRankBoard === 'function' && (
-          <div data-card-ranking-rank className="-mx-3">
+          // 中身(43 の PlayerRankBoard)の左右の余白は消して、一覧の幅にそのまま収める。前は -mx-3 で一覧より 24px 広げていて、縦に流す一覧が横にも 12px 動き、説明の頭が左で切れていた(2026-11-24 社長 r1119-157)
+          <div data-card-ranking-rank className="[&>[data-player-rank-board]]:px-0">
             <PlayerRankBoard kind="card" fetchTop={() => sbFetchPlayerRanks('card')} fetchMine={async () => (selfId ? sbFetchPlayerRankMine('card', selfId) : null)}
               renderIcon={renderBreederIcon} selfBreederId={selfId} reloadKey={`${retry}:${selfId}`}/>
           </div>
