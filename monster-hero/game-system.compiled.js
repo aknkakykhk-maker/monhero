@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfdb4325f5e8dc80
+// source-sha256: 0b0f91e69b64840e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38841,6 +38841,11 @@ const RhythmSongSelect = ({
   React.useEffect(() => {
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
+  const firstRowSongId = rows.length ? rows[0].entry.songId : '';
+  const songInGenre = !song || genre.id === 'all' || genreMatches(song);
+  React.useEffect(() => {
+    if (!songInGenre && firstRowSongId) setSongId(firstRowSongId);
+  }, [songInGenre, firstRowSongId, genre.id]);
   const pickRandom = () => {
     const pool = list.filter(item => !lockedSong(item));
     if (!pool.length) return;
@@ -38849,8 +38854,39 @@ const RhythmSongSelect = ({
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
-  const loopEnabled = rows.length >= 2;
+  const [loopFits, setLoopFits] = React.useState(true);
+  const loopEnabled = rows.length >= 2 && loopFits;
   const listRef = React.useRef(null);
+  const rowsKey = rows.map(row => row.entry.songId).join('|');
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el || rows.length < 2) return;
+    const measure = () => {
+      const node = listRef.current;
+      if (!node || !node.clientHeight) return;
+      const ul = node.querySelector('ul');
+      if (!ul) return;
+      const looped = node.getAttribute('data-rhythm-song-loop') === '1';
+      const cs = typeof getComputedStyle === 'function' ? getComputedStyle(node) : null;
+      const pad = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+      const one = ul.offsetHeight / (looped ? 3 : 1),
+        room = node.clientHeight - pad;
+      setLoopFits(prev => prev ? one > room - 4 : one > room + 2);
+    };
+    measure();
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+      try {
+        observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+      } catch (e) {
+        observer = null;
+      }
+    }
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [rowsKey, loopEnabled]);
   const loopReadyRef = React.useRef(false);
   const settleRef = React.useRef(null);
   const restoreTopRef = React.useRef(typeof listScrollTop === 'number' && listScrollTop > 0 ? listScrollTop : null);
