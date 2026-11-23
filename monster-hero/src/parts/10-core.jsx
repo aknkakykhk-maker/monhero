@@ -546,23 +546,23 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
   // 花の女3人のイベント(2026-11-23〜11-30・台帳 r1119-101)。お話の本文は社長の OK のあと data/assistants.js へ group:'flower3' で入れる
-  { id:'flower3', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
-  { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
+  { id:'flower3', genre:'event', emoji:'🌸', label:'花の女3人の新曲', note:'みゅあ・きき・ももの曲作りのお話', color:'#f9a8d4' },
+  { id:'pandora_wings', genre:'event', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
   // モンヒロサクセスのお話(2026-11-14 第1話・β版の前の予告から)
-  { id:'monsuc', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
+  { id:'monsuc', genre:'play', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
   // ききが初めて作った曲のお話(2026-11-15 社長 r1115-102。新曲 Sparkling Pink Overture と一緒に出る)
   // あつとみゅあの歌のお話(2026-11-22 社長 r1119-076。新曲 Beyond the Same Sky と一緒に出る)
-  { id:'wof_song', emoji:'🌌', label:'あつとみゅあの歌', note:'W.o.F のころの思い出の歌のお話', color:'#a78bfa' },
+  { id:'wof_song', genre:'song', emoji:'🌌', label:'あつとみゅあの歌', note:'W.o.F のころの思い出の歌のお話', color:'#a78bfa' },
   // えるびんの歌のお話(2026-11-21 社長 r1119-079。新曲 Desert Crown と一緒に出る)
-  { id:'erubin_song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
-  { id:'kiki_song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
-  { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
-  { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
-  { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
-  { id:'symphony', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
-  { id:'cup', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
+  { id:'erubin_song', genre:'song', emoji:'🏜️', label:'えるびんの歌', note:'えるびんが初めて作った曲のお話', color:'#d6b47a' },
+  { id:'kiki_song', genre:'song', emoji:'🎹', label:'ききの初めての曲', note:'ききが初めて作った曲のお話', color:'#f9a8d4' },
+  { id:'halloween', genre:'event', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
+  { id:'update', genre:'play', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
+  { id:'beat_point', genre:'event', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },
+  { id:'symphony', genre:'event', emoji:'🎼', label:'異世界交響祭', note:'モンヒロビートの大会', color:'#38bdf8' },
+  { id:'cup', genre:'event', emoji:'🏆', label:'週末ゲリラ杯', note:'モンヒロビートの大会', color:'#fbbf24' },
   // あつ・きゅうこの加入のお話も、ここへ並べる(2026-10-23 社長「あつときゅうこは助手のお話のほうがいいんじゃない？」。前は「新しい遊びのお話」)
-  { id:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけ・あつ・きゅうことの出会い', color:'#f472b6' },
+  { id:'assistant', genre:'assistant', emoji:'💬', label:'助手のお話', note:'きき・ももすけ・あつ・きゅうことの出会い', color:'#f472b6' },
 ]);
 const EVENT_REPLAY_GROUP_FALLBACK = 'update';
 const eventReplayGroups = (keep = eventReplayReleased) => {
@@ -576,6 +576,69 @@ const eventReplayGroups = (keep = eventReplayReleased) => {
   return EVENT_REPLAY_GROUPS
     .map(group => ({ ...group, events: asc.filter(event => groupOf(event) === group.id) }))
     .filter(group => group.events.length > 0);
+};
+// ── イベント回想のジャンル(2026-11-23 社長が案Bを選んだ・台帳 r1119-027) ──
+// 一覧の1ページ目はジャンルの扉4枚。まとまり(EVENT_REPLAY_GROUPS)の genre で分け、まとまりと違うジャンルへ入れる話だけ下の表で個別に決める。
+// 期間イベントはまとまり(シリーズ)の札、助手のお話は助手の顔、曲のお話はジャケット、遊びの案内は遊びごとの見出しで並べる。
+// 保存はしない(見たかどうかは今までの回想の印を読むだけ)。まとまりを足すときは genre を書く(無ければ期間イベント)
+const EVENT_REPLAY_GENRES = Object.freeze([
+  { id:'event', emoji:'📅', label:'期間イベント', note:'開催したイベントのお話', color:'#fb923c' },
+  { id:'assistant', emoji:'💬', label:'助手のお話', note:'出会いと季節の小話', color:'#f472b6' },
+  { id:'song', emoji:'🎵', label:'曲のお話', note:'新しい曲ができるまで', color:'#a78bfa' },
+  { id:'play', emoji:'🆕', label:'遊びの案内', note:'新しい遊びができた日', color:'#38bdf8' },
+]);
+const EVENT_REPLAY_GENRE_OF_EVENT = Object.freeze({
+  // 「新しい遊びのお話」に入っていた助手の小話
+  kyuko_winter_2026_11:'assistant', kiki_twintail_2026_11:'assistant',
+  // ビートPのまとまりのうち、交換所の案内は遊びの案内(もう1話のキャンペーンは期間イベント)
+  beat_point_always_2026_09_24:'play',
+});
+// 曲のお話: どの曲か(ジャケットは曲の絵をそのまま使う)と、歌った助手
+const EVENT_REPLAY_SONG_STORIES = Object.freeze({
+  sparkling_pink_kiki_story:{ songId:'sparkling_pink_overture', who:['kiki'] },
+  desert_crown_story:{ songId:'desert_crown', who:['erubin'] },
+  beyond_same_sky_story:{ songId:'beyond_the_same_sky', who:['atsu','mua'] },
+});
+// 遊びの案内の見出し(話の id の頭で決める。知らない物は「そのほか」)
+const EVENT_REPLAY_PLAY_AREAS = Object.freeze([
+  { id:'beat', test:/^(rhythm_|beat_point_)/, label:'🎵 モンヒロビート' },
+  { id:'tactics', test:/^tactics_/, label:'⚔️ タクティクスバトル' },
+  { id:'card', test:/^card_/, label:'🃏 MFバトルカード' },
+  { id:'monsuc', test:/^monsuc_/, label:'🌱 モンヒロサクセス' },
+  { id:'assistant', test:/^assistant_/, label:'🤝 助手と遊ぶ' },
+  { id:'other', test:/.*/, label:'✨ そのほか' },
+]);
+const eventReplayGenreOf = (event) => {
+  if (!event) return 'event';
+  if (EVENT_REPLAY_GENRE_OF_EVENT[event.id]) return EVENT_REPLAY_GENRE_OF_EVENT[event.id];
+  const group = EVENT_REPLAY_GROUPS.find(g => g.id === event.group) || EVENT_REPLAY_GROUPS.find(g => g.id === EVENT_REPLAY_GROUP_FALLBACK);
+  return (group && group.genre) || 'event';
+};
+const eventReplayPlayAreaOf = (event) => EVENT_REPLAY_PLAY_AREAS.find(a => a.test.test(String((event && event.id) || ''))) || EVENT_REPLAY_PLAY_AREAS[EVENT_REPLAY_PLAY_AREAS.length - 1];
+// 助手のお話・曲のお話に出す顔(話の id の頭の助手名・曲の表の助手)。分からなければ空
+const eventReplayWhoOf = (event) => {
+  const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
+  const ids = song ? song.who : [String((event && event.id) || '').split('_')[0]];
+  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST : [];
+  return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
+};
+// ジャンルごとのまとまりと話(どちらも古い順)。話の無いジャンルは出さない。
+// 期間イベントは「まとまりごと」に、それ以外は話を1列に並べる(まとまりの中の話がジャンルをまたぐときは、その話だけ別のジャンルへ)
+const eventReplayGenreList = (keep = eventReplayReleased) => {
+  const groups = eventReplayGroups(keep);
+  return EVENT_REPLAY_GENRES.map(genre => {
+    const events = [];
+    const series = [];
+    groups.forEach(group => {
+      const mine = group.events.filter(event => eventReplayGenreOf(event) === genre.id);
+      if (!mine.length) return;
+      events.push(...mine);
+      series.push({ ...group, events: mine });
+    });
+    const ms = (event) => eventReplayDateMs(event) || 0;
+    events.sort((a, b) => ms(a) - ms(b));
+    return { ...genre, series, events };
+  }).filter(genre => genre.events.length > 0);
 };
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
