@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66cad06b03a0c7f6
+// source-sha256: c5cb7c5b16f6a605
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -266743,14 +266743,11 @@ function MonsterHeroGame() {
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
       const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
       const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
-      let storyStillFrom = step;
-      if (storyStillImg) {
-        while (storyStillFrom > 0 && script[storyStillFrom - 1] && script[storyStillFrom - 1].still === storyStill) storyStillFrom--;
-      }
+      const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          [l && l.bg, l && l.still].forEach(k => {
+          [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
             const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
             if (src && !pre.has(src)) {
               pre.add(src);
@@ -267052,10 +267049,13 @@ function MonsterHeroGame() {
       }), storyStillImg && React.createElement("div", {
         key: `still:${storyStill}`,
         "data-story-still": storyStill,
-        "data-story-still-settled": step > storyStillFrom ? '' : undefined,
+        "data-story-still-has-tate": storyStillTate ? '' : undefined,
         "aria-hidden": "true",
         style: {
-          '--story-still': `url("${storyStillImg}")`
+          '--story-still': `url("${storyStillImg}")`,
+          ...(storyStillTate ? {
+            '--story-still-tate': `url("${storyStillTate}")`
+          } : {})
         }
       }, React.createElement("div", {
         "data-story-still-area": true
@@ -267064,7 +267064,12 @@ function MonsterHeroGame() {
         src: storyStillImg,
         alt: "",
         draggable: false
-      }))), React.createElement("button", {
+      })), storyStillTate && React.createElement("img", {
+        "data-story-still-tate": true,
+        src: storyStillTate,
+        alt: "",
+        draggable: false
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -273534,20 +273539,15 @@ const createAnimationStyle = () => {
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
     /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
-       絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める。
-       縦の画面は社長の選択「C 流して全体へ」: 絵を範囲の高さいっぱいに映して左から右へゆっくり流し、最後に全体へ引いて止まる。
-       動きを減らす設定・2行目から(settled = タップで送った)は、はじめから全体で止める */
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
     [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
     [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
     [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
     [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
     /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
     @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
-    @supports (width: 1cqw) {
-      @media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
-        [data-story-still]:not([data-story-still-settled]) [data-story-still-img] { animation: storyStillPan 7s ease-in-out .3s both; }
-      }
-    }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
     /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
        (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
     @media (orientation: landscape) and (max-height: 500px) {
@@ -273559,10 +273559,14 @@ const createAnimationStyle = () => {
     [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
     /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
     @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-    @keyframes storyStillPan {
-      0%, 10% { width: 200cqh; height: 100cqh; top: 0; left: 0; transform: none; }
-      68% { width: 200cqh; height: 100cqh; top: 0; left: calc(100cqw - 200cqh); transform: none; }
-      100% { width: 100cqw; height: 50cqw; top: calc(50cqh - 25cqw); left: 0; transform: none; }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
     }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
