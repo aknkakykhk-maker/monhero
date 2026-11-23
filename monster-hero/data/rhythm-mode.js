@@ -1502,7 +1502,8 @@ const rhythmSkyLiftRatio=yRatio=>{
   if(RHYTHM_SKY_RISE_MODE.id==='A'){
     const top=rhythmProjectionScale(0);
     if(!(base>top))return 0;
-    return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(y)-top)/(base-top);
+    // 11/22 feb873a2a と同じく、上端より上は上端の高さ(持ち上げ0)に収める
+    return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(rhythmClamp01(Number(yRatio)))-top)/(base-top);
   }
   if(!(base>0))return 0;
   const u=y/(line*RHYTHM_SKY_RISE_AT),rise=u>=1?1:u*(2-u);
@@ -81577,7 +81578,7 @@ const rhythmCreateGpuSlideBand=(gl,host)=>{
     'float travelP(float p){float k=1.0/uFar;if(p<0.0)return p*(k-1.0)/(k*k)/(1.0-uFar);if(p>1.0)return 1.0+(p-1.0)*(k-1.0)/(1.0-uFar);return (1.0/(k-(k-1.0)*p)-uFar)/(1.0-uFar);}'+
     // rhythmSlideSegmentQuads の project と同じ(横は rhythmProjectBoundary、ノーツサイズの倍率は帯の中心のまわりで掛ける)
     'vec2 proj(vec4 p,float sky){float y=uSpawnY+travelP(1.0-(p.x-uSnow)/uTravel)*uTravelPx+uHalfH;float yr=min(1.0,y/uH);if(abs(aMisc.w-1.0)<0.5)yr=clamp(yr,0.0,1.0);float s=depth(yr)*uRoad;'+
-    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:(uSkyType>1.5?uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky:uSkyType>0.5?uSkyK*(depth(min(yr,1.0))-uTop)*uRoad*sky:uSkyK*depth(min(yr,1.0))*uRoad*skyRise(yr)*sky);return vec2(x,y-lift);}'+
+    'float x=uW*(0.5+((p.z+p.w*uSize)/uLanes-0.5)*s);if(uMinHw>0.0&&p.w!=0.0){float hp=abs(p.w)*uSize/uLanes*s*uW;if(hp<uMinHw)x+=sign(p.w)*(uMinHw-hp);}float lift=uGround>0.5?0.0:(uSkyType>1.5?uSkyK*depth(clamp(yr,0.0,1.0))*uRoad*sky:uSkyType>0.5?uSkyK*(depth(clamp(yr,0.0,1.0))-uTop)*uRoad*sky:uSkyK*depth(min(yr,1.0))*uRoad*skyRise(yr)*sky);return vec2(x,y-lift);}'+
     // 譜面の点のつなぎ目(aMisc.w=2 来た側の線・3 出ていく側の線・4 角の丸): 画面の上で急に曲がる(約25度より大きい)ときだけ、
     // 角を伸ばさず線を2組に分けて丸を重ねる(2D の lineJoin round と同じ形)。緩い所は今までどおり角を伸ばし、丸は1点に縮めて描かない
     'void main(){vec4 cu=aCur;if(uCore>0.5)cu.w=0.0;vec2 b=proj(cu,aSky.y);vec2 pos=b;float f=aMisc.w;'+
