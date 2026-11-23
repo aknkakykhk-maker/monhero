@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d37bdf373ecf1509
+// source-sha256: 24cdec3c2c7491e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39188,6 +39188,150 @@ const RhythmSongName = ({
     style: chunk
   }, sub));
 };
+const useRhythmFitText = (ref, {
+  text,
+  maxPx,
+  minPx,
+  lines = 2,
+  maxH = 0
+}) => {
+  const [fit, setFit] = React.useState({
+    px: maxPx,
+    lines: 1,
+    clip: false
+  });
+  const measure = React.useCallback(() => {
+    const el = ref.current;
+    if (!el || !el.clientWidth) return;
+    const keep = {
+      fontSize: el.style.fontSize,
+      whiteSpace: el.style.whiteSpace,
+      clamp: el.style.webkitLineClamp,
+      display: el.style.display
+    };
+    const restore = () => {
+      el.style.fontSize = keep.fontSize;
+      el.style.whiteSpace = keep.whiteSpace;
+      el.style.webkitLineClamp = keep.clamp;
+      el.style.display = keep.display;
+    };
+    el.style.webkitLineClamp = 'unset';
+    el.style.display = 'block';
+    const fits = (px, n) => {
+      el.style.fontSize = `${px}px`;
+      el.style.whiteSpace = n === 1 ? 'nowrap' : 'normal';
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || px * 1.25;
+      return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= Math.ceil(lh * n) + 1 && (!maxH || el.scrollHeight <= maxH + 1);
+    };
+    let found = null;
+    for (let n = 1; n <= Math.max(1, lines) && !found; n++) {
+      for (let px = maxPx; px >= minPx; px--) {
+        if (fits(px, n)) {
+          found = {
+            px,
+            lines: n,
+            clip: false
+          };
+          break;
+        }
+      }
+    }
+    restore();
+    const next = found || {
+      px: minPx,
+      lines: Math.max(1, lines),
+      clip: true
+    };
+    setFit(prev => prev.px === next.px && prev.lines === next.lines && prev.clip === next.clip ? prev : next);
+  }, [ref, maxPx, minPx, lines, maxH]);
+  React.useLayoutEffect(() => {
+    measure();
+  }, [measure, text]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let last = '';
+    const ro = new ResizeObserver(() => {
+      const box = `${el.clientWidth}`;
+      if (box !== last) {
+        last = box;
+        measure();
+      }
+    });
+    ro.observe(el);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => measure()).catch(() => {});
+    return () => ro.disconnect();
+  }, [measure]);
+  const style = {
+    fontSize: `${fit.px}px`,
+    whiteSpace: fit.lines === 1 ? 'nowrap' : 'normal',
+    overflow: 'hidden'
+  };
+  if (fit.clip) {
+    if (fit.lines === 1) style.textOverflow = 'ellipsis';else {
+      style.display = '-webkit-box';
+      style.WebkitBoxOrient = 'vertical';
+      style.WebkitLineClamp = String(fit.lines);
+    }
+  }
+  return {
+    fit,
+    style
+  };
+};
+const RhythmFitTitle = ({
+  song,
+  maxPx,
+  minPx,
+  lines,
+  maxH = 0,
+  className = ''
+}) => {
+  const ref = React.useRef(null);
+  const {
+    fit,
+    style
+  } = useRhythmFitText(ref, {
+    text: rhythmSongFullName(song),
+    maxPx,
+    minPx,
+    lines,
+    maxH
+  });
+  return React.createElement("b", {
+    ref: ref,
+    "data-rhythm-song-title": true,
+    "data-rhythm-title-fit": fit.clip ? 'clip' : `${fit.px}px/${fit.lines}`,
+    className: className,
+    style: style
+  }, React.createElement(RhythmSongName, {
+    song: song
+  }));
+};
+const RhythmFitLabel = ({
+  text,
+  maxPx,
+  minPx,
+  lines = 2,
+  className = ''
+}) => {
+  const ref = React.useRef(null);
+  const {
+    fit,
+    style
+  } = useRhythmFitText(ref, {
+    text,
+    maxPx,
+    minPx,
+    lines
+  });
+  return React.createElement("span", {
+    ref: ref,
+    "data-rhythm-label-fit": fit.clip ? 'clip' : `${fit.px}px/${fit.lines}`,
+    className: className,
+    style: style
+  }, text);
+};
 const RhythmSongArt = ({
   song,
   large = false,
@@ -39703,9 +39847,13 @@ const RhythmSongSelect = ({
         "aria-pressed": on,
         onClick: () => setSongId(item.songId),
         className: `flex min-h-[36px] min-w-0 ${viewWide ? 'max-w-[6.5rem] px-2 text-[11px]' : 'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-      }, React.createElement("span", {
-        className: "truncate"
-      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
+      }, React.createElement(RhythmFitLabel, {
+        text: rhythmSongVersionLabel(item.songId) || '原曲',
+        maxPx: viewWide ? 11 : 12,
+        minPx: 8,
+        lines: 2,
+        className: "block min-w-0 text-center leading-[1.15]"
+      }), eventVersion && React.createElement("span", {
         "aria-label": "イベント対象"
       }, "🏆"));
     }));
@@ -40008,16 +40156,20 @@ const RhythmSongSelect = ({
       gridArea: 'title'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-1.5 [container-type:inline-size]"
-  }, React.createElement("b", {
-    "data-rhythm-song-title": true,
-    className: `line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white ${viewWide && versionsOf(song).length > 1 ? 'landscape:line-clamp-2 landscape:h-auto landscape:max-h-[2.5em] landscape:text-[12px]' : 'landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]'}`,
-    style: {
-      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, viewWide && versionsOf(song).length > 1 ? 44 + 76 * versionsOf(song).length : 44)
-    }
-  }, React.createElement(RhythmSongName, {
-    song: song
-  })), viewWide && versionTabs, React.createElement("button", {
+    className: "flex flex-wrap items-start gap-x-1.5 gap-y-1 [container-type:inline-size]"
+  }, (() => {
+    const wideVer = viewWide && versionsOf(song).length > 1,
+      shortTate = !viewWide && isShortScreen;
+    return React.createElement(RhythmFitTitle, {
+      key: song.songId,
+      song: song,
+      maxPx: shortTate ? 15 : wideVer ? 14 : viewWide ? 16 : 17,
+      minPx: shortTate ? 10 : 10,
+      lines: 3,
+      maxH: shortTate ? 38 : viewWide ? 0 : 43,
+      className: `block min-w-0 flex-1 overflow-hidden font-black leading-[1.25] text-white ${viewWide || shortTate ? '' : 'h-[43px]'} ${wideVer ? 'basis-[9rem]' : ''}`
+    });
+  })(), viewWide && versionTabs, React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
     "aria-pressed": favoriteIds.has(song.songId),
