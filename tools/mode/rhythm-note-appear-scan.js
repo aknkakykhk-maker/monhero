@@ -27,6 +27,9 @@ fs.mkdirSync(OUT,{recursive:true});
 //   SKY_LIFT=nov22 … 11/22〜11/23 の式(上端で0・判定ラインまで一定の割合で上がる)
 //   案を並べた止め絵: docs/progress/beat/sky-rise-2026-11-23/
 const SKY_LIFT=process.env.SKY_LIFT||'';
+// 演出の案を重ねて撮る(2026-11-23・台帳 r1119-141)。MOCK_FX=<js> の window.__mhMockFx(曲の時刻ms) を各コマの撮影の前に呼ぶ。本体は触らない
+//   案の止め絵: docs/progress/beat/zenbu-hell-fx-ideas/
+const MOCK_FX=process.env.MOCK_FX||'';
 const skyLiftPatched=src=>{
  const rep=(a,b)=>{if(!src.includes(a))throw new Error('差し替える所が見つからない: '+a.slice(0,80));src=src.replace(a,b);};
  const js="rise=u>=1?1:u*(2-u);",sh="float skyRise(float y){float u=y/uSkyRise;return u>=1.0?1.0:u*(2.0-u);}";
@@ -100,10 +103,17 @@ const skyLiftPatched=src=>{
  const first=Math.round(Math.max(FROM,cur)*1000)/1000+STEP/1000;
  console.error('止め始め',first.toFixed(2),'秒');
  await page.addStyleTag({content:'[data-rhythm-down-vignette],[data-rhythm-life-down-slam]{display:none!important}'});
+ if(MOCK_FX)await page.addScriptTag({content:fs.readFileSync(MOCK_FX,'utf8')}); // 案の演出をこのブラウザの中だけで重ねる(window.__mhMockFx(ms) を撮る前に呼ぶ)
  const info=await page.evaluate(()=>{const a=document.querySelector('[data-rhythm-play-area]'),r=a.getBoundingClientRect();const cv=[...a.querySelectorAll('canvas')].map(c=>{const q=c.getBoundingClientRect();return {x:Math.round(q.x),y:Math.round(q.y),w:Math.round(q.width),h:Math.round(q.height)};});
   const songEnd=(window.__mhSong.ctx&&0)||0;return {area:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)},canvas:cv};});
  const songLen=await page.evaluate(()=>{const s=window.__mhSong;return s?null:null;});
  const raf=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+ // SHOT_AT=<秒>,<秒>,… その時刻のコマだけ撮って終わる(案の止め絵用。名前は PREFIX-<ms>.png)
+ if(process.env.SHOT_AT){for(const x of process.env.SHOT_AT.split(',').map(Number).filter(Number.isFinite)){
+   await page.evaluate(s=>{window.__mhHook();window.__mhFreezeSong(s);},x);await raf();
+   if(MOCK_FX)await page.evaluate(ms=>{if(typeof window.__mhMockFx==='function')window.__mhMockFx(ms);},x*1000);await raf();
+   await page.screenshot({path:path.join(OUT,`${process.env.PREFIX||'shot'}-${Math.round(x*1000)}.png`)});}
+  await b.close();server.close();return;}
  const notes=new Map();let emptyRun=0,firstStep=true;
  // 画面に入った = 頭の真ん中が canvas の上端より下(cy>=TOP)。TOP は既定0(横持ちの上の帯で隠れる分は TOP で足す)
  const TOP=Number(process.env.TOP||0);
@@ -113,6 +123,7 @@ const skyLiftPatched=src=>{
   const draws=await page.evaluate(()=>{const d=window.__mhDraws;window.__mhDraws=[];return d;});
   const ended=await page.evaluate(()=>!document.querySelector('[data-rhythm-play-area]'));
   if(ended)break;
+  if(MOCK_FX)await page.evaluate(x=>{if(typeof window.__mhMockFx==='function')window.__mhMockFx(x*1000);},sec);
   if(process.env.SHOT_EVERY==='1')await page.screenshot({path:path.join(OUT,`step-${Math.round(sec*1000)}.png`)}); // FROM〜TO の全コマを撮る(短い範囲で使う)
   const seen=new Set();
   for(const d of draws){if(d.now===d.t)continue; // 演奏前の温め(heldMs:0)の描画は数えない
