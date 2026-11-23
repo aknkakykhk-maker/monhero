@@ -17,13 +17,10 @@ const REST = {
   'stand-normal/kyuko_angry.png': 1, 'stand-normal/kyuko_normal.png': 1,
   // 表情の並んだ絵(シート)から作った物で、全身画とは絵が違う(life-expression-sheets.py)
   'stand-normal/myua_angry.png': 1, 'stand-normal/myua_crying.png': 1,
+  // (stand-card-master は 2026-11-23 r1119-137 で新しい全身画から作り直したので外した)
   // 全身画から作り直せるが、表情ごとに姿勢が違い、場面で顔がずれる表情が出る(2026-11-23 窓口に相談中)
-  'stand-card-master/myua_crying.png': 1, 'stand-card-master/myua_happy.png': 1, 'stand-card-master/myua_normal.png': 1,
-  'stand-card-master/myua_surprise.png': 1, 'stand-card-master/myua_troubled.png': 1, 'stand-card-master/myua_wink.png': 1,
   'stand-hosei/sorashido_angry.png': 1, 'stand-hosei/sorashido_crying.png': 1, 'stand-hosei/sorashido_excited.png': 1, 'stand-hosei/sorashido_happy.png': 1,
   'stand-hosei/sorashido_normal.png': 1, 'stand-hosei/sorashido_surprise.png': 1, 'stand-hosei/sorashido_troubled.png': 1, 'stand-hosei/sorashido_wink.png': 1,
-  // ソラシド通常(古い全身画から作った物。新しい全身画から作り直す)
-  'stand-normal/sorashido_troubled.png': 1,
 };
 
 function standDirs() {

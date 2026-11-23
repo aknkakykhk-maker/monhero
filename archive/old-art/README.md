@@ -1,0 +1,24 @@
+# 旧版の絵の保管庫(配信しない・正本ではない)
+
+<!-- このファイルは node tools/image/assistant-art-catalog.js が書く。手で直さない(直すのは tools/image/assistant-art-catalog.json の moved) -->
+
+**ここにあるのは旧版(作り直す前の絵・重複)。ここから絵を作らない・ゲームへ入れない。** 正本は `tools/art-sources/assistants/<キャラ>/CATALOG.md` で確かめる(台帳 r1119-124・r1119-128)。
+
+- 配信されない(GitHub Pages に載るのは `index.html` と `monster-hero/` だけ)。消さずに残している
+- 置き方: `archive/old-art/assistant/<キャラ>/<服>/<その版が入った日>-old-<何の版>/`
+- 戻すときは `git mv` で元の場所へ戻し、`tools/image/assistant-art-catalog.json` の `moved` から外して正本に書く(検査 `--check` が、戻した旧版と目録の食い違いを見ている)
+
+合計 38 枚・52.6MB(10 組)
+
+| 保管庫の場所 | 枚数 | 容量 | 移した日 | 元の場所 | 旧版とする理由 |
+| --- | ---: | ---: | --- | --- | --- |
+| `archive/old-art/assistant/mua/normal/2026-11-11-old-fullbody-received-v1/` | 2 | 4.7MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/mua-normal-8expressions-sheet.png`<br>`tools/art-sources/assistant-fullbody/received-v1/msg2-blonde-angel.png` | みゅあ(ふだん)の全身絵・立ち絵は 2026-11-21〜22 に作り直した完成品へ差し替え済み。この受け取り第1版から道具を回すと、作り直す前の絵に戻る |
+| `archive/old-art/assistant/mua/halloween/2026-11-11-old-fullbody-received-v1/` | 2 | 4.9MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/mua-halloween-8expressions-sheet.png`<br>`tools/art-sources/assistant-fullbody/received-v1/msg3-blonde-halloween-witch.png` | みゅあ(ハロウィン)。同上(2026-11-21〜22 に差し替え済み) |
+| `archive/old-art/assistant/mua/card-master/2026-11-11-old-fullbody-received-v1/` | 2 | 4.4MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/mua-cardmaster-8expressions-sheet.png`<br>`tools/art-sources/assistant-fullbody/received-v1/msg4-blonde-blue-cape.png` | みゅあ(デュエルマスター)。同上(2026-11-21〜22 に差し替え済み) |
+| `archive/old-art/assistant/mua/card-master/2026-10-27-old-bust-received/` | 8 | 19.3MB | 2026-11-23 | `tools/art-sources/assistants/mua-card-master` | みゅあ(デュエルマスター)のバスト絵の最初の原本(2026-10-27)。バスト絵・顔は 2026-11-21 に作り直した物へ差し替え済み |
+| `archive/old-art/assistant/mua/normal/2026-11-17-old-bust-pre-resize/` | 8 | 3.1MB | 2026-11-23 | `tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_angry.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_crying.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_excited.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_happy.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_normal.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_surprise.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_troubled.PNG`<br>`tools/art-sources/pre-resize-2026-11-17/images/assistant/myua_wink.PNG` | みゅあ(ふだん)のバスト絵の、縮める前(2026-11-17)の版。バスト絵は 2026-11-21 に作り直した物へ差し替え済みなので、もう現行の原本ではない |
+| `archive/old-art/assistant/kyuko/normal/2026-11-12-old-fullbody-received-v1/` | 2 | 3.3MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/kyuko-8expressions-sheet.png`<br>`tools/art-sources/assistant-fullbody/received-v1/kyuuko_transparent_fixed.png` | きゅうこ(ふだん)の全身絵は 2026-11-22 に作り直した完成品へ差し替え済み(立ち絵もそこから切り直した) |
+| `archive/old-art/assistant/sorashido/normal/2026-11-14-old-fullbody-received-v1/` | 3 | 4.4MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/sorashido-umahone-sheet1.png`<br>`tools/art-sources/assistant-fullbody/received-v1/sorashido-umahone-sheet2.png`<br>`tools/art-sources/assistant-fullbody/received-v1/sorashido-umahone-sleep.png` | ソラシド(ふだん=馬骨)の全身絵は #7292(2026-11-23)で作り直した完成品へ差し替え済み。寝顔も 2026-11-21 に直接入れた物が現行 |
+| `archive/old-art/assistant/sorashido/hosei/2026-11-12-old-fullbody-received-v1/` | 2 | 4.8MB | 2026-11-23 | `tools/art-sources/assistant-fullbody/received-v1/sorashido-8expressions-sheet1.png`<br>`tools/art-sources/assistant-fullbody/received-v1/sorashido-8expressions-sheet2.png` | ソラシド(補正)の全身絵8表情は 2026-11-20〜21 に直接入れた完成品へ差し替え済み |
+| `archive/old-art/assistant/sorashido/hosei/2026-10-27-old-bust-sheet/` | 1 | 3.4MB | 2026-11-23 | `tools/art-sources/assistants/sorashido-faces-sheet.png` | ソラシドの最初のバスト絵8表情のシート(2026-10-27)。バスト絵・顔は、ふだん・補正とも 2026-11-20〜21 に直接入れた物へ差し替え済み |
+| `archive/old-art/assistant/dra/normal/2026-09-17-duplicate-of-current-bust/` | 8 | 0.2MB | 2026-11-23 | `tools/art-sources/assistants/dra_angry.PNG`<br>`tools/art-sources/assistants/dra_crying.PNG`<br>`tools/art-sources/assistants/dra_excited.PNG`<br>`tools/art-sources/assistants/dra_happy.PNG`<br>`tools/art-sources/assistants/dra_normal.PNG`<br>`tools/art-sources/assistants/dra_surprise.PNG`<br>`tools/art-sources/assistants/dra_troubled.PNG`<br>`tools/art-sources/assistants/dra_wink.PNG` | 旧版ではなく重複。配信中のバスト絵と1バイトも違わない同じ物が2か所にある(「同じ中身を2か所で持たない」決まり)。原本のシート dra-expressions-sheet.png は正本として残す |

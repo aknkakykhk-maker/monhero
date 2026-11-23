@@ -28,6 +28,7 @@ const missionRewardChipText = (r) => { const t = giftRewardText(r); const e = MI
 function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll, ownedItems = null }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
   // 助手の1日1行の案内(デイリーのタブ)。いま選んでいる助手が話す。AI の文が無ければ決まった台詞
+  //   畳む・開くはひとことと同じ「💬▲▼」で、ミッションの画面で1つ(mh_bubble_collapsed_v1 の screen:missions。r1119-135)
   const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
   const aiLines = useMissionDailyLines();
   const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
@@ -46,7 +47,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact collapseKey="screen:missions"/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},

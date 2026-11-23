@@ -39,12 +39,15 @@ HEADS = {
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None),
     'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95),
-    # 馬骨(2026-11-23 全身画を作り直した #7292)。補正(いままでの絵)は stand-hosei
     # hold … まだこの道具で作っていない(--only で名指ししたときだけ作る)。表情ごとに姿勢が違い(上げた腕)、場面は表情ごとの見えている体の範囲で置くので、
     #   作り直すと顔がずれる表情がある(2026-11-23 窓口に相談中: 場面が同じ組の normal の範囲で置くようにするか)
     'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, hold=True),
-    'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, hold=True),
-    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, face=dict(side=3.4, down=0.04)),
+    # カードマスター(2026-11-23 r1119-137 全身画を作り直した)。normal だけ手を頭の上へ上げているので、場面はどの表情も normal の見えている範囲で置く
+    #   (56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_SAME_FRAME)。same_frame … 顔のずれを normal の範囲で測る
+    'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, same_frame=True),
+    # 馬骨。補正(いままでの絵)は stand-hosei。顔アイコンは sorashido-umahone-busts.py で作った物のまま(2026-11-23 表情の全身画は元の版に戻ったので作り直さない)。
+    #   表情の全身画を作り直したら face=dict(side=3.4, down=0.04) を足して顔アイコンも作る
+    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None),
 }
 ALPHA = 40  # これより濃い画素を「体」とみなす(端の検査 life-stand-edge-check.js と同じ考え)
 
@@ -135,7 +138,7 @@ def remeasure(key, mk, cur):
     return new, 'ずれの誤差 %.3f・倍率 %.3f' % (e, s)
 
 
-def align(base, a, mk, cx):
+def align(base, a, mk, cx, from_bottom=False):
     """表情の絵を normal に重ねる位置。頭(髪と顔の輪郭・頭のてっぺんから顎の少し下まで)で合わせ、目の真ん中がそろうようにする。
     表情ごとに描き分けた全身画は大きさ(倍率)が違うことがあるが、引き伸ばさない(r1115-143)。倍率は「注意」に出すだけ。
     返す ((dx, dy), 倍率): a(x+dx, y+dy) が base(x, y) に重なる。"""
@@ -148,9 +151,23 @@ def align(base, a, mk, cx):
     # 初めの見当: 体の上端と、頭の真ん中(髪の重心)をそろえる
     acx = head_cx(a, bb[1], int(hh * s0))
     t0 = lambda s: (cx - s * acx, ba[1] - s * bb[1])
+    scales = np.linspace(0.8, 1.25, 19)
+    if from_bottom:
+        # normal だけ手を頭の上へ上げている組(カードマスター・2026-11-23 r1119-137)。上げた腕が頭の前を横切り、頭で合わせると外れる。
+        #   全身画どうしは同じ大きさ・同じ頭の高さに作ってある(life-card-master-recut.py)ので、縦と倍率はそのまま、横だけ頭(顔のまわり)で合わせる
+        S, D = feat(a), feat(base)
+        ys = np.arange(int(eye - 0.6 * hh), int(chin + 0.1 * hh), 2)
+        xs = np.arange(int(cx - 0.45 * hh), int(cx + 0.45 * hh), 2)
+        N = D[np.ix_(ys, xs)]
+        best = None
+        for dx in range(-int(1.2 * hh) + int(round(acx - cx)), int(1.2 * hh) + int(round(acx - cx)) + 1, 2):
+            e = float(np.abs(sample(S, 1.0, -dx, 0.0, ys, xs) - N).mean())
+            if best is None or e < best[0]:
+                best = (e, dx)
+        return (best[1], 0), 1.0
     q = max(2, int(round(hh / 60)))
     r = int(0.35 * hh)
-    e, s, tx, ty = register(a, base, rows, cols, np.linspace(0.8, 1.25, 19), range(-r, r + 1, q * 2), 1.0, t0, q=q)
+    e, s, tx, ty = register(a, base, rows, cols, scales, range(-r, r + 1, q * 2), 1.0, t0, q=q)
     e, s, tx, ty = register(a, base, rows, cols, np.linspace(s * 0.98, s * 1.02, 5), range(-q * 2, q * 2 + 1, max(1, q // 2)), 1.0, (tx, ty), q=max(1, q // 2))
     # base(x) ≈ a((x - t) / s)。normal の目の真ん中 (cx, eye) が a のどこに来るか
     ax, ay = (cx - tx) / s, (eye - ty) / s
@@ -226,7 +243,7 @@ def run(key, cfg, marks, opts):
     cx = head_cx(base, nb[1], int(max(8, (mk['chin'] - nb[1]) * 0.8)))
     # 下の切れ目: 顎の位置が chin_frac になる高さ(normal の体のてっぺんから測る)
     bottom = int(round(nb[1] + (mk['chin'] - nb[1]) / cfg['chin_frac']))
-    al = [((0, 0), 1.0)] + [align(base, a, mk, cx) for a in ims[1:]]
+    al = [((0, 0), 1.0)] + [align(base, a, mk, cx, from_bottom=cfg.get('same_frame', False)) for a in ims[1:]]
     ds = [d for d, _ in al]
     big = [(e, k) for e, (_, k) in zip(EXPR, al) if abs(k - 1) > 0.04]
     # 枠: 8表情ぶんの不透明な画素(切れ目より上)が上・左・右の端に触れない所まで。余白 g
@@ -257,7 +274,7 @@ def run(key, cfg, marks, opts):
         row['above'] = cfg['above']
     # 顔のずれ: 場面は見えている体の範囲で置くので、表情ごとに範囲が違うと顔が動く。顔の長さ(目から顎)の何割かで出す
     worst = (0.0, '')
-    for e, (l, t, r, b) in zip(EXPR, vb):
+    for e, (l, t, r, b) in zip(EXPR, [vb[0]] * len(vb) if cfg.get('same_frame') else vb):
         ey = ((mk['eye'] - frame[1]) - t) / float(b - t) - row['eye']
         exn = ((l + r) / 2.0 - (vb[0][0] + vb[0][2]) / 2.0) / float(b - t) * vh
         dv = max(abs(ey * vh), abs(exn)) / f

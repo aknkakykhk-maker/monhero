@@ -696,6 +696,9 @@ const assistantPeerLineText = (line, talk) => {
 // replay … 関係図・アルバムから見返すときの台本(1日の数に入れず、仲良し度も上げない。返事は選び直せる)
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
+  // 💬▲▼ で畳む・開く(2026-11-23 台帳 r1119-135)。画面ごとに覚える(今の mh_bubble_collapsed_v1 に peer:<画面> を足す。無ければ開いている)。
+  //   畳んでいる間も掛け合いは始まり、右下に「💬▼」だけ出る(押すと開いて続きから読める)。見返しは畳まない
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
@@ -822,6 +825,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(
+      <div data-assistant-peer-folded className="flex justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setPeerFolded(false)} data-assistant-peer-fold=""/>
+      </div>);
+  }
   const { talk } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
@@ -874,8 +883,11 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+        {scene && !cur.replay && <BubbleFoldButton open onToggle={() => setPeerFolded(true)} size="sm" data-assistant-peer-fold=""/>}
         <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
           className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
+        </span>
       </div>
     </div>);
 }

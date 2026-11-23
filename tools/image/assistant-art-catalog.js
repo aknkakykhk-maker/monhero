@@ -1,20 +1,21 @@
 // 助手の絵の目録を作る道具(2026-11-23 社長「作り直しが何世代も重なり、いま使っている最新版と古い版の見分けがつかず
 // 取り違えが繰り返し起きている」・台帳 r1119-124・追跡表 r1123-011)。
 //
-//   node tools/image/assistant-art-catalog.js            … 要約だけ画面に出し、目録と「移す一覧」を書く(書き先は下の OUT_*)
+//   node tools/image/assistant-art-catalog.js            … 要約だけ画面に出し、キャラごとの目録(CATALOG.md)と保管庫の表を書き直す
 //   node tools/image/assistant-art-catalog.js --all      … 要確認と古い疑いを全部、画面にも出す
 //   node tools/image/assistant-art-catalog.js --check    … 検査だけ(何も書かない)。正本が在るか・目録が古くないか・現行が正本より古くないか
 //   node tools/image/assistant-art-catalog.js --no-write … 目録のファイルを書かない(台帳も書かない)
 //   node tools/image/assistant-art-catalog.js --why <語> … 道筋に <語> を含む絵が、どの組(キャラ/服/種類)で・正本か旧版かを出す
 //   node tools/image/assistant-art-catalog.js --selftest … 道具の自己点検
 //
-// 【この道具は画像を動かさない・消さない】 読んで数えるだけ。旧版を保管庫へ移すのは社長が一覧を OK してから(git mv)。
+// 【この道具は画像を動かさない・消さない】 読んで数えるだけ。旧版は 2026-11-23 に保管庫 archive/old-art/ へ移した(r1119-128)。
+//   目録はキャラごと: tools/art-sources/assistants/<キャラ>/CATALOG.md(原本もそのフォルダの <服>/ の下)。保管庫の表は archive/old-art/README.md
 //
 // 【読む物・書く物】
 //   人が書く  tools/image/assistant-art-catalog.json … キャラ・服の名前、組ごとの「正本(最新の原本)」と作り方、旧版の候補(移す一覧)、要確認
 //   道具が書く tools/image/assistant-art-ledger.json  … 絵1枚ごとの「中身の印(sha)と、最後に変えたコミット」。中身が変わった絵だけ git で引き直す
 //                                                      (会話の履歴は浅いことがあるので、分かった日付はここへ貯めておく)
-//   道具が書く OUT_CATALOG(目録)・OUT_MOVES(移す一覧)
+//   道具が書く キャラごとの CATALOG.md・archive/old-art/README.md・要確認の一覧(書き先は catalog.json の out)
 //
 // 【組】 monster-hero/images/assistant の絵を「キャラ/服/種類」に分ける(名前を組み立てて読む決まり data/assistants.js と同じ分け方)。
 //   全身絵 fullbody/<名前>[__<表情>].png / 立ち絵 stand-<服>/<接頭辞>_<表情>.png / バスト絵 [<服>/]<接頭辞>_<表情>.PNG / 顔 [<服>/]face/<接頭辞>_<表情>.PNG
@@ -24,10 +25,10 @@
 //   ["道筋", …]   … 原本のファイル(* は1階層の任意の文字)。現行の絵はここから how の道具で作る
 //
 // 【検査(--check)が落とす物】
-//   1 組が目録(catalog.json)に無い・目録にあって絵が無い  2 正本に書いたファイルが無い  3 正本が保管庫(archive/)や「移す一覧」の中にある
+//   1 組が目録(catalog.json)に無い・目録にあって絵が無い  2 正本に書いたファイルが無い  3 正本が保管庫(archive/)の中にある
 //   4 絵の中身が台帳と違う(絵を替えたのに目録を作り直していない → 引数なしで回す)
 //   5 現行の絵が正本より古い(正本だけ新しくして、現行を作り直していない)。分かっていて直している最中の物は catalog.json の knownStale に理由つきで書く
-//   6 「移す一覧」の元が無い・行き先がもう在る・現行フォルダ(monster-hero/)の中を指している
+//   6 保管庫へ移した旧版(catalog.json の moved)が無い・元の場所にまた在る・保管庫に目録に無い絵がある
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -133,10 +134,15 @@ const refreshLedger = (files, old) => {
   const ledger = { note: 'このファイルは node tools/image/assistant-art-catalog.js が書く。手で直さない', commits: {}, files: {} };
   const need = [];
   const shas = {};
+  // 置き場だけ変わった絵(git mv)は、中身の印が同じ前の控え(もう無い道筋の物)から「最後に変えたコミット」を引き継ぐ
+  const movedFrom = {};
+  for (const [f, v] of Object.entries(old.files || {})) if (!exists(f) && v.split(' ')[1] !== PENDING) movedFrom[v.split(' ')[0]] = v;
   for (const f of files) {
     shas[f] = sha(f);
     const prev = old.files && old.files[f];
-    if (prev && prev.split(' ')[0] === shas[f] && prev.split(' ')[1] !== PENDING) ledger.files[f] = prev; else need.push(f);
+    if (prev && prev.split(' ')[0] === shas[f] && prev.split(' ')[1] !== PENDING) ledger.files[f] = prev;
+    else if (!prev && movedFrom[shas[f]]) ledger.files[f] = movedFrom[shas[f]];
+    else need.push(f);
   }
   const got = gitLastChange(need);
   for (const f of need) {
@@ -183,8 +189,6 @@ const build = (cat, ledger, files) => {
   for (const f of strays) problems.push(`組に分けられない絵が現行フォルダにある(旧版の疑い・名前の形が決まりと違う): ${f}`);
   for (const key of Object.keys(cat.groups)) if (!groups[key]) problems.push(`目録(${CATALOG})に ${key} があるが、絵が無い`);
 
-  const moveSources = new Set();
-  for (const m of cat.moves || []) for (const p of m.from) for (const f of expand(p)) moveSources.add(f);
 
   for (const key of Object.keys(groups).sort()) {
     const g = groups[key];
@@ -209,7 +213,7 @@ const build = (cat, ledger, files) => {
       const hit = expand(p);
       if (!hit.length) problems.push(`${key} の正本に書いたファイルが無い: ${p}`);
       if (p.startsWith('archive/')) problems.push(`${key} の正本が保管庫(旧版の置き場)を指している: ${p}`);
-      for (const f of hit) { if (moveSources.has(f)) problems.push(`${key} の正本が「移す一覧」(旧版の候補)に入っている: ${f}`); g.masterFiles.push(f); }
+      g.masterFiles.push(...hit);
     }
     // 現行が正本より古くないか
     let masterNewest = null;
@@ -245,20 +249,18 @@ const build = (cat, ledger, files) => {
   }
   for (const c of cat.confirm || []) confirms.push(c);
 
-  // 「移す一覧」
+  // 保管庫へ移した旧版: 行き先に在るか・元の場所へ戻っていないか
   const moves = [];
-  for (const m of cat.moves || []) {
-    const srcs = [];
-    for (const p of m.from) {
-      const hit = expand(p);
-      if (!hit.length) problems.push(`「移す一覧」の元が無い: ${p}`);
-      if (p.startsWith('monster-hero/')) problems.push(`「移す一覧」が現行フォルダを指している(現行は動かさない): ${p}`);
-      srcs.push(...hit);
-    }
-    if (!/^archive\/old-art\//.test(m.to)) problems.push(`「移す一覧」の行き先が保管庫(archive/old-art/)でない: ${m.to}`);
-    if (exists(m.to)) problems.push(`「移す一覧」の行き先がもう在る: ${m.to}`);
-    moves.push({ ...m, files: srcs, bytes: srcs.reduce((t, f) => t + fs.statSync(abs(f)).size, 0) });
+  for (const m of cat.moved || []) {
+    if (!/^archive\/old-art\//.test(m.to)) problems.push(`旧版の行き先が保管庫(archive/old-art/)でない: ${m.to}`);
+    const files = expand(m.to);
+    if (!files.length) problems.push(`保管庫に移したはずの旧版が無い: ${m.to}`);
+    for (const p of m.from) if (expand(p).length) problems.push(`保管庫へ移した旧版が、元の場所にまた在る(旧版を戻していないか): ${p}`);
+    moves.push({ ...m, files, bytes: files.reduce((t, f) => t + fs.statSync(abs(f)).size, 0) });
   }
+  // 保管庫の中に、目録(moved)に書いていない物が無いか
+  const known = new Set(moves.flatMap(m => m.files));
+  for (const f of walk('archive/old-art')) if (isImage(f) && !known.has(f)) problems.push(`保管庫に、目録(${CATALOG} の moved)に無い絵がある: ${f}`);
   return { groups, problems, confirms, moves };
 };
 
@@ -278,46 +280,49 @@ const masterText = (g) => {
   if (g.spec.master === 'self') return '現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い)';
   return g.spec.master.map(p => '`' + p + '`').join('<br>');
 };
-const renderCatalog = (cat, r) => {
+const renderCatalog = (cat, r, who) => {
+  const w = cat.who[who];
   const L = [];
-  L.push('# 助手の絵の目録(どれが正本で、ゲームはどれを使っているか)', '');
+  L.push(`# ${w.name}(${who})の絵の目録 — どれが正本で、ゲームはどれを使っているか`, '');
   L.push('<!-- このファイルは node tools/image/assistant-art-catalog.js が書く。手で直さない(直すのは tools/image/assistant-art-catalog.json) -->', '');
-  L.push('台帳 r1119-124。**絵を作り直す・差し替える前に、ここで「正本」を確かめる。** 旧版は保管庫 `archive/old-art/` にあり、正本ではない。', '');
-  L.push('- 「正本」= その絵を作り直すときに元にするファイル。「現行のファイルそのもの」とある組は、ゲームの絵が完成品で、道具で作り直してはいけない');
+  L.push('台帳 r1119-124・r1119-128。**絵を作り直す・差し替える前に、ここで「正本」を確かめる。**', '');
+  L.push('- 「正本」= その絵を作り直すときに元にするファイル。「現行のファイルそのもの」とある組は、ゲームの絵が完成品で、道具で作り直してはいけない(道具も断る)');
+  L.push('- このフォルダ(`tools/art-sources/assistants/' + who + '/<服>/`)にあるのは、いまも正本の原本だけ。**旧版は `archive/old-art/assistant/' + who + '/` にあり、正本ではない**');
   L.push('- 「最後に作った日」= ゲームの絵を最後に替えたコミットの日と PR(PR の番号が無い物はコミットの印)');
   L.push('- 絵を替えたら `node tools/image/assistant-art-catalog.js` を回す(回さないと検査 `--check` が落ちる)', '');
-  const count = Object.values(r.groups).reduce((t, g) => t + g.files.length, 0);
-  L.push(`助手 ${Object.keys(cat.who).length} 人・服 ${Object.values(cat.who).reduce((t, w) => t + 1 + Object.keys(w.outfits).length, 0)} 着・絵 ${count} 枚。`, '');
-  for (const who of Object.keys(cat.who)) {
-    const w = cat.who[who];
-    L.push(`## ${w.name}(${who})`, '');
-    for (const outfit of ['normal', ...Object.keys(w.outfits)]) {
-      L.push(`### ${outfit === 'normal' ? 'ふだんの服' : '服「' + w.outfits[outfit] + '」(' + outfit + ')'}`, '');
-      L.push('| 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |', '| --- | --- | ---: | --- | --- | --- |');
-      for (const kind of KINDS) {
-        const g = r.groups[`${who}/${outfit}/${kind}`];
-        if (!g) { L.push(`| ${KIND_NAME[kind]} | なし | 0 | | | |`); continue; }
-        L.push(`| ${KIND_NAME[kind]} | ${filesText(g)} | ${g.files.length} | ${madeText(g)} | ${masterText(g)} | ${(g.spec && g.spec.how) || ''}${g.stale ? '<br>**いま古い**: ' + g.stale : ''} |`);
-      }
-      L.push('');
+  for (const outfit of ['normal', ...Object.keys(w.outfits)]) {
+    L.push(`## ${outfit === 'normal' ? 'ふだんの服' : '服「' + w.outfits[outfit] + '」(' + outfit + ')'}`, '');
+    L.push('| 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |', '| --- | --- | ---: | --- | --- | --- |');
+    for (const kind of KINDS) {
+      const g = r.groups[`${who}/${outfit}/${kind}`];
+      if (!g) { L.push(`| ${KIND_NAME[kind]} | なし | 0 | | | |`); continue; }
+      L.push(`| ${KIND_NAME[kind]} | ${filesText(g)} | ${g.files.length} | ${madeText(g)} | ${masterText(g)} | ${(g.spec && g.spec.how) || ''}${g.stale ? '<br>**いま古い**: ' + g.stale : ''} |`);
     }
+    L.push('');
   }
-  L.push('## 寝顔(`_sleep`)', '', cat.sleepNote || '', '');
+  const old = r.moves.filter(m => m.to.startsWith(`archive/old-art/assistant/${who}/`));
+  L.push('## 旧版(正本ではない・保管庫)', '');
+  if (!old.length) L.push('なし');
+  for (const m of old) L.push(`- \`${m.to}/\`(${m.files.length}枚)… ${m.why}`);
+  L.push('', '## 寝顔(`_sleep`)', '', cat.sleepNote || '', '');
   return L.join('\n') + '\n';
 };
-const renderMoves = (cat, r) => {
+const renderOldArt = (cat, r) => {
   const L = [];
   const total = r.moves.reduce((t, m) => t + m.files.length, 0);
-  const bytes = r.moves.reduce((t, m) => t + m.bytes, 0);
-  L.push('# 旧版・予備の絵を保管庫へ移す一覧(r1123-011・案)', '');
-  L.push('<!-- このファイルは node tools/image/assistant-art-catalog.js が書く。手で直さない(直すのは tools/image/assistant-art-catalog.json の moves) -->', '');
-  L.push('**まだ何も移していない・消していない。** 社長が OK したあとに `git mv` で移す。ゲームが読む絵(`monster-hero/images`)は1枚も動かさない。', '');
-  L.push(`合計 ${total} 枚・${mb(bytes)}(${r.moves.length} 組)`, '');
-  L.push('| 元の場所 | 枚数 | 容量 | 行き先(保管庫) | 旧版とする理由 | 移す前に直す道具 |', '| --- | ---: | ---: | --- | --- | --- |');
-  for (const m of r.moves) {
-    L.push(`| ${m.from.map(p => '`' + p + '`').join('<br>')} | ${m.files.length} | ${mb(m.bytes)} | \`${m.to}/\` | ${m.why} | ${(m.fixTools || []).map(p => '`' + p + '`').join('<br>') || 'なし'} |`);
-  }
-  L.push('', `## 要確認(${r.confirms.length} 件)`, '');
+  L.push('# 旧版の絵の保管庫(配信しない・正本ではない)', '');
+  L.push('<!-- このファイルは node tools/image/assistant-art-catalog.js が書く。手で直さない(直すのは tools/image/assistant-art-catalog.json の moved) -->', '');
+  L.push('**ここにあるのは旧版(作り直す前の絵・重複)。ここから絵を作らない・ゲームへ入れない。** 正本は `tools/art-sources/assistants/<キャラ>/CATALOG.md` で確かめる(台帳 r1119-124・r1119-128)。', '');
+  L.push('- 配信されない(GitHub Pages に載るのは `index.html` と `monster-hero/` だけ)。消さずに残している');
+  L.push('- 置き方: `archive/old-art/assistant/<キャラ>/<服>/<その版が入った日>-old-<何の版>/`');
+  L.push('- 戻すときは `git mv` で元の場所へ戻し、`tools/image/assistant-art-catalog.json` の `moved` から外して正本に書く(検査 `--check` が、戻した旧版と目録の食い違いを見ている)', '');
+  L.push(`合計 ${total} 枚・${mb(r.moves.reduce((t, m) => t + m.bytes, 0))}(${r.moves.length} 組)`, '');
+  L.push('| 保管庫の場所 | 枚数 | 容量 | 移した日 | 元の場所 | 旧版とする理由 |', '| --- | ---: | ---: | --- | --- | --- |');
+  for (const m of r.moves) L.push(`| \`${m.to}/\` | ${m.files.length} | ${mb(m.bytes)} | ${m.date} | ${m.from.map(p => '\`' + p + '\`').join('<br>')} | ${m.why} |`);
+  return L.join('\n') + '\n';
+};
+const renderConfirm = (cat, r) => {
+  const L = ['# 助手の絵の目録: 要確認(道具が書く)', '', '<!-- node tools/image/assistant-art-catalog.js が書く。手で直さない -->', '', `## 要確認(${r.confirms.length} 件)`, ''];
   for (const c of r.confirms) L.push('- ' + c);
   L.push('', `## 検査で落ちている物(${r.problems.length} 件)`, '');
   if (!r.problems.length) L.push('なし');
@@ -366,12 +371,14 @@ const main = () => {
   if (has('--why') && why) {
     for (const g of Object.values(r.groups)) for (const x of g.files) if (x.path.includes(why)) console.log(`現行 ${x.path} … ${g.key} / 正本: ${g.spec ? (g.spec.master === 'self' ? 'このファイルそのもの' : g.spec.master.join(' , ')) : '目録に無い'}`);
     for (const g of Object.values(r.groups)) for (const f of g.masterFiles || []) if (f.includes(why)) console.log(`正本 ${f} … ${g.key} の原本`);
-    for (const m of r.moves) for (const f of m.files) if (f.includes(why)) console.log(`旧版の候補 ${f} … ${m.why} → ${m.to}/`);
+    for (const m of r.moves) for (const f of m.files) if (f.includes(why)) console.log(`旧版(保管庫・正本ではない) ${f} … ${m.why}`);
     return;
   }
   if (write) {
     fs.writeFileSync(abs(LEDGER), JSON.stringify(ledger, null, 1) + '\n');
-    for (const [p, text] of [[cat.out.catalog, renderCatalog(cat, r)], [cat.out.moves, renderMoves(cat, r)]]) {
+    const outs = Object.keys(cat.who).map(who => [`${cat.out.catalogDir}/${who}/CATALOG.md`, renderCatalog(cat, r, who)]);
+    outs.push([cat.out.oldArtReadme, renderOldArt(cat, r)], [cat.out.confirm, renderConfirm(cat, r)]);
+    for (const [p, text] of outs) {
       fs.mkdirSync(path.dirname(abs(p)), { recursive: true });
       fs.writeFileSync(abs(p), text);
     }
@@ -379,11 +386,11 @@ const main = () => {
   const total = Object.values(r.groups).reduce((t, g) => t + g.files.length, 0);
   const self = Object.values(r.groups).filter(g => g.spec && g.spec.master === 'self').length;
   console.log(`助手の絵 ${total} 枚 / 組 ${Object.keys(r.groups).length}(正本が現行そのもの ${self}・原本あり ${Object.keys(r.groups).length - self})`);
-  console.log(`旧版の候補(移す一覧) ${r.moves.reduce((t, m) => t + m.files.length, 0)} 枚・${mb(r.moves.reduce((t, m) => t + m.bytes, 0))} / 要確認 ${r.confirms.length} 件 / 検査で落ちる物 ${r.problems.length} 件`);
+  console.log(`保管庫の旧版 ${r.moves.reduce((t, m) => t + m.files.length, 0)} 枚・${mb(r.moves.reduce((t, m) => t + m.bytes, 0))} / 要確認 ${r.confirms.length} 件 / 検査で落ちる物 ${r.problems.length} 件`);
   const show = (title, list) => { if (!list.length) return; console.log(title); for (const x of (has('--all') ? list : list.slice(0, 5))) console.log('  - ' + x); if (!has('--all') && list.length > 5) console.log(`  …ほか ${list.length - 5} 件(--all)`); };
   show('検査で落ちる物:', r.problems);
   show('要確認:', r.confirms);
-  if (write) console.log(`目録 → ${cat.out.catalog} / 移す一覧 → ${cat.out.moves}`);
+  if (write) console.log(`目録 → ${cat.out.catalogDir}/<キャラ>/CATALOG.md / 保管庫の表 → ${cat.out.oldArtReadme} / 要確認 → ${cat.out.confirm}`);
   if (checkOnly && r.problems.length) process.exitCode = 1;
   if (checkOnly && !r.problems.length) console.log('OK: 助手の絵の目録は現行と合っている');
 };

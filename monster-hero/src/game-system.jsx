@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a40b905bea2439e4
+// generated-sha256: 8487ce99b4b51568
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5043,6 +5043,25 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
 // 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 作り直した譜面(data/rhythm-mode.js の RHYTHM_CHART_RESETS)の自己ベスト(2026-11-23・台帳 r1119-136・社長「スコアはリセット」)。
+// 形は { '<songId>|<難易度id>|<版の印>': 1件の記録(normalizeRhythmBestRecord) }。v1・v2 の旧の記録は消さず書き換えない(CLAUDE.md ⑦)。
+// 読むときは、作り直した曲・難易度だけ、旧の記録のかわりにこちらを出す(まだ遊んでいなければ0から)。印が変われば別の記録になる
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId,difficultyId) => {const tag=typeof rhythmChartResetTag==='function'?rhythmChartResetTag(songId,difficultyId):null;return tag?`${songId}|${difficultyId}|${tag}`:null;};
+const normalizeRhythmBestChartResets = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  return Object.fromEntries(Object.entries(source).filter(([id,record])=>/^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id)&&record&&typeof record==='object'&&!Array.isArray(record)).map(([id,record])=>[id,normalizeRhythmBestRecord(record)]));
+};
+// 記録の一覧(normalizeRhythmBestRecords の形)の、作り直した曲・難易度を、作り直したあとの記録に差し替える(ほかはそのまま)
+const rhythmBestRecordsWithChartResets = (records,resets) => {
+  const out={...records},clean=normalizeRhythmBestChartResets(resets);
+  if(typeof RHYTHM_CHART_RESETS==='undefined')return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair=>{const [songId,difficultyId]=pair.split('|');if(!out[songId]||!Object.prototype.hasOwnProperty.call(out[songId],difficultyId))return;
+    const id=rhythmBestChartResetId(songId,difficultyId);if(!id)return;
+    out[songId]={...out[songId],[difficultyId]:normalizeRhythmBestRecord(clean[id])};
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);});
+  return out;
+};
 // 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
 //   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
 //     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
@@ -5453,6 +5472,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   multiLook:'LIGHT',
   // 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11 社長「消せる・はじめは入」)。新しい項目なので、保存値に無い人は ON で補われる
   multiLiveBoard:true,
+  // 部屋(みんなで対戦・助手とのセッション)のメンバー札の上に出る吹き出しを出すか(2026-11-23 r1119-135)。切でもチャットの欄には残る。
+  // 新しい項目なので、保存値に無い・壊れている人は ON(これまでの見え方)で補われる
+  multiMemberBubble:true,
   // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
   // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
   modeSelectArt:true, modeSelectComment:true,
@@ -5698,7 +5720,7 @@ const normalizeRhythmSettings = value => {
     noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), multiMemberBubble:bool('multiMemberBubble'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
@@ -6577,10 +6599,18 @@ const Audio_ = (() => {
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げない(スマホのメモリで広げ切れない)。
+    // 中身を取ってきた時点で見分けて断り、区切って鳴らす側(演奏は startRhythmTrack、BGM は startBgmLong)へ回す。
+    // 先読み(preloadBGM・prepareBGM)が長い曲を丸ごと広げてしまうこともこれで無くなる(2026-11-23 r1119-134)
+    const request = (data ? Promise.resolve(data) : (longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    })).then((bytes) => decode(ctx, bytes)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
+    }))).then((bytes) => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) { const entry = longEntryOf(url, new Uint8Array(bytes)); if (entry.long) throw longSongError(entry); }
+      return decode(ctx, bytes);
+    }).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
       .then((buffer) => { buffers.set(key, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(key));
     loadingBuffers.set(key, request);
@@ -6616,6 +6646,34 @@ const Audio_ = (() => {
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  // 長い曲を BGM として流す(2026-11-23 r1119-134 社長「BGMも直す」)。演奏と同じく区切って広げて鳴らす。
+  // bgmSource には、止め方(stopSource)が同じになる入れ物を入れる。音量・フェードはこれまでどおり bgmGain で掛かる。
+  // 輪にする曲は、終わりの時刻ちょうどに頭の区切りを予約して、すき間なく頭へ戻る
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || (bgmSource && bgmSourceKey === key)) return;
+    let long = null;
+    try { long = await openLongSong(ctx, entry); } catch (e) { return; }
+    if (stale() || (bgmSource && bgmSourceKey === key) || !bgmGain) { long.release(); return; }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+    bgmSource = holder; bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
+    // __mhTestLongBgmFromSec … 検査(tools/audio/long-bgm-chunk-check.js)だけが置く。曲の途中から流して、輪の継ぎ目を待たずに測る
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) { try { await long.ready(fromSec); } catch (e) {} if (stale() || bgmSource !== holder) { if (bgmSource !== holder) long.release(); return; } }
+    const t0 = long.playFrom(fromSec, bgmGain, () => { const f = holder.onended; if (f) f(); }, { loop: once ? false : track.loop !== false });
+    if (t0 === false) { stopOthers(); return; }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = (key) => {
     const track = resolveTrack(key);
     if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
@@ -6632,7 +6690,9 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch((e) => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
@@ -6679,15 +6739,27 @@ const Audio_ = (() => {
     // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
-    try { const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+    try {
+      // 長い曲は丸ごと広げず、区切って広げて輪にして流す(startBgmLong と同じ。2026-11-23 r1119-134)
+      let buffer = null, longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) { try { buffer = await loadBuffer(track.src); rememberSongBuffer(track.src); } catch (e) { if (!e || !e.longEntry) throw e; longEntry = e.longEntry; } }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
       // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) { long = await openLongSong(ctx, longEntry); if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) { long.release(); return false; } }
       applyTrackGain(track);
-      const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
-      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      let source;
+      if (long) {
+        source = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+        previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); };
+        if (long.playFrom(0, bgmGain, () => { const f = source.onended; if (f) f(); }, { loop: track.loop !== false }) === false) { if (previewSource === source) { previewSource = null; previewKey = null; } return false; }
+      } else {
+        source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      }
       // 止まったままのAudioContextで鳴らしても無音。もう一度だけ復帰を試し、
       // それでも動かなければ「鳴っている」と嘘をつかずに戻す(次のタップでやり直せる)
       if (ctx.state !== 'running') { await ensureAudioCtxRunning(); }
@@ -6799,16 +6871,21 @@ const Audio_ = (() => {
     }
     return offs.length ? { offsets: Uint32Array.from(offs), end, sr, spf } : null;
   };
-  const fetchSongBytes = async (url) => {
-    const hit = longSongBytes.get(url); if (hit) return hit;
-    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
-    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
+  // 取ってきた中身が長い曲かを見分ける。長い曲なら中身を持っておく(いちばん新しい1曲だけ)
+  const longEntryOf = (url, bytes) => {
     let map = null; try { map = parseMp3Frames(bytes); } catch (e) { map = null; }
     const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
     const entry = { url, bytes, map, long };
     if (long) { longSongBytes.clear(); longSongBytes.set(url, entry); }
     return entry;
+  };
+  // loadBuffer が長い曲を断るときの印(e.longEntry に中身)
+  const longSongError = (entry) => { const e = new Error('long song: play in chunks'); e.longEntry = entry; return e; };
+  const fetchSongBytes = async (url) => {
+    const hit = longSongBytes.get(url); if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
   const monoRange = (buf, from, len) => {
@@ -6868,6 +6945,9 @@ const Audio_ = (() => {
       return p;
     };
     const head = (await getChunk(0)).buffer, rate = head.sampleRate;
+    // 2回目からは、前に測った値(同じサンプルレートのとき)を使う。BGM として何度も流し直すので
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) { C = meta.C; aligned = meta.aligned; stats.probeCorr = meta.probeCorr; }
     // 区切りの頭のずれ方(C)を測る: 曲の頭の区切りの中で音のいちばん大きい所から短く広げ、頭の区切りと突き合わせる
     {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
@@ -6877,7 +6957,7 @@ const Audio_ = (() => {
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
-      if (bestP >= 0) {
+      if (bestP >= 0 && !meta) {
         try {
           const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
           const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
@@ -6888,8 +6968,9 @@ const Audio_ = (() => {
     }
     stats.offsetMs = Math.round(C * 10000) / 10;
     // 曲の長さ: 最後の区切りを広げて測る(持ち続けない)
-    let duration = head.duration;
-    if (count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    if (!meta) entry.longMeta = { rate, C, aligned, probeCorr: stats.probeCorr, duration };
     let session = 0, live = [], timer = null, play = null;
     const chunkIndexAt = (s) => { let k = 0; while (k + 1 < count && s >= seamSec(k + 1)) k++; return k; };
     const dropLive = (x) => { stopSource(x.src); try { x.gain.disconnect(); } catch (e) {} };
@@ -6910,7 +6991,7 @@ const Audio_ = (() => {
         const prev = live.find((x) => x.k === k - 1);
         if (prev) { prev.gain.gain.setValueAtTime(1, when); prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC); try { prev.src.stop(when + LONG_FADE_SEC + 0.01); } catch (e) {} }
       }
-      if (k === count - 1) src.onended = () => { if (my === session && play) { const done = play.onEnd; halt(); done(); } };
+      if (k === count - 1) src.onended = () => { if (my === session && play && !play.loopAt) { const done = play.onEnd; halt(); done(); } };
       src.start(when, Math.max(0, fromSong - c.startSec));
       stats.log.push({ k, first, marginMs: Math.round((when - ctx.currentTime) * 10000) / 10, devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100 }); if (stats.log.length > 8) stats.log.shift();
       live.push({ k, src, gain: g });
@@ -6922,7 +7003,28 @@ const Audio_ = (() => {
       if (next < count && !live.some((x) => x.k === next)) {
         getChunk(next).then(() => { if (my === session && play && !live.some((x) => x.k === next) && live.some((x) => x.k === next - 1)) scheduleChunk(next, false); }).catch(() => { stats.failed++; });
       }
-      live = live.filter((x) => { if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
+      // 輪にする(BGM): 最後の区切りが入ったら、曲の終わりの時刻ちょうどに頭の区切りを予約する(丸ごとの loop と同じく、終わりから頭へそのまま続ける)
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find((x) => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(), src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer; src.connect(g); g.connect(play.out); g.gain.value = 1;
+            play.loopAt = endAt; lastLive.src.onended = null;
+            try { lastLive.src.stop(endAt); } catch (e) {}
+            src.start(endAt, 0); live.push({ k: 0, src, gain: g, loopNew: true });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      // 頭へ戻った: 時刻の起点を頭に置き直し、前の周の区切りを捨てる
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt; play.o = 0; play.loopAt = null;
+        live = live.filter((x) => { if (x.loopNew) { x.loopNew = false; return true; } dropLive(x); return false; });
+        return;
+      }
+      live = live.filter((x) => { if (x.loopNew) return true; if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
       for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some((x) => x.k === k)) chunks.delete(k);
     };
     return {
@@ -6932,10 +7034,11 @@ const Audio_ = (() => {
       // 「いまの時刻」で入れると、ブラウザがその時刻をもう過ぎていて数ms〜十数ms遅れて鳴り始めることがある
       // (Chromium で seek のあとにたまに 512 サンプル遅れた)。続く区切りはこの起点から時刻を決めるので、
       // 少し先(LONG_START_LEAD_SEC)のサンプルの切れ目に予約して、起点と鳴り始めを必ず一致させる
-      playFrom: (o, out, onEnd) => {
+      // opts.loop … 終わりまで鳴ったら、すき間なく頭へ戻って鳴り続ける(BGM)
+      playFrom: (o, out, onEnd, opts = null) => {
         halt(); const k = chunkIndexAt(o); if (!chunks.has(k)) return false;
         const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
-        play = { t0, o, out, onEnd }; scheduleChunk(k, true);
+        play = { t0, o, out, onEnd, loop: !!(opts && opts.loop), loopAt: null }; scheduleChunk(k, true);
         timer = setInterval(tick, 250); tick(); return t0;
       },
       halt,
@@ -6960,7 +7063,10 @@ const Audio_ = (() => {
       // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げず、区切って鳴らす(openLongSong)。
       // すでに丸ごと広げてある曲(BGMで鳴らした等)はそれを使う。丸ごと広げるのに失敗した mp3 も、区切って鳴らしに回す
       let buffer=null,long=null,dctx=null;
-      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function')buffer=await loadBuffer(track.src);
+      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function'){
+        try{buffer=await loadBuffer(track.src);}
+        catch(e){if(!e||!e.longEntry)throw e;dctx=getAudioCtx();if(!dctx)return null;long=await openLongSong(dctx,e.longEntry);}
+      }
       else{
         const entry=await fetchSongBytes(track.src);dctx=getAudioCtx();
         if(!dctx)return null;
@@ -7082,10 +7188,11 @@ const Audio_ = (() => {
     } catch(e){ return null; }
   };
   const preloadBGM = (key) => { const track = resolveTrack(key); if (!track) return; const bufKey = sceneBufferKey(track.src); loadBuffer(bufKey).then(() => rememberSongBuffer(bufKey)).catch(() => {}); };
+  // 長い曲は丸ごと広げない(中身を取ってきたら用意できた扱い。鳴らすときに頭の区切りから広げる)
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
     const bufKey = sceneBufferKey(track.src);
-    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch((e) => !!(e && e.longEntry)), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
@@ -10848,6 +10955,12 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   const pinUntil = Date.parse(entry.pinUntil || '');
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
+};
+// 「イベント」タブに並べる札(2026-11-23 r1119-113)。開催中を上、開催予定(eventStartAt より前)を下にする。
+//   それぞれの中は一覧と同じ並び(新しい順)。時刻で変わるので、呼ぶたびに数え直す
+const changelogPinnedEntries = (nowMs = Date.now()) => {
+  const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
 };
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
@@ -15604,6 +15717,34 @@ const useBubbleCollapse = (collapseKey) => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, (next) => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+// ── 💬▲▼ を全画面に(2026-11-23 台帳 r1119-135・社長「💬▲▼を全画面に」) ──
+// モンヒロビートの曲えらびの「💬▲/▼」(29-rhythm-screens.jsx)と同じ形のボタンで、画面ごとにひとことを畳む・開く。
+// 覚えるのは今の mh_bubble_collapsed_v1(畳んだ画面の名前だけ入れる。無い・壊れていれば今の見た目=開いている)。既存の値の意味は変えない
+//   ・collapseKey を渡した吹き出し(マーケット・神殿・編成・カード売り場)は、その名前のまま(覚えている値を引き継ぐ)
+//   ・collapseKey を渡さない吹き出しは、場面から画面の名前を決める(下の表。同じ画面で場面が変わるものは1つにまとめる)
+//   ・畳まないもの: HOME(「隠す」r1119-081 のまま)・はじめての案内/一度きりの案内・文を直接渡す吹き出し・最初から開く吹き出し・
+//     モンヒロビートの曲えらび(rhythmHome。上の欄に💬▲▼が元からある)
+// 設定「助手のひとこと」の3択は今のまま先に効く(「出さない」なら畳む・開くより先に隠れる)
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([
+  [/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'],
+  [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'],
+  [/^(transcendence|masuEnhance)$/, 'masuEnhance'],
+]);
+const assistantBubbleFoldKey = (scene) => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+// 💬▲(開いている・押すと畳む)/ 💬▼(畳んでいる・押すと開く)。形はモンヒロビートの曲えらびと同じ
+const BubbleFoldButton = ({ open, onToggle, size = 'md', className = '', ...attrs }) => (
+  <button type="button" onClick={(ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); onToggle(); }} aria-pressed={!!open}
+    aria-label={open ? 'ひとことをたたむ' : 'ひとことを開く'} title={open ? '助手のひとことを畳む' : '助手のひとことを出す'} {...attrs}
+    className={`mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`}>
+    <span aria-hidden="true">💬</span><span aria-hidden="true">{open ? '▲' : '▼'}</span>
+  </button>
+);
 // 助手の吹き出し。どの画面でもこれ1つ置けばよい。
 //   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
 //   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
@@ -15611,19 +15752,21 @@ const useBubbleCollapse = (collapseKey) => {
 //   accent      … 画面のテーマ色に合わせたいとき(省略すると助手ごとの色)
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
-//   collapseKey … 渡すと吹き出しを小さくたためる(たたんだことを mh_bubble_collapsed_v1 に覚える)。画面ごとに別のキー
+//   collapseKey … 畳む・開く(💬▲▼)を覚える名前(mh_bubble_collapsed_v1)。渡さなければ場面から決める(assistantBubbleFoldKey)・null なら畳まない
 //   collapseHidden … たたんだら札も出さず何も描かない(ひらく入口が画面の別の所にあるとき。ヘルプの上の助手の顔)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
 // 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=undefined, collapseHidden=false, oneLine=false, menu=null }) => {
   const [open, setOpen] = useState(defaultOpen);
   // menu … [{ key, label, onClick }]。渡すと、吹き出しを押したときに小さなメニュー(渡した項目+「📖 詳しく見る」)を出す。
   //   HOME は吹き出しの中に「💬 おしゃべり」と「タップで詳しく」の2つの押し所があり、違いが分からなかった(r1119-050 窓-36)。押し所を吹き出し1つにまとめ、機能は減らさない
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  // 畳む・開くの名前。渡されたらそれ(null なら畳まない)、渡されなければ場面から(文を直接渡す・最初から開くものは畳まない)
+  const foldKey = collapseKey !== undefined ? collapseKey : (line || defaultOpen ? null : assistantBubbleFoldKey(scene));
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
@@ -15703,21 +15846,18 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   if (bubbleHidden) return null;
-  // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
-  if (collapseKey && collapsed) {
+  // 畳んでいる間は、右に「💬▼」のボタンだけ(押すと開く。モンヒロビートの曲えらびと同じ形・r1119-135)
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return (
-      <div data-bubble-collapsed className="w-full flex items-center gap-2">
-        <AssistantFace who={who} size={32} accent={color} expression={face}/>
-        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことを開く`}
-          className="mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95"
-          style={{ borderColor:color, color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>💬 {who.name}のひとこと ▾</button>
+      <div data-bubble-collapsed className="w-full flex items-center justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setCollapsed(false)} size="sm"/>
       </div>
     );
   }
   return (
     <>
-      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${collapseKey?'relative':''}`}>
+      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${foldKey?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
@@ -15748,8 +15888,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
-        {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
-          className="mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90">▴</button>}
+        {/* 開いている間は、吹き出しの右に「💬▲」(押すと畳む・画面ごとに覚える。r1119-135) */}
+        {foldKey&&!collapseHidden&&<BubbleFoldButton open onToggle={() => setCollapsed(true)} size="sm" className="self-center" data-bubble-collapse=""/>}
         {useMenu&&menuOpen&&<>
           {/* 外を押すとメニューが閉じる(幕は透明。後ろの施設をうっかり押さない) */}
           <div className="fixed inset-0" style={{ zIndex:60 }} onClick={()=>setMenuOpen(false)} data-bubble-menu-backdrop aria-hidden="true"/>
@@ -19886,6 +20026,14 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  // 作り直した譜面(RHYTHM_CHART_RESETS)の記録は、旧の記録(v1・v2)へ書かず専用のキーへ(2026-11-23・r1119-136)
+  const resetId=rhythmBestChartResetId(songId,difficultyId);
+  if(resetId){
+    const resets=normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
+    resets[resetId]=normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY,resets,false);
+    return loadRhythmBestRecordsNow();
+  }
   const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
   const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
@@ -19893,13 +20041,15 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   return loadRhythmBestRecordsNow();
 };
 // その版の自己ベスト(保存値そのまま・正規化だけ)
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// 作り直した譜面(RHYTHM_CHART_RESETS)の曲・難易度だけは、どの版でも作り直したあとの記録(mh_rhythm_best_chart_reset_v1)を返す
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false)),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 // いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
 // 切り替え前は今までどおり v1 をそのまま返す
 const loadRhythmBestRecordsNow = async () => {
   const legacy=await loadRhythmBestRecordsOf(1);
   if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
+  // 旧の記録の印を重ねたあとも、作り直した曲・難易度は作り直したあとの記録だけにする(旧の点・印を混ぜない)
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
@@ -24168,6 +24318,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
 {/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
 {field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
+{/* 部屋のメンバー札の上の吹き出し(2026-11-23 r1119-135)。切でもチャットの欄には残る */}
+{field('部屋のメンバーの吹き出しを出す',toggle('multiMemberBubble'),'切にしても、発言はチャットの欄で読めます。')}
 </div>
 </section>
 <section className={card}>
@@ -24650,6 +24802,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   React.useEffect(()=>{
     if(song&&song.songId!==songId)setSongId(song.songId);
   },[song?song.songId:'',songId]);
+  // 絞り込み(イベント・お気に入り)で、選んでいる曲が一覧から外れたら、一覧の先頭の曲を選び直す
+  //   (2026-11-23 社長の実機。右の詳細が一覧に無い曲のままだった)。ALL に戻しても選び直した曲のまま。
+  //   選ぶのは曲の id だけで、保存値(mh_rhythm_select_v1)の形は変えない
+  const firstRowSongId=rows.length?rows[0].entry.songId:'';
+  const songInGenre=!song||genre.id==='all'||genreMatches(song);
+  React.useEffect(()=>{
+    if(!songInGenre&&firstRowSongId)setSongId(firstRowSongId);
+  },[songInGenre,firstRowSongId,genre.id]);
 
   const pickRandom=()=>{
     // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
@@ -24674,8 +24834,35 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=rows.length>=2;
+  // ★並び1つぶんが一覧に収まるときも輪にしない(2026-11-23 社長の実機)。イベントで3曲に絞ると、
+  //   3つ重ねたぶんだけがはみ出して輪になり、同じ曲が繰り返し並んで見えていた。
+  //   1つぶんの高さが一覧の高さを超えるときだけ輪にする(測るのは下の効果。CSSが遅れて届いても測り直す)
+  const [loopFits,setLoopFits]=React.useState(true);
+  const loopEnabled=rows.length>=2&&loopFits;
   const listRef=React.useRef(null);
+  const rowsKey=rows.map(row=>row.entry.songId).join('|');
+  React.useEffect(()=>{
+    const el=listRef.current;
+    if(!el||rows.length<2)return;
+    const measure=()=>{
+      const node=listRef.current;
+      if(!node||!node.clientHeight)return;
+      const ul=node.querySelector('ul');
+      if(!ul)return;
+      const looped=node.getAttribute('data-rhythm-song-loop')==='1';
+      const cs=typeof getComputedStyle==='function'?getComputedStyle(node):null;
+      const pad=cs?(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0):0;
+      const one=ul.offsetHeight/(looped?3:1),room=node.clientHeight-pad;
+      // 行き来しないよう、輪をやめるときと始めるときで少し幅を持たせる
+      setLoopFits(prev=>prev?one>room-4:one>room+2);
+    };
+    measure();
+    let observer=null;
+    if(typeof ResizeObserver==='function'){
+      try{observer=new ResizeObserver(()=>measure());observer.observe(el);}catch(e){observer=null;}
+    }
+    return ()=>{if(observer)observer.disconnect();};
+  },[rowsKey,loopEnabled]);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
   // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
@@ -24994,8 +25181,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
+              {/* 鍵のあいだは赤くしない(2026-11-23 r1119-126 社長「難易度のヘルだけ解放されてないのに色がある」)。ほかの鍵の難易度と同じ灰色で、開いたら赤 */}
               {item.id==='HELL'
-                ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
+                ?<b data-rhythm-hell-level className={`block text-[21px] tabular-nums landscape:text-[19px]${open?' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]':''}`}>{song.difficulties[item.id].level}</b>
                 :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
               <span className="block text-[8px] tracking-wide">{item.id}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
@@ -26918,6 +27106,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 毎フレームの処理(tick)が道の両側の光の筋を点ける。変わったときだけ触る。見た目だけで、判定・スコアには触らない
   const climaxFxOn=settings.climaxFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode&&!tutorial&&typeof rhythmSongClimaxAt==='function';
   const climaxRef=useRef(null);
+  // その譜面だけの演出(data/rhythm-mode.js の RHYTHM_CHART_SPECIAL_FX・2026-11-23 r1119-136)。区間の中だけ道の色を変え、文字を一度だけ出す。見た目だけ
+  const specialFx=!tutorial&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
+  const specialFxRef=useRef(null);
   // 光の筋が流れる速さは、曲の2拍で1周(拍の表が無い曲は 900ms)
   const climaxCycleMs=(()=>{const grid=climaxFxOn?rhythmSongBeatGrid(song.songId):null;return grid?Math.round(Math.min(1400,Math.max(500,grid.beatMs*2))):900;})();
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -27913,6 +28104,8 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
 // 盛り上がりの光。いまが盛り上がる区間なら、その強さで点ける(重いときの自動調整で切られたら消す)
 {const climaxEl=climaxRef.current;if(climaxEl){const level=settingsLiveRef.current.climaxFx===true?rhythmSongClimaxAt(song.songId,visualTime):0;
   if(run._climaxLevel!==level){run._climaxLevel=level;climaxEl.setAttribute('data-on',level>0?'1':'0');climaxEl.style.opacity=level>0?String(level):'0';}}}
+// その譜面だけの演出。区間に入ったら印を立てる(変わったときだけ触る)
+{const fxEl=specialFxRef.current;if(fxEl&&specialFx){const on=visualTime>=specialFx.fromMs&&visualTime<specialFx.toMs?'1':'0';if(run._specialFxOn!==on){run._specialFxOn=on;fxEl.setAttribute('data-on',on);}}}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -29011,7 +29204,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {RHYTHM_GRAND_STAGE_CONFETTI.map((c,k)=><i key={k} style={{left:`${c.x}%`,background:c.color,animationDuration:`${c.dur}s`,animationDelay:`${c.delay}s`,top:settings.effectAmount==='MINIMAL'||settings.lightweightMode?`${c.y}%`:undefined}}/>)}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{specialFx&&<i ref={specialFxRef} data-rhythm-special-fx data-on="0" aria-hidden="true"><b>{specialFx.label}</b></i>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -43657,6 +43850,7 @@ const missionRewardChipText = (r) => { const t = giftRewardText(r); const e = MI
 function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll, ownedItems = null }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
   // 助手の1日1行の案内(デイリーのタブ)。いま選んでいる助手が話す。AI の文が無ければ決まった台詞
+  //   畳む・開くはひとことと同じ「💬▲▼」で、ミッションの画面で1つ(mh_bubble_collapsed_v1 の screen:missions。r1119-135)
   const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
   const aiLines = useMissionDailyLines();
   const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
@@ -43675,7 +43869,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact collapseKey="screen:missions"/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
@@ -50343,9 +50537,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
@@ -50743,7 +50946,9 @@ function HomeScreen({
         {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
           {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
-            <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
+            {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
+                幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}
+            <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
           </button>}
           {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
             <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
@@ -60884,7 +61089,7 @@ function RhythmWatchRoomList({ songs = [], friendIds = null, resolveIconUrl = nu
 function RhythmMultiScreen(props) {
   return (<><RhythmMultiScreenBody {...props} /><RhythmWatchScreen songs={props.songs} resolveIconUrl={props.resolveIconUrl} /></>);
 }
-function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
+function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, multiMemberBubble = true, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
   // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
   useRhythmOwnedSongs();
@@ -60946,6 +61151,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     }
     return '';
   };
+  // メンバー札の上の吹き出しは、設定「部屋のメンバーの吹き出しを出す」が切なら出さない(2026-11-23 r1119-135)。チャットの欄(chatList)はそのまま
+  const cardBubbleOf = (id) => (multiMemberBubble ? chatBubbleOf(id) : '');
   const [statsOpen, setStatsOpen] = React.useState(false);
   const [memberSheetId, setMemberSheetId] = React.useState('');
   const [rankingOpen, setRankingOpen] = React.useState(false);
@@ -61996,7 +62203,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>モード選びへ戻る</button>
           </section></div>
           : <>
-            <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
+            <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
               badgeOf={(m) => ({ text: view && m.id === view.hostId ? 'ホスト' : '入室', cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950', sub: `Lv.${m.level}` })} />
             {/* 縦向きでは、下の欄を枠のすぐ下へ寄せる(2026-10-20 改善部 M5。390 で枠と欄のあいだが約300px 空いていた)。
                 高さの上限も広げ、320×568 で「ルームを出る」が画面の外へ切れないようにする。横向きは今のまま */}
@@ -62138,7 +62345,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <li aria-hidden="true" data-rhythm-multi-result-bubbles className="pointer-events-none absolute inset-x-2 top-0 z-40 grid h-11 [@media(orientation:portrait)_and_(min-height:700px)]:h-[58px] grid-cols-5 gap-1.5 landscape:inset-x-3 landscape:h-4 landscape:gap-2 [@media(max-height:440px)]:h-2 [[data-mh-view-rotation=true]_&]:h-2" style={resultGridStyle}>
             {Array.from({ length: resultCols }).map((_, i) => {
               const r = team.rows[i];
-              return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={chatBubbleOf(r.m.id)} /> : null}</span>;
+              return <span key={r ? r.m.id : `b${i}`} className="relative min-w-0">{r ? <RhythmMultiResultBubble text={cardBubbleOf(r.m.id)} /> : null}</span>;
             })}
           </li>
           {Array.from({ length: resultCols }).map((_, i) => {
@@ -62274,7 +62481,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     return (
       <main data-rhythm-multi data-rhythm-multi-step="waiting" className={shell}>
         {header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom)}
-        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
+        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.playing ? { text: 'ライブ中', cls: 'bg-amber-400 text-slate-950' } : { text: '待機中', cls: 'bg-slate-600 text-white' })} />
         <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="shrink-0 px-2 pt-1" />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
@@ -62330,7 +62537,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <main data-rhythm-multi data-rhythm-multi-step="ready" className={shell}>
         {/* 部屋主の「すぐ開始」は下の準備完了のボタンへまとめた(2026-11-22 r1119-094・点検 N36「次に押す物が2つ」) */}
         {header('難易度選択', leaveRoom, { timer: room.left })}
-        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
+        <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.readyRound === room.round ? { text: '準備完了', cls: 'bg-emerald-400 text-slate-950', sub: m.diff } : { text: '準備中', cls: 'bg-slate-600 text-white', sub: m.diff })} />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           {drawnSong && (
@@ -62403,7 +62610,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
       {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.deadline ? room.left : null, advance: '締め切る', buddy: true, selectTime: true, exitLabel: 'ルームを出る' })}
-      <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
+      <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={cardBubbleOf} members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}
         difficulties={difficultyList}
@@ -66780,6 +66987,9 @@ const assistantPeerLineText = (line, talk) => {
 // replay … 関係図・アルバムから見返すときの台本(1日の数に入れず、仲良し度も上げない。返事は選び直せる)
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
+  // 💬▲▼ で畳む・開く(2026-11-23 台帳 r1119-135)。画面ごとに覚える(今の mh_bubble_collapsed_v1 に peer:<画面> を足す。無ければ開いている)。
+  //   畳んでいる間も掛け合いは始まり、右下に「💬▼」だけ出る(押すと開いて続きから読める)。見返しは畳まない
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
@@ -66906,6 +67116,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(
+      <div data-assistant-peer-folded className="flex justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setPeerFolded(false)} data-assistant-peer-fold=""/>
+      </div>);
+  }
   const { talk } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
@@ -66958,8 +67174,11 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+        {scene && !cur.replay && <BubbleFoldButton open onToggle={() => setPeerFolded(true)} size="sm" data-assistant-peer-fold=""/>}
         <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
           className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
+        </span>
       </div>
     </div>);
 }
@@ -70166,8 +70385,19 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 //   絵の描かれている範囲(透明でない所)を一度だけ測り、見た目の高さ(頭の上〜絵の下)を場面の高さの fig にそろえる。
 //   下は絵の下の端を、場面の下から 22%(横で低い画面は台詞の窓の上 150px)の床にそろえる(2026-11-08 ミハリ: 横で顔が台詞の窓の裏に隠れた)。左右は描かれている範囲の真ん中を cx にそろえる。衣装の絵でも同じ。測れないうちは今までの出し方
 const ASSISTANT_LIFE_STAND_BOX = new Map();
+// 8表情を同じ枠・同じ顔の位置で切り出した組(tools/assistant/life-stand-from-fullbody.py)。表情ごとに見えている体の範囲が違う(normal だけ手を頭の上へ上げている)ので、
+//   どの表情も同じ組の normal の範囲で置く(表情を替えても顔が動かない)。2026-11-23 r1119-137 カードマスターの立ち絵を新しい全身画から作り直したとき
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master']);
+const assistantLifeStandFrameSrc = (src) => {
+  const s = String(src || '');
+  const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  if (!m || !ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || m[3] === 'normal') return src;
+  return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
+};
 const assistantLifeStandBox = (src) => new Promise((res) => {
   if (ASSISTANT_LIFE_STAND_BOX.has(src)) { res(ASSISTANT_LIFE_STAND_BOX.get(src)); return; }
+  const frameSrc = assistantLifeStandFrameSrc(src);
+  if (frameSrc !== src) { assistantLifeStandBox(frameSrc).then((box) => { ASSISTANT_LIFE_STAND_BOX.set(src, box); res(box); }); return; }
   const im = new Image();
   im.onload = () => {
     // 測れないとき(iPhone で canvas が使えない・上限を超えて真っ白になるなど)も、絵の縦横の比だけは本物を使う。
@@ -70228,11 +70458,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0029, eye: 0.273, chin: 0.4302, m: 1.169 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.129, eye: 0.3271, chin: 0.4282, m: 0.752, above: 0.75 } },
+  'stand-card-master': { mua: { top: 0.1161, eye: 0.321, chin: 0.4299, m: 0.81, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
   'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
@@ -93543,7 +93773,6 @@ const MSX_HOME_CSS = `
 .mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
 .mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
 .mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
-.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
 @media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
 @media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
@@ -93563,7 +93792,9 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
         {/* リボン「β版 開幕！」は公開の日の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し)。
             βの表示はリボン1つだけ(2026-11-16 UI改修: 中の β と二重になっていた)。名前はフルネーム「モンヒロサクセス」+下の言葉「育成」
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
-        <i className="rb" aria-hidden="true">β版 開幕！</i>
+        {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
+            モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
@@ -128476,7 +128707,7 @@ function MonsterHeroGame() {
   // 更新履歴で詳細を開いている項目のID(1つだけ)。一覧は見出しだけを並べ、押した項目だけ本文を出す
   // (2026-09-05・ユーザー指示「更新情報の内容が細かすぎる。簡潔に表示して、タップすると詳細が見れるように」)
   const [changelogOpenId, setChangelogOpenId] = useState(null);
-  const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
+  const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'event'=イベント(r1119-113) / 'issue'=不具合情報
   const [changelogSeen, setChangelogSeen] = useState({ update: [], issue: [] }); // タブごとの既読ID一覧(端末に保存)
   const displayedChangelogTabRef = useRef(null); // 表示中のタブは、そこから離れるまで未読のまま保つ
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
@@ -128765,15 +128996,39 @@ function MonsterHeroGame() {
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
   // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
-  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+  // 「イベント」タブ(2026-11-23 r1119-113)。開催中・開催予定の札はこのタブにだけ出す。
+  //   印(!)は、まだ見ていない札があるあいだだけ付ける。既読は今ある mh_changelog_seen_ids_<その項目のタブ> へ足す(キーは増やさない)。
+  //   札になっている項目は、更新情報タブを見ただけでは既読にしない(イベントタブを開くまで印を残す)。
+  //   開催中かは時刻で変わるので、窓を開くたびに数え直す(showChangelog を依存に入れている)
+  const { changelogUnreadIds, changelogUnread, changelogPinnedIds } = useMemo(() => {
     const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
-    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
-  }, [changelogSeen]);
-  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
+    const pinnedIds = changelogPinnedEntries().map(entry => entry.id);
+    const pinnedSet = new Set(pinnedIds);
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id) && !pinnedSet.has(id))]));
+    unreadIds.event = pinnedIds.filter(id => !changelogSeenAnyTab.has(id));
+    const unread = Object.fromEntries(Object.keys(unreadIds).map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread, changelogPinnedIds: pinnedSet };
+  }, [changelogSeen, showChangelog]);
+  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue || changelogUnread.event;
   const markChangelogTabSeen = (type) => {
-    const ids = CHANGELOG_IDS_BY_TYPE[type];
+    if (type === 'event') {
+      // 札の項目を、その項目が属するタブの既読へ足す(更新情報の項目なら mh_changelog_seen_ids_update)
+      if (!changelogUnreadIds.event.length) return;
+      const byTab = {};
+      CHANGELOG_ENTRIES.forEach(entry => {
+        if (!changelogUnreadIds.event.includes(entry.id)) return;
+        const tab = CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) ? 'issue' : 'update';
+        (byTab[tab] = byTab[tab] || []).push(entry.id);
+      });
+      const next = {};
+      Object.keys(byTab).forEach(tab => {
+        next[tab] = Array.from(new Set([...(changelogSeen[tab]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...byTab[tab]]));
+        storeSet(`mh_changelog_seen_ids_${tab}`, next[tab], false);
+      });
+      setChangelogSeen(prev => ({ ...prev, ...next }));
+      return;
+    }
+    const ids = CHANGELOG_IDS_BY_TYPE[type].filter(id => !changelogPinnedIds.has(id));
     if (!ids.length || !changelogUnreadIds[type].length) return;
     // いま出ているIDで上書きすると、振り分けが変わって別のタブへ移ったIDが消え、
     // 移った先で未読へ戻る。すでに残っているIDへ足す形にする
@@ -129709,6 +129964,7 @@ function MonsterHeroGame() {
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? { chart: rhythmChartResetTag(song.songId, difficulty.id) } : {}), // 作り直した譜面の版(r1119-136)
       // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
       ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
@@ -145111,7 +145367,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           見た目は .mh-title-dialog--changelog(70-bootstrap.jsx)。見出しの帯・タブ・一覧(ここだけ送る)・閉じるの4段で、閉じるはいつも同じ所。
           横・小さい横は、左の列に見出し・タブ・閉じる、右の列に一覧。お知らせの中身と既読の印は変えていない */}
       <div className="mh-title-dialog mh-title-dialog--changelog" role="dialog" aria-modal="true" aria-label="更新履歴"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3></div>
-        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
+        <div className="mh-changelog-tabs">{[{key:'update',label:'更新情報'},{key:'event',label:'イベント'},{key:'issue',label:'不具合情報'}].map(t=><button key={t.key} type="button" aria-pressed={changelogTab===t.key} onClick={()=>selectChangelogTab(t.key)} className={changelogTab===t.key?'active':''}>{t.label}{changelogUnread[t.key]&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>)}</div>
         {/* data/changelog.js の読み込みに失敗すると中身が0件になる。黙って空にすると
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
@@ -145122,13 +145378,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = changelogRowsOfTab(changelogTab);
-            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
+            // 「イベント」タブ(r1119-113)は札だけを並べる。更新情報・不具合情報は一番上から日付ごとの項目
+            const rows = changelogTab==='event' ? [] : changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]||[]);
             let shownDay = null;
             // 開催中の期間限定イベントは、いつも一覧のいちばん上に固定して出す(2026-10-04・ユーザー指示
             // 「イベント期間中はこれを常に1番上に出しといて」)。日付やまとめの並びとは別。終わったら自然に消えて、あとは普通の行として残る。
             // 開催中かは描くたびに数え直す(changelogEventLive)。ふだんは他の行と同じく閉じておき、押すと中身(告知画像・本文)が開く
-            const pinnedEvents = changelogTab==='update' ? CHANGELOG_ENTRIES.filter(entry=>changelogEventLive(entry)) : [];
+            // 2026-11-23 r1119-113 社長「更新内容が見づらい」→ 札は「イベント」タブへ移した(開催中が上・開催予定が下。changelogPinnedEntries)
+            const pinnedEvents = changelogTab==='event' ? changelogPinnedEntries() : [];
+            if (changelogTab==='event' && pinnedEvents.length===0) return <p className="mh-changelog-empty" data-changelog-event-empty>いま開催中・開催予定のイベントはありません。</p>;
             return [...pinnedEvents.map(c=>(
               <details key={`pinned-${c.id}`} data-changelog-pinned className="mh-changelog-pinned"
                 style={{margin:'0 0 10px',border:'2px solid #fb923c',borderRadius:16,background:'linear-gradient(135deg,#431407,#3b0764)',padding:'8px 10px'}}>
@@ -147478,6 +147737,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           multiLook={rhythmSettings.multiLook||'LIGHT'}
           multiLiveBoard={rhythmSettings.multiLiveBoard!==false}
           onChangeMultiLiveBoard={async(on)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLiveBoard:on===true});setRhythmSettings(saved);}}
+          multiMemberBubble={rhythmSettings.multiMemberBubble!==false}
           onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):'',
             // 負けた・やめたあと、ここから1周目を始め直せるか(曲えらびの帯の「⚔ 1周目から新しく始める」と同じ条件)
@@ -151277,8 +151537,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20) */}
-            <button type="button" onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label={helpAssistantOpen?'ひとことをたたむ':'ひとことを開く'} data-help-bubble-toggle className="shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95">{helpAssistantOpen?'たたむ ▲':'💬 ひとこと'}</button>
+            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20)。2026-11-23 から全画面と同じ「💬▲▼」の形(r1119-135) */}
+            <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
@@ -157469,7 +157729,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 8px;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:13px;margin:-6px -8px -6px 0}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}/* 窓の閉じる(2026-11-19 r1119-013 ⑥ B-1・B-2)。メニューの行(.mh-dialog-choice)の形だと項目の1つに見えたので、参考の窓と同じ「下の中央の丸いボタン」にし、窓の中を送っても下に貼り付けて画面の外へ出さない */.mh-dialog-close{position:sticky;bottom:0;z-index:2;flex:none;align-self:center;min-width:168px;min-height:46px;margin-top:auto;padding:0 28px;border:1px solid #ffffff38;border-radius:999px;background:#334155;color:#f1f5f9;font-weight:900;box-shadow:0 3px 0 #0009,0 -14px 14px 2px #0f172a}.mh-dialog-close:active{transform:translateY(1px) scale(.98)}.mh-dialog-head:has(>h3:only-child){justify-content:center}/* 更新履歴の窓(2026-11-19 r1119-010・U-14)。参考の窓(見出しの帯/中身/下の中央のとじる)にそろえ、窓の中で送るのは一覧だけにする。送った札は日付の見出しと上のふちの下へもぐり、切れた枠に見えない。字は 10px より小さくしない */.mh-title-dialog--changelog{width:min(100%,440px);height:min(calc(var(--mh-vh) - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),760px);max-height:none;padding:0;gap:0;overflow:hidden;border:2px solid #a78bfa88}.mh-title-dialog--changelog>.mh-dialog-head{flex:none;justify-content:center;min-height:44px;padding:8px 16px;background:linear-gradient(180deg,#2b3150,#1b2036);border-bottom:1px solid #ffffff1f}.mh-title-dialog--changelog>.mh-dialog-head h3{font-size:15px;letter-spacing:.04em}.mh-title-dialog--changelog>.mh-changelog-tabs{flex:none;margin:10px 12px 0;padding:3px;gap:3px;border-radius:12px;background:#0b1222;border:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 4px;white-space:nowrap;border-radius:9px;background:transparent;color:#94a3b8;font-size:12px;font-weight:900}.mh-title-dialog--changelog>.mh-changelog-tabs button.active{background:linear-gradient(180deg,#d97706,#b45309);color:#fff;box-shadow:0 2px 0 #0006}.mh-title-dialog--changelog .mh-changelog-tabs .mh-unread-badge{position:static;width:16px;height:16px;border-width:1.5px;font-size:10px;box-shadow:none}.mh-title-dialog--changelog>.mh-changelog-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding:0 12px 12px;border-top:1px solid #ffffff1a;box-shadow:inset 0 8px 8px -8px #000c}.mh-title-dialog--changelog .mh-changelog-day{margin:0 -12px 8px;padding:6px 12px;background:#0f172af2;border-bottom:1px solid #ffffff12;box-shadow:0 6px 8px -6px #000c;font-size:11px;color:#c7d2fe}.mh-title-dialog--changelog .mh-changelog-day:first-child{margin-top:0}.mh-title-dialog--changelog .mh-changelog-list>details:first-child{margin-top:10px!important}.mh-title-dialog--changelog .mh-changelog-list article{padding:10px 12px;margin-bottom:8px;border-radius:14px;background:#111a2e}.mh-title-dialog--changelog .mh-changelog-list article.unread{border-color:#f59e0bb0;box-shadow:inset 3px 0 0 #f59e0b}.mh-title-dialog--changelog .mh-changelog-head{min-height:40px}.mh-title-dialog--changelog .mh-changelog-head b{font-size:13px;line-height:1.4}.mh-title-dialog--changelog .mh-changelog-head small{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count{font-size:10px}.mh-title-dialog--changelog .mh-changelog-count em,.mh-title-dialog--changelog .mh-changelog-item time em{font-size:9px}.mh-title-dialog--changelog .mh-changelog-kind{font-size:10px}.mh-title-dialog--changelog .mh-changelog-peek{font-size:11px;color:#a8b3c7}.mh-title-dialog--changelog .mh-changelog-list p{font-size:12px;line-height:1.65}.mh-title-dialog--changelog .mh-changelog-item time{font-size:10px}.mh-title-dialog--changelog .mh-changelog-item b{font-size:12.5px}.mh-title-dialog--changelog>.mh-dialog-close{position:static;margin:10px auto 12px;box-shadow:0 3px 0 #0009}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--changelog{display:grid;grid-template-columns:minmax(170px,30%) 1fr;grid-template-rows:auto auto 1fr auto;width:min(100%,860px);height:calc(var(--mh-vh) - 16px);padding:0}.mh-title-dialog--changelog>.mh-dialog-head{grid-column:1;grid-row:1;border-right:1px solid #ffffff14}.mh-title-dialog--changelog>.mh-changelog-tabs{grid-column:1;grid-row:2;grid-template-columns:1fr;margin:10px}.mh-title-dialog--changelog>.mh-dialog-close{grid-column:1;grid-row:4;align-self:end;justify-self:center;min-width:0;width:calc(100% - 20px);margin:0 10px 10px}.mh-title-dialog--changelog>.mh-changelog-list{grid-column:2;grid-row:1/-1;margin:0;padding-top:0;border-top:0;border-left:1px solid #ffffff1a;box-shadow:none}}@media(orientation:landscape) and (max-height:500px){.mh-title-dialog--menu{display:grid;grid-template-columns:1fr 1fr;align-content:start}.mh-title-dialog--menu>.mh-dialog-head,.mh-title-dialog--menu>.mh-dialog-close{grid-column:1/-1;justify-self:center}.mh-title-dialog--menu>.mh-dialog-choice{padding:10px 12px}}.mh-changelog-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

@@ -281,6 +281,25 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
 // 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 作り直した譜面(data/rhythm-mode.js の RHYTHM_CHART_RESETS)の自己ベスト(2026-11-23・台帳 r1119-136・社長「スコアはリセット」)。
+// 形は { '<songId>|<難易度id>|<版の印>': 1件の記録(normalizeRhythmBestRecord) }。v1・v2 の旧の記録は消さず書き換えない(CLAUDE.md ⑦)。
+// 読むときは、作り直した曲・難易度だけ、旧の記録のかわりにこちらを出す(まだ遊んでいなければ0から)。印が変われば別の記録になる
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId,difficultyId) => {const tag=typeof rhythmChartResetTag==='function'?rhythmChartResetTag(songId,difficultyId):null;return tag?`${songId}|${difficultyId}|${tag}`:null;};
+const normalizeRhythmBestChartResets = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  return Object.fromEntries(Object.entries(source).filter(([id,record])=>/^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id)&&record&&typeof record==='object'&&!Array.isArray(record)).map(([id,record])=>[id,normalizeRhythmBestRecord(record)]));
+};
+// 記録の一覧(normalizeRhythmBestRecords の形)の、作り直した曲・難易度を、作り直したあとの記録に差し替える(ほかはそのまま)
+const rhythmBestRecordsWithChartResets = (records,resets) => {
+  const out={...records},clean=normalizeRhythmBestChartResets(resets);
+  if(typeof RHYTHM_CHART_RESETS==='undefined')return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair=>{const [songId,difficultyId]=pair.split('|');if(!out[songId]||!Object.prototype.hasOwnProperty.call(out[songId],difficultyId))return;
+    const id=rhythmBestChartResetId(songId,difficultyId);if(!id)return;
+    out[songId]={...out[songId],[difficultyId]:normalizeRhythmBestRecord(clean[id])};
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);});
+  return out;
+};
 // 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
 //   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
 //     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
@@ -691,6 +710,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   multiLook:'LIGHT',
   // 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11 社長「消せる・はじめは入」)。新しい項目なので、保存値に無い人は ON で補われる
   multiLiveBoard:true,
+  // 部屋(みんなで対戦・助手とのセッション)のメンバー札の上に出る吹き出しを出すか(2026-11-23 r1119-135)。切でもチャットの欄には残る。
+  // 新しい項目なので、保存値に無い・壊れている人は ON(これまでの見え方)で補われる
+  multiMemberBubble:true,
   // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
   // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
   modeSelectArt:true, modeSelectComment:true,
@@ -936,7 +958,7 @@ const normalizeRhythmSettings = value => {
     noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), multiMemberBubble:bool('multiMemberBubble'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,

@@ -1,8 +1,24 @@
-# 助手・キャラクターの表情の原本
+# 助手・キャラクターの絵の原本(キャラごと)
 
-ここには**まだゲームから読み込んでいない**表情画像を置く。配信フォルダ
-(`monster-hero/images/assistant/`) に置くと、一度も読まれない絵がサイトに並ぶため
-(→ 親の [`../README.md`](../README.md))、使うことが決まるまではこちら側で持つ。
+2026-11-23 に並べ直した(社長「目録はキャラごと」・台帳 r1119-124・r1119-128)。
+
+```
+tools/art-sources/assistants/
+  <キャラ>/CATALOG.md            そのキャラの目録(正本はどれ・ゲームはどれを使っているか・いつどの PR で作ったか・作り方)。道具が書く
+  <キャラ>/<服>/fullbody/        全身絵の原本(服は normal・halloween・card-master・twintail・winter・hosei・sekiyuou)
+  <キャラ>/<服>/bust/            バスト絵の原本(8表情のシート)。cut/ は切り出した減色前の物
+  <キャラ>/<服>/pre-resize-2026-11-17/  表示の大きさへ縮める前の物(bust・face・stand)
+  _shared/sleep-faces/           寝顔の原本(1枚に7人のシートなのでキャラに分けられない)
+```
+
+- **絵を作り直す・差し替える前に、そのキャラの `CATALOG.md` で正本を確かめる。** 正本が「現行のファイルそのもの」の組は、
+  ゲームの絵(`monster-hero/images/assistant/`)が完成品で、道具で作り直さない(道具 `tools/assistant/art_source.py` が断る)
+- **ここに旧版は置かない。** 作り直して要らなくなった原本は保管庫 `archive/old-art/assistant/<キャラ>/<服>/<日付>-old-<何の版>/` へ
+  `git mv` し、`tools/image/assistant-art-catalog.json` の `moved` に1行足す
+- 絵や原本を替えたら `node tools/image/assistant-art-catalog.js`(目録を書き直す)。検査は `--check`、その絵が正本か旧版かは `--why <語>`
+- 新しい原本を受け取ったら `<キャラ>/<服>/` へ置き、`assistant-art-catalog.json` の `groups` の `master` に書く
+
+以下は、原本ごとの切り出し方の控え(道筋は 2026-11-23 の並べ直しに合わせてある)。
 
 ## ドラ
 
@@ -22,7 +38,7 @@
 | `dra_troubled.PNG` | 困り   | 汗 |
 | `dra_wink.PNG`     | 考え中 | 「？」マーク |
 
-- `dra-expressions-sheet.png` が受け取った原本(1536x1024・8種が1枚に並んだもの)。
+- `dra/normal/bust/dra-expressions-sheet.png` が受け取った原本(1536x1024・8種が1枚に並んだもの)。
   切り出しをやり直したくなったらこれを使う。1.6MBあるが**減色して軽くしない**。
   絵の周りに薄いアルファ(1〜23)の陰が広く乗っていて、256色へ落とすとそこが崩れる
   (実測で見える画素の75%が変化した)。配信しないので通信量には効かない
@@ -45,7 +61,7 @@
 ## 使うときの手順
 
 1. 8枚を配信フォルダへ写す
-   `cp tools/art-sources/assistants/dra_*.PNG monster-hero/images/assistant/`
+   (2026-09-17 に配信へ写した。同じ中身の控え 8 枚は 2026-11-23 に保管庫 `archive/old-art/assistant/dra/normal/` へ移した)
 2. 助手として出すなら `monster-hero/data/assistants.js` の `ASSISTANTS` へ1件足す
    (`imageDir:'images/assistant'` / `imagePrefix:'dra'`)。イベントの会話だけで使うなら
    `ASSISTANTS` へは足さず、パスを直接指すのではなく置き場所を1か所にまとめてから参照する
@@ -57,7 +73,9 @@
 4. 写したあとは原本をここから消す(親の README の「同じ中身を2か所で持たない」)。
    `dra-expressions-sheet.png` は切り出し前の原本なので残してよい
 
-## みゅあの MASTER の服(`mua-card-master/`・2026-10-27)
+## みゅあの MASTER の服(2026-10-27 の原本は旧版 → `archive/old-art/assistant/mua/card-master/2026-10-27-old-bust-received/`)
+
+**バスト絵・顔は 2026-11-21 に作り直した完成品へ差し替え済み。下は最初の版の控え。**
 
 社長が用意した、MFバトルカードでみゅあの MASTER に勝つと買えるようになる服の原本(1086×1448・背景透け)。
 配信用は `monster-hero/images/assistant/card-master/`(立ち絵 768×1024・減色PNG)と、その `face/`
@@ -75,7 +93,7 @@
 | `myua_new_costume_08.png` | 指さして笑う | excited |
 ## ソラシド(2026-10-27)
 
-7人目の助手。`sorashido-faces-sheet.png` が受け取った原本(1448x1086・背景透過・8表情が4列×2段)。
+7人目の助手。**バスト絵・顔は 2026-11-20〜21 に直接入れた完成品へ差し替え済みで、下のシートは旧版**(`archive/old-art/assistant/sorashido/hosei/2026-10-27-old-bust-sheet/`)。`sorashido-faces-sheet.png` が最初に受け取った原本(1448x1086・背景透過・8表情が4列×2段)。
 切り出しをやり直したくなったらこれを使う。配信しないので減色しない。
 
 - 切り出した8枚(`monster-hero/images/assistant/sorashido_<表情>.PNG`)は、きゅうこと同じ **384x512・背景透過**
@@ -87,10 +105,10 @@
 
 ## えるびん(2026-11-05・公開前)
 
-8人目の助手。`erubin-expressions-sheet.png`(通常衣装)・`erubin-costume-sekiyuou-sheet.png`(衣装『石油王』)が受け取った原本
+8人目の助手。`erubin/normal/bust/erubin-expressions-sheet.png`(通常衣装)・`erubin/sekiyuou/bust/erubin-costume-sekiyuou-sheet.png`(衣装『石油王』)が受け取った原本
 (どちらも 1536x1024・4列×2段・1マス 384x512・背景はクリーム色で塗られている)。
 
-- 切り分けた絵は `erubin/`(通常)・`erubin/sekiyuou/`(石油王)。**384x512・背景透過**。顔アイコンは各 `face/`(256px)
+- 切り分けた絵は `erubin/normal/bust/cut/`(通常)・`erubin/sekiyuou/bust/cut/`(石油王)。**384x512・背景透過**。顔アイコンは各 `face/`(256px)
 - 公開が決まるまで配信フォルダへは写さない(このフォルダの決まりどおり)。写すときは通常を `monster-hero/images/assistant/`、
   石油王を `monster-hero/images/assistant/sekiyuou/` へ
 - 切り方: `python3 tools/assistant/cut-assistant-sheet.py <シート> <出力> erubin normal,happy,surprise,troubled,crying,excited,angry,wink [--pockets]`

@@ -1,11 +1,31 @@
-# 助手の絵の最新版と旧版の見分け(r1123-011・台帳 r1119-124)— A の段(調べて案を作る)
+# 助手の絵の最新版と旧版の見分け(r1123-011・台帳 r1119-124・r1119-128)
+
+## C の段(2026-11-23・移した)
+
+社長の答え「移すけど目録はキャラごと」(r1119-128)で、次のとおりにした。**ゲームが読む絵(`monster-hero/images`)は1枚も動かしていない。消した絵も無い。**
+
+| したこと | 場所 |
+| --- | --- |
+| 旧版 38 枚(52.6MB)を保管庫へ `git mv` | `archive/old-art/assistant/<キャラ>/<服>/<日付>-old-<何の版>/`(表は `archive/old-art/README.md`) |
+| いまも正本の原本 105 枚を、キャラごとのフォルダへ並べ直し | `tools/art-sources/assistants/<キャラ>/<服>/`(寝顔のシートだけ `_shared/sleep-faces/`) |
+| キャラごとの目録(道具が書く) | `tools/art-sources/assistants/<キャラ>/CATALOG.md`(8 人ぶん) |
+| 道具が旧版から絵を作らないようにした | `tools/assistant/art_source.py`(原本の場所を引く・正本が「現行そのもの」の組は断る)。`life-fullbody-art.py`・`life-expression-sheets.py`・`sorashido-umahone-busts.py` が使う |
+| 検査をつないだ | `tools/image/assistant-art-catalog-check.js`(`run-checks.js --changed` が、助手の絵・原本・保管庫・絵を作る道具を触ったときに選ぶ) |
+| 要確認の一覧(道具が書く) | [`confirm.md`](confirm.md) |
+
+回し方: `node tools/image/assistant-art-catalog.js`(目録を書き直す)/ `--check` / `--why <語>` / `--all`
+
+以下は A の段(調べて案を作った時点)の記録。
+
+---
+
+## A の段(調べて案を作る)の記録
 
 **このPRでは画像を1枚も動かしていない・消していない。** 社長が下の案を OK してから移す(C の段)。
 
 | 物 | 場所 |
 | --- | --- |
-| 目録の下書き(キャラ・服ごとの正本と現行) | [`assistant-art-catalog.md`](assistant-art-catalog.md) |
-| 移す一覧(元の場所 → 保管庫・理由)と要確認 | [`move-list.md`](move-list.md) |
+| 目録の下書き・移す一覧 | C の段で、キャラごとの `CATALOG.md` と `archive/old-art/README.md` に置き換えた |
 | 道具 | `node tools/image/assistant-art-catalog.js`(`--check` 検査 / `--why <語>` その絵は正本か旧版か / `--all` / `--selftest`) |
 | 目録の元(人が書く) | `tools/image/assistant-art-catalog.json` |
 | 絵ごとの「最後に変えたコミット」の控え(道具が書く) | `tools/image/assistant-art-ledger.json` |

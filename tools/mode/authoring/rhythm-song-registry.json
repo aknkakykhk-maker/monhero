@@ -2130,7 +2130,8 @@
    },
    "chartIntensity": "mild",
    "sustainScale": {
-    "EXPERT": 0.2
+    "EXPERT": 0.2,
+    "HELL": 0.6
    },
    "chartIntensityByDifficulty": {
     "HELL": "extreme"

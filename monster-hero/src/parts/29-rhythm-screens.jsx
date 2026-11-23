@@ -569,6 +569,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
 {/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
 {field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
+{/* 部屋のメンバー札の上の吹き出し(2026-11-23 r1119-135)。切でもチャットの欄には残る */}
+{field('部屋のメンバーの吹き出しを出す',toggle('multiMemberBubble'),'切にしても、発言はチャットの欄で読めます。')}
 </div>
 </section>
 <section className={card}>
@@ -1051,6 +1053,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   React.useEffect(()=>{
     if(song&&song.songId!==songId)setSongId(song.songId);
   },[song?song.songId:'',songId]);
+  // 絞り込み(イベント・お気に入り)で、選んでいる曲が一覧から外れたら、一覧の先頭の曲を選び直す
+  //   (2026-11-23 社長の実機。右の詳細が一覧に無い曲のままだった)。ALL に戻しても選び直した曲のまま。
+  //   選ぶのは曲の id だけで、保存値(mh_rhythm_select_v1)の形は変えない
+  const firstRowSongId=rows.length?rows[0].entry.songId:'';
+  const songInGenre=!song||genre.id==='all'||genreMatches(song);
+  React.useEffect(()=>{
+    if(!songInGenre&&firstRowSongId)setSongId(firstRowSongId);
+  },[songInGenre,firstRowSongId,genre.id]);
 
   const pickRandom=()=>{
     // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
@@ -1075,8 +1085,35 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=rows.length>=2;
+  // ★並び1つぶんが一覧に収まるときも輪にしない(2026-11-23 社長の実機)。イベントで3曲に絞ると、
+  //   3つ重ねたぶんだけがはみ出して輪になり、同じ曲が繰り返し並んで見えていた。
+  //   1つぶんの高さが一覧の高さを超えるときだけ輪にする(測るのは下の効果。CSSが遅れて届いても測り直す)
+  const [loopFits,setLoopFits]=React.useState(true);
+  const loopEnabled=rows.length>=2&&loopFits;
   const listRef=React.useRef(null);
+  const rowsKey=rows.map(row=>row.entry.songId).join('|');
+  React.useEffect(()=>{
+    const el=listRef.current;
+    if(!el||rows.length<2)return;
+    const measure=()=>{
+      const node=listRef.current;
+      if(!node||!node.clientHeight)return;
+      const ul=node.querySelector('ul');
+      if(!ul)return;
+      const looped=node.getAttribute('data-rhythm-song-loop')==='1';
+      const cs=typeof getComputedStyle==='function'?getComputedStyle(node):null;
+      const pad=cs?(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0):0;
+      const one=ul.offsetHeight/(looped?3:1),room=node.clientHeight-pad;
+      // 行き来しないよう、輪をやめるときと始めるときで少し幅を持たせる
+      setLoopFits(prev=>prev?one>room-4:one>room+2);
+    };
+    measure();
+    let observer=null;
+    if(typeof ResizeObserver==='function'){
+      try{observer=new ResizeObserver(()=>measure());observer.observe(el);}catch(e){observer=null;}
+    }
+    return ()=>{if(observer)observer.disconnect();};
+  },[rowsKey,loopEnabled]);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
   // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
@@ -1395,8 +1432,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
+              {/* 鍵のあいだは赤くしない(2026-11-23 r1119-126 社長「難易度のヘルだけ解放されてないのに色がある」)。ほかの鍵の難易度と同じ灰色で、開いたら赤 */}
               {item.id==='HELL'
-                ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
+                ?<b data-rhythm-hell-level className={`block text-[21px] tabular-nums landscape:text-[19px]${open?' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]':''}`}>{song.difficulties[item.id].level}</b>
                 :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
               <span className="block text-[8px] tracking-wide">{item.id}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
