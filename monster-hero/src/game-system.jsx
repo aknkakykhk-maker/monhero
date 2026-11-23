@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 048a079c762f502e
+// generated-sha256: 7a5973997aaa46b4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5224,11 +5224,12 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','
 // 空中ノーツの上がり方(2026-11-23 台帳 r1119-138)。skyRise(NOW/OLD)は #7358 で入れた最初の形。画面からは外したが、保存値の意味は変えずに読み直すだけ(保存の決まり)
 const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW','OLD']);
 // 空中ノーツの上がり方のタイプ(2026-11-23 台帳 r1119-146・社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ、Cが今作ったやつ」)。
-//   A は 11/22 の式(既定)、B はいちばん最初の式、C は #7303 の案B 1/4。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE
-const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB'],['C','タイプC']]);
+//   A は 11/22 の式(既定)、B はいちばん最初の式。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE。
+//   C(#7303 の案B 1/4)は社長「Cは違和感ありまくりで欠陥レベル」で外した。保存値が C の人も A で読む
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id])=>id));
 // 選んでいるタイプの見え方(オプションの説明文に出す)
-const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。',C:'道の奥から出て、早めに空の高さまで上がります。'});
+const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。'});
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -5547,7 +5548,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 空中ノーツの上がり方(2026-11-23 r1119-138)。#7358 の形。いまはどこからも使わない(skyRiseType へ分けた)。保存値は消さずに読み直すだけ
   skyRise:'NOW',
   // 空中ノーツの上がり方のタイプ(2026-11-23 r1119-146)。新しい項目なので、保存値に無い・壊れている人は A で補われる。
-  //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。見た目だけに効く
+  //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。A・B 以外(C を含む)も A。見た目だけに効く
   skyRiseType:'A',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
@@ -24025,10 +24026,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
 {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
               '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
-{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138 → r1119-146 社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ、Cが今作ったやつ」)。説明文の頭に、選んでいるタイプの見え方を出す */}
+{/* 空中ノーツの上がり方(2026-11-23 台帳 r1119-138 → r1119-146 社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ」・C は外した)。説明文の頭に、選んでいるタイプの見え方を出す */}
 {field('空のノーツの上がり方',<>{segments('skyRiseType',RHYTHM_SKY_RISE_TYPE_LABELS)}
                 <p data-rhythm-sky-rise-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType]||RHYTHM_SKY_RISE_TYPE_NOTES.A)}</p></>,
-              `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきて、タイプCは道の奥で早めに空の高さまで上がります。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`,{full:true})}
+              `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`,{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>

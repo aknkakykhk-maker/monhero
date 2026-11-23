@@ -462,11 +462,12 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','
 // 空中ノーツの上がり方(2026-11-23 台帳 r1119-138)。skyRise(NOW/OLD)は #7358 で入れた最初の形。画面からは外したが、保存値の意味は変えずに読み直すだけ(保存の決まり)
 const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW','OLD']);
 // 空中ノーツの上がり方のタイプ(2026-11-23 台帳 r1119-146・社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ、Cが今作ったやつ」)。
-//   A は 11/22 の式(既定)、B はいちばん最初の式、C は #7303 の案B 1/4。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE
-const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB'],['C','タイプC']]);
+//   A は 11/22 の式(既定)、B はいちばん最初の式。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE。
+//   C(#7303 の案B 1/4)は社長「Cは違和感ありまくりで欠陥レベル」で外した。保存値が C の人も A で読む
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id])=>id));
 // 選んでいるタイプの見え方(オプションの説明文に出す)
-const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。',C:'道の奥から出て、早めに空の高さまで上がります。'});
+const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。'});
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -785,7 +786,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 空中ノーツの上がり方(2026-11-23 r1119-138)。#7358 の形。いまはどこからも使わない(skyRiseType へ分けた)。保存値は消さずに読み直すだけ
   skyRise:'NOW',
   // 空中ノーツの上がり方のタイプ(2026-11-23 r1119-146)。新しい項目なので、保存値に無い・壊れている人は A で補われる。
-  //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。見た目だけに効く
+  //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。A・B 以外(C を含む)も A。見た目だけに効く
   skyRiseType:'A',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)

@@ -1490,10 +1490,11 @@ const RHYTHM_SKY_RISE_AT=.25;
 // ★上がり方を設定で選べる(2026-11-23 台帳 r1119-138 → r1119-146 で3つに。社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ、Cが今作ったやつ」)。
 //   A … 11/22 feb873a2a の式(上端で0から判定ラインまで一定の割合で上がる・既定)
 //   B … feb873a2a より前の最初の式(奥の縮み(y)/判定ラインの縮み。上端でも持ち上げが残り、横持ちでは遅れて上から出る)
-//   C … #7303 の案B 1/4(上端で0から ease-out で、上端〜判定ラインの1/4で B の高さに上がり切る)
+//   C … #7303 の案B 1/4(上端で0から ease-out で、上端〜判定ラインの1/4で B の高さに上がり切る)。社長「Cは違和感ありまくりで欠陥レベル」で選べなくした
+//       (set は A・B だけを返す)。式はここと GPU の帯のシェーダーに残すだけで、どこからも使わない
 //   設定は mh_rhythm_settings_v1 の skyRiseType。演奏画面を開いた最初の1回だけ set する(演奏の途中では切り替わらない)。
 //   見た目だけ: 判定の時刻・判定ラインでの高さ・判定の幅・点数・譜面は、どれでも同じ。GPU の帯のシェーダーも uSkyType で同じ式を通す
-const RHYTHM_SKY_RISE_MODE={id:'A',set(type){this.id=type==='B'||type==='C'?type:'A';return this.id;}};
+const RHYTHM_SKY_RISE_MODE={id:'A',set(type){this.id=type==='B'?'B':'A';return this.id;}};
 const rhythmSkyLiftRatio=yRatio=>{
   const line=RHYTHM_JUDGMENT_LINE_Y.ratio,base=rhythmProjectionScale(line);
   const y=Math.min(1,Number(yRatio)||0);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2245e6a7c01dccd9
+// source-sha256: bcd34f3b9dae6cf2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6914,12 +6914,11 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '�
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP', '深い']]);
 const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW', 'OLD']);
-const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB'], ['C', 'タイプC']]);
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id]) => id));
 const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({
   A: '道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',
-  B: '少し遅れて、画面の上から空の高さで出てきます。',
-  C: '道の奥から出て、早めに空の高さまで上がります。'
+  B: '少し遅れて、画面の上から空の高さで出てきます。'
 });
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
@@ -38516,7 +38515,7 @@ const RhythmOptions = ({
     "data-rhythm-sky-rise-note": true,
     className: `mt-1.5 ${note}`,
     style: JA_WRAP_STYLE
-  }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきて、タイプCは道の奥で早めに空の高さまで上がります。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
+  }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
     full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
