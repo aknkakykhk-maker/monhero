@@ -81,7 +81,15 @@ const MH_MULTI_PLAY_GUARD=(()=>{
 // 見るのは出来事のあった時と、ボタンなどを押した時(click)だけ(毎コマ・演奏中のタッチでは見ない)。演奏の判定・スコアには関わらない。
 const MH_PAGE_OFFSET_GUARD=(()=>{
   if(typeof window==='undefined'||typeof document==='undefined')return {state:()=>null,check:()=>{}};
-  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
+  // 「文字を打っている間」だけ戻さない。キーボードが出ない入力(スライダー・チェック・ボタンなど)は入れない。
+  // 【2026-11-23 社長「設定行ったらかぶってて戻れなくなった。このバグも何回目だよ」(台帳 r1119-147)】
+  //   モンヒロビートのオプションで判定ラインのスライダー(input type=range)を動かすと、フォーカスがスライダーに残る。
+  //   それまでは INPUT を全部「入力中」と数えていたので、その間に iPhone がページを状態表示の高さ(47px)ぶんずらしても戻さず、
+  //   🔄横の器ごと上へずれて、左上の「戻る」が状態表示の下に入って押せなくなっていた(保存を押しても戻らない)。
+  const NO_KEYBOARD=new Set(['range','checkbox','radio','button','submit','reset','color','file','image','hidden']);
+  const editing=()=>{const el=document.activeElement;if(!el)return false;const tag=String(el.tagName||'').toUpperCase();
+    if(tag==='INPUT')return !NO_KEYBOARD.has(String(el.type||'text').toLowerCase());
+    return tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable===true;};
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
   // いまのずれ。どれも0(倍率は1)が正しい
   const state=()=>{
