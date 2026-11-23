@@ -34,7 +34,7 @@ ok('リザルトの結果と画面へ渡している',
 ok('リザルトの内訳でMARVELOUSのすぐ上に出す',
   game.includes('data-rhythm-result-precise')&&game.includes('>JUST MARVELOUS<')
   &&game.includes("{id==='MARVELOUS'&&<React.Fragment key=\"precise\">")
-  &&/data-rhythm-result-precise[\s\S]{0,700}<dt data-rhythm-judgment-row=\{id\}>\{id\}<\/dt>/.test(game)
+  &&/data-rhythm-result-precise[\s\S]{0,900}<dt data-rhythm-judgment-row=\{id\}[^>]*>\{id\}<\/dt>/.test(game)
   &&!game.includes('└ JUST MARVELOUS'));
 // ランキングのスコア詳細(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
 // JUST Marvelousも見れるようにして」)。
@@ -58,17 +58,18 @@ ok('ランクから段を作っている(失敗は段0)',
   game.includes("const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);"));
 ok('段を器とランクの丸へ渡している',
   game.includes('data-rank-tier={String(rankTier)}')
-  &&game.includes('<main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}'));
+  &&/<main (?:ref=\{resultRootRef\} )?data-rhythm-result data-rank=\{rank\} data-rank-tier=\{String\(rankTier\)\}/.test(game));
 ok('リザルトでも演出量と軽量モードを効かせる',
-  /<main data-rhythm-result[\s\S]{0,200}data-rhythm-effect=\{settings\.effectAmount\}/.test(game)
-  &&/<main data-rhythm-result[\s\S]{0,240}data-rhythm-lightweight=\{settings\.lightweightMode\?'true':'false'\}/.test(game));
+  /data-rhythm-result data-rank=\{rank\}[\s\S]{0,400}data-rhythm-effect=\{settings\.effectAmount\}/.test(game)
+  &&/data-rhythm-result data-rank=\{rank\}[\s\S]{0,440}data-rhythm-lightweight=\{settings\.lightweightMode\?'true':'false'\}/.test(game));
 ok('動きだけを止める(光は残す)',
   html.includes('[data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-result-rank],')
   &&/\[data-rhythm-result\]\[data-rhythm-lightweight="true"\] \[data-rhythm-result-rank\]\{animation:none\}/.test(html));
 
 // ---- 判定の内訳の色(2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」) ----
 ok('リザルトとランキングの両方で、判定ごとの印を付けている',
-  game.includes('<dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>')
+  // 2026-11-23 リザルトの行は数え上げの時刻(--mh-row-d)と数(data-count-*)を持つようになった
+  /<dt data-rhythm-judgment-row=\{id\}[^>]*>\{id\}<\/dt><dd data-rhythm-judgment-row=\{id\} className="text-right font-mono"[^>]*>\{view\.counts\[id\]\}<\/dd>/.test(game)
   &&game.includes('<dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>')
   &&/data-rhythm-result-precise[^\n]{0,60}data-rhythm-judgment-row="JUST"/.test(game)
   &&/data-rhythm-ranking-precise[^\n]{0,60}data-rhythm-judgment-row="JUST"/.test(game));
@@ -219,8 +220,9 @@ ${keyframes}
 // 2026-09-13・ユーザー指摘「リザルトの方もJUST Marvelous地味すぎる /
 //   スコアには乗らないだけで並びは同じようにして色合いは合わせて」。
 ok('JUST MARVELOUS だけ字を小さくしていない',
-  /<dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS<\/dt>/.test(game)
-  &&/<dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">/.test(game));
+  // 2026-11-23 数え上げの時刻(style)と数(data-count-*)が付いた。字の大きさのクラスは足していない
+  /<dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST"(?: style=\{\{[^>]*\}\})?>JUST MARVELOUS<\/dt>/.test(game)
+  &&/<dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono"[ >]/.test(game));
 // ★グラデーションは**箱の幅**に対して描かれる。列の幅いっぱいの箱のなかで
 //   数字を右へ寄せていると、字にかかるのは虹のごく一部だけになる
 ok('グラデーションの行は、箱を字の幅へ縮めている',

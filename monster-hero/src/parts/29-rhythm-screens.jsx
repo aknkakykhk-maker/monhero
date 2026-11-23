@@ -278,6 +278,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('空のノーツの上がり方',<>{segments('skyRiseType',RHYTHM_SKY_RISE_TYPE_LABELS)}
                 <p data-rhythm-sky-rise-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType]||RHYTHM_SKY_RISE_TYPE_NOTES.A)}</p></>,
               `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`,{full:true})}
+{/* 空中スライドの色の分け方(2026-11-23 台帳 r1119-149 追記3 社長: 新しい色分けを既定に・前の左右の手の色分けへ戻せる)。説明文の頭に、選んでいる分け方の見え方を出す */}
+{field('空中スライドの色',<>{segments('skySlideColor',RHYTHM_SKY_SLIDE_COLOR_LABELS)}
+                <p data-rhythm-sky-slide-color-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_SLIDE_COLOR_NOTES[draft.skySlideColor]||RHYTHM_SKY_SLIDE_COLOR_NOTES.HEIGHT)}</p></>,
+              'HELL などの空中スライドの帯の色の分け方です（既定は空中・地上で色分け）。見た目だけが変わり、判定・スコアは変わりません。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
