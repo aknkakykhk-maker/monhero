@@ -39,12 +39,13 @@ HEADS = {
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None),
     'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95),
-    # 馬骨(2026-11-23 全身画を作り直した #7292)。補正(いままでの絵)は stand-hosei
     # hold … まだこの道具で作っていない(--only で名指ししたときだけ作る)。表情ごとに姿勢が違い(上げた腕)、場面は表情ごとの見えている体の範囲で置くので、
     #   作り直すと顔がずれる表情がある(2026-11-23 窓口に相談中: 場面が同じ組の normal の範囲で置くようにするか)
     'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, hold=True),
     'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, hold=True),
-    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, face=dict(side=3.4, down=0.04)),
+    # 馬骨。補正(いままでの絵)は stand-hosei。顔アイコンは sorashido-umahone-busts.py で作った物のまま(2026-11-23 表情の全身画は元の版に戻ったので作り直さない)。
+    #   表情の全身画を作り直したら face=dict(side=3.4, down=0.04) を足して顔アイコンも作る
+    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None),
 }
 ALPHA = 40  # これより濃い画素を「体」とみなす(端の検査 life-stand-edge-check.js と同じ考え)
 

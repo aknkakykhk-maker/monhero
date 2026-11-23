@@ -2,7 +2,7 @@
 //   node tools/assistant/life-sleep-faces-make.js                 作る(元の絵と同じフォルダに ◯◯_sleep.PNG。全身と顔アイコン)
 //   node tools/assistant/life-sleep-faces-make.js --only myua,kiki          一部の人だけ作り直す
 //   node tools/assistant/life-sleep-faces-make.js --preview <フォルダ>   [元 | 重ねた後] の目のまわりの比較も書き出す
-// 受け取った物: tools/art-sources/sleep-faces/received-v1.png(1枚に7人)・momosuke-normal.png・momosuke-halloween.png(1枚に1人)。背景は抜いてある。加工せずに残す
+// 受け取った物: tools/art-sources/assistants/_shared/sleep-faces/received-v1.png(1枚に7人)・momosuke-normal.png・momosuke-halloween.png(1枚に1人)。背景は抜いてある。加工せずに残す
 // 作り方
 //   ① 人ごとの枠の中で、いちばん大きなつながった塊だけを取る(背景を抜いた跡の点・筋・隣の人のはみ出しを捨てる)
 //   ② 社長の絵を元の立ち絵へ合わせる(縮尺・回転・位置)。体全体の明るさと形でざっと → 目のまわり(目そのものは除く)で細かく
@@ -12,7 +12,7 @@
 //   合わせ方は life-sleep-faces-fit.json に控える(--refit で測り直す)
 const sharp = require('sharp'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), IMG = path.join(ROOT, 'monster-hero/images/assistant');
-const SRC = path.join(ROOT, 'tools/art-sources/sleep-faces/received-v1.png');
+const SRC = path.join(ROOT, 'tools/art-sources/assistants/_shared/sleep-faces/received-v1.png'); // 2026-11-23 キャラごとの置き場へ(1枚に7人なので _shared・台帳 r1119-128)
 // 受け取った絵の中の人ごとの枠 [x0, y0, x1, y1]
 // 1枚に1人の絵(あとから届いた分)。絵の全体から、いちばん大きなつながった塊だけを取る
 const SINGLE = { momosuke: 'momosuke-normal.png', 'momosuke-halloween': 'momosuke-halloween.png' };
