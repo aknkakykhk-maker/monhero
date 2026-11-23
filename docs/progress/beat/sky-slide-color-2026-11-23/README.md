@@ -66,3 +66,11 @@ node docs/progress/beat/sky-slide-color-2026-11-23/shoot.js     # mock.html を�
 bash docs/progress/beat/sky-slide-color-2026-11-23/shoot-game.sh      # 前(origin/main の rhythm-mode.js)と後を撮る
 python3 docs/progress/beat/sky-slide-color-2026-11-23/compose.py      # 並べた1枚にする
 ```
+
+## オプションで前の色分けに戻せる(r1119-149 追記3)
+
+- オプションの「演奏」タブ、「空のノーツの上がり方」のすぐ下に「空中スライドの色」: 「空中・地上で色分け」(既定)/「左右の手で色分け」(前の見た目)
+- 保存は `mh_rhythm_settings_v1` に `skySlideColor`('HEIGHT' / 'HAND')を足しただけ。既存の項目は変えない。無い・壊れている時は HEIGHT
+- 演奏を始める時に `RHYTHM_SKY_SLIDE_COLOR_MODE` へ当てる(30-rhythm-play.jsx)。HAND の時は帯・押さえている頭・火花が前と同じ手の色
+- 止め絵: `options/tate-height.png` `options/tate-hand.png`(縦)・`options/yoko-*.png`(横)。撮り直し: `node docs/progress/beat/sky-slide-color-2026-11-23/shoot-options.js`
+- 「左右の手」で演奏画面が前の見た目に戻るのは `LS='{"mh_rhythm_settings_v1":{"skySlideColor":"HAND"}}'` を付けて `rhythm-note-appear-scan.js` で確かめた
