@@ -425,6 +425,12 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (Number.isFinite(pinUntil) && nowMs >= pinUntil) return false;
   return Number.isFinite(until) && nowMs < until && (!Number.isFinite(from) || nowMs >= from);
 };
+// 「イベント」タブに並べる札(2026-11-23 r1119-113)。開催中を上、開催予定(eventStartAt より前)を下にする。
+//   それぞれの中は一覧と同じ並び(新しい順)。時刻で変わるので、呼ぶたびに数え直す
+const changelogPinnedEntries = (nowMs = Date.now()) => {
+  const live = CHANGELOG_ENTRIES.filter(entry => changelogEventLive(entry, nowMs));
+  return [...live.filter(entry => !changelogEventUpcoming(entry, nowMs)), ...live.filter(entry => changelogEventUpcoming(entry, nowMs))];
+};
 
 // 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
 // 【なぜ絞るか】(2026-09-14・よそのゲームの曲を入れたときの案内用に足した)
