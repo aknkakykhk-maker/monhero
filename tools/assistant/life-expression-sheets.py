@@ -19,7 +19,8 @@ spec = importlib.util.spec_from_file_location('fb', os.path.join(HERE, 'life-ful
 fb = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fb)
 
-SRC = os.path.join(ROOT, 'tools/art-sources/assistant-fullbody/received-v1')
+sys.path.insert(0, HERE)
+import art_source  # 原本の場所を引く・正本が「現行そのもの」の組(旧版が元の組)は作らない(台帳 r1119-128)
 EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']
 SCRATCH = os.environ.get('SHEET_SCRATCH', '/tmp/sheet-scratch')
 
@@ -89,7 +90,7 @@ def key_checker(rgb):
 
 
 def cut_cells(cfg):
-    path = os.path.join(SRC, cfg['file'])
+    path = art_source.src(cfg['file'])
     im = Image.open(path)
     out = []
     for x0, y0, x1, y1 in cfg['cells']:
@@ -109,6 +110,9 @@ def main():
     os.makedirs(SCRATCH, exist_ok=True)
     for key, cfg in SHEETS.items():
         if only and key != only:
+            continue
+        # 全身画と立ち絵の両方を書き出すので、どちらかの正本が「現行そのもの」なら作らない
+        if art_source.refuse(art_source.group_of(key, 'fullbody')) or art_source.refuse(art_source.group_of(key, 'stand')):
             continue
         cells = cut_cells(cfg)
         if stage == 'cells':

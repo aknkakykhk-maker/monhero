@@ -13,7 +13,9 @@ from scipy import ndimage
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 IMG = os.path.join(ROOT, 'monster-hero/images/assistant')
-SLEEP = os.path.join(ROOT, 'tools/art-sources/assistant-fullbody/received-v1/sorashido-umahone-sleep.png')
+SLEEP_NAME = 'sorashido-umahone-sleep.png'  # 2026-11-23 旧版として保管庫 archive/old-art/assistant/sorashido/normal/ へ移した(台帳 r1119-128)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import art_source
 EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']
 # 全身画 normal の測り(画素): 髪のてっぺん・目・顎(life-stand-from-fullbody.py の HEADS と同じ)
 TOP, EYE, CHIN = 12, 89, 131
@@ -78,6 +80,10 @@ def save(im, path):
 
 
 def main():
+    # ソラシド(ふだん)のバスト絵・顔・寝顔は、社長が完成品を直接入れた物が正本。この道具では作り直さない(目録 tools/art-sources/assistants/sorashido/CATALOG.md)
+    if art_source.refuse('sorashido/normal/bust') or art_source.refuse('sorashido/normal/face'):
+        return
+    SLEEP = art_source.src(SLEEP_NAME)
     os.makedirs(os.path.join(IMG, 'face'), exist_ok=True)
     base = Image.open(os.path.join(IMG, 'fullbody/sorashido__normal.png')).convert('RGBA')
     nb = bbox(np.array(base))
