@@ -31,7 +31,9 @@ async function openSession({ playwright, pageUrl, port, out, rand, persona, repo
     headless: !report.headed,
     args: ['--autoplay-policy=no-user-gesture-required'],
   });
-  const context = await browser.newContext({ viewport, hasTouch: true, locale: 'ja-JP', timezoneId: 'Asia/Tokyo' });
+  // SHOT_DSF=3 … iPhone 相当の倍率で撮る(小さい字のにじみの見比べ。2026-11-23 r1119-130)。無ければ 1 のまま
+  const dsf = Number(process.env.SHOT_DSF);
+  const context = await browser.newContext({ viewport, hasTouch: true, locale: 'ja-JP', timezoneId: 'Asia/Tokyo', ...(Number.isFinite(dsf) && dsf > 0 ? { deviceScaleFactor: dsf } : {}) });
   const page = await context.newPage();
   if (cpuSlowdown > 1) { const cdp = await context.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuSlowdown }); }
   const supabase = createFakeSupabase();

@@ -83,6 +83,32 @@ const slideEaseProgress=(ease,p)=>{
   if(ease==='inout')return x*x*(3-2*x);
   return x;
 };
+// 通り抜け(ease:'through'・2026-11-23 r1119-133)。ゲーム本体の rhythmSlideSegmentLane と同じ式(点の時刻の代わりに grid で測る)。
+// 点での傾きは Steffen の方法・となりが直線/in/out/inout ならその傾きに合わせる・どれも区間の傾きの2倍まで
+const SLIDE_EASE_EDGE={linear:[1,1],in:[0,2],out:[2,0],inout:[0,0]};
+const slideThroughLane=(note,points,i,x)=>{
+  const T=p=>Number(p?.grid),easeOf=j=>{const e=points[j]?.ease??note.slideEase;return ['in','out','inout','through'].includes(e)?e:'linear';};
+  const sec=j=>{const h=T(points[j+1])-T(points[j]);return h>0?(Number(points[j+1].lane)-Number(points[j].lane))/h:0;};
+  const isThr=j=>j>=0&&j<points.length-1&&easeOf(j)==='through';
+  const tangent=(k,own)=>{
+    const other=own===k?k-1:k,d=sec(own);let m;
+    if(other<0||other>=points.length-1){
+      const inner=own===k?own+1:own-1;
+      if(isThr(inner)){const df=sec(inner),he=T(points[own+1])-T(points[own]),hf=T(points[inner+1])-T(points[inner]);
+        if(he>0&&hf>0){const pe=d*(1+he/(he+hf))-df*he/(he+hf);m=pe*d<=0?0:Math.abs(pe)>2*Math.abs(d)?2*d:pe;}else m=d;}else m=d;
+    }else if(isThr(other)){
+      const h0=T(points[k])-T(points[k-1]),h1=T(points[k+1])-T(points[k]),d0=sec(k-1),d1=sec(k);
+      if(!(h0>0)||!(h1>0)||d0*d1<=0)return 0;
+      const p=(d0*h1+d1*h0)/(h0+h1);return (Math.sign(d0)+Math.sign(d1))*Math.min(Math.abs(d0),Math.abs(d1),.5*Math.abs(p));
+    }else m=sec(other)*SLIDE_EASE_EDGE[easeOf(other)][other<k?1:0];
+    if(m*d<=0)return 0;return Math.abs(m)>2*Math.abs(d)?2*d:m;
+  };
+  const a=points[i-1],b=points[i],la=Number(a.lane),lb=Number(b.lane),h=T(b)-T(a);
+  if(!(h>0))return la+(lb-la)*x;
+  const ma=tangent(i-1,i-1)*h,mb=tangent(i,i-1)*h,x2=x*x,x3=x2*x;
+  const v=(2*x3-3*x2+1)*la+(x3-2*x2+x)*ma+(-2*x3+3*x2)*lb+(x3-x2)*mb;
+  return Math.max(Math.min(la,lb),Math.min(Math.max(la,lb),v));
+};
 // 親指の左右(2026-09-26・Rev.14〜)。手のシミュレートは親指の左右を区別せず、近いほうの指で取っていた。
 // 実際の親指は交差しにくいので、切り替えると左の指が右の指より右で叩く割り振りに費用を付ける(rhythm-hand-simulate.js)
 let handSidesOn=false;
@@ -179,6 +205,7 @@ const slideLaneAtGrid=(note,grid)=>{
     if(g<=Number(b.grid)){
       const span=Math.max(1e-9,Number(b.grid)-Number(a.grid));
       let t=Math.max(0,Math.min(1,(g-Number(a.grid))/span));
+      if(slideEaseOn&&(a.ease??note.slideEase)==='through')return slideThroughLane(note,points,i,t)+slideLaneShift;
       if(slideEaseOn)t=slideEaseProgress(a.ease??note.slideEase,t);
       return Number(a.lane)+(Number(b.lane)-Number(a.lane))*t+slideLaneShift;
     }

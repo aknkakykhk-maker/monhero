@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c20119442e2403dc
+// source-sha256: eb31f93182916346
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6799,6 +6799,34 @@ const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId, difficultyId) => {
+  const tag = typeof rhythmChartResetTag === 'function' ? rhythmChartResetTag(songId, difficultyId) : null;
+  return tag ? `${songId}|${difficultyId}|${tag}` : null;
+};
+const normalizeRhythmBestChartResets = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(source).filter(([id, record]) => /^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id) && record && typeof record === 'object' && !Array.isArray(record)).map(([id, record]) => [id, normalizeRhythmBestRecord(record)]));
+};
+const rhythmBestRecordsWithChartResets = (records, resets) => {
+  const out = {
+      ...records
+    },
+    clean = normalizeRhythmBestChartResets(resets);
+  if (typeof RHYTHM_CHART_RESETS === 'undefined') return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair => {
+    const [songId, difficultyId] = pair.split('|');
+    if (!out[songId] || !Object.prototype.hasOwnProperty.call(out[songId], difficultyId)) return;
+    const id = rhythmBestChartResetId(songId, difficultyId);
+    if (!id) return;
+    out[songId] = {
+      ...out[songId],
+      [difficultyId]: normalizeRhythmBestRecord(clean[id])
+    };
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);
+  });
+  return out;
+};
 const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
   const now = normalizeRhythmBestRecords(current),
@@ -33185,17 +33213,24 @@ const saveRhythmMonsterSlots = async value => {
 const saveRhythmBestRecord = async (records, songId, difficultyId, value, version = 1) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const resetId = rhythmBestChartResetId(songId, difficultyId);
+  if (resetId) {
+    const resets = normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
+    resets[resetId] = normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY, resets, false);
+    return loadRhythmBestRecordsNow();
+  }
   const key = version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY;
   const normalized = normalizeRhythmBestRecords(await storeGet(key, {}, false));
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
   await storeSet(key, normalized, false);
   return loadRhythmBestRecordsNow();
 };
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false));
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false)), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 const loadRhythmBestRecordsNow = async () => {
   const legacy = await loadRhythmBestRecordsOf(1);
   if (!(typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive())) return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy);
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 };
 const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
@@ -44138,6 +44173,8 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
+  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const specialFxRef = useRef(null);
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45861,6 +45898,16 @@ const RhythmTapTest = ({
             run._climaxLevel = level;
             climaxEl.setAttribute('data-on', level > 0 ? '1' : '0');
             climaxEl.style.opacity = level > 0 ? String(level) : '0';
+          }
+        }
+      }
+      {
+        const fxEl = specialFxRef.current;
+        if (fxEl && specialFx) {
+          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
+          if (run._specialFxOn !== on) {
+            run._specialFxOn = on;
+            fxEl.setAttribute('data-on', on);
           }
         }
       }
@@ -48794,7 +48841,12 @@ const RhythmTapTest = ({
     ref: roadGlowRef,
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
-  })), climaxFxOn && React.createElement("i", {
+  })), specialFx && React.createElement("i", {
+    ref: specialFxRef,
+    "data-rhythm-special-fx": true,
+    "data-on": "0",
+    "aria-hidden": "true"
+  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",
@@ -84384,9 +84436,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 const HOME_RAID_JACK_CSS = `
@@ -85171,9 +85232,11 @@ function HomeScreen({
     className: "mh-home-event-banner",
     onClick: openChangelog,
     "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
+  }, homeEventCampaign.banner.title2) : null), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: "mh-home-tour-banner",
@@ -169166,7 +169229,6 @@ const MSX_HOME_CSS = `
 .mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
 .mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
 .mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
-.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
 @media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
 @media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
@@ -169193,9 +169255,10 @@ function MonheroSuccessHomeEntry({
     "data-home-monhero-success": true,
     onClick: () => setOpen(true),
     "aria-label": "モンヒロサクセス β"
-  }, React.createElement("i", {
-    className: "rb",
-    "aria-hidden": "true"
+  }, React.createElement("em", {
+    className: "rb mh-home-event-badge",
+    "aria-hidden": "true",
+    style: HOME_EVENT_BADGE_STYLE
   }, "β版 開幕！"), React.createElement("span", {
     className: "pic"
   }, React.createElement("img", {
@@ -236478,6 +236541,9 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId,
       difficultyId: difficulty.id,
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? {
+        chart: rhythmChartResetTag(song.songId, difficulty.id)
+      } : {}),
       ...(scoreVersion === 2 ? {
         scoreVersion: 2,
         tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)),
