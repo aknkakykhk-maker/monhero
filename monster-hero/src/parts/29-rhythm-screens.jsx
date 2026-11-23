@@ -1048,6 +1048,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   React.useEffect(()=>{
     if(song&&song.songId!==songId)setSongId(song.songId);
   },[song?song.songId:'',songId]);
+  // 絞り込み(イベント・お気に入り)で、選んでいる曲が一覧から外れたら、一覧の先頭の曲を選び直す
+  //   (2026-11-23 社長の実機。右の詳細が一覧に無い曲のままだった)。ALL に戻しても選び直した曲のまま。
+  //   選ぶのは曲の id だけで、保存値(mh_rhythm_select_v1)の形は変えない
+  const firstRowSongId=rows.length?rows[0].entry.songId:'';
+  const songInGenre=!song||genre.id==='all'||genreMatches(song);
+  React.useEffect(()=>{
+    if(!songInGenre&&firstRowSongId)setSongId(firstRowSongId);
+  },[songInGenre,firstRowSongId,genre.id]);
 
   const pickRandom=()=>{
     // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
@@ -1072,8 +1080,35 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=rows.length>=2;
+  // ★並び1つぶんが一覧に収まるときも輪にしない(2026-11-23 社長の実機)。イベントで3曲に絞ると、
+  //   3つ重ねたぶんだけがはみ出して輪になり、同じ曲が繰り返し並んで見えていた。
+  //   1つぶんの高さが一覧の高さを超えるときだけ輪にする(測るのは下の効果。CSSが遅れて届いても測り直す)
+  const [loopFits,setLoopFits]=React.useState(true);
+  const loopEnabled=rows.length>=2&&loopFits;
   const listRef=React.useRef(null);
+  const rowsKey=rows.map(row=>row.entry.songId).join('|');
+  React.useEffect(()=>{
+    const el=listRef.current;
+    if(!el||rows.length<2)return;
+    const measure=()=>{
+      const node=listRef.current;
+      if(!node||!node.clientHeight)return;
+      const ul=node.querySelector('ul');
+      if(!ul)return;
+      const looped=node.getAttribute('data-rhythm-song-loop')==='1';
+      const cs=typeof getComputedStyle==='function'?getComputedStyle(node):null;
+      const pad=cs?(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0):0;
+      const one=ul.offsetHeight/(looped?3:1),room=node.clientHeight-pad;
+      // 行き来しないよう、輪をやめるときと始めるときで少し幅を持たせる
+      setLoopFits(prev=>prev?one>room-4:one>room+2);
+    };
+    measure();
+    let observer=null;
+    if(typeof ResizeObserver==='function'){
+      try{observer=new ResizeObserver(()=>measure());observer.observe(el);}catch(e){observer=null;}
+    }
+    return ()=>{if(observer)observer.disconnect();};
+  },[rowsKey,loopEnabled]);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
   // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
