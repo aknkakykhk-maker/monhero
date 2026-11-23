@@ -4396,6 +4396,8 @@ function MonsterHeroGame() {
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      // 作り直した譜面の記録なら、その版の印も残す(鍵の末尾と同じ・2026-11-23 r1119-136。読む側は鍵で分けるので、ここは後から確かめる手がかり)
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? { chart: rhythmChartResetTag(song.songId, difficulty.id) } : {}),
       // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
       ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
