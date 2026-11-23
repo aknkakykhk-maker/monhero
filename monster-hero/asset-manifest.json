@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "8f8873205a2f",
-  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":422805559,"count":1562},"card":{"bytes":38085297,"count":1046},"all":{"bytes":772447921,"count":2774},"core":{"bytes":25734725,"count":25}},
+  "id": "3a5b1b24411a",
+  "packs": {"beat":{"bytes":311557065,"count":166},"battle":{"bytes":426377356,"count":1562},"card":{"bytes":38085297,"count":1046},"all":{"bytes":776019718,"count":2774},"core":{"bytes":25735048,"count":25}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"b43d691d4773","size":2833344,"pack":"beat"},
@@ -369,15 +369,15 @@
     "images/assistant/fullbody/mua_halloween__surprise.png": {"v":"a6e4aac754ef","size":2806534,"pack":"battle"},
     "images/assistant/fullbody/mua_halloween__troubled.png": {"v":"763ec1c389e2","size":2884599,"pack":"battle"},
     "images/assistant/fullbody/mua_halloween__wink.png": {"v":"adb077f39f71","size":2806965,"pack":"battle"},
-    "images/assistant/fullbody/sorashido.png": {"v":"fa4ff159319c","size":68883,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__angry.png": {"v":"8699a34641d1","size":1862755,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__crying.png": {"v":"6835cbcc864b","size":1822863,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__excited.png": {"v":"54c8ec83f00e","size":1740527,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__happy.png": {"v":"d8444b3c2d6f","size":1719019,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__normal.png": {"v":"a82a894b50ce","size":1748905,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__surprise.png": {"v":"9f6e1f5848cd","size":1632551,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__troubled.png": {"v":"590d1ae6824f","size":1695785,"pack":"battle"},
-    "images/assistant/fullbody/sorashido__wink.png": {"v":"9a1c1086e1ba","size":1428019,"pack":"battle"},
+    "images/assistant/fullbody/sorashido.png": {"v":"9cbdc0b735d4","size":1905462,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__angry.png": {"v":"c7230781cabb","size":1917637,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__crying.png": {"v":"b29b9d961e10","size":1936466,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__excited.png": {"v":"7fa648919fb7","size":1916140,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__happy.png": {"v":"051fe403939b","size":1938013,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__normal.png": {"v":"9cbdc0b735d4","size":1905462,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__surprise.png": {"v":"db91ace0d1ed","size":1968872,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__troubled.png": {"v":"7c6428d30ad5","size":1934457,"pack":"battle"},
+    "images/assistant/fullbody/sorashido__wink.png": {"v":"ae1c92c3c3fd","size":1868595,"pack":"battle"},
     "images/assistant/fullbody/sorashido_hosei.png": {"v":"4c3ca11f1e3d","size":1411178,"pack":"battle"},
     "images/assistant/fullbody/sorashido_hosei__angry.png": {"v":"4d63f3a3a2d9","size":2634169,"pack":"battle"},
     "images/assistant/fullbody/sorashido_hosei__crying.png": {"v":"a27cea886c94","size":2851884,"pack":"battle"},
@@ -2779,7 +2779,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"65fb5adb7456","size":318791,"pack":"core"},
+    "tailwind.css": {"v":"1992c287c23a","size":318791,"pack":"core"},
     "data/images/images-ally.js": {"v":"7fcc9331d4b6","size":92225,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2801,6 +2801,6 @@
     "data/assistant-masmon-techs.js": {"v":"353cf73676a6","size":113841,"pack":"core"},
     "data/assistant-life-rel-talks.js": {"v":"cde51ded5428","size":225977,"pack":"core"},
     "data/success-sounds.js": {"v":"9692dd51493a","size":19367,"pack":"core"},
-    "game-system.compiled.js": {"v":"781236f11cf7","size":12376407,"pack":"core"}
+    "game-system.compiled.js": {"v":"fe9c9fde5c37","size":12376730,"pack":"core"}
   }
 }
