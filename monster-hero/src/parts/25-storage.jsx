@@ -178,6 +178,14 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  // 作り直した譜面(RHYTHM_CHART_RESETS)の記録は、旧の記録(v1・v2)へ書かず専用のキーへ(2026-11-23・r1119-136)
+  const resetId=rhythmBestChartResetId(songId,difficultyId);
+  if(resetId){
+    const resets=normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
+    resets[resetId]=normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY,resets,false);
+    return loadRhythmBestRecordsNow();
+  }
   const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
   const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
@@ -185,13 +193,15 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   return loadRhythmBestRecordsNow();
 };
 // その版の自己ベスト(保存値そのまま・正規化だけ)
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// 作り直した譜面(RHYTHM_CHART_RESETS)の曲・難易度だけは、どの版でも作り直したあとの記録(mh_rhythm_best_chart_reset_v1)を返す
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false)),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 // いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
 // 切り替え前は今までどおり v1 をそのまま返す
 const loadRhythmBestRecordsNow = async () => {
   const legacy=await loadRhythmBestRecordsOf(1);
   if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
+  // 旧の記録の印を重ねたあとも、作り直した曲・難易度は作り直したあとの記録だけにする(旧の点・印を混ぜない)
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
