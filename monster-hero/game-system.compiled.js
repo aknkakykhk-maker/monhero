@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73ab8dbcf78c1b15
+// source-sha256: 2245e6a7c01dccd9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6913,8 +6913,14 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP', '深い']]);
-const RHYTHM_SKY_RISE_LABELS = Object.freeze([['NOW', '今の（早め）'], ['OLD', '元の']]);
-const RHYTHM_SKY_RISE_MODES = Object.freeze(RHYTHM_SKY_RISE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW', 'OLD']);
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB'], ['C', 'タイプC']]);
+const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({
+  A: '道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',
+  B: '少し遅れて、画面の上から空の高さで出てきます。',
+  C: '道の奥から出て、早めに空の高さまで上がります。'
+});
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
@@ -7263,6 +7269,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   roadWidth: 'WIDE',
   roadDepth: 'NORMAL',
   skyRise: 'NOW',
+  skyRiseType: 'A',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -7555,6 +7562,7 @@ const normalizeRhythmSettings = value => {
     roadWidth: RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth) ? source.roadWidth : DEFAULT_RHYTHM_SETTINGS.roadWidth,
     roadDepth: RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth) ? source.roadDepth : DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise: RHYTHM_SKY_RISE_MODES.includes(source.skyRise) ? source.skyRise : DEFAULT_RHYTHM_SETTINGS.skyRise,
+    skyRiseType: RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType) ? source.skyRiseType : DEFAULT_RHYTHM_SETTINGS.skyRiseType,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -38504,7 +38512,11 @@ const RhythmOptions = ({
     full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
-  }), field('空のノーツの上がり方', segments('skyRise', RHYTHM_SKY_RISE_LABELS), 'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。', {
+  }), field('空のノーツの上がり方', React.createElement(React.Fragment, null, segments('skyRiseType', RHYTHM_SKY_RISE_TYPE_LABELS), React.createElement("p", {
+    "data-rhythm-sky-rise-note": true,
+    className: `mt-1.5 ${note}`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきて、タイプCは道の奥で早めに空の高さまで上がります。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
     full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
@@ -43653,7 +43665,7 @@ const RhythmTapTest = ({
       if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settingsIn?.noteShape);
     } catch (e) {}
     try {
-      if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRise);
+      if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);
     } catch (e) {}
     return 0;
   });

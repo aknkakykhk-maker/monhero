@@ -459,10 +459,14 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控�
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','ふつう'],['NARROW','細い']]);
 // 道の奥行き(2026-10-27 社長の選択「案A」: 案3のカメラを寝かせる形をオプションで選べるように)。「深い」は道が奥へ長く伸び、遠くのノーツほど小さく、手前で速く近づく
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','深い']]);
-// 空中ノーツの上がり方(2026-11-23 台帳 r1119-138・社長「スカイノーツは設定で元々のとさっきのいまの選べるようにしといてね」)。
-//   NOW は今の上がり方(#7303 案B 1/4・既定)、OLD は元の上がり方(#7303 より前)。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE
-const RHYTHM_SKY_RISE_LABELS = Object.freeze([['NOW','今の（早め）'],['OLD','元の']]);
-const RHYTHM_SKY_RISE_MODES = Object.freeze(RHYTHM_SKY_RISE_LABELS.map(([id])=>id));
+// 空中ノーツの上がり方(2026-11-23 台帳 r1119-138)。skyRise(NOW/OLD)は #7358 で入れた最初の形。画面からは外したが、保存値の意味は変えずに読み直すだけ(保存の決まり)
+const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW','OLD']);
+// 空中ノーツの上がり方のタイプ(2026-11-23 台帳 r1119-146・社長「ABC。デフォルト(A)を1個前のやつにしてBをもともとのやつ、Cが今作ったやつ」)。
+//   A は 11/22 の式(既定)、B はいちばん最初の式、C は #7303 の案B 1/4。式は data/rhythm-mode.js の RHYTHM_SKY_RISE_MODE
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB'],['C','タイプC']]);
+const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id])=>id));
+// 選んでいるタイプの見え方(オプションの説明文に出す)
+const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。',C:'道の奥から出て、早めに空の高さまで上がります。'});
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -778,8 +782,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ★2026-10-27 社長「もとの見た目に直して」で、オプションの「道の奥行き」を画面から外した(深いカメラはデバッグの試作 c3b に戻した)。
   //   選んだ人の保存値は消さずに読み直すだけにする(保存の決まり)。いまはどこからも使わない
   roadDepth:'NORMAL',
-  // 空中ノーツの上がり方(2026-11-23 r1119-138)。新しい項目なので、保存値に無い・壊れている人は今の上がり方(NOW)で補われる。見た目だけに効く
+  // 空中ノーツの上がり方(2026-11-23 r1119-138)。#7358 の形。いまはどこからも使わない(skyRiseType へ分けた)。保存値は消さずに読み直すだけ
   skyRise:'NOW',
+  // 空中ノーツの上がり方のタイプ(2026-11-23 r1119-146)。新しい項目なので、保存値に無い・壊れている人は A で補われる。
+  //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。見た目だけに効く
+  skyRiseType:'A',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -948,6 +955,7 @@ const normalizeRhythmSettings = value => {
     roadWidth:RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth)?source.roadWidth:DEFAULT_RHYTHM_SETTINGS.roadWidth,
     roadDepth:RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth)?source.roadDepth:DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise:RHYTHM_SKY_RISE_MODES.includes(source.skyRise)?source.skyRise:DEFAULT_RHYTHM_SETTINGS.skyRise,
+    skyRiseType:RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType)?source.skyRiseType:DEFAULT_RHYTHM_SETTINGS.skyRiseType,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
