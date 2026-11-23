@@ -11,3 +11,12 @@
   原本が `tools/art-sources/assistant-fullbody/received-v1/` にあるので、ここには入れていない
 - 戻したいときは、ここのファイルを同じパスへ上書きし、`node tools/build.js` で
   キャッシュキー(`?v=`)を付け直す
+
+## 助手の絵は移した(2026-11-23・台帳 r1119-128)
+
+`images/assistant/` にあった 40 枚は、キャラごとの置き場へ並べ直した(「元のパスそのまま」ではなくなった)。
+
+- いまも現行の原本(縮める前の物)32 枚 → `tools/art-sources/assistants/<キャラ>/<服>/pre-resize-2026-11-17/<bust・face・stand>/`
+- みゅあ(ふだん)のバスト絵 8 枚は、2026-11-21 に作り直した物へ差し替え済みなので旧版 →
+  `archive/old-art/assistant/mua/normal/2026-11-17-old-bust-pre-resize/`
+- 戻す先は、各キャラの `CATALOG.md` の「ゲームで使っているファイル」を見る
