@@ -41,3 +41,28 @@
 node docs/progress/beat/sky-slide-color-2026-11-23/extract.js   # 譜面から場面を切り出す(scenes.js)
 node docs/progress/beat/sky-slide-color-2026-11-23/shoot.js     # mock.html を撮る(compare.jpg)
 ```
+
+---
+
+## 決まって作ったもの(2026-11-23 社長の決め・r1119-149 追記)
+
+社長「地上スライドはそのままで、スカイスライドを空中と地上で色分けは？いまの真ん中線で判断はそのままで」「空中は赤(青)、地上は青(赤)とかそんなかんじ。切り替わるとこの色はうまくやって」
+
+- 空中スライドの帯は、**白い芯が出ている所=桃(空中)・出ていない所=青(地上)**。新しい色は使わず、今の2色を手(左右)ではなく通る所で使い分ける
+- **桃を空中にした理由**: 空中のタップ・フリックが赤い板なので、空中=赤系でそろう。青は地上スライドの紫とも、地上タップの水色(明るい)とも見分けられる濃い青
+- 切り替わりは白い芯の出始め・消える時刻(`rhythmSlideSkyCoreSpans`)をまん中に、前後45msでなめらかに移す(`RHYTHM_SKY_COLOR_BLEND_MS`)。2D(`fillSkyQuad`)と GPU の帯(mode 9)で同じ区切り・同じ式
+- 白い芯の出方・地上だけのスライドの色・判定・点・譜面は変えていない
+- 押さえている間の頭の板・火花も手の色をやめた(頭はその時刻の帯の色、火花は桃)
+- ヘルプの見本の絵は「空中を通る所(桃)」「地上を通る所(青)」の2つにした
+
+### ゲーム本体の止め絵(前=本番・後=今回)
+
+- 横: [`game-yoko.jpg`](game-yoko.jpg) / 縦: [`game-tate.jpg`](game-tate.jpg)(1枚ずつは `game/`)
+- 場面: Grievous Lady HELL(左右同時・空中→地上)/ Sheriruth HELL(地上→空中)/ Beyond the Same Sky HELL(空中だけ)
+  (綺季一閃は撮る道具の曲えらびで選べなかったので、同じく行き来のある Sheriruth に替えた)
+- 白い線が切れる所で桃→青に変わっているのが見える(Grievous Lady・Sheriruth)
+
+```
+bash docs/progress/beat/sky-slide-color-2026-11-23/shoot-game.sh      # 前(origin/main の rhythm-mode.js)と後を撮る
+python3 docs/progress/beat/sky-slide-color-2026-11-23/compose.py      # 並べた1枚にする
+```

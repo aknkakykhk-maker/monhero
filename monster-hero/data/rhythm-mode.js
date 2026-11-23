@@ -81376,7 +81376,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const chartNowMs=slideTravel?.chartNowMs;
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,chartNowMs);
   const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*rhythmHeadWidthRatio(note)));
-  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
+  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null,chartNowMs};
   const height=Math.max(0,Number(bodyHeight)||0);
   // GPU の帯の描き方のとき(ノーツの板も GPU で描く・drawHead)
   if(slideTravel&&slideTravel.gpu)out.gpu=true;
@@ -84838,7 +84838,7 @@ const rhythmBuildCanvasRenderer=()=>{
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ色にする(今の時刻の帯の色・r1119-149。前は手の色)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){
-        const nowT=Number(geo.slideGpu?.travel?.chartNowMs),hA=RHYTHM_SKY_LOOK.arc,hSp=rhythmSlideSkyCoreSpans(note),hrgb=Number.isFinite(nowT)?rhythmSkySlideMixRgb(hA,rhythmSlideSkyCoreSpansUsable(hSp)?rhythmSkySlideAirK(hSp,nowT):(rhythmSlideSkyAt(note,nowT)>.05?1:0)):hA.air,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
+        const nowT=Number(geo.slideGpu?.travel?.chartNowMs??geo.chartNowMs),hA=RHYTHM_SKY_LOOK.arc,hSp=rhythmSlideSkyCoreSpans(note),hrgb=Number.isFinite(nowT)?rhythmSkySlideMixRgb(hA,rhythmSlideSkyCoreSpansUsable(hSp)?rhythmSkySlideAirK(hSp,nowT):(rhythmSlideSkyAt(note,nowT)>.05?1:0)):hA.air,hd=geo.head,hw=hd.w*sizeScale,hh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale;
         ctx.globalAlpha=o.alpha*trackDim;roundRectPath(ctx,hd.cx-hw/2,hd.cy-hh/2,hw,hh,7*sizeScale);ctx.fillStyle=`rgba(${hrgb},.55)`;ctx.fill();
         ctx.lineWidth=2.4*sizeScale;ctx.strokeStyle=`rgba(${hrgb},1)`;ctx.stroke();ctx.globalAlpha=1;
       }
