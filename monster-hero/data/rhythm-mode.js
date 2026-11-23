@@ -2340,6 +2340,8 @@ const rhythmSlideLaneSpeedAt=(note,chartTimeMs)=>{
   const speedOf=(a,b,p)=>{
     const seconds=(Number(b?.timeMs)-Number(a?.timeMs))/1000,lanes=Math.abs(Number(b?.lane)-Number(a?.lane));
     const average=seconds>0&&Number.isFinite(lanes)?lanes/seconds:0;
+    // 通り抜けの区間は、その瞬間の曲線の傾き(rhythmSlideSegmentLaneSpeed)
+    if(rhythmSlideSegmentEase(note,a)==='through'){const i=points.indexOf(a);if(i>=0&&i<points.length-1)return rhythmSlideSegmentLaneSpeed(note,points,i+1,p);}
     return average*rhythmSlideEaseSlope(rhythmSlideSegmentEase(note,a),p);
   };
   if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return speedOf(points[0],points[1],0);
@@ -2403,7 +2405,9 @@ const rhythmSlidePoints=note=>Array.isArray(note?.slidePoints)&&note.slidePoints
 // **どちらも書いていない区間は今までどおりの直線**(既存の譜面は1点も動かない)。
 // 曲がるのは「レーン(横の位置)」だけ。幅(subLaneWidth)の変わり方は今までどおり時間に比例する。
 // 見た目(帯)・追従の的・速さの上乗せの3つは、すべて下の2つの関数を通るのでずれない。
-const RHYTHM_SLIDE_EASES=Object.freeze(['linear','in','out','inout']);
+//   'through' … 点で止まらずに通り抜ける滑らかな曲線(2026-11-23 台帳 r1119-133)。下の rhythmSlideSegmentLane
+// ★並びの番号は譜面の短い形(mhSlideV2 の点の4つ目)と書き出し(rhythm-runtime-notes.js の SLIDE_EASE_CODES)で使う。足すときは後ろへ
+const RHYTHM_SLIDE_EASES=Object.freeze(['linear','in','out','inout','through']);
 const rhythmSlideSegmentEase=(note,point)=>{
   const ease=point?.ease??note?.slideEase;
   return RHYTHM_SLIDE_EASES.includes(ease)?ease:'linear';
@@ -2423,6 +2427,68 @@ const rhythmSlideEaseSlope=(ease,p)=>{
   if(ease==='out')return 2*(1-x);
   if(ease==='inout')return 6*x*(1-x);
   return 1;
+};
+// ── 通り抜けの曲線(ease:'through'・2026-11-23 台帳 r1119-133「案A＋案B」) ──
+// 社長「モンビーのスライドは曲線もあったからいまのままでもっとバリエーションを増やす案のほうが良さそうだ」→ 新しい曲線の種類を1つ足す。
+// 'through' を書いた点から次の点までを、点を通る3次の曲線(エルミート)で結ぶ。点での傾きは前後の区間から決める(Steffen の方法)ので、
+// 同じ向きへ進み続ける点では止まらずに通り抜け、向きが変わる点・止まっている区間のとなりでは傾き0になる。
+// どの区間も、区間の両端のレーンの間から出ない(行き過ぎない・道の外へはみ出さない)。
+// 'through' を書いていない区間(配信中の全譜面)は、下の rhythmSlideSegmentLane でも今までと同じ式を通るので1点も動かない。
+// 見た目(2D・GPU の帯)・追従の的・速さの上乗せは、すべて rhythmSlideExpectedLane / rhythmSlideLaneSpeedAt を通るのでずれない。
+// 曲がるのは横の位置だけ。幅(subLaneWidth)・空中の高さ(sky)は、今までどおり時間に比例する(rhythmSlideEaseProgress の 'through' は直線)。
+const rhythmSlideSecant=(a,b)=>{const h=Number(b?.timeMs)-Number(a?.timeMs);return h>0?(Number(b?.lane)-Number(a?.lane))/h:0;};
+// 区間 j(点 j → 点 j+1)が通り抜けか
+const rhythmSlideSegmentThrough=(note,points,j)=>j>=0&&j<points.length-1&&rhythmSlideSegmentEase(note,points[j])==='through';
+// ease の区間の、両端での傾き(区間の平均の傾き d に掛ける倍率。rhythmSlideEaseSlope と同じ)
+const rhythmSlideEaseEdgeSlope=(ease,atEnd)=>rhythmSlideEaseSlope(ease,atEnd?1:0);
+// 通り抜けの区間の両端の点 k での傾き(レーン/ms)。side は、その点から見て通り抜けの区間がある側(-1 … 左の区間 k-1、+1 … 右の区間 k)
+const rhythmSlideThroughTangent=(note,points,k,side)=>{
+  const n=points.length,own=side<0?k-1:k,other=side<0?k:k-1;
+  const d=rhythmSlideSecant(points[own],points[own+1]);
+  let m;
+  if(other<0||other>=n-1){
+    // スライドの端: 通り抜けの区間がもう1つ内側にあれば Steffen の端の決め方、無ければ区間の傾き(直線と同じ)
+    const inner=side<0?own-1:own+1;
+    if(rhythmSlideSegmentThrough(note,points,inner)){
+      const df=rhythmSlideSecant(points[inner],points[inner+1]);
+      const he=Number(points[own+1].timeMs)-Number(points[own].timeMs),hf=Number(points[inner+1].timeMs)-Number(points[inner].timeMs);
+      if(he>0&&hf>0){const pe=d*(1+he/(he+hf))-df*he/(he+hf);m=pe*d<=0?0:Math.abs(pe)>2*Math.abs(d)?2*d:pe;}else m=d;
+    }else m=d;
+  }else if(rhythmSlideSegmentThrough(note,points,other)){
+    // 両側とも通り抜け: Steffen の傾き
+    const a=points[k-1],b=points[k],c=points[k+1],h0=Number(b.timeMs)-Number(a.timeMs),h1=Number(c.timeMs)-Number(b.timeMs);
+    const d0=rhythmSlideSecant(a,b),d1=rhythmSlideSecant(b,c);
+    if(!(h0>0)||!(h1>0)||d0*d1<=0)return 0;
+    const p=(d0*h1+d1*h0)/(h0+h1);
+    return (Math.sign(d0)+Math.sign(d1))*Math.min(Math.abs(d0),Math.abs(d1),.5*Math.abs(p));
+  }else{
+    // となりが直線・in・out・inout の区間: その区間の点 k での傾きに合わせる(折れ目を出さない)
+    const ease=rhythmSlideSegmentEase(note,points[other]);
+    m=rhythmSlideSecant(points[other],points[other+1])*rhythmSlideEaseEdgeSlope(ease,other<k);
+  }
+  // 行き過ぎないように、向きが逆なら0・急すぎるなら区間の傾きの2倍まで(両端とも2倍以内なら区間の外へ出ない)
+  if(m*d<=0)return 0;
+  return Math.abs(m)>2*Math.abs(d)?2*d:m;
+};
+// 区間 i-1 → i の、進み具合 p(0〜1)でのレーン(寄せる前)
+const rhythmSlideSegmentLane=(note,points,i,p)=>{
+  const a=points[i-1],b=points[i],ease=rhythmSlideSegmentEase(note,a);
+  if(ease!=='through')return Number(a.lane)+(Number(b.lane)-Number(a.lane))*rhythmSlideEaseProgress(ease,p);
+  const la=Number(a.lane)||0,lb=Number(b.lane)||0,h=Number(b.timeMs)-Number(a.timeMs),x=Math.max(0,Math.min(1,Number(p)||0));
+  if(!(h>0))return la+(lb-la)*x;
+  const ma=rhythmSlideThroughTangent(note,points,i-1,1)*h,mb=rhythmSlideThroughTangent(note,points,i,-1)*h,x2=x*x,x3=x2*x;
+  const lane=(2*x3-3*x2+1)*la+(x3-2*x2+x)*ma+(-2*x3+3*x2)*lb+(x3-x2)*mb;
+  return Math.max(Math.min(la,lb),Math.min(Math.max(la,lb),lane));
+};
+// 区間 i-1 → i の、進み具合 p での横の速さ(レーン/秒・向きは見ない)。rhythmSlideSegmentLane の微分
+const rhythmSlideSegmentLaneSpeed=(note,points,i,p)=>{
+  const a=points[i-1],b=points[i],ease=rhythmSlideSegmentEase(note,a),la=Number(a?.lane)||0,lb=Number(b?.lane)||0,h=Number(b?.timeMs)-Number(a?.timeMs);
+  if(!(h>0))return 0;
+  const x=Math.max(0,Math.min(1,Number(p)||0));
+  if(ease!=='through')return Math.abs(lb-la)/(h/1000)*rhythmSlideEaseSlope(ease,x);
+  const ma=rhythmSlideThroughTangent(note,points,i-1,1)*h,mb=rhythmSlideThroughTangent(note,points,i,-1)*h,x2=x*x;
+  const ds=(6*x2-6*x)*la+(3*x2-4*x+1)*ma+(-6*x2+6*x)*lb+(3*x2-2*x)*mb;
+  return Math.abs(ds)/(h/1000);
 };
 const rhythmSlideWidthAt=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
@@ -2449,7 +2515,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
     if(t<=b.timeMs){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs));
       const p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
-      return fit(Number(a.lane)+(Number(b.lane)-Number(a.lane))*rhythmSlideEaseProgress(rhythmSlideSegmentEase(note,a),p),t);
+      return fit(rhythmSlideSegmentLane(note,points,i,p),t);
     }
   }
   const last=points[points.length-1];
@@ -5537,7 +5603,7 @@ const mhHoldV2=(timeMs,subLane,subLaneWidth,endTimeMs,endFlick,holdPoints)=>Obje
     ?{holdPoints:Object.freeze(holdPoints.map(([pointTimeMs,pointSubLane,pointWidth])=>Object.freeze({timeMs:pointTimeMs,subLane:pointSubLane,subLaneWidth:pointWidth})))}
     :{}),
 });
-// 点の4つ目は曲線の番号(RHYTHM_SLIDE_EASES の並び。1=in・2=out・3=inout)。書いていない点は直線
+// 点の4つ目は曲線の番号(RHYTHM_SLIDE_EASES の並び。1=in・2=out・3=inout・4=through)。書いていない点は直線
 const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
   const slidePoints=Object.freeze(points.map(([pointTimeMs,lane,subLaneWidth,easeCode])=>Object.freeze({timeMs:pointTimeMs,lane,subLaneWidth,
     ...(easeCode>0&&RHYTHM_SLIDE_EASES[easeCode]?{ease:RHYTHM_SLIDE_EASES[easeCode]}:{})})));

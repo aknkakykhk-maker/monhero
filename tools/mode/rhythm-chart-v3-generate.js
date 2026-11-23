@@ -4068,6 +4068,11 @@ function smoothSlideWidthSteps(points){
 // 付けたあと、配信前の検査(rhythm-runtime-notes.js)と同じ式で「指が2本入らない重なり」を数え、
 // 付ける前に無かった重なりに関わったSLIDEは直線へ戻す。ノーツ数は変わらない。
 const SLIDE_EASE_MAX_LANES_PER_SEC=6;
+// Rev.42(2026-11-23 台帳 r1119-129・r1119-133「案A＋案B」・資料 docs/progress/beat/slide-shapes-2026-11-23/):
+// スライドの形の種類を増やす。上の付け方を済ませたあとに、①通り抜け(ゲーム本体の ease:'through')②弧 ③行って戻る を足す。
+// 作るのは新曲・作り直してよい譜面だけ(配信中の譜面は rhythm-released-chart-lock-check.js が見張る)。
+// 付けたあとの「重なったら直線へ戻す」は今までと同じ(通り抜けも戻す)
+const SLIDE_SHAPE_VARIETY=chartRevision>=42;
 function applySlideEase(notes){
   const runtime=require('./rhythm-runtime-notes.js');
   const rt=runtime.loadRuntime(),spanAt=runtime.makeSpanAt(rt);
@@ -4093,19 +4098,50 @@ function applySlideEase(notes){
   const strip=note=>{for(const p of note.slidePoints)delete p.ease;};
   const baseline=conflictKeys();
   const easedNotes=new Set();
-  let segments=0;
+  let segments=0,variety=0;
+  const shapes={through:0,arc:0,hairpin:0};
   notes.forEach((note,index)=>{
     if(note.type!=='SLIDE'||!Array.isArray(note.slidePoints)||note.slidePoints.length<2)return;
     const pts=note.slidePoints,dir=(a,b)=>Math.sign(Number(b.lane)-Number(a.lane));
+    const speedOf=i=>{const seconds=(gridTimeMs(pts[i+1].grid)-gridTimeMs(pts[i].grid))/1000;return seconds>0?Math.abs(Number(pts[i+1].lane)-Number(pts[i].lane))/seconds:Infinity;};
+    const dirOf=i=>i>=0&&i<pts.length-1?dir(pts[i],pts[i+1]):0;
+    // Rev.42: 平均の何倍の速さまで出る曲線か(in・out・通り抜けは2倍、inout は1.5倍)。山の速さが inout の上限(6×1.5)を超えない区間だけに使う
+    const peakOk=(i,factor)=>speedOf(i)*factor<=SLIDE_EASE_MAX_LANES_PER_SEC*1.5;
     for(let i=0;i<pts.length-1;i++){
-      const d=dir(pts[i],pts[i+1]);
-      const seconds=(gridTimeMs(pts[i+1].grid)-gridTimeMs(pts[i].grid))/1000;
-      const speed=seconds>0?Math.abs(Number(pts[i+1].lane)-Number(pts[i].lane))/seconds:Infinity;
-      if(d===0||speed>SLIDE_EASE_MAX_LANES_PER_SEC)continue;
-      const slowStart=(i>0?dir(pts[i-1],pts[i]):0)!==d,slowEnd=(i+2<pts.length?dir(pts[i+1],pts[i+2]):0)!==d;
+      const d=dirOf(i);
+      if(d===0||speedOf(i)>SLIDE_EASE_MAX_LANES_PER_SEC)continue;
+      const slowStart=dirOf(i-1)!==d,slowEnd=dirOf(i+1)!==d;
       const ease=slowStart&&slowEnd?'inout':slowStart?'in':slowEnd?'out':null;
       if(!ease)continue;
       pts[i].ease=ease;segments++;easedNotes.add(index);
+    }
+    if(!SLIDE_SHAPE_VARIETY)return;
+    // ① 通り抜け: 同じ向きへ続く区間の速さが変わる所(直線のままだと点で折れる)は、その続きの区間をまとめて通り抜けにする。
+    //    通り抜けは向きが変わる点・止まる区間のとなりでは傾き0になるので、ゆっくり動く所は今までどおり残る
+    for(let i=0;i<pts.length-1;){
+      const d=dirOf(i);
+      if(d===0){i++;continue;}
+      let j=i;while(j+1<pts.length-1&&dirOf(j+1)===d)j++;
+      const run=[];for(let k=i;k<=j;k++)run.push(k);
+      const uneven=run.some((k,n)=>n>0&&Math.abs(speedOf(k)-speedOf(k-1))>1e-6);
+      if(run.length>=2&&uneven&&run.every(k=>peakOk(k,2))){
+        for(const k of run){if(!pts[k].ease)segments++;pts[k].ease='through';}
+        easedNotes.add(index);shapes.through++;
+      }
+      i=j+1;
+    }
+    // ② 弧: 前後どちらにも折り返しの無い1区間(端・止まる区間にはさまれた区間)は、S字・弧・逆の弧を順に使う
+    // ③ 行って戻る: 1区間ずつの折り返し(端または止まる区間 → 折り返し → 端または止まる区間)は、2回に1回 out → in の丸い折り返しにする
+    const free=k=>dirOf(k)===0;// 区間 k が無い(端)か止まっている
+    for(let i=0;i<pts.length-1;i++){
+      const d=dirOf(i);
+      if(d===0||pts[i].ease!=='inout')continue;
+      if(free(i-1)&&free(i+1)){
+        const pick=['inout','out','in'][variety++%3];
+        if(pick!=='inout'&&peakOk(i,2)){pts[i].ease=pick;shapes.arc++;}
+      }else if(free(i-1)&&dirOf(i+1)===-d&&pts[i+1]?.ease==='inout'&&free(i+2)){
+        if(variety++%2===1&&peakOk(i,2)&&peakOk(i+1,2)){pts[i].ease='out';pts[i+1].ease='in';shapes.hairpin++;i++;}
+      }
     }
   });
   let reverted=0;
@@ -4118,7 +4154,7 @@ function applySlideEase(notes){
     }
   }
   const kept=notes.reduce((sum,note)=>sum+(note.type==='SLIDE'?note.slidePoints.filter(p=>p.ease).length:0),0);
-  return {segments:kept,notes:easedNotes.size,reverted};
+  return {segments:kept,notes:easedNotes.size,reverted,shapes};
 }
 
 
@@ -4223,7 +4259,7 @@ if(ending&&ending.active){
 {
   for(const difficulty of targets){
     const r=results[difficulty],eased=applySlideEase(r.notes);
-    (r.notice||(r.notice=[])).push(`スライドの曲線: ${eased.notes}本・${eased.segments}区間`+(eased.reverted?`（重なるので直線へ戻した ${eased.reverted}本）`:''));
+    (r.notice||(r.notice=[])).push(`スライドの曲線: ${eased.notes}本・${eased.segments}区間`+(SLIDE_SHAPE_VARIETY?`(通り抜け ${eased.shapes.through}・弧 ${eased.shapes.arc}・行って戻る ${eased.shapes.hairpin})`:'')+(eased.reverted?`（重なるので直線へ戻した ${eased.reverted}本）`:''));
   }
 }
 // 押さえている帯の中(同じ高さで重なる・幅1が絡む半レーン)にノーツを置かない(2026-10-13 社長「ホールド・スライド中に同じところにノーツを出すのはやめたほうがいい」)。

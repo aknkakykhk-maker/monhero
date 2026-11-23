@@ -127,7 +127,8 @@ const fastPairConflicts=(notes,spanAt)=>{
 // 行の書き方は tools/mode/rhythm-chart-v3-pipeline.js の runtimeRow と同じにする。
 // ここがずれると、直していないノーツまで差分に出てしまう。
 // 本体の RHYTHM_SLIDE_EASES と同じ並び(rhythm-slide-ease-check.js が突き合わせる)
-const SLIDE_EASE_CODES=Object.freeze(['linear','in','out','inout']);
+// 4=through(通り抜け・2026-11-23 r1119-133)。ゲーム本体の RHYTHM_SLIDE_EASES と同じ並び
+const SLIDE_EASE_CODES=Object.freeze(['linear','in','out','inout','through']);
 // 横フリックの向きの番号。本体の RHYTHM_FLICK_DIRS と同じ並び(rhythm-side-flick-check.js が突き合わせる)
 const FLICK_DIR_CODES=Object.freeze(['','left','right']);
 const runtimeRow=note=>{
