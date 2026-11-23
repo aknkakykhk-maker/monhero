@@ -957,11 +957,12 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 // 8表情を同じ枠・同じ顔の位置で切り出した組(tools/assistant/life-stand-from-fullbody.py)。表情ごとに見えている体の範囲が違う(normal だけ手を頭の上へ上げている)ので、
 //   どの表情も同じ組の normal の範囲で置く(表情を替えても顔が動かない)。2026-11-23 r1119-137 カードマスターの立ち絵を新しい全身画から作り直したとき
-const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master']);
+//   「フォルダ/接頭辞」なら、そのフォルダのその助手だけ(2026-11-23 r1119-153 えるびん: 表情ごとにポーズが違い、上げたこぶしで範囲が変わる)
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin', 'stand-normal/kiki', 'stand-halloween/kiki']);
 const assistantLifeStandFrameSrc = (src) => {
   const s = String(src || '');
   const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
-  if (!m || !ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || m[3] === 'normal') return src;
+  if (!m || m[3] === 'normal' || !(ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || ASSISTANT_LIFE_STAND_SAME_FRAME.includes(`${m[1]}/${m[2]}`))) return src;
   return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
 };
 const assistantLifeStandBox = (src) => new Promise((res) => {
@@ -1028,10 +1029,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0029, eye: 0.273, chin: 0.4302, m: 1.169 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
-  'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0877, eye: 0.3355, chin: 0.4298, m: 0.702 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0029, eye: 0.273, chin: 0.4302, m: 1.169 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
+  'stand-sekiyuou': { erubin: { top: 0.0137, eye: 0.2531, chin: 0.4299, m: 1.315 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
+  'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.149, eye: 0.3347, chin: 0.43, m: 0.709, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1161, eye: 0.321, chin: 0.4299, m: 0.81, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
