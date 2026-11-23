@@ -1,14 +1,17 @@
 {
-  "atsu": {"fullbody": "30a518f6ea50", "stand": "0a58f94c4948"},
+  "atsu": {"fullbody": "30a518f6ea50", "stand": "50ce778965da"},
   "erubin": {"fullbody": "1465993f3a9b", "stand": "56f53250b746"},
-  "erubin:sekiyuou": {"fullbody": "b07a74323d1e", "stand": "15bd233a130e"},
-  "kiki": {"fullbody": "b6894b7e5d1c", "stand": "64bbc1cc1b39"},
-  "kiki:halloween": {"fullbody": "3c099efb786f", "stand": "0e5971052c0c"},
-  "kiki:twintail": {"fullbody": "91a0baf56735", "stand": "394361cefd6f"},
-  "kyuko": {"fullbody": "08af0bf7a299", "stand": "ce4ab76c6c3f"},
-  "kyuko:winter": {"fullbody": "a5265e116729", "stand": "76d81f92265a"},
-  "momosuke": {"fullbody": "64362e6b2aff", "stand": "e561079e6064"},
-  "momosuke:halloween": {"fullbody": "b5c88eef3e71", "stand": "c7601ee098a2"},
-  "mua:card-master": {"fullbody": "cc376c4ae967", "stand": "4f1654e1fb63"},
-  "sorashido": {"fullbody": "2ef3edaea4aa", "stand": "c3ce7d7c0b93"}
+  "erubin:sekiyuou": {"fullbody": "9407e04b9687", "stand": "17f12b2a4756"},
+  "kiki": {"fullbody": "b6894b7e5d1c", "stand": "598f770717cb"},
+  "kiki:halloween": {"fullbody": "3c099efb786f", "stand": "ae229fd440ce"},
+  "kiki:twintail": {"fullbody": "91a0baf56735", "stand": "eccba97e6878"},
+  "kyuko": {"fullbody": "08af0bf7a299", "stand": "650c0645ff3d"},
+  "kyuko:winter": {"fullbody": "a5265e116729", "stand": "ee9fb81f3e43"},
+  "momosuke": {"fullbody": "64362e6b2aff", "stand": "69d615d43b70"},
+  "momosuke:halloween": {"fullbody": "b5c88eef3e71", "stand": "4c53a203ccc2"},
+  "mua": {"fullbody": "36a440fa9f31", "stand": "c028f03a9294"},
+  "mua:card-master": {"fullbody": "cc376c4ae967", "stand": "5c66c20d19ca"},
+  "mua:halloween": {"fullbody": "324508f8ce1d", "stand": "7d10f29e3a77"},
+  "sorashido": {"fullbody": "55a680ca124d", "stand": "7cf20f90d711"},
+  "sorashido:hosei": {"fullbody": "a566b6e5950e", "stand": "92551a582aa3"}
 }

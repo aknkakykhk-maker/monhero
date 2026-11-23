@@ -158,6 +158,8 @@ const headCenterX = (ctx, w, top, side) => {
   return count ? sum / count : w / 2;
 };
 
+// 接頭辞 → 全身画の名前(助手id)。違うのはみゅあだけ
+const FULLBODY_ID = { myua: 'mua' };
 const run = async () => {
   fs.mkdirSync(outDir, { recursive: true });
   const prefixes = assistantPrefixes();
@@ -167,6 +169,13 @@ const run = async () => {
   console.log(`対象の助手: ${prefixes.join(', ')}`);
   for (const file of files) {
     const prefix = prefixes.find(p => file.toLowerCase().startsWith(`${p.toLowerCase()}_`));
+    // 全身画から顔アイコンを作っている表情は上書きしない(2026-11-23 r1119-153 社長「助手絵は最新の全身絵に切り替えて」。
+    //   作り方は tools/assistant/life-stand-from-fullbody.py)。古い絵から作り直したいときだけ --force-old
+    if (!process.argv.includes('--force-old')) {
+      const ex = file.replace(/\.png$/i, '').slice(prefix.length + 1);
+      const fbName = `${FULLBODY_ID[prefix] || prefix}${costumeArg ? `_${path.basename(costumeArg)}` : ''}`;
+      if (fs.existsSync(path.join(__dirname, '..', 'monster-hero', 'images', 'assistant', 'fullbody', `${fbName}__${ex}.png`))) { console.log(`とばす: ${file}(全身画から作っている)`); continue; }
+    }
     const tune = PER_ASSISTANT[prefix] || {};
     const headRatio = Number.isFinite(tune.headRatio) ? tune.headRatio : HEAD_RATIO;
     const headTopSkip = Number.isFinite(tune.headTopSkip) ? tune.headTopSkip : HEAD_TOP_SKIP;
