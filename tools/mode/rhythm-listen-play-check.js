@@ -13,6 +13,8 @@ const argv = process.argv.slice(2);
 const arg = (name, fb = null) => { const i = argv.indexOf(`--${name}`); return i >= 0 && i + 1 < argv.length ? argv[i + 1] : fb; };
 const SONG = arg('song', 'monster_hero'), DIFF = arg('diff', 'EXPERT'), LIST = argv.includes('--list');
 const FROM = Number(arg('from', 0)), TO = Number(arg('to', 1e12));
+// --shot <ms> --out <png> … その時刻になった瞬間の画面を撮って終わる(止めると一時停止の窓が出るので止めない)(見た目を見比べるとき用)。--portrait で縦持ち(390×844)
+const SHOT = arg('shot') != null ? Number(arg('shot')) : null, OUT = arg('out'), PORTRAIT = argv.includes('--portrait');
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
@@ -23,12 +25,13 @@ const seed = (songId) => `(() => {
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
   put('mh_rhythm_hell_story_seen_v1', true); put('mh_story_assistant_chat_seen_v1', true);
+  put('mh_rhythm_owned_songs_v1', [${JSON.stringify(songId)}, ${JSON.stringify(songId.replace(/_short$/, ''))}]);   // 有料の曲も鑑賞できるように
   put('mh_rhythm_best_v1', { ${JSON.stringify(songId)}: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map(d => [d, { bestScore: 900000, maxCombo: 10, played: true, clear: true }])) });
 })()`;
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
-  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true });
+  const context = await browser.newContext({ viewport: PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 }, deviceScaleFactor: SHOT != null ? 2 : 1, hasTouch: true });
   const sb = createFakeSupabase();
   await context.route('**/*', async (route) => {
     const req = route.request(), u = req.url();
@@ -64,7 +67,7 @@ const seed = (songId) => `(() => {
   await page.evaluate((id) => { const b = document.querySelector(`[data-rhythm-song-version="${id}"]`); if (b && b.getAttribute('aria-pressed') !== 'true') b.click(); }, SONG); await page.waitForTimeout(800);
   await page.evaluate(() => document.querySelector('[data-rhythm-song-art-zoom]')?.click()); await page.waitForTimeout(1000);
   const picked = await page.evaluate((d) => { const b = document.querySelector(`[data-rhythm-listen-diff="${d}"]`); if (!b) return false; b.click(); return true; }, DIFF);
-  if (!picked) throw new Error(`鑑賞の難易度 ${DIFF} を選べない`);
+  if (!picked) { const have = await page.evaluate(() => [...document.querySelectorAll('[data-rhythm-listen-diff]')].map(b => b.getAttribute('data-rhythm-listen-diff')).join(',') + ' / ' + (document.querySelector('[data-rhythm-listen-panel]')?.parentElement?.innerText || '').slice(0, 80)); throw new Error(`鑑賞の難易度 ${DIFF} を選べない(選べるのは ${have})`); }
   await page.waitForTimeout(400);
   // 鳴らした音を数える(音そのものは変えない。呼ばれた回数を数えるだけ)
   await page.evaluate(() => {
@@ -85,6 +88,12 @@ const seed = (songId) => `(() => {
   await page.waitForFunction(() => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) > 0, null, { timeout: 30000, polling: 100 });
   while (FROM > 0) { const ms = await page.evaluate(() => window.__mhTestHooks.rhythmSongMs()); if (ms >= FROM - 10500) break;
     const ok = await page.evaluate(() => { const b = document.querySelector('button[aria-label="10秒送る"]'); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
+  if (SHOT != null) {
+    await page.waitForFunction((t) => (window.__mhTestHooks?.rhythmSongMs?.() ?? -1) >= t, SHOT, { timeout: 600000, polling: 5 });
+    await page.screenshot({ path: OUT || 'listen-shot.png' });
+    console.log(`  撮った: ${OUT || 'listen-shot.png'}(${SHOT}ms)`);
+    await context.close(); await browser.close(); return;
+  }
   // 曲が終わると演奏の読み取り口が消えるので、1秒ごとに控えておく
   let res = null;
   for (;;) {
