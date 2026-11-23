@@ -32,8 +32,9 @@ EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'e
 # key … 助手id(服があれば id:服)。name … 全身画の名前。stand … 立ち絵の置き場。prefix … 画像の接頭辞。chin_frac … 切った絵の高さのうち顎の位置
 # above … 顔の表の above(大きい飾りが場面の枠で切れないように)。face … 顔アイコンも作る(side=辺が目から顎の何倍か・down=顔を丸の真ん中よりどれだけ下へ)
 HEADS = {
-    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None),
-    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95),
+    # きき(ふだん・ハロウィン)は 2026-11-23 #7427 で表情ごとにポーズの違う全身画になった。えるびんと同じくそろえる
+    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7),
     'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95),
     # えるびん(2026-11-23 r1119-153 ポーズ違いの全身画から作り直し)。表情ごとに全身画の大きさが違うので match_scale でそろえ、

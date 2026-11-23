@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ce35b33f2a226cdc
+// source-sha256: ae04a661062113cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120650,7 +120650,7 @@ function AssistantLifeRoomSheet({
   }));
 }
 const ASSISTANT_LIFE_STAND_BOX = new Map();
-const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin']);
+const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin', 'stand-normal/kiki', 'stand-halloween/kiki']);
 const assistantLifeStandFrameSrc = src => {
   const s = String(src || '');
   const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
@@ -120843,10 +120843,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       above: 0.7
     },
     kiki: {
-      top: 0.0835,
-      eye: 0.3343,
+      top: 0.0877,
+      eye: 0.3355,
       chin: 0.4298,
-      m: 0.711
+      m: 0.702
     },
     atsu: {
       top: 0.0727,
@@ -120905,10 +120905,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       above: 0.95
     },
     kiki: {
-      top: 0.1499,
-      eye: 0.3353,
-      chin: 0.4304,
-      m: 0.708,
+      top: 0.149,
+      eye: 0.3347,
+      chin: 0.43,
+      m: 0.709,
       above: 0.95
     }
   },
