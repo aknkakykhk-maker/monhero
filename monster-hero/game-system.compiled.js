@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfdb4325f5e8dc80
+// source-sha256: 8e748074891158a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -67592,8 +67592,9 @@ const TimeOfDaySettingsPanel = () => {
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-slate-200"
   }, title), React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-400"
-  }, desc)), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, ['on', 'off'].map(v => React.createElement("button", {
     key: v,
@@ -69455,8 +69456,9 @@ function AssetDownloadPage({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "自動ダウンロード"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -69527,8 +69529,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "タクティクスバトル画面"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_SCREEN_STYLE_LABELS.map(option => React.createElement("button", {
       key: option.id,
@@ -69547,8 +69550,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "行動カードの見た目"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
       key: option.id,
@@ -69682,8 +69686,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "新しいバージョンのお知らせ"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, UPDATE_NOTICE_STYLE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69697,15 +69702,17 @@ function SettingsScreen({
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。'))), React.createElement("div", {
     "data-assistant-bubble-setting": true,
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -69724,8 +69731,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "ホームの助手コメント"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69752,8 +69760,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手どうしの会話を自動で進める"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -69896,13 +69905,11 @@ function ScreenThemeModal({
   const rows = [{
     id: 'title',
     label: 'タイトル画面',
-    desc: 'タイトル画面の絵',
     value: titleArt,
     set: onChangeTitleArt
   }, {
     id: 'home',
     label: 'ホーム画面',
-    desc: 'ホーム画面の背景',
     value: homeArt,
     set: onChangeHomeArt
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
@@ -69969,7 +69976,7 @@ function ScreenThemeModal({
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-white"
-  }, row.label), React.createElement("small", {
+  }, row.label), row.desc && row.desc !== row.label && React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -255193,11 +255200,19 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "デフォルトに戻す"), React.createElement("div", {
+    "data-bgm-close-band": true,
+    className: "sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"
+  }, React.createElement("button", {
     className: "mh-dialog-close",
     "data-mh-back": true,
+    style: {
+      position: 'static',
+      margin: 0,
+      boxShadow: '0 3px 0 #0009'
+    },
     onClick: closeBgmArrangement
-  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
+  }, "閉じる")))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
@@ -266741,17 +266756,22 @@ function MonsterHeroGame() {
         }
       }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
+      const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
+      const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          const src = l && STORY_SCENE_IMAGES[l.bg];
-          if (src && !pre.has(src)) {
-            pre.add(src);
-            try {
-              const im = new Image();
-              im.src = src;
-            } catch (e) {}
-          }
+          [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
+            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            if (src && !pre.has(src)) {
+              pre.add(src);
+              try {
+                const im = new Image();
+                im.src = src;
+              } catch (e) {}
+            }
+          });
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -266804,10 +266824,10 @@ function MonsterHeroGame() {
         }
       }
       const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
-      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
-      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageGuest = stageLine && !storyStillImg ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
-      const speakingGuest = isGuestWho(line.who);
+      const speakingGuest = isGuestWho(line.who) && !storyStillImg;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -266833,7 +266853,7 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -267018,6 +267038,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-still-on": storyStillImg ? '' : undefined,
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
@@ -267040,7 +267061,30 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), React.createElement("button", {
+      }), storyStillImg && React.createElement("div", {
+        key: `still:${storyStill}`,
+        "data-story-still": storyStill,
+        "data-story-still-has-tate": storyStillTate ? '' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-still': `url("${storyStillImg}")`,
+          ...(storyStillTate ? {
+            '--story-still-tate': `url("${storyStillTate}")`
+          } : {})
+        }
+      }, React.createElement("div", {
+        "data-story-still-area": true
+      }, React.createElement("img", {
+        "data-story-still-img": true,
+        src: storyStillImg,
+        alt: "",
+        draggable: false
+      })), storyStillTate && React.createElement("img", {
+        "data-story-still-tate": true,
+        src: storyStillTate,
+        alt: "",
+        draggable: false
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -267194,7 +267238,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
+          top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -267204,7 +267248,7 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
         }
       }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
@@ -273509,6 +273553,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -273521,6 +273595,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
