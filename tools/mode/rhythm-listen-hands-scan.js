@@ -14,6 +14,7 @@
 //
 //   node tools/mode/rhythm-listen-hands-scan.js                 全曲・全難易度(試し用の曲は除く)。取り逃しが1つでもあれば終了コード1
 //   node tools/mode/rhythm-listen-hands-scan.js --song mf_ichika_mix --diff HELL --list
+//   --sky         空中のノーツ(スライド・ホールド・タップ・フリック)の取れた数・落とした数を、曲・難易度・版ごとに出す(落としのある譜面は --sky なしでも出す)
 //   --old-shape   直す前の渡し方(読み取り口の控えの形)で回す。検査が取り逃しを見つけられることの確かめ用
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '../..');
@@ -38,7 +39,7 @@ vm.createContext(ctx);
 vm.runInContext(`${mode}\n${hands}\nthis.G={rhythmPreviewHandsStart,rhythmMatchInputBatch,rhythmFlickMatches,rhythmNoteIsSlide,rhythmSlidePoints,rhythmChartHasSky,
   RHYTHM_SKY_INPUT,RHYTHM_SKY_LIFT,RHYTHM_JUDGMENT_LINE_Y,RHYTHM_GESTURE_RUNTIME,RHYTHM_VIEW_ROTATION,RHYTHM_NOTE_TYPES,RHYTHM_SONGS,
   RHYTHM_HELL_CHARTS:typeof RHYTHM_HELL_CHARTS!=='undefined'?RHYTHM_HELL_CHARTS:null,RHYTHM_FLICK_MAX_MS,RHYTHM_FLICK_DISTANCE_PX,RHYTHM_END_FLICK_ARM_MS,
-  rhythmLaneAtPoint,rhythmSubLaneCoordinateAtPoint,rhythmSubLaneCoordinateAtLineIfBelow,rhythmNoteWantsEndFlick};`, ctx);
+  rhythmLaneAtPoint,rhythmSubLaneCoordinateAtPoint,rhythmTrackingLaneCoordinateAtPoint,rhythmSlideExpectedLane,rhythmSlideHasSky,rhythmNoteSkyHeight,rhythmSubLaneCoordinateAtLineIfBelow,rhythmNoteWantsEndFlick};`, ctx);
 const G = ctx.G;
 const rect = { left: 0, top: 0, width: W, height: H, right: W, bottom: H };
 // 回していない器(画面の座標 = 器の座標)
@@ -118,6 +119,13 @@ const checkChart = (c) => {
     } else if (isLong(n)) {
       const e = Number(n.endTimeMs);
       if (!up || Math.abs(up.t - e) > 40) fails.push({ index, what: `終わりで離さない(${up ? Math.round(up.t - e) + 'ms' : '離しなし'})` });
+      // なぞり: 押さえている間の指が、帯の真ん中(rhythmSlideExpectedLane)から半レーン以内にいるか。
+      //   押し始めたあとは横の位置だけで追う(空中の帯も判定ラインの高さに直した横の位置で見る)ので、その位置で比べる
+      if (G.rhythmNoteIsSlide(n)) {
+        const far = ev.filter(x => x.type === 'pointermove' && x.t > t + 30 && x.t < e - 50).map(x => Math.abs(G.rhythmTrackingLaneCoordinateAtPoint(x.x, x.y, rect) - G.rhythmSlideExpectedLane(n, x.t)))
+          .reduce((m, v) => Math.max(m, Number.isFinite(v) ? v : 9), 0);
+        if (far > .5) fails.push({ index, what: `なぞりが帯から ${far.toFixed(2)} レーン外れる` });
+      }
       if (G.rhythmNoteWantsEndFlick(n)) {
         const armAt = e - G.RHYTHM_END_FLICK_ARM_MS, moves = ev.filter(x => x.t >= armAt && x.t <= e + 20);
         const base = ev.filter(x => x.t <= armAt).pop() || moves[0];
@@ -139,11 +147,18 @@ const flickKind = n => { const sky = Number(n.skyHeight) > 0 ? '空中の' : '';
   if ((n.type === 'HOLD' || n.type === 'SLIDE') && G.rhythmNoteWantsEndFlick(n)) return '終点フリック';
   return null; };
 const flickAll = {}, flickMiss = {};
+// 空中のノーツの種類ごとの、取れた数 / 全数(2026-11-23 社長「むしろスカイスライドを押せてないね」)。--sky で曲・難易度・版ごとにも出す
+const SKY_LIST = argv.includes('--sky');
+const skyKind = n => G.rhythmNoteIsSlide(n) ? (G.rhythmSlideHasSky(n) ? '空中スライド' : null) : G.rhythmNoteSkyHeight(n) > 0 ? (n.type === 'HOLD' ? '空中ホールド' : n.type === 'FLICK' ? '空中フリック' : '空中タップ') : null;
+const skyAll = {}, skyMiss = {};
 const t0 = Date.now();
 for (const c of charts) {
   const fails = checkChart(c);
   for (const n of c.notes) { const k = flickKind(n); if (k) flickAll[k] = (flickAll[k] || 0) + 1; }
   for (const i of new Set(fails.map(f => f.index))) { const k = flickKind(c.notes[i]); if (k) flickMiss[k] = (flickMiss[k] || 0) + 1; }
+  { const a = {}, m = {}, bad = new Set(fails.map(f => f.index));
+    c.notes.forEach((n, i) => { const k = skyKind(n); if (!k) return; a[k] = (a[k] || 0) + 1; skyAll[k] = (skyAll[k] || 0) + 1; if (bad.has(i)) { m[k] = (m[k] || 0) + 1; skyMiss[k] = (skyMiss[k] || 0) + 1; } });
+    if (Object.keys(a).length && (SKY_LIST || Object.keys(m).length)) console.log(`  空中 ${c.songId} ${c.diff}: ${Object.keys(a).sort().map(k => `${k} 取れた ${a[k] - (m[k] || 0)} / 落とした ${m[k] || 0}`).join(' ・ ')}`); }
   if (!fails.length) continue;
   badCharts++; total += fails.length;
   const ks = {}; for (const f of fails) { const k = kindOf(c.notes[f.index]); ks[k] = (ks[k] || 0) + 1; kinds[k] = (kinds[k] || 0) + 1; }
@@ -152,4 +167,5 @@ for (const c of charts) {
 }
 console.log(`${total ? '✗' : '✓'} 曲鑑賞の自動の手: ${charts.length} 譜面を確かめた / 取り逃しのある譜面 ${badCharts} / 取り逃し ${total}${total ? ` (${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(' / ')})` : ''} / ${((Date.now() - t0) / 1000).toFixed(0)}秒${OLD ? ' 〔直す前の渡し方〕' : ''}`);
 console.log(`  フリックの種類ごと(取れた数 / 全数): ${Object.keys(flickAll).sort().map(k => `${k} ${flickAll[k] - (flickMiss[k] || 0)}/${flickAll[k]}`).join(' ・ ')}`);
+console.log(`  空中のノーツの種類ごと(取れた数 / 全数): ${Object.keys(skyAll).sort().map(k => `${k} ${skyAll[k] - (skyMiss[k] || 0)}/${skyAll[k]}`).join(' ・ ')}`);
 process.exitCode = total ? 1 : 0;
