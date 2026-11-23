@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 48bf2d5d2db2bc96
+// generated-sha256: 9525fa96ddafe81a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24631,6 +24631,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   const isShortScreen=useRhythmShortPortrait();
   const playedSongCount=React.useMemo(()=>rhythmPlayedSongCount(bestRecords),[bestRecords]);
   const noticeOpen=rhythmSelectNoticeOpen(state,playedSongCount,isShortScreen);
+  // 横の右の欄に助手の一言が収まるか(2026-11-23 r1119-140 社長「助手のひとことが重なってる」・iPhone の🔄横)。
+  // 欄があふれると、下に貼り付けた「決定」の段(sticky)が一言の上にかぶさって読めなくなる。iPhone は HIGH SCORE の札などが
+  // 検査の端末より高く、高さの決め打ち(container 300px)では見分けられなかったので、実際の欄で測る。
+  //   0: そのまま / 1: 上を詰める(MAX COMBO の行を畳む・難易度の札を44px) / 2: それでも入らない → 一言を出さない(低い欄と同じ扱い)
+  const detailRef=React.useRef(null);
+  const [noteFit,setNoteFit]=React.useState(0);
+  const [noteFitKey,setNoteFitKey]=React.useState(0);
   const [sortOpen,setSortOpen]=React.useState(false);
   const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
@@ -24957,6 +24964,34 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 className={`flex min-h-[36px] min-w-0 ${viewWide?'max-w-[6.5rem] px-2 text-[11px]':'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
                 <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})();
+  // 横の一言が欄に収まるかを測る(上の noteFit)。曲・難易度・開け閉め・欄の大きさが変わったら、詰めない形から測り直す
+  const noteFitShow=!!notice&&noticeOpen&&viewWide;
+  React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
+  // 欄の大きさと、中の格子の高さ(字の太さ・絵の読み込みで後から変わる)の両方を見張る。詰めた形で高さが変わったときは測り直さない
+  const noteFitRo=React.useRef(null);
+  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:2;
+  React.useLayoutEffect(()=>{
+    const el=detailRef.current;
+    const grid=el&&el.querySelector('[data-rhythm-song-detail-grid]');
+    if(noteFitRo.current&&grid)noteFitRo.current.observe(grid);
+    if(!noteFitShow||!el||noteFit>=2)return;
+    if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit+1);
+  });
+  useEffect(()=>{
+    const el=detailRef.current;
+    if(!el||typeof ResizeObserver==='undefined')return undefined;
+    let lastBox='';
+    const ro=new ResizeObserver(()=>{
+      const box=`${el.clientWidth}x${el.clientHeight}`;
+      if(box!==lastBox){lastBox=box;setNoteFitKey(k=>k+1);return;}
+      // 中身が伸びて欄があふれたときだけ測り直す(詰めて縮んだときは何もしない)
+      if(noteFitNow.current<2&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
+    });
+    noteFitRo.current=ro;
+    ro.observe(el);
+    return()=>{ro.disconnect();noteFitRo.current=null;};
+  },[]);
+  const noteTight=noteFitShow&&noteFit>=1;
   return <div data-rhythm-song-select data-rhythm-song-genre={genre?genre.id:'all'} className="flex min-h-0 flex-1 flex-col landscape:flex-row">
     {/* 曲の一覧。案内(notice)はスクロールの**外**へ置き、動くのは曲の並びだけにする。
         中に入れていたときは、曲を探して指を動かすと案内も一緒に流れて場所を食っていた
@@ -25094,7 +25129,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     </div>
 
     {/* 選んでいる曲 */}
-    <aside data-rhythm-song-detail
+    <aside data-rhythm-song-detail ref={detailRef} data-rhythm-song-note-fit={noteFit}
       className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
       style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
@@ -25143,7 +25178,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
-          <div data-rhythm-song-stats style={{gridArea:'stats'}} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:[@container(max-height:300px)]:py-1">
+          <div data-rhythm-song-stats style={{gridArea:'stats'}} className={`grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 landscape:[@container(max-height:300px)]:py-1 ${noteTight?'py-1':'py-1.5'}`}>
             {/* スコアの字の大きさは、置ける幅と桁数から決める(2026-09-26・ユーザー報告「スコアの文字が切れてる」)。
                 端末の字(iPhone の太字の数字)は検査の端末より幅が広く、決め打ちの22pxでは「954,0…」と切れていた。
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
@@ -25155,7 +25190,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
                 {best&&best.played?best.bestScore.toLocaleString():'—'}
               </b>
-              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[10px] font-black text-slate-400 landscape:[@container(max-height:300px)]:hidden"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
+              <span data-rhythm-demo-combo className={`${noteTight?'hidden':'block'} whitespace-nowrap text-[10px] font-black text-slate-400 landscape:[@container(max-height:300px)]:hidden`}><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
             <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
           </div>
@@ -25178,7 +25213,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] ${noteTight?'landscape:h-[44px]':'landscape:h-[48px]'} landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
               {/* 鍵のあいだは赤くしない(2026-11-23 r1119-126 社長「難易度のヘルだけ解放されてないのに色がある」)。ほかの鍵の難易度と同じ灰色で、開いたら赤 */}
@@ -25204,7 +25239,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               (iPhone の🔄横は画面が低く、マルチの曲えらびで「この曲で決定」が欄の下へ隠れていた・2026-11-08 社長「下が切れてる」)。
               上下の余白は付けない(付けると欄が8px伸び、小さい横画面で下の助手の吹き出しがはみ出した・rhythm-song-notice-landscape-check) */}
           {/* 横の助手の一言は「決定」のすぐ上(欄の下のほう)に置く。決定より下に置くと、決定が欄の下端から浮いていた(2026-11-22 r1119-094) */}
-          {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
+          {/* 欄があふれると決定の段(sticky)が一言にかぶさる(2026-11-23 r1119-140)。上の noteFit で詰め、それでも入らないときは出さない */}
+          {notice&&noticeOpen&&noteFit<2&&<div data-rhythm-song-notice-landscape className="hidden min-w-0 self-end landscape:block" style={{gridArea:'note'}}>{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
           {/* 「決定」はいちばん強いボタンにする(高さ52px・幅は段の大半)。「ランダム」は細く・弱く(2026-11-22 r1119-094・点検 N2) */}
           {/* 縦は高さ60px(2026-11-23 API総点検② V1・V27)。横は52pxのまま(高くすると、すぐ上の助手の一言がこの段に隠れる) */}
           <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:self-end landscape:bg-slate-950/95" style={{gridArea:'act'}}>
@@ -146157,21 +146193,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
                 <ChevronRight size={16} className="shrink-0 text-violet-300/80"/>
               </span>
-              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60">{desc}</small>
+              {/* 説明は文節で折る(API 総点検③: 「振り/直す」の途中で折れていた) */}
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60" style={JA_LABEL_STYLE}>{typeof desc==='string'?jaWrap(desc):desc}</small>
             </button>
           );
           return (
           <div data-mh-screen className={SCREEN_SHELL_CLASS}>
             <ScreenHead title="神殿" accent="text-violet-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
-            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080) */}
-            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`}>
+            {/* 横の低い画面は2列(2026-11-22 点検 #7059: 1列で5つ目から先が切れていた・r1119-080)。行は中身の高さ(auto-rows-max: 縮められて説明が下の札に重なっていた・API 総点検③) */}
+            <div className={`w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`}>
               {templeLink(<PlusCircle size={18}/>,'再生','ベースモンから新しいマスモンを再生する',()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');})}
               {templeLink(<Layers size={18}/>,'合体','2体のマスモンを合体して新しい個体へつなぐ',()=>{resetFusionFlow();setGameState('MASU_FUSION');})}
               {templeLink(<Gem size={18}/>,'寄付','マスモンを寄付して報酬を受け取る',()=>{resetDonationFlow();setGameState('MASU_DONATION');})}
               {templeLink(<Coins size={18}/>,'お布施','ダイヤを払ってマスモンへ直接経験値を与える',()=>{setGameState('MASU_OFFERING');})}
               {templeLink(<ArrowUpCircle size={18}/>,'限界突破','マスモンのレベル上限を引き上げる',()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');})}
-              {templeLink(<RotateCcw size={18}/>,'転生','Lvを99下げて強化Pを獲得し、育成を振り直す',()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
+              {templeLink(<RotateCcw size={18}/>,'転生',jaWrapParts('Lvを99下げて',<span style={{whiteSpace:'nowrap'}}>強化Pを</span>,'獲得し、育成を振り直す'),()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');setGameState('MASU_REINCARNATE');})}
               {templeLink(<Sparkles size={18}/>,'超越','さらなる成長へ進むための限界を超える',()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');},{className:'mh-transcend-link'})}
               {templeLink(<Crown size={18}/>,'魂格進化','魂格を進めてLv上限をさらに解放する',()=>{setSoulRankSelectedId(null);setSoulRankError('');setGameState('MASU_SOUL_RANK');},{'data-soul-rank-link':true})}
             </div>
@@ -149700,7 +149737,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
           // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
           // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
-          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&String(activeGroup.label||'').includes(p.series)?`${p.ep} ${p.sub}`.trim():t;};
+          // まとまりの話がみな同じ作品名の続きものなら、その作品名(まとまりの名前に入っていなくても)を札から外し、見出しの下に1回だけ出す
+          // (API 総点検③: 「花の女3人の新曲」の札8枚すべてに「咲かせて！ハナウタ・ノート」が繰り返し出て、作品名の途中でも折れていた)
+          const sharedSeries=(()=>{if(!activeGroup)return '';const ps=activeGroup.events.map(e=>storyEpisodeTitleParts(e.title));const s0=ps[0]&&ps[0].series;return s0&&ps.every(p=>p.serial&&p.series===s0)?s0:'';})();
+          const seriesInLabel=(series)=>!!series&&!!activeGroup&&String(activeGroup.label||'').includes(series);
+          const episodeTitle=(t)=>{const p=storyEpisodeTitleParts(t);return p.serial&&p.series&&activeGroup&&(seriesInLabel(p.series)||p.series===sharedSeries)?`${p.ep} ${p.sub}`.trim():t;};
           const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
           <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -149743,6 +149784,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex min-h-[44px] shrink-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-slate-800 px-2.5 text-slate-300 active:scale-95"><ArrowLeft size={18}/><span className="text-[11px] font-black">戻る</span></button>
                     <span className="min-w-0 flex-1 text-center">
                       <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true" data-event-replay-head-emoji className="block text-[16px] leading-none mb-0.5">{activeGroup.emoji}</span>{jaWrap(activeGroup.label)}</b>
+                      {sharedSeries&&!seriesInLabel(sharedSeries)&&<small data-event-replay-series className="block text-[10px] font-black leading-tight text-slate-300" style={JA_LABEL_STYLE}>{titleWrap(sharedSeries)}</small>}
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
                     <span className="w-[76px] shrink-0" aria-hidden="true"/>

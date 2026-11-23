@@ -27,7 +27,7 @@ await page.getByText('TAP TO START').click();await page.waitForTimeout(2500);awa
 await page.evaluate(()=>{setInterval(()=>{if(window.__noAutoClose)return;const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|(?:始|はじ)める|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
 await page.waitForFunction(()=>document.querySelector('button[data-home-fac="rhythm"]')&&!document.querySelector('[role=dialog]'),null,{timeout:40000});
 
-await page.evaluate(()=>{try{localStorage.setItem('mh_rhythm_select_view_v1',JSON.stringify({noticeOpen:true,noticeTouched:true}));}catch(e){}});
+await page.evaluate(()=>{try{localStorage.setItem('mh_rhythm_select_view_v1',JSON.stringify({noticeOpen:true,noticeTouched:true,genre:'event'}));}catch(e){}});
 await page.locator('button[data-home-fac="rhythm"]').click();
 await page.locator('[data-rhythm-mode-solo]').click();
 await page.waitForSelector('[data-rhythm-song-detail]',{timeout:20000});await page.waitForTimeout(1500);
@@ -47,6 +47,31 @@ for(const [w,h,rot,lab] of [[844,390,false,'横画面'],[667,375,false,'小さ�
   check(`曲えらび(${lab}): 横の助手の吹き出しが画面の外へはみ出さず、右の欄に収まる`,!r.err&&!r.out&&r.inAside,JSON.stringify(r));
   check(`曲えらび(${lab}): 横の吹き出しは1行の形(oneLine)`,!!r.one,JSON.stringify(r));
 }
+// 一言が「決定」の段・難易度の列と重ならない(2026-11-23 r1119-140 社長の写真 docs/progress/beat/bubble-overlap-2026-11-23/)。
+// iPhone では HIGH SCORE の札などが検査の端末より高く、欄があふれて、下に貼り付けた決定の段が一言にかぶさっていた。
+// イベントで絞り込み、きみ待ち♡ループを選んだ形で、iPhone の大きさ(切り欠きあり)と🔄横を測る。札を高くして iPhone をまねた形(+14px)も測る
+const setSafe=(v)=>page.evaluate((v)=>{const r=document.documentElement.style;Object.entries(v).forEach(([k,x])=>r.setProperty(`--mh-safe-${k}`,x));},v);
+const NO={top:'0px',bottom:'0px',left:'0px',right:'0px'},LAND={top:'0px',bottom:'21px',left:'47px',right:'47px'},PORTR={top:'47px',bottom:'34px',left:'0px',right:'0px'};
+for(const [w,h,rot,safe,tall,lab] of [[844,390,false,LAND,0,'iPhone横・切り欠き'],[844,390,false,NO,14,'iPhone横・札が高い'],[667,375,false,NO,0,'小さい横'],[932,430,false,LAND,14,'大きい横・札が高い'],
+  [390,844,true,PORTR,0,'🔄横 390'],[390,844,true,PORTR,14,'🔄横 390・札が高い'],[375,667,true,NO,0,'🔄横 375'],[430,932,true,PORTR,14,'🔄横 430・札が高い']]){
+  await page.setViewportSize({width:w,height:h});await page.evaluate(on=>RHYTHM_VIEW_ROTATION.set(on?90:0),rot);await setSafe(safe);
+  await page.evaluate((t)=>{let st=document.getElementById('__tall');if(!st){st=document.createElement('style');st.id='__tall';document.head.appendChild(st);}st.textContent=t?`[data-rhythm-demo-best]{margin-bottom:${t}px}`:'';},tall);
+  await page.waitForTimeout(rot?1300:800);
+  const row=page.locator('[data-rhythm-song-list] >> text=きみ待ち♡ループ').first();
+  if(await row.count())await row.click({force:true}).catch(()=>{});else{const any=page.locator('text=きみ待ち♡ループ').first();if(await any.count())await any.click({force:true}).catch(()=>{});}
+  await page.waitForTimeout(700);
+  if(process.env.MH_SHOT_DIR)await page.screenshot({path:path.join(process.env.MH_SHOT_DIR,`song-notice-event-${lab.replace(/[ ・+]/g,'_')}.png`)});
+  const r=await page.evaluate(()=>{const vis=s=>[...document.querySelectorAll(s)].filter(e=>e.getBoundingClientRect().width>0)[0];
+    const R=e=>{if(!e)return null;const b=e.getBoundingClientRect();return {l:b.left,t:b.top,r:b.right,b:b.bottom};};
+    const n=R(vis('[data-rhythm-song-notice-landscape]')),act=R(vis('[data-rhythm-song-act]')),diff=R(vis('[data-rhythm-difficulty-row]')),as=vis('[data-rhythm-song-detail]');
+    const hit=(a,b)=>!!a&&!!b&&Math.min(a.r,b.r)-Math.max(a.l,b.l)>1&&Math.min(a.b,b.b)-Math.max(a.t,b.t)>1;
+    return {shown:!!n,overAct:hit(n,act),overDiff:hit(n,diff),overflow:as?as.scrollHeight-as.clientHeight:null,fit:as&&as.getAttribute('data-rhythm-song-note-fit'),
+      song:(document.querySelector('[data-rhythm-song-detail] [data-rhythm-song-title]')||{}).textContent||''};});
+  check(`曲えらび(${lab}): 一言が決定の段・難易度の列と重ならない`,!r.overAct&&!r.overDiff,JSON.stringify(r));
+  check(`曲えらび(${lab}): 右の欄があふれない(決定の段が上にかぶさらない)`,r.overflow!==null&&r.overflow<=1,JSON.stringify(r));
+  if(w>=844||rot&&h>=844)check(`曲えらび(${lab}): iPhone の大きさでは一言が出ている`,r.shown,JSON.stringify(r));
+}
+await page.evaluate(()=>{const st=document.getElementById('__tall');if(st)st.remove();});await setSafe(NO);
 // 押すと説明が開く(1行にしても、全文は「詳しく」で読める)
 await page.setViewportSize({width:844,height:390});await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));await page.waitForTimeout(800);
 // 起動の窓を自動で閉じる仕掛けを止めてから押す(開いた説明まで閉じてしまうため)

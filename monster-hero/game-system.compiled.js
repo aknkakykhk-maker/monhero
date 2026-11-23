@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d0201a1c1556ddc
+// source-sha256: 4888a2b742479bd2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39359,6 +39359,9 @@ const RhythmSongSelect = ({
   const isShortScreen = useRhythmShortPortrait();
   const playedSongCount = React.useMemo(() => rhythmPlayedSongCount(bestRecords), [bestRecords]);
   const noticeOpen = rhythmSelectNoticeOpen(state, playedSongCount, isShortScreen);
+  const detailRef = React.useRef(null);
+  const [noteFit, setNoteFit] = React.useState(0);
+  const [noteFitKey, setNoteFitKey] = React.useState(0);
   const [sortOpen, setSortOpen] = React.useState(false);
   const [genreOpen, setGenreOpen] = React.useState(false);
   const [artZoom, setArtZoom] = React.useState(false);
@@ -39707,6 +39710,41 @@ const RhythmSongSelect = ({
       }, "🏆"));
     }));
   })();
+  const noteFitShow = !!notice && noticeOpen && viewWide;
+  React.useLayoutEffect(() => {
+    setNoteFit(0);
+  }, [noteFitShow, noteFitKey, song && song.songId, difficulty && difficulty.id]);
+  const noteFitRo = React.useRef(null);
+  const noteFitNow = React.useRef(0);
+  noteFitNow.current = noteFitShow ? noteFit : 2;
+  React.useLayoutEffect(() => {
+    const el = detailRef.current;
+    const grid = el && el.querySelector('[data-rhythm-song-detail-grid]');
+    if (noteFitRo.current && grid) noteFitRo.current.observe(grid);
+    if (!noteFitShow || !el || noteFit >= 2) return;
+    if (el.scrollHeight > el.clientHeight + 1) setNoteFit(noteFit + 1);
+  });
+  useEffect(() => {
+    const el = detailRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let lastBox = '';
+    const ro = new ResizeObserver(() => {
+      const box = `${el.clientWidth}x${el.clientHeight}`;
+      if (box !== lastBox) {
+        lastBox = box;
+        setNoteFitKey(k => k + 1);
+        return;
+      }
+      if (noteFitNow.current < 2 && el.scrollHeight > el.clientHeight + 1) setNoteFitKey(k => k + 1);
+    });
+    noteFitRo.current = ro;
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      noteFitRo.current = null;
+    };
+  }, []);
+  const noteTight = noteFitShow && noteFit >= 1;
   return React.createElement("div", {
     "data-rhythm-song-select": true,
     "data-rhythm-song-genre": genre ? genre.id : 'all',
@@ -39917,6 +39955,8 @@ const RhythmSongSelect = ({
     }, " イベント対象"))))));
   }))))), React.createElement("aside", {
     "data-rhythm-song-detail": true,
+    ref: detailRef,
+    "data-rhythm-song-note-fit": noteFit,
     className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]",
     style: {
       paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
@@ -40003,7 +40043,7 @@ const RhythmSongSelect = ({
     style: {
       gridArea: 'stats'
     },
-    className: "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5 landscape:[@container(max-height:300px)]:py-1"
+    className: `grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 landscape:[@container(max-height:300px)]:py-1 ${noteTight ? 'py-1' : 'py-1.5'}`
   }, React.createElement("div", {
     className: "min-w-0 [container-type:inline-size]"
   }, React.createElement("small", {
@@ -40024,7 +40064,7 @@ const RhythmSongSelect = ({
     } : undefined
   }, best && best.played ? best.bestScore.toLocaleString() : '—'), React.createElement("span", {
     "data-rhythm-demo-combo": true,
-    className: "block whitespace-nowrap text-[10px] font-black text-slate-400 landscape:[@container(max-height:300px)]:hidden"
+    className: `${noteTight ? 'hidden' : 'block'} whitespace-nowrap text-[10px] font-black text-slate-400 landscape:[@container(max-height:300px)]:hidden`
   }, React.createElement("span", {
     className: "[@container(max-width:120px)]:hidden"
   }, "MAX "), "COMBO ", React.createElement("b", {
@@ -40058,7 +40098,7 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] ${noteTight ? 'landscape:h-[44px]' : 'landscape:h-[48px]'} landscape:[@container(max-height:300px)]:h-[44px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, item.id === 'HELL' ? React.createElement("b", {
       "data-rhythm-hell-level": true,
       className: `block text-[21px] tabular-nums landscape:text-[19px]${open ? ' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]' : ''}`
@@ -40089,9 +40129,9 @@ const RhythmSongSelect = ({
     "data-rhythm-difficulty-lock-hint": true,
     title: lockHint,
     className: "mt-1 truncate text-[10px] font-black leading-tight text-slate-400"
-  }, lockHint)), notice && noticeOpen && React.createElement("div", {
+  }, lockHint)), notice && noticeOpen && noteFit < 2 && React.createElement("div", {
     "data-rhythm-song-notice-landscape": true,
-    className: "hidden min-w-0 self-end landscape:block landscape:[@container(max-height:300px)]:hidden",
+    className: "hidden min-w-0 self-end landscape:block",
     style: {
       gridArea: 'note'
     }
@@ -257878,8 +257918,9 @@ function MonsterHeroGame() {
         size: 16,
         className: "shrink-0 text-violet-300/80"
       })), React.createElement("small", {
-        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60"
-      }, desc));
+        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60",
+        style: JA_LABEL_STYLE
+      }, typeof desc === 'string' ? jaWrap(desc) : desc));
       return React.createElement("div", {
         "data-mh-screen": true,
         className: SCREEN_SHELL_CLASS
@@ -257894,7 +257935,7 @@ function MonsterHeroGame() {
         scene: "temple",
         compact: true
       })), React.createElement("div", {
-        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start ${SCREEN_LIST_CLASS}`
+        className: `w-full max-w-md mx-auto space-y-2 [@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:500px)]:gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:500px)]:content-start [@media(orientation:landscape)_and_(max-height:500px)]:auto-rows-max ${SCREEN_LIST_CLASS}`
       }, templeLink(React.createElement(PlusCircle, {
         size: 18
       }), '再生', 'ベースモンから新しいマスモンを再生する', () => {
@@ -257924,7 +257965,11 @@ function MonsterHeroGame() {
         setGameState('MASU_REBIRTH');
       }), templeLink(React.createElement(RotateCcw, {
         size: 18
-      }), '転生', 'Lvを99下げて強化Pを獲得し、育成を振り直す', () => {
+      }), '転生', jaWrapParts('Lvを99下げて', React.createElement("span", {
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, "強化Pを"), '獲得し、育成を振り直す'), () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
         setReincarnateTimes(1);
@@ -265816,9 +265861,16 @@ function MonsterHeroGame() {
         return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
       };
       const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      const sharedSeries = (() => {
+        if (!activeGroup) return '';
+        const ps = activeGroup.events.map(e => storyEpisodeTitleParts(e.title));
+        const s0 = ps[0] && ps[0].series;
+        return s0 && ps.every(p => p.serial && p.series === s0) ? s0 : '';
+      })();
+      const seriesInLabel = series => !!series && !!activeGroup && String(activeGroup.label || '').includes(series);
       const episodeTitle = t => {
         const p = storyEpisodeTitleParts(t);
-        return p.serial && p.series && activeGroup && String(activeGroup.label || '').includes(p.series) ? `${p.ep} ${p.sub}`.trim() : t;
+        return p.serial && p.series && activeGroup && (seriesInLabel(p.series) || p.series === sharedSeries) ? `${p.ep} ${p.sub}`.trim() : t;
       };
       const titleWrap = t => String(t || '').split(/(\s+)/).map((x, i) => !x || /^\s+$/.test(x) ? x : [...x].length <= 12 ? React.createElement("span", {
         key: i,
@@ -265919,7 +265971,11 @@ function MonsterHeroGame() {
         "aria-hidden": "true",
         "data-event-replay-head-emoji": true,
         className: "block text-[16px] leading-none mb-0.5"
-      }, activeGroup.emoji), jaWrap(activeGroup.label)), React.createElement("small", {
+      }, activeGroup.emoji), jaWrap(activeGroup.label)), sharedSeries && !seriesInLabel(sharedSeries) && React.createElement("small", {
+        "data-event-replay-series": true,
+        className: "block text-[10px] font-black leading-tight text-slate-300",
+        style: JA_LABEL_STYLE
+      }, titleWrap(sharedSeries)), React.createElement("small", {
         className: "block text-[10px] font-black tabular-nums",
         style: {
           color: activeGroup.color
