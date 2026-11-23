@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 982602fd4ac74958
+// source-sha256: ce35b33f2a226cdc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -821,7 +821,7 @@ const TACTICS_MODE = Object.freeze({
   emoji: '🎯',
   color: '#fb923c',
   tagline: '強化を選んでじっくり攻略する、基本のモード',
-  highlights: [['🏆', '強化を選んでスコアを伸ばす王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
+  highlights: [['🏆', '技を見てから強化を選ぶ王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
   points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['❤️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['📈', 'WAVEのあいだの強化', 'クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'], ['👹', '難しさ', '難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、間合い攻撃・連撃・貫通撃・攻撃力アップなど、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てたモンスターを連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'], ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。']]
 });
 const TACTICS_SPECIES_MODE = Object.freeze({
@@ -988,7 +988,7 @@ const BATTLE_MODES = [{
   emoji: '🏆',
   color: '#818cf8',
   tagline: '強化を選んでじっくり攻略する、基本のモード',
-  highlights: [['🏆', '強化を選んでスコアを伸ばす王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'スコアランキングに反映される']],
+  highlights: [['🏆', '伸ばす強化を自分で決める王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'スコアランキングに反映される']],
   points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べるので、編成のかみ合わせを考えながら組み立てられます。ブリーダーの教えもここで選びます。'], ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、一番素直な難しさです。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わるモンスターは所持しているモンスターから選べます。'], ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']]
 }, {
   id: BATTLE_MODE_QUICK,
@@ -6918,6 +6918,12 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP'
 const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW', 'OLD']);
 const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_SLIDE_COLOR_LABELS = Object.freeze([['HEIGHT', '空中・地上で色分け'], ['HAND', '左右の手で色分け']]);
+const RHYTHM_SKY_SLIDE_COLORS = Object.freeze(RHYTHM_SKY_SLIDE_COLOR_LABELS.map(([id]) => id));
+const RHYTHM_SKY_SLIDE_COLOR_NOTES = Object.freeze({
+  HEIGHT: '空中を通る所は桃、地上を通る所は青になります。',
+  HAND: '左手で取る帯は青、右手で取る帯は桃になります（前の見た目）。'
+});
 const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({
   A: '道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',
   B: '少し遅れて、画面の上から空の高さで出てきます。'
@@ -7271,6 +7277,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   roadDepth: 'NORMAL',
   skyRise: 'NOW',
   skyRiseType: 'A',
+  skySlideColor: 'HEIGHT',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -7564,6 +7571,7 @@ const normalizeRhythmSettings = value => {
     roadDepth: RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth) ? source.roadDepth : DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise: RHYTHM_SKY_RISE_MODES.includes(source.skyRise) ? source.skyRise : DEFAULT_RHYTHM_SETTINGS.skyRise,
     skyRiseType: RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType) ? source.skyRiseType : DEFAULT_RHYTHM_SETTINGS.skyRiseType,
+    skySlideColor: RHYTHM_SKY_SLIDE_COLORS.includes(source.skySlideColor) ? source.skySlideColor : DEFAULT_RHYTHM_SETTINGS.skySlideColor,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -38541,6 +38549,12 @@ const RhythmOptions = ({
     style: JA_WRAP_STYLE
   }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
     full: true
+  }), field('空中スライドの色', React.createElement(React.Fragment, null, segments('skySlideColor', RHYTHM_SKY_SLIDE_COLOR_LABELS), React.createElement("p", {
+    "data-rhythm-sky-slide-color-note": true,
+    className: `mt-1.5 ${note}`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(RHYTHM_SKY_SLIDE_COLOR_NOTES[draft.skySlideColor] || RHYTHM_SKY_SLIDE_COLOR_NOTES.HEIGHT))), 'HELL などの空中スライドの帯の色の分け方です（既定は空中・地上で色分け）。見た目だけが変わり、判定・スコアは変わりません。', {
+    full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
     className: card
@@ -43772,6 +43786,20 @@ const rhythmListenClock = ms => {
   const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
+const RHYTHM_LISTEN_HUD_KEY = 'mh_rhythm_listen_hud_v1';
+const rhythmListenHudRead = settings => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_LISTEN_HUD_KEY) : null;
+    if (v === '1') return true;
+    if (v === '0') return false;
+  } catch {}
+  return !!settings && (settings.judgmentTextDisplay !== false || settings.comboDisplay !== false);
+};
+const rhythmListenHudWrite = on => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_LISTEN_HUD_KEY, on ? '1' : '0');
+  } catch {}
+};
 const RhythmListenBar = ({
   runRef,
   song,
@@ -43780,7 +43808,9 @@ const RhythmListenBar = ({
   onPause,
   onClose,
   isLandscape,
-  paused = false
+  paused = false,
+  hudOn = true,
+  onToggleHud = null
 }) => {
   const [now, setNow] = useState({
     ms: 0,
@@ -43802,6 +43832,18 @@ const RhythmListenBar = ({
   }, [runRef]);
   const pct = now.total > 0 ? Math.max(0, Math.min(100, now.ms / now.total * 100)) : 0;
   const btn = 'flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  const hudToggle = typeof onToggleHud === 'function' ? React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-hud": hudOn ? 'on' : 'off',
+    "aria-pressed": hudOn,
+    onClick: onToggleHud,
+    "aria-label": hudOn ? '判定の文字とコンボ数を隠す' : '判定の文字とコンボ数を出す',
+    className: `flex min-h-[44px] min-w-[60px] flex-col items-center justify-center rounded-xl border px-1.5 leading-none ${hudOn ? 'border-cyan-300 bg-cyan-900/80 text-cyan-50' : 'border-slate-600 bg-slate-800/90 text-slate-400'}`
+  }, React.createElement("small", {
+    className: "text-[9px] font-black"
+  }, "判定・コンボ"), React.createElement("b", {
+    className: "mt-1 text-[13px] font-black"
+  }, hudOn ? '入' : '切')) : null;
   return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), !paused && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-listen-top": true,
     className: "pointer-events-auto absolute z-[35] flex items-center gap-1.5",
@@ -43823,8 +43865,7 @@ const RhythmListenBar = ({
     className: "pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5",
     style: {
       right: 'calc(var(--mh-safe-right,0px) + 8px)',
-      top: '50%',
-      transform: 'translateY(-62%)'
+      top: 'calc(var(--mh-safe-top,0px) + 62px)'
     }
   }, React.createElement("span", {
     "data-rhythm-listen-time": true,
@@ -43859,7 +43900,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")) : React.createElement("div", {
+  }, "+10秒"), hudToggle) : React.createElement("div", {
     "data-rhythm-listen-bar": true,
     className: "pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2",
     style: {
@@ -43901,7 +43942,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")))));
+  }, "+10秒"), hudToggle))));
 };
 const RhythmLineAdjustPanel = ({
   adjust,
@@ -44213,10 +44254,26 @@ const RhythmTapTest = ({
   const previewHands = !!(lineAdjust && (lineAdjust.preview || lineAdjust.listen));
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
-  const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
-    ...settingsIn,
-    judgmentLineHeight: lineHeightOverride
-  }, [settingsIn, lineHeightOverride]);
+  const [listenHud, setListenHud] = useState(() => rhythmListenHudRead(settingsIn));
+  const toggleListenHud = useCallback(() => setListenHud(v => {
+    const next = !v;
+    rhythmListenHudWrite(next);
+    return next;
+  }), []);
+  const settingsBase = useMemo(() => {
+    const lined = lineHeightOverride === null || !settingsIn ? settingsIn : {
+      ...settingsIn,
+      judgmentLineHeight: lineHeightOverride
+    };
+    return listenMode && lined ? {
+      ...lined,
+      judgmentTextDisplay: listenHud,
+      comboDisplay: listenHud,
+      ...(listenHud ? {} : {
+        fastSlowDisplay: false
+      })
+    } : lined;
+  }, [settingsIn, lineHeightOverride, listenMode, listenHud]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
   useState(() => {
     try {
@@ -44227,6 +44284,9 @@ const RhythmTapTest = ({
     } catch (e) {}
     try {
       if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);
+    } catch (e) {}
+    try {
+      if (typeof RHYTHM_SKY_SLIDE_COLOR_MODE === 'object') RHYTHM_SKY_SLIDE_COLOR_MODE.set(settingsIn?.skySlideColor);
     } catch (e) {}
     return 0;
   });
@@ -44755,10 +44815,15 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
-  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
-  const chargeOrbRef = useRef(null),
+  const specialFx = (!tutorial || listenMode && !tutorialProp) && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const chargeEdgeLRef = useRef(null),
+    chargeEdgeRRef = useRef(null),
     chargeBlastRef = useRef(null),
     chargeHitRef = useRef(null);
+  const chargeEdgeClip = useMemo(() => specialFx && typeof rhythmSpanPolygon === 'function' ? {
+    l: rhythmSpanPolygon(-.2, .16),
+    r: rhythmSpanPolygon(RHYTHM_LANE_COUNT - .16, RHYTHM_LANE_COUNT + .2)
+  } : null, [specialFx]);
   chargeHitRef.current = (note, judgment) => {
     const run = runRef.current,
       c = run && run.charge;
@@ -44774,25 +44839,38 @@ const RhythmTapTest = ({
     c.fin[z] = true;
     const blast = chargeBlastRef.current;
     if (!blast || typeof blast.animate !== 'function') return;
+    for (const el of [chargeEdgeLRef.current, chargeEdgeRRef.current]) {
+      if (!el || typeof el.animate !== 'function') continue;
+      const o0 = Number(el.style.opacity) || 0;
+      el.animate(judgment === 'MISS' ? [{
+        opacity: o0
+      }, {
+        opacity: 0
+      }] : [{
+        opacity: o0,
+        transform: 'scaleX(1)'
+      }, {
+        offset: .75,
+        opacity: 1,
+        transform: 'scaleX(.06)'
+      }, {
+        opacity: 0,
+        transform: 'scaleX(.02)'
+      }], {
+        duration: judgment === 'MISS' ? 260 : 200,
+        easing: 'ease-in'
+      });
+    }
     const r = Math.min(1, (c.hits[z] || 0) / Math.max(1, zone.n)),
       s0 = .3 + .9 * r,
       H = blast.parentElement ? blast.parentElement.clientHeight : 0;
     const dy = Math.max(0, (Number.isFinite(run._hitY) ? run._hitY : H * .8) - H * .04),
       tf = (y, sx, sy) => `translate(-50%,-50%) translateY(${y.toFixed(1)}px) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
-    if (judgment === 'MISS') {
-      blast.animate([{
-        opacity: .9,
-        transform: tf(0, s0, s0)
-      }, {
-        opacity: 0,
-        transform: tf(0, .1, .1)
-      }], {
-        duration: 320,
-        easing: 'ease-in'
-      });
-      return;
-    }
+    if (judgment === 'MISS') return;
     const big = 1.2 + 2.8 * r;
+    try {
+      if (typeof RHYTHM_NOTE_SE_RUNTIME.playAccent === 'function') RHYTHM_NOTE_SE_RUNTIME.playAccent(judgment);
+    } catch {}
     blast.animate([{
       opacity: 1,
       transform: tf(0, s0, s0)
@@ -44809,7 +44887,9 @@ const RhythmTapTest = ({
       transform: tf(dy, big * 2.4, big * .7)
     }], {
       duration: 440,
-      easing: 'linear'
+      delay: 150,
+      easing: 'linear',
+      fill: 'backwards'
     });
   };
   const climaxCycleMs = (() => {
@@ -46599,13 +46679,18 @@ const RhythmTapTest = ({
         }
       }
       {
-        const orb = chargeOrbRef.current,
+        const el = chargeEdgeLRef.current,
+          er = chargeEdgeRRef.current,
           c = run.charge;
-        if (orb && c) {
+        if (el && er && c) {
           run._hitY = travel.hitY;
           let z = -1;
           for (let k = 0; k < c.zones.length; k++) {
             const q = c.zones[k];
+            if (visualTime < q.from - 400 && (c.fin[k] || c.hits[k])) {
+              c.fin[k] = false;
+              c.hits[k] = 0;
+            }
             if (!c.fin[k] && visualTime >= q.from - 400 && visualTime <= q.finaleMs + 250) {
               z = k;
               break;
@@ -46615,8 +46700,9 @@ const RhythmTapTest = ({
             key = z >= 0 ? `${z}:${c.hits[z] || 0}` : 'off';
           if (c.key !== key) {
             c.key = key;
-            orb.style.opacity = z >= 0 ? (.5 + .5 * r).toFixed(3) : '0';
-            orb.style.transform = `translate(-50%,-50%) scale(${(z >= 0 ? .3 + .9 * r : .2).toFixed(3)})`;
+            const op = z >= 0 ? (.1 + .9 * r).toFixed(3) : '0';
+            el.style.opacity = op;
+            er.style.opacity = op;
           }
         }
       }
@@ -47633,6 +47719,15 @@ const RhythmTapTest = ({
         note._rhythmCanvasSettled = true;
       }
     });
+    if (run.charge && specialFx && typeof rhythmMarkChargeNotes === 'function') {
+      const zones = rhythmMarkChargeNotes(notes, specialFx);
+      run.charge.zones = zones;
+      run.charge.key = '';
+      zones.forEach((q, k) => {
+        run.charge.fin[k] = q.finaleMs < target - 30;
+        run.charge.hits[k] = run.charge.fin[k] || target < q.from ? 0 : notes.filter(n => n._mhZone === k && n._mhCharge === 1 && n.done).length;
+      });
+    }
     run.notes = notes;
     run.scanFrom = 0;
     run._stageNoteIndex = notes.findIndex(note => !note.done);
@@ -49404,7 +49499,9 @@ const RhythmTapTest = ({
     onPause: pause,
     onClose: onExit,
     isLandscape: isLandscape,
-    paused: view.status === 'paused'
+    paused: view.status === 'paused',
+    hudOn: listenHud,
+    onToggleHud: toggleListenHud
   }) : lineAdjust && React.createElement(RhythmLineAdjustPanel, {
     adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),
@@ -49583,7 +49680,17 @@ const RhythmTapTest = ({
     "data-rhythm-charge-fx": true,
     "aria-hidden": "true"
   }, React.createElement("b", {
-    ref: chargeOrbRef
+    ref: chargeEdgeLRef,
+    "data-edge": "l",
+    style: chargeEdgeClip ? {
+      clipPath: chargeEdgeClip.l
+    } : undefined
+  }), React.createElement("b", {
+    ref: chargeEdgeRRef,
+    "data-edge": "r",
+    style: chargeEdgeClip ? {
+      clipPath: chargeEdgeClip.r
+    } : undefined
   }), React.createElement("em", {
     ref: chargeBlastRef
   })), climaxFxOn && React.createElement("i", {
@@ -259761,7 +259868,9 @@ function MonsterHeroGame() {
           className: "mhbt-sub"
         }, m.tagline), modeSoon ? React.createElement("div", {
           className: "mhbt-score"
-        }, React.createElement("b", null, "遊べません"), React.createElement("small", null, "準備中 ・ 遊べるようになったらお知らせします")) : React.createElement("div", {
+        }, React.createElement("b", {
+          "aria-hidden": "true"
+        }, "🔒"), React.createElement("small", null, "遊べるようになったらお知らせします")) : React.createElement("div", {
           className: "mhbt-score"
         }, React.createElement("b", null, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`, " ・ ", isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("ul", {
           className: "mhbt-feats [@media(orientation:landscape)_and_(max-height:520px)]:mt-4 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start"
@@ -259811,7 +259920,7 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `mhbt-go w-full disabled:opacity-40${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`
+          className: `mhbt-go w-full disabled:opacity-40${modeSoon ? ' after:hidden' : ''}${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`
         }, modeSoon ? '準備中' : extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ')));
       })), React.createElement("button", {
         "aria-label": "次のモード",
@@ -260123,8 +260232,8 @@ function MonsterHeroGame() {
         ranked = modeHasRanking(battleMode);
       const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
-      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false]];
+      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : 'スコアがランキングに登録される';
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
@@ -260289,10 +260398,12 @@ function MonsterHeroGame() {
         }, "✅")), React.createElement("div", {
           className: "mhbt-score"
         }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
-          className: "mhbt-cells"
-        }, rateCells(setting).map(([label, value, boosted], _i, all) => React.createElement("div", {
-          key: label,
-          className: all.length === 1 ? 'col-span-3' : undefined
+          className: "mhbt-cells",
+          style: {
+            gridTemplateColumns: `repeat(${rateCells(setting).length},minmax(0,1fr))`
+          }
+        }, rateCells(setting).map(([label, value, boosted]) => React.createElement("div", {
+          key: label
         }, label, React.createElement("b", {
           className: boosted ? 'underline decoration-2' : ''
         }, value)))), React.createElement("div", {
@@ -260319,7 +260430,7 @@ function MonsterHeroGame() {
           }, claimed ? '✅ 受取済み（初回のみ）' : '初回クリアのみ'));
         })() : React.createElement(React.Fragment, null, React.createElement("b", {
           className: "block text-[10px] text-white"
-        }, "経験値：", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), React.createElement("b", {
+        }, "経験値：", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : pro ? `絆×${PRO_BOND_XP_MULT}・ブリーダー×${PRO_BREEDER_XP_MULT}` : '通常'), React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
         }, React.createElement("span", {
           "aria-hidden": "true"
@@ -260446,7 +260557,7 @@ function MonsterHeroGame() {
         onClick: () => selectDifficultyIndex(i),
         className: `mhbs-dot relative mx-1 mh-hit-expand-dot ${key === safeDifficulty ? 'on' : ''}`
       }))), React.createElement("div", {
-        className: `shrink-0 mb-auto ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
+        className: `shrink-0 mb-auto ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'} [@media(orientation:landscape)_and_(max-height:520px)]:hidden`,
         "data-difficulty-assistant": true
       }, React.createElement(AssistantBubble, {
         key: battleMode,

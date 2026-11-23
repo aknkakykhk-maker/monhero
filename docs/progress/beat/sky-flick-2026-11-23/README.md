@@ -15,3 +15,11 @@
   - 案B: 板をフリックの桃色に変え、払う向きへ白い大きな矢印を板から突き出す(桃の光付き)
   - 案C: 板そのものを払う向きに尖らせた矢じり形にし、縁を空色に光らせる。中に白い山形を2つ
 - 見本の作り: `now-after-arrow-fix.png` は `node tools/mode/rhythm-listen-play-check.js --song beyond_the_same_sky --diff HELL --from 141000 --shot 150450 --out <png>`
+
+## 社長の選択と作ったもの(2026-11-23・案A)
+- 空中のフリック(ガラスの箱)に、地上の横フリックと同じ山形(<<< / >>>・地上と同じ色)を、箱の幅の 0.72 倍の大きさで箱の真ん中へ重ねる。上フリックは地上と同じ桃色の矢印(箱の幅の 0.34 倍)。板の赤はそのまま。下フリックという種類はゲームに無い
+- 地上と同じ焼いた絵を貼るだけなので、2D と GPU(WebGL)で同じに出る
+- 止め絵(Beyond the Same Sky HELL 2:30・空中の左フリック)
+  - 前: `now-after-arrow-fix.png`(横・2D)・`before-portrait.png`(縦・2D)
+  - 後: `after-A-landscape.png`・`after-A-portrait.png`(2D)/ `after-A-landscape-gpu.png`・`after-A-portrait-gpu.png`(GPU)
+- 検査: `tools/mode/rhythm-sky-flick-mark-check.js`
