@@ -26,6 +26,8 @@ const cardPack = fs.readFileSync(path.join(root, 'monster-hero/src/parts/89-card
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
+  // 説明文は本体と同じく文節で折る(jaWrap・JA_WRAP_STYLE・JA_LABEL_STYLE)。部品は本体の定義をそのまま持ち込む
+  grab(source, 'const JA_WRAP_LINE = ', '// 大きな所持数を縮めて出す'),
   breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
   // ギフトの本文はアイテムのidから名前を引くので、その仕組みも持ち込む(2026-09-14)

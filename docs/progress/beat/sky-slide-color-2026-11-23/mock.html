@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>空中スライドの色分け 案</title>
+<!-- 止め絵の見本(台帳 r1119-149)。ゲーム本体は使わず、本物の HELL 譜面の場面を簡単な道の絵に描くだけ。判定・点・譜面は変えない -->
+<style>
+body{margin:0;background:#0b1020;color:#e2e8f0;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:13px;color:#94a3b8;margin-bottom:12px}
+table{border-collapse:separate;border-spacing:8px}
+th{font-size:15px;text-align:left;vertical-align:bottom;padding:0 4px}
+th small{display:block;font-weight:normal;color:#94a3b8;font-size:12px;line-height:1.4}
+td.row{min-width:170px;max-width:170px;font-size:13px;vertical-align:middle;line-height:1.5}
+td.row b{font-size:14px;display:block}
+canvas{display:block;border-radius:10px;border:1px solid #334155}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin:6px 8px 0;max-width:1600px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:26px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.35)}
+.legend .h{width:100%;color:#94a3b8;margin-top:4px}
+</style></head><body>
+<h1>空中スライドの色分け 案(止め絵・見た目だけ)</h1>
+<div class="sub">本物の HELL 譜面の場面。判定ラインに近いほど手前。横画面の道を簡単にした絵で、太さ・明るさはゲームと少し違います。</div>
+<table id="grid"></table>
+<div class="legend" id="legend"></div>
+<script src="scenes.js"></script>
+<script>
+const W=440,H=300;
+// ゲームの色(data/rhythm-mode.js の RHYTHM_NOTE_PALETTES.STANDARD・RHYTHM_SKY_BOX_LOOKS.red2・RHYTHM_HELL_VIS_PRESETS.v2)
+const C={tap:'56,189,248',hold:'52,211,153',slide:'167,139,250',flick:'244,114,182',left:'251,146,60',right:'163,230,53',
+  skyBox:'200,30,30',skyBoxFront:'127,29,29',charge:'255,92,170',
+  nowL:'37,99,235',nowR:'244,114,182',
+  gold:'250,204,21',ground:'167,139,250',skyOnly:'59,130,246'};
+const PLANS=[
+  {id:'now',name:'今',note:'青=左手・桃=右手'},
+  {id:'a1',name:'案1 通る高さで色',note:'地上=紫・空中=金。行き来でなめらかに移る'},
+  {id:'a2',name:'案2 スライドの種類で色',note:'行き来する=金・空中だけ=青'},
+  {id:'a3',name:'案3 1色+高さの光の幕',note:'空中スライドは全部金。下へ光の幕を垂らして高さを見せる'},
+];
+const lerp=(a,b,k)=>a+(b-a)*k;
+const mix=(a,b,k)=>{const x=a.split(',').map(Number),y=b.split(',').map(Number);return x.map((v,i)=>Math.round(lerp(v,y[i],k))).join(',');};
+const smooth=k=>k<=0?0:k>=1?1:k*k*(3-2*k);
+const VY=H*.05,JY=H*.86,HALF=W*.47,CX=W/2,LIFT=H*.46,K=3.2,SFAR=1/(1+K);
+function proj(scene,t,sub,sky){const d=Math.max(0,(t-scene.t)/scene.span),s=1/(1+K*d);
+  const rise=Math.max(0,(s-SFAR)/(1-SFAR));
+  return {x:CX+((sub/12)*2-1)*HALF*s,y:VY+(JY-VY)*s-LIFT*sky*rise,s,gy:VY+(JY-VY)*s};}
+function slideAt(n,t){const p=n.pts;if(t<=p[0].t)return p[0];for(let i=1;i<p.length;i++)if(t<=p[i].t){const a=p[i-1],b=p[i],k=(t-a.t)/Math.max(1,b.t-a.t);
+  return {sub:lerp(a.sub,b.sub,k),w:lerp(a.w,b.w,k),sky:lerp(a.sky,b.sky,k)};}return p[p.length-1];}
+function handOf(n){if(n.hand)return n.hand;const avg=n.pts.reduce((s,p)=>s+p.sub+p.w/2,0)/n.pts.length;return avg<6?'L':'R';}
+function slideColor(plan,n,sky){
+  const goes=n.pts.some(p=>p.sky<.01)&&n.pts.some(p=>p.sky>.5);
+  if(plan==='now')return handOf(n)==='L'?C.nowL:C.nowR;
+  if(plan==='a1')return mix(C.ground,C.gold,smooth(sky*1.25));
+  if(plan==='a2')return goes?C.gold:C.skyOnly;
+  return C.gold;}
+function drawRoad(g){
+  const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#120b2e');bg.addColorStop(1,'#1c1442');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  const fl=proj({t:0,span:1},1,0,0),fr=proj({t:0,span:1},1,12,0),nl=proj({t:0,span:1},0,0,0),nr=proj({t:0,span:1},0,12,0);
+  g.fillStyle='rgba(76,56,170,.55)';g.beginPath();g.moveTo(fl.x,fl.y);g.lineTo(fr.x,fr.y);g.lineTo(nr.x,nr.y);g.lineTo(nl.x,nl.y);g.fill();
+  g.strokeStyle='rgba(255,255,255,.12)';g.lineWidth=1;for(let i=2;i<12;i+=2){const a=proj({t:0,span:1},1,i,0),b=proj({t:0,span:1},0,i,0);g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
+  g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=1.6;g.beginPath();g.moveTo(fl.x,fl.y);g.lineTo(nl.x,nl.y);g.moveTo(fr.x,fr.y);g.lineTo(nr.x,nr.y);g.stroke();
+  // 地上の判定ライン
+  g.fillStyle='rgba(255,255,255,.9)';g.fillRect(nl.x,JY-1.5,nr.x-nl.x,3);
+  // 空中の判定ライン(紫の帯と芯)
+  const sy=JY-LIFT;g.fillStyle='rgba(150,118,235,.45)';g.fillRect(nl.x+20,sy-4,nr.x-nl.x-40,8);g.fillStyle='rgba(196,181,253,.95)';g.fillRect(nl.x+20,sy-1.5,nr.x-nl.x-40,3);}
+function noteBar(g,sc,t,sub,w,rgb,sky=0){const a=proj(sc,t,sub,sky),b=proj(sc,t,sub+w,sky),h=Math.max(3,9*a.s);
+  g.fillStyle='rgba(2,6,23,.88)';g.fillRect(a.x-2,a.y-h/2-2,b.x-a.x+4,h+4);
+  const gr=g.createLinearGradient(0,a.y-h/2,0,a.y+h/2);gr.addColorStop(0,'rgba(255,255,255,.95)');gr.addColorStop(.45,`rgb(${rgb})`);gr.addColorStop(1,`rgb(${mix(rgb,'0,0,0',.35)})`);
+  g.fillStyle=gr;g.fillRect(a.x,a.y-h/2,b.x-a.x,h);return {a,b,h};}
+function skyBox(g,sc,t,sub,w,flick){const a=proj(sc,t,sub,1),b=proj(sc,t,sub+w,1),h=Math.max(4,12*a.s);
+  g.fillStyle=`rgb(${C.skyBoxFront})`;g.fillRect(a.x,a.y,b.x-a.x,h*.45);g.fillStyle=`rgb(${C.skyBox})`;g.fillRect(a.x,a.y-h*.55,b.x-a.x,h*.6);
+  g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=Math.max(1,2.4*a.s);g.strokeRect(a.x,a.y-h*.55,b.x-a.x,h);
+  if(flick)arrow(g,(a.x+b.x)/2,a.y-h*.55-3,7*a.s+3,'#fff');}
+function arrow(g,x,y,s,col){g.fillStyle=col;g.beginPath();g.moveTo(x,y-s);g.lineTo(x-s*.8,y);g.lineTo(x+s*.8,y);g.fill();}
+function drawSlide(g,sc,n,plan){
+  const t0=Math.max(sc.t,n.t),t1=Math.min(sc.t+sc.span,n.end),N=60,pts=[];
+  for(let i=0;i<=N;i++){const t=lerp(t0,t1,i/N),p=slideAt(n,t),l=proj(sc,t,p.sub,p.sky),r=proj(sc,t,p.sub+p.w,p.sky),gl=proj(sc,t,p.sub,0),gr=proj(sc,t,p.sub+p.w,0);pts.push({l,r,gl,gr,sky:p.sky});}
+  const isSky=n.pts.some(p=>p.sky>0);
+  if(!isSky){band(g,pts,()=>C.slide,.62,true);return;}
+  // 地上の影
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(a.sky<.05&&b.sky<.05)continue;g.fillStyle='rgba(6,3,20,.18)';quad(g,a.gl,a.gr,b.gr,b.gl);}
+  if(plan==='a3'){for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(a.sky<.03)continue;
+    const cx1=(a.l.x+a.r.x)/2,cx2=(b.l.x+b.r.x)/2;const gr=g.createLinearGradient(0,Math.min(a.l.y,b.l.y),0,Math.max(a.gl.y,b.gl.y));
+    gr.addColorStop(0,`rgba(${C.gold},.34)`);gr.addColorStop(1,`rgba(${C.gold},.02)`);g.fillStyle=gr;
+    g.beginPath();g.moveTo(cx1,a.l.y);g.lineTo(cx2,b.l.y);g.lineTo(cx2,b.gl.y);g.lineTo(cx1,a.gl.y);g.fill();}
+    g.strokeStyle=`rgba(${C.gold},.55)`;g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();pts.forEach((p,i)=>{if(p.sky<.03)return;const x=(p.gl.x+p.gr.x)/2;i?g.lineTo(x,p.gl.y):g.moveTo(x,p.gl.y);});g.stroke();g.setLineDash([]);}
+  band(g,pts,p=>slideColor(plan,n,p.sky),.82,false);}
+function quad(g,a,b,c,d){g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.lineTo(c.x,c.y);g.lineTo(d.x,d.y);g.fill();}
+function band(g,pts,col,alpha,ground){
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];g.fillStyle=`rgba(${col(a)},${alpha})`;quad(g,a.l,a.r,b.r,b.l);}
+  g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=1.2;['l','r'].forEach(k=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[k].x,p[k].y):g.moveTo(p[k].x,p[k].y));g.stroke();});
+  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=2.2;g.beginPath();let on=false;pts.forEach(p=>{const x=(p.l.x+p.r.x)/2,y=(p.l.y+p.r.y)/2;if(!ground&&p.sky<.05){on=false;return;}on?g.lineTo(x,y):g.moveTo(x,y);on=true;});g.stroke();}
+function render(cv,sc,plan){const g=cv.getContext('2d');cv.width=W*2;cv.height=H*2;cv.style.width=W+'px';cv.style.height=H+'px';g.scale(2,2);
+  drawRoad(g);
+  const ns=[...sc.notes].sort((a,b)=>b.t-a.t);
+  for(const n of ns)if(n.pts)drawSlide(g,sc,n,plan);
+  for(const n of ns){if(n.pts)continue;if(n.t<sc.t)continue;
+    if(n.sky>0){skyBox(g,sc,n.t,n.sub,n.w,n.type==='FLICK');continue;}
+    if(n.type==='HOLD'){const a=proj(sc,Math.max(sc.t,n.t),n.sub,0),b=proj(sc,Math.max(sc.t,n.t),n.sub+n.w,0),c=proj(sc,Math.min(n.end,sc.t+sc.span),n.sub,0),d=proj(sc,Math.min(n.end,sc.t+sc.span),n.sub+n.w,0);g.fillStyle=`rgba(${C.hold},.45)`;quad(g,a,b,d,c);}
+    const r=noteBar(g,sc,n.t,n.sub,n.w,n.type==='FLICK'?C.flick:n.type==='HOLD'?C.hold:C.tap);
+    if(n.type==='FLICK')arrow(g,(r.a.x+r.b.x)/2,r.a.y-r.h/2-2,6*r.a.s+3,'#fff');}
+  g.fillStyle='rgba(2,6,23,.7)';g.fillRect(6,6,150,20);g.fillStyle='#fff';g.font='bold 12px sans-serif';g.fillText(PLANS.find(p=>p.id===plan).name,12,20);}
+const grid=document.getElementById('grid');
+const only=new URLSearchParams(location.search).get('plan');
+const plans=only?PLANS.filter(p=>p.id===only):PLANS;
+grid.insertAdjacentHTML('beforeend','<tr><th></th>'+plans.map(p=>`<th>${p.name}<small>${p.note}</small></th>`).join('')+'</tr>');
+for(const sc of SCENES){const tr=document.createElement('tr');tr.innerHTML=`<td class="row"><b>${sc.title} HELL</b>${(sc.t/1000).toFixed(1)}秒〜<br>${sc.label}</td>`;
+  for(const p of plans){const td=document.createElement('td'),cv=document.createElement('canvas');render(cv,sc,p.id);td.appendChild(cv);tr.appendChild(td);}grid.appendChild(tr);}
+const L=[['h','ほかのノーツの色(かぶらないか)'],[C.tap,'地上タップ(水色)'],[C.hold,'ホールド(緑)'],[C.slide,'地上スライド(紫)'],[C.flick,'上フリック(ピンク)'],[C.left,'横フリック 左(オレンジ)'],[C.right,'横フリック 右(黄緑)'],[C.skyBox,'空中タップ・空中フリック(赤い板)'],[C.charge,'ききのチャージノーツ(ピンク・作る予定)'],
+  ['h','空中スライドの色'],[C.nowL,'今 左手(青)'],[C.nowR,'今 右手(桃)…上フリック・チャージノーツとかぶる'],[C.ground,'案1 地上を通る所(地上スライドと同じ紫)'],[C.gold,'案1 空中/案2 行き来/案3 全部(金)'],[C.skyOnly,'案2 空中だけ(青)']];
+document.getElementById('legend').innerHTML=L.map(([c,t])=>c==='h'?`<span class="h">${t}</span>`:`<span><i style="background:rgb(${c})"></i>${t}</span>`).join('');
+</script></body></html>
