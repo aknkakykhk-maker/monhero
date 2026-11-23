@@ -28,7 +28,8 @@ for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=
   const block=rt0.markerBlock(source,`${marker}-${d}`);if(block)current[`${songId}/${d}`]=hash(block.body);}
 // HELL も見張る(2026-10-21 社長「HELL も指紋で見張る」)。HELL は試作の枠の曲に入っていて上の表の外だったので、作り直しても気づけなかった。
 //   ふつうは曲のマーカーの -hell。Grievous Lady の HELL だけは別の名前のマーカー
-const HELL_MARKERS={grievous_lady:'grievous-lady-hell'};
+//   全部必殺技でつは 2026-11-23 に HELL を作り直して -v4- の目印へ移した(台帳 r1119-136)。見張るのはいま遊ばれる -v4-(旧の -v3- は残して使わない)
+const HELL_MARKERS={grievous_lady:'grievous-lady-hell',zenbu_hissatsuwaza:'zenbu-hissatsuwaza-v4-hell'};
 for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS).filter(([id])=>DEMO.has(id))){
   const block=rt0.markerBlock(source,HELL_MARKERS[songId]||`${marker}-hell`);if(block)current[`${songId}/hell`]=hash(block.body);}
 

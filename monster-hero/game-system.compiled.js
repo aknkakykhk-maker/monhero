@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67e10980d5bfca0d
+// source-sha256: bdf994423349be25
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6799,6 +6799,34 @@ const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId, difficultyId) => {
+  const tag = typeof rhythmChartResetTag === 'function' ? rhythmChartResetTag(songId, difficultyId) : null;
+  return tag ? `${songId}|${difficultyId}|${tag}` : null;
+};
+const normalizeRhythmBestChartResets = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(source).filter(([id, record]) => /^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id) && record && typeof record === 'object' && !Array.isArray(record)).map(([id, record]) => [id, normalizeRhythmBestRecord(record)]));
+};
+const rhythmBestRecordsWithChartResets = (records, resets) => {
+  const out = {
+      ...records
+    },
+    clean = normalizeRhythmBestChartResets(resets);
+  if (typeof RHYTHM_CHART_RESETS === 'undefined') return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair => {
+    const [songId, difficultyId] = pair.split('|');
+    if (!out[songId] || !Object.prototype.hasOwnProperty.call(out[songId], difficultyId)) return;
+    const id = rhythmBestChartResetId(songId, difficultyId);
+    if (!id) return;
+    out[songId] = {
+      ...out[songId],
+      [difficultyId]: normalizeRhythmBestRecord(clean[id])
+    };
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);
+  });
+  return out;
+};
 const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
   const now = normalizeRhythmBestRecords(current),
@@ -33183,17 +33211,24 @@ const saveRhythmMonsterSlots = async value => {
 const saveRhythmBestRecord = async (records, songId, difficultyId, value, version = 1) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const resetId = rhythmBestChartResetId(songId, difficultyId);
+  if (resetId) {
+    const resets = normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
+    resets[resetId] = normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY, resets, false);
+    return loadRhythmBestRecordsNow();
+  }
   const key = version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY;
   const normalized = normalizeRhythmBestRecords(await storeGet(key, {}, false));
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
   await storeSet(key, normalized, false);
   return loadRhythmBestRecordsNow();
 };
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false));
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false)), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 const loadRhythmBestRecordsNow = async () => {
   const legacy = await loadRhythmBestRecordsOf(1);
   if (!(typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive())) return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy);
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 };
 const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
@@ -44136,6 +44171,8 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
+  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const specialFxRef = useRef(null);
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45859,6 +45896,16 @@ const RhythmTapTest = ({
             run._climaxLevel = level;
             climaxEl.setAttribute('data-on', level > 0 ? '1' : '0');
             climaxEl.style.opacity = level > 0 ? String(level) : '0';
+          }
+        }
+      }
+      {
+        const fxEl = specialFxRef.current;
+        if (fxEl && specialFx) {
+          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
+          if (run._specialFxOn !== on) {
+            run._specialFxOn = on;
+            fxEl.setAttribute('data-on', on);
           }
         }
       }
@@ -48792,7 +48839,12 @@ const RhythmTapTest = ({
     ref: roadGlowRef,
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
-  })), climaxFxOn && React.createElement("i", {
+  })), specialFx && React.createElement("i", {
+    ref: specialFxRef,
+    "data-rhythm-special-fx": true,
+    "data-on": "0",
+    "aria-hidden": "true"
+  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",
@@ -236485,6 +236537,9 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId,
       difficultyId: difficulty.id,
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? {
+        chart: rhythmChartResetTag(song.songId, difficulty.id)
+      } : {}),
       ...(scoreVersion === 2 ? {
         scoreVersion: 2,
         tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)),
