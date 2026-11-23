@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 415102a8cb457f46
+// source-sha256: c4c8532cb9e3edb9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -821,7 +821,7 @@ const TACTICS_MODE = Object.freeze({
   emoji: '🎯',
   color: '#fb923c',
   tagline: '強化を選んでじっくり攻略する、基本のモード',
-  highlights: [['🏆', '強化を選んでスコアを伸ばす王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
+  highlights: [['🏆', '技を見てから強化を選ぶ王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
   points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['❤️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['📈', 'WAVEのあいだの強化', 'クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'], ['👹', '難しさ', '難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、間合い攻撃・連撃・貫通撃・攻撃力アップなど、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てたモンスターを連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'], ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。']]
 });
 const TACTICS_SPECIES_MODE = Object.freeze({
@@ -988,7 +988,7 @@ const BATTLE_MODES = [{
   emoji: '🏆',
   color: '#818cf8',
   tagline: '強化を選んでじっくり攻略する、基本のモード',
-  highlights: [['🏆', '強化を選んでスコアを伸ばす王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'スコアランキングに反映される']],
+  highlights: [['🏆', '伸ばす強化を自分で決める王道'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'スコアランキングに反映される']],
   points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べるので、編成のかみ合わせを考えながら組み立てられます。ブリーダーの教えもここで選びます。'], ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、一番素直な難しさです。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わるモンスターは所持しているモンスターから選べます。'], ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']]
 }, {
   id: BATTLE_MODE_QUICK,
@@ -259548,7 +259548,9 @@ function MonsterHeroGame() {
           className: "mhbt-sub"
         }, m.tagline), modeSoon ? React.createElement("div", {
           className: "mhbt-score"
-        }, React.createElement("b", null, "遊べません"), React.createElement("small", null, "準備中 ・ 遊べるようになったらお知らせします")) : React.createElement("div", {
+        }, React.createElement("b", {
+          "aria-hidden": "true"
+        }, "🔒"), React.createElement("small", null, "遊べるようになったらお知らせします")) : React.createElement("div", {
           className: "mhbt-score"
         }, React.createElement("b", null, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`, " ・ ", isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("ul", {
           className: "mhbt-feats [@media(orientation:landscape)_and_(max-height:520px)]:mt-4 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start"
@@ -259598,7 +259600,7 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `mhbt-go w-full disabled:opacity-40${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`
+          className: `mhbt-go w-full disabled:opacity-40${modeSoon ? ' after:hidden' : ''}${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`
         }, modeSoon ? '準備中' : extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ')));
       })), React.createElement("button", {
         "aria-label": "次のモード",
@@ -259910,8 +259912,8 @@ function MonsterHeroGame() {
         ranked = modeHasRanking(battleMode);
       const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
-      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false]];
+      const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : 'スコアがランキングに登録される';
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
@@ -260076,10 +260078,12 @@ function MonsterHeroGame() {
         }, "✅")), React.createElement("div", {
           className: "mhbt-score"
         }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
-          className: "mhbt-cells"
-        }, rateCells(setting).map(([label, value, boosted], _i, all) => React.createElement("div", {
-          key: label,
-          className: all.length === 1 ? 'col-span-3' : undefined
+          className: "mhbt-cells",
+          style: {
+            gridTemplateColumns: `repeat(${rateCells(setting).length},minmax(0,1fr))`
+          }
+        }, rateCells(setting).map(([label, value, boosted]) => React.createElement("div", {
+          key: label
         }, label, React.createElement("b", {
           className: boosted ? 'underline decoration-2' : ''
         }, value)))), React.createElement("div", {
@@ -260106,7 +260110,7 @@ function MonsterHeroGame() {
           }, claimed ? '✅ 受取済み（初回のみ）' : '初回クリアのみ'));
         })() : React.createElement(React.Fragment, null, React.createElement("b", {
           className: "block text-[10px] text-white"
-        }, "経験値：", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), React.createElement("b", {
+        }, "経験値：", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : pro ? `絆×${PRO_BOND_XP_MULT}・ブリーダー×${PRO_BREEDER_XP_MULT}` : '通常'), React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
         }, React.createElement("span", {
           "aria-hidden": "true"
@@ -260233,7 +260237,7 @@ function MonsterHeroGame() {
         onClick: () => selectDifficultyIndex(i),
         className: `mhbs-dot relative mx-1 mh-hit-expand-dot ${key === safeDifficulty ? 'on' : ''}`
       }))), React.createElement("div", {
-        className: `shrink-0 mb-auto ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
+        className: `shrink-0 mb-auto ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'} [@media(orientation:landscape)_and_(max-height:520px)]:hidden`,
         "data-difficulty-assistant": true
       }, React.createElement(AssistantBubble, {
         key: battleMode,
