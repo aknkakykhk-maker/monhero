@@ -21,9 +21,29 @@ const OUT=process.env.OUT||fs.mkdtempSync(path.join(os.tmpdir(),'mh-appear-'));
 const SHOTS=process.env.SHOTS==='1',SHOT_MAX=Number(process.env.SHOT_MAX||12);
 const LATE=Number(process.env.LATE||0.15); // 初めて描かれた時の progress がこれより大きければ「いきなり」
 fs.mkdirSync(OUT,{recursive:true});
+// 空中の持ち上げ方を比べる(2026-11-23・台帳 r1119-123「上がり方を早める」)。配る rhythm-mode.js だけをこのブラウザの中で差し替える(本体は触らない)。
+//   SKY_LIFT=rise:<割合> … 上端〜判定ラインの <割合> の所で上がり切る(本体は RHYTHM_SKY_RISE_AT=.25 の案B)
+//   SKY_LIFT=old  … 11/22 より前の式(奥の縮み/判定ラインの縮み。上端でも持ち上げが残る)
+//   SKY_LIFT=nov22 … 11/22〜11/23 の式(上端で0・判定ラインまで一定の割合で上がる)
+//   案を並べた止め絵: docs/progress/beat/sky-rise-2026-11-23/
+const SKY_LIFT=process.env.SKY_LIFT||'';
+const skyLiftPatched=src=>{
+ const rep=(a,b)=>{if(!src.includes(a))throw new Error('差し替える所が見つからない: '+a.slice(0,80));src=src.replace(a,b);};
+ const js="rise=u>=1?1:u*(2-u);",sh="float skyRise(float y){float u=y/uSkyRise;return u>=1.0?1.0:u*(2.0-u);}";
+ if(SKY_LIFT==='old'){rep(js,"rise=1;");rep(sh,"float skyRise(float y){return 1.0;}");return src;}
+ if(SKY_LIFT==='nov22'){
+  rep("return RHYTHM_SKY_LIFT.ratio*rhythmProjectionScale(y)/base*rise;","const top=rhythmProjectionScale(0);return RHYTHM_SKY_LIFT.ratio*(rhythmProjectionScale(y)-top)/(base-top);");
+  rep("uSkyK*depth(min(yr,1.0))*uRoad*skyRise(yr)*sky","uSkyK*(depth(min(yr,1.0))-uTop)*uRoad*sky");
+  rep("const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio);\n","const base=rhythmProjectionScale(RHYTHM_JUDGMENT_LINE_Y.ratio)-rhythmProjectionScale(0);\n");
+  return src;}
+ const m=/^rise:([\d.]+)$/.exec(SKY_LIFT);if(!m)throw new Error('SKY_LIFT が分からない: '+SKY_LIFT);
+ rep("const RHYTHM_SKY_RISE_AT=.25;",`const RHYTHM_SKY_RISE_AT=${Number(m[1])};`);
+ return src;};
 (async()=>{
  const server=http.createServer((req,res)=>{const f=path.join(ROOT,decodeURIComponent(req.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}
-  const t={'.js':'text/javascript','.html':'text/html','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.mp3':'audio/mpeg','.m4a':'audio/mp4','.json':'application/json'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t});fs.createReadStream(f).pipe(res);}).listen(PORT);
+  const t={'.js':'text/javascript','.html':'text/html','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.mp3':'audio/mpeg','.m4a':'audio/mp4','.json':'application/json'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t});
+  if(SKY_LIFT&&/data[\\/]rhythm-mode\.js$/.test(f)){res.end(skyLiftPatched(fs.readFileSync(f,'utf8')));return;}
+  fs.createReadStream(f).pipe(res);}).listen(PORT);
  const b=await require('playwright').chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const MOBILE=process.env.MOBILE!=='0'; // PC で撮るときは MOBILE=0(端末の真似をしない)
  const page=await b.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,hasTouch:MOBILE,isMobile:MOBILE});

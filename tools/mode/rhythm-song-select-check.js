@@ -475,8 +475,9 @@ const serve=()=>new Promise(resolve=>{
     // このサンドボックスはTailwindを読めないので overflow が効かず、
     // scrollTop がそもそも動かない。輪の動きは実際にスクロールできるときだけ測る。
     await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');
-      el.style.overflowY='auto';el.style.height='200px';});
-    await page.waitForTimeout(250);
+      el.style.overflowY='auto';el.style.height='200px';el.style.flex='none';el.style.maxHeight='200px';});
+    // 輪にするかは「並び1つぶんが一覧からはみ出すか」を測って決める(2026-11-23)。高さが決まってから測り直すのを待つ
+    await page.waitForTimeout(800);
     const loop0=await loopState();
     ok('曲が2つ以上あるときは一覧を輪にする',loop0.loop==='1');
     if(loop0.max>0){
@@ -493,7 +494,15 @@ const serve=()=>new Promise(resolve=>{
     }
     // 曲が1つしかないときは輪にしない(同じ行が3つ並ぶだけになるため)
     // 2026-10-03: 一覧は同じ曲の別の版をまとめた行(rows)で輪にする
-    ok('曲が1つのときは輪にしない',gameSource.includes('const loopEnabled=rows.length>=2;'));
+    ok('曲が1つのときは輪にしない',gameSource.includes('const loopEnabled=rows.length>=2&&loopFits;'));
+    // 並び1つぶんが一覧に収まるときも輪にしない(2026-11-23 社長の実機。イベントで3曲に絞ると同じ曲がくり返し並んで見えていた)
+    await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');el.style.height='20000px';el.style.maxHeight='20000px';});
+    await page.waitForTimeout(800);
+    const loopTall=await loopState();
+    ok('並び1つぶんが一覧に収まるときは輪にしない',loopTall.loop==='0',`輪=${loopTall.loop}`);
+    await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');el.style.height='200px';el.style.maxHeight='200px';});
+    await page.waitForTimeout(800);
+    ok('はみ出す高さに戻すと、また輪にする',(await loopState()).loop==='1');
     // 影の行は、数えて確かめる検査の邪魔をしない
     const rowMarks=await page.evaluate(()=>({
       rows:document.querySelectorAll('#song-select-probe [data-rhythm-song-row]').length,

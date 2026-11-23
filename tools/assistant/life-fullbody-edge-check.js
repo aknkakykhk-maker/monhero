@@ -122,6 +122,8 @@ function matte({ w, h, alpha, rgb }) {
   return edge ? bad / edge : 0;
 }
 
+module.exports = { readAlpha }; // 立ち絵の端の検査(life-stand-edge-check.js)も使う
+if (require.main === module) {
 let failed = 0, n = 0, worst = { hard: 0, name: '' };
 for (const f of fs.readdirSync(DIR).filter((x) => /\.png$/i.test(x)).sort()) {
   n++;
@@ -144,3 +146,4 @@ for (const f of fs.readdirSync(DIR).filter((x) => /\.png$/i.test(x)).sort()) {
 }
 console.log(failed ? `全身画のふち: ${failed}件 NG(上の行)` : `全身画のふちの透過・白マット: OK(${n}枚・いちばん硬いのは ${worst.name} の ${worst.hard.toFixed(3)})`);
 process.exitCode = failed ? 1 : 0;
+}

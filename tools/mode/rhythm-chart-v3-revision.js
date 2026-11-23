@@ -146,6 +146,11 @@
 //        サビが見つからない曲は Rev.37 と同じ決め方。配信中の譜面は変えていない
 //   39 … HELL の骨組みは短い動機の写しを使わない(2026-11-11 社長の決定 A)。HELL の骨組みは手の仕上げを通らないので、写した形が残って
 //        押せない所・交差が増えた(Rev.38 の7曲の比べ)。EASY〜MASTER は Rev.38 と同じ譜面。試すときは生成器に --hell-motifs
+//   42 … スライドの形の種類を増やす(2026-11-23 台帳 r1119-129・r1119-133 社長「案A＋案B」・資料 docs/progress/beat/slide-shapes-2026-11-23/)。
+//        曲線の付け方(applySlideEase)のあとに、①同じ向きで速さが変わって点で折れる続きの区間を「通り抜け」(ゲーム本体の ease:'through')にする
+//        ②折り返しの無い1区間に S字・弧・逆の弧を順に使う ③1区間ずつの折り返しを2回に1回 out → in の丸い折り返しにする。
+//        どれも山の速さが inout の上限(1秒6レーン×1.5)を超えない区間だけ。重なれば直線へ戻すのは今までどおり。
+//        スライド以外のノーツ・点の位置と時刻・ノーツ数は Rev.41 と同じ。配信中の譜面は変えていない
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -157,7 +162,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=39;
+const CHART_REVISION_CODE_LATEST=42;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
