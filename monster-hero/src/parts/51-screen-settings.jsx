@@ -95,7 +95,7 @@ function AssetDownloadPage({ onBack }) {
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -140,7 +140,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
             <div data-battle-screen-setting>
               <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_SCREEN_STYLE_LABELS.map(option => (
                   <button key={option.id} type="button" data-battle-screen-style={option.id}
@@ -156,7 +156,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
             <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
               <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_CARD_LOOKS.map(option => (
                   <button key={option.id} type="button" data-battle-card-look={option.id}
@@ -232,7 +232,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「出さない」を選んでも、すぐ上の「ゲームを更新」からいつでも更新できる。 */}
         <div data-update-notice-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">新しいバージョンのお知らせ</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')}</p>
           {/* 選ばれている側にも枠を持たせる。tailwind の preflight が border:0 を敷いているので、
               片方だけ border クラスが無いと、選ぶたびに中身が1pxずれる */}
           <div className="mt-2 grid grid-cols-3 gap-2">
@@ -246,13 +246,13 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -270,7 +270,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
@@ -288,7 +288,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
           <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
             <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
                 <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
@@ -378,8 +378,8 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', desc: 'タイトル画面の絵', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', desc: 'ホーム画面の背景', value: homeArt, set: onChangeHomeArt },
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -405,7 +405,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
-          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
           <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>

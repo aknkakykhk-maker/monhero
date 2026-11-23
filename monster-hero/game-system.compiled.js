@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 277f74caa9eb6a23
+// source-sha256: bc22d67f5d5cf6be
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22818,6 +22818,36 @@ const useBubbleCollapse = collapseKey => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([[/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'], [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'], [/^(transcendence|masuEnhance)$/, 'masuEnhance']]);
+const assistantBubbleFoldKey = scene => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+const BubbleFoldButton = ({
+  open,
+  onToggle,
+  size = 'md',
+  className = '',
+  ...attrs
+}) => React.createElement("button", _extends({
+  type: "button",
+  onClick: ev => {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    onToggle();
+  },
+  "aria-pressed": !!open,
+  "aria-label": open ? 'ひとことをたたむ' : 'ひとことを開く',
+  title: open ? '助手のひとことを畳む' : '助手のひとことを出す'
+}, attrs, {
+  className: `mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`
+}), React.createElement("span", {
+  "aria-hidden": "true"
+}, "💬"), React.createElement("span", {
+  "aria-hidden": "true"
+}, open ? '▲' : '▼'));
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -22834,14 +22864,15 @@ const AssistantBubble = ({
   defaultOpen = false,
   footerSpace = 0,
   maxLines = 0,
-  collapseKey = null,
+  collapseKey = undefined,
   collapseHidden = false,
   oneLine = false,
   menu = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  const foldKey = collapseKey !== undefined ? collapseKey : line || defaultOpen ? null : assistantBubbleFoldKey(scene);
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -22931,32 +22962,21 @@ const AssistantBubble = ({
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
-  if (collapseKey && collapsed) {
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return React.createElement("div", {
       "data-bubble-collapsed": true,
-      className: "w-full flex items-center gap-2"
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 32,
-      accent: color,
-      expression: face
-    }), React.createElement("button", {
-      type: "button",
-      onClick: () => setCollapsed(false),
-      "aria-label": `${who.name}のひとことを開く`,
-      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
-      style: {
-        borderColor: color,
-        color,
-        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
-      }
-    }, "💬 ", who.name, "のひとこと ▾"));
+      className: "w-full flex items-center justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setCollapsed(false),
+      size: "sm"
+    }));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
     "data-bubble-one-line": oneLine ? '' : undefined,
-    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${collapseKey ? 'relative' : ''}`
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -23083,13 +23103,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
-  }))))), collapseKey && React.createElement("button", {
-    type: "button",
-    onClick: () => setCollapsed(true),
-    "aria-label": "ひとことをたたむ",
-    "data-bubble-collapse": true,
-    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
-  }, "▴"), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))))), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setCollapsed(true),
+    size: "sm",
+    className: "self-center",
+    "data-bubble-collapse": ""
+  }), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "fixed inset-0",
     style: {
       zIndex: 60
@@ -39483,6 +39503,11 @@ const RhythmSongSelect = ({
   React.useEffect(() => {
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
+  const firstRowSongId = rows.length ? rows[0].entry.songId : '';
+  const songInGenre = !song || genre.id === 'all' || genreMatches(song);
+  React.useEffect(() => {
+    if (!songInGenre && firstRowSongId) setSongId(firstRowSongId);
+  }, [songInGenre, firstRowSongId, genre.id]);
   const pickRandom = () => {
     const pool = list.filter(item => !lockedSong(item));
     if (!pool.length) return;
@@ -39491,8 +39516,39 @@ const RhythmSongSelect = ({
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
-  const loopEnabled = rows.length >= 2;
+  const [loopFits, setLoopFits] = React.useState(true);
+  const loopEnabled = rows.length >= 2 && loopFits;
   const listRef = React.useRef(null);
+  const rowsKey = rows.map(row => row.entry.songId).join('|');
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el || rows.length < 2) return;
+    const measure = () => {
+      const node = listRef.current;
+      if (!node || !node.clientHeight) return;
+      const ul = node.querySelector('ul');
+      if (!ul) return;
+      const looped = node.getAttribute('data-rhythm-song-loop') === '1';
+      const cs = typeof getComputedStyle === 'function' ? getComputedStyle(node) : null;
+      const pad = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+      const one = ul.offsetHeight / (looped ? 3 : 1),
+        room = node.clientHeight - pad;
+      setLoopFits(prev => prev ? one > room - 4 : one > room + 2);
+    };
+    measure();
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+      try {
+        observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+      } catch (e) {
+        observer = null;
+      }
+    }
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [rowsKey, loopEnabled]);
   const loopReadyRef = React.useRef(false);
   const settleRef = React.useRef(null);
   const restoreTopRef = React.useRef(typeof listScrollTop === 'number' && listScrollTop > 0 ? listScrollTop : null);
@@ -39958,7 +40014,7 @@ const RhythmSongSelect = ({
       className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, item.id === 'HELL' ? React.createElement("b", {
       "data-rhythm-hell-level": true,
-      className: "block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]"
+      className: `block text-[21px] tabular-nums landscape:text-[19px]${open ? ' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]' : ''}`
     }, song.difficulties[item.id].level) : React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
@@ -68234,8 +68290,9 @@ const TimeOfDaySettingsPanel = () => {
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-slate-200"
   }, title), React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-400"
-  }, desc)), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(desc))), React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, ['on', 'off'].map(v => React.createElement("button", {
     key: v,
@@ -70097,8 +70154,9 @@ function AssetDownloadPage({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "自動ダウンロード"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     id: true,
@@ -70169,8 +70227,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "タクティクスバトル画面"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_SCREEN_STYLE_LABELS.map(option => React.createElement("button", {
       key: option.id,
@@ -70189,8 +70248,9 @@ function SettingsScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-slate-200"
     }, "行動カードの見た目"), React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。"), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2"
     }, BATTLE_CARD_LOOKS.map(option => React.createElement("button", {
       key: option.id,
@@ -70324,8 +70384,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "新しいバージョンのお知らせ"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, UPDATE_NOTICE_STYLE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -70339,15 +70400,17 @@ function SettingsScreen({
   }, option.label), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold opacity-80"
   }, option.note)))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。")), React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。'))), React.createElement("div", {
     "data-assistant-bubble-setting": true,
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手のひとこと"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, ASSISTANT_BUBBLE_MODE_LABELS.map(option => React.createElement("button", {
     key: option.id,
@@ -70366,8 +70429,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "ホームの助手コメント"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -70394,8 +70458,9 @@ function SettingsScreen({
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "助手どうしの会話を自動で進める"), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。"), React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')), React.createElement("div", {
     className: "mt-2 grid grid-cols-2 gap-2"
   }, [{
     on: false,
@@ -70538,13 +70603,11 @@ function ScreenThemeModal({
   const rows = [{
     id: 'title',
     label: 'タイトル画面',
-    desc: 'タイトル画面の絵',
     value: titleArt,
     set: onChangeTitleArt
   }, {
     id: 'home',
     label: 'ホーム画面',
-    desc: 'ホーム画面の背景',
     value: homeArt,
     set: onChangeHomeArt
   }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
@@ -70611,7 +70674,7 @@ function ScreenThemeModal({
     className: "rounded-xl border border-white/10 bg-white/5 p-2"
   }, React.createElement("b", {
     className: "block text-[12px] font-black text-white"
-  }, row.label), React.createElement("small", {
+  }, row.label), row.desc && row.desc !== row.label && React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-400"
   }, row.desc), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -71057,7 +71120,8 @@ function MissionsScreen({
       line: dailyLine.text,
       helpRef: "items/missions",
       expression: "happy",
-      compact: true
+      compact: true,
+      collapseKey: "screen:missions"
     })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
@@ -112090,6 +112154,7 @@ function AssistantPeerTalk({
   onReplayEnd = null,
   today = null
 }) {
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
@@ -112285,6 +112350,16 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(React.createElement("div", {
+      "data-assistant-peer-folded": true,
+      className: "flex justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setPeerFolded(false),
+      "data-assistant-peer-fold": ""
+    })));
+  }
   const {
     talk
   } = cur;
@@ -112373,7 +112448,14 @@ function AssistantPeerTalk({
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
-  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
+  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, scene && !cur.replay && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setPeerFolded(true),
+    size: "sm",
+    "data-assistant-peer-fold": ""
+  }), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
     onClick: ev => {
@@ -112381,7 +112463,7 @@ function AssistantPeerTalk({
       finish(cur);
     },
     className: "min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "閉じる"))));
+  }, "閉じる")))));
 }
 const ASSISTANT_PEER_PHOTO_W = 400,
   ASSISTANT_PEER_PHOTO_H = 300;
@@ -255835,11 +255917,19 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "デフォルトに戻す"), React.createElement("div", {
+    "data-bgm-close-band": true,
+    className: "sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"
+  }, React.createElement("button", {
     className: "mh-dialog-close",
     "data-mh-back": true,
+    style: {
+      position: 'static',
+      margin: 0,
+      boxShadow: '0 3px 0 #0009'
+    },
     onClick: closeBgmArrangement
-  }, "閉じる"))) : showBackup ? React.createElement("div", _extends({
+  }, "閉じる")))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
@@ -267383,17 +267473,22 @@ function MonsterHeroGame() {
         }
       }
       const storySceneImg = storyScene && typeof STORY_SCENE_IMAGES !== 'undefined' ? STORY_SCENE_IMAGES[storyScene] || null : null;
+      const storyStill = typeof line.still === 'string' && typeof STORY_SCENE_IMAGES !== 'undefined' ? line.still : null;
+      const storyStillImg = storyStill ? STORY_SCENE_IMAGES[storyStill] || null : null;
+      const storyStillTate = storyStillImg ? STORY_SCENE_IMAGES[`${storyStill}_tate`] || null : null;
       if (typeof STORY_SCENE_IMAGES !== 'undefined' && typeof window !== 'undefined') {
         const pre = window.__mhStoryScenePreloaded || (window.__mhStoryScenePreloaded = new Set());
         script.forEach(l => {
-          const src = l && STORY_SCENE_IMAGES[l.bg];
-          if (src && !pre.has(src)) {
-            pre.add(src);
-            try {
-              const im = new Image();
-              im.src = src;
-            } catch (e) {}
-          }
+          [l && l.bg, l && l.still, l && typeof l.still === 'string' ? `${l.still}_tate` : null].forEach(k => {
+            const src = typeof k === 'string' ? STORY_SCENE_IMAGES[k] : null;
+            if (src && !pre.has(src)) {
+              pre.add(src);
+              try {
+                const im = new Image();
+                im.src = src;
+              } catch (e) {}
+            }
+          });
         });
       }
       if (typeof window !== 'undefined' && typeof assistantFaceSrc === 'function') {
@@ -267446,10 +267541,10 @@ function MonsterHeroGame() {
         }
       }
       const stageLine = stageIdx >= 0 ? script[stageIdx] : null;
-      const stageGuest = stageLine ? assistantById(stageLine.stage || stageLine.who) : null;
-      const stageName = stageLine ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
+      const stageGuest = stageLine && !storyStillImg ? assistantById(stageLine.stage || stageLine.who) : null;
+      const stageName = stageLine && stageGuest ? (stageLine.stage ? stageLine.stageName : stageLine.name) || stageGuest.name : '';
       const stageTier = ['男爵', '子爵', '伯爵', '公爵', '大王'].findIndex(t => stageName.includes(t)) + 1;
-      const speakingGuest = isGuestWho(line.who);
+      const speakingGuest = isGuestWho(line.who) && !storyStillImg;
       let bubbleIdx = -1;
       for (let i = step; i >= 0; i--) {
         if (isGuestWho(script[i].who)) {
@@ -267475,7 +267570,7 @@ function MonsterHeroGame() {
           break;
         }
       }
-      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
+      const storyMonsters = monstersIdx >= 0 && !storyStillImg ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         fall: '255,214,150',
         split: '233,213,255',
@@ -267660,6 +267755,7 @@ function MonsterHeroGame() {
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
         "data-story-has-stage": stageGuest ? '1' : undefined,
+        "data-story-still-on": storyStillImg ? '' : undefined,
         "data-story-step": step,
         "data-story-zones": storyZones ? storyKeepRow ? 'facerow' : 'face' : undefined,
         "data-story-ending-pull": eventReplay.ending && STORY_ENDING_STYLE === 'pull' ? '' : undefined,
@@ -267682,7 +267778,30 @@ function MonsterHeroGame() {
         style: {
           '--story-bg': `url("${storySceneImg}")`
         }
-      }), React.createElement("button", {
+      }), storyStillImg && React.createElement("div", {
+        key: `still:${storyStill}`,
+        "data-story-still": storyStill,
+        "data-story-still-has-tate": storyStillTate ? '' : undefined,
+        "aria-hidden": "true",
+        style: {
+          '--story-still': `url("${storyStillImg}")`,
+          ...(storyStillTate ? {
+            '--story-still-tate': `url("${storyStillTate}")`
+          } : {})
+        }
+      }, React.createElement("div", {
+        "data-story-still-area": true
+      }, React.createElement("img", {
+        "data-story-still-img": true,
+        src: storyStillImg,
+        alt: "",
+        draggable: false
+      })), storyStillTate && React.createElement("img", {
+        "data-story-still-tate": true,
+        src: storyStillTate,
+        alt: "",
+        draggable: false
+      })), React.createElement("button", {
         type: "button",
         onClick: next,
         "aria-label": "次へ",
@@ -267836,7 +267955,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
+          top: storyStillImg ? 'calc(env(safe-area-inset-top) + 42px)' : 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -267846,7 +267965,7 @@ function MonsterHeroGame() {
           borderRadius: 14,
           boxShadow: '0 4px 18px rgba(0,0,0,.45)',
           textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
-          animation: 'storyBanner .7s ease-out both'
+          animation: storyStillImg ? 'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards' : 'storyBanner .7s ease-out both'
         }
       }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
@@ -269075,13 +269194,11 @@ function MonsterHeroGame() {
         style: {
           color: accent
         }
-      }, headTitle)), React.createElement("button", {
-        type: "button",
-        onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
-        "data-help-bubble-toggle": true,
-        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
-      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
+      }, headTitle)), React.createElement(BubbleFoldButton, {
+        open: helpAssistantOpen,
+        onToggle: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
+        "data-help-bubble-toggle": ""
+      })), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
@@ -274151,6 +274268,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -274163,6 +274310,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }

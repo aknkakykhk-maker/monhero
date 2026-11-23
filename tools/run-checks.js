@@ -179,6 +179,8 @@ const FORCE_CHECKS = [
     checks: ['assistant/life-fullbody-edge-check.js', 'assistant/life-fullbody-pocket-check.js'], why: '助手の全身画のふちの透過が2値(ギザギザ)に戻っていないか・囲まれた背景の残り' },
   { re: /^monster-hero\/(images\/assistant\/(?!face\/).+\.(png|PNG)|src\/parts\/(56-assistant-life-map|56-assistant-peer)\.jsx)$/,
     checks: ['assistant/assistant-art-scenes-check.js'], why: '助手の絵が使う場面の全部でうまく出ているか' },
+  { re: /^(monster-hero\/images\/assistant\/stand-[a-z0-9-]+\/.+\.png|monster-hero\/images\/assistant\/fullbody\/.+\.png|monster-hero\/data\/assistants\.js|tools\/assistant\/life-stand-[a-z-]+\.(py|js|json))$/,
+    checks: ['assistant/life-stand-edge-check.js'], why: '全身画から切り出した立ち絵の上・左・右の端で、頭・腕が切れていないか(r1119-122)' },
   // 5人目の助手あつの解放(仲良し度 → お話 → 選べる)。公開の印・お話の流し方・一覧の出し分けは実ブラウザでないと通らない(2026-10-22)
   { re: /^monster-hero\/(src\/parts\/(10-core|17-release-changelog-login-missions|56-screen-profile|60-app)\.jsx|data\/assistants\.js)$/,
     checks: ['assistant/atsu-unlock-browser-check.js'], why: 'あつの解放の流れ(公開の印・お話・選ぶ画面)' },

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 927d45506e5d30ea
+// generated-sha256: 0ec52ad3945f5879
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15682,6 +15682,34 @@ const useBubbleCollapse = (collapseKey) => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, (next) => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+// ── 💬▲▼ を全画面に(2026-11-23 台帳 r1119-135・社長「💬▲▼を全画面に」) ──
+// モンヒロビートの曲えらびの「💬▲/▼」(29-rhythm-screens.jsx)と同じ形のボタンで、画面ごとにひとことを畳む・開く。
+// 覚えるのは今の mh_bubble_collapsed_v1(畳んだ画面の名前だけ入れる。無い・壊れていれば今の見た目=開いている)。既存の値の意味は変えない
+//   ・collapseKey を渡した吹き出し(マーケット・神殿・編成・カード売り場)は、その名前のまま(覚えている値を引き継ぐ)
+//   ・collapseKey を渡さない吹き出しは、場面から画面の名前を決める(下の表。同じ画面で場面が変わるものは1つにまとめる)
+//   ・畳まないもの: HOME(「隠す」r1119-081 のまま)・はじめての案内/一度きりの案内・文を直接渡す吹き出し・最初から開く吹き出し・
+//     モンヒロビートの曲えらび(rhythmHome。上の欄に💬▲▼が元からある)
+// 設定「助手のひとこと」の3択は今のまま先に効く(「出さない」なら畳む・開くより先に隠れる)
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([
+  [/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'],
+  [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'],
+  [/^(transcendence|masuEnhance)$/, 'masuEnhance'],
+]);
+const assistantBubbleFoldKey = (scene) => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+// 💬▲(開いている・押すと畳む)/ 💬▼(畳んでいる・押すと開く)。形はモンヒロビートの曲えらびと同じ
+const BubbleFoldButton = ({ open, onToggle, size = 'md', className = '', ...attrs }) => (
+  <button type="button" onClick={(ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); onToggle(); }} aria-pressed={!!open}
+    aria-label={open ? 'ひとことをたたむ' : 'ひとことを開く'} title={open ? '助手のひとことを畳む' : '助手のひとことを出す'} {...attrs}
+    className={`mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`}>
+    <span aria-hidden="true">💬</span><span aria-hidden="true">{open ? '▲' : '▼'}</span>
+  </button>
+);
 // 助手の吹き出し。どの画面でもこれ1つ置けばよい。
 //   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
 //   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
@@ -15689,19 +15717,21 @@ const useBubbleCollapse = (collapseKey) => {
 //   accent      … 画面のテーマ色に合わせたいとき(省略すると助手ごとの色)
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
-//   collapseKey … 渡すと吹き出しを小さくたためる(たたんだことを mh_bubble_collapsed_v1 に覚える)。画面ごとに別のキー
+//   collapseKey … 畳む・開く(💬▲▼)を覚える名前(mh_bubble_collapsed_v1)。渡さなければ場面から決める(assistantBubbleFoldKey)・null なら畳まない
 //   collapseHidden … たたんだら札も出さず何も描かない(ひらく入口が画面の別の所にあるとき。ヘルプの上の助手の顔)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
 // 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false, oneLine=false, menu=null }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=undefined, collapseHidden=false, oneLine=false, menu=null }) => {
   const [open, setOpen] = useState(defaultOpen);
   // menu … [{ key, label, onClick }]。渡すと、吹き出しを押したときに小さなメニュー(渡した項目+「📖 詳しく見る」)を出す。
   //   HOME は吹き出しの中に「💬 おしゃべり」と「タップで詳しく」の2つの押し所があり、違いが分からなかった(r1119-050 窓-36)。押し所を吹き出し1つにまとめ、機能は減らさない
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  // 畳む・開くの名前。渡されたらそれ(null なら畳まない)、渡されなければ場面から(文を直接渡す・最初から開くものは畳まない)
+  const foldKey = collapseKey !== undefined ? collapseKey : (line || defaultOpen ? null : assistantBubbleFoldKey(scene));
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
@@ -15781,21 +15811,18 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   if (bubbleHidden) return null;
-  // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
-  if (collapseKey && collapsed) {
+  // 畳んでいる間は、右に「💬▼」のボタンだけ(押すと開く。モンヒロビートの曲えらびと同じ形・r1119-135)
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return (
-      <div data-bubble-collapsed className="w-full flex items-center gap-2">
-        <AssistantFace who={who} size={32} accent={color} expression={face}/>
-        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことを開く`}
-          className="mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95"
-          style={{ borderColor:color, color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>💬 {who.name}のひとこと ▾</button>
+      <div data-bubble-collapsed className="w-full flex items-center justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setCollapsed(false)} size="sm"/>
       </div>
     );
   }
   return (
     <>
-      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${collapseKey?'relative':''}`}>
+      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${foldKey?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
@@ -15826,8 +15853,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
           </>}
         </Wrapper>
-        {collapseKey&&<button type="button" onClick={() => setCollapsed(true)} aria-label="ひとことをたたむ" data-bubble-collapse
-          className="mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90">▴</button>}
+        {/* 開いている間は、吹き出しの右に「💬▲」(押すと畳む・画面ごとに覚える。r1119-135) */}
+        {foldKey&&!collapseHidden&&<BubbleFoldButton open onToggle={() => setCollapsed(true)} size="sm" className="self-center" data-bubble-collapse=""/>}
         {useMenu&&menuOpen&&<>
           {/* 外を押すとメニューが閉じる(幕は透明。後ろの施設をうっかり押さない) */}
           <div className="fixed inset-0" style={{ zIndex:60 }} onClick={()=>setMenuOpen(false)} data-bubble-menu-backdrop aria-hidden="true"/>
@@ -24725,6 +24752,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   React.useEffect(()=>{
     if(song&&song.songId!==songId)setSongId(song.songId);
   },[song?song.songId:'',songId]);
+  // 絞り込み(イベント・お気に入り)で、選んでいる曲が一覧から外れたら、一覧の先頭の曲を選び直す
+  //   (2026-11-23 社長の実機。右の詳細が一覧に無い曲のままだった)。ALL に戻しても選び直した曲のまま。
+  //   選ぶのは曲の id だけで、保存値(mh_rhythm_select_v1)の形は変えない
+  const firstRowSongId=rows.length?rows[0].entry.songId:'';
+  const songInGenre=!song||genre.id==='all'||genreMatches(song);
+  React.useEffect(()=>{
+    if(!songInGenre&&firstRowSongId)setSongId(firstRowSongId);
+  },[songInGenre,firstRowSongId,genre.id]);
 
   const pickRandom=()=>{
     // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
@@ -24749,8 +24784,35 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=rows.length>=2;
+  // ★並び1つぶんが一覧に収まるときも輪にしない(2026-11-23 社長の実機)。イベントで3曲に絞ると、
+  //   3つ重ねたぶんだけがはみ出して輪になり、同じ曲が繰り返し並んで見えていた。
+  //   1つぶんの高さが一覧の高さを超えるときだけ輪にする(測るのは下の効果。CSSが遅れて届いても測り直す)
+  const [loopFits,setLoopFits]=React.useState(true);
+  const loopEnabled=rows.length>=2&&loopFits;
   const listRef=React.useRef(null);
+  const rowsKey=rows.map(row=>row.entry.songId).join('|');
+  React.useEffect(()=>{
+    const el=listRef.current;
+    if(!el||rows.length<2)return;
+    const measure=()=>{
+      const node=listRef.current;
+      if(!node||!node.clientHeight)return;
+      const ul=node.querySelector('ul');
+      if(!ul)return;
+      const looped=node.getAttribute('data-rhythm-song-loop')==='1';
+      const cs=typeof getComputedStyle==='function'?getComputedStyle(node):null;
+      const pad=cs?(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0):0;
+      const one=ul.offsetHeight/(looped?3:1),room=node.clientHeight-pad;
+      // 行き来しないよう、輪をやめるときと始めるときで少し幅を持たせる
+      setLoopFits(prev=>prev?one>room-4:one>room+2);
+    };
+    measure();
+    let observer=null;
+    if(typeof ResizeObserver==='function'){
+      try{observer=new ResizeObserver(()=>measure());observer.observe(el);}catch(e){observer=null;}
+    }
+    return ()=>{if(observer)observer.disconnect();};
+  },[rowsKey,loopEnabled]);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
   // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
@@ -25069,8 +25131,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length>5?' gap-px':''} ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               {/* HELL の Lv. は大きく・赤く出す(2026-10-21 改善部 N6。MASTER を1回クリアで開くが、MASTER と Lv. の差が25以上の曲がある) */}
+              {/* 鍵のあいだは赤くしない(2026-11-23 r1119-126 社長「難易度のヘルだけ解放されてないのに色がある」)。ほかの鍵の難易度と同じ灰色で、開いたら赤 */}
               {item.id==='HELL'
-                ?<b data-rhythm-hell-level className="block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]">{song.difficulties[item.id].level}</b>
+                ?<b data-rhythm-hell-level className={`block text-[21px] tabular-nums landscape:text-[19px]${open?' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]':''}`}>{song.difficulties[item.id].level}</b>
                 :<b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>}
               <span className="block text-[8px] tracking-wide">{item.id}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
@@ -41936,7 +41999,7 @@ const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => (
     <div className="flex items-center gap-3 mt-2">
-      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400">{desc}</p></div>
+      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</p></div>
       <div className="flex shrink-0 gap-1">
         {['on', 'off'].map(v => (
           <button key={v} type="button" data-time-of-day-setting={`${key}-${v}`} aria-pressed={st.settings[key] === v} onClick={() => timeOfDaySetSettings({ [key]: v })}
@@ -43076,7 +43139,7 @@ function AssetDownloadPage({ onBack }) {
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -43121,7 +43184,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
             <div data-battle-screen-setting>
               <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_SCREEN_STYLE_LABELS.map(option => (
                   <button key={option.id} type="button" data-battle-screen-style={option.id}
@@ -43137,7 +43200,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
             <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
               <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_CARD_LOOKS.map(option => (
                   <button key={option.id} type="button" data-battle-card-look={option.id}
@@ -43213,7 +43276,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「出さない」を選んでも、すぐ上の「ゲームを更新」からいつでも更新できる。 */}
         <div data-update-notice-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">新しいバージョンのお知らせ</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')}</p>
           {/* 選ばれている側にも枠を持たせる。tailwind の preflight が border:0 を敷いているので、
               片方だけ border クラスが無いと、選ぶたびに中身が1pxずれる */}
           <div className="mt-2 grid grid-cols-3 gap-2">
@@ -43227,13 +43290,13 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -43251,7 +43314,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
@@ -43269,7 +43332,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
           <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
             <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
                 <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
@@ -43359,8 +43422,8 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', desc: 'タイトル画面の絵', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', desc: 'ホーム画面の背景', value: homeArt, set: onChangeHomeArt },
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -43386,7 +43449,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
-          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
           <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
@@ -43730,6 +43793,7 @@ const missionRewardChipText = (r) => { const t = giftRewardText(r); const e = MI
 function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onClaim, onClaimAll, ownedItems = null }) {
   const state = normalizeMissions(missions), defs = MISSION_DEFS[missionTab];
   // 助手の1日1行の案内(デイリーのタブ)。いま選んでいる助手が話す。AI の文が無ければ決まった台詞
+  //   畳む・開くはひとことと同じ「💬▲▼」で、ミッションの画面で1つ(mh_bubble_collapsed_v1 の screen:missions。r1119-135)
   const bond = typeof useAssistantBond === 'function' ? useAssistantBond() : null;
   const aiLines = useMissionDailyLines();
   const dailyLine = missionDailyLineFor(bond && bond.assistantId, aiLines);
@@ -43748,7 +43812,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="ミッション" icon={<List size={20}/>} accent="text-amber-400" onBack={onBack} backLabel="戻る"/>
       {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
+      {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2">{dailyLine&&missionTab==='daily'?<div data-mission-daily-line><AssistantBubble key={`line-${dailyLine.who}`} assistantId={dailyLine.who} line={dailyLine.text} helpRef="items/missions" expression='happy' compact collapseKey="screen:missions"/></div>:<AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/>}</div>;})()}
       <ScreenTabs value={missionTab} onChange={onSelectTab} items={[
         {id:'daily',color:'#d97706',label:<>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</>},
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
@@ -66853,6 +66917,9 @@ const assistantPeerLineText = (line, talk) => {
 // replay … 関係図・アルバムから見返すときの台本(1日の数に入れず、仲良し度も上げない。返事は選び直せる)
 // today … その日の遊び方 { battles, clears, enhances }(その日の出来事の掛け合いを選ぶのに使う)
 function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayEnd = null, today = null }) {
+  // 💬▲▼ で畳む・開く(2026-11-23 台帳 r1119-135)。画面ごとに覚える(今の mh_bubble_collapsed_v1 に peer:<画面> を足す。無ければ開いている)。
+  //   畳んでいる間も掛け合いは始まり、右下に「💬▼」だけ出る(押すと開いて続きから読める)。見返しは畳まない
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null); // { talk, special, step, phase:'lines'|'choice'|'reply', pick, replay }
@@ -66979,6 +67046,12 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
           : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`}
       </div>);
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(
+      <div data-assistant-peer-folded className="flex justify-end">
+        <BubbleFoldButton open={false} onToggle={() => setPeerFolded(false)} data-assistant-peer-fold=""/>
+      </div>);
+  }
   const { talk } = cur;
   const list = linesOf(cur);
   const line = cur.phase === 'choice' ? talk.lines[talk.lines.length - 1] : list[cur.step];
@@ -67031,8 +67104,11 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
         </div>)}
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[9px] font-bold text-slate-500">{cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+        {scene && !cur.replay && <BubbleFoldButton open onToggle={() => setPeerFolded(true)} size="sm" data-assistant-peer-fold=""/>}
         <button type="button" data-assistant-peer-close onClick={ev => { ev.stopPropagation(); finish(cur); }}
           className="min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
+        </span>
       </div>
     </div>);
 }
@@ -145317,7 +145393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
-   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button><button className="mh-dialog-close" data-mh-back onClick={closeBgmArrangement}>閉じる</button></div></div>
+   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button>{/* 閉じるは窓の下の固い帯に置く(浮いた丸ボタンが一覧の「試聴」「デフォルト中」と曲名の欄に重なって押せなかった。2026-11-23 API 総点検③ settings-bgm) */}<div data-bgm-close-band className="sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"><button className="mh-dialog-close" data-mh-back style={{position:'static',margin:0,boxShadow:'0 3px 0 #0009'}} onClick={closeBgmArrangement}>閉じる</button></div></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowBackup(false)}>閉じる</button></div></div>
   ) : null;
@@ -150496,10 +150572,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         for(let i=step;i>=0;i--){const l=script[i];if(l&&typeof l.bg==='string'){storyScene=l.bg==='none'?null:l.bg;break;}}
         // 絵は data/breeder.js の STORY_SCENE_IMAGES(名前 → 絵)。表に無い名前は出さない
         const storySceneImg=storyScene&&typeof STORY_SCENE_IMAGES!=='undefined'?(STORY_SCENE_IMAGES[storyScene]||null):null;
+        // 一枚絵(台本の行の still:'名前'・2026-11-23 r1119-115)。その行だけ背景の上に絵を出し、上のステージ・真ん中のモンスターを消す(次の行に still が無ければ戻る)。
+        //   絵は同じ STORY_SCENE_IMAGES。縦の画面用の絵(名前_tate)があれば、縦では幅いっぱい・上寄せでそれを出す(追記2 社長「縦の絵を使う・幅に合わせる」)。
+        //   横は横の絵の全体。出し分けは 70-bootstrap.jsx の [data-story-still]。続けて同じ絵の行は出し直さない(key を絵の名前にする)
+        const storyStill=typeof line.still==='string'&&typeof STORY_SCENE_IMAGES!=='undefined'?line.still:null;
+        const storyStillImg=storyStill?(STORY_SCENE_IMAGES[storyStill]||null):null;
+        const storyStillTate=storyStillImg?(STORY_SCENE_IMAGES[`${storyStill}_tate`]||null):null;
         // このお話で使う背景は、開いたときに先に読んでおく(場面が替わった瞬間に絵が遅れて出ないように)
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
-          script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+          script.forEach(l=>{[l&&l.bg,l&&l.still,l&&typeof l.still==='string'?`${l.still}_tate`:null].forEach(k=>{const src=typeof k==='string'?STORY_SCENE_IMAGES[k]:null;if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});});
         }
         // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
         //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
@@ -150522,10 +150604,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let stageIdx=-1;
         for(let i=step;i>=0;i--){const l=script[i];if(l.stage==='none'){stageIdx=-1;break;}if(l.stage||isGuestWho(l.who)){stageIdx=i;break;}}
         const stageLine=stageIdx>=0?script[stageIdx]:null;
-        const stageGuest=stageLine?assistantById(stageLine.stage||stageLine.who):null;
-        const stageName=stageLine?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
+        const stageGuest=stageLine&&!storyStillImg?assistantById(stageLine.stage||stageLine.who):null;
+        const stageName=stageLine&&stageGuest?((stageLine.stage?stageLine.stageName:stageLine.name)||stageGuest.name):'';
         const stageTier=['男爵','子爵','伯爵','公爵','大王'].findIndex(t=>stageName.includes(t))+1;
-        const speakingGuest=isGuestWho(line.who);
+        // 一枚絵の行はステージを出さないので、ゲストの台詞も下の欄に出す
+        const speakingGuest=isGuestWho(line.who)&&!storyStillImg;
         let bubbleIdx=-1;
         for(let i=step;i>=0;i--){if(isGuestWho(script[i].who)){bubbleIdx=i;break;}}
         const bubbleLine=(bubbleIdx>=0&&bubbleIdx>=stageIdx&&stageGuest)?script[bubbleIdx]:null;
@@ -150540,7 +150623,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
         let monstersIdx=-1;
         for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
-        const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
+        const storyMonsters=monstersIdx>=0&&!storyStillImg?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
         const fxColors={fall:'255,214,150',split:'233,213,255',merge:'255,250,235',unlock:'253,230,138',transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -150683,11 +150766,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} data-story-still-on={storyStillImg?'':undefined} data-story-step={step} data-story-zones={storyZones?(storyKeepRow?'facerow':'face'):undefined} data-story-ending-pull={eventReplay.ending&&STORY_ENDING_STYLE==='pull'?'':undefined} data-story-opening={storyOpening?storyOpeningStyle:undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${storyTitleNow||''}`}>
           {/* 場面の背景(台本の行の bg)。場面が替わると key が替わり、ふわっと切り替わる。fx:'fall' の行では、
               穴へ落ちていくように背景が上へ流れて暗くなる(70-bootstrap.jsx の [data-story-bg]) */}
           {storySceneImg&&<div key={storyScene} data-story-bg={storyScene} data-story-bg-fx={fx==='fall'?'fall':undefined} aria-hidden="true"
             style={{'--story-bg':`url("${storySceneImg}")`}}/>}
+          {storyStillImg&&<div key={`still:${storyStill}`} data-story-still={storyStill} data-story-still-has-tate={storyStillTate?'':undefined} aria-hidden="true"
+            style={{'--story-still':`url("${storyStillImg}")`,...(storyStillTate?{'--story-still-tate':`url("${storyStillTate}")`}:{})}}><div data-story-still-area><img data-story-still-img src={storyStillImg} alt="" draggable={false}/></div>
+            {storyStillTate&&<img data-story-still-tate src={storyStillTate} alt="" draggable={false}/>}</div>}
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -150743,7 +150829,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
               {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
                   残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
-              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
+              {line.fxText&&!storyOpening&&!eventReplay.ending&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:storyStillImg?'calc(env(safe-area-inset-top) + 42px)':'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:storyStillImg?'storyBanner .7s ease-out both, storyStillBannerAway .8s ease-in 4.2s forwards':'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
@@ -151340,8 +151426,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} data-mh-help-back data-mh-back className="shrink-0 max-w-[40%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20) */}
-            <button type="button" onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label={helpAssistantOpen?'ひとことをたたむ':'ひとことを開く'} data-help-bubble-toggle className="shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95">{helpAssistantOpen?'たたむ ▲':'💬 ひとこと'}</button>
+            {/* 右上は顔を出さない(下の吹き出しの顔と二重だった)。押すと何が起きるか分かるよう、言葉のボタンでひとことを開く・たたむ(r1119-033 窓-06・20)。2026-11-23 から全画面と同じ「💬▲▼」の形(r1119-135) */}
+            <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
@@ -155493,6 +155579,36 @@ const createAnimationStyle = () => {
     [data-story-bg][data-story-bg-fx="fall"] { animation: storySceneFall 2.4s cubic-bezier(.55,0,.8,.4) both; }
     @keyframes storySceneFall { 0% { transform: none; filter: none; } 100% { transform: translateY(-85%) scale(1.25); filter: brightness(0); } }
     @media (prefers-reduced-motion: reduce) { [data-story-bg], [data-story-bg][data-story-bg-fx="fall"] { animation-duration: .01s !important; } }
+    /* 一枚絵(台本の行の still・2026-11-23 r1119-115 社長「最後にみんなで演奏したときの絵」)。背景の上に重ね、立ち絵(ステージ・モンスター)は 60-app.jsx が消す。
+       横の絵は会話の紙より上の範囲(data-story-still-area)に全体を見せ、まわりはぼかした同じ絵で埋める */
+    [data-story-still] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background-color: #0b0a14; animation: storySceneIn .7s ease-out both; }
+    [data-story-still]::before { content: ''; position: absolute; inset: -48px; background-image: var(--story-still); background-size: cover; background-position: center; filter: blur(22px) brightness(.5) saturate(1.1); }
+    [data-story-still-area] { position: absolute; left: 0; right: 0; top: 0; bottom: var(--story-sheet-h, 45%); overflow: hidden; container-type: size; }
+    [data-story-still-img] { position: absolute; left: 0; top: 50%; width: 100%; max-width: none; height: auto; aspect-ratio: 2 / 1; transform: translateY(-50%); object-fit: cover; box-shadow: 0 0 28px rgba(0,0,0,.55); }
+    /* 横の画面: 範囲(紙より上)が横長なので、高さに合わせて真ん中に置く */
+    @container (min-aspect-ratio: 2 / 1) { [data-story-still-img] { left: 50%; top: 0; width: auto; height: 100%; transform: translateX(-50%); } }
+    /* 縦の画面: 縦用の絵(名前_tate)があればそれを幅いっぱい・上寄せで出し、下の余りはぼかした同じ縦の絵で埋める(追記2 社長「縦の絵を使う・幅に合わせる」)。
+       「🔄 横」(端末は縦のまま絵を回す)は横の画面なので横の絵のまま */
+    /* 横の低い画面(と「🔄 横」): 紙はふだん上のステージのぶんを空けた高さで固定だが、一枚絵の行はステージが無いので、紙を中身の高さまで縮めて絵の範囲を広げる
+       (題・小さい顔の列・ページ数を隠す。台詞の欄とボタンはそのまま) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+      [data-event-story][data-story-still-on] [data-story-body] > p, [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+      [data-event-story][data-story-still-on] [data-story-buttons][data-story-buttons] { margin-top: .375rem; }
+    }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-sheet][data-story-sheet] { height: auto !important; }
+    [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-body] > p, [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny], [data-mh-view-rotation="true"] [data-event-story][data-story-still-on] [data-story-cast-tiny-empty] { display: none; }
+    /* 一枚絵の行の場面の説明の帯は、読んだころ(4秒ほど)に消して絵を見せる */
+    @keyframes storyStillBannerAway { 0% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+    [data-story-still-tate] { display: none; }
+    @media (orientation: portrait) {
+      [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still-tate); }
+      [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: none; }
+      [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: block; position: absolute; top: 0; left: 0; width: 100%; max-width: none; height: auto; box-shadow: 0 6px 28px rgba(0,0,0,.55); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate]::before { background-image: var(--story-still); }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-area] { display: block; }
+      [data-mh-view-rotation="true"] [data-story-still][data-story-still-has-tate] [data-story-still-tate] { display: none; }
+    }
     [data-event-story][data-story-opening]:not([data-story-opening="iris"]) > :not([data-story-opening-card]):not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-opening-card], [data-story-opening-card] * { animation-duration: .01s !important; animation-delay: 0s !important; } }
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
@@ -155505,6 +155621,8 @@ const createAnimationStyle = () => {
     [data-story-shake="1"] { animation: storyShakeB .7s ease-in-out both; }
     @media (prefers-reduced-motion: reduce) {
       [data-story-shake], [data-story-guest], [data-story-fx-flash], [data-story-banner], [data-story-pop] { animation: none !important; }
+      /* 帯は動きで真ん中へ寄せていたので、動きを止めたときも真ん中に置く(2026-11-23 止めると右へずれて切れていた) */
+      [data-story-banner] { transform: translate(-50%, -50%); }
     }
     /* レイドバトルの強化の帯: 出て、しばらく止まって、消える。動かすのは transform と opacity だけ */
     @keyframes raidGrowthBanner { 0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.94); } 8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); } }
