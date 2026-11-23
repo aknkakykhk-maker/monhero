@@ -129,7 +129,7 @@ check('診断の行へ timing を入れる',/timing:RHYTHM_TIMING_DIAG\.snapshot
 check('演奏の始めに、ゲームが記録から直し方の入れ切りを決める',/rhythmTouchFixAutoSet\(rhythmTouchFixAutoFrom\(await storeGet\(RHYTHM_TOUCH_DIAG_KEY,\[\]\)\)\)/.test(play));
 check('人が触るパネルは置かない(人の手で調整する前提にしない)',!/RhythmFixOverridePanel/.test(play)&&!/RhythmFixOverridePanel/.test(app));
 check('アプリを離れたら数え、直し方が入っていれば一時停止する',/visibilitychange/.test(play)&&/RHYTHM_TIMING_DIAG\.hidden\(\)/.test(play)&&/rhythmTouchFixOn\('autoPauseOnHidden'\)\)pause\(\)/.test(play));
-check('音の時計の直し方(smoothSongClock)は、入っていないときは ctx.currentTime から作った値のまま',/const rawSongTimeSeconds=\(\)=>Math\.min\(buffer\.duration,Math\.max\(0,offsetSeconds\+\(playing\?ctx\.currentTime-startedAt-outputLatencySeconds:0\)\)\);/.test(audio)&&/if\(!playing\|\|!rhythmTouchFixOn\('smoothSongClock'\)\|\|typeof performance==='undefined'\)\{smoothPerf=0;return raw;\}/.test(audio));
+check('音の時計の直し方(smoothSongClock)は、入っていないときは ctx.currentTime から作った値のまま',/const rawSongTimeSeconds=\(\)=>Math\.min\((?:buffer\.)?duration,Math\.max\(0,offsetSeconds\+\(playing\?ctx\.currentTime-startedAt-outputLatencySeconds:0\)\)\);/.test(audio)&&/if\(!playing\|\|!rhythmTouchFixOn\('smoothSongClock'\)\|\|typeof performance==='undefined'\)\{smoothPerf=0;return raw;\}/.test(audio));
 check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(audio)&&/headMs/.test(audio));
 
 // 5. 報告ツール
