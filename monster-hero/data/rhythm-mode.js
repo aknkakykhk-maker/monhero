@@ -3226,6 +3226,9 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // 開始のタップ音と同じ音だと「指を置いた音」と区別が付かず、取れたのか分からない
   // (実機で「取れた手ごたえがほしい」という報告があった)。音量・ON/OFF・全体ミュートはタップ音と同じ設定を読む
   const playClear=(judgment=null)=>{const settings=readSettings();return voice(settings,'end',judgment,settings.endVolume/100);};
+  // 必殺ノーツ(全部必殺技でつ HELL・r1119-141)を取ったとき。触れた瞬間のタップ音に、少し強いタップ音と「キン」を重ねる(社長「普段のタップ音より少し強調した音」)。
+  // 音の素材は足さない。タップ音のセット・タップ音量・ノーツの効果音OFF・全体ミュートに従う(voice の中で止まる)
+  const playAccent=(judgment=null)=>{const settings=readSettings();const a=voice(settings,'tap',judgment,1.35);voice(settings,'end',judgment,(Number(settings.endVolume)||0)/100*1.1);return a;};
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{if(typeof performance!=='undefined')lastNoteSeAt=performance.now();const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
@@ -3570,7 +3573,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,wake,prepare,play,playClear,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
+  return {warm,wake,prepare,play,playClear,playAccent,playFlick,playMonster,playSky,playTick,preview,playEmpty,beginInputGroup,markInputGroupHandled,recentNoteSe,endInputGroup,playFullCombo,playNewRecord,playCue,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -82770,7 +82773,8 @@ const rhythmBuildCanvasRenderer=()=>{
     // ききのチャージノーツ(全部必殺技でつ HELL の4か所・2026-11-23 r1119-141)。タップだけをききのピンクにする(スライド・フリックは今の色のまま)。
     // ★上フリックもピンク(#f472b6)なので、金の縁と頭の「ききのリボン」で見分ける(矢印の無いフリックに見えないように)。
     //   社長「もうちょいピンク色に」「ききのリボンがぴょこんとついたような」(2026-11-23)
-    CHARGE: {...headOf({hi:'#fff1f8',mid:'#fb6fb6',lo:'#e11d74',rgb:'251,111,182'}),ring:'#fde68a'},
+    //   社長「ききノーツが少し見づらい」(2026-11-23): 道の紫の上で埋もれないよう、明るいピンク・明るい金の縁・強めの光にした
+    CHARGE: {...headOf({hi:'#fff5fa',mid:'#ff8ccb',lo:'#ff3d9a',rgb:'255,110,185'}),ring:'#fff0a8',glow:[[16,'rgba(255,110,185,.9)'],[6,'rgba(255,240,248,.55)'],[12,'rgba(255,110,185,.6)']]},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
@@ -83646,6 +83650,14 @@ const rhythmBuildCanvasRenderer=()=>{
     ctx.globalCompositeOperation='lighter';ctx.strokeStyle=`rgba(${L.fill},.28)`;ctx.lineWidth=7;box();ctx.strokeStyle=`rgba(${L.fill},.45)`;ctx.lineWidth=3.5;box();ctx.globalCompositeOperation='source-over';
     ctx.fillStyle=`rgba(${L.fill},.55)`;ctx.fillRect(x0,y0,W,H);ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x0,y0,W,H*.55);
     ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=1.3;box();ctx.globalAlpha=1;
+  };
+  // 空中のフリックの印を箱の真ん中へ重ねる(上の案Zの箱の描き方の続き。r1119-148 案A)。箱の幅に合わせて大きさを決め、奥の小さい箱でも潰れすぎないよう下限を持つ
+  const drawSkyFlickMark=(note,hd,opts)=>{
+    if(!hd)return;
+    const {faceH,thick,W}=skyBoxDims(hd,opts),dir=rhythmFlickDir(note);
+    const sprite=dir?sideChevronSprite(dir):arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+    const k=Math.max(.45,(W*(dir?.72:.34))/sprite.tw),aw=(sprite.tw+sprite.margin*2)*k,ah=(sprite.th+sprite.margin*2)*k,cy=hd.cy-faceH/2+(faceH+thick)/2;
+    ctx.globalAlpha=Number(opts.alpha)>=0?Number(opts.alpha):1;ctx.drawImage(sprite.canvas,hd.cx-aw/2,cy-ah/2,aw,ah);ctx.globalAlpha=1;
   };
   const drawGlassBox=(hd,opts)=>{
     if(case3){drawSkyPlateGlow(hd,opts);return;}
@@ -84921,15 +84933,15 @@ const rhythmBuildCanvasRenderer=()=>{
       const skyGlass=skyPlate&&o.pop===null&&!o.failed&&skyZOn();
       if(skyGlass){
         const gopts=trackDim<1?{...o,alpha:o.alpha*trackDim}:o;drawGlassBox(geo.head,gopts);
-        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK'){const hd=geo.head,fh=skyBoxDims(hd,o).faceH,ax=hd.cx,ay=hd.cy-fh/2-3,aw=Math.max(4,fh*.7);ctx.globalAlpha=o.alpha;ctx.fillStyle='#ffffff';ctx.beginPath();
-          // 左右のフリックは、その向きの三角で描く(2026-11-23 r1119-145 社長「スカイスライドでなんか上フリックある？」。向きに関係なく上向きで描いていて、空中の左右フリックが上フリックに見えた)
-          {const fd=rhythmFlickDir(note),my=ay-aw/2;if(fd==='right'){ctx.moveTo(ax+aw/2,my);ctx.lineTo(ax-aw/2,my-aw);ctx.lineTo(ax-aw/2,my+aw);}else if(fd==='left'){ctx.moveTo(ax-aw/2,my);ctx.lineTo(ax+aw/2,my-aw);ctx.lineTo(ax+aw/2,my+aw);}else{ctx.moveTo(ax,ay-aw);ctx.lineTo(ax+aw,ay);ctx.lineTo(ax-aw,ay);}}
-          ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
+        // 空中のフリックの印(2026-11-23 r1119-148 社長の選択「案A 地上と同じ山形」)。前は箱の上の小さな白い三角だけで、空中のタップと見分けにくかった。
+        // 地上の横フリックと同じ山形(地上と同じ色 RHYTHM_NOTE_COLORS.LEFT/RIGHT)、上フリックは地上と同じ桃色の矢印を、箱の真ん中へ大きく重ねる。
+        // 絵は地上と同じ焼いた絵(sideChevronSprite・arrowSprite)を貼るだけなので、2D でも GPU(webgl の描き口)でも同じに出る
+        if(note.type==='FLICK'||note._rhythmOriginalType==='FLICK')drawSkyFlickMark(note,geo.head,o);
       }else if(skyPlate||!(geo.skyShadow&&!isSlide&&o.pop===null))drawHead(note,geo,headOpts);
       // ききノーツ(r1119-141): 頭にききのリボンをぴょこんと付ける。必殺ノーツは上にピンクの剣を置き(リボンは右上へ)、叩いたら消える。顔と同じく最後にまとめて貼る
       if(note._mhCharge&&geo.head&&!o.failed&&o.pop===null&&rhythmNoteVisualType(note)==='TAP'){
         const fin=note._mhCharge===2,nh=HEAD_H*HEAD_THICK*(o.depthScale||1)*sizeScale*(fin?1.9:1),nw=geo.head.w*sizeScale*(fin&&(Number(note.subLaneWidth)||2)<=4?2.6:1),a=Math.min(1,o.alpha);
-        const rb=kikiBitmap('ribbon');if(rb){const size=Math.max(14,nh*3.2);faces.push(rb,geo.head.cx+(fin?nw*.36:0),geo.head.cy-nh/2-size*.12,size,a);}
+        const rb=kikiBitmap('ribbon');if(rb){const size=Math.max(18,nh*4.2);faces.push(rb,geo.head.cx+(fin?nw*.36:0),geo.head.cy-nh/2-size*.12,size,a);}
         if(note._mhLabel){const sw=kikiBitmap('sword');if(sw){const size=Math.max(30,geo.head.w/Math.max(1,Number(note.subLaneWidth)||2)*2*sizeScale*1.75);/* 奥から来るノーツに大きくかぶらない大きさ */faces.push(sw,cssW/2,geo.head.cy-nh/2-size*.36,size,a);}}}
       // 案Z: 空中のスライドを押している間、頭の板も帯と同じ色にする(今の時刻の帯の色・r1119-149。前は手の色)
       if(isSlide&&geo.head&&o.pressed&&!o.failed&&o.skySlideRgb&&skyZOn()&&(o.skyHand==='L'||o.skyHand==='R')){

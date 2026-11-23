@@ -92,6 +92,7 @@ const skyLiftPatched=src=>{
  await page.waitForTimeout(400);
  const selected=await page.evaluate(()=>({diff:document.querySelector('[data-rhythm-demo-difficulty][aria-pressed=true],[aria-pressed=true][data-rhythm-difficulty]')?.innerText||''}));
  if(process.env.DEBUG_SHOT)await page.screenshot({path:path.join(OUT,"select.png")});console.error("曲:",picked,"難易度:",diffOk,JSON.stringify(selected));
+<<<<<<< HEAD
  // 鑑賞(自動演奏)で撮るときは START=listen(2026-11-23 r1119-149 HELL の案内の動画)。既定は演奏を始めるボタン
  if(process.env.START==="listen"){ // 曲の詳細のジャケット → 鑑賞の欄で難易度を選んで「鑑賞」
   await page.evaluate(()=>document.querySelector("[data-rhythm-song-art-zoom]")?.click());
@@ -102,6 +103,14 @@ const skyLiftPatched=src=>{
   await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
   await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
  }
+=======
+ await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
+ // LISTEN=1: 曲の鑑賞(ジャケット → 鑑賞の難易度 → 鑑賞する)で始める。ノーツは鑑賞の自動の手が叩く(AUTO_TAP でも道具は押さない)
+ if(process.env.LISTEN==='1'){await page.evaluate(()=>[...document.querySelectorAll('button[aria-label]')].find(b=>/ジャケットを大きく見る/.test(b.getAttribute('aria-label')))?.click());
+  await page.waitForSelector('[data-rhythm-listen-start]',{timeout:15000});await page.evaluate(d=>document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
+  await page.evaluate(()=>document.querySelector('[data-rhythm-listen-start]').click());}
+ else await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
+>>>>>>> origin/main
  await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
  await page.waitForFunction(()=>!!window.__mhSong,null,{timeout:60000});
  await page.waitForFunction(()=>typeof RHYTHM_CANVAS_RENDERER!=='undefined',null,{timeout:30000});
@@ -118,6 +127,17 @@ const skyLiftPatched=src=>{
   const songEnd=(window.__mhSong.ctx&&0)||0;return {area:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)},canvas:cv};});
  const songLen=await page.evaluate(()=>{const s=window.__mhSong;return s?null:null;});
  const raf=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+ // REAL_SHOTS=1 PRE_CLICK=… SHOT_AT=…: 時計を止めずに実時間で流し、PRE_CLICK のボタンを押してから、曲の時刻が SHOT_AT に来たら撮る
+ //   (鑑賞の「+10秒」は止めた時計とかみ合わないため。撮る時刻は数十ms ずれる)
+ if(process.env.REAL_SHOTS==='1'){await page.evaluate(()=>{window.__mhFrozen=null;});await page.waitForTimeout(600);
+  const [label,times]=(process.env.PRE_CLICK||':0').split(':');for(let i=0;i<(Number(times)||0);i++){await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(x=>(x.innerText||'').replace(/\s+/g,'').includes(t));if(b)b.click();},label);await page.waitForTimeout(350);}
+  for(const x of (process.env.SHOT_AT||'').split(',').map(Number).filter(Number.isFinite)){
+   await page.waitForFunction(ms=>{const f=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs;const v=f?f():null;return v!=null&&v>=ms;},x*1000-25,{timeout:180000,polling:10});
+   const at=await page.evaluate(()=>Math.round(window.__mhTestHooks.rhythmSongMs()));await page.screenshot({path:path.join(OUT,`${process.env.PREFIX||'real'}-${Math.round(x*1000)}.png`)});console.log('撮った',x,'実際',at);}
+  await b.close();server.close();return;}
+ // PRE_CLICK=<ボタンの字>:<回数>(例 '+10秒:3'): 止めた時計で進める前に、そのボタンを押す(鑑賞の送り戻しの後も演出が出るかを撮る・r1119-141)
+ if(process.env.PRE_CLICK){const [label,times]=process.env.PRE_CLICK.split(':');for(let i=0;i<(Number(times)||1);i++){
+   const ok=await page.evaluate(t=>{const b=[...document.querySelectorAll('button')].find(x=>(x.innerText||'').replace(/\s+/g,'').includes(t));if(!b)return false;b.click();return true;},label);console.log('押した',label,ok);await page.waitForTimeout(400);}}
  // AUTO_TAP=1 SHOT_AT=<秒>,…: FROM から STEP ずつ止めた時計を進め、ノーツの時刻が来たら判定ラインのその位置を押して離す(タップだけ。
  //   スライドの押さえは続けないので取り逃しになる)。SHOT_AT の時刻のコマを PREFIX-<ms>.png で撮る(演出の止め絵用・2026-11-23 r1119-141)
  if(process.env.AUTO_TAP==='1'&&process.env.SHOT_AT){const shots=process.env.SHOT_AT.split(',').map(Number).filter(Number.isFinite).sort((x,y)=>x-y);
@@ -127,7 +147,7 @@ const skyLiftPatched=src=>{
   for(let sec=Math.max(FROM,cur);sec<=end+1e-6;sec=Math.round((sec+STEP/1000)*1000)/1000){
    await page.evaluate(s=>{window.__mhHook();window.__mhDraws=[];window.__mhFreezeSong(s);window.__mhNowMs=s*1000;},sec);await raf();
    const draws=await page.evaluate(()=>{const d=window.__mhDraws;window.__mhDraws=[];return d;});
-   for(const d of draws){if(tapped.has(d.i)||d.t>sec*1000+1||d.t<sec*1000-STEP*2||d.type==='SLIDE'||d.type==='HOLD')continue;tapped.add(d.i);
+   for(const d of (process.env.LISTEN==='1'?[]:draws)){if(tapped.has(d.i)||d.t>sec*1000+1||d.t<sec*1000-STEP*2||d.type==='SLIDE'||d.type==='HOLD')continue;tapped.add(d.i);
     await page.mouse.move(cv.x+d.cx,cv.y+d.cy);await page.mouse.down();await page.mouse.up();}
    while(si<shots.length&&shots[si]<=sec+1e-6){await raf();
     // 叩いたときに始まる動き(element.animate)は実時間で進むので、撮る時刻に合わせて止める(始まった曲の時刻からの経過。終わった動きは消す)

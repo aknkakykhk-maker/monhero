@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d2de430e34badfc
+// source-sha256: b2c2c0da4b2229ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43786,6 +43786,20 @@ const rhythmListenClock = ms => {
   const t = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
+const RHYTHM_LISTEN_HUD_KEY = 'mh_rhythm_listen_hud_v1';
+const rhythmListenHudRead = settings => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_LISTEN_HUD_KEY) : null;
+    if (v === '1') return true;
+    if (v === '0') return false;
+  } catch {}
+  return !!settings && (settings.judgmentTextDisplay !== false || settings.comboDisplay !== false);
+};
+const rhythmListenHudWrite = on => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_LISTEN_HUD_KEY, on ? '1' : '0');
+  } catch {}
+};
 const RhythmListenBar = ({
   runRef,
   song,
@@ -43794,7 +43808,9 @@ const RhythmListenBar = ({
   onPause,
   onClose,
   isLandscape,
-  paused = false
+  paused = false,
+  hudOn = true,
+  onToggleHud = null
 }) => {
   const [now, setNow] = useState({
     ms: 0,
@@ -43816,6 +43832,18 @@ const RhythmListenBar = ({
   }, [runRef]);
   const pct = now.total > 0 ? Math.max(0, Math.min(100, now.ms / now.total * 100)) : 0;
   const btn = 'flex min-h-[44px] min-w-[52px] items-center justify-center rounded-xl border border-slate-500 bg-slate-800 px-2 text-[12px] font-black text-white';
+  const hudToggle = typeof onToggleHud === 'function' ? React.createElement("button", {
+    type: "button",
+    "data-rhythm-listen-hud": hudOn ? 'on' : 'off',
+    "aria-pressed": hudOn,
+    onClick: onToggleHud,
+    "aria-label": hudOn ? '判定の文字とコンボ数を隠す' : '判定の文字とコンボ数を出す',
+    className: `flex min-h-[44px] min-w-[60px] flex-col items-center justify-center rounded-xl border px-1.5 leading-none ${hudOn ? 'border-cyan-300 bg-cyan-900/80 text-cyan-50' : 'border-slate-600 bg-slate-800/90 text-slate-400'}`
+  }, React.createElement("small", {
+    className: "text-[9px] font-black"
+  }, "判定・コンボ"), React.createElement("b", {
+    className: "mt-1 text-[13px] font-black"
+  }, hudOn ? '入' : '切')) : null;
   return React.createElement(React.Fragment, null, React.createElement("style", null, RHYTHM_LISTEN_HIDE_CSS), !paused && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-listen-top": true,
     className: "pointer-events-auto absolute z-[35] flex items-center gap-1.5",
@@ -43837,8 +43865,7 @@ const RhythmListenBar = ({
     className: "pointer-events-auto absolute z-[35] flex w-[76px] flex-col items-stretch gap-1.5 rounded-2xl border border-slate-600 bg-slate-900/90 p-1.5",
     style: {
       right: 'calc(var(--mh-safe-right,0px) + 8px)',
-      top: '50%',
-      transform: 'translateY(-62%)'
+      top: 'calc(var(--mh-safe-top,0px) + 62px)'
     }
   }, React.createElement("span", {
     "data-rhythm-listen-time": true,
@@ -43873,7 +43900,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")) : React.createElement("div", {
+  }, "+10秒"), hudToggle) : React.createElement("div", {
     "data-rhythm-listen-bar": true,
     className: "pointer-events-auto absolute z-[35] rounded-2xl border border-slate-600 bg-slate-900/90 px-3 py-2",
     style: {
@@ -43915,7 +43942,7 @@ const RhythmListenBar = ({
     onClick: () => onSeek(10000),
     "aria-label": "10秒送る",
     className: btn
-  }, "+10秒")))));
+  }, "+10秒"), hudToggle))));
 };
 const RhythmLineAdjustPanel = ({
   adjust,
@@ -44227,10 +44254,26 @@ const RhythmTapTest = ({
   const previewHands = !!(lineAdjust && (lineAdjust.preview || lineAdjust.listen));
   const lineHeightOverride = lineAdjust && Number.isFinite(Number(lineAdjust.ground)) ? Number(lineAdjust.ground) : null;
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
-  const settingsBase = useMemo(() => lineHeightOverride === null || !settingsIn ? settingsIn : {
-    ...settingsIn,
-    judgmentLineHeight: lineHeightOverride
-  }, [settingsIn, lineHeightOverride]);
+  const [listenHud, setListenHud] = useState(() => rhythmListenHudRead(settingsIn));
+  const toggleListenHud = useCallback(() => setListenHud(v => {
+    const next = !v;
+    rhythmListenHudWrite(next);
+    return next;
+  }), []);
+  const settingsBase = useMemo(() => {
+    const lined = lineHeightOverride === null || !settingsIn ? settingsIn : {
+      ...settingsIn,
+      judgmentLineHeight: lineHeightOverride
+    };
+    return listenMode && lined ? {
+      ...lined,
+      judgmentTextDisplay: listenHud,
+      comboDisplay: listenHud,
+      ...(listenHud ? {} : {
+        fastSlowDisplay: false
+      })
+    } : lined;
+  }, [settingsIn, lineHeightOverride, listenMode, listenHud]);
   const settings = useMemo(() => settingsBase && settingsBase.autoEffectDown !== false ? rhythmCapEffects(settingsBase, effectCap) : settingsBase, [settingsBase, effectCap]);
   useState(() => {
     try {
@@ -44772,10 +44815,15 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
-  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
-  const chargeOrbRef = useRef(null),
+  const specialFx = (!tutorial || listenMode && !tutorialProp) && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const chargeEdgeLRef = useRef(null),
+    chargeEdgeRRef = useRef(null),
     chargeBlastRef = useRef(null),
     chargeHitRef = useRef(null);
+  const chargeEdgeClip = useMemo(() => specialFx && typeof rhythmSpanPolygon === 'function' ? {
+    l: rhythmSpanPolygon(-.2, .16),
+    r: rhythmSpanPolygon(RHYTHM_LANE_COUNT - .16, RHYTHM_LANE_COUNT + .2)
+  } : null, [specialFx]);
   chargeHitRef.current = (note, judgment) => {
     const run = runRef.current,
       c = run && run.charge;
@@ -44791,25 +44839,38 @@ const RhythmTapTest = ({
     c.fin[z] = true;
     const blast = chargeBlastRef.current;
     if (!blast || typeof blast.animate !== 'function') return;
+    for (const el of [chargeEdgeLRef.current, chargeEdgeRRef.current]) {
+      if (!el || typeof el.animate !== 'function') continue;
+      const o0 = Number(el.style.opacity) || 0;
+      el.animate(judgment === 'MISS' ? [{
+        opacity: o0
+      }, {
+        opacity: 0
+      }] : [{
+        opacity: o0,
+        transform: 'scaleX(1)'
+      }, {
+        offset: .75,
+        opacity: 1,
+        transform: 'scaleX(.06)'
+      }, {
+        opacity: 0,
+        transform: 'scaleX(.02)'
+      }], {
+        duration: judgment === 'MISS' ? 260 : 200,
+        easing: 'ease-in'
+      });
+    }
     const r = Math.min(1, (c.hits[z] || 0) / Math.max(1, zone.n)),
       s0 = .3 + .9 * r,
       H = blast.parentElement ? blast.parentElement.clientHeight : 0;
     const dy = Math.max(0, (Number.isFinite(run._hitY) ? run._hitY : H * .8) - H * .04),
       tf = (y, sx, sy) => `translate(-50%,-50%) translateY(${y.toFixed(1)}px) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
-    if (judgment === 'MISS') {
-      blast.animate([{
-        opacity: .9,
-        transform: tf(0, s0, s0)
-      }, {
-        opacity: 0,
-        transform: tf(0, .1, .1)
-      }], {
-        duration: 320,
-        easing: 'ease-in'
-      });
-      return;
-    }
+    if (judgment === 'MISS') return;
     const big = 1.2 + 2.8 * r;
+    try {
+      if (typeof RHYTHM_NOTE_SE_RUNTIME.playAccent === 'function') RHYTHM_NOTE_SE_RUNTIME.playAccent(judgment);
+    } catch {}
     blast.animate([{
       opacity: 1,
       transform: tf(0, s0, s0)
@@ -44826,7 +44887,9 @@ const RhythmTapTest = ({
       transform: tf(dy, big * 2.4, big * .7)
     }], {
       duration: 440,
-      easing: 'linear'
+      delay: 150,
+      easing: 'linear',
+      fill: 'backwards'
     });
   };
   const climaxCycleMs = (() => {
@@ -46616,13 +46679,18 @@ const RhythmTapTest = ({
         }
       }
       {
-        const orb = chargeOrbRef.current,
+        const el = chargeEdgeLRef.current,
+          er = chargeEdgeRRef.current,
           c = run.charge;
-        if (orb && c) {
+        if (el && er && c) {
           run._hitY = travel.hitY;
           let z = -1;
           for (let k = 0; k < c.zones.length; k++) {
             const q = c.zones[k];
+            if (visualTime < q.from - 400 && (c.fin[k] || c.hits[k])) {
+              c.fin[k] = false;
+              c.hits[k] = 0;
+            }
             if (!c.fin[k] && visualTime >= q.from - 400 && visualTime <= q.finaleMs + 250) {
               z = k;
               break;
@@ -46632,8 +46700,9 @@ const RhythmTapTest = ({
             key = z >= 0 ? `${z}:${c.hits[z] || 0}` : 'off';
           if (c.key !== key) {
             c.key = key;
-            orb.style.opacity = z >= 0 ? (.5 + .5 * r).toFixed(3) : '0';
-            orb.style.transform = `translate(-50%,-50%) scale(${(z >= 0 ? .3 + .9 * r : .2).toFixed(3)})`;
+            const op = z >= 0 ? (.1 + .9 * r).toFixed(3) : '0';
+            el.style.opacity = op;
+            er.style.opacity = op;
           }
         }
       }
@@ -47650,6 +47719,15 @@ const RhythmTapTest = ({
         note._rhythmCanvasSettled = true;
       }
     });
+    if (run.charge && specialFx && typeof rhythmMarkChargeNotes === 'function') {
+      const zones = rhythmMarkChargeNotes(notes, specialFx);
+      run.charge.zones = zones;
+      run.charge.key = '';
+      zones.forEach((q, k) => {
+        run.charge.fin[k] = q.finaleMs < target - 30;
+        run.charge.hits[k] = run.charge.fin[k] || target < q.from ? 0 : notes.filter(n => n._mhZone === k && n._mhCharge === 1 && n.done).length;
+      });
+    }
     run.notes = notes;
     run.scanFrom = 0;
     run._stageNoteIndex = notes.findIndex(note => !note.done);
@@ -49421,7 +49499,9 @@ const RhythmTapTest = ({
     onPause: pause,
     onClose: onExit,
     isLandscape: isLandscape,
-    paused: view.status === 'paused'
+    paused: view.status === 'paused',
+    hudOn: listenHud,
+    onToggleHud: toggleListenHud
   }) : lineAdjust && React.createElement(RhythmLineAdjustPanel, {
     adjust: lineAdjust,
     onBump: () => setSkyLineTick(n => n + 1),
@@ -49600,7 +49680,17 @@ const RhythmTapTest = ({
     "data-rhythm-charge-fx": true,
     "aria-hidden": "true"
   }, React.createElement("b", {
-    ref: chargeOrbRef
+    ref: chargeEdgeLRef,
+    "data-edge": "l",
+    style: chargeEdgeClip ? {
+      clipPath: chargeEdgeClip.l
+    } : undefined
+  }), React.createElement("b", {
+    ref: chargeEdgeRRef,
+    "data-edge": "r",
+    style: chargeEdgeClip ? {
+      clipPath: chargeEdgeClip.r
+    } : undefined
   }), React.createElement("em", {
     ref: chargeBlastRef
   })), climaxFxOn && React.createElement("i", {
