@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>プロフィール案の止め絵</title>
+<!-- 案の止め絵(資料だけ。ゲーム本体ではない)。mock.html#A-top のように開く。撮影: node docs/progress/profile-renewal-plan/shoot-mock.js -->
+<style>
+:root{--bg:#0b1024;--panel:#141a35;--line:rgba(255,255,255,.12);--txt:#fff;--sub:#94a3b8;--ind:#818cf8;--pink:#f9a8d4;--amber:#fbbf24}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:"Hiragino Sans","Noto Sans JP",sans-serif;font-weight:700;overflow:hidden}
+.scr{height:100vh;display:flex;flex-direction:column;padding:10px 12px;gap:8px}
+.head{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.back{border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:11px;background:#151b33}
+.ttl{font-size:19px;font-weight:900;color:var(--ind);flex:1}
+.clock{font-size:11px;border:1px solid var(--line);border-radius:99px;padding:4px 8px;background:#1e2442}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px}
+.av{width:72px;height:72px;border-radius:50%;border:3px solid #c084fc;background:#1e293b;overflow:hidden;flex-shrink:0}
+.av img,.face img{width:100%;height:100%;object-fit:cover}
+.row{display:flex;align-items:center;gap:10px}
+.name{font-size:18px;font-weight:900}
+.lv{font-size:14px;color:#c7d2fe}
+.bar{height:7px;border-radius:9px;background:#00000066;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#6366f1,#c084fc)}
+.title{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;background:linear-gradient(90deg,#f59e0b33,#f472b633);border:1px solid #fbbf2488;color:#fde68a;margin-top:3px}
+.msg{font-size:11px;color:#fbcfe8;margin-top:6px}
+.small{font-size:10px;color:var(--sub);font-weight:700}
+.lab{font-size:11px;color:#a5b4fc;font-weight:900;margin:2px 2px 4px}
+.tabs{display:flex;gap:4px;flex-shrink:0;background:#0f1530;border:1px solid var(--line);border-radius:14px;padding:4px}
+.tab{flex:1;text-align:center;font-size:11px;padding:8px 0;border-radius:10px;color:var(--sub)}
+.tab.on{background:#4f46e5;color:#fff}
+.tab b{display:block;font-size:16px;line-height:1.1}
+.body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{border:1px solid var(--line);border-radius:14px;background:#1a2142;padding:8px 10px;font-size:12px;min-height:52px;display:flex;align-items:center;gap:8px}
+.tile em{font-style:normal;font-size:20px}
+.tile small{display:block;font-size:10px;color:var(--sub)}
+.stat{border:1px solid #f59e0b55;background:#451a0333;border-radius:12px;text-align:center;padding:6px 2px;font-size:10px;color:#fcd34d}
+.stat b{display:block;font-size:14px;color:#fff}
+.rec{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:7px 10px;background:#121836;font-size:12px}
+.rec em{font-style:normal;font-size:18px}
+.rec small{margin-left:auto;font-size:11px;color:#fde68a}
+.door{border-radius:16px;padding:10px;min-height:86px;display:flex;flex-direction:column;justify-content:space-between;border:1.5px solid}
+.door b{font-size:14px}.door small{font-size:10px;color:#e2e8f0cc}
+.door .n{font-size:11px;font-weight:900}
+.faces{display:flex;gap:2px}.face{width:26px;height:26px;border-radius:50%;overflow:hidden;border:1.5px solid #fff3;background:#334}
+.seg{display:flex;gap:4px;flex-wrap:nowrap}
+.chip{font-size:11px;padding:7px 9px;border-radius:99px;border:1px solid var(--line);background:#161d3b;white-space:nowrap;color:#cbd5e1}
+.chip.on{background:#a21caf;border-color:#f0abfc;color:#fff}
+.ban{border-radius:14px;overflow:hidden;position:relative;border:1px solid var(--line);min-height:70px;background:#222}
+.ban img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;opacity:.85}
+.ban .cap{position:relative;padding:8px 10px;background:linear-gradient(90deg,#000c 40%,#0000);min-height:70px}
+.ban .cap b{font-size:13px;display:block}.ban .cap small{font-size:10px;color:#e2e8f0}
+.done{display:inline-block;font-size:9px;background:#16a34a;border-radius:99px;padding:1px 6px;margin-left:4px}
+.ep{display:flex;align-items:center;gap:8px;border:1px solid #e879f966;background:#4a044e44;border-radius:12px;padding:7px 10px;font-size:12px}
+.ep small{display:block;font-size:10px;color:#f0abfcaa}
+.jk{width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0}.jk img{width:100%;height:100%;object-fit:cover}
+.sec{font-size:11px;color:#e9d5ff;font-weight:900;margin-top:2px;display:flex;align-items:center;gap:6px}
+.sec:after{content:"";flex:1;height:1px;background:var(--line)}
+.bubble{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.bubble .t{flex:1;border:2px solid #f472b6;border-radius:14px;padding:5px 9px;font-size:10px;background:#1a1030}
+.yoko .scr{padding:8px 12px}
+.cols{flex:1;min-height:0;display:flex;gap:10px}
+.cols>.l{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.cols>.r{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.sticky{position:relative}
+.fade{position:relative}.fade:after{content:"";position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(#0000,var(--bg))}
+.note{position:fixed;right:6px;bottom:6px;font-size:10px;background:#ef4444;color:#fff;padding:3px 7px;border-radius:8px;z-index:9}
+</style></head><body><div id="app"></div>
+<script>
+const IMG='../../../monster-hero/images/';
+const F=n=>`<span class="face"><img src="${IMG}assistant/face/${n}_normal.PNG"></span>`;
+const yoko=innerWidth>innerHeight; if(yoko) document.body.classList.add('yoko');
+const head=`<div class="head"><span class="back">← ホームへ戻る</span><span class="ttl">プロフィール</span><span class="clock">🌙 19:04</span></div>`;
+const card=(big)=>`<div class="panel"><div class="row"><div class="av" style="${big?'width:84px;height:84px':''}"><img src="${IMG}monster-icons/face/mocchi.png"></div>
+<div style="flex:1;min-width:0"><div class="name">テスト ✎</div><div class="lv">👑 Lv.42 <span class="small">ブリーダー</span></div>
+<div class="title">🎖 称号：セッションマスター</div>
+<div class="bar"><i style="width:62%"></i></div><div class="small" style="margin-top:2px">1,240 / 2,000 XP</div></div></div>
+<div class="msg">💬「モンヒロビート、毎日やってます！」</div></div>`;
+const stats=`<div class="g3"><div class="stat">💎 ダイヤ<b>12,300</b></div><div class="stat">🪙 ブリーダーP<b>4,820</b></div><div class="stat" style="border-color:#818cf855;color:#a5b4fc">⏱ プレイ時間<b>86時間</b></div></div>`;
+const showcase=`<div class="lab">見せる欄（フレンドにもこう見えます）</div><div class="g2">
+<div class="tile" style="border-color:#d9770699;min-height:70px"><span class="face" style="width:44px;height:44px"><img src="${IMG}monster-icons/face/kenshi-mocchi.png"></span><div>好きなモンスター<small>ケンシモッチー 絆Lv.8</small></div></div>
+<div class="tile" style="border-color:#d9770699;min-height:70px"><em>🃏</em><div>バトルカードのデッキ<small>押すとデッキ登録へ</small></div></div></div>`;
+const looks=`<div class="g2"><div class="tile"><em>🖼</em><div>アイコン・フレーム<small>フレーム：紫</small></div></div><div class="tile"><em>👗</em><div>着替え<small>元の服</small></div></div>
+<div class="tile"><em>👥</em><div>フレンド<small>申請・プロフィール</small></div></div><div class="tile"><em>📦</em><div>アイテム<small>32個</small></div></div></div>`;
+const recs=`<div class="rec"><em>🏆</em>チャレンジモード<small>最高 182,400 pt</small></div><div class="rec"><em>⚡</em>クイックモード<small>WAVE 38</small></div>
+<div class="rec"><em>🎓</em>プロモード<small>最高 95,210 pt</small></div><div class="rec"><em>🔥</em>極限チャレンジ<small>未記録</small></div>
+<div class="rec"><em>🧬</em>種族チャレンジ<small>クリア 12/315</small></div><div class="rec"><em>🎵</em>モンヒロビート<small>FC 41曲・AE 7曲</small></div><div class="rec"><em>🃏</em>MFバトルカード<small>32勝 18敗</small></div>`;
+// 回想のジャンル(案の分け方。数は 2026-11-23 の EVENT_REPLAYS 58件)
+const G4=[['📅','期間イベント','開催したイベントの物語',32,'#fb923c'],['💬','助手のお話','出会い・季節の小話',8,'#f472b6'],['🎵','曲のお話','新曲ができるまでのお話',3,'#a78bfa'],['🆕','遊びの案内','新しい遊びができた日',15,'#38bdf8']];
+const series=[['flower3-2026-wide.jpg','咲かせて！ハナウタ・ノート','2026/11/23〜11/30・全8話','開催中 3/8'],['pandora-wings-2026-wide.jpg','鍵の向こう側へ','2026/11/02〜11/09・全8話','8/8'],['halloween-night-2026.jpg','ハロウィン・ナイト','2026/10/04〜11/01・全11話','11/11'],['monbeat-event-2026-09-17-wide.jpg','異世界交響祭','2026/09/17〜09/21・全2話','2/2'],['monbeat-event-2026-09-11-wide.jpg','週末ゲリラ杯','2026/09/11〜09/14・全2話','2/2']];
+const banners=(n)=>series.slice(0,n).map(s=>`<div class="ban"><img src="${IMG}events/${s[0]}"><div class="cap"><b>${s[1]}</b><small>${s[2]}</small><br><small style="color:#fde68a">見たお話 ${s[3]}</small>${s[3].startsWith('開催')?'':'<span class="done">全部見た</span>'}</div></div>`).join('');
+const mk={};
+/* ===== 案A タブで分ける ===== */
+const tabsA=(on)=>`<div class="tabs">${[['🙂','わたし'],['🏆','記録'],['💬','助手'],['📖','思い出']].map(([e,t])=>`<div class="tab ${t===on?'on':''}"><b>${e}</b>${t}</div>`).join('')}</div>`;
+mk['A-top']=()=>yoko?`<div class="scr">${head}<div class="cols"><div class="l">${card()}${stats}</div><div class="r">${tabsA('わたし')}<div class="body fade">${showcase}${looks}</div></div></div></div>`
+:`<div class="scr">${head}${card()}${tabsA('わたし')}<div class="body fade">${showcase}${stats}${looks}</div></div>`;
+mk['A-rec']=()=>`<div class="scr">${head}${card()}${tabsA('記録')}<div class="body fade"><div class="lab">バトル・モンヒロビート・MFバトルカード（押すと詳しい記録）</div>${recs}</div></div>`;
+const segA=(on)=>`<div class="seg">${G4.map(g=>`<span class="chip ${g[1]===on?"on":""}" style="padding:7px 6px;font-size:10.5px">${g[0]}${g[1]}</span>`).join('')}</div>`;
+mk['A-replay']=()=>yoko?`<div class="scr">${head}<div class="cols"><div class="l">${card()}<div class="panel small">見たお話 57/58<div class="bar"><i style="width:98%"></i></div></div></div><div class="r">${tabsA('思い出')}${segA('期間イベント')}<div class="body fade"><div class="g2">${banners(4)}</div></div></div></div></div>`
+:`<div class="scr">${head}${card()}${tabsA('思い出')}<div style="overflow:hidden">${segA('期間イベント')}</div><div class="body fade">${banners(5)}</div></div>`;
+/* ===== 案B 名刺＋扉 ===== */
+const doors=[['🏆','記録','バトル・ビート・カード','#fbbf24'],['💬','助手','仲良し度・関係図・助手ライフ','#f472b6'],['📖','思い出','イベント回想 57/58','#e879f9'],['🎨','見た目','アイコン・フレーム・着替え','#818cf8'],['👥','フレンド','申請 2件','#f9a8d4'],['📦','アイテム','32個','#2dd4bf']];
+const doorHtml=d=>`<div class="door" style="border-color:${d[3]}88;background:${d[3]}18"><b>${d[0]} ${d[1]}</b><small>${d[2]}</small></div>`;
+const hi=`<div class="g3"><div class="stat" style="border-color:#fbbf2466">チャレンジ最高<b>182,400</b></div><div class="stat" style="border-color:#a78bfa66;color:#c4b5fd">ビート FC<b>41曲</b></div><div class="stat" style="border-color:#f472b666;color:#f9a8d4">仲良し最高<b>みゅあ Lv.12</b></div></div>`;
+mk['B-top']=()=>yoko?`<div class="scr">${head}<div class="cols"><div class="l">${card(true)}${hi}</div><div class="r"><div class="g3" style="flex:1">${doors.map(doorHtml).join('')}</div>${stats}</div></div></div>`
+:`<div class="scr">${head}${card(true)}${hi}${showcase}<div class="g3">${doors.map(doorHtml).join('')}</div>${stats}</div>`;
+const gdoor=(g,inner)=>`<div class="door" style="border-color:${g[4]}99;background:${g[4]}1c;min-height:${yoko?150:118}px"><div><b>${g[0]} ${g[1]}</b><br><small>${g[2]}</small></div>${inner}<span class="n" style="color:${g[4]}">見たお話 ${g[3]===32?'31':g[3]}/${g[3]}</span></div>`;
+const gInner=[`<div class="jk" style="width:100%;height:40px"><img src="${IMG}events/halloween-night-2026.jpg"></div>`,
+`<div class="faces">${['kiki','momosuke','atsu','kyuko','sorashido','erubin'].map(F).join('')}</div>`,
+`<div class="row" style="gap:4px"><span class="jk" style="width:34px;height:34px"><img src="${IMG}song-art/sparkling-pink-overture.jpg"></span><span class="jk" style="width:34px;height:34px"><img src="${IMG}song-art/desert-crown.jpg"></span><span class="jk" style="width:34px;height:34px"><img src="${IMG}song-art/beyond-the-same-sky.jpg"></span></div>`,
+`<div style="font-size:16px">🎵 ⚔️ 🃏 🌱 💬</div>`];
+mk['B-replay']=()=>{const h=`<div class="head"><span class="back">← プロフィール</span><span class="ttl" style="color:#f0abfc">📖 思い出</span><span class="clock">57/58</span></div>`;
+ return yoko?`<div class="scr">${h}<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1">${G4.map((g,i)=>gdoor(g,gInner[i])).join('')}</div></div>`
+ :`<div class="scr">${h}<div class="small">見たいジャンルを選んでください</div><div class="g2">${G4.map((g,i)=>gdoor(g,gInner[i])).join('')}</div>
+ <div class="sec">いま開催中</div>${banners(1)}<div class="sec">さいきん見たお話</div><div class="ep">▶ <div>鍵の向こう側へ 第8話・終章<small>2026/11/09</small></div></div></div>`;};
+mk['B-song']=()=>{const h=`<div class="head"><span class="back">← 思い出</span><span class="ttl" style="color:#c4b5fd">🎵 曲のお話</span><span class="clock">3/3</span></div>`;
+ const s=[['beyond-the-same-sky.jpg','同じ空の先へ','Beyond the Same Sky','atsu'],['desert-crown.jpg','砂の向こうの歌','Desert Crown','erubin'],['sparkling-pink-overture.jpg','はじめての曲','Sparkling Pink Overture','kiki']];
+ return `<div class="scr">${h}${s.map(x=>`<div class="ep" style="border-color:#a78bfa88;background:#2e106544;padding:9px"><span class="jk" style="width:64px;height:64px"><img src="${IMG}song-art/${x[0]}"></span><div style="flex:1">${x[1]}<small>♪ ${x[2]}</small></div>${F(x[3])}</div>`).join('')}</div>`;};
+/* ===== 案C 1列のまま整理＋しおり ===== */
+const jumpC=(on)=>`<div class="seg" style="flex-shrink:0">${['名刺','思い出','記録','助手','持ちもの'].map(t=>`<span class="chip ${t===on?'on':''}" style="${t===on?'background:#4f46e5;border-color:#a5b4fc':''}">${t}</span>`).join('')}</div>`;
+const replayBandC=`<div class="sec">📖 思い出（イベント回想 57/58）</div><div class="g2">${G4.map(g=>`<div class="tile" style="border-color:${g[4]}88;background:${g[4]}14"><em>${g[0]}</em><div>${g[1]}<small>${g[3]}話</small></div></div>`).join('')}</div>`;
+mk['C-top']=()=>yoko?`<div class="scr">${head}${jumpC('名刺')}<div class="cols"><div class="l">${card()}${stats}</div><div class="r fade">${replayBandC}<div class="sec">🏆 記録</div>${recs}</div></div></div>`
+:`<div class="scr">${head}${jumpC('名刺')}<div class="body fade">${card()}${stats}${replayBandC}<div class="sec">🏆 記録</div>${recs}</div></div>`;
+mk['C-replay']=()=>{const box=(inner)=>`<div style="position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;padding:${yoko?8:20}px"><div class="panel" style="width:100%;max-width:${yoko?720:340}px;height:100%;display:flex;flex-direction:column;gap:8px;background:#0f172a">${inner}</div></div>`;
+ const chips=`<div class="seg" style="overflow:hidden">${[['📅','イベント'],['💬','助手と曲'],['🆕','遊びの案内']].map((c,i)=>`<span class="chip ${i===0?'on':''}">${c[0]} ${c[1]}</span>`).join('')}</div>`;
+ const rows=series.slice(0,yoko?4:5).map(s=>`<div class="ep" style="border-color:#fb923c66;background:#43140733"><span class="jk"><img src="${IMG}events/${s[0]}"></span><div style="flex:1">${s[1]}<small>${s[2]}</small></div><span style="font-size:11px;color:#fde68a">${s[3]}</span></div>`).join('');
+ return `<div class="scr">${head}</div>`+box(`<div style="text-align:center;font-size:15px">📖 イベント回想</div>${chips}<div class="body fade" ${yoko?'style="display:grid;grid-template-columns:1fr 1fr;align-content:start"':''}>${rows}</div><div class="back" style="text-align:center">閉じる</div>`);};
+const id=location.hash.slice(1)||'A-top';
+document.getElementById('app').innerHTML=(mk[id]||(()=>'?'))();
+</script></body></html>
