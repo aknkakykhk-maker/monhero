@@ -45,14 +45,14 @@ async function enterQuickBattle(s, { system = 'systemQuick', mode = 'challenge' 
   const want = wantIds.length ? wantIds[pick % wantIds.length] : '';
   const heroName = await page.evaluate(([n, wantId]) => {
     const cards = [...document.querySelectorAll('article,button,[role="button"],div')]
-      .filter((x) => /総合力/.test(x.innerText || '') && /詳細を見る|くわしく見る/.test(x.innerText || '') && x.querySelectorAll('img').length === 1);
+      .filter((x) => /総合力/.test(x.innerText || '') && /詳細を見る|くわしく見る|詳しく見る/.test(x.innerText || '') && x.querySelectorAll('img').length === 1);
     // eslint-disable-next-line no-undef
     const wantName = wantId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[wantId] ? ALL_PLAYER_MONSTERS[wantId].name : '';
     const named = wantName ? cards.find((x) => (x.innerText || '').split('\n')[0].trim() === wantName) : null;
     const card = named || cards[n % Math.max(1, cards.length)];
     if (!card) return '';
     card.scrollIntoView({ block: 'center' });
-    const detail = [...card.querySelectorAll('button')].find((b) => /詳細を見る|くわしく見る/.test(b.innerText || ''));
+    const detail = [...card.querySelectorAll('button')].find((b) => /詳細を見る|くわしく見る|詳しく見る/.test(b.innerText || ''));
     (detail || card).click();
     return (card.innerText || '').split('\n')[0].trim();
   }, [pick, want]);
