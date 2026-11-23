@@ -32,12 +32,12 @@ ok('どの設定でも、称号があって失敗でないときは1回だけ・
 ok('お祝い画面が出る設定では、結果へ進むところでは鳴らさない(二重に鳴らさない)', when('FULL COMBO!', false, true) === 'celebrate');
 ok('お祝い画面が出ない設定(軽量モード・演出量が最小・演出OFF)でも鳴らす', when('FULL COMBO!', false, false) === 'result');
 
-const calls = SRC.split('RHYTHM_NOTE_SE_RUNTIME.playFullCombo()').length - 1;
+const calls = SRC.split('RHYTHM_NOTE_SE_RUNTIME.playFullCombo(').length - 1;  // 2026-11-23 称号の段(fc/ae/am)を渡すようになった
 ok('playFullCombo を呼ぶ場所は2つだけ(お祝い画面・結果へ進むところ)', calls === 2, `${calls}か所`);
-ok('結果へ進むところは rhythmCelebrateSeWhen が \'result\' のときだけ', /rhythmCelebrateSeWhen\(celebrateTitle,failed,showCelebrate\)==='result'\)\{try\{RHYTHM_NOTE_SE_RUNTIME\.playFullCombo\(\)/.test(SRC));
-ok('お祝い画面に入ったときは status===\'celebrate\' で1回', /if\(view\.status!=='celebrate'\)return;\s*RHYTHM_NOTE_SE_RUNTIME\.playFullCombo\(\);/.test(SRC));
+ok('結果へ進むところは rhythmCelebrateSeWhen が \'result\' のときだけ', /rhythmCelebrateSeWhen\(celebrateTitle,failed,showCelebrate\)==='result'\)\{try\{RHYTHM_NOTE_SE_RUNTIME\.playFullCombo\(rhythmCelebrateTierOf\(achievements\)\|\|'fc'\)/.test(SRC));
+ok('お祝い画面に入ったときは status===\'celebrate\' で1回', /if\(view\.status!=='celebrate'\)return;\s*RHYTHM_NOTE_SE_RUNTIME\.playFullCombo\(rhythmCelebrateTierOf\(view\.result\)\|\|'fc'\);/.test(SRC));
 
 const RT = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'rhythm-mode.js'), 'utf8');
-const pf = RT.slice(RT.indexOf('const playFullCombo=()=>'), RT.indexOf('const playFullCombo=()=>') + 400);
+const pf = RT.slice(RT.indexOf("const playFullCombo=(tier='fc')=>"), RT.indexOf("const playFullCombo=(tier='fc')=>") + 400);
 ok('音が鳴らないのは「ノーツの効果音OFF・音量0・全体ミュート」だけ(playFullCombo の守りのまま)', /!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)/.test(pf));
 console.log(ng ? `\n${ng}件のNGがあります` : '\nすべてOK'); process.exit(ng ? 1 : 0);
