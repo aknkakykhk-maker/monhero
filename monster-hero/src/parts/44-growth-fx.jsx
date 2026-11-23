@@ -104,7 +104,9 @@ const growthFxAssistantOf = (assistantId) => {
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
   const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
-  return (typeof assistantStandArt === 'function' && assistantStandArt(who, expression)) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+  // 着ている服の立ち絵(2026-11-23 r1119-153 窓口: 前はふだんの服の立ち絵を出していた)。服の立ち絵が無ければふだんの服
+  const outfit = typeof assistantWornOutfitName === 'function' ? assistantWornOutfitName(who) : '';
+  return (typeof assistantStandArt === 'function' && ((outfit && assistantStandArt(who, expression, outfit)) || assistantStandArt(who, expression))) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = (assistantId) => {
   const who = growthFxAssistantOf(assistantId);

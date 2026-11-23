@@ -2,10 +2,8 @@
 
 <!-- node tools/image/assistant-art-catalog.js が書く。手で直さない -->
 
-## 要確認(8 件)
+## 要確認(6 件)
 
-- mua/halloween/stand: 全身絵(2026-11-22)のほうが立ち絵(2026-11-21)より新しい。立ち絵は作り直した全身絵と同じ絵か
-- mua/normal/stand: 全身絵(2026-11-22)のほうが立ち絵(2026-11-21)より新しい。立ち絵は作り直した全身絵と同じ絵か
 - mua/normal/fullbody: 表情なしの全身絵(mua.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
 - mua/halloween/fullbody: 表情なしの全身絵(mua_halloween.png・2026-11-21)が、表情つき(2026-11-22)より古い世代のまま現行フォルダにある
 - sorashido/hosei/fullbody: 表情なしの全身絵(sorashido_hosei.png・2026-11-18)が、表情つき(2026-11-20)より古い世代のまま現行フォルダにある

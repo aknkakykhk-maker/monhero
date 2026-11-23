@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38d4783a64e88ee5
+// source-sha256: 508fb86d6ea87bbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -69540,7 +69540,8 @@ const growthFxAssistantOf = assistantId => {
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
   const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
-  return typeof assistantStandArt === 'function' && assistantStandArt(who, expression) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+  const outfit = typeof assistantWornOutfitName === 'function' ? assistantWornOutfitName(who) : '';
+  return typeof assistantStandArt === 'function' && (outfit && assistantStandArt(who, expression, outfit) || assistantStandArt(who, expression)) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = assistantId => {
   const who = growthFxAssistantOf(assistantId);
@@ -120972,11 +120973,10 @@ function AssistantLifeRoomSheet({
   }));
 }
 const ASSISTANT_LIFE_STAND_BOX = new Map();
-const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin', 'stand-normal/kiki', 'stand-halloween/kiki']);
 const assistantLifeStandFrameSrc = src => {
   const s = String(src || '');
-  const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
-  if (!m || m[3] === 'normal' || !(ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || ASSISTANT_LIFE_STAND_SAME_FRAME.includes(`${m[1]}/${m[2]}`))) return src;
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  if (!m || m[3] === 'normal') return src;
   return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
 };
 const assistantLifeStandBox = src => new Promise(res => {
@@ -121152,41 +121152,42 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.1489,
-      eye: 0.336,
-      chin: 0.4296,
-      m: 0.696
+      top: 0.2058,
+      eye: 0.4599,
+      chin: 0.5379,
+      m: 0.58,
+      above: 0.7
     },
     momosuke: {
-      top: 0.0636,
+      top: 0.0635,
       eye: 0.3248,
-      chin: 0.4298,
-      m: 0.781,
+      chin: 0.4296,
+      m: 0.78,
       above: 0.7
     },
     kiki: {
-      top: 0.0877,
-      eye: 0.3355,
-      chin: 0.4298,
-      m: 0.702
+      top: 0.1181,
+      eye: 0.4372,
+      chin: 0.5587,
+      m: 0.904
     },
     atsu: {
-      top: 0.0727,
-      eye: 0.3275,
-      chin: 0.4295,
-      m: 0.758
+      top: 0.0726,
+      eye: 0.3274,
+      chin: 0.4296,
+      m: 0.76
     },
     kyuko: {
-      top: 0.0589,
-      eye: 0.3171,
-      chin: 0.43,
-      m: 0.84
+      top: 0.0783,
+      eye: 0.3698,
+      chin: 0.4973,
+      m: 0.949
     },
     sorashido: {
-      top: 0.0029,
-      eye: 0.273,
-      chin: 0.4302,
-      m: 1.169
+      top: 0.0041,
+      eye: 0.2876,
+      chin: 0.4526,
+      m: 1.228
     },
     erubin: {
       top: 0.0109,
@@ -121197,49 +121198,49 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-sekiyuou': {
     erubin: {
-      top: 0.0137,
-      eye: 0.2531,
-      chin: 0.4299,
-      m: 1.315
+      top: -0.0059,
+      eye: 0.2449,
+      chin: 0.4297,
+      m: 1.376
     }
   },
   'stand-hosei': {
     sorashido: {
-      top: 0.0562,
-      eye: 0.2921,
-      chin: 0.4307,
-      m: 1.031
+      top: 0.0263,
+      eye: 0.3096,
+      chin: 0.452,
+      m: 1.059
     }
   },
   'stand-halloween': {
     mua: {
-      top: 0.2342,
-      eye: 0.3496,
-      chin: 0.4299,
-      m: 0.598,
-      above: 1.2
+      top: 0.2281,
+      eye: 0.4663,
+      chin: 0.539,
+      m: 0.541,
+      above: 0.95
     },
     momosuke: {
-      top: 0.0614,
-      eye: 0.3116,
-      chin: 0.4296,
-      m: 0.878,
+      top: 0.061,
+      eye: 0.3118,
+      chin: 0.4301,
+      m: 0.88,
       above: 0.95
     },
     kiki: {
-      top: 0.149,
-      eye: 0.3347,
-      chin: 0.43,
-      m: 0.709,
+      top: 0.1731,
+      eye: 0.3825,
+      chin: 0.4899,
+      m: 0.799,
       above: 0.95
     }
   },
   'stand-card-master': {
     mua: {
-      top: 0.1161,
-      eye: 0.321,
-      chin: 0.4299,
-      m: 0.81,
+      top: 0.1476,
+      eye: 0.403,
+      chin: 0.5388,
+      m: 1.01,
       above: 0.75
     }
   },
@@ -121254,8 +121255,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-winter': {
     kyuko: {
       top: 0.0137,
-      eye: 0.3311,
-      chin: 0.43,
+      eye: 0.3314,
+      chin: 0.4303,
       m: 0.736
     }
   },
@@ -121270,10 +121271,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-twintail': {
     kiki: {
-      top: 0.1966,
-      eye: 0.3225,
-      chin: 0.43,
-      m: 0.8,
+      top: 0.2539,
+      eye: 0.4133,
+      chin: 0.5496,
+      m: 1.014,
       above: 0.95
     }
   }

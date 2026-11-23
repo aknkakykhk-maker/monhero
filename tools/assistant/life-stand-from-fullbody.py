@@ -28,32 +28,33 @@ HOUSE = os.path.join(ROOT, 'monster-hero/src/parts/56-assistant-life-house.jsx')
 # 切り出したときの全身画と立ち絵の指紋(2026-11-23 r1119-153: えるびんの全身画を差し替えたのに立ち絵が古いままだった)。
 #   life-stand-stale-check.js が今の絵と比べ、全身画だけ替わっている(切り出し直し忘れ)を見つける。この道具を回すたびに書く
 MADE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-made.json')
+# 切り方の数字の表(2026-11-23 r1119-153: 位置の細かい調整は Muse が触るので、数字はここ1か所にまとめる)。
+#   default に全組の既定、キーごとに上書き。face … 顔アイコン(head・up・px・dx・dy)、stand_max … 立ち絵の長い辺の上限。
+#   使い方・確かめ方は docs/progress/assistant-art/r1119-153-switch/MUSE.md
+CUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-cut.json')
 EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']
 # key … 助手id(服があれば id:服)。name … 全身画の名前。stand … 立ち絵の置き場。prefix … 画像の接頭辞。chin_frac … 切った絵の高さのうち顎の位置
 # above … 顔の表の above(大きい飾りが場面の枠で切れないように)。face … 顔アイコンも作る(side=辺が目から顎の何倍か・down=顔を丸の真ん中よりどれだけ下へ)
 HEADS = {
-    # きき(ふだん・ハロウィン)は 2026-11-23 #7427 で表情ごとにポーズの違う全身画になった。えるびんと同じくそろえる
+    # 2026-11-23 r1119-153 社長「助手絵は最新の全身絵に切り替えて」: 全身画がある組は、立ち絵も顔アイコンも全身画から切る。
+    #   表情ごとに全身画の大きさ・ポーズが違うので match_scale(いちばん小さい表情へ縮めてそろえる)、
+    #   場面はどの表情も normal の範囲で置く(scene_same_frame・56-assistant-life-house.jsx の assistantLifeStandFrameSrc)
+    'mua': dict(name='mua', stand='stand-normal', prefix='myua', chin_frac=0.43, above=0.7, match_scale=True, scene_same_frame=True),
+    'mua:halloween': dict(name='mua_halloween', stand='stand-halloween', prefix='myua', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    # カードマスター(2026-11-23 r1119-137)。normal だけ手を頭の上へ上げているので、重ね合わせは横だけ(same_frame)
+    'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, same_frame=True),
     'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
-    'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7),
-    'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95),
-    # えるびん(2026-11-23 r1119-153 ポーズ違いの全身画から作り直し)。表情ごとに全身画の大きさが違うので match_scale でそろえ、
-    #   上げた腕・こぶしで見えている範囲が変わるので、場面はどの表情も normal の範囲で置く(scene_same_frame・56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_SAME_FRAME)
+    'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7, match_scale=True, scene_same_frame=True),
+    'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
+    'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'erubin': dict(name='erubin', stand='stand-normal', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'erubin:sekiyuou': dict(name='erubin_sekiyuou', stand='stand-sekiyuou', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
-    'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None),
-    'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None),
-    'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None),
-    'kiki:twintail': dict(name='kiki_twintail', stand='stand-twintail', prefix='kiki', chin_frac=0.43, above=0.95),
-    # hold … まだこの道具で作っていない(--only で名指ししたときだけ作る)。表情ごとに姿勢が違い(上げた腕)、場面は表情ごとの見えている体の範囲で置くので、
-    #   作り直すと顔がずれる表情がある(2026-11-23 窓口に相談中: 場面が同じ組の normal の範囲で置くようにするか)
-    'sorashido:hosei': dict(name='sorashido_hosei', stand='stand-hosei', prefix='sorashido', chin_frac=0.43, above=None, hold=True),
-    # カードマスター(2026-11-23 r1119-137 全身画を作り直した)。normal だけ手を頭の上へ上げているので、場面はどの表情も normal の見えている範囲で置く
-    #   (56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_SAME_FRAME)。same_frame … 顔のずれを normal の範囲で測る
-    'mua:card-master': dict(name='mua_card-master', stand='stand-card-master', prefix='myua', chin_frac=0.43, above=0.75, same_frame=True),
-    # 馬骨。補正(いままでの絵)は stand-hosei。顔アイコンは sorashido-umahone-busts.py で作った物のまま(2026-11-23 表情の全身画は元の版に戻ったので作り直さない)。
-    #   表情の全身画を作り直したら face=dict(side=3.4, down=0.04) を足して顔アイコンも作る
-    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', chin_frac=0.43, above=None),
 }
 ALPHA = 40  # これより濃い画素を「体」とみなす(端の検査 life-stand-edge-check.js と同じ考え)
 
@@ -262,6 +263,20 @@ def marks_image(key, a, mk, frame):
     return os.path.relpath(p, ROOT)
 
 
+def with_cut(key, cfg):
+    """切り方の表(life-stand-cut.json)の既定と、そのキーの上書きを混ぜる。face が null の組は顔アイコンを作らない。"""
+    cut = json.load(open(CUT, encoding='utf-8')) if os.path.exists(CUT) else {}
+    d, o = dict(cut.get('default') or {}), dict(cut.get(key) or {})
+    out = dict(cfg)
+    if 'stand_max' in d or 'stand_max' in o:
+        out['stand_max'] = o.get('stand_max', d.get('stand_max'))
+    if 'face' in o and o['face'] is None:
+        out.pop('face', None)
+    elif d.get('face') or o.get('face'):
+        out['face'] = dict(d.get('face') or {}, **(o.get('face') or {}))
+    return out
+
+
 def run(key, cfg, marks, opts):
     ims = [load(os.path.join(FB, '%s__%s.png' % (cfg['name'], e))) for e in EXPR]
     base = ims[0]
@@ -306,6 +321,9 @@ def run(key, cfg, marks, opts):
     outs = []
     for e, a, d in zip(EXPR, ims, ds):
         c = place(a, frame, d)
+        if cfg.get('stand_max') and max(c.size) > cfg['stand_max']:
+            # 場面の大きさに合う細かさへ縮める(引き伸ばさない・r1119-153 社長「重くしすぎない」)
+            c = Image.fromarray(shrink(np.asarray(c), cfg['stand_max'] / float(max(c.size))))
         outs.append(c)
         tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))
     # 顔の表(見えている体の上を0・下を1)。normal の絵で測る
@@ -354,7 +372,7 @@ def run(key, cfg, marks, opts):
                         best = (x - run0, run0, x)
                     run0 = None
             hx = (best[1] + best[2]) / 2.0 if best[0] else cx
-            fx0, fy0 = int(round(hx - side / 2.0)), int(round(mk['top'] - hh * fc.get('up', 0.12)))
+            fx0, fy0 = int(round(hx - side / 2.0 + side * fc.get('dx', 0))), int(round(mk['top'] - hh * fc.get('up', 0.12) + side * fc.get('dy', 0)))
         else:
             side = int(round(f * fc['side']))
             cy = mk['eye'] + 0.35 * f  # 目と鼻のあいだ
@@ -365,7 +383,9 @@ def run(key, cfg, marks, opts):
             if fc.get('px') and side > fc['px']:
                 # 吹き出しの顔は 48〜72px で出る。重くしないよう px へ縮める(引き伸ばしはしない・r1119-153 社長「場面の大きさに合う解像度で」)
                 fim = Image.fromarray(shrink(np.asarray(fim), fc['px'] / float(side)))
-            ft += save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant/face', '%s_%s.PNG' % (cfg['prefix'], e)))
+            # 服の顔は images/assistant/<服>/face/(assistantCostumeImage と同じ置き場)
+            fdir = '%s/face' % key.split(':')[1] if ':' in key else 'face'
+            ft += save_png(fim, os.path.join(ROOT, 'monster-hero/images/assistant', fdir, '%s_%s.PNG' % (cfg['prefix'], e)))
         print('   顔アイコン: 一辺 %d 計%dKB' % (side, ft))
 
 
@@ -377,7 +397,7 @@ if __name__ == '__main__':
     for k, c in HEADS.items():
         if (only and k != only) or (not only and c.get('hold')):
             continue
-        run(k, c, marks, opts)
+        run(k, with_cut(k, c), marks, opts)
     if json.dumps(marks, sort_keys=True) != before:
         with open(MARKS, 'w', encoding='utf-8') as fp:
             fp.write('{\n' + ',\n'.join('  %s: %s' % (json.dumps(k, ensure_ascii=False), json.dumps(v, ensure_ascii=False)) for k, v in marks.items()) + '\n}\n')
