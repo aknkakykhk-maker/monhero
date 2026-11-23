@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d37bdf373ecf1509
+// source-sha256: a1f8afa40bc44afe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6913,8 +6913,13 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP', '深い']]);
-const RHYTHM_SKY_RISE_LABELS = Object.freeze([['NOW', '今の（早め）'], ['OLD', '元の']]);
-const RHYTHM_SKY_RISE_MODES = Object.freeze(RHYTHM_SKY_RISE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW', 'OLD']);
+const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB']]);
+const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({
+  A: '道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',
+  B: '少し遅れて、画面の上から空の高さで出てきます。'
+});
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_TAP_LIGHT_MODES = Object.freeze(['AUTO', 'ALWAYS']);
 const RHYTHM_TAP_LIGHT_LABELS = Object.freeze([['AUTO', 'おまかせ'], ['ALWAYS', 'いつも出す']]);
@@ -7263,6 +7268,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   roadWidth: 'WIDE',
   roadDepth: 'NORMAL',
   skyRise: 'NOW',
+  skyRiseType: 'A',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -7555,6 +7561,7 @@ const normalizeRhythmSettings = value => {
     roadWidth: RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth) ? source.roadWidth : DEFAULT_RHYTHM_SETTINGS.roadWidth,
     roadDepth: RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth) ? source.roadDepth : DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise: RHYTHM_SKY_RISE_MODES.includes(source.skyRise) ? source.skyRise : DEFAULT_RHYTHM_SETTINGS.skyRise,
+    skyRiseType: RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType) ? source.skyRiseType : DEFAULT_RHYTHM_SETTINGS.skyRiseType,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -38504,7 +38511,11 @@ const RhythmOptions = ({
     full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
-  }), field('空のノーツの上がり方', segments('skyRise', RHYTHM_SKY_RISE_LABELS), 'HELL などの空のノーツが、道の奥から空の道の高さへ上がっていく速さです。「今の（早め）」は道の途中で早めに空の高さまで上がります（既定）。「元の」は判定ラインに近づくにつれて少しずつ上がる、前の上がり方です。見た目だけが変わり、叩くタイミング・判定・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。', {
+  }), field('空のノーツの上がり方', React.createElement(React.Fragment, null, segments('skyRiseType', RHYTHM_SKY_RISE_TYPE_LABELS), React.createElement("p", {
+    "data-rhythm-sky-rise-note": true,
+    className: `mt-1.5 ${note}`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
     full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
@@ -39188,6 +39199,150 @@ const RhythmSongName = ({
     style: chunk
   }, sub));
 };
+const useRhythmFitText = (ref, {
+  text,
+  maxPx,
+  minPx,
+  lines = 2,
+  maxH = 0
+}) => {
+  const [fit, setFit] = React.useState({
+    px: maxPx,
+    lines: 1,
+    clip: false
+  });
+  const measure = React.useCallback(() => {
+    const el = ref.current;
+    if (!el || !el.clientWidth) return;
+    const keep = {
+      fontSize: el.style.fontSize,
+      whiteSpace: el.style.whiteSpace,
+      clamp: el.style.webkitLineClamp,
+      display: el.style.display
+    };
+    const restore = () => {
+      el.style.fontSize = keep.fontSize;
+      el.style.whiteSpace = keep.whiteSpace;
+      el.style.webkitLineClamp = keep.clamp;
+      el.style.display = keep.display;
+    };
+    el.style.webkitLineClamp = 'unset';
+    el.style.display = 'block';
+    const fits = (px, n) => {
+      el.style.fontSize = `${px}px`;
+      el.style.whiteSpace = n === 1 ? 'nowrap' : 'normal';
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || px * 1.25;
+      return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= Math.ceil(lh * n) + 1 && (!maxH || el.scrollHeight <= maxH + 1);
+    };
+    let found = null;
+    for (let n = 1; n <= Math.max(1, lines) && !found; n++) {
+      for (let px = maxPx; px >= minPx; px--) {
+        if (fits(px, n)) {
+          found = {
+            px,
+            lines: n,
+            clip: false
+          };
+          break;
+        }
+      }
+    }
+    restore();
+    const next = found || {
+      px: minPx,
+      lines: Math.max(1, lines),
+      clip: true
+    };
+    setFit(prev => prev.px === next.px && prev.lines === next.lines && prev.clip === next.clip ? prev : next);
+  }, [ref, maxPx, minPx, lines, maxH]);
+  React.useLayoutEffect(() => {
+    measure();
+  }, [measure, text]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let last = '';
+    const ro = new ResizeObserver(() => {
+      const box = `${el.clientWidth}`;
+      if (box !== last) {
+        last = box;
+        measure();
+      }
+    });
+    ro.observe(el);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => measure()).catch(() => {});
+    return () => ro.disconnect();
+  }, [measure]);
+  const style = {
+    fontSize: `${fit.px}px`,
+    whiteSpace: fit.lines === 1 ? 'nowrap' : 'normal',
+    overflow: 'hidden'
+  };
+  if (fit.clip) {
+    if (fit.lines === 1) style.textOverflow = 'ellipsis';else {
+      style.display = '-webkit-box';
+      style.WebkitBoxOrient = 'vertical';
+      style.WebkitLineClamp = String(fit.lines);
+    }
+  }
+  return {
+    fit,
+    style
+  };
+};
+const RhythmFitTitle = ({
+  song,
+  maxPx,
+  minPx,
+  lines,
+  maxH = 0,
+  className = ''
+}) => {
+  const ref = React.useRef(null);
+  const {
+    fit,
+    style
+  } = useRhythmFitText(ref, {
+    text: rhythmSongFullName(song),
+    maxPx,
+    minPx,
+    lines,
+    maxH
+  });
+  return React.createElement("b", {
+    ref: ref,
+    "data-rhythm-song-title": true,
+    "data-rhythm-title-fit": fit.clip ? 'clip' : `${fit.px}px/${fit.lines}`,
+    className: className,
+    style: style
+  }, React.createElement(RhythmSongName, {
+    song: song
+  }));
+};
+const RhythmFitLabel = ({
+  text,
+  maxPx,
+  minPx,
+  lines = 2,
+  className = ''
+}) => {
+  const ref = React.useRef(null);
+  const {
+    fit,
+    style
+  } = useRhythmFitText(ref, {
+    text,
+    maxPx,
+    minPx,
+    lines
+  });
+  return React.createElement("span", {
+    ref: ref,
+    "data-rhythm-label-fit": fit.clip ? 'clip' : `${fit.px}px/${fit.lines}`,
+    className: className,
+    style: style
+  }, text);
+};
 const RhythmSongArt = ({
   song,
   large = false,
@@ -39703,9 +39858,13 @@ const RhythmSongSelect = ({
         "aria-pressed": on,
         onClick: () => setSongId(item.songId),
         className: `flex min-h-[36px] min-w-0 ${viewWide ? 'max-w-[6.5rem] px-2 text-[11px]' : 'flex-1 px-1 text-[12px]'} items-center justify-center gap-0.5 rounded-lg border font-black leading-none landscape:min-h-[32px] ${on ? 'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-      }, React.createElement("span", {
-        className: "truncate"
-      }, rhythmSongVersionLabel(item.songId) || '原曲'), eventVersion && React.createElement("span", {
+      }, React.createElement(RhythmFitLabel, {
+        text: rhythmSongVersionLabel(item.songId) || '原曲',
+        maxPx: viewWide ? 11 : 12,
+        minPx: 8,
+        lines: 2,
+        className: "block min-w-0 text-center leading-[1.15]"
+      }), eventVersion && React.createElement("span", {
         "aria-label": "イベント対象"
       }, "🏆"));
     }));
@@ -40008,16 +40167,20 @@ const RhythmSongSelect = ({
       gridArea: 'title'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-1.5 [container-type:inline-size]"
-  }, React.createElement("b", {
-    "data-rhythm-song-title": true,
-    className: `line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white ${viewWide && versionsOf(song).length > 1 ? 'landscape:line-clamp-2 landscape:h-auto landscape:max-h-[2.5em] landscape:text-[12px]' : 'landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]'}`,
-    style: {
-      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, viewWide && versionsOf(song).length > 1 ? 44 + 76 * versionsOf(song).length : 44)
-    }
-  }, React.createElement(RhythmSongName, {
-    song: song
-  })), viewWide && versionTabs, React.createElement("button", {
+    className: "flex flex-wrap items-start gap-x-1.5 gap-y-1 [container-type:inline-size]"
+  }, (() => {
+    const wideVer = viewWide && versionsOf(song).length > 1,
+      shortTate = !viewWide && isShortScreen;
+    return React.createElement(RhythmFitTitle, {
+      key: song.songId,
+      song: song,
+      maxPx: shortTate ? 15 : wideVer ? 14 : viewWide ? 16 : 17,
+      minPx: shortTate ? 10 : 10,
+      lines: 3,
+      maxH: shortTate ? 38 : viewWide ? 0 : 43,
+      className: `block min-w-0 flex-1 overflow-hidden font-black leading-[1.25] text-white ${viewWide || shortTate ? '' : 'h-[43px]'} ${wideVer ? 'basis-[9rem]' : ''}`
+    });
+  })(), viewWide && versionTabs, React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
     "aria-pressed": favoriteIds.has(song.songId),
@@ -43693,7 +43856,7 @@ const RhythmTapTest = ({
       if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settingsIn?.noteShape);
     } catch (e) {}
     try {
-      if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRise);
+      if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);
     } catch (e) {}
     return 0;
   });
@@ -44223,7 +44386,62 @@ const RhythmTapTest = ({
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
   const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
-  const specialFxRef = useRef(null);
+  const chargeOrbRef = useRef(null),
+    chargeBlastRef = useRef(null),
+    chargeHitRef = useRef(null);
+  chargeHitRef.current = (note, judgment) => {
+    const run = runRef.current,
+      c = run && run.charge;
+    if (!c) return;
+    const z = note._mhZone,
+      zone = c.zones[z];
+    if (!zone) return;
+    if (note._mhCharge === 1) {
+      if (judgment !== 'MISS') c.hits[z] = (c.hits[z] || 0) + 1;
+      return;
+    }
+    if (c.fin[z]) return;
+    c.fin[z] = true;
+    const blast = chargeBlastRef.current;
+    if (!blast || typeof blast.animate !== 'function') return;
+    const r = Math.min(1, (c.hits[z] || 0) / Math.max(1, zone.n)),
+      s0 = .3 + .9 * r,
+      H = blast.parentElement ? blast.parentElement.clientHeight : 0;
+    const dy = Math.max(0, (Number.isFinite(run._hitY) ? run._hitY : H * .8) - H * .04),
+      tf = (y, sx, sy) => `translate(-50%,-50%) translateY(${y.toFixed(1)}px) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
+    if (judgment === 'MISS') {
+      blast.animate([{
+        opacity: .9,
+        transform: tf(0, s0, s0)
+      }, {
+        opacity: 0,
+        transform: tf(0, .1, .1)
+      }], {
+        duration: 320,
+        easing: 'ease-in'
+      });
+      return;
+    }
+    const big = 1.2 + 2.8 * r;
+    blast.animate([{
+      opacity: 1,
+      transform: tf(0, s0, s0)
+    }, {
+      offset: .36,
+      opacity: 1,
+      transform: tf(dy, s0 * .8, s0 * 1.7)
+    }, {
+      offset: .5,
+      opacity: .95,
+      transform: tf(dy, big * 1.6, big * .5)
+    }, {
+      opacity: 0,
+      transform: tf(dy, big * 2.4, big * .7)
+    }], {
+      duration: 440,
+      easing: 'linear'
+    });
+  };
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45098,6 +45316,7 @@ const RhythmTapTest = ({
     rhythmFloatingNoteRemove(note);
     note.done = true;
     note._rhythmFinalJudgment = judgment;
+    if (note._mhCharge && chargeHitRef.current) chargeHitRef.current(note, judgment);
     note._rhythmDeltaMs = typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
     const preciseHit = rhythmJudgmentIsPrecise(judgment, deltaMs);
     if (calibrating && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
@@ -45951,12 +46170,24 @@ const RhythmTapTest = ({
         }
       }
       {
-        const fxEl = specialFxRef.current;
-        if (fxEl && specialFx) {
-          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
-          if (run._specialFxOn !== on) {
-            run._specialFxOn = on;
-            fxEl.setAttribute('data-on', on);
+        const orb = chargeOrbRef.current,
+          c = run.charge;
+        if (orb && c) {
+          run._hitY = travel.hitY;
+          let z = -1;
+          for (let k = 0; k < c.zones.length; k++) {
+            const q = c.zones[k];
+            if (!c.fin[k] && visualTime >= q.from - 400 && visualTime <= q.finaleMs + 250) {
+              z = k;
+              break;
+            }
+          }
+          const r = z >= 0 ? Math.min(1, (c.hits[z] || 0) / Math.max(1, c.zones[z].n)) : 0,
+            key = z >= 0 ? `${z}:${c.hits[z] || 0}` : 'off';
+          if (c.key !== key) {
+            c.key = key;
+            orb.style.opacity = z >= 0 ? (.5 + .5 * r).toFixed(3) : '0';
+            orb.style.transform = `translate(-50%,-50%) scale(${(z >= 0 ? .3 + .9 * r : .2).toFixed(3)})`;
           }
         }
       }
@@ -46702,6 +46933,12 @@ const RhythmTapTest = ({
       startBest,
       startBestScore: startBest.bestScore
     };
+    if (specialFx && typeof rhythmMarkChargeNotes === 'function') runRef.current.charge = {
+      zones: rhythmMarkChargeNotes(runRef.current.notes, specialFx),
+      hits: [],
+      fin: [],
+      key: ''
+    };
     laneRefs.current.forEach(el => {
       if (el) {
         el.style.display = 'block';
@@ -46907,7 +47144,9 @@ const RhythmTapTest = ({
       if (stop) return;
       const ms = window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs ? window.__mhTestHooks.rhythmSongMs() : null;
       if (ms != null && playAreaRef.current) {
-        stop = rhythmPreviewHandsStart(playAreaRef.current);
+        stop = rhythmPreviewHandsStart(playAreaRef.current, {
+          notes: chart && Array.isArray(chart.notes) ? chart.notes : null
+        });
         clearInterval(wait);
       }
     }, 100);
@@ -48891,11 +49130,13 @@ const RhythmTapTest = ({
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
   })), specialFx && React.createElement("i", {
-    ref: specialFxRef,
-    "data-rhythm-special-fx": true,
-    "data-on": "0",
+    "data-rhythm-charge-fx": true,
     "aria-hidden": "true"
-  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
+  }, React.createElement("b", {
+    ref: chargeOrbRef
+  }), React.createElement("em", {
+    ref: chargeBlastRef
+  })), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",
@@ -49262,7 +49503,7 @@ const RhythmTapTest = ({
     onClick: abort
   }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : listenMode ? '鑑賞をやめて曲選びへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
 };
-const rhythmPreviewHandsStart = area => {
+const rhythmPreviewHandsStart = (area, opts = null) => {
   if (typeof window === 'undefined' || !area) return () => {};
   const hooks = () => window.__mhTestHooks || {};
   let stopped = false,
@@ -49343,7 +49584,8 @@ const rhythmPreviewHandsStart = area => {
   };
   const notes = (() => {
     try {
-      return (hooks().rhythmNotes && hooks().rhythmNotes() || []).slice().sort((a, b) => a.timeMs - b.timeMs);
+      const src = opts && Array.isArray(opts.notes) ? opts.notes : hooks().rhythmNotes && hooks().rhythmNotes() || [];
+      return src.filter(n => n && Number.isFinite(Number(n.timeMs))).slice().sort((a, b) => a.timeMs - b.timeMs);
     } catch (_) {
       return [];
     }
@@ -269431,14 +269673,16 @@ function MonsterHeroGame() {
             color: c.color
           }
         }, t.title), React.createElement("span", {
-          className: "block text-[10px] text-slate-300 leading-tight mt-0.5"
-        }, "みゅあと一緒に、実際に動かして遊び方を覚えられます")), React.createElement(ChevronRight, {
+          className: "block text-[10px] text-slate-300 leading-tight mt-0.5",
+          style: JA_LABEL_STYLE
+        }, jaWrap('みゅあと一緒に、実際に動かして遊び方を覚えられます'))), React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0 text-slate-400"
         }));
       })(), React.createElement("p", {
-        className: "text-[11px] text-slate-400 leading-relaxed mb-3"
-      }, HELP_GUIDE_INTRO), HELP_GUIDE.length === 0 && React.createElement("div", {
+        className: "text-[11px] text-slate-400 leading-relaxed mb-3",
+        style: JA_WRAP_STYLE
+      }, jaWrap(HELP_GUIDE_INTRO)), HELP_GUIDE.length === 0 && React.createElement("div", {
         className: "text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed"
       }, "ヘルプの内容を読み込めませんでした。", React.createElement("br", null), "通信環境を確認して、ページを再読み込みしてください。"), HELP_GUIDE.map(c => React.createElement("button", {
         key: c.id,
