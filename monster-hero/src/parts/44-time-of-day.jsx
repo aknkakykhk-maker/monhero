@@ -211,7 +211,7 @@ const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => (
     <div className="flex items-center gap-3 mt-2">
-      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400">{desc}</p></div>
+      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</p></div>
       <div className="flex shrink-0 gap-1">
         {['on', 'off'].map(v => (
           <button key={v} type="button" data-time-of-day-setting={`${key}-${v}`} aria-pressed={st.settings[key] === v} onClick={() => timeOfDaySetSettings({ [key]: v })}
