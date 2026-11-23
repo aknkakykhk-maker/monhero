@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82e7af7e88a2ddf4
+// generated-sha256: be14347b0cb56b74
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39485,8 +39485,9 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
 
 // 画面の説明文(見出しの下に1〜2行)。各画面が同じ指定を手で書き写していたのでまとめる。
 // 補足は 10px より小さくしない(8px は実機では模様にしか見えない)。
+// 文字だけのときは言葉の切れ目で折る(M/B管理「編成画面で選／ぶと」と言葉の途中で折れていた・API 総点検③ r1119-118)
 const ScreenLead = ({ children }) => (
-  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
+  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400" style={typeof children === 'string' ? JA_LABEL_STYLE : undefined}>{typeof children === 'string' ? jaWrap(children) : children}</p>
 );
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -39497,10 +39498,12 @@ const ScreenLead = ({ children }) => (
 const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
   <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-1.5 px-4 py-12 text-center">
     <span aria-hidden="true" className="leading-none" style={{fontSize:'40px'}}>{emoji}</span>
+    {/* 1行に収まる文は真ん中、2行以上に折れる文は左そろえ(中央そろえのまま折れて2行目の頭がずれていた・API 総点検③ r1119-118)。
+        中身を inline-block にすると、1行のときは文の幅に縮んで真ん中に置かれ、折れたときだけ左そろえに見える */}
     {(Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => (
       <p key={index} className={index === 0
         ? 'text-[12px] font-black leading-relaxed text-slate-300'
-        : 'text-[10px] font-bold leading-relaxed text-slate-500'}>{line}</p>
+        : 'text-[10px] font-bold leading-relaxed text-slate-500'}><span className="inline-block max-w-full text-left align-top">{line}</span></p>
     ))}
     {action && <div className="mt-2 w-full">{action}</div>}
   </div>
@@ -41635,7 +41638,7 @@ const TimeOfDaySettingsPanel = () => {
   const st = useTimeOfDay();
   const row = (key, title, desc) => (
     <div className="flex items-center gap-3 mt-2">
-      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400">{desc}</p></div>
+      <div className="min-w-0 flex-1"><b className="block text-[12px] font-black text-slate-200">{title}</b><p className="text-[10px] font-bold leading-relaxed text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</p></div>
       <div className="flex shrink-0 gap-1">
         {['on', 'off'].map(v => (
           <button key={v} type="button" data-time-of-day-setting={`${key}-${v}`} aria-pressed={st.settings[key] === v} onClick={() => timeOfDaySetSettings({ [key]: v })}
@@ -42775,7 +42778,7 @@ function AssetDownloadPage({ onBack }) {
         })}
         <section data-asset-auto className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">自動ダウンロード</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('よく使う画像と、選んだ曲・遊んだ曲を、すきまの時間に少しずつ入れます。演奏中は止まり、モバイル回線では控えめです。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ id: true, label: 'する' }, { id: false, label: 'しない' }].map(option => (
               <button key={String(option.id)} type="button" data-asset-auto-option={String(option.id)} aria-pressed={asset.auto === option.id}
@@ -42820,7 +42823,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
           <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
             <div data-battle-screen-setting>
               <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_SCREEN_STYLE_LABELS.map(option => (
                   <button key={option.id} type="button" data-battle-screen-style={option.id}
@@ -42836,7 +42839,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             {/* 行動カードの見た目(2026-10-16 社長「前のカードも選べる」)。タクティクスバトル(新)の手札だけ。既定は新しいカードの絵 */}
             <div data-battle-card-look-setting className="border-t border-white/10 pt-3">
               <b className="block text-[13px] font-black text-slate-200">行動カードの見た目</b>
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。</p>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('タクティクスバトル(新)の手札のカードの見た目を選びます。カードの効果や大きさ・操作は同じです。')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {BATTLE_CARD_LOOKS.map(option => (
                   <button key={option.id} type="button" data-battle-card-look={option.id}
@@ -42912,7 +42915,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「出さない」を選んでも、すぐ上の「ゲームを更新」からいつでも更新できる。 */}
         <div data-update-notice-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">新しいバージョンのお知らせ</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。')}</p>
           {/* 選ばれている側にも枠を持たせる。tailwind の preflight が border:0 を敷いているので、
               片方だけ border クラスが無いと、選ぶたびに中身が1pxずれる */}
           <div className="mt-2 grid grid-cols-3 gap-2">
@@ -42926,13 +42929,13 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+          <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。')}</p>
         </div>
         {/* 助手のひとことを出す回数(2026-10-10・改善 G6)。選べるのは3つ(ASSISTANT_BUBBLE_MODE_LABELS が正本)。
             止めるのは画面ごとのひとことだけ。はじめての案内・一度きりの案内・HOMEの助手・助手の告知は出る(21-assistant.jsx) */}
         <div data-assistant-bubble-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">助手のひとこと</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('画面の上に出る助手の吹き出しです。「1日1回」にすると、同じ画面のひとことは1日1回だけ出ます(朝4:00で戻ります)。「出さない」にしても、初めての案内やHOMEの助手、新しい機能のお知らせは出ます。')}</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {ASSISTANT_BUBBLE_MODE_LABELS.map(option => (
               <button key={option.id} type="button" data-assistant-bubble-mode={option.id}
@@ -42950,7 +42953,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
             「切」にすると HOME の吹き出しと「おしゃべり」のボタンが消えて、広場が広くなる */}
         <div data-home-assistant-comment-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
           <b className="block text-[13px] font-black text-slate-200">ホームの助手コメント</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。</p>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ホーム画面の上に出る助手の吹き出しです。「切」にすると吹き出しと「おしゃべり」のボタンが消えて、広場が広くなります。新しい機能のお知らせは、これまでどおり出ます。')}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {[{ on: false, label: '切', note: '吹き出しを隠す' }, { on: true, label: '入', note: 'これまでどおり' }].map(option => (
               <button key={option.label} type="button" data-home-assistant-comment={option.on ? 'on' : 'off'}
@@ -42968,7 +42971,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {peerAuto && typeof assistantPeerEnabled === 'function' && assistantPeerEnabled() && (
           <div data-assistant-peer-auto-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
             <b className="block text-[13px] font-black text-slate-200">助手どうしの会話を自動で進める</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手たちの掛け合いや特別なお話、助手ライフの場面の言葉の進め方です。「切」のときは、タップするまで次へ進みません。')}</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {[{ on: false, label: '切', note: 'タップで次へ' }, { on: true, label: '入', note: '自動で進む' }].map(option => (
                 <button key={option.label} type="button" data-assistant-peer-auto={option.on ? 'on' : 'off'}
@@ -43058,8 +43061,8 @@ const ensureArtPickerCss = () => {
 // タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
 function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
   const rows = [
-    { id: 'title', label: 'タイトル画面', desc: 'タイトル画面の絵', value: titleArt, set: onChangeTitleArt },
-    { id: 'home', label: 'ホーム画面', desc: 'ホーム画面の背景', value: homeArt, set: onChangeHomeArt },
+    { id: 'title', label: 'タイトル画面', value: titleArt, set: onChangeTitleArt },
+    { id: 'home', label: 'ホーム画面', value: homeArt, set: onChangeHomeArt },
     ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
   ];
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
@@ -43085,7 +43088,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
       <div className="mt-2 grid grid-cols-1 gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2">{rows.map(row => (
         <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
           <b className="block text-[12px] font-black text-white">{row.label}</b>
-          <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+          {/* 見出しをくり返すだけの説明(「マーケット／マーケット」)は出さない(2026-11-23 API 総点検③ settings-theme) */}{row.desc && row.desc !== row.label && <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>}
           <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
         </div>
       ))}</div>
@@ -46535,7 +46538,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" wrapTitle accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -145016,7 +145019,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
-   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button><button className="mh-dialog-close" data-mh-back onClick={closeBgmArrangement}>閉じる</button></div></div>
+   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button>{/* 閉じるは窓の下の固い帯に置く(浮いた丸ボタンが一覧の「試聴」「デフォルト中」と曲名の欄に重なって押せなかった。2026-11-23 API 総点検③ settings-bgm) */}<div data-bgm-close-band className="sticky -bottom-[18px] z-[2] -mb-[18px] flex shrink-0 justify-center border-t border-white/10 bg-[#0f172a] pt-2 pb-[18px]"><button className="mh-dialog-close" data-mh-back style={{position:'static',margin:0,boxShadow:'0 3px 0 #0009'}} onClick={closeBgmArrangement}>閉じる</button></div></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal" {...settingsBackdropProps(()=>setShowBackup(false))}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルを保存（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('バックアップファイルから復元（.mhsave）')}</span></button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={{...JA_LABEL_STYLE,textAlign:'center'}}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}<button className="mh-dialog-close" data-mh-back onClick={()=>setShowBackup(false)}>閉じる</button></div></div>
   ) : null;
@@ -145624,7 +145627,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="AUTO設定" accent="text-indigo-300" note="AUTOで戦うときの方針と供モンを決めておく" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
               <section data-auto-settings-section="policy" className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
+              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1" style={JA_LABEL_STYLE}>{jaWrap('WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。')}</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[12px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`mh-range-label text-white ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-70'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
@@ -148279,7 +148282,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">{/* 数はすぐ上の「編成中 8/8」に出ているので、ボタンは決定か残りの数だけ(API 総点検③ r1119-118) */}{draftMonsterRoster.length<STARTER_MONSTER_IDS.length?`あと${STARTER_MONSTER_IDS.length-draftMonsterRoster.length}体選ぶ`:'決定'}</button></div>
                 </div>
               </>
             ):(
@@ -148420,7 +148423,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })}
               </div>
             </div>
-            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">{/* 選んだ数は上の「0 / 5」と枠に出ているので、ボタンは「決定」だけ(API 総点検③ r1119-118) */}決定</button></div>
           </div>);
         })()}
 

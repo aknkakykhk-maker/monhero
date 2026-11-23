@@ -36,7 +36,7 @@ async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
     // 会話は人もスキップすることがある(半分くらい)。全部読むと長い
     const skip = list.find((b) => /^スキップ$/.test(b.label));
     // アイコンを選ぶ画面のように「進む」ボタンが無い一覧では、並んでいるものから1つ選ぶ
-    const pick = setup || (skip && rand() < 0.5 ? skip : forward.length ? forward[0]
+    const pick = setup || (skip && rand() < 0.5 ? skip : forward.length ? (forward.find((b) => /^この助手にする$/.test(b.label)) || forward[0])
       : others.length ? others[Math.floor(rand() * others.length)] : list[Math.floor(rand() * list.length)]);
     // 窓の中で同じ2つのボタンを行ったり来たりしている(動画の「音ありで見る／音を消す」など)ときは、人と同じく窓を閉じる
     // (2026-10-15・「HELL の遊び方」の動画の窓で、閉じるを BACKWARD として避け続け150手使い切った)
