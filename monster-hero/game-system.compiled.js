@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76a72f4400866c97
+// source-sha256: cfdb4325f5e8dc80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37050,7 +37050,7 @@ const RhythmOrientationButton = ({
       if (how === 'device') return;
       if (how === 'already') return;
       if (how === 'forced') {
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
+        setNote(`代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてください`);
         return;
       }
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
@@ -39251,6 +39251,7 @@ const RhythmSongSelect = ({
     className: "ml-1.5 inline-block whitespace-nowrap text-slate-300"
   }, chart.totalNotes, "ノーツ"), rhythmTickRulesActive() && difficulty && rhythmChartTickCount(song, chart, difficulty.id) > 0 ? React.createElement("span", {
     "data-rhythm-demo-ticks": true,
+    title: "ホールド・スライドを押さえている途中で入る判定の数",
     className: "ml-1 inline-block whitespace-nowrap text-slate-300"
   }, `+ 刻み${rhythmChartTickCount(song, chart, difficulty.id)}`) : null)), React.createElement("div", {
     "data-rhythm-song-stats": true,
@@ -64164,8 +64165,9 @@ const ScreenHead = ({
 const ScreenLead = ({
   children
 }) => React.createElement("p", {
-  className: "mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
-}, children);
+  className: "mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400",
+  style: typeof children === 'string' ? JA_LABEL_STYLE : undefined
+}, typeof children === 'string' ? jaWrap(children) : children);
 const ScreenEmpty = ({
   emoji = '📭',
   lines = [],
@@ -64181,7 +64183,9 @@ const ScreenEmpty = ({
 }, emoji), (Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => React.createElement("p", {
   key: index,
   className: index === 0 ? 'text-[12px] font-black leading-relaxed text-slate-300' : 'text-[10px] font-bold leading-relaxed text-slate-500'
-}, line)), action && React.createElement("div", {
+}, React.createElement("span", {
+  className: "inline-block max-w-full text-left align-top"
+}, line))), action && React.createElement("div", {
   className: "mt-2 w-full"
 }, action));
 const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
@@ -66137,7 +66141,7 @@ function PlayerRankStrip({
     }
   })), React.createElement("small", {
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
-  }, `次まで ${(info.need - info.into).toLocaleString()}`));
+  }, `次のランクまで あと${(info.need - info.into).toLocaleString()}`));
 }
 const PLAYER_RANK_REWARDS_STEP = 30;
 function PlayerRankRewards({
@@ -66770,7 +66774,7 @@ function PlayerRankXpBar({
     className: "mh-prxb-add"
   }, `経験値 +${view.shown.toLocaleString()}`), React.createElement("span", {
     className: "text-[12px] font-black text-white tabular-nums"
-  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 0 && React.createElement("div", {
+  }, view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`)), parts.length > 1 && React.createElement("div", {
     "data-player-rank-gain-parts": true,
     className: "mb-3 mt-1.5 flex flex-wrap gap-1.5"
   }, parts.map((p, i) => React.createElement("span", {
@@ -66803,8 +66807,9 @@ function PlayerRankXpBar({
     className: "mh-prxb-up",
     "aria-hidden": "true"
   }, "RANK UP!")), React.createElement("div", {
-    className: "mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums"
-  }, React.createElement("span", null, `${view.into.toLocaleString()} / ${need.toLocaleString()}`), React.createElement("span", null, `次まで ${(need - view.into).toLocaleString()}`)), React.createElement("div", {
+    "data-player-rank-xp-left": true,
+    className: "mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums"
+  }, `次のランクまで あと ${(need - view.into).toLocaleString()}`), React.createElement("div", {
     ref: fxRef,
     className: "mh-prxb-fx",
     "aria-hidden": "true"
@@ -66836,9 +66841,11 @@ function PlayerRankGain({
     }
   }), next && React.createElement("p", {
     "data-player-rank-gain-next": true,
-    className: "text-[10px] font-bold text-slate-300",
-    style: JA_WRAP_STYLE
-  }, jaWrap(`次は ${next}`)), up && done && React.createElement(PlayerRankUp, {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "次は ", String(next).split('・').map((part, i) => React.createElement("span", {
+    key: i,
+    className: "inline-block whitespace-nowrap"
+  }, `${i ? '・' : ''}${part}`))), up && done && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
@@ -75356,6 +75363,7 @@ function MasuMonsScreen({
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
     title: "マスモン一覧(バトル)",
+    wrapTitle: true,
     accent: "text-pink-400",
     note: "マスモン＝自分で育てたモンスター。絆・状態を見る",
     onBack: onBack,
@@ -233483,7 +233491,7 @@ function MonsterHeroGame() {
       const fxGains = [...(basePoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${basePoints.toLocaleString()}`,
-        note: '上がったランク ×100'
+        note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計`
       }] : []), ...(gain.bonusPoints > 0 ? [{
         icon: '🎟️',
         text: `ビートP ${gain.bonusPoints.toLocaleString()}`,
@@ -256754,8 +256762,9 @@ function MonsterHeroGame() {
       }, React.createElement("div", null, React.createElement("h3", {
         className: "text-[13px] font-black text-indigo-200"
       }, "2. 供モン事前設定"), React.createElement("p", {
-        className: "text-[11px] leading-relaxed text-slate-400 mt-1"
-      }, "WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。")), draftAutoSettings.allies.map((ally, index) => React.createElement("div", {
+        className: "text-[11px] leading-relaxed text-slate-400 mt-1",
+        style: JA_LABEL_STYLE
+      }, jaWrap('WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。'))), draftAutoSettings.allies.map((ally, index) => React.createElement("div", {
         key: index,
         className: `${SCREEN_PANEL_CLASS} space-y-2`
       }, React.createElement("label", {
@@ -256784,7 +256793,7 @@ function MonsterHeroGame() {
           slot
         }),
         "aria-pressed": ally.slot === slot,
-        className: `min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-50'}`
+        className: `min-h-[44px] min-w-0 rounded-xl border text-[12px] font-black active:scale-95 ${slot === null ? 'bg-slate-700 border-slate-500 text-white' : `mh-range-label text-white ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot === slot ? 'ring-2 ring-white border-white' : 'opacity-70'}`
       }, ally.slot === slot && '✓', label))))))), React.createElement("section", {
         "data-auto-settings-section": "quickRun",
         className: "space-y-3"
@@ -263301,7 +263310,7 @@ function MonsterHeroGame() {
       onClick: confirmMonsterRoster,
       disabled: draftMonsterRoster.length !== STARTER_MONSTER_IDS.length,
       className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
-    }, "決定 (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")")))) : React.createElement(React.Fragment, null, React.createElement("div", {
+    }, draftMonsterRoster.length < STARTER_MONSTER_IDS.length ? `あと${STARTER_MONSTER_IDS.length - draftMonsterRoster.length}体選ぶ` : '決定')))) : React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, React.createElement("span", {
       className: "text-[10px] font-black text-purple-300 shrink-0 leading-tight"
@@ -263578,7 +263587,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: savePastureSettings,
         className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
-      }, "決定（", draftHomePastureIds.length, "体）")));
+      }, "決定")));
     })(), gameState === 'RHYTHM_MASU_BEAT' && React.createElement(MasuBeatScreen, {
       masuMons: masuMons,
       songs: rhythmDemoSongs(RHYTHM_SONGS),

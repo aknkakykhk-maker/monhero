@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7bb3e4483843178b
+// generated-sha256: 3e686868daa0de23
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23173,7 +23173,9 @@ const RhythmOrientationButton=({className=''})=>{
       if(how==='forced'){
         // 端末は回ってくれなかったので、絵のほうを回した。
         // 本体の向きはそのままなので、**持ち替えてもらう**必要がある。ここは必ず伝える。
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
+        // 端末の向き・角度などの開発用の1行は出さない(2026-11-23 API総点検② V6: 見出しの上に3行の箱で重なっていた)。
+        //   その1行は、回せなかったとき(下)だけに残す。そちらは原因を追う手がかり。案内は時間では消さない(下の検査の決まり・2026-09-06)
+        setNote(`代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてください`);
         return;
       }
       setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
@@ -24727,7 +24729,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             </div>
             <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{detailBpm?<span data-rhythm-song-bpm className="mr-1.5 tabular-nums text-slate-300">BPM {detailBpm}</span>:null}{rhythmSongLengthLabel(song,chart)}{/* Lv. は難易度の札と一覧の行に出ているので、ここには書かない(2026-11-23 API総点検② V7・V31・V33: 同じ Lv. が3か所に出ていた)。
                 ノーツの数と刻みの数は、それぞれ途中で折り返さない1かたまりにする(「刻/み247」と切れていた) */}
-              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks className="ml-1 inline-block whitespace-nowrap text-slate-300">{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
+              <span data-rhythm-demo-level data-level={chart.level} className="ml-1.5 inline-block whitespace-nowrap text-slate-300">{chart.totalNotes}ノーツ</span>{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?<span data-rhythm-demo-ticks title="ホールド・スライドを押さえている途中で入る判定の数" className="ml-1 inline-block whitespace-nowrap text-slate-300">{/* 「長押しの刻み」と書くと縦で2行目に落ち、一覧が1行ぶん狭くなったので「刻み」のまま(2026-11-23 API総点検② V34 は見送り) */}{`+ 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`}</span>:null}</small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -39483,8 +39485,9 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
 
 // 画面の説明文(見出しの下に1〜2行)。各画面が同じ指定を手で書き写していたのでまとめる。
 // 補足は 10px より小さくしない(8px は実機では模様にしか見えない)。
+// 文字だけのときは言葉の切れ目で折る(M/B管理「編成画面で選／ぶと」と言葉の途中で折れていた・API 総点検③ r1119-118)
 const ScreenLead = ({ children }) => (
-  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
+  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400" style={typeof children === 'string' ? JA_LABEL_STYLE : undefined}>{typeof children === 'string' ? jaWrap(children) : children}</p>
 );
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -39495,10 +39498,12 @@ const ScreenLead = ({ children }) => (
 const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
   <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-1.5 px-4 py-12 text-center">
     <span aria-hidden="true" className="leading-none" style={{fontSize:'40px'}}>{emoji}</span>
+    {/* 1行に収まる文は真ん中、2行以上に折れる文は左そろえ(中央そろえのまま折れて2行目の頭がずれていた・API 総点検③ r1119-118)。
+        中身を inline-block にすると、1行のときは文の幅に縮んで真ん中に置かれ、折れたときだけ左そろえに見える */}
     {(Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => (
       <p key={index} className={index === 0
         ? 'text-[12px] font-black leading-relaxed text-slate-300'
-        : 'text-[10px] font-bold leading-relaxed text-slate-500'}>{line}</p>
+        : 'text-[10px] font-bold leading-relaxed text-slate-500'}><span className="inline-block max-w-full text-left align-top">{line}</span></p>
     ))}
     {action && <div className="mt-2 w-full">{action}</div>}
   </div>
@@ -40856,7 +40861,7 @@ function PlayerRankStrip({ kind = 'beat', xp = 0, size = 'sm' }) {
       <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
         <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
       </div>
-      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+      {/* 「次まで 23」では何の23か分からなかった(2026-11-23 API総点検② V14) */}<small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次のランクまで あと${(info.need - info.into).toLocaleString()}`}</small>
     </div>
   );
 }
@@ -41151,7 +41156,8 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <b ref={addRef} data-player-rank-gain-add className="mh-prxb-add">{`経験値 +${view.shown.toLocaleString()}`}</b>
         <span className="text-[12px] font-black text-white tabular-nums">{view.up ? `(ランク${startInfo.rank}→${endInfo.rank})` : `(ランク${view.rank})`}</span>
       </div>
-      {parts.length > 0 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
+      {/* 内訳が1つだけのときは、上の「経験値 +◯」と同じ数字をもう一度読ませるだけなので出さない(2026-11-23 API総点検② V18) */}
+      {parts.length > 1 && <div data-player-rank-gain-parts className="mb-3 mt-1.5 flex flex-wrap gap-1.5">
         {parts.map((p, i) => <span key={i} ref={(el) => { chipRefs.current[i] = el; }} className={`mh-prxb-chip${i < view.chips ? ' on' : ''}`}>{p.label} <b>{`+${p.xp}`}</b></span>)}
       </div>}
       <div ref={trackRef} className="mh-prxb-track">
@@ -41161,9 +41167,9 @@ function PlayerRankXpBar({ kind = 'beat', award, onFull = null, onDone = null, o
         <i className={`mh-prxb-tip${view.tip ? ' on' : ''}`} style={{ left: w }}/>
         {view.up && <span className="mh-prxb-up" aria-hidden="true">RANK UP!</span>}
       </div>
-      <div className="mt-1 flex justify-between gap-2 text-[10px] font-bold text-slate-300 tabular-nums">
-        <span>{`${view.into.toLocaleString()} / ${need.toLocaleString()}`}</span>
-        <span>{`次まで ${(need - view.into).toLocaleString()}`}</span>
+      {/* 「15 / 29」と「次まで 14」が同じ残りを2通りで言っていたので1つにする(2026-11-23 API総点検② V21) */}
+      <div data-player-rank-xp-left className="mt-1 text-right text-[10px] font-bold text-slate-300 tabular-nums">
+        {`次のランクまで あと ${(need - view.into).toLocaleString()}`}
       </div>
       <div ref={fxRef} className="mh-prxb-fx" aria-hidden="true"/>
     </div>
@@ -41181,7 +41187,8 @@ function PlayerRankGain({ kind = 'beat', award, next = '', onFull = null, onDone
   return (
     <section data-player-rank-gain={kind} className={`relative my-3 space-y-1.5 rounded-2xl border p-3 pt-4 text-left ${k.border} ${k.panel}`}>
       <PlayerRankXpBar kind={kind} award={award} onFull={onFull} onStart={onStart} onDone={() => { setDone(true); if (onDone) onDone(); }}/>
-      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
+      {/* ごほうびは「・」で区切った1つずつを折らないかたまりにする(「セッション券／1枚」「セッション／券」と切れていた・2026-11-23 API総点検② V23) */}
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300">次は {String(next).split('・').map((part, i) => <span key={i} className="inline-block whitespace-nowrap">{`${i ? '・' : ''}${part}`}</span>)}</p>}
       {up && done && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );
@@ -46531,7 +46538,7 @@ function MasuMonsScreen({
 }) {
   return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="マスモン一覧(バトル)" accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="マスモン一覧(バトル)" wrapTitle accent="text-pink-400" note="マスモン＝自分で育てたモンスター。絆・状態を見る" onBack={onBack} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="masuList" compact/></div>
         <ScreenLead>勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</ScreenLead>
         {renderMonsterSortFilterBar({ singleType: true })}
@@ -127482,7 +127489,8 @@ function MonsterHeroGame() {
       // 画面いっぱいの演出に並べる、もらった物(ふつうの分 → 5ランクごとのおまけ の順。おまけは光で分ける)
       const basePoints = gain.beatPoints - gain.bonusPoints, baseTickets = gain.tickets - gain.bonusTickets;
       const fxGains = [
-        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: '上がったランク ×100' }] : []),
+        // 「上がったランク ×100」は、ランクの数×100なのか上がった段数×100なのか分からなかったので、例を添える(2026-11-23 API総点検② V26)
+        ...(basePoints > 0 ? [{ icon: '🎟️', text: `ビートP ${basePoints.toLocaleString()}`, note: basePoints === gain.to * 100 ? `ランクの数×100(ランク${gain.to} → ${(gain.to * 100).toLocaleString()})` : `上がった各ランクの数×100の合計` }] : []),
         ...(gain.bonusPoints > 0 ? [{ icon: '🎟️', text: `ビートP ${gain.bonusPoints.toLocaleString()}`, note: '5ランクごとのおまけ(ランク ×200)', bonus: true }] : []),
         ...(baseTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${baseTickets}枚`, note: 'ランクが上がるたびに1枚' }] : []),
         ...(gain.bonusTickets > 0 ? [{ icon: '🎶', text: `セッション券 ${gain.bonusTickets}枚`, note: '5ランクごとのおまけ(ランクと同じ枚数)', bonus: true }] : []),
@@ -145619,7 +145627,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="AUTO設定" accent="text-indigo-300" note="AUTOで戦うときの方針と供モンを決めておく" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
               <section data-auto-settings-section="policy" className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
+              <section data-auto-settings-section="ally" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1" style={JA_LABEL_STYLE}>{jaWrap('WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。')}</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[12px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`mh-range-label text-white ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-70'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
@@ -148274,7 +148282,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">{/* 数はすぐ上の「編成中 8/8」に出ているので、ボタンは決定か残りの数だけ(API 総点検③ r1119-118) */}{draftMonsterRoster.length<STARTER_MONSTER_IDS.length?`あと${STARTER_MONSTER_IDS.length-draftMonsterRoster.length}体選ぶ`:'決定'}</button></div>
                 </div>
               </>
             ):(
@@ -148415,7 +148423,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })}
               </div>
             </div>
-            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">{/* 選んだ数は上の「0 / 5」と枠に出ているので、ボタンは「決定」だけ(API 総点検③ r1119-118) */}決定</button></div>
           </div>);
         })()}
 
