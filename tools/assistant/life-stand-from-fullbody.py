@@ -17,7 +17,7 @@
 使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー] [--write] [--marks]   (--marks … 確かめ絵を docs/progress/assistant-art/stand-marks/ へ)
 足すときは下の HEADS に1つ足し、life-stand-marks.json に点を足す(初めの1回だけ手で測る。--marks の絵で確かめる)。
 """
-import os, sys, json, re, io, subprocess
+import os, sys, json, re, io, subprocess, hashlib
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -25,16 +25,22 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FB = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
 MARKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-marks.json')
 HOUSE = os.path.join(ROOT, 'monster-hero/src/parts/56-assistant-life-house.jsx')
+# 切り出したときの全身画と立ち絵の指紋(2026-11-23 r1119-153: えるびんの全身画を差し替えたのに立ち絵が古いままだった)。
+#   life-stand-stale-check.js が今の絵と比べ、全身画だけ替わっている(切り出し直し忘れ)を見つける。この道具を回すたびに書く
+MADE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'life-stand-made.json')
 EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']
 # key … 助手id(服があれば id:服)。name … 全身画の名前。stand … 立ち絵の置き場。prefix … 画像の接頭辞。chin_frac … 切った絵の高さのうち顎の位置
 # above … 顔の表の above(大きい飾りが場面の枠で切れないように)。face … 顔アイコンも作る(side=辺が目から顎の何倍か・down=顔を丸の真ん中よりどれだけ下へ)
 HEADS = {
-    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None),
-    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95),
+    # きき(ふだん・ハロウィン)は 2026-11-23 #7427 で表情ごとにポーズの違う全身画になった。えるびんと同じくそろえる
+    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', chin_frac=0.43, above=0.95, match_scale=True, scene_same_frame=True),
     'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', chin_frac=0.43, above=0.7),
     'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', chin_frac=0.43, above=0.95),
-    'erubin': dict(name='erubin', stand='stand-normal', prefix='erubin', chin_frac=0.43, above=None),
-    'erubin:sekiyuou': dict(name='erubin_sekiyuou', stand='stand-sekiyuou', prefix='erubin', chin_frac=0.43, above=None),
+    # えるびん(2026-11-23 r1119-153 ポーズ違いの全身画から作り直し)。表情ごとに全身画の大きさが違うので match_scale でそろえ、
+    #   上げた腕・こぶしで見えている範囲が変わるので、場面はどの表情も normal の範囲で置く(scene_same_frame・56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_SAME_FRAME)
+    'erubin': dict(name='erubin', stand='stand-normal', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
+    'erubin:sekiyuou': dict(name='erubin_sekiyuou', stand='stand-sekiyuou', prefix='erubin', chin_frac=0.43, above=None, match_scale=True, scene_same_frame=True),
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', chin_frac=0.43, above=None),
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', chin_frac=0.43, above=None),
     'kyuko:winter': dict(name='kyuko_winter', stand='stand-winter', prefix='kyuko', chin_frac=0.43, above=None),
@@ -174,6 +180,15 @@ def align(base, a, mk, cx, from_bottom=False):
     return (int(round(ax - cx)), int(round(ay - eye))), 1.0 / s
 
 
+def shrink(a, r):
+    """絵を r 倍に縮める(r>=1 ならそのまま)。透明の縁が黒ずまないよう、色に不透明さを掛けてから縮める。"""
+    if r >= 0.999:
+        return a
+    im = Image.fromarray(a).convert('RGBa')
+    im = im.resize((max(1, int(round(im.width * r))), max(1, int(round(im.height * r)))), Image.LANCZOS)
+    return np.asarray(im.convert('RGBA'))
+
+
 def head_cx(a, top, rows):
     """頭の横の真ん中。上げた腕・こぶし(肌色)に引かれないよう、髪(暗い色)の重心を使う。"""
     sub = (a[top:top + rows, :, 3] > ALPHA) & (a[top:top + rows, :, :3].astype(int).sum(axis=2) < 3 * 90)
@@ -189,6 +204,22 @@ def place(a, frame, d):
     im = Image.fromarray(a)
     out.paste(im, (-x0 - d[0], -y0 - d[1]))
     return out
+
+
+def files_hash(paths):
+    h = hashlib.sha1()
+    for p in paths:
+        with open(p, 'rb') as fp:
+            h.update(fp.read())
+    return h.hexdigest()[:12]
+
+
+def write_made(key, cfg):
+    made = json.load(open(MADE, encoding='utf-8')) if os.path.exists(MADE) else {}
+    made[key] = dict(fullbody=files_hash([os.path.join(FB, '%s__%s.png' % (cfg['name'], e)) for e in EXPR]),
+                     stand=files_hash([os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)) for e in EXPR]))
+    with open(MADE, 'w', encoding='utf-8') as fp:
+        fp.write('{\n' + ',\n'.join('  %s: %s' % (json.dumps(k), json.dumps(v)) for k, v in sorted(made.items())) + '\n}\n')
 
 
 def save_png(im, path):
@@ -243,7 +274,20 @@ def run(key, cfg, marks, opts):
     cx = head_cx(base, nb[1], int(max(8, (mk['chin'] - nb[1]) * 0.8)))
     # 下の切れ目: 顎の位置が chin_frac になる高さ(normal の体のてっぺんから測る)
     bottom = int(round(nb[1] + (mk['chin'] - nb[1]) / cfg['chin_frac']))
-    al = [((0, 0), 1.0)] + [align(base, a, mk, cx, from_bottom=cfg.get('same_frame', False)) for a in ims[1:]]
+    al = al0 = [((0, 0), 1.0)] + [align(base, a, mk, cx, from_bottom=cfg.get('same_frame', False)) for a in ims[1:]]
+    if cfg.get('match_scale'):
+        # 表情ごとに全身画の大きさが違う組(えるびん・2026-11-23 r1119-153 社長「表情ごとに顔の位置と大きさがそろう」)。
+        #   いちばん小さい表情の大きさへ、ほかを縮めてそろえる(引き伸ばさない・r1115-143)。縮めたら重ね合わせを測り直す
+        T = min([1.0] + [k for _, k in al])
+        ims = [shrink(a, T / k) for a, (_, k) in zip(ims, al)]
+        base = ims[0]
+        mk = dict(mk, top=mk['top'] * T, eye=mk['eye'] * T, chin=mk['chin'] * T)
+        nb = bbox(base)
+        f = mk['chin'] - mk['eye']
+        cx = head_cx(base, nb[1], int(max(8, (mk['chin'] - nb[1]) * 0.8)))
+        bottom = int(round(nb[1] + (mk['chin'] - nb[1]) / cfg['chin_frac']))
+        al = [((0, 0), 1.0)] + [align(base, a, mk, cx) for a in ims[1:]]
+        print('   大きさをそろえた: normal×%.3f %s' % (T, ' '.join('%s×%.3f' % (e[:2], T / k) for e, (_, k) in zip(EXPR[1:], al0[1:]))))
     ds = [d for d, _ in al]
     big = [(e, k) for e, (_, k) in zip(EXPR, al) if abs(k - 1) > 0.04]
     # 枠: 8表情ぶんの不透明な画素(切れ目より上)が上・左・右の端に触れない所まで。余白 g
@@ -274,7 +318,7 @@ def run(key, cfg, marks, opts):
         row['above'] = cfg['above']
     # 顔のずれ: 場面は見えている体の範囲で置くので、表情ごとに範囲が違うと顔が動く。顔の長さ(目から顎)の何割かで出す
     worst = (0.0, '')
-    for e, (l, t, r, b) in zip(EXPR, [vb[0]] * len(vb) if cfg.get('same_frame') else vb):
+    for e, (l, t, r, b) in zip(EXPR, [vb[0]] * len(vb) if (cfg.get('same_frame') or cfg.get('scene_same_frame')) else vb):
         ey = ((mk['eye'] - frame[1]) - t) / float(b - t) - row['eye']
         exn = ((l + r) / 2.0 - (vb[0][0] + vb[0][2]) / 2.0) / float(b - t) * vh
         dv = max(abs(ey * vh), abs(exn)) / f
@@ -286,6 +330,7 @@ def run(key, cfg, marks, opts):
     if worst[0] > 0.1:
         print('   注意: %s は場面で顔が 顔の長さの%d%% ずれる(見えている体の範囲が normal と違う)' % (worst[1], round(worst[0] * 100)))
     print('   顔の表(%s): %s: %s' % (cfg['stand'], key.split(':')[0], row))
+    write_made(key, cfg)
     if opts['write']:
         ok = write_face_row(cfg['stand'], key.split(':')[0], row)
         print('   → 56-assistant-life-house.jsx に%s' % ('書いた' if ok else '書けなかった(手で足す)'))
