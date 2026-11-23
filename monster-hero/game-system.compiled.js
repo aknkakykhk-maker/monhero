@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c55a6402f587dac
+// source-sha256: baacf8ece1dab43e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43469,6 +43469,8 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
+  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const specialFxRef = useRef(null);
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45192,6 +45194,16 @@ const RhythmTapTest = ({
             run._climaxLevel = level;
             climaxEl.setAttribute('data-on', level > 0 ? '1' : '0');
             climaxEl.style.opacity = level > 0 ? String(level) : '0';
+          }
+        }
+      }
+      {
+        const fxEl = specialFxRef.current;
+        if (fxEl && specialFx) {
+          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
+          if (run._specialFxOn !== on) {
+            run._specialFxOn = on;
+            fxEl.setAttribute('data-on', on);
           }
         }
       }
@@ -48125,7 +48137,12 @@ const RhythmTapTest = ({
     ref: roadGlowRef,
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
-  })), climaxFxOn && React.createElement("i", {
+  })), specialFx && React.createElement("i", {
+    ref: specialFxRef,
+    "data-rhythm-special-fx": true,
+    "data-on": "0",
+    "aria-hidden": "true"
+  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",

@@ -526,7 +526,7 @@
   "desert_crown/hell": "662c4a0b30060ef2",
   "brand_new_sky/hell": "184d3b1d09c53b39",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
-  "zenbu_hissatsuwaza/hell": "076c0cc90177db18",
+  "zenbu_hissatsuwaza/hell": "11b6b53a89fa418f",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -1261,6 +1261,13 @@
   {
    "at": "2026-11-23 12:34",
    "reason": "2026-11-23 r1119-136 社長: 全部必殺技でつ HELL を作り直し(空なしのまま 591→703ノーツ・Lv.46→52)。新しい譜面は -v4- の目印、旧の -v3- は残して使わない",
+   "changed": [
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 13:11",
+   "reason": "2026-11-23 r1119-136 社長の選択 A＋B＋C＋D: 全部必殺技でつ HELL に必殺技の決め・地上の大技・ききの連打を置いた(776ノーツ・Lv.76)",
    "changed": [
     "zenbu_hissatsuwaza/hell"
    ]

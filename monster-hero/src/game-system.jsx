@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f813c05f16ee9b1b
+// generated-sha256: 68cda581573304d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -26722,6 +26722,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 毎フレームの処理(tick)が道の両側の光の筋を点ける。変わったときだけ触る。見た目だけで、判定・スコアには触らない
   const climaxFxOn=settings.climaxFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode&&!tutorial&&typeof rhythmSongClimaxAt==='function';
   const climaxRef=useRef(null);
+  // その譜面だけの演出(data/rhythm-mode.js の RHYTHM_CHART_SPECIAL_FX・2026-11-23 r1119-136)。区間の中だけ道の色を変え、文字を一度だけ出す。見た目だけ
+  const specialFx=!tutorial&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
+  const specialFxRef=useRef(null);
   // 光の筋が流れる速さは、曲の2拍で1周(拍の表が無い曲は 900ms)
   const climaxCycleMs=(()=>{const grid=climaxFxOn?rhythmSongBeatGrid(song.songId):null;return grid?Math.round(Math.min(1400,Math.max(500,grid.beatMs*2))):900;})();
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -27717,6 +27720,8 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
 // 盛り上がりの光。いまが盛り上がる区間なら、その強さで点ける(重いときの自動調整で切られたら消す)
 {const climaxEl=climaxRef.current;if(climaxEl){const level=settingsLiveRef.current.climaxFx===true?rhythmSongClimaxAt(song.songId,visualTime):0;
   if(run._climaxLevel!==level){run._climaxLevel=level;climaxEl.setAttribute('data-on',level>0?'1':'0');climaxEl.style.opacity=level>0?String(level):'0';}}}
+// その譜面だけの演出。区間に入ったら印を立てる(変わったときだけ触る)
+{const fxEl=specialFxRef.current;if(fxEl&&specialFx){const on=visualTime>=specialFx.fromMs&&visualTime<specialFx.toMs?'1':'0';if(run._specialFxOn!==on){run._specialFxOn=on;fxEl.setAttribute('data-on',on);}}}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -28815,7 +28820,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {RHYTHM_GRAND_STAGE_CONFETTI.map((c,k)=><i key={k} style={{left:`${c.x}%`,background:c.color,animationDuration:`${c.dur}s`,animationDelay:`${c.delay}s`,top:settings.effectAmount==='MINIMAL'||settings.lightweightMode?`${c.y}%`:undefined}}/>)}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{specialFx&&<i ref={specialFxRef} data-rhythm-special-fx data-on="0" aria-hidden="true"><b>{specialFx.label}</b></i>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、

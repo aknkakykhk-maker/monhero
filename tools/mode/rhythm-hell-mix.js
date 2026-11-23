@@ -91,7 +91,8 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   //   --write し直すと空が戻るので、作り直すときは地上へ下ろす手順も通す(歯ごたえは曲の一覧の chartIntensityByDifficulty HELL:extreme)
   // 2026-11-23 作り直し(台帳 r1119-136・社長「スカイないぶんもっと難しく。ノーツ数増やして」): 書く先を -v4- の目印へ移した(旧の -v3- は残して使わない)。
   //   hellDensity:1.4・曲の一覧の sustainScale HELL:0.6(長押しを減らして、その間の刻みをタップへ戻す)・precision は外した(phrases ground で空のタップを作らない)。
-  //   書いたあと空のスライド12本・タップ3個を地上へ下ろし、rhythm-held-cross.js --fix のあと残った押さえ中の交差6個のタップを抜き、モンスターノーツ4番を 90.91秒のタップへ移した(591→703ノーツ・Lv.46→52)
+  //   書いたあと空のスライド12本・タップ3個を地上へ下ろし、rhythm-held-cross.js --fix のあと残った押さえ中の交差6個のタップを抜き、モンスターノーツ4番を 90.91秒のタップへ移した(591→703ノーツ・Lv.46→52)。
+  //   そのあと社長の選択「A＋B＋C＋D 全部」で、必殺技の決め・地上で描く大技・ききの連打を置き直した(776ノーツ・Lv.76。docs/progress/beat/zenbu-hell-remake/README.md)。--write し直すとこれも消える
   zenbu_hissatsuwaza:{marker:'zenbu-hissatsuwaza-v4',zero:1236.1,beat:310.29,levelRe:/const zenbuHissatsuwazaV4HellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1,phrases:['ground'],hellDensity:1.4},
   walkure:{marker:'walkure-v3',zero:70,beat:277.743,levelRe:/const walkureHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true,phrases:['ground','L','ground','R'],levelSettle:true},
   walkure_short:{marker:'walkure-short-v3',zero:23,beat:277.743,levelRe:/const walkureShortHellChart=mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
