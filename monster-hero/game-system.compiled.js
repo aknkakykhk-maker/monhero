@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 17990bd49b9a4bd7
+// source-sha256: 8d2de430e34badfc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6918,6 +6918,12 @@ const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL', 'いまの'], ['DEEP'
 const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW', 'OLD']);
 const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A', 'タイプA'], ['B', 'タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id]) => id));
+const RHYTHM_SKY_SLIDE_COLOR_LABELS = Object.freeze([['HEIGHT', '空中・地上で色分け'], ['HAND', '左右の手で色分け']]);
+const RHYTHM_SKY_SLIDE_COLORS = Object.freeze(RHYTHM_SKY_SLIDE_COLOR_LABELS.map(([id]) => id));
+const RHYTHM_SKY_SLIDE_COLOR_NOTES = Object.freeze({
+  HEIGHT: '空中を通る所は桃、地上を通る所は青になります。',
+  HAND: '左手で取る帯は青、右手で取る帯は桃になります（前の見た目）。'
+});
 const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({
   A: '道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',
   B: '少し遅れて、画面の上から空の高さで出てきます。'
@@ -7271,6 +7277,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   roadDepth: 'NORMAL',
   skyRise: 'NOW',
   skyRiseType: 'A',
+  skySlideColor: 'HEIGHT',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -7564,6 +7571,7 @@ const normalizeRhythmSettings = value => {
     roadDepth: RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth) ? source.roadDepth : DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise: RHYTHM_SKY_RISE_MODES.includes(source.skyRise) ? source.skyRise : DEFAULT_RHYTHM_SETTINGS.skyRise,
     skyRiseType: RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType) ? source.skyRiseType : DEFAULT_RHYTHM_SETTINGS.skyRiseType,
+    skySlideColor: RHYTHM_SKY_SLIDE_COLORS.includes(source.skySlideColor) ? source.skySlideColor : DEFAULT_RHYTHM_SETTINGS.skySlideColor,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -38541,6 +38549,12 @@ const RhythmOptions = ({
     style: JA_WRAP_STYLE
   }, jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType] || RHYTHM_SKY_RISE_TYPE_NOTES.A))), `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`, {
     full: true
+  }), field('空中スライドの色', React.createElement(React.Fragment, null, segments('skySlideColor', RHYTHM_SKY_SLIDE_COLOR_LABELS), React.createElement("p", {
+    "data-rhythm-sky-slide-color-note": true,
+    className: `mt-1.5 ${note}`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(RHYTHM_SKY_SLIDE_COLOR_NOTES[draft.skySlideColor] || RHYTHM_SKY_SLIDE_COLOR_NOTES.HEIGHT))), 'HELL などの空中スライドの帯の色の分け方です（既定は空中・地上で色分け）。見た目だけが変わり、判定・スコアは変わりません。', {
+    full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
     className: card
@@ -44227,6 +44241,9 @@ const RhythmTapTest = ({
     } catch (e) {}
     try {
       if (typeof RHYTHM_SKY_RISE_MODE === 'object') RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);
+    } catch (e) {}
+    try {
+      if (typeof RHYTHM_SKY_SLIDE_COLOR_MODE === 'object') RHYTHM_SKY_SLIDE_COLOR_MODE.set(settingsIn?.skySlideColor);
     } catch (e) {}
     return 0;
   });
