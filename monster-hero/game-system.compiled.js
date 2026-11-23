@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d51fbdf7312b557
+// source-sha256: 3c53b39e9b23bae7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8681,19 +8681,19 @@ const Audio_ = (() => {
       buffers.delete(old);
     }
   };
-  const loadBuffer = key => {
+  const loadBuffer = (key, data = null) => {
     if (buffers.has(key)) return Promise.resolve(buffers.get(key));
     if (loadingBuffers.has(key)) return loadingBuffers.get(key);
     const ctx = getAudioCtx();
-    if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    if (!ctx || !data && typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
-    const request = fetch(audioUrlWithKey(url), {
+    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    }).then(data => decode(ctx, data)).then(decoded => {
+    })).then(bytes => decode(ctx, bytes)).then(decoded => {
       decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
       return light ? lightenBuffer(decoded) : decoded;
@@ -8992,6 +8992,401 @@ const Audio_ = (() => {
       return false;
     }
   };
+  const LONG_SONG_SEC = 480,
+    LONG_START_LEAD_SEC = 0.03,
+    LONG_CHUNK_SEC = 20,
+    LONG_PRE_FRAMES = 16,
+    LONG_POST_FRAMES = 16,
+    LONG_FADE_SEC = 0.02;
+  const longSongBytes = new Map();
+  const MP3_BITRATE = {
+    1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+  };
+  const MP3_RATE = {
+    3: [44100, 48000, 32000],
+    2: [22050, 24000, 16000],
+    0: [11025, 12000, 8000]
+  };
+  const mp3FrameAt = (u8, i) => {
+    if (i + 4 > u8.length || u8[i] !== 0xFF || (u8[i + 1] & 0xE0) !== 0xE0) return null;
+    const ver = u8[i + 1] >> 3 & 3,
+      layer = u8[i + 1] >> 1 & 3;
+    if (ver === 1 || layer !== 1) return null;
+    const bri = u8[i + 2] >> 4,
+      sri = u8[i + 2] >> 2 & 3,
+      pad = u8[i + 2] >> 1 & 1;
+    if (bri === 0 || bri === 15 || sri === 3) return null;
+    const sr = MP3_RATE[ver][sri],
+      spf = ver === 3 ? 1152 : 576;
+    return {
+      len: Math.floor(spf / 8 * MP3_BITRATE[ver === 3 ? 1 : 2][bri] * 1000 / sr) + pad,
+      sr,
+      spf
+    };
+  };
+  const parseMp3Frames = u8 => {
+    let i = 0;
+    if (u8.length > 10 && u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) i = 10 + ((u8[6] & 127) << 21 | (u8[7] & 127) << 14 | (u8[8] & 127) << 7 | u8[9] & 127) + (u8[5] & 0x10 ? 10 : 0);
+    const offs = [];
+    let sr = 0,
+      spf = 0,
+      end = i;
+    while (i + 4 <= u8.length) {
+      const f = mp3FrameAt(u8, i);
+      if (f && f.len > 4 && (!sr || f.sr === sr && f.spf === spf)) {
+        const next = i + f.len;
+        if (next <= u8.length && (next === u8.length || u8.length - next <= 128 || mp3FrameAt(u8, next))) {
+          offs.push(i);
+          sr = f.sr;
+          spf = f.spf;
+          end = next;
+          i = next;
+          continue;
+        }
+      }
+      i++;
+    }
+    return offs.length ? {
+      offsets: Uint32Array.from(offs),
+      end,
+      sr,
+      spf
+    } : null;
+  };
+  const fetchSongBytes = async url => {
+    const hit = longSongBytes.get(url);
+    if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), {
+      cache: 'force-cache'
+    });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let map = null;
+    try {
+      map = parseMp3Frames(bytes);
+    } catch (e) {
+      map = null;
+    }
+    const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
+    const entry = {
+      url,
+      bytes,
+      map,
+      long
+    };
+    if (long) {
+      longSongBytes.clear();
+      longSongBytes.set(url, entry);
+    }
+    return entry;
+  };
+  const monoRange = (buf, from, len) => {
+    const out = new Float32Array(len),
+      c0 = buf.getChannelData(0),
+      c1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+    for (let i = 0; i < len; i++) {
+      const k = from + i;
+      if (k >= 0 && k < buf.length) out[i] = c1 ? (c0[k] + c1[k]) * 0.5 : c0[k];
+    }
+    return out;
+  };
+  const longAlignLag = (aBuf, bBuf, j0, len, L0, R = 3200) => {
+    const D = 8;
+    len -= len % D;
+    const A = monoRange(aBuf, j0 + L0 - R - D, len + 2 * R + 2 * D),
+      B = monoRange(bBuf, j0, len);
+    const dec = x => {
+      const m = Math.floor(x.length / D),
+        o = new Float32Array(m);
+      for (let i = 0; i < m; i++) {
+        let t = 0;
+        for (let k = 0; k < D; k++) t += x[i * D + k];
+        o[i] = t;
+      }
+      return o;
+    };
+    const Ad = dec(A),
+      Bd = dec(B),
+      RD = R / D;
+    let best = -Infinity,
+      bestD = 0;
+    for (let d = -RD; d <= RD; d++) {
+      let t = 0;
+      const o = d + RD + 1;
+      for (let i = 0; i < Bd.length; i++) t += Ad[i + o] * Bd[i];
+      if (t > best) {
+        best = t;
+        bestD = d;
+      }
+    }
+    const Lc = L0 + bestD * D,
+      W = 12,
+      len2 = Math.min(len, 8192),
+      j1 = j0 + Math.floor((len - len2) / 2);
+    const A2 = monoRange(aBuf, j1 + Lc - W, len2 + 2 * W),
+      B2 = monoRange(bBuf, j1, len2);
+    const sc = [];
+    for (let L = -W; L <= W; L++) {
+      let t = 0;
+      for (let i = 0; i < len2; i++) t += A2[i + L + W] * B2[i];
+      sc.push(t);
+    }
+    let bi = 0;
+    for (let i = 1; i < sc.length; i++) if (sc[i] > sc[bi]) bi = i;
+    let frac = 0;
+    if (bi > 0 && bi < sc.length - 1) {
+      const den = sc[bi - 1] - 2 * sc[bi] + sc[bi + 1];
+      if (den < 0) frac = 0.5 * (sc[bi - 1] - sc[bi + 1]) / den;
+    }
+    let ea = 0,
+      eb = 0;
+    for (let i = 0; i < len2; i++) {
+      const x = A2[i + bi];
+      ea += x * x;
+      eb += B2[i] * B2[i];
+    }
+    return {
+      lag: Lc + (bi - W) + frac,
+      corr: ea > 0 && eb > 0 ? sc[bi] / Math.sqrt(ea * eb) : 0,
+      rms: Math.sqrt(eb / len2)
+    };
+  };
+  const longAligned = r => r && r.corr >= 0.97 && r.rms > 1e-3;
+  const openLongSong = async (ctx, entry) => {
+    const {
+        bytes,
+        map
+      } = entry,
+      n = map.offsets.length,
+      fsec = map.spf / map.sr;
+    const per = Math.max(64, Math.round(LONG_CHUNK_SEC / fsec));
+    const bounds = [0];
+    for (let b = per; b < n - per / 4; b += per) bounds.push(b);
+    const count = bounds.length;
+    const byteRange = k => {
+      const a = k === 0 ? 0 : map.offsets[Math.max(0, bounds[k] - LONG_PRE_FRAMES)];
+      const e = k + 1 >= count ? bytes.length : bounds[k + 1] + LONG_POST_FRAMES < n ? map.offsets[bounds[k + 1] + LONG_POST_FRAMES] : bytes.length;
+      return [a, e];
+    };
+    let C = 0,
+      aligned = false;
+    const stats = {
+      log: [],
+      chunks: count,
+      chunkSec: per * fsec,
+      decoded: 0,
+      seams: 0,
+      seamMaxDevMs: 0,
+      late: 0,
+      failed: 0,
+      probeCorr: 0
+    };
+    const theoryStart = k => k === 0 ? 0 : (bounds[k] - LONG_PRE_FRAMES) * fsec + C;
+    const seamSec = k => bounds[k] * fsec + C;
+    const chunks = new Map(),
+      pending = new Map();
+    const getChunk = k => {
+      if (chunks.has(k)) return Promise.resolve(chunks.get(k));
+      if (pending.has(k)) return pending.get(k);
+      const [a, e] = byteRange(k);
+      const p = decode(ctx, bytes.slice(a, e).buffer).then(buffer => {
+        stats.decoded++;
+        decodedBytes += bufferBytes(buffer);
+        decodedCount += 1;
+        let startSec = theoryStart(k);
+        const prev = chunks.get(k - 1);
+        if (k > 0 && prev && aligned) {
+          const r = buffer.sampleRate,
+            s = seamSec(k);
+          const m = longAlignLag(prev.buffer, buffer, Math.round((s - 0.2 - startSec) * r), Math.round(0.4 * r), Math.round((startSec - prev.startSec) * r), 960);
+          if (longAligned(m)) {
+            const got = prev.startSec + m.lag / r,
+              dev = Math.abs(got - startSec);
+            stats.seams++;
+            stats.seamMaxDevMs = Math.max(stats.seamMaxDevMs, dev * 1000);
+            if (dev < 0.02 && dev * r >= 0.5) startSec = got;
+          }
+        }
+        const c = {
+          buffer,
+          startSec
+        };
+        chunks.set(k, c);
+        return c;
+      }).finally(() => pending.delete(k));
+      pending.set(k, p);
+      return p;
+    };
+    const head = (await getChunk(0)).buffer,
+      rate = head.sampleRate;
+    {
+      const probeLen = 48,
+        lo = LONG_PRE_FRAMES + 8,
+        hi = Math.min(bounds[1] || n, n) - probeLen - 8;
+      let bestP = -1,
+        bestE = 0;
+      for (let p = lo; p <= hi; p += Math.max(1, Math.round(1 / fsec))) {
+        const from = Math.round(p * fsec * rate),
+          seg = monoRange(head, from, Math.round(0.5 * rate));
+        let e = 0;
+        for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
+        if (e > bestE) {
+          bestE = e;
+          bestP = p;
+        }
+      }
+      if (bestP >= 0) {
+        try {
+          const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
+          const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
+          stats.probeCorr = Math.round(m.corr * 1000) / 1000;
+          if (longAligned(m)) {
+            const lag = Math.abs(m.lag - Math.round(m.lag)) < 0.25 ? Math.round(m.lag) : m.lag;
+            C = lag / rate - bestP * fsec;
+            aligned = true;
+          }
+        } catch (e) {}
+      }
+    }
+    stats.offsetMs = Math.round(C * 10000) / 10;
+    let duration = head.duration;
+    if (count > 1) {
+      const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer);
+      stats.decoded++;
+      duration = theoryStart(count - 1) + last.duration;
+    }
+    let session = 0,
+      live = [],
+      timer = null,
+      play = null;
+    const chunkIndexAt = s => {
+      let k = 0;
+      while (k + 1 < count && s >= seamSec(k + 1)) k++;
+      return k;
+    };
+    const dropLive = x => {
+      stopSource(x.src);
+      try {
+        x.gain.disconnect();
+      } catch (e) {}
+    };
+    const halt = () => {
+      session++;
+      if (timer) clearInterval(timer);
+      timer = null;
+      live.forEach(dropLive);
+      live = [];
+      play = null;
+    };
+    const scheduleChunk = (k, first) => {
+      const c = chunks.get(k);
+      if (!c || !play) return false;
+      const g = ctx.createGain(),
+        src = ctx.createBufferSource(),
+        my = session;
+      src.buffer = c.buffer;
+      src.connect(g);
+      g.connect(play.out);
+      let fromSong = first ? play.o : seamSec(k) - LONG_FADE_SEC / 2;
+      let when = play.t0 + (fromSong - play.o);
+      if (!first && when < ctx.currentTime) {
+        stats.late++;
+        fromSong += ctx.currentTime - when;
+        when = ctx.currentTime;
+      }
+      if (!first) {
+        const wr = Math.round(when * ctx.sampleRate) / ctx.sampleRate;
+        fromSong += wr - when;
+        when = wr;
+      }
+      if (first) g.gain.value = 1;else {
+        g.gain.setValueAtTime(0, when);
+        g.gain.linearRampToValueAtTime(1, when + LONG_FADE_SEC);
+        const prev = live.find(x => x.k === k - 1);
+        if (prev) {
+          prev.gain.gain.setValueAtTime(1, when);
+          prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC);
+          try {
+            prev.src.stop(when + LONG_FADE_SEC + 0.01);
+          } catch (e) {}
+        }
+      }
+      if (k === count - 1) src.onended = () => {
+        if (my === session && play) {
+          const done = play.onEnd;
+          halt();
+          done();
+        }
+      };
+      src.start(when, Math.max(0, fromSong - c.startSec));
+      stats.log.push({
+        k,
+        first,
+        marginMs: Math.round((when - ctx.currentTime) * 10000) / 10,
+        devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100
+      });
+      if (stats.log.length > 8) stats.log.shift();
+      live.push({
+        k,
+        src,
+        gain: g
+      });
+      return true;
+    };
+    const tick = () => {
+      if (!play) return;
+      const my = session,
+        s = play.o + (ctx.currentTime - play.t0),
+        cur = Math.max(chunkIndexAt(Math.max(s, play.o)), live.length ? live[0].k : 0),
+        next = cur + 1;
+      if (next < count && !live.some(x => x.k === next)) {
+        getChunk(next).then(() => {
+          if (my === session && play && !live.some(x => x.k === next) && live.some(x => x.k === next - 1)) scheduleChunk(next, false);
+        }).catch(() => {
+          stats.failed++;
+        });
+      }
+      live = live.filter(x => {
+        if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) {
+          dropLive(x);
+          return false;
+        }
+        return true;
+      });
+      for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some(x => x.k === k)) chunks.delete(k);
+    };
+    return {
+      duration,
+      head,
+      stats: () => ({
+        ...stats,
+        held: chunks.size
+      }),
+      ready: o => getChunk(chunkIndexAt(o)),
+      playFrom: (o, out, onEnd) => {
+        halt();
+        const k = chunkIndexAt(o);
+        if (!chunks.has(k)) return false;
+        const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
+        play = {
+          t0,
+          o,
+          out,
+          onEnd
+        };
+        scheduleChunk(k, true);
+        timer = setInterval(tick, 250);
+        tick();
+        return t0;
+      },
+      halt,
+      release: () => {
+        halt();
+        chunks.clear();
+      }
+    };
+  };
   const startRhythmTrack = async (key, rhythmVolumePct = 100, options = null) => {
     const autoStart = options?.autoStart !== false;
     const loop = options?.loop === true;
@@ -9004,11 +9399,30 @@ const Audio_ = (() => {
     stopOthers();
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src),
-        ctx = await ensureAudioCtxRunning();
-      rememberSongBuffer(track.src);
-      if (!ctx) return null;
-      rhythmBuffersInUse.add(buffer);
+      let buffer = null,
+        long = null,
+        dctx = null;
+      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') buffer = await loadBuffer(track.src);else {
+        const entry = await fetchSongBytes(track.src);
+        dctx = getAudioCtx();
+        if (!dctx) return null;
+        if (entry.long) long = await openLongSong(dctx, entry);else {
+          try {
+            buffer = await loadBuffer(track.src, entry.map ? entry.bytes.buffer.slice(0) : entry.bytes.buffer);
+          } catch (e) {
+            if (!entry.map) throw e;
+            long = await openLongSong(dctx, entry);
+          }
+        }
+      }
+      const ctx = await ensureAudioCtxRunning();
+      if (buffer) rememberSongBuffer(track.src);
+      if (!ctx || long && ctx !== dctx) {
+        if (long) long.release();
+        return null;
+      }
+      if (buffer) rhythmBuffersInUse.add(buffer);
+      const duration = buffer ? buffer.duration : long.duration;
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
@@ -9023,8 +9437,21 @@ const Audio_ = (() => {
           gainEntry = null;
         }
       };
+      const haltSource = () => {
+        const old = source;
+        source = null;
+        stopSource(old);
+        if (long) long.halt();
+      };
+      const prepareAt = async offset => {
+        if (long) {
+          try {
+            await long.ready(offset);
+          } catch {}
+        }
+      };
       const startSource = offset => {
-        if (stopped || offset >= buffer.duration) {
+        if (stopped || offset >= duration) {
           naturallyEnded = true;
           return false;
         }
@@ -9038,6 +9465,27 @@ const Audio_ = (() => {
         };
         activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value = enabled ? raw : 0;
+        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
+        if (long) {
+          rhythmGain.connect(masterOut || ctx.destination);
+          const t0 = long.playFrom(offset, rhythmGain, () => {
+            if (!playing || stopped) return;
+            if (loop) {
+              startSource(0);
+              return;
+            }
+            playing = false;
+            naturallyEnded = true;
+          });
+          if (t0 === false) {
+            dropGainEntry();
+            return false;
+          }
+          offsetSeconds = offset;
+          startedAt = t0;
+          playing = true;
+          return true;
+        }
         nextSource.buffer = buffer;
         nextSource.loop = loop;
         nextSource.connect(rhythmGain);
@@ -9046,7 +9494,6 @@ const Audio_ = (() => {
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
         playing = true;
-        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
         nextSource.onended = () => {
           if (source === nextSource && playing) {
             playing = false;
@@ -9059,17 +9506,18 @@ const Audio_ = (() => {
       };
       const headMs = (() => {
         try {
-          const d = buffer.getChannelData(0);
-          const n = Math.min(d.length, Math.floor(buffer.sampleRate * 1.5));
+          const hb = buffer || long.head;
+          const d = hb.getChannelData(0);
+          const n = Math.min(d.length, Math.floor(hb.sampleRate * 1.5));
           for (let i = 0; i < n; i++) {
-            if (Math.abs(d[i]) > .01) return Math.round(i / buffer.sampleRate * 1000);
+            if (Math.abs(d[i]) > .01) return Math.round(i / hb.sampleRate * 1000);
           }
           return -1;
         } catch {
           return null;
         }
       })();
-      const rawSongTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
+      const rawSongTimeSeconds = () => Math.min(duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       let smoothSong = 0,
         smoothPerf = 0;
       const tsLatSamples = [];
@@ -9105,12 +9553,16 @@ const Audio_ = (() => {
         }
         let next = smoothSong + (p - smoothPerf) / 1000;
         if (Math.abs(raw - next) > .05) next = raw;else next += (raw - next) * .15;
-        smoothSong = Math.min(buffer.duration, Math.max(smoothSong, next));
+        smoothSong = Math.min(duration, Math.max(smoothSong, next));
         smoothPerf = p;
         return smoothSong;
       };
       const atSeconds = Math.max(0, (Number(options?.atMs) || 0) / 1000);
-      if (autoStart) startSource(atSeconds < buffer.duration ? atSeconds : 0);
+      if (autoStart) {
+        const at = atSeconds < duration ? atSeconds : 0;
+        await prepareAt(at);
+        startSource(at);
+      }
       return {
         start: () => {
           if (playing || stopped || naturallyEnded) return playing;
@@ -9125,48 +9577,50 @@ const Audio_ = (() => {
           hasTs: typeof ctx.getOutputTimestamp === 'function',
           tsLatMs: tsLatMs(),
           rate: Math.round(Number(ctx.sampleRate) || 0),
-          headMs
+          headMs,
+          ...(long ? {
+            chunked: long.stats()
+          } : {})
         }),
-        durationMs: buffer.duration * 1000,
-        ended: () => naturallyEnded || songTimeSeconds() >= buffer.duration,
+        durationMs: duration * 1000,
+        ended: () => naturallyEnded || songTimeSeconds() >= duration,
         paused: () => !playing && !stopped && !naturallyEnded,
         pause: () => {
           if (!playing || stopped) return;
           offsetSeconds = songTimeSeconds();
           playing = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
         },
         resume: async () => {
           if (playing || stopped || naturallyEnded) return playing;
           await ensureAudioCtxRunning();
+          await prepareAt(offsetSeconds);
+          if (playing || stopped || naturallyEnded) return playing;
           return startSource(offsetSeconds);
         },
         seek: async ms => {
           if (stopped) return false;
           const at = Math.max(0, (Number(ms) || 0) / 1000);
-          if (at >= buffer.duration) return false;
+          if (at >= duration) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = at;
           smoothPerf = 0;
           await ensureAudioCtxRunning();
-          if (stopped) return false;
+          await prepareAt(at);
+          if (stopped || playing || offsetSeconds !== at) return playing;
           return startSource(at);
         },
         restart: async () => {
           if (stopped) return false;
           playing = false;
           naturallyEnded = false;
-          const old = source;
-          source = null;
-          stopSource(old);
+          haltSource();
           offsetSeconds = 0;
           await ensureAudioCtxRunning();
+          await prepareAt(0);
+          if (stopped || playing) return playing;
           return startSource(0);
         },
         fadeOut: ms => {
@@ -9192,7 +9646,8 @@ const Audio_ = (() => {
           source = null;
           stopSource(old);
           dropGainEntry();
-          rhythmBuffersInUse.delete(buffer);
+          if (long) long.release();
+          if (buffer) rhythmBuffersInUse.delete(buffer);
         }
       };
     } catch (e) {
@@ -22180,6 +22635,36 @@ const useBubbleCollapse = collapseKey => {
   const collapsed = !!collapseKey && state.map[collapseKey] === true;
   return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
 };
+const ASSISTANT_BUBBLE_FOLD_SKIP_SCENES = Object.freeze(['home', 'rhythmHome']);
+const ASSISTANT_BUBBLE_FOLD_GROUPS = Object.freeze([[/^missions/, 'missions'], [/^gift/, 'gift'], [/^result(Win|Lose|Retire)$/, 'result'], [/^pick(Hero|Ally)$/, 'pick'], [/^(battleQuick|battleChallenge|battlePro|extremeChallenge)$/, 'battleMode'], [/(Difficulty|^underworldTab)$/, 'battleDifficulty'], [/^(transcendence|masuEnhance)$/, 'masuEnhance']]);
+const assistantBubbleFoldKey = scene => {
+  const id = String(scene || '');
+  if (!id || ASSISTANT_BUBBLE_FOLD_SKIP_SCENES.includes(id) || assistantBubbleAlwaysShown(id)) return null;
+  const hit = ASSISTANT_BUBBLE_FOLD_GROUPS.find(([re]) => re.test(id));
+  return `screen:${hit ? hit[1] : id}`;
+};
+const BubbleFoldButton = ({
+  open,
+  onToggle,
+  size = 'md',
+  className = '',
+  ...attrs
+}) => React.createElement("button", _extends({
+  type: "button",
+  onClick: ev => {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    onToggle();
+  },
+  "aria-pressed": !!open,
+  "aria-label": open ? 'ひとことをたたむ' : 'ひとことを開く',
+  title: open ? '助手のひとことを畳む' : '助手のひとことを出す'
+}, attrs, {
+  className: `mh-bubble-fold relative flex shrink-0 items-center justify-center gap-0.5 rounded-xl border font-black active:scale-95 ${size === 'sm' ? 'h-[36px] w-[44px] text-[10px]' : 'h-[40px] w-[52px] text-[11px]'} ${open ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'} ${className}`
+}), React.createElement("span", {
+  "aria-hidden": "true"
+}, "💬"), React.createElement("span", {
+  "aria-hidden": "true"
+}, open ? '▲' : '▼'));
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -22196,14 +22681,15 @@ const AssistantBubble = ({
   defaultOpen = false,
   footerSpace = 0,
   maxLines = 0,
-  collapseKey = null,
+  collapseKey = undefined,
   collapseHidden = false,
   oneLine = false,
   menu = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
+  const foldKey = collapseKey !== undefined ? collapseKey : line || defaultOpen ? null : assistantBubbleFoldKey(scene);
+  const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -22293,32 +22779,21 @@ const AssistantBubble = ({
   const Wrapper = hasDetail || useMenu ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
-  if (collapseKey && collapsed) {
+  if (foldKey && collapsed) {
     if (collapseHidden) return null;
     return React.createElement("div", {
       "data-bubble-collapsed": true,
-      className: "w-full flex items-center gap-2"
-    }, React.createElement(AssistantFace, {
-      who: who,
-      size: 32,
-      accent: color,
-      expression: face
-    }), React.createElement("button", {
-      type: "button",
-      onClick: () => setCollapsed(false),
-      "aria-label": `${who.name}のひとことを開く`,
-      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
-      style: {
-        borderColor: color,
-        color,
-        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
-      }
-    }, "💬 ", who.name, "のひとこと ▾"));
+      className: "w-full flex items-center justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setCollapsed(false),
+      size: "sm"
+    }));
   }
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
     "data-bubble-one-line": oneLine ? '' : undefined,
-    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${collapseKey ? 'relative' : ''}`
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -22445,13 +22920,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
-  }))))), collapseKey && React.createElement("button", {
-    type: "button",
-    onClick: () => setCollapsed(true),
-    "aria-label": "ひとことをたたむ",
-    "data-bubble-collapse": true,
-    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
-  }, "▴"), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))))), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setCollapsed(true),
+    size: "sm",
+    className: "self-center",
+    "data-bubble-collapse": ""
+  }), useMenu && menuOpen && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "fixed inset-0",
     style: {
       zIndex: 60
@@ -38845,6 +39320,11 @@ const RhythmSongSelect = ({
   React.useEffect(() => {
     if (song && song.songId !== songId) setSongId(song.songId);
   }, [song ? song.songId : '', songId]);
+  const firstRowSongId = rows.length ? rows[0].entry.songId : '';
+  const songInGenre = !song || genre.id === 'all' || genreMatches(song);
+  React.useEffect(() => {
+    if (!songInGenre && firstRowSongId) setSongId(firstRowSongId);
+  }, [songInGenre, firstRowSongId, genre.id]);
   const pickRandom = () => {
     const pool = list.filter(item => !lockedSong(item));
     if (!pool.length) return;
@@ -38853,8 +39333,39 @@ const RhythmSongSelect = ({
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
-  const loopEnabled = rows.length >= 2;
+  const [loopFits, setLoopFits] = React.useState(true);
+  const loopEnabled = rows.length >= 2 && loopFits;
   const listRef = React.useRef(null);
+  const rowsKey = rows.map(row => row.entry.songId).join('|');
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el || rows.length < 2) return;
+    const measure = () => {
+      const node = listRef.current;
+      if (!node || !node.clientHeight) return;
+      const ul = node.querySelector('ul');
+      if (!ul) return;
+      const looped = node.getAttribute('data-rhythm-song-loop') === '1';
+      const cs = typeof getComputedStyle === 'function' ? getComputedStyle(node) : null;
+      const pad = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+      const one = ul.offsetHeight / (looped ? 3 : 1),
+        room = node.clientHeight - pad;
+      setLoopFits(prev => prev ? one > room - 4 : one > room + 2);
+    };
+    measure();
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+      try {
+        observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+      } catch (e) {
+        observer = null;
+      }
+    }
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [rowsKey, loopEnabled]);
   const loopReadyRef = React.useRef(false);
   const settleRef = React.useRef(null);
   const restoreTopRef = React.useRef(typeof listScrollTop === 'number' && listScrollTop > 0 ? listScrollTop : null);
@@ -39320,7 +39831,7 @@ const RhythmSongSelect = ({
       className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] landscape:[@container(max-height:300px)]:h-[44px]${available.length > 5 ? ' gap-px' : ''} ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, item.id === 'HELL' ? React.createElement("b", {
       "data-rhythm-hell-level": true,
-      className: "block text-[21px] tabular-nums text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)] landscape:text-[19px]"
+      className: `block text-[21px] tabular-nums landscape:text-[19px]${open ? ' text-rose-300 [text-shadow:0_0_8px_rgba(244,63,94,.65)]' : ''}`
     }, song.difficulties[item.id].level) : React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
@@ -70426,7 +70937,8 @@ function MissionsScreen({
       line: dailyLine.text,
       helpRef: "items/missions",
       expression: "happy",
-      compact: true
+      compact: true,
+      collapseKey: "screen:missions"
     })) : React.createElement(AssistantBubble, {
       key: claimable ? 'claim' : 'normal',
       scene: claimable ? 'missionsClaimable' : 'missionsNormal',
@@ -111459,6 +111971,7 @@ function AssistantPeerTalk({
   onReplayEnd = null,
   today = null
 }) {
+  const [peerFolded, setPeerFolded] = useBubbleCollapse(scene ? `peer:${scene}` : null);
   const st = useAssistantPeerState();
   const auto = useAssistantPeerAuto();
   const [cur, setCur] = React.useState(null);
@@ -111654,6 +112167,16 @@ function AssistantPeerTalk({
       className: "mx-auto w-fit rounded-full border border-pink-300/60 bg-slate-950/90 px-4 py-1.5 text-[11px] font-black text-pink-200 shadow-xl"
     }, toast.kind === 'daily' ? `今日のペア達成！ ${a.name}と${b.name}がもっと仲良くなりました` : toast.kind === 'makeup' ? `${a.name}と${b.name}が仲直りしました` : assistantPeerLifeOn() ? `${a.name}と${b.name}の友情Lvが ${toast.level}${stage ? `「${assistantPeerStageName(stage)}」` : ''}になりました` : `${a.name}と${b.name}の仲良し度が Lv${toast.level}${stage ? `「${stage.name}」` : ''}になりました`));
   }
+  if (peerFolded && !cur.replay) {
+    return wrap(React.createElement("div", {
+      "data-assistant-peer-folded": true,
+      className: "flex justify-end"
+    }, React.createElement(BubbleFoldButton, {
+      open: false,
+      onToggle: () => setPeerFolded(false),
+      "data-assistant-peer-fold": ""
+    })));
+  }
   const {
     talk
   } = cur;
@@ -111742,7 +112265,14 @@ function AssistantPeerTalk({
     className: "mt-1 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-[9px] font-bold text-slate-500"
-  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("button", {
+  }, cur.phase === 'choice' ? '返事をえらんでね' : `${pos}/${total}・タップで次へ`), React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, scene && !cur.replay && React.createElement(BubbleFoldButton, {
+    open: true,
+    onToggle: () => setPeerFolded(true),
+    size: "sm",
+    "data-assistant-peer-fold": ""
+  }), React.createElement("button", {
     type: "button",
     "data-assistant-peer-close": true,
     onClick: ev => {
@@ -111750,7 +112280,7 @@ function AssistantPeerTalk({
       finish(cur);
     },
     className: "min-h-[28px] shrink-0 whitespace-nowrap rounded-full border border-slate-600 px-2.5 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "閉じる"))));
+  }, "閉じる")))));
 }
 const ASSISTANT_PEER_PHOTO_W = 400,
   ASSISTANT_PEER_PHOTO_H = 300;
@@ -268512,13 +269042,11 @@ function MonsterHeroGame() {
         style: {
           color: accent
         }
-      }, headTitle)), React.createElement("button", {
-        type: "button",
-        onClick: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
-        "aria-label": helpAssistantOpen ? 'ひとことをたたむ' : 'ひとことを開く',
-        "data-help-bubble-toggle": true,
-        className: "shrink-0 min-h-[44px] min-w-[44px] px-2 rounded-xl text-[11px] font-black text-slate-300 active:scale-95"
-      }, helpAssistantOpen ? 'たたむ ▲' : '💬 ひとこと')), helpAssistantOpen && React.createElement("div", {
+      }, headTitle)), React.createElement(BubbleFoldButton, {
+        open: helpAssistantOpen,
+        onToggle: () => helpShort ? setHelpBubbleOpenShort(!helpAssistantOpen) : setHelpBubbleFolded(helpAssistantOpen),
+        "data-help-bubble-toggle": ""
+      })), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
