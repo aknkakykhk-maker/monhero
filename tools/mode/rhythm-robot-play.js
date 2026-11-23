@@ -9,6 +9,12 @@
 //     --settings … 演奏の設定(mh_rhythm_settings_v1)をこの値で始める(演出を確かめるとき。重いときの自動調整は切る)
 //     --release  … HOLD/SLIDEの終わりの扱い。correct(既定・終わりで離す)/late(+130ms)/past(+260ms)/hold(離さない)/early(0.6秒前)
 //     --shots    … 曲のその時刻(ms)を過ぎたところで画面を撮る(--shot-dir へ <曲>-<難易度>-<時刻>.png)
+//   node tools/mode/rhythm-robot-play.js --song <曲> --difficulty EASY --end-shots <dir> [--best-score 950000] [--viewport 844x390]
+//     --end-shots   … 曲が終わったあと、フルコンボ以上のお祝い(--celebrate-times 既定 150,450,800,1400 ms)と結果の画面
+//                     (--result-times 既定 250,900,1550,2700 ms)を、その時刻で動きを止めて撮る(<dir>/celebrate-<ms>.png・result-<ms>.png)。
+//                     時刻をそろえるため、撮るあいだだけ お祝いの自動の進み(setTimeout)と結果の数え上げの描画の合図(requestAnimationFrame)をつかむ
+//     --best-score  … 前の自己ベストをこの点にして始める(既定 1)。結果の「自己ベストまで あと」・越えた瞬間を撮るとき
+//     --viewport    … 画面の大きさ(既定 390x844)
 //   どちらのときも、演出が出たか(盛り上がりの光が点いた時刻・叩いた場所の判定の数・ランクが上がったときの文字)を最後に出す
 //
 // 【なぜ要るか】
@@ -30,13 +36,13 @@ const PAGE_URL=process.env.SMOKE_URL||'http://localhost:8899/monster-hero/index.
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
 
 // ロボット用のブラウザの初期値(はじめての案内を閉じた状態・全曲の全難易度を開けた状態)
-const seed=({songIds,settings})=>{
+const seed=({songIds,settings,bestScore})=>{
   const put=(k,v)=>{localStorage.setItem(k,JSON.stringify(v));};
   if(settings)put('mh_rhythm_settings_v1',{...settings,autoEffectDown:false});
   put('mh_breeder_name','ロボット');put('mh_breeder_icon','Mocchi');put('mh_onboarded',true);
   put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
   put('mh_rhythm_tutorial_seen_v1',true);
-  const best={};for(const id of songIds){best[id]={};for(const d of ['EASY','NORMAL','HARD','EXPERT','MASTER'])best[id][d]={score:1,clear:true,rank:'C',maxCombo:1};}
+  const best={};for(const id of songIds){best[id]={};for(const d of ['EASY','NORMAL','HARD','EXPERT','MASTER'])best[id][d]={score:bestScore||1,bestScore:bestScore||1,played:true,clear:true,rank:'C',maxCombo:1};}
   put('mh_rhythm_best_v1',best);
 };
 
@@ -131,11 +137,25 @@ const collect=()=>{
 
 const RELEASE=arg('--release','correct');
 const SETTINGS=arg('--settings',null)?JSON.parse(arg('--settings')):null;
+const END_SHOTS=arg('--end-shots',null);
+const timesOf=(name,fallback)=>(arg(name,fallback)||'').split(',').map(Number).filter(n=>n>=0);
+// 撮るあいだだけ時刻をつかむ仕掛け(ページの中)。__mhHoldTimeouts の間は、その長さの setTimeout をためておく。
+// __mhRafNow が数のあいだは、requestAnimationFrame へ渡す時刻をその数にする(結果の数え上げを決めた時刻で止める)
+const installEndHooks=holdMs=>{
+  const st=window.setTimeout.bind(window),raf=window.requestAnimationFrame.bind(window);
+  window.__mhHeld=[];
+  window.setTimeout=(fn,ms,...rest)=>{if(window.__mhHoldTimeouts&&ms===holdMs){window.__mhHeld.push(fn);return -1;}return st(fn,ms,...rest);};
+  window.requestAnimationFrame=fn=>raf(now=>fn(typeof window.__mhRafNow==='number'?window.__mhRafNow:now));
+};
+// 中の CSS の動きを止めて、その時刻に合わせる
+const freezeAt=({selector,ms})=>{const root=document.querySelector(selector);if(!root)return 0;let n=0;
+  for(const a of root.getAnimations({subtree:true})){try{a.pause();a.currentTime=ms;n++;}catch(_){}}return n;};
 const SHOTS=(arg('--shots','')||'').split(',').map(Number).filter(n=>n>0).sort((a,b)=>a-b),SHOT_DIR=arg('--shot-dir',null);
 const playOne=async(browser,songIds,songId,difficulty)=>{
-  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,hasTouch:true,isMobile:true});
+  const [vw,vh]=(arg('--viewport','390x844')||'390x844').split('x').map(Number);
+  const page=await browser.newPage({viewport:{width:vw||390,height:vh||844},deviceScaleFactor:END_SHOTS?2:1,hasTouch:true,isMobile:true});
   try{
-    await page.addInitScript(seed,{songIds,settings:SETTINGS});
+    await page.addInitScript(seed,{songIds,settings:SETTINGS,bestScore:Number(arg('--best-score',1))||1});
     const clickText=pattern=>page.evaluate(s=>{const rx=new RegExp(s);const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;},pattern);
     await page.goto(PAGE_URL,{waitUntil:'load',timeout:90000});
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),undefined,{timeout:90000});
@@ -167,6 +187,30 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     // --band-shot <png> … 最後のノーツのあとの「FULL COMBO」の帯が出た 0.6秒後を撮る
     const bandShot=arg('--band-shot',null);
     if(bandShot){try{await page.waitForSelector('[data-rhythm-fullcombo-band][data-on="1"]',{state:'attached',timeout:8*60*1000});await page.waitForTimeout(600);await page.screenshot({path:bandShot});}catch(_){}}
+    if(END_SHOTS){fs.mkdirSync(END_SHOTS,{recursive:true});
+      const CELEBRATE_MS=1800;
+      await page.evaluate(installEndHooks,CELEBRATE_MS);
+      // ビートランクが上がった知らせ(別の重ね)は、撮るあいだだけ隠す
+      await page.addStyleTag({content:'[data-player-rank-up-fx]{display:none!important}'});
+      await page.evaluate(()=>{window.__mhHoldTimeouts=true;});
+      const got=await page.waitForSelector('[data-rhythm-celebrate],[data-rhythm-result]',{timeout:8*60*1000}).then(()=>true).catch(()=>false);
+      if(got&&await page.$('[data-rhythm-celebrate]')){
+        const tier=await page.evaluate(()=>document.querySelector('[data-rhythm-celebrate]').dataset.tier);
+        for(const ms of timesOf('--celebrate-times','150,450,800,1400')){await page.evaluate(freezeAt,{selector:'[data-rhythm-celebrate]',ms});await page.waitForTimeout(80);
+          await page.screenshot({path:path.join(END_SHOTS,`celebrate-${tier}-${ms}.png`)});}
+        await page.evaluate(()=>{window.__mhRafNow=1;window.__mhHoldTimeouts=false;const held=window.__mhHeld.splice(0);held.forEach(fn=>fn());});
+      }else await page.evaluate(()=>{window.__mhHoldTimeouts=false;});
+      // お祝いが出ないとき、結果の数え上げは先に始まっている。そのときは時刻をつかまず、出てからの実際の時間で待って撮る
+      const fixed=await page.evaluate(()=>typeof window.__mhRafNow==='number');
+      await page.waitForSelector('[data-rhythm-result]',{timeout:30000});
+      const shownAt=Date.now();
+      for(const ms of timesOf('--result-times','250,900,1550,2700')){
+        if(fixed){await page.evaluate(t=>{window.__mhRafNow=t+1;},ms);await page.waitForTimeout(120);}
+        else{const wait=ms-(Date.now()-shownAt);if(wait>0)await page.waitForTimeout(wait);}
+        await page.evaluate(freezeAt,{selector:'[data-rhythm-result]',ms});await page.waitForTimeout(80);
+        await page.screenshot({path:path.join(END_SHOTS,`result-${ms}.png`)});}
+      await page.evaluate(()=>{window.__mhRafNow=undefined;});
+    }
     // 曲が終わるまで待つ(結果の画面が出る・プレイエリアが消える)
     await page.waitForFunction(()=>!document.querySelector('[data-rhythm-play-area]')||/RESULT|リザルト|もう一度/.test(document.body.innerText),undefined,{timeout:8*60*1000,polling:1000});
     await page.waitForTimeout(500);
