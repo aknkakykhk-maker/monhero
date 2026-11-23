@@ -8,7 +8,8 @@
 // ノーツごとに「初めて描かれたコマ」の (残り時間・画面の縦の位置・道の奥からの割合) を出す。
 // 出始め(progress -0.1)より大きく遅れて初めて描かれたノーツ = いきなり出たノーツ、として一覧にする。
 // 撮影(SHOTS=1)は、いきなり出たノーツの直前・直後のコマを OUT へ PNG で残す(数が多いときは先頭から SHOT_MAX 件)。
-// SHOT_EVERY=1 FROM=<秒> TO=<秒> で、その範囲のコマを全部撮る(空中と地上の出方を絵で比べる)。
+// SHOT_EVERY=1 FROM=<秒> TO=<秒> で、その範囲のコマを全部撮る(空中と地上の出方を絵で比べる)。SHOT_FROM=<秒> でそれより前は撮らずに進める。
+// START=listen で、曲の鑑賞(自動演奏)で撮る(動画の素材用)。
 // 縦持ちと比べるときは W=390 H=844。
 // 演奏は記録しない(ランキング・自己ベストは測るブラウザの中だけ。本物の保存データには触らない)。
 const path=require('path'),http=require('http'),fs=require('fs'),os=require('os');
@@ -91,8 +92,16 @@ const skyLiftPatched=src=>{
  await page.waitForTimeout(400);
  const selected=await page.evaluate(()=>({diff:document.querySelector('[data-rhythm-demo-difficulty][aria-pressed=true],[aria-pressed=true][data-rhythm-difficulty]')?.innerText||''}));
  if(process.env.DEBUG_SHOT)await page.screenshot({path:path.join(OUT,"select.png")});console.error("曲:",picked,"難易度:",diffOk,JSON.stringify(selected));
- await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
- await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
+ // 鑑賞(自動演奏)で撮るときは START=listen(2026-11-23 r1119-149 HELL の案内の動画)。既定は演奏を始めるボタン
+ if(process.env.START==="listen"){ // 曲の詳細のジャケット → 鑑賞の欄で難易度を選んで「鑑賞」
+  await page.evaluate(()=>document.querySelector("[data-rhythm-song-art-zoom]")?.click());
+  await page.waitForSelector("[data-rhythm-listen-start]",{timeout:15000});
+  await page.evaluate(d=>document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
+  await page.evaluate(()=>document.querySelector("[data-rhythm-listen-start]").click());
+ }else{
+  await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
+  await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
+ }
  await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
  await page.waitForFunction(()=>!!window.__mhSong,null,{timeout:60000});
  await page.waitForFunction(()=>typeof RHYTHM_CANVAS_RENDERER!=='undefined',null,{timeout:30000});
@@ -135,7 +144,7 @@ const skyLiftPatched=src=>{
   const draws=await page.evaluate(()=>{const d=window.__mhDraws;window.__mhDraws=[];return d;});
   const ended=await page.evaluate(()=>!document.querySelector('[data-rhythm-play-area]'));
   if(ended)break;
-  if(process.env.SHOT_EVERY==='1')await page.screenshot({path:path.join(OUT,`step-${Math.round(sec*1000)}.png`)}); // FROM〜TO の全コマを撮る(短い範囲で使う)
+  if(process.env.SHOT_EVERY==='1'&&sec>=Number(process.env.SHOT_FROM||0))await page.screenshot({path:path.join(OUT,`step-${Math.round(sec*1000)}.png`)}); // FROM〜TO の全コマを撮る(短い範囲で使う)
   const seen=new Set();
   for(const d of draws){if(d.now===d.t)continue; // 演奏前の温め(heldMs:0)の描画は数えない
    if(seen.has(d.i))continue;seen.add(d.i);const now=d.now;const lead=now==null?null:d.t-now;

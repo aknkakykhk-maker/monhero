@@ -78496,7 +78496,7 @@ const rhythmHellEntryText=()=>{const entry=rhythmHellEntrySong();return entry?`ã
 const RHYTHM_HELL_GUIDE_VIDEOS=Object.freeze({
   hell:Object.freeze({src:'movies/hell-guide-hell.mp4?v=6b7b6822f91e',webm:'movies/hell-guide-hell.webm?v=9ac04925c1a7',w:640,h:262}),
   sky_tap:Object.freeze({src:'movies/hell-guide-sky-tap.mp4?v=76fe49cbd775',webm:'movies/hell-guide-sky-tap.webm?v=654fec3d70f8',w:640,h:262}),
-  sky_slide:Object.freeze({src:'movies/hell-guide-sky-slide.mp4?v=bd01b1b6e6d2',webm:'movies/hell-guide-sky-slide.webm?v=17415794ea6b',w:640,h:262}),
+  sky_slide:Object.freeze({src:'movies/hell-guide-sky-slide.mp4?v=342c219811e0',webm:'movies/hell-guide-sky-slide.webm?v=0930b8428e01',w:640,h:262}),
   hands:Object.freeze({src:'movies/hell-guide-hands.mp4?v=8380785a12e2',webm:'movies/hell-guide-hands.webm?v=527f9b08282a',w:640,h:262}),
   play:Object.freeze({src:'movies/hell-guide-play.mp4?v=d17f2bd5364d',webm:'movies/hell-guide-play.webm?v=500365aa2306',w:640,h:296,sound:true}),
 });
