@@ -14,7 +14,7 @@
 | 種類 | ゲームで使っているファイル | 枚数 | 最後に作った日・PR | 正本(最新の原本) | 作り方 |
 | --- | --- | ---: | --- | --- | --- |
 | 全身絵 | `monster-hero/images/assistant/fullbody/atsu[__<表情>].png` | 9 | 2026-11-18 f24fe446e(1枚・うち表情なし1) / 2026-11-16 #6742(8枚) | `tools/art-sources/assistants/atsu/normal/fullbody/atsu-8expressions-sheet.png`<br>`tools/art-sources/assistants/atsu/normal/fullbody/atsu_transparent_fixed.png` | `tools/assistant/life-fullbody-art.py` |
-| 立ち絵 | `monster-hero/images/assistant/stand-normal/atsu_<表情>.png` | 8 | 2026-11-16 #6742(8枚) | `tools/art-sources/assistants/atsu/normal/fullbody/atsu-8expressions-sheet.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
+| 立ち絵 | `monster-hero/images/assistant/stand-normal/atsu_<表情>.png` | 8 | 2026-11-23 69cee4cd(8枚) | `tools/art-sources/assistants/atsu/normal/fullbody/atsu-8expressions-sheet.png` | `tools/assistant/life-fullbody-art.py` → `tools/assistant/life-stand-from-fullbody.py`(全身絵から切り出す) |
 | バスト絵 | `monster-hero/images/assistant/atsu_<表情>.PNG` | 9 | 2026-11-18 42fb3f2ab(1枚・うち寝顔1) / 2026-10-22 #3286(8枚) | 現行のファイルそのもの(完成品を直接入れた・別の原本はリポジトリに無い) | 受け取った絵を配信の形にした物。原本は別に無い(道具で作り直さない) |
 | 顔アイコン | `monster-hero/images/assistant/face/atsu_<表情>.PNG` | 9 | 2026-11-16 #6742(8枚) / 2026-11-15 7a486a01c(1枚・うち寝顔1) | `tools/art-sources/assistants/atsu/normal/fullbody/atsu-8expressions-sheet.png` | `tools/assistant/face-from-fullbody.py`(原画の画素のまま・r1115-203) |
 

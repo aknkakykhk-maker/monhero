@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78646d2cd1d98ce9
+// generated-sha256: 6ae254e20e293f66
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42612,7 +42612,9 @@ const growthFxAssistantOf = (assistantId) => {
 const growthFxAssistantFace = (assistantId, expression = 'happy') => {
   const who = growthFxAssistantOf(assistantId);
   if (!who || !who.imageDir || !who.imagePrefix) return null;
-  return (typeof assistantStandArt === 'function' && assistantStandArt(who, expression)) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
+  // 着ている服の立ち絵(2026-11-23 r1119-153 窓口: 前はふだんの服の立ち絵を出していた)。服の立ち絵が無ければふだんの服
+  const outfit = typeof assistantWornOutfitName === 'function' ? assistantWornOutfitName(who) : '';
+  return (typeof assistantStandArt === 'function' && ((outfit && assistantStandArt(who, expression, outfit)) || assistantStandArt(who, expression))) || `${who.imageDir}/${who.imagePrefix}_${expression}.PNG`;
 };
 const growthFxAssistantName = (assistantId) => {
   const who = growthFxAssistantOf(assistantId);
@@ -70887,12 +70889,11 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
 const ASSISTANT_LIFE_STAND_BOX = new Map();
 // 8表情を同じ枠・同じ顔の位置で切り出した組(tools/assistant/life-stand-from-fullbody.py)。表情ごとに見えている体の範囲が違う(normal だけ手を頭の上へ上げている)ので、
 //   どの表情も同じ組の normal の範囲で置く(表情を替えても顔が動かない)。2026-11-23 r1119-137 カードマスターの立ち絵を新しい全身画から作り直したとき
-//   「フォルダ/接頭辞」なら、そのフォルダのその助手だけ(2026-11-23 r1119-153 えるびん: 表情ごとにポーズが違い、上げたこぶしで範囲が変わる)
-const ASSISTANT_LIFE_STAND_SAME_FRAME = Object.freeze(['stand-card-master', 'stand-normal/erubin', 'stand-sekiyuou/erubin', 'stand-normal/kiki', 'stand-halloween/kiki']);
+//   2026-11-23 r1119-153 社長「助手絵は最新の全身絵に切り替えて」: 全身画がある組は全部この形で切り出したので、立ち絵の置き場(stand-*)はどれも normal の範囲で置く
 const assistantLifeStandFrameSrc = (src) => {
   const s = String(src || '');
-  const m = /\/assistant\/([a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
-  if (!m || m[3] === 'normal' || !(ASSISTANT_LIFE_STAND_SAME_FRAME.includes(m[1]) || ASSISTANT_LIFE_STAND_SAME_FRAME.includes(`${m[1]}/${m[2]}`))) return src;
+  const m = /\/assistant\/(stand-[a-z0-9-]+)\/([a-z]+)_([a-z]+)\.png/i.exec(s);
+  if (!m || m[3] === 'normal') return src;
   return s.replace(`/${m[1]}/${m[2]}_${m[3]}.png`, `/${m[1]}/${m[2]}_normal.png`);
 };
 const assistantLifeStandBox = (src) => new Promise((res) => {
@@ -70959,17 +70960,17 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0877, eye: 0.3355, chin: 0.4298, m: 0.702 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0029, eye: 0.273, chin: 0.4302, m: 1.169 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
-  'stand-sekiyuou': { erubin: { top: 0.0137, eye: 0.2531, chin: 0.4299, m: 1.315 } },
-  'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.149, eye: 0.3347, chin: 0.43, m: 0.709, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1161, eye: 0.321, chin: 0.4299, m: 0.81, above: 0.75 } },
+  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
+  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376 } },
+  'stand-hosei': { sorashido: { top: 0.0263, eye: 0.3096, chin: 0.452, m: 1.059 } },
+  'stand-halloween': { mua: { top: 0.2281, eye: 0.4663, chin: 0.539, m: 0.541, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, above: 0.95 }, kiki: { top: 0.1731, eye: 0.3825, chin: 0.4899, m: 0.799, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.1476, eye: 0.403, chin: 0.5388, m: 1.01, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
+  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
-  'stand-twintail': { kiki: { top: 0.1966, eye: 0.3225, chin: 0.43, m: 0.8, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.2539, eye: 0.4133, chin: 0.5496, m: 1.014, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
