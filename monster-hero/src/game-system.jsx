@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 885796252dd610b8
+// generated-sha256: d7832a04374b7136
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42689,7 +42689,7 @@ const growthFxSessionLevel = (list = []) => {
 // ---------- 見た目 ----------
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}@media (min-width:768px) and (min-height:601px){.mh-gfx-chips{right:max(10px,calc((100vw - 600px) / 2 + 10px))}.mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 600px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips{right:max(10px,calc((100vw - 1024px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 1024px) / 2 + 10px))}}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -44657,7 +44657,7 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:costumeItems.length?'円盤石・アシスト・アイテム・着替えが買える':'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
@@ -151870,12 +151870,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
-            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
+            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)',paddingLeft:'max(.75rem, calc((100% - 48rem) / 2))',paddingRight:'max(.75rem, calc((100% - 48rem) / 2))'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
               <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={null} maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
-          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
+          {/* PC など広い画面では札と吹き出しが横いっぱいに伸び、題名と「›」が離れていた(API 総点検③)。中身の幅を48remで止める */}
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000',paddingLeft:'max(1rem, calc((100% - 48rem) / 2))',paddingRight:'max(1rem, calc((100% - 48rem) / 2))'}}>
             {!cat&&(
               <div className="space-y-2.5">
                 {/* ヘルプを開いてすぐ目に入る場所に、バトルのれんしゅうへの導線を置く。
