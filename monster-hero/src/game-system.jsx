@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5f8b4f1833da32d8
+// generated-sha256: 2b5de03f60cec440
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5043,6 +5043,25 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
 // 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 作り直した譜面(data/rhythm-mode.js の RHYTHM_CHART_RESETS)の自己ベスト(2026-11-23・台帳 r1119-136・社長「スコアはリセット」)。
+// 形は { '<songId>|<難易度id>|<版の印>': 1件の記録(normalizeRhythmBestRecord) }。v1・v2 の旧の記録は消さず書き換えない(CLAUDE.md ⑦)。
+// 読むときは、作り直した曲・難易度だけ、旧の記録のかわりにこちらを出す(まだ遊んでいなければ0から)。印が変われば別の記録になる
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId,difficultyId) => {const tag=typeof rhythmChartResetTag==='function'?rhythmChartResetTag(songId,difficultyId):null;return tag?`${songId}|${difficultyId}|${tag}`:null;};
+const normalizeRhythmBestChartResets = value => {
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  return Object.fromEntries(Object.entries(source).filter(([id,record])=>/^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id)&&record&&typeof record==='object'&&!Array.isArray(record)).map(([id,record])=>[id,normalizeRhythmBestRecord(record)]));
+};
+// 記録の一覧(normalizeRhythmBestRecords の形)の、作り直した曲・難易度を、作り直したあとの記録に差し替える(ほかはそのまま)
+const rhythmBestRecordsWithChartResets = (records,resets) => {
+  const out={...records},clean=normalizeRhythmBestChartResets(resets);
+  if(typeof RHYTHM_CHART_RESETS==='undefined')return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair=>{const [songId,difficultyId]=pair.split('|');if(!out[songId]||!Object.prototype.hasOwnProperty.call(out[songId],difficultyId))return;
+    const id=rhythmBestChartResetId(songId,difficultyId);if(!id)return;
+    out[songId]={...out[songId],[difficultyId]:normalizeRhythmBestRecord(clean[id])};
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);});
+  return out;
+};
 // 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
 //   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
 //     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
@@ -6570,10 +6589,18 @@ const Audio_ = (() => {
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げない(スマホのメモリで広げ切れない)。
+    // 中身を取ってきた時点で見分けて断り、区切って鳴らす側(演奏は startRhythmTrack、BGM は startBgmLong)へ回す。
+    // 先読み(preloadBGM・prepareBGM)が長い曲を丸ごと広げてしまうこともこれで無くなる(2026-11-23 r1119-134)
+    const request = (data ? Promise.resolve(data) : (longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    })).then((bytes) => decode(ctx, bytes)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
+    }))).then((bytes) => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) { const entry = longEntryOf(url, new Uint8Array(bytes)); if (entry.long) throw longSongError(entry); }
+      return decode(ctx, bytes);
+    }).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
       .then((buffer) => { buffers.set(key, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(key));
     loadingBuffers.set(key, request);
@@ -6609,6 +6636,34 @@ const Audio_ = (() => {
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  // 長い曲を BGM として流す(2026-11-23 r1119-134 社長「BGMも直す」)。演奏と同じく区切って広げて鳴らす。
+  // bgmSource には、止め方(stopSource)が同じになる入れ物を入れる。音量・フェードはこれまでどおり bgmGain で掛かる。
+  // 輪にする曲は、終わりの時刻ちょうどに頭の区切りを予約して、すき間なく頭へ戻る
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || (bgmSource && bgmSourceKey === key)) return;
+    let long = null;
+    try { long = await openLongSong(ctx, entry); } catch (e) { return; }
+    if (stale() || (bgmSource && bgmSourceKey === key) || !bgmGain) { long.release(); return; }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+    bgmSource = holder; bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
+    // __mhTestLongBgmFromSec … 検査(tools/audio/long-bgm-chunk-check.js)だけが置く。曲の途中から流して、輪の継ぎ目を待たずに測る
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) { try { await long.ready(fromSec); } catch (e) {} if (stale() || bgmSource !== holder) { if (bgmSource !== holder) long.release(); return; } }
+    const t0 = long.playFrom(fromSec, bgmGain, () => { const f = holder.onended; if (f) f(); }, { loop: once ? false : track.loop !== false });
+    if (t0 === false) { stopOthers(); return; }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = (key) => {
     const track = resolveTrack(key);
     if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
@@ -6625,7 +6680,9 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch((e) => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
@@ -6672,15 +6729,27 @@ const Audio_ = (() => {
     // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
-    try { const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+    try {
+      // 長い曲は丸ごと広げず、区切って広げて輪にして流す(startBgmLong と同じ。2026-11-23 r1119-134)
+      let buffer = null, longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) { try { buffer = await loadBuffer(track.src); rememberSongBuffer(track.src); } catch (e) { if (!e || !e.longEntry) throw e; longEntry = e.longEntry; } }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
       // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) { long = await openLongSong(ctx, longEntry); if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) { long.release(); return false; } }
       applyTrackGain(track);
-      const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
-      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      let source;
+      if (long) {
+        source = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+        previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); };
+        if (long.playFrom(0, bgmGain, () => { const f = source.onended; if (f) f(); }, { loop: track.loop !== false }) === false) { if (previewSource === source) { previewSource = null; previewKey = null; } return false; }
+      } else {
+        source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      }
       // 止まったままのAudioContextで鳴らしても無音。もう一度だけ復帰を試し、
       // それでも動かなければ「鳴っている」と嘘をつかずに戻す(次のタップでやり直せる)
       if (ctx.state !== 'running') { await ensureAudioCtxRunning(); }
@@ -6792,16 +6861,21 @@ const Audio_ = (() => {
     }
     return offs.length ? { offsets: Uint32Array.from(offs), end, sr, spf } : null;
   };
-  const fetchSongBytes = async (url) => {
-    const hit = longSongBytes.get(url); if (hit) return hit;
-    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
-    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
+  // 取ってきた中身が長い曲かを見分ける。長い曲なら中身を持っておく(いちばん新しい1曲だけ)
+  const longEntryOf = (url, bytes) => {
     let map = null; try { map = parseMp3Frames(bytes); } catch (e) { map = null; }
     const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
     const entry = { url, bytes, map, long };
     if (long) { longSongBytes.clear(); longSongBytes.set(url, entry); }
     return entry;
+  };
+  // loadBuffer が長い曲を断るときの印(e.longEntry に中身)
+  const longSongError = (entry) => { const e = new Error('long song: play in chunks'); e.longEntry = entry; return e; };
+  const fetchSongBytes = async (url) => {
+    const hit = longSongBytes.get(url); if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
   const monoRange = (buf, from, len) => {
@@ -6861,6 +6935,9 @@ const Audio_ = (() => {
       return p;
     };
     const head = (await getChunk(0)).buffer, rate = head.sampleRate;
+    // 2回目からは、前に測った値(同じサンプルレートのとき)を使う。BGM として何度も流し直すので
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) { C = meta.C; aligned = meta.aligned; stats.probeCorr = meta.probeCorr; }
     // 区切りの頭のずれ方(C)を測る: 曲の頭の区切りの中で音のいちばん大きい所から短く広げ、頭の区切りと突き合わせる
     {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
@@ -6870,7 +6947,7 @@ const Audio_ = (() => {
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
-      if (bestP >= 0) {
+      if (bestP >= 0 && !meta) {
         try {
           const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
           const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
@@ -6881,8 +6958,9 @@ const Audio_ = (() => {
     }
     stats.offsetMs = Math.round(C * 10000) / 10;
     // 曲の長さ: 最後の区切りを広げて測る(持ち続けない)
-    let duration = head.duration;
-    if (count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    if (!meta) entry.longMeta = { rate, C, aligned, probeCorr: stats.probeCorr, duration };
     let session = 0, live = [], timer = null, play = null;
     const chunkIndexAt = (s) => { let k = 0; while (k + 1 < count && s >= seamSec(k + 1)) k++; return k; };
     const dropLive = (x) => { stopSource(x.src); try { x.gain.disconnect(); } catch (e) {} };
@@ -6903,7 +6981,7 @@ const Audio_ = (() => {
         const prev = live.find((x) => x.k === k - 1);
         if (prev) { prev.gain.gain.setValueAtTime(1, when); prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC); try { prev.src.stop(when + LONG_FADE_SEC + 0.01); } catch (e) {} }
       }
-      if (k === count - 1) src.onended = () => { if (my === session && play) { const done = play.onEnd; halt(); done(); } };
+      if (k === count - 1) src.onended = () => { if (my === session && play && !play.loopAt) { const done = play.onEnd; halt(); done(); } };
       src.start(when, Math.max(0, fromSong - c.startSec));
       stats.log.push({ k, first, marginMs: Math.round((when - ctx.currentTime) * 10000) / 10, devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100 }); if (stats.log.length > 8) stats.log.shift();
       live.push({ k, src, gain: g });
@@ -6915,7 +6993,28 @@ const Audio_ = (() => {
       if (next < count && !live.some((x) => x.k === next)) {
         getChunk(next).then(() => { if (my === session && play && !live.some((x) => x.k === next) && live.some((x) => x.k === next - 1)) scheduleChunk(next, false); }).catch(() => { stats.failed++; });
       }
-      live = live.filter((x) => { if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
+      // 輪にする(BGM): 最後の区切りが入ったら、曲の終わりの時刻ちょうどに頭の区切りを予約する(丸ごとの loop と同じく、終わりから頭へそのまま続ける)
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find((x) => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(), src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer; src.connect(g); g.connect(play.out); g.gain.value = 1;
+            play.loopAt = endAt; lastLive.src.onended = null;
+            try { lastLive.src.stop(endAt); } catch (e) {}
+            src.start(endAt, 0); live.push({ k: 0, src, gain: g, loopNew: true });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      // 頭へ戻った: 時刻の起点を頭に置き直し、前の周の区切りを捨てる
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt; play.o = 0; play.loopAt = null;
+        live = live.filter((x) => { if (x.loopNew) { x.loopNew = false; return true; } dropLive(x); return false; });
+        return;
+      }
+      live = live.filter((x) => { if (x.loopNew) return true; if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
       for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some((x) => x.k === k)) chunks.delete(k);
     };
     return {
@@ -6925,10 +7024,11 @@ const Audio_ = (() => {
       // 「いまの時刻」で入れると、ブラウザがその時刻をもう過ぎていて数ms〜十数ms遅れて鳴り始めることがある
       // (Chromium で seek のあとにたまに 512 サンプル遅れた)。続く区切りはこの起点から時刻を決めるので、
       // 少し先(LONG_START_LEAD_SEC)のサンプルの切れ目に予約して、起点と鳴り始めを必ず一致させる
-      playFrom: (o, out, onEnd) => {
+      // opts.loop … 終わりまで鳴ったら、すき間なく頭へ戻って鳴り続ける(BGM)
+      playFrom: (o, out, onEnd, opts = null) => {
         halt(); const k = chunkIndexAt(o); if (!chunks.has(k)) return false;
         const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
-        play = { t0, o, out, onEnd }; scheduleChunk(k, true);
+        play = { t0, o, out, onEnd, loop: !!(opts && opts.loop), loopAt: null }; scheduleChunk(k, true);
         timer = setInterval(tick, 250); tick(); return t0;
       },
       halt,
@@ -6953,7 +7053,10 @@ const Audio_ = (() => {
       // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げず、区切って鳴らす(openLongSong)。
       // すでに丸ごと広げてある曲(BGMで鳴らした等)はそれを使う。丸ごと広げるのに失敗した mp3 も、区切って鳴らしに回す
       let buffer=null,long=null,dctx=null;
-      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function')buffer=await loadBuffer(track.src);
+      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function'){
+        try{buffer=await loadBuffer(track.src);}
+        catch(e){if(!e||!e.longEntry)throw e;dctx=getAudioCtx();if(!dctx)return null;long=await openLongSong(dctx,e.longEntry);}
+      }
       else{
         const entry=await fetchSongBytes(track.src);dctx=getAudioCtx();
         if(!dctx)return null;
@@ -7075,10 +7178,11 @@ const Audio_ = (() => {
     } catch(e){ return null; }
   };
   const preloadBGM = (key) => { const track = resolveTrack(key); if (!track) return; const bufKey = sceneBufferKey(track.src); loadBuffer(bufKey).then(() => rememberSongBuffer(bufKey)).catch(() => {}); };
+  // 長い曲は丸ごと広げない(中身を取ってきたら用意できた扱い。鳴らすときに頭の区切りから広げる)
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
     const bufKey = sceneBufferKey(track.src);
-    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch((e) => !!(e && e.longEntry)), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
@@ -19912,6 +20016,14 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
+  // 作り直した譜面(RHYTHM_CHART_RESETS)の記録は、旧の記録(v1・v2)へ書かず専用のキーへ(2026-11-23・r1119-136)
+  const resetId=rhythmBestChartResetId(songId,difficultyId);
+  if(resetId){
+    const resets=normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
+    resets[resetId]=normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY,resets,false);
+    return loadRhythmBestRecordsNow();
+  }
   const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
   const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
@@ -19919,13 +20031,15 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1)
   return loadRhythmBestRecordsNow();
 };
 // その版の自己ベスト(保存値そのまま・正規化だけ)
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// 作り直した譜面(RHYTHM_CHART_RESETS)の曲・難易度だけは、どの版でも作り直したあとの記録(mh_rhythm_best_chart_reset_v1)を返す
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false)),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 // いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
 // 切り替え前は今までどおり v1 をそのまま返す
 const loadRhythmBestRecordsNow = async () => {
   const legacy=await loadRhythmBestRecordsOf(1);
   if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
+  // 旧の記録の印を重ねたあとも、作り直した曲・難易度は作り直したあとの記録だけにする(旧の点・印を混ぜない)
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy),await storeGet(RHYTHM_BEST_CHART_RESET_KEY,{},false));
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
@@ -26975,6 +27089,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 毎フレームの処理(tick)が道の両側の光の筋を点ける。変わったときだけ触る。見た目だけで、判定・スコアには触らない
   const climaxFxOn=settings.climaxFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode&&!tutorial&&typeof rhythmSongClimaxAt==='function';
   const climaxRef=useRef(null);
+  // その譜面だけの演出(data/rhythm-mode.js の RHYTHM_CHART_SPECIAL_FX・2026-11-23 r1119-136)。区間の中だけ道の色を変え、文字を一度だけ出す。見た目だけ
+  const specialFx=!tutorial&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
+  const specialFxRef=useRef(null);
   // 光の筋が流れる速さは、曲の2拍で1周(拍の表が無い曲は 900ms)
   const climaxCycleMs=(()=>{const grid=climaxFxOn?rhythmSongBeatGrid(song.songId):null;return grid?Math.round(Math.min(1400,Math.max(500,grid.beatMs*2))):900;})();
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -27970,6 +28087,8 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
 // 盛り上がりの光。いまが盛り上がる区間なら、その強さで点ける(重いときの自動調整で切られたら消す)
 {const climaxEl=climaxRef.current;if(climaxEl){const level=settingsLiveRef.current.climaxFx===true?rhythmSongClimaxAt(song.songId,visualTime):0;
   if(run._climaxLevel!==level){run._climaxLevel=level;climaxEl.setAttribute('data-on',level>0?'1':'0');climaxEl.style.opacity=level>0?String(level):'0';}}}
+// その譜面だけの演出。区間に入ったら印を立てる(変わったときだけ触る)
+{const fxEl=specialFxRef.current;if(fxEl&&specialFx){const on=visualTime>=specialFx.fromMs&&visualTime<specialFx.toMs?'1':'0';if(run._specialFxOn!==on){run._specialFxOn=on;fxEl.setAttribute('data-on',on);}}}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -29068,7 +29187,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   {RHYTHM_GRAND_STAGE_CONFETTI.map((c,k)=><i key={k} style={{left:`${c.x}%`,background:c.color,animationDuration:`${c.dur}s`,animationDelay:`${c.delay}s`,top:settings.effectAmount==='MINIMAL'||settings.lightweightMode?`${c.y}%`:undefined}}/>)}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFogOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{specialFx&&<i ref={specialFxRef} data-rhythm-special-fx data-on="0" aria-hidden="true"><b>{specialFx.label}</b></i>}{climaxFxOn&&<i ref={climaxRef} data-rhythm-climax data-on="0" style={{'--climax-cycle':`${climaxCycleMs}ms`}} aria-hidden="true"><b data-side="l"/><b data-side="r"/></i>}{stageLevel!=='SIMPLE'&&stageTimingOn&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -50401,9 +50520,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
@@ -50801,7 +50929,9 @@ function HomeScreen({
         {homeStripCount>0&&<div className="mh-home-event-strip" data-home-event-strip>
           {homeEventCampaign&&homeStripShow===0&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
             {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
-            <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
+            {/* 2026-11-23 r1119-131 社長「右の時計の手前まで横に伸ばし、行数を減らして縦を詰める」: 1行目に題と期間(sub)、2行目に副題(title2)。
+                幅が足りない端末では期間だけが題の下へ折り返す(.r1 の flex-wrap) */}
+            <b className="r1"><span>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</span><small>{homeEventCampaign.banner.sub}</small></b>{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}
           </button>}
           {homeCardTour&&typeof onOpenCardTour==='function'&&homeStripShow===(homeEventCampaign?1:0)&&<button type="button" data-home-card-tour={homeCardTour.id} className="mh-home-tour-banner" onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
             <span aria-hidden="true">🏆</span><span><b>{homeCardTour.name}</b><small>{homeCardTour.sub}{homeCardTour.prize&&<em>{homeCardTour.prize}</em>}</small></span>
@@ -70298,7 +70428,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0331, eye: 0.2899, chin: 0.4299, m: 1.042 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1489, eye: 0.336, chin: 0.4296, m: 0.696 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0589, eye: 0.3171, chin: 0.43, m: 0.84 }, sorashido: { top: 0.0029, eye: 0.273, chin: 0.4302, m: 1.169 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.2342, eye: 0.3496, chin: 0.4299, m: 0.598, above: 1.2 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -129804,6 +129934,7 @@ function MonsterHeroGame() {
     if (!difficultyKey) return;
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? { chart: rhythmChartResetTag(song.songId, difficulty.id) } : {}), // 作り直した譜面の版(r1119-136)
       // 刻みの数(新しい物差しのときだけ。判定の内訳 judgments・precise はノーツだけ)
       ...(scoreVersion === 2 ? { scoreVersion: 2, tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)), tickJust: Math.max(0, Math.floor(Number(result.tickJust) || 0)), tickMiss: Math.max(0, Math.floor(Number(result.tickMiss) || 0)) } : {}),
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,

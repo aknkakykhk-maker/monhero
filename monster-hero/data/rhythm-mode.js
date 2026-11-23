@@ -2340,6 +2340,8 @@ const rhythmSlideLaneSpeedAt=(note,chartTimeMs)=>{
   const speedOf=(a,b,p)=>{
     const seconds=(Number(b?.timeMs)-Number(a?.timeMs))/1000,lanes=Math.abs(Number(b?.lane)-Number(a?.lane));
     const average=seconds>0&&Number.isFinite(lanes)?lanes/seconds:0;
+    // 通り抜けの区間は、その瞬間の曲線の傾き(rhythmSlideSegmentLaneSpeed)
+    if(rhythmSlideSegmentEase(note,a)==='through'){const i=points.indexOf(a);if(i>=0&&i<points.length-1)return rhythmSlideSegmentLaneSpeed(note,points,i+1,p);}
     return average*rhythmSlideEaseSlope(rhythmSlideSegmentEase(note,a),p);
   };
   if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return speedOf(points[0],points[1],0);
@@ -2403,7 +2405,9 @@ const rhythmSlidePoints=note=>Array.isArray(note?.slidePoints)&&note.slidePoints
 // **どちらも書いていない区間は今までどおりの直線**(既存の譜面は1点も動かない)。
 // 曲がるのは「レーン(横の位置)」だけ。幅(subLaneWidth)の変わり方は今までどおり時間に比例する。
 // 見た目(帯)・追従の的・速さの上乗せの3つは、すべて下の2つの関数を通るのでずれない。
-const RHYTHM_SLIDE_EASES=Object.freeze(['linear','in','out','inout']);
+//   'through' … 点で止まらずに通り抜ける滑らかな曲線(2026-11-23 台帳 r1119-133)。下の rhythmSlideSegmentLane
+// ★並びの番号は譜面の短い形(mhSlideV2 の点の4つ目)と書き出し(rhythm-runtime-notes.js の SLIDE_EASE_CODES)で使う。足すときは後ろへ
+const RHYTHM_SLIDE_EASES=Object.freeze(['linear','in','out','inout','through']);
 const rhythmSlideSegmentEase=(note,point)=>{
   const ease=point?.ease??note?.slideEase;
   return RHYTHM_SLIDE_EASES.includes(ease)?ease:'linear';
@@ -2423,6 +2427,68 @@ const rhythmSlideEaseSlope=(ease,p)=>{
   if(ease==='out')return 2*(1-x);
   if(ease==='inout')return 6*x*(1-x);
   return 1;
+};
+// ── 通り抜けの曲線(ease:'through'・2026-11-23 台帳 r1119-133「案A＋案B」) ──
+// 社長「モンビーのスライドは曲線もあったからいまのままでもっとバリエーションを増やす案のほうが良さそうだ」→ 新しい曲線の種類を1つ足す。
+// 'through' を書いた点から次の点までを、点を通る3次の曲線(エルミート)で結ぶ。点での傾きは前後の区間から決める(Steffen の方法)ので、
+// 同じ向きへ進み続ける点では止まらずに通り抜け、向きが変わる点・止まっている区間のとなりでは傾き0になる。
+// どの区間も、区間の両端のレーンの間から出ない(行き過ぎない・道の外へはみ出さない)。
+// 'through' を書いていない区間(配信中の全譜面)は、下の rhythmSlideSegmentLane でも今までと同じ式を通るので1点も動かない。
+// 見た目(2D・GPU の帯)・追従の的・速さの上乗せは、すべて rhythmSlideExpectedLane / rhythmSlideLaneSpeedAt を通るのでずれない。
+// 曲がるのは横の位置だけ。幅(subLaneWidth)・空中の高さ(sky)は、今までどおり時間に比例する(rhythmSlideEaseProgress の 'through' は直線)。
+const rhythmSlideSecant=(a,b)=>{const h=Number(b?.timeMs)-Number(a?.timeMs);return h>0?(Number(b?.lane)-Number(a?.lane))/h:0;};
+// 区間 j(点 j → 点 j+1)が通り抜けか
+const rhythmSlideSegmentThrough=(note,points,j)=>j>=0&&j<points.length-1&&rhythmSlideSegmentEase(note,points[j])==='through';
+// ease の区間の、両端での傾き(区間の平均の傾き d に掛ける倍率。rhythmSlideEaseSlope と同じ)
+const rhythmSlideEaseEdgeSlope=(ease,atEnd)=>rhythmSlideEaseSlope(ease,atEnd?1:0);
+// 通り抜けの区間の両端の点 k での傾き(レーン/ms)。side は、その点から見て通り抜けの区間がある側(-1 … 左の区間 k-1、+1 … 右の区間 k)
+const rhythmSlideThroughTangent=(note,points,k,side)=>{
+  const n=points.length,own=side<0?k-1:k,other=side<0?k:k-1;
+  const d=rhythmSlideSecant(points[own],points[own+1]);
+  let m;
+  if(other<0||other>=n-1){
+    // スライドの端: 通り抜けの区間がもう1つ内側にあれば Steffen の端の決め方、無ければ区間の傾き(直線と同じ)
+    const inner=side<0?own-1:own+1;
+    if(rhythmSlideSegmentThrough(note,points,inner)){
+      const df=rhythmSlideSecant(points[inner],points[inner+1]);
+      const he=Number(points[own+1].timeMs)-Number(points[own].timeMs),hf=Number(points[inner+1].timeMs)-Number(points[inner].timeMs);
+      if(he>0&&hf>0){const pe=d*(1+he/(he+hf))-df*he/(he+hf);m=pe*d<=0?0:Math.abs(pe)>2*Math.abs(d)?2*d:pe;}else m=d;
+    }else m=d;
+  }else if(rhythmSlideSegmentThrough(note,points,other)){
+    // 両側とも通り抜け: Steffen の傾き
+    const a=points[k-1],b=points[k],c=points[k+1],h0=Number(b.timeMs)-Number(a.timeMs),h1=Number(c.timeMs)-Number(b.timeMs);
+    const d0=rhythmSlideSecant(a,b),d1=rhythmSlideSecant(b,c);
+    if(!(h0>0)||!(h1>0)||d0*d1<=0)return 0;
+    const p=(d0*h1+d1*h0)/(h0+h1);
+    return (Math.sign(d0)+Math.sign(d1))*Math.min(Math.abs(d0),Math.abs(d1),.5*Math.abs(p));
+  }else{
+    // となりが直線・in・out・inout の区間: その区間の点 k での傾きに合わせる(折れ目を出さない)
+    const ease=rhythmSlideSegmentEase(note,points[other]);
+    m=rhythmSlideSecant(points[other],points[other+1])*rhythmSlideEaseEdgeSlope(ease,other<k);
+  }
+  // 行き過ぎないように、向きが逆なら0・急すぎるなら区間の傾きの2倍まで(両端とも2倍以内なら区間の外へ出ない)
+  if(m*d<=0)return 0;
+  return Math.abs(m)>2*Math.abs(d)?2*d:m;
+};
+// 区間 i-1 → i の、進み具合 p(0〜1)でのレーン(寄せる前)
+const rhythmSlideSegmentLane=(note,points,i,p)=>{
+  const a=points[i-1],b=points[i],ease=rhythmSlideSegmentEase(note,a);
+  if(ease!=='through')return Number(a.lane)+(Number(b.lane)-Number(a.lane))*rhythmSlideEaseProgress(ease,p);
+  const la=Number(a.lane)||0,lb=Number(b.lane)||0,h=Number(b.timeMs)-Number(a.timeMs),x=Math.max(0,Math.min(1,Number(p)||0));
+  if(!(h>0))return la+(lb-la)*x;
+  const ma=rhythmSlideThroughTangent(note,points,i-1,1)*h,mb=rhythmSlideThroughTangent(note,points,i,-1)*h,x2=x*x,x3=x2*x;
+  const lane=(2*x3-3*x2+1)*la+(x3-2*x2+x)*ma+(-2*x3+3*x2)*lb+(x3-x2)*mb;
+  return Math.max(Math.min(la,lb),Math.min(Math.max(la,lb),lane));
+};
+// 区間 i-1 → i の、進み具合 p での横の速さ(レーン/秒・向きは見ない)。rhythmSlideSegmentLane の微分
+const rhythmSlideSegmentLaneSpeed=(note,points,i,p)=>{
+  const a=points[i-1],b=points[i],ease=rhythmSlideSegmentEase(note,a),la=Number(a?.lane)||0,lb=Number(b?.lane)||0,h=Number(b?.timeMs)-Number(a?.timeMs);
+  if(!(h>0))return 0;
+  const x=Math.max(0,Math.min(1,Number(p)||0));
+  if(ease!=='through')return Math.abs(lb-la)/(h/1000)*rhythmSlideEaseSlope(ease,x);
+  const ma=rhythmSlideThroughTangent(note,points,i-1,1)*h,mb=rhythmSlideThroughTangent(note,points,i,-1)*h,x2=x*x;
+  const ds=(6*x2-6*x)*la+(3*x2-4*x+1)*ma+(-6*x2+6*x)*lb+(3*x2-2*x)*mb;
+  return Math.abs(ds)/(h/1000);
 };
 const rhythmSlideWidthAt=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
@@ -2449,7 +2515,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
     if(t<=b.timeMs){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs));
       const p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
-      return fit(Number(a.lane)+(Number(b.lane)-Number(a.lane))*rhythmSlideEaseProgress(rhythmSlideSegmentEase(note,a),p),t);
+      return fit(rhythmSlideSegmentLane(note,points,i,p),t);
     }
   }
   const last=points[points.length-1];
@@ -5537,7 +5603,7 @@ const mhHoldV2=(timeMs,subLane,subLaneWidth,endTimeMs,endFlick,holdPoints)=>Obje
     ?{holdPoints:Object.freeze(holdPoints.map(([pointTimeMs,pointSubLane,pointWidth])=>Object.freeze({timeMs:pointTimeMs,subLane:pointSubLane,subLaneWidth:pointWidth})))}
     :{}),
 });
-// 点の4つ目は曲線の番号(RHYTHM_SLIDE_EASES の並び。1=in・2=out・3=inout)。書いていない点は直線
+// 点の4つ目は曲線の番号(RHYTHM_SLIDE_EASES の並び。1=in・2=out・3=inout・4=through)。書いていない点は直線
 const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
   const slidePoints=Object.freeze(points.map(([pointTimeMs,lane,subLaneWidth,easeCode])=>Object.freeze({timeMs:pointTimeMs,lane,subLaneWidth,
     ...(easeCode>0&&RHYTHM_SLIDE_EASES[easeCode]?{ease:RHYTHM_SLIDE_EASES[easeCode]}:{})})));
@@ -60643,6 +60709,209 @@ const zenbuHissatsuwazaHellNotes=((t,h,f,s,T,F,S)=>[
 // </zenbu-hissatsuwaza-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const zenbuHissatsuwazaHellChart=mhChart(46,zenbuHissatsuwazaHellNotes,ZENBU_HISSATSUWAZA_DURATION_MS,6);
+// 全部必殺技でつ HELL の作り直し(2026-11-23・台帳 r1119-136・社長「スカイないぶんもっと難しく。早い系の曲だからノーツ数増やして」)。
+// 空(スカイ)なしのまま、ノーツを増やして密度を上げた。上の zenbuHissatsuwazaHellChart(11/23 公開の HELL)は消さずに残し、使わない。
+// 曲えらび・演奏はこちら(RHYTHM_HELL_CHARTS)。スコアは新しい譜面から数え直し(RHYTHM_CHART_RESETS・ランキングの鍵の末尾 -r2)
+const zenbuHissatsuwazaV4HellNotes=((t,h,f,s,T,F,S)=>[
+// <zenbu-hissatsuwaza-v4-hell-notes>
+  t(2167,8,2,0),t(2322,5,4,0),t(2477,3,3,0),t(2555,5,4,0),
+  t(2710,3,3,0),t(2788,5,4,0),t(2943,3,4,0),t(3020,1,4,0),
+  t(3175,0,3,0),t(3331,2,2,0),t(3408,4,2,0),t(3641,4,6,0),
+  t(3718,7,4,0),t(3951,9,3,0),t(4029,7,4,0),t(4106,10,2,0),
+  t(4261,5,4,0),t(4339,3,3,0),t(4417,6,2,0),t(4572,3,3,0),
+  t(4649,3,4,0),t(4727,5,4,0),t(4882,3,4,0),t(4960,5,3,0),
+  t(5192,5,3,0),t(5270,7,3,0),t(5347,6,2,0),t(5503,6,6,0),
+  t(5580,5,4,0),h(5658,8,4,6278),t(6356,8,1,0),t(6433,5,4,0),
+  t(6511,4,1,0),t(6744,1,3,0),t(7054,1,3,0),t(7132,3,3,0),
+  t(7209,6,2,0),t(7364,7,3,0),t(7442,3,3,0),t(7675,5,3,0),
+  t(7752,7,3,0),t(7830,6,2,0),t(7985,2,6,0),S(8062,9304,[[8062,3,3,0,0],[8218,3,3,0,0],[8450,1,2,0,0],[8605,0.5,2,0,0],[8838,1,2,0,0],[9304,1,2,0,0]],0,'L'),
+  t(8373,7,3,0),f(8605,4,4,0),t(9381,3,4,0),t(9459,2,2,0),
+  t(9536,0,4,0),t(9614,3,3,0),t(9847,7,4,0),t(10002,3,3,0),
+  t(10079,1,4,0),t(10157,0,4,0),t(10235,1,3,0),t(10467,0,3,0),
+  t(10545,3,3,0),t(10622,5,4,0),t(10700,8,1,0),f(10778,9,3),
+  h(11088,5,2,11708),f(11398,9,3,0),h(11864,5,4,12329),t(12407,5,4,0),
+  h(12484,3,4,13260),t(12794,8,2,0),f(12950,8,2,0),t(13337,7,4,0),
+  h(13493,6,2,14268),f(13880,2,3),t(14346,1,4,0),t(14423,3,3,0),
+  t(14501,5,4,0),t(14656,1,4,0),t(14734,6,2,0),h(14889,4,2,15897),
+  t(15199,7,1,0),f(15354,7,2,0),t(15975,1,3,0),t(16052,4,2,0),
+  t(16130,1,3,0),t(16208,0,3,0),t(16363,3,4,0),t(16595,8,2,0),
+  t(16751,3,3,0),t(16906,0,3,0),t(16983,1,4,0),t(17216,0,2,0),
+  h(17371,2,3,18612),f(17759,0,1,0),t(18767,1,3,0),t(18845,5,4,0),
+  t(19078,3,4,0),t(19233,5,3,0),t(19388,7,3,0),t(19466,8,4,0),
+  t(19621,7,4,0),h(19854,5,4,20474),t(20629,1,4,0),t(20707,3,4,0),
+  S(20862,22103,[[20862,3,2,0,0],[21017,3,2,0,0],[21095,3.252,2,0,0],[21172,3.5,2,0,0],[21250,3.5,3,0,0],[21327,2.5,3,0,0],[21405,2,2,0,0],[21483,1.5,3,0,0],[21560,1,3,0,0],[21638,1,3,0,0],[21715,1,2,0,0],[21793,1,2,0,0],[21870,1,2,0,0],[22103,1,2,0,0]],0,'R'),t(21172,3,3,0),t(21405,0,3,0),f(21560,0,2,0),
+  t(22181,0,2,0),t(22336,1,3,0),t(22491,0,3,0),t(22646,0,4,1),
+  t(22801,1,4,0),t(22879,4,2,0),t(22956,2,2,0),t(23112,0,3,0),
+  t(23189,1,3,0),t(23267,0,3,0),t(23344,1,4,0),t(23422,0,3,0),
+  t(23499,3,4,0),t(23577,1,3,0),t(23810,0,2,0),t(23887,1,4,0),
+  t(23965,5,3,0),t(24120,8,2,0),t(24198,9,3,0),t(24275,7,3,0),
+  t(24508,3,3,0),t(24585,7,4,0),t(24818,2,6,0),t(24896,5,3,0),
+  t(25128,7,3,0),t(25206,5,4,0),t(25361,7,4,0),t(25439,9,3,0),
+  t(25516,7,4,0),t(25749,9,3,0),t(25827,7,3,0),t(25982,5,4,0),
+  t(26059,3,4,0),t(26137,1,3,0),t(26370,0,3,0),t(26447,3,3,0),
+  t(26525,5,4,0),h(26680,4,2,27145),t(27223,6,1,0),t(27300,6,6,0),
+  t(27378,3,3,0),t(27611,5,3,0),t(27688,1,3,0),t(27921,0,4,0),
+  t(27999,1,4,0),t(28076,3,3,0),t(28309,8,2,0),t(28386,4,2,0),
+  S(28542,29783,[[28542,1.5,2,0,0],[29783,1.5,2,0,0]],0,'L'),S(28542,29240,[[28542,4,2,0,0],[28774,4,2,0,0],[29085,2.5,2,0,0],[29240,2.5,2,0,0]],0,'R'),f(29472,6,4),t(29938,7,3,0),
+  t(30093,10,2,0),t(30093,6,2,0),t(30403,3,4,0),t(30481,6,2,0),
+  t(30559,7,3,0),t(30636,10,2,0),t(30714,7,4,0),t(30869,8,4,0),
+  t(30869,3,3,0),t(31024,8,2,0),t(31024,4,2,0),h(31179,6,3,31800),
+  f(31489,10,2,0),t(31955,7,4,0),t(31955,2,3,0),t(32110,5,3,0),
+  t(32188,3,3,0),t(32265,0,2,0),t(32343,1,3,0),t(32420,0,2,0),
+  t(32575,1,3,0),t(32653,3,3,0),t(32731,1,3,0),t(32886,0,4,0),
+  t(32886,6,3,0),t(33041,2,2,0),t(33118,5,4,0),t(33351,4,2,0),
+  t(33351,8,2,0),t(33506,8,2,0),S(33506,35833,[[33506,0,2,0,0],[34747,2,2,0,0],[35833,0,2,0,0]],0,'L'),t(33661,9,2,0),
+  t(33817,10,2,0),t(33972,9,2,0),t(34127,8,2,0),t(34282,9,2,0),
+  t(34437,10,2,0),t(34592,9,2,0),t(34747,8,2,0),t(34903,9,2,0),
+  t(35058,10,2,0),t(35213,9,2,0),t(35368,8,2,0),t(35523,9,2,0),
+  t(35678,10,2,0),t(35989,3,2,0),S(35989,38316,[[35989,5,2,0,0],[37230,3,2,0,0],[38316,5,2,0,0]],0,'R'),t(36144,2,2,0),
+  t(36299,1,2,0),t(36454,2,2,0),t(36609,3,2,0),t(36764,2,2,0),
+  t(36919,1,2,0),t(37075,2,2,0),t(37230,3,2,0),t(37385,2,2,0),
+  t(37540,1,2,0),t(37695,2,2,0),t(37850,3,2,0),t(38005,2,2,0),
+  t(38161,1,2,0),t(38471,1,3,0),t(38548,3,3,0),t(38781,2,2,0),
+  t(38859,5,3,0),t(38936,3,4,0),f(39091,1,3),h(39402,2,2,39867),
+  t(40022,2,2,0),t(40100,4,2,0),t(40333,5,3,0),t(40410,7,3,0),
+  t(40488,6,3,0),h(40643,5,3,41729),t(40953,1,3,0),f(41108,0,4,0),
+  t(41884,8,4,0),t(41884,3,3,0),t(42039,7,3,0),t(42039,2,3,0),
+  t(42194,8,4,0),t(42194,3,3,0),t(42350,5,3,0),t(42505,8,2,0),
+  t(42737,4,2,0),t(42815,5,3,0),t(42970,4,2,0),t(43125,1,3,0),
+  t(43280,4,2,0),t(43358,8,2,0),t(43436,5,4,0),t(43513,9,3,0),
+  t(43746,10,2,0),t(43823,7,3,0),t(43901,8,4,0),t(44056,7,3,0),
+  t(44211,4,2,0),t(44366,2,2,0),t(44444,0,1,0),t(44522,2,2,0),
+  t(44599,0,2,0),f(44677,1,3),t(44987,0,4,0),t(44987,6,3,0),
+  t(45142,1,4,0),t(45220,5,4,0),t(45297,1,4,0),t(45530,4,2,0),
+  t(45608,0,4,0),t(45763,4,2,0),f(45918,2,3,1),f(45918,7,3,2),
+  h(46073,1,4,46694),t(46771,0,1,0),t(46849,2,2,0),t(47004,3,3,0),
+  h(47159,0,4,47702),t(47780,1,3,0),t(47857,0,1,0),t(47935,2,2,0),
+  f(48090,3,4),t(48400,7,3,0),t(48478,9,3,0),t(48555,7,3,0),
+  t(48710,8,4,0),t(48710,3,3,0),t(48866,8,4,0),t(48866,3,3,0),
+  t(49021,8,2,2),t(49176,9,3,0),t(49176,4,3,0),t(49331,7,4,0),
+  t(49486,7,4,0),t(49641,9,3,0),t(49719,7,3,0),t(49796,9,3,0),
+  t(49952,7,4,0),t(50107,9,3,0),t(50107,4,3,0),t(50262,8,2,0),
+  t(50339,10,2,0),t(50417,7,3,0),t(50495,6,2,0),f(50572,3,4),
+  t(50883,1,4,0),t(50960,5,4,0),t(51348,2,6,0),t(51426,1,4,0),
+  t(51658,4,1,0),t(51813,6,2,0),t(51969,8,2,0),t(52124,8,4,0),
+  t(52201,7,4,0),t(52279,9,3,0),f(52356,7,3),t(52744,5,4,0),
+  t(52822,6,4,0),S(52899,54141,[[52899,4,2,0,0],[52977,4.25,2,0,0],[53055,4.5,2,0,0],[53132,4.5,2,0,0],[53210,4.5,2,0,0],[53287,4.5,2,0,0],[53365,4.5,3,0,0],[53442,4.5,3,0,0],[53520,3.5,3,0,0],[53598,2,3,0,0],[53675,2,3,0,0],[53753,3.258,2,0,0],[53830,4.5,2,0,0],[53908,4.5,2,0,0],[54063,4.5,2,0,0],[54141,2.5,2,0,0]],0,'R'),t(53287,6,2,0),t(53520,5,3,0),
+  t(53675,1,3,0),f(53830,6,1,0),f(54296,9,3),t(54684,5,3,0),
+  t(54684,0,3,0),t(54916,5,4,0),t(54994,8,2,0),t(55227,9,3,0),
+  t(55304,7,3,0),t(55382,5,4,0),t(55537,8,4,0),t(55537,3,3,0),
+  t(55692,8,4,0),t(55692,3,3,0),f(55847,7,3),t(56157,7,4,0),
+  t(56157,2,3,0),t(56313,5,3,0),t(56468,3,3,0),t(56468,8,3,0),
+  t(56778,1,4,0),t(56778,7,3,0),t(56933,1,3,0),t(57088,3,4,0),
+  t(57243,5,3,0),t(57399,7,4,0),t(57399,2,3,0),t(57554,3,3,0),
+  t(57709,5,4,0),t(57709,0,3,0),t(57864,1,3,0),t(57864,6,3,0),
+  t(58019,5,4,0),t(58019,0,3,0),t(58174,2,2,0),t(58252,4,2,0),
+  t(58329,0,3,0),t(58407,1,3,0),t(58485,0,3,0),t(58640,3,4,0),
+  h(58795,0,3,59493),f(59105,4,3),t(59571,3,3,0),t(59726,1,3,0),
+  t(59881,0,4,0),t(59881,6,3,0),t(60036,1,3,0),t(60036,6,3,0),
+  t(60269,0,3,0),t(60346,1,3,0),t(60501,0,4,0),t(60501,6,3,0),
+  t(60657,3,3,0),t(60812,0,4,0),t(60812,6,3,0),t(60967,3,3,0),
+  t(61122,0,3,0),t(61277,1,4,0),t(61432,3,3,0),t(61588,5,4,0),
+  t(61588,0,3,0),t(61743,4,2,0),t(61898,5,3,0),t(62053,8,2,0),
+  t(62053,4,2,0),t(62208,9,3,0),t(62363,7,3,0),t(62441,9,3,0),
+  t(62518,7,4,0),t(62674,9,3,0),t(62674,4,3,0),t(62829,8,2,0),
+  t(62829,4,2,0),t(62984,5,4,0),t(63139,4,2,0),f(63217,1,4),
+  t(63915,0,4,3),t(64225,3,3,0),t(64458,3,4,0),t(64535,2,6,0),
+  S(64613,65854,[[64613,3,3,0,0],[65078,3,2,0,0],[65466,5,2,0,0],[65854,5,2,0,0]],0,'R'),t(64923,3,3,0),t(65078,4,2,0),t(65233,3,3,0),
+  f(65466,5,4,0),t(65932,4,2,0),t(66087,1,3,0),t(66164,0,3,0),
+  t(66319,4,1,0),t(66397,5,3,0),t(66552,3,4,0),t(66707,5,3,0),
+  t(66862,6,1,0),t(66940,2,2,0),t(67018,3,3,0),t(67328,0,3,0),
+  t(67405,3,3,0),t(67561,2,2,0),S(67638,68879,[[67638,2,3,0,0],[68104,4,2,0,0],[68879,4,2,0,0]],0,'L'),f(67948,10,2),
+  f(68259,10,2,0),t(68957,1,3,0),h(69190,1,2,69888),f(69500,4,4,0),
+  t(69965,0,2,0),t(70120,0,4,0),t(70198,1,4,0),t(70431,0,3,0),
+  t(70663,3,4,0),t(70741,7,4,0),t(70819,3,3,0),t(71051,7,3,0),
+  S(71129,72370,[[71129,3,3,0,0],[71362,3,2,0,0],[71439,3,2,0,0],[71517,3,2,0,0],[71594,3,2,0,0],[71672,3,2,0,0],[71750,0.5,2,0,0],[71827,0.5,2,0,0],[71905,0.5,2,0,0],[71982,3,2,0,0],[72060,3,2,0,0],[72137,3,2,0,0],[72370,3,3,0,0]],0,'R'),f(71439,2,3,0),f(71982,1,4,0),t(72448,4,2,0),
+  t(72603,5,3,0),t(72758,3,4,0),t(72758,9,3,0),t(72913,8,2,0),
+  t(72991,6,2,0),t(73068,4,2,0),t(73223,5,4,0),t(73301,3,3,0),
+  t(73379,1,3,0),t(73534,1,3,0),t(73534,6,3,0),t(73689,0,3,0),
+  t(73689,5,3,0),t(73844,0,3,0),t(73999,1,4,0),t(74154,3,4,0),
+  t(74232,6,1,0),t(74465,7,3,0),t(74620,9,3,0),t(74775,7,4,0),
+  t(74852,5,4,0),t(75008,7,4,0),S(75085,76016,[[75085,2,3,0,0],[75163,2.302,3,0,0],[75240,2.599,3,0,0],[75318,2.901,3,0,0],[75395,3.198,3,0,0],[75473,3.5,2,0,0],[75551,3.5,3,0,0],[75628,3.5,3,0,0],[75706,3.5,2,0,0],[75783,3.832,3,0,0],[75861,4.168,3,0,0],[75938,4.5,2,0,0],[76016,4.5,2,0,0]],0,'L'),f(75395,10,2,0),
+  t(76171,6,2,0),t(76326,3,3,0),t(76481,5,3,0),S(76637,77878,[[76637,4,3,0,0],[76714,3.503,3,0,0],[76792,3,3,0,0],[76869,2.503,3,0,0],[76947,2,2,0,0],[77102,2,2,0,0],[77180,2,2,0,0],[77257,2.5,2,0,0],[77335,3.003,3,0,0],[77412,3.5,2,0,0],[77645,3.5,2,0,0],[77723,3,2,0,0],[77800,2,2,0,0],[77878,2,2,0,0]],0,'R'),
+  t(77257,1,4,0),t(77412,3,3,0),f(77567,2,4,0),t(78033,8,1,0),
+  t(78188,8,4,0),t(78188,3,3,0),t(78343,8,2,0),t(78343,4,2,0),
+  t(78498,3,4,0),t(78498,9,3,0),t(78653,7,4,0),t(78809,5,4,0),
+  t(78886,10,2,0),t(78964,8,4,0),t(79119,8,4,0),t(79119,3,3,0),
+  t(79274,8,4,0),t(79352,7,4,0),t(79429,5,3,0),S(79584,80825,[[79584,4,3,0,0],[79662,4.252,3,0,0],[79739,4.5,2,0,0],[79817,4.5,2,0,0],[79895,3.5,2,0,0],[79972,2.5,2,0,0],[80050,2.5,2,0,0],[80127,2.5,3,0,0],[80205,2.5,2,0,0],[80282,2.997,3,0,0],[80360,3.5,2,0,0],[80438,3.5,3,0,0],[80515,3.5,2,0,0],[80593,3.5,3,0,0],[80670,3.5,2,0,0],[80748,4.255,3,0,0],[80825,5,3,0,0]],0,'R'),
+  t(79895,3,3,0),t(80050,1,4,0),t(80205,0,3,0),t(80360,1,4,0),
+  f(80515,3,3,0),t(80981,7,3,0),t(80981,2,3,0),t(81136,5,3,0),
+  t(81291,9,3,0),t(81446,9,3,0),t(81601,7,4,0),t(81756,5,3,0),
+  t(81912,3,4,0),t(81912,9,3,0),t(82067,7,3,0),t(82222,5,4,0),
+  t(82377,3,3,0),t(82455,2,2,0),t(82532,0,3,0),t(82687,1,3,0),
+  t(82687,6,3,0),t(82842,0,4,0),t(82842,6,3,0),t(82998,1,3,0),
+  t(83153,4,2,0),t(83308,6,2,0),t(83463,4,2,0),t(83618,6,2,0),
+  t(83773,4,2,0),t(83928,6,2,0),t(84084,4,2,0),t(84239,6,2,0),
+  t(84394,3,2,0),t(84549,7,2,0),t(84704,3,2,0),t(84859,7,2,0),
+  t(85014,3,2,0),t(85170,7,2,0),t(85325,3,2,0),t(85480,7,2,0),
+  t(85635,2,2,0),t(85713,8,2,0),t(85790,2,2,0),t(85868,8,2,0),
+  t(85945,2,2,0),t(86023,8,2,0),t(86100,2,2,0),t(86178,8,2,0),
+  t(86256,2,2,0),t(86333,8,2,0),t(86411,2,2,0),t(86488,8,2,0),
+  t(86566,2,2,0),t(86643,8,2,0),t(86721,2,2,0),t(86799,8,2,0),
+  t(86876,2,2,0),t(86954,8,2,0),t(87031,2,2,0),t(87109,8,2,0),
+  t(87186,2,2,0),t(87264,8,2,0),t(87342,2,2,0),t(87419,8,2,0),
+  t(87497,2,2,0),t(87574,8,2,0),t(87652,2,2,0),t(87729,8,2,0),
+  t(87807,2,2,0),t(87885,8,2,0),t(87962,2,2,0),t(88040,8,2,0),
+  t(88117,1,2,0),t(88195,9,2,0),t(88272,1,2,0),t(88350,9,2,0),
+  t(88428,1,2,0),t(88505,9,2,0),t(88583,1,2,0),t(88660,9,2,0),
+  t(88738,1,2,0),t(88815,9,2,0),t(88893,1,2,0),t(88971,9,2,0),
+  t(89048,1,2,0),t(89126,9,2,0),t(89203,1,2,0),t(89281,9,2,0),
+  t(89358,0,2,0),t(89436,10,2,0),t(89514,0,2,0),t(89591,10,2,0),
+  t(89669,0,2,0),t(89746,10,2,0),t(89824,0,2,0),t(89901,10,2,0),
+  t(89979,0,2,0),t(90057,10,2,0),t(90134,0,2,0),t(90212,10,2,0),
+  t(90289,0,2,0),t(90367,10,2,0),t(90444,0,2,0),
+  t(90600,8,2,0),S(90600,92927,[[90600,0,2,0,0],[91841,2,2,0,0],[92927,0,2,0,0]],0,'L'),t(90755,9,2,0),t(90910,10,2,4),
+  t(91065,9,2,0),t(91220,8,2,0),t(91375,9,2,0),t(91530,10,2,0),
+  t(91686,9,2,0),t(91841,8,2,0),t(91996,9,2,0),t(92151,10,2,0),
+  t(92306,9,2,0),t(92461,8,2,0),t(92617,9,2,0),t(92772,10,2,0),
+  t(93082,3,2,0),S(93082,95409,[[93082,5,2,0,0],[94323,3,2,0,0],[95409,5,2,0,0]],0,'R'),t(93237,2,2,0),t(93392,1,2,0),
+  t(93547,2,2,0),t(93703,3,2,0),t(93858,2,2,0),t(94013,1,2,0),
+  t(94168,2,2,0),t(94323,3,2,0),t(94478,2,2,0),t(94633,1,2,0),
+  t(94789,2,2,0),t(94944,3,2,0),t(95099,2,2,0),t(95254,1,2,0),
+  f(95564,1,4),t(95875,2,2,0),t(95875,6,2,0),t(96030,5,4,0),
+  t(96185,7,3,0),t(96340,8,4,0),t(96340,3,3,0),h(96495,8,4,97736),
+  t(96805,3,4,0),t(96961,4,3,0),t(97116,4,3,0),t(97271,3,4,0),
+  f(97426,3,4,0),t(97891,7,3,0),t(97891,2,3,0),h(98047,8,4,98667),
+  f(98357,1,3),S(98977,100219,[[98977,1.5,3,0,0],[99055,0.75,3,0,0],[99133,0,2,0,0],[99210,0,2,0,0],[99288,1,2,0,0],[99365,1.248,3,0,0],[99443,1.5,2,0,0],[99520,1.5,3,0,0],[99598,1.5,2,0,0],[99676,1.5,3,0,0],[99753,1.5,2,0,0],[99908,1.5,2,0,0],[99986,0.745,3,0,0],[100063,0,2,0,0],[100141,0.75,3,0,0],[100219,1.5,3,0,0]],0,'L'),t(99598,6,3,0),t(99753,6,4,0),
+  f(99908,6,4),f(100529,2,3,1),f(100529,7,3,2),t(100684,1,3,0),
+  t(100839,0,4,0),t(100839,6,3,0),t(100994,0,4,0),t(100994,6,3,0),
+  t(101149,1,4,0),t(101149,7,3,0),t(101305,5,3,0),t(101460,7,4,0),
+  t(101460,2,3,0),t(101615,7,3,0),t(101615,2,3,0),t(101770,7,3,0),
+  t(101848,6,2,0),t(101925,7,3,0),t(102080,8,4,0),t(102080,3,3,0),
+  t(102235,7,3,0),t(102235,2,3,0),t(102391,8,2,0),t(102391,4,2,0),
+  t(102546,7,3,0),t(102623,5,3,0),f(102701,1,4),t(103011,9,3,0),
+  t(103011,4,3,0),t(103166,7,3,0),t(103322,7,4,0),t(103477,9,3,0),
+  t(103632,7,3,0),t(103787,5,3,0),t(103942,4,2,0),h(104097,7,4,105338),
+  t(104408,3,3,0),t(104563,4,2,0),t(104718,3,3,0),t(104873,2,4,0),
+  f(105028,2,4),t(105494,5,4,0),t(105571,7,3,0),S(105726,106967,[[105726,5,2,0,0],[105959,4.5,2,0,0],[106192,3,2,0,0],[106424,2,2,0,0],[106657,0,2,0,0],[106890,1,2,0,0],[106967,1.5,2,0,0]],0,'L'),
+  f(106114,10,2),t(106424,8,2,0),f(106580,8,2,0),t(107123,0,2,0),
+  t(107123,4,2,0),t(107355,0,2,0),t(107510,3,3,0),t(107666,5,4,0),
+  t(107666,0,3,0),t(107821,6,2,0),S(107976,109217,[[107976,3,3,0,0],[108053,3,3,0,0],[108131,1,2,0,0],[108209,1,2,0,0],[108286,1,2,0,0],[108364,1,2,0,0],[108441,3.5,2,0,0],[108519,3.5,2,0,0],[108674,3.5,2,0,0],[108752,3.5,2,0,0],[108829,3.5,2,0,0],[108907,3.5,2,0,0],[108984,3.5,2,0,0],[109217,3.5,3,0,0]],0,'R'),t(108286,0,2,0),
+  t(108441,3,3,0),t(108596,3,3,0),t(108752,3,3,0),f(108907,2,4,0),
+  t(109372,5,3,0),t(109372,0,3,0),t(109527,5,4,0),t(109605,4,2,0),
+  t(109682,1,3,0),t(109838,5,3,0),t(109993,3,3,0),h(110148,4,3,111234),
+  t(110458,0,3,0),t(110613,0,3,0),f(110768,0,3,0),t(111389,0,3,0),
+  t(111389,5,3,0),t(111622,2,2,0),t(111699,3,4,0),f(111854,1,3,0),
+  f(112320,5,3),t(112630,4,2,0),t(112785,0,2,0),t(112941,10,2,0),
+  t(112941,0,2,0),t(113096,9,2,0),t(113096,1,2,0),t(113251,7,2,0),
+  t(113251,3,2,0),t(113406,6,2,0),t(113406,4,2,0),t(113561,10,2,0),
+  t(113561,0,2,0),t(113716,9,2,0),t(113716,1,2,0),t(113871,7,2,0),
+  t(113871,3,2,0),t(114027,6,2,0),t(114027,4,2,0),t(114182,10,2,0),
+  t(114182,0,2,0),t(114337,9,2,0),t(114337,1,2,0),t(114492,7,2,0),
+  t(114492,3,2,0),t(114647,6,2,0),t(114647,4,2,0),t(114802,10,2,0),
+  t(114802,0,2,0),t(114957,9,2,0),t(114957,1,2,0),t(115113,7,2,0),
+  t(115113,3,2,0),t(115268,6,2,0),t(115268,4,2,0),t(115423,10,2,0),
+  t(115423,0,2,0),t(115578,9,2,0),t(115578,1,2,0),t(115733,7,2,0),
+  t(115733,3,2,0),t(115888,6,2,0),t(115888,4,2,0),t(116043,10,2,0),
+  t(116043,0,2,0),t(116199,9,2,0),t(116199,1,2,0),t(116354,7,2,0),
+  t(116354,3,2,0),t(116509,6,2,0),t(116509,4,2,0),t(116664,10,2,0),
+  t(116664,0,2,0),t(116819,9,2,0),t(116819,1,2,0),t(116974,7,2,0),
+  t(116974,3,2,0),t(117129,6,2,0),t(117129,4,2,0),t(117285,10,2,0),
+  t(117285,0,2,0),t(117440,9,2,0),t(117440,1,2,0),t(117595,6,6,0),
+  t(117595,0,6,0),
+// </zenbu-hissatsuwaza-v4-hell-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
+const zenbuHissatsuwazaV4HellChart=mhChart(76,zenbuHissatsuwazaV4HellNotes,ZENBU_HISSATSUWAZA_DURATION_MS,6);
 const DESERT_CROWN_DURATION_MS=153624;
 const desertCrownEasyNotes=((t,h,f,s)=>[
 // <desert-crown-v3-easy-notes>
@@ -78155,7 +78424,7 @@ const monsterShortHellNotes=((t,h,f,s,T,F,S)=>[
 // </monster-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
 const monsterShortHellChart=mhChart(35,monsterShortHellNotes,MONSTER_SHORT_DURATION_MS,6);
-const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart,megalovania_sans:megalovaniaSansHellChart,megalovania_smash:megalovaniaSmashHellChart,departure:departureHellChart,departure_short:departureShortHellChart,rpg:rpgHellChart,rpg_short:rpgShortHellChart,midnight_studio:midnightStudioHellChart,midnight_studio_short:midnightStudioShortHellChart,hopes_and_dreams:hopesAndDreamsHellChart,hopes_and_dreams_short:hopesAndDreamsShortHellChart,sparkling_pink_overture:sparklingPinkOvertureHellChart,seasons_of_a_little_plaza:seasonsOfALittlePlazaHellChart,eiyuu_no_akashi:eiyuuNoAkashiHellChart,eiyuu_no_akashi_milktea:eiyuuNoAkashiMilkteaHellChart,gourmet_race_64:gourmetRace64HellChart,gourmet_race_dx:gourmetRaceDxHellChart,dr_wily_stage_1:drWilyStage1HellChart,dr_wily_stage_1_okkussenman:drWilyStage1OkkussenmanHellChart,erfolg:erfolgHellChart,erfolg_piano:erfolgPianoHellChart,amakakeru_tsubasa:amakakeruTsubasaHellChart,beyond_the_same_sky:beyondTheSameSkyHellChart,beyond_the_same_sky_short:beyondTheSameSkyShortHellChart,desert_crown:desertCrownHellChart,zenbu_hissatsuwaza:zenbuHissatsuwazaHellChart,brand_new_sky:brandNewSkyHellChart,walkure:walkureHellChart,walkure_short:walkureShortHellChart,battle_5:battle5HellChart,battle_5_short:battle5ShortHellChart,kimimachi_loop:kimimachiLoopHellChart});
+const RHYTHM_HELL_CHARTS=Object.freeze({mf_ichika_mix:mfIchikaMixHellChart,monster_hero:monsterHeroHellChart,monster_hero_another:monsterHeroAnotherHellChart,six_eternel_beat:sixEternelBeatHellChart,six_eternel_remix:sixEternelRemixHellChart,stay_with_me:stayWithMeHellChart,kiki_issen:kikiIssenHellChart,close_to_your_heart:closeToYourHeartHellChart,eiki_boss_remix:eikiBossRemixHellChart,pandora_boss_remix:pandoraBossRemixHellChart,dullahan:dullahanHellChart,dullahan_clockwork:dullahanClockworkHellChart,toriko:torikoHellChart,'4u_hitasura':song4uHitasuraHellChart,kindan_no_resistance:kindanNoResistanceHellChart,crossing_field:crossingFieldHellChart,nothing_without_you:nothingWithoutYouHellChart,mou_hitotsu_no_sekai_e:mouHitotsuNoSekaiEHellChart,senjou_no_shippuu:senjouNoShippuuHellChart,makutsu_no_senritsu:makutsuNoSenritsuHellChart,the_city_beneath_the_comets:theCityBeneathTheCometsHellChart,freedom_dive:freedomDiveHellChart,only_my_railgun:onlyMyRailgunHellChart,big_bridge_no_shitou:bigBridgeNoShitouHellChart,rising_hope:risingHopeHellChart,haruka:harukaHellChart,stay_with_me_short:stayWithMeShortHellChart,kiki_issen_short:kikiIssenShortHellChart,crazy_party_night:crazyPartyNightHellChart,crazy_party_night_full:crazyPartyNightFullHellChart,emerald_rush:emeraldRushHellChart,wrath_of_the_thorn_king:wrathOfTheThornKingHellChart,monster:monsterHellChart,monster_short:monsterShortHellChart,anima:animaHellChart,journey:journeyHellChart,sheriruth:sheriruthHellChart,grievous_lady:grievousLadyHellChart,kaze_ga_soyogu:kazeGaSoyoguHellChart,against_my_own_shadow:againstMyOwnShadowHellChart,rose:roseHellChart,rose_short:roseShortHellChart,toward_the_stars_short:towardTheStarsShortHellChart,sad_song:sadSongHellChart,sad_song_short:sadSongShortHellChart,black_shout:blackShoutHellChart,light_player:lightPlayerHellChart,light_player_short:lightPlayerShortHellChart,tsuki_ga_michiru_mae_ni:tsukiGaMichiruMaeNiHellChart,tsuki_ga_michiru_mae_ni_short:tsukiGaMichiruMaeNiShortHellChart,rebellion:rebellionHellChart,rebellion_short:rebellionShortHellChart,altar_world_tree:altarWorldTreeHellChart,altar_world_tree_short:altarWorldTreeShortHellChart,evans:evansHellScrolledChart,humanoid:humanoidHellChart,lamia:lamiaHellChart,saudade:saudadeHellChart,saudade_short:saudadeShortHellChart,megalovania_sans:megalovaniaSansHellChart,megalovania_smash:megalovaniaSmashHellChart,departure:departureHellChart,departure_short:departureShortHellChart,rpg:rpgHellChart,rpg_short:rpgShortHellChart,midnight_studio:midnightStudioHellChart,midnight_studio_short:midnightStudioShortHellChart,hopes_and_dreams:hopesAndDreamsHellChart,hopes_and_dreams_short:hopesAndDreamsShortHellChart,sparkling_pink_overture:sparklingPinkOvertureHellChart,seasons_of_a_little_plaza:seasonsOfALittlePlazaHellChart,eiyuu_no_akashi:eiyuuNoAkashiHellChart,eiyuu_no_akashi_milktea:eiyuuNoAkashiMilkteaHellChart,gourmet_race_64:gourmetRace64HellChart,gourmet_race_dx:gourmetRaceDxHellChart,dr_wily_stage_1:drWilyStage1HellChart,dr_wily_stage_1_okkussenman:drWilyStage1OkkussenmanHellChart,erfolg:erfolgHellChart,erfolg_piano:erfolgPianoHellChart,amakakeru_tsubasa:amakakeruTsubasaHellChart,beyond_the_same_sky:beyondTheSameSkyHellChart,beyond_the_same_sky_short:beyondTheSameSkyShortHellChart,desert_crown:desertCrownHellChart,zenbu_hissatsuwaza:zenbuHissatsuwazaV4HellChart,brand_new_sky:brandNewSkyHellChart,walkure:walkureHellChart,walkure_short:walkureShortHellChart,battle_5:battle5HellChart,battle_5_short:battle5ShortHellChart,kimimachi_loop:kimimachiLoopHellChart});
 // はじめての HELL の目安(2026-10-21 改善部 N6・社長の決定)。HELL は MASTER を1回クリアで開くが、MASTER と HELL の Lv. の差が大きい曲がある
 //   (デュラハンテーマ MASTER 25 → HELL 59 など)。HELL の譜面のうち Lv. がいちばん低い公開曲を、実データから選ぶ(曲名・Lv. を手で書かない)
 const rhythmHellEntrySong=()=>{
@@ -79098,7 +79367,7 @@ const RHYTHM_PROTO_SONGS=Object.freeze([
     debugDescription:'曲の解析から HELL 用に一から作った譜面。遊んでも記録しない。',
     bgmTrackId:'melo_zenbu_hissatsuwaza',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_PLAY_DIFFICULTIES.map(({id})=>[
-      id,rhythmChartOnRoad(id==='HELL'?zenbuHissatsuwazaHellChart:emptyRhythmChart())
+      id,rhythmChartOnRoad(id==='HELL'?zenbuHissatsuwazaV4HellChart:emptyRhythmChart())
     ])))
   }),
   Object.freeze({
@@ -79558,16 +79827,29 @@ const rhythmRankingUrl=(url,version=rhythmRankingViewVersion())=>version===2?Str
 // 新しい物差し、それより前に終わった期間は今までの物差しで数える(終わった週の順位・報酬は変わらない)。
 // legacyView … 画面の「旧記録」を押しているとき。切り替えより前に出した記録(今までの物差し)で見る。報酬の計算は渡さない
 const rhythmRankingPeriodVersion=()=>1;
+// ===== 作り直した譜面のスコアを数え直す(2026-11-23・台帳 r1119-136・社長「スコアはリセット。ただし回数ボーナスはのこし」) =====
+// 作り直した譜面の記録は、ランキングの鍵の末尾に版の印を付けて送る(Rhythm-<songId>-<難易度id>-<印>・4つ区切り)。
+// 今までの鍵(3つ区切り)で入っている旧の譜面の記録は消さず書き換えず、そのまま残す(CLAUDE.md ⑦)。曲ごとの順位はこの鍵だけを読むので、旧の記録は混ざらない。
+// 自己ベストも別のキー(mh_rhythm_best_chart_reset_v1)へ分ける(13-bgm-and-rhythm-settings.jsx の RHYTHM_BEST_CHART_RESET_KEY)。
+// ★印は '2'(刻みの数え方の鍵 RHYTHM_RANKING_VERSION_TAG)と重ねない。古い版のアプリは今までの鍵で送るので、旧の記録の側に入る
+const RHYTHM_CHART_RESETS=Object.freeze({'zenbu_hissatsuwaza|HELL':'r2'});
+// その譜面だけの演出の区間(2026-11-23・台帳 r1119-136 案D・社長「ヘルスカイなしだからなにか特別な感じに」)。
+// 区間に入ると道の色が変わり、「必殺技！」の文字が一度だけ出る(見た目だけ。判定・スコアには触らない)。時刻は譜面の時刻(ms)
+const RHYTHM_CHART_SPECIAL_FX=Object.freeze({'zenbu_hissatsuwaza|HELL':Object.freeze({fromMs:112900,toMs:118000,label:'必殺技！'})});
+const rhythmChartSpecialFx=(songId,difficultyId)=>RHYTHM_CHART_SPECIAL_FX[`${songId}|${difficultyId}`]||null;
+const rhythmChartResetTag=(songId,difficultyId)=>RHYTHM_CHART_RESETS[`${songId}|${difficultyId}`]||null;
 const rhythmRankingDifficultyKey=(songId,difficultyId,version=rhythmRankingViewVersion())=>{
   if(!songId||!rhythmScoredDifficulty(difficultyId))return null;
   const base=`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
+  const resetTag=rhythmChartResetTag(songId,difficultyId);
+  if(resetTag)return `${base}${RHYTHM_RANKING_SEPARATOR}${resetTag}`;
   return version===2?`${base}${RHYTHM_RANKING_SEPARATOR}${RHYTHM_RANKING_VERSION_TAG}`:base;
 };
 // ランキングキーから曲と難易度へ戻す。知らない形式や難易度はnull(既存キーとして扱わない)
 const parseRhythmRankingDifficultyKey=(key)=>{
   const parts=String(key??'').trim().split(RHYTHM_RANKING_SEPARATOR);
-  // 4つ区切りは刻みの数え方の記録(末尾が '2' のものだけ)
-  if(!(parts.length===3||(parts.length===4&&parts[3]===RHYTHM_RANKING_VERSION_TAG))||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
+  // 4つ区切りは刻みの数え方の記録(末尾が '2' のものだけ)と、作り直した譜面の記録(末尾が RHYTHM_CHART_RESETS の印)
+  if(!(parts.length===3||(parts.length===4&&(parts[3]===RHYTHM_RANKING_VERSION_TAG||parts[3]===rhythmChartResetTag(parts[1],parts[2]))))||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
   const [,songId,difficultyId]=parts;
   // 読むほうは HELL の行も受ける(公開前は送らないので、行は無い)
   if(!songId||!RHYTHM_PLAY_DIFFICULTIES.some(d=>d.id===difficultyId))return null;

@@ -22,8 +22,6 @@ const REST = {
   'stand-card-master/myua_surprise.png': 1, 'stand-card-master/myua_troubled.png': 1, 'stand-card-master/myua_wink.png': 1,
   'stand-hosei/sorashido_angry.png': 1, 'stand-hosei/sorashido_crying.png': 1, 'stand-hosei/sorashido_excited.png': 1, 'stand-hosei/sorashido_happy.png': 1,
   'stand-hosei/sorashido_normal.png': 1, 'stand-hosei/sorashido_surprise.png': 1, 'stand-hosei/sorashido_troubled.png': 1, 'stand-hosei/sorashido_wink.png': 1,
-  // ソラシド通常(古い全身画から作った物。新しい全身画から作り直す)
-  'stand-normal/sorashido_troubled.png': 1,
 };
 
 function standDirs() {

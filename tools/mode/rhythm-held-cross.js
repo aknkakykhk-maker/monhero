@@ -108,7 +108,9 @@ const fixChart=notes=>{
 
 // ── マーカーへ書く ──
 const MODE=path.join(__dirname,'../../monster-hero/data/rhythm-mode.js');
-const markerOf=(songId,diff)=>{const base=songId.replace(/_/g,'-');return `${base}-v3-${diff==='HELL'?'hell':diff.toLowerCase()}-notes`;};
+// 作り直して別の目印へ移した譜面(2026-11-23 全部必殺技でつ HELL・r1119-136。旧の -v3- は残して使わない)
+const MARKER_OVERRIDES={'zenbu_hissatsuwaza/HELL':'zenbu-hissatsuwaza-v4-hell-notes'};
+const markerOf=(songId,diff)=>{if(MARKER_OVERRIDES[`${songId}/${diff}`])return MARKER_OVERRIDES[`${songId}/${diff}`];const base=songId.replace(/_/g,'-');return `${base}-v3-${diff==='HELL'?'hell':diff.toLowerCase()}-notes`;};
 // マーカーの中の t( / f( / T( / F( の呼び出しのうち、時刻・サブレーン・幅が同じ1つだけの subLane を書き換える
 const writeMoves=(songId,diff,moves)=>{
   const src=fs.readFileSync(MODE,'utf8');const m=markerOf(songId,diff);

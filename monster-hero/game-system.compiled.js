@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7579b82b17d2f82c
+// source-sha256: fdebe981e423a8d5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6799,6 +6799,34 @@ const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+const RHYTHM_BEST_CHART_RESET_KEY = 'mh_rhythm_best_chart_reset_v1';
+const rhythmBestChartResetId = (songId, difficultyId) => {
+  const tag = typeof rhythmChartResetTag === 'function' ? rhythmChartResetTag(songId, difficultyId) : null;
+  return tag ? `${songId}|${difficultyId}|${tag}` : null;
+};
+const normalizeRhythmBestChartResets = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(source).filter(([id, record]) => /^[a-z0-9_]{1,80}\|[A-Z][A-Z0-9_]{0,23}\|[a-z0-9]{1,8}$/.test(id) && record && typeof record === 'object' && !Array.isArray(record)).map(([id, record]) => [id, normalizeRhythmBestRecord(record)]));
+};
+const rhythmBestRecordsWithChartResets = (records, resets) => {
+  const out = {
+      ...records
+    },
+    clean = normalizeRhythmBestChartResets(resets);
+  if (typeof RHYTHM_CHART_RESETS === 'undefined') return out;
+  Object.keys(RHYTHM_CHART_RESETS).forEach(pair => {
+    const [songId, difficultyId] = pair.split('|');
+    if (!out[songId] || !Object.prototype.hasOwnProperty.call(out[songId], difficultyId)) return;
+    const id = rhythmBestChartResetId(songId, difficultyId);
+    if (!id) return;
+    out[songId] = {
+      ...out[songId],
+      [difficultyId]: normalizeRhythmBestRecord(clean[id])
+    };
+    RHYTHM_BEST_LEGACY_SHOWN.delete(`${songId}|${difficultyId}`);
+  });
+  return out;
+};
 const RHYTHM_BEST_LEGACY_SHOWN = new Set();
 const rhythmBestRecordsWithLegacyMarks = (current, legacy) => {
   const now = normalizeRhythmBestRecords(current),
@@ -8688,12 +8716,20 @@ const Audio_ = (() => {
     if (!ctx || !data && typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
-    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), {
+    const request = (data ? Promise.resolve(data) : longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    })).then(bytes => decode(ctx, bytes)).then(decoded => {
+    })).then(bytes => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) {
+        const entry = longEntryOf(url, new Uint8Array(bytes));
+        if (entry.long) throw longSongError(entry);
+      }
+      return decode(ctx, bytes);
+    }).then(decoded => {
       decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
       return light ? lightenBuffer(decoded) : decoded;
@@ -8769,6 +8805,66 @@ const Audio_ = (() => {
     }
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || bgmSource && bgmSourceKey === key) return;
+    let long = null;
+    try {
+      long = await openLongSong(ctx, entry);
+    } catch (e) {
+      return;
+    }
+    if (stale() || bgmSource && bgmSourceKey === key || !bgmGain) {
+      long.release();
+      return;
+    }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = {
+      buffer: null,
+      longSong: long,
+      onended: null,
+      stop: () => long.release(),
+      disconnect: () => {}
+    };
+    bgmSource = holder;
+    bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null;
+      bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) {
+        bgmOnce = null;
+        try {
+          o.onEnd && o.onEnd();
+        } catch (e) {}
+      }
+    };
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) {
+      try {
+        await long.ready(fromSec);
+      } catch (e) {}
+      if (stale() || bgmSource !== holder) {
+        if (bgmSource !== holder) long.release();
+        return;
+      }
+    }
+    const t0 = long.playFrom(fromSec, bgmGain, () => {
+      const f = holder.onended;
+      if (f) f();
+    }, {
+      loop: once ? false : track.loop !== false
+    });
+    if (t0 === false) {
+      stopOthers();
+      return;
+    }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = key => {
     const track = resolveTrack(key);
     if (!track) {
@@ -8797,10 +8893,12 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
     return loadBuffer(bufKey).then(buffer => {
       rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
-    }).catch(() => {
+    }).catch(e => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) {
         bgmOnce = null;
@@ -8864,22 +8962,66 @@ const Audio_ = (() => {
     previewKey = track.id;
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+      let buffer = null,
+        longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) {
+        try {
+          buffer = await loadBuffer(track.src);
+          rememberSongBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          longEntry = e.longEntry;
+        }
+      }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning();
       if (!ctx) return false;
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) {
+        long = await openLongSong(ctx, longEntry);
+        if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) {
+          long.release();
+          return false;
+        }
+      }
       applyTrackGain(track);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = track.loop !== false;
-      source.connect(bgmGain);
-      previewSource = source;
-      source.onended = () => {
-        if (previewSource === source) stopPreview(true);
-      };
-      source.start(0);
+      let source;
+      if (long) {
+        source = {
+          buffer: null,
+          longSong: long,
+          onended: null,
+          stop: () => long.release(),
+          disconnect: () => {}
+        };
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        if (long.playFrom(0, bgmGain, () => {
+          const f = source.onended;
+          if (f) f();
+        }, {
+          loop: track.loop !== false
+        }) === false) {
+          if (previewSource === source) {
+            previewSource = null;
+            previewKey = null;
+          }
+          return false;
+        }
+      } else {
+        source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = track.loop !== false;
+        source.connect(bgmGain);
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        source.start(0);
+      }
       if (ctx.state !== 'running') {
         await ensureAudioCtxRunning();
       }
@@ -9054,14 +9196,7 @@ const Audio_ = (() => {
       spf
     } : null;
   };
-  const fetchSongBytes = async url => {
-    const hit = longSongBytes.get(url);
-    if (hit) return hit;
-    const res = await fetch(audioUrlWithKey(url), {
-      cache: 'force-cache'
-    });
-    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
+  const longEntryOf = (url, bytes) => {
     let map = null;
     try {
       map = parseMp3Frames(bytes);
@@ -9080,6 +9215,20 @@ const Audio_ = (() => {
       longSongBytes.set(url, entry);
     }
     return entry;
+  };
+  const longSongError = entry => {
+    const e = new Error('long song: play in chunks');
+    e.longEntry = entry;
+    return e;
+  };
+  const fetchSongBytes = async url => {
+    const hit = longSongBytes.get(url);
+    if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), {
+      cache: 'force-cache'
+    });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   const monoRange = (buf, from, len) => {
     const out = new Float32Array(len),
@@ -9220,6 +9369,12 @@ const Audio_ = (() => {
     };
     const head = (await getChunk(0)).buffer,
       rate = head.sampleRate;
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) {
+      C = meta.C;
+      aligned = meta.aligned;
+      stats.probeCorr = meta.probeCorr;
+    }
     {
       const probeLen = 48,
         lo = LONG_PRE_FRAMES + 8,
@@ -9236,7 +9391,7 @@ const Audio_ = (() => {
           bestP = p;
         }
       }
-      if (bestP >= 0) {
+      if (bestP >= 0 && !meta) {
         try {
           const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
           const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
@@ -9250,12 +9405,19 @@ const Audio_ = (() => {
       }
     }
     stats.offsetMs = Math.round(C * 10000) / 10;
-    let duration = head.duration;
-    if (count > 1) {
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) {
       const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer);
       stats.decoded++;
       duration = theoryStart(count - 1) + last.duration;
     }
+    if (!meta) entry.longMeta = {
+      rate,
+      C,
+      aligned,
+      probeCorr: stats.probeCorr,
+      duration
+    };
     let session = 0,
       live = [],
       timer = null,
@@ -9313,7 +9475,7 @@ const Audio_ = (() => {
         }
       }
       if (k === count - 1) src.onended = () => {
-        if (my === session && play) {
+        if (my === session && play && !play.loopAt) {
           const done = play.onEnd;
           halt();
           done();
@@ -9347,7 +9509,49 @@ const Audio_ = (() => {
           stats.failed++;
         });
       }
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find(x => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(),
+              src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer;
+            src.connect(g);
+            g.connect(play.out);
+            g.gain.value = 1;
+            play.loopAt = endAt;
+            lastLive.src.onended = null;
+            try {
+              lastLive.src.stop(endAt);
+            } catch (e) {}
+            src.start(endAt, 0);
+            live.push({
+              k: 0,
+              src,
+              gain: g,
+              loopNew: true
+            });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt;
+        play.o = 0;
+        play.loopAt = null;
+        live = live.filter(x => {
+          if (x.loopNew) {
+            x.loopNew = false;
+            return true;
+          }
+          dropLive(x);
+          return false;
+        });
+        return;
+      }
       live = live.filter(x => {
+        if (x.loopNew) return true;
         if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) {
           dropLive(x);
           return false;
@@ -9364,7 +9568,7 @@ const Audio_ = (() => {
         held: chunks.size
       }),
       ready: o => getChunk(chunkIndexAt(o)),
-      playFrom: (o, out, onEnd) => {
+      playFrom: (o, out, onEnd, opts = null) => {
         halt();
         const k = chunkIndexAt(o);
         if (!chunks.has(k)) return false;
@@ -9373,7 +9577,9 @@ const Audio_ = (() => {
           t0,
           o,
           out,
-          onEnd
+          onEnd,
+          loop: !!(opts && opts.loop),
+          loopAt: null
         };
         scheduleChunk(k, true);
         timer = setInterval(tick, 250);
@@ -9402,7 +9608,16 @@ const Audio_ = (() => {
       let buffer = null,
         long = null,
         dctx = null;
-      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') buffer = await loadBuffer(track.src);else {
+      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') {
+        try {
+          buffer = await loadBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          dctx = getAudioCtx();
+          if (!dctx) return null;
+          long = await openLongSong(dctx, e.longEntry);
+        }
+      } else {
         const entry = await fetchSongBytes(track.src);
         dctx = getAudioCtx();
         if (!dctx) return null;
@@ -9667,7 +9882,7 @@ const Audio_ = (() => {
     return Promise.race([loadBuffer(bufKey).then(() => {
       rememberSongBuffer(bufKey);
       return true;
-    }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    }).catch(e => !!(e && e.longEntry)), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {
@@ -32996,17 +33211,24 @@ const saveRhythmMonsterSlots = async value => {
 const saveRhythmBestRecord = async (records, songId, difficultyId, value, version = 1) => {
   const song = RHYTHM_SONGS.find(item => item.songId === songId);
   if (!song || !rhythmSongDifficultyDefs(song).some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const resetId = rhythmBestChartResetId(songId, difficultyId);
+  if (resetId) {
+    const resets = normalizeRhythmBestChartResets(await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
+    resets[resetId] = normalizeRhythmBestRecord(value);
+    await storeSet(RHYTHM_BEST_CHART_RESET_KEY, resets, false);
+    return loadRhythmBestRecordsNow();
+  }
   const key = version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY;
   const normalized = normalizeRhythmBestRecords(await storeGet(key, {}, false));
   normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
   await storeSet(key, normalized, false);
   return loadRhythmBestRecordsNow();
 };
-const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false));
+const loadRhythmBestRecordsOf = async version => rhythmBestRecordsWithChartResets(normalizeRhythmBestRecords(await storeGet(version === 2 ? RHYTHM_BEST_RECORDS_V2_KEY : RHYTHM_BEST_RECORDS_KEY, {}, false)), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 const loadRhythmBestRecordsNow = async () => {
   const legacy = await loadRhythmBestRecordsOf(1);
   if (!(typeof rhythmTickRulesActive === 'function' && rhythmTickRulesActive())) return legacy;
-  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy);
+  return rhythmBestRecordsWithChartResets(rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2), legacy), await storeGet(RHYTHM_BEST_CHART_RESET_KEY, {}, false));
 };
 const RHYTHM_ACHIEVEMENT_GRANTERS = {};
 const rhythmAchievementEligible = (songId, difficultyId) => {
@@ -43949,6 +44171,8 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
+  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const specialFxRef = useRef(null);
   const climaxCycleMs = (() => {
     const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
     return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
@@ -45672,6 +45896,16 @@ const RhythmTapTest = ({
             run._climaxLevel = level;
             climaxEl.setAttribute('data-on', level > 0 ? '1' : '0');
             climaxEl.style.opacity = level > 0 ? String(level) : '0';
+          }
+        }
+      }
+      {
+        const fxEl = specialFxRef.current;
+        if (fxEl && specialFx) {
+          const on = visualTime >= specialFx.fromMs && visualTime < specialFx.toMs ? '1' : '0';
+          if (run._specialFxOn !== on) {
+            run._specialFxOn = on;
+            fxEl.setAttribute('data-on', on);
           }
         }
       }
@@ -48605,7 +48839,12 @@ const RhythmTapTest = ({
     ref: roadGlowRef,
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
-  })), climaxFxOn && React.createElement("i", {
+  })), specialFx && React.createElement("i", {
+    ref: specialFxRef,
+    "data-rhythm-special-fx": true,
+    "data-on": "0",
+    "aria-hidden": "true"
+  }, React.createElement("b", null, specialFx.label)), climaxFxOn && React.createElement("i", {
     ref: climaxRef,
     "data-rhythm-climax": true,
     "data-on": "0",
@@ -84195,9 +84434,18 @@ const HOME_EVENT_BADGE_CSS = `
 /* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
    (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
 .mh-home-event-banner .t2{display:block}
+/* r1119-131: 1行目は題と期間を横に並べる(入らなければ期間だけ折り返す)。札は右の時計の手前まで伸ばしてよい */
+.mh-home-event-banner .r1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:7px;row-gap:0}
+.mh-home-event-banner .r1 small{white-space:nowrap}
+.mh-home-event-banner .t2{font-size:10px;font-weight:800;color:#ffedd5}
+.mh-home-scene .mh-home-event-strip .mh-home-event-banner{max-width:calc(100cqw - 9px - 88px)}
+/* 横の小さい端末(568×320 など)では、左39%から始まる札が助手の吹き出し(右端は台詞しだいで 240〜350px)にかかっていた。
+   この大きさだけ、札を吹き出しの下の空き(施設の列の上)へ下ろす */
+@media(orientation:landscape) and (max-width:620px) and (max-height:340px){
+  .mh-home-scene .mh-home-event-strip{top:calc(160px + env(safe-area-inset-top))}}
 @media(orientation:landscape) and (max-height:430px){
   .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
-  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner b,.mh-home-scene .mh-home-event-banner .t2{font-size:10px;line-height:1.1}
   .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 const HOME_RAID_JACK_CSS = `
@@ -84982,9 +85230,11 @@ function HomeScreen({
     className: "mh-home-event-banner",
     onClick: openChangelog,
     "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+  }, React.createElement("b", {
+    className: "r1"
+  }, React.createElement("span", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeEventCampaign.banner.title2 ? React.createElement("span", {
     className: "t2"
-  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
+  }, homeEventCampaign.banner.title2) : null), homeCardTour && typeof onOpenCardTour === 'function' && homeStripShow === (homeEventCampaign ? 1 : 0) && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: "mh-home-tour-banner",
@@ -119739,10 +119989,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.84
     },
     sorashido: {
-      top: 0.0331,
-      eye: 0.2899,
-      chin: 0.4299,
-      m: 1.042
+      top: 0.0029,
+      eye: 0.273,
+      chin: 0.4302,
+      m: 1.169
     },
     erubin: {
       top: 0.0042,
@@ -236287,6 +236537,9 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId,
       difficultyId: difficulty.id,
+      ...(typeof rhythmChartResetTag === 'function' && rhythmChartResetTag(song.songId, difficulty.id) ? {
+        chart: rhythmChartResetTag(song.songId, difficulty.id)
+      } : {}),
       ...(scoreVersion === 2 ? {
         scoreVersion: 2,
         tickTotal: Math.max(0, Math.floor(Number(result.tickTotal) || 0)),
