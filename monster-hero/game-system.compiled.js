@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d78352f0de61f9f
+// source-sha256: 94658b04f1a6dae2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -21404,7 +21404,10 @@ const MarketProductCard = ({
   previewIcon = null,
   ribbon = null,
   noteSlot = false,
-  note = null
+  note = null,
+  row = false,
+  onCard = null,
+  rowNote = null
 }) => {
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
   const usesPsyche = item.currency === 'psyche';
@@ -21413,6 +21416,87 @@ const MarketProductCard = ({
   const usesBeatPoint = item.currency === 'beatPoint';
   const usesCardPoint = item.currency === 'cardPoint';
   const priceLabel = usesCardPoint ? `${item.cost}ビートP` : usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
+  if (row) {
+    const lacking = !comingSoon && !owned && !canBuy && !disabled;
+    const stop = e => e.stopPropagation();
+    return React.createElement("div", _extends({}, dataAttrs || {}, {
+      "data-market-row-card": true,
+      role: onCard ? 'button' : undefined,
+      tabIndex: onCard ? 0 : undefined,
+      "aria-label": onCard ? `${item.name}を詳しく見る` : undefined,
+      onClick: onCard || undefined,
+      onKeyDown: onCard ? e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onCard();
+        }
+      } : undefined,
+      className: `relative flex min-w-0 items-center gap-2.5 rounded-2xl border p-2 text-left ${onCard ? 'cursor-pointer active:scale-[.98]' : ''} ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
+    }), ribbon && React.createElement("span", {
+      "data-market-ribbon": true,
+      className: "pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-tight text-slate-900 shadow"
+    }, ribbon), React.createElement("span", {
+      className: "shrink-0",
+      onClick: stop
+    }, React.createElement(MarketProductIcon, {
+      item: item,
+      onZoom: onZoom,
+      disabled: disabled,
+      previewIcon: previewIcon
+    })), React.createElement("div", {
+      className: "flex min-w-0 flex-1 flex-col items-start gap-1"
+    }, React.createElement("div", {
+      "data-market-name-text": true,
+      className: "w-full text-[12px] font-black leading-tight text-white",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, marketNameNodes(item.name)), rowNote && React.createElement("div", {
+      className: "text-[10px] font-black text-slate-400"
+    }, rowNote), comingSoon ? React.createElement("div", {
+      "data-market-coming-soon-label": true,
+      className: "max-w-full rounded-lg bg-slate-800/60 px-1.5 py-0.5 text-[10px] font-black leading-tight text-slate-400",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, marketLabelNodes(comingSoonLabel)) : owned ? React.createElement("div", {
+      className: "whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-0.5 text-[10px] font-black text-emerald-400"
+    }, "所持済み") : React.createElement("button", {
+      onClick: e => {
+        stop(e);
+        onBuy && onBuy();
+      },
+      disabled: disabled || !canBuy,
+      "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard || usesBeatPoint || usesCardPoint ? '交換' : '購入'}`}`,
+      style: lacking ? {
+        color: '#f87171',
+        opacity: 1
+      } : undefined,
+      className: `mh-button flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-xl px-2.5 text-[12px] font-black ${lacking ? 'bg-slate-800' : disabled || !canBuy ? 'bg-slate-800 text-slate-500' : 'bg-amber-500 text-black active:scale-95'}`
+    }, usesCardPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🃏"), React.createElement("span", null, item.cost.toLocaleString())) : usesBeatPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🎟️"), React.createElement("span", null, item.cost.toLocaleString())) : usesHeroProofShard ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🎖️"), React.createElement("span", {
+      className: "text-[10px]"
+    }, "証片 ×", item.cost.toLocaleString())) : usesHeroProof ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🏅"), React.createElement("span", {
+      className: "text-[10px]"
+    }, "勇者の証 ×", item.cost.toLocaleString())) : usesPsyche ? React.createElement(React.Fragment, null, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🌈"), React.createElement("span", null, item.cost.toLocaleString())) : React.createElement(React.Fragment, null, usesGold ? React.createElement(Gem, {
+      size: 11,
+      className: "shrink-0"
+    }) : React.createElement(Coins, {
+      size: 11,
+      className: "shrink-0"
+    }), React.createElement("span", null, item.cost.toLocaleString())))));
+  }
   return React.createElement("div", _extends({}, dataAttrs || {}, {
     className: `relative rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
   }), ribbon && React.createElement("span", {
@@ -72908,7 +72992,8 @@ function BreederMarketScreen({
   }));
   const renderMarketItem = (item, {
     showBase = true,
-    showHeroProofExchange = false
+    showHeroProofExchange = false,
+    row = false
   } = {}) => {
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
@@ -72925,9 +73010,16 @@ function BreederMarketScreen({
       currency: 'heroProof',
       cost: 1
     } : null;
+    const rowCard = !row ? null : item.groupMembers || item.type === 'icon' || item.giftOnly || item.type === 'item' && item.desc || item.type === 'costume' ? () => onOpenItemDetail(item) : item.type === 'frame' && frameCondition ? () => onOpenItemDetail({
+      ...item,
+      frameCondition
+    }) : detailMon || detailTeaching ? () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching) : null;
     return React.createElement(React.Fragment, {
       key: item.id
     }, showBase && React.createElement(MarketProductCard, {
+      row: row,
+      onCard: rowCard,
+      rowNote: row && item.type === 'item' ? `所持 ${ownedItems[item.id] || 0}` : null,
       previewIcon: previewIcon,
       ribbon: item.perk ? '🛍 助手のおすすめ 1割引き' : marketPartnerRibbon(item.type === 'assist' ? item.id : null),
       item: item,
@@ -73154,9 +73246,15 @@ function BreederMarketScreen({
   }, diamondItems.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🛒",
     lines: ['まだ商品がありません']
-  }) : React.createElement("div", {
-    className: MARKET_GRID_CLASS
-  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && React.createElement(React.Fragment, null, renderSectionTabs('breeder'), React.createElement("div", {
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-market-row-hint": true,
+    className: "mb-2 rounded-xl border border-cyan-400/30 bg-cyan-950/40 px-3 py-1.5 text-[11px] font-black text-slate-200"
+  }, "品を押すと詳しく見られます。ダイヤが足りない品は値段が赤"), React.createElement("div", {
+    "data-market-row-grid": true,
+    className: "grid grid-cols-2 gap-2 pb-4 min-[900px]:grid-cols-3 [@media(orientation:landscape)_and_(max-width:760px)]:grid-cols-1"
+  }, diamondItems.map(item => renderMarketItem(item, {
+    row: true
+  })))))), marketSection === 'breeder' && React.createElement(React.Fragment, null, renderSectionTabs('breeder'), React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, breederTabItems.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🛒",

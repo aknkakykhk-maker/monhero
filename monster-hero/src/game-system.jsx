@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6ae254e20e293f66
+// generated-sha256: 986dee04971412d8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -14558,7 +14558,7 @@ const MarketCostumePreview = ({ item }) => {
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
 // ribbon … 札の上のふちに横1行で出す帯(2026-11-06 レジェンドブリーダー優待パス「優待パス還元」)。
 // noteSlot … 品名の下に3行ぶん(帯・いつもの交換・優待の交換)の段(高さ固定)を取る。同じ一覧の札にはそろえて渡す(段の無い札だけ低くならないように)。note はその中身
-const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null, ribbon=null, noteSlot=false, note=null }) => {
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null, ribbon=null, noteSlot=false, note=null, row=false, onCard=null, rowNote=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
@@ -14566,6 +14566,27 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesBeatPoint=item.currency==='beatPoint';
   const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのビートP
   const priceLabel=usesCardPoint?`${item.cost}ビートP`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  // 横長の札(ダイヤショップ・r1119-155 案B)。絵が左、名前と値段が右。札そのものを押すと詳しく見られ(小さな「詳細」は出さない)、
+  // 値段のボタンで買う。足りないときは値段を赤で出す
+  if(row){
+    const lacking=!comingSoon&&!owned&&!canBuy&&!disabled;
+    const stop=(e)=>e.stopPropagation();
+    return <div {...(dataAttrs||{})} data-market-row-card role={onCard?'button':undefined} tabIndex={onCard?0:undefined} aria-label={onCard?`${item.name}を詳しく見る`:undefined}
+      onClick={onCard||undefined} onKeyDown={onCard?(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onCard(); } }:undefined}
+      className={`relative flex min-w-0 items-center gap-2.5 rounded-2xl border p-2 text-left ${onCard?'cursor-pointer active:scale-[.98]':''} ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
+      {ribbon&&<span data-market-ribbon className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-tight text-slate-900 shadow">{ribbon}</span>}
+      <span className="shrink-0" onClick={stop}><MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/></span>
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+        <div data-market-name-text className="w-full text-[12px] font-black leading-tight text-white" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+        {rowNote&&<div className="text-[10px] font-black text-slate-400">{rowNote}</div>}
+        {comingSoon?<div data-market-coming-soon-label className="max-w-full rounded-lg bg-slate-800/60 px-1.5 py-0.5 text-[10px] font-black leading-tight text-slate-400" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketLabelNodes(comingSoonLabel)}</div>
+          :owned?<div className="whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-0.5 text-[10px] font-black text-emerald-400">所持済み</div>
+          :<button onClick={(e)=>{ stop(e); onBuy&&onBuy(); }} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint||usesCardPoint?'交換':'購入'}`}`}
+            style={lacking?{color:'#f87171',opacity:1}:undefined}
+            className={`mh-button flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-xl px-2.5 text-[12px] font-black ${lacking?'bg-slate-800':disabled||!canBuy?'bg-slate-800 text-slate-500':'bg-amber-500 text-black active:scale-95'}`}>{usesCardPoint?<><span aria-hidden="true">🃏</span><span>{item.cost.toLocaleString()}</span></>:usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}
+      </div>
+    </div>;
+  }
   return <div {...(dataAttrs||{})} className={`relative rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     {ribbon&&<span data-market-ribbon className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-400 px-1.5 py-[1px] text-[9px] font-black leading-tight text-slate-900 shadow">{ribbon}</span>}
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
@@ -44699,7 +44720,7 @@ function BreederMarketScreen({
     {detailItem?.desc&&<MarketDetailChip label={`${detailItem.name}の効果を見る`} onClick={()=>onOpenItemDetail(extraDetail?{...detailItem,...extraDetail}:detailItem)}/>}
   </>;
 
-  const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
+  const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false,row=false}={})=>{
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
@@ -44715,9 +44736,15 @@ function BreederMarketScreen({
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     // 着替えは middle の「詳細」から詳細窓を開ける(2026-11-20 社長。詳細窓に全身絵プレビューが出る。所持済み・近日追加でも同じ)
+    // 横長の札(ダイヤショップ・r1119-155 案B)は、中段の「詳細」の代わりに札そのものを押して同じ窓を開く
+    const rowCard = !row ? null
+      : item.groupMembers||item.type==='icon'||item.giftOnly||(item.type==='item'&&item.desc)||item.type==='costume' ? ()=>onOpenItemDetail(item)
+      : item.type==='frame'&&frameCondition ? ()=>onOpenItemDetail({...item,frameCondition})
+      : (detailMon||detailTeaching) ? ()=>(detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching))
+      : null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
+        {showBase&&<MarketProductCard row={row} onCard={rowCard} rowNote={row&&item.type==='item'?`所持 ${ownedItems[item.id]||0}`:null} previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
@@ -44807,7 +44834,11 @@ function BreederMarketScreen({
         <ScreenTabs value={activeDiamondTab} onChange={onSelectTab}
           items={diamondTabs.map(tab=>({id:tab.key,label:tab.label,color:'#0891b2'}))}/>
         <div className={SCREEN_LIST_CLASS}>
-          {diamondItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{diamondItems.map(item=>renderMarketItem(item))}</div>}
+          {/* ダイヤショップは横長の札を2列(r1119-155 案B)。札を押すと詳しく見られ、値段のボタンで買う */}
+          {diamondItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<>
+            <div data-market-row-hint className="mb-2 rounded-xl border border-cyan-400/30 bg-cyan-950/40 px-3 py-1.5 text-[11px] font-black text-slate-200">品を押すと詳しく見られます。ダイヤが足りない品は値段が赤</div>
+            <div data-market-row-grid className="grid grid-cols-2 gap-2 pb-4 min-[900px]:grid-cols-3 [@media(orientation:landscape)_and_(max-width:760px)]:grid-cols-1">{diamondItems.map(item=>renderMarketItem(item,{row:true}))}</div>
+          </>}
         </div>
       </>}
 

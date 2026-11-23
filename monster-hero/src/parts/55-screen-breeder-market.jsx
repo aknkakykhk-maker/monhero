@@ -242,7 +242,7 @@ function BreederMarketScreen({
     {detailItem?.desc&&<MarketDetailChip label={`${detailItem.name}の効果を見る`} onClick={()=>onOpenItemDetail(extraDetail?{...detailItem,...extraDetail}:detailItem)}/>}
   </>;
 
-  const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
+  const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false,row=false}={})=>{
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
@@ -258,9 +258,15 @@ function BreederMarketScreen({
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     // 着替えは middle の「詳細」から詳細窓を開ける(2026-11-20 社長。詳細窓に全身絵プレビューが出る。所持済み・近日追加でも同じ)
+    // 横長の札(ダイヤショップ・r1119-155 案B)は、中段の「詳細」の代わりに札そのものを押して同じ窓を開く
+    const rowCard = !row ? null
+      : item.groupMembers||item.type==='icon'||item.giftOnly||(item.type==='item'&&item.desc)||item.type==='costume' ? ()=>onOpenItemDetail(item)
+      : item.type==='frame'&&frameCondition ? ()=>onOpenItemDetail({...item,frameCondition})
+      : (detailMon||detailTeaching) ? ()=>(detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching))
+      : null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
+        {showBase&&<MarketProductCard row={row} onCard={rowCard} rowNote={row&&item.type==='item'?`所持 ${ownedItems[item.id]||0}`:null} previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
@@ -350,7 +356,11 @@ function BreederMarketScreen({
         <ScreenTabs value={activeDiamondTab} onChange={onSelectTab}
           items={diamondTabs.map(tab=>({id:tab.key,label:tab.label,color:'#0891b2'}))}/>
         <div className={SCREEN_LIST_CLASS}>
-          {diamondItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{diamondItems.map(item=>renderMarketItem(item))}</div>}
+          {/* ダイヤショップは横長の札を2列(r1119-155 案B)。札を押すと詳しく見られ、値段のボタンで買う */}
+          {diamondItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<>
+            <div data-market-row-hint className="mb-2 rounded-xl border border-cyan-400/30 bg-cyan-950/40 px-3 py-1.5 text-[11px] font-black text-slate-200">品を押すと詳しく見られます。ダイヤが足りない品は値段が赤</div>
+            <div data-market-row-grid className="grid grid-cols-2 gap-2 pb-4 min-[900px]:grid-cols-3 [@media(orientation:landscape)_and_(max-width:760px)]:grid-cols-1">{diamondItems.map(item=>renderMarketItem(item,{row:true}))}</div>
+          </>}
         </div>
       </>}
 
