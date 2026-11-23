@@ -48,3 +48,13 @@ AUTO_TAP=1 STEP=20 PREFIX=b1 SHOT_AT=34.3,36.5,37.95,38.22,38.40 SONG='全部必
 - `src/parts/30-rhythm-play.jsx`: 演奏の始めに印を付ける・判定(applyJudgment)で数える・毎フレーム玉の大きさ・叩いたら駆け下りる光(element.animate)
 - `index.html`: `[data-rhythm-charge-fx]`(前の `[data-rhythm-special-fx]` を置き換え)
 - `tools/mode/rhythm-note-appear-scan.js`: `AUTO_TAP=1`・`SHOT_AT`(止め絵用)
+
+## 曲の鑑賞でも出す(2026-11-23・社長「鑑賞でききの曲みたけど変わってないよ」)
+
+鑑賞(`lineAdjust.listen`)は中で練習扱い(`tutorial`)になり、演出が切れていた。本物の練習(`tutorialProp`)でない鑑賞のときは、ふつうに遊ぶ時と同じに出す
+(判定ラインの合わせ・オプションの見本・練習では今までどおり出さない)。鑑賞の「-10秒」で区間より前へ戻ったときは、玉を空から溜め直す。
+止め絵 `4-listen.jpg`(鑑賞の自動の手で流したもの。スライドも取るので玉はいっぱいまで育つ)。撮り方は `LISTEN=1` を足すだけ:
+
+```
+LISTEN=1 AUTO_TAP=1 STEP=20 PREFIX=b1 SHOT_AT=37.95,38.40 SONG='全部必殺技でつ( `･ω･)' SONG_ID=zenbu_hissatsuwaza DIFF=HELL FROM=33.3 OUT=<置き場> node tools/mode/rhythm-note-appear-scan.js
+```

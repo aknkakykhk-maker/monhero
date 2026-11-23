@@ -87,7 +87,11 @@ const skyLiftPatched=src=>{
  const selected=await page.evaluate(()=>({diff:document.querySelector('[data-rhythm-demo-difficulty][aria-pressed=true],[aria-pressed=true][data-rhythm-difficulty]')?.innerText||''}));
  if(process.env.DEBUG_SHOT)await page.screenshot({path:path.join(OUT,"select.png")});console.error("曲:",picked,"難易度:",diffOk,JSON.stringify(selected));
  await page.waitForSelector("[data-rhythm-demo-start]",{timeout:15000});
- await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
+ // LISTEN=1: 曲の鑑賞(ジャケット → 鑑賞の難易度 → 鑑賞する)で始める。ノーツは鑑賞の自動の手が叩く(AUTO_TAP でも道具は押さない)
+ if(process.env.LISTEN==='1'){await page.evaluate(()=>[...document.querySelectorAll('button[aria-label]')].find(b=>/ジャケットを大きく見る/.test(b.getAttribute('aria-label')))?.click());
+  await page.waitForSelector('[data-rhythm-listen-start]',{timeout:15000});await page.evaluate(d=>document.querySelector(`[data-rhythm-listen-diff="${d}"]`)?.click(),DIFF);await page.waitForTimeout(300);
+  await page.evaluate(()=>document.querySelector('[data-rhythm-listen-start]').click());}
+ else await page.evaluate(()=>document.querySelector("[data-rhythm-demo-start]").click());
  await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
  await page.waitForFunction(()=>!!window.__mhSong,null,{timeout:60000});
  await page.waitForFunction(()=>typeof RHYTHM_CANVAS_RENDERER!=='undefined',null,{timeout:30000});
@@ -113,7 +117,7 @@ const skyLiftPatched=src=>{
   for(let sec=Math.max(FROM,cur);sec<=end+1e-6;sec=Math.round((sec+STEP/1000)*1000)/1000){
    await page.evaluate(s=>{window.__mhHook();window.__mhDraws=[];window.__mhFreezeSong(s);window.__mhNowMs=s*1000;},sec);await raf();
    const draws=await page.evaluate(()=>{const d=window.__mhDraws;window.__mhDraws=[];return d;});
-   for(const d of draws){if(tapped.has(d.i)||d.t>sec*1000+1||d.t<sec*1000-STEP*2||d.type==='SLIDE'||d.type==='HOLD')continue;tapped.add(d.i);
+   for(const d of (process.env.LISTEN==='1'?[]:draws)){if(tapped.has(d.i)||d.t>sec*1000+1||d.t<sec*1000-STEP*2||d.type==='SLIDE'||d.type==='HOLD')continue;tapped.add(d.i);
     await page.mouse.move(cv.x+d.cx,cv.y+d.cy);await page.mouse.down();await page.mouse.up();}
    while(si<shots.length&&shots[si]<=sec+1e-6){await raf();
     // 叩いたときに始まる動き(element.animate)は実時間で進むので、撮る時刻に合わせて止める(始まった曲の時刻からの経過。終わった動きは消す)

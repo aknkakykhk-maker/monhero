@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1f8afa40bc44afe
+// source-sha256: 55b363740ca60ac6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44385,7 +44385,7 @@ const RhythmTapTest = ({
   const roadGlowRef = useRef(null);
   const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
   const climaxRef = useRef(null);
-  const specialFx = !tutorial && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
+  const specialFx = (!tutorial || listenMode && !tutorialProp) && typeof rhythmChartSpecialFx === 'function' ? rhythmChartSpecialFx(song.songId, difficulty.id) : null;
   const chargeOrbRef = useRef(null),
     chargeBlastRef = useRef(null),
     chargeHitRef = useRef(null);
@@ -46177,6 +46177,10 @@ const RhythmTapTest = ({
           let z = -1;
           for (let k = 0; k < c.zones.length; k++) {
             const q = c.zones[k];
+            if (visualTime < q.from - 400 && (c.fin[k] || c.hits[k])) {
+              c.fin[k] = false;
+              c.hits[k] = 0;
+            }
             if (!c.fin[k] && visualTime >= q.from - 400 && visualTime <= q.finaleMs + 250) {
               z = k;
               break;

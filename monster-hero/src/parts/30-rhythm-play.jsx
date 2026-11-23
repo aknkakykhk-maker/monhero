@@ -1556,7 +1556,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // その譜面だけの演出(data/rhythm-mode.js の RHYTHM_CHART_SPECIAL_FX・2026-11-23 r1119-141)。見た目だけ(判定・点・譜面には触らない)。
   // 区間のチャージノーツ(ききのピンク)を取るほど道の奥の光の玉が大きくなり、最後の必殺ノーツを叩くと、溜めた光が判定まで駆け下りて弾ける。
   // 動かすのは玉(b)と駆け下りる光(em)の2つだけ・transform と opacity だけ。ノーツより下の層に置くので、ノーツを隠さない。軽量モードでも出す
-  const specialFx=!tutorial&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
+  // 曲の鑑賞(listenMode)でも、ふつうに遊ぶ時と同じに出す(2026-11-23 社長「鑑賞でききの曲みたけど変わってないよ」)。練習・判定ラインの合わせ・オプションの見本では出さない
+  const specialFx=(!tutorial||(listenMode&&!tutorialProp))&&typeof rhythmChartSpecialFx==='function'?rhythmChartSpecialFx(song.songId,difficulty.id):null;
   const chargeOrbRef=useRef(null),chargeBlastRef=useRef(null),chargeHitRef=useRef(null);
   chargeHitRef.current=(note,judgment)=>{const run=runRef.current,c=run&&run.charge;if(!c)return;const z=note._mhZone,zone=c.zones[z];if(!zone)return;
     if(note._mhCharge===1){if(judgment!=='MISS')c.hits[z]=(c.hits[z]||0)+1;return;}
@@ -2566,7 +2567,7 @@ if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-rhy
 {const climaxEl=climaxRef.current;if(climaxEl){const level=settingsLiveRef.current.climaxFx===true?rhythmSongClimaxAt(song.songId,visualTime):0;
   if(run._climaxLevel!==level){run._climaxLevel=level;climaxEl.setAttribute('data-on',level>0?'1':'0');climaxEl.style.opacity=level>0?String(level):'0';}}}
 // その譜面だけの演出(チャージの光の玉)。区間の中だけ出し、取った数で大きさを変える(変わったときだけ触る)
-{const orb=chargeOrbRef.current,c=run.charge;if(orb&&c){run._hitY=travel.hitY;let z=-1;for(let k=0;k<c.zones.length;k++){const q=c.zones[k];if(!c.fin[k]&&visualTime>=q.from-400&&visualTime<=q.finaleMs+250){z=k;break;}}
+{const orb=chargeOrbRef.current,c=run.charge;if(orb&&c){run._hitY=travel.hitY;let z=-1;for(let k=0;k<c.zones.length;k++){const q=c.zones[k];if(visualTime<q.from-400&&(c.fin[k]||c.hits[k])){c.fin[k]=false;c.hits[k]=0;}/* 鑑賞の「-10秒」で区間より前へ戻ったら、溜め直す */if(!c.fin[k]&&visualTime>=q.from-400&&visualTime<=q.finaleMs+250){z=k;break;}}
   const r=z>=0?Math.min(1,(c.hits[z]||0)/Math.max(1,c.zones[z].n)):0,key=z>=0?`${z}:${c.hits[z]||0}`:'off';
   if(c.key!==key){c.key=key;orb.style.opacity=z>=0?(.5+.5*r).toFixed(3):'0';orb.style.transform=`translate(-50%,-50%) scale(${(z>=0?.3+.9*r:.2).toFixed(3)})`;}}}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
