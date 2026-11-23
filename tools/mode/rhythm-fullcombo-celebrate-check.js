@@ -55,10 +55,12 @@ const celebrateEffect=(()=>{
   return at>=0?game.slice(at,end):'';
 })();
 check('celebrateの効果音・タイマーの一式を取り出せる',celebrateEffect.length>0);
-check('celebrateへ入った瞬間に合成音を1回鳴らす',
-  celebrateEffect.includes('RHYTHM_NOTE_SE_RUNTIME.playFullCombo();'));
-check('タイマーで既定の時間のあとresultへ進む',
-  /setTimeout\(\(\)=>\{setView\(v=>v\.status==='celebrate'\?\{\.\.\.v,status:'result'\}:v\);\},1300\);/.test(celebrateEffect));
+// 2026-11-23 案A「光の柱と花火」(台帳 r1119-143): 称号の段(fc/ae/am)ごとに音も変え、演出は約1.8秒
+check('celebrateへ入った瞬間に、段に合った合成音を1回鳴らす',
+  celebrateEffect.includes("RHYTHM_NOTE_SE_RUNTIME.playFullCombo(rhythmCelebrateTierOf(view.result)||'fc');"));
+check('タイマーで既定の時間(RHYTHM_CELEBRATE_MS)のあとresultへ進む',
+  /setTimeout\(\(\)=>\{setView\(v=>v\.status==='celebrate'\?\{\.\.\.v,status:'result'\}:v\);\},RHYTHM_CELEBRATE_MS\);/.test(celebrateEffect)
+  &&/const RHYTHM_CELEBRATE_MS=\d+;/.test(game));
 // ★ここが以前100コンボ演出で実際に踏んだバグと同じ形。view.comboのような毎ノーツ変わる値を
 // 依存にすると、非該当の再実行のたびcleanupが走ってタイマーが節目と無関係に解除される。
 // celebrateはview.statusが'celebrate'になる一度しか変化しない値なので、それだけを依存にする。
@@ -71,10 +73,17 @@ check('アンマウント・状態変化時にタイマーを後片付けする'
 
 // --- 画面本体 ---
 check('celebrate画面がある',game.includes("view.status==='celebrate'")&&game.includes('data-rhythm-celebrate'));
-check('達成の種類ごとに見出しを出し分ける',
-  game.includes("celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'"));
-check('最大コンボも添えて出す',/data-rhythm-celebrate-slam[\s\S]{0,300}MAX COMBO \{view\.maxCombo\}/.test(game));
-check('タップで早送りできる導線を画面に付けている',/data-rhythm-celebrate[^>]*onClick=\{skipCelebrate\}/.test(game));
+check('達成の種類ごとに段と見出しを出し分ける(ALL MARVELOUS > ALL EXCELLENT > FULL COMBO)',
+  game.includes("const rhythmCelebrateTierOf=a=>!a?null:a.allMarvelous?'am':a.allExcellent?'ae':a.fullCombo?'fc':null;")
+  &&game.includes("const RHYTHM_CELEBRATE_TITLES=Object.freeze({fc:'FULL COMBO!',ae:'ALL EXCELLENT!!',am:'ALL MARVELOUS!!'});"));
+check('最大コンボも添えて出す',/data-rhythm-celebrate-slam[\s\S]{0,300}MAX COMBO \{maxCombo\}/.test(game));
+check('タップで早送りできる導線を画面に付けている',/data-rhythm-celebrate data-tier=\{t\}[^>]*onClick=\{onSkip\}/.test(game)&&game.includes('onSkip={skipCelebrate}/>'));
+check('演奏画面を入れ替えず、演奏の場所の中へ重ねる(道と判定ラインが残る)',
+  !/if\(view\.status==='celebrate'\)\{[^\n]*return <main data-rhythm-celebrate/.test(game)
+  &&game.includes("{view.status==='celebrate'&&<RhythmCelebrateFx tier={rhythmCelebrateTierOf(view.result)}"));
+check('光の柱は道の形(rhythmProjectLane)から判定ラインの高さでの位置を決める',
+  /const lanes=Array\.from\(\{length:RHYTHM_LANE_COUNT\},\(_,i\)=>\{const at=rhythmProjectLane\(i,lineRatio\);/.test(game));
+check('火花は「火花」の演出を出さないにしたとき出さない',game.includes("sparksOn={!['OFF','NONE'].includes(rhythmFxPick(settings,'sparks'))}")&&game.includes('const sparkCount=!sparksOn?0:'));
 
 // --- ゲームプレイ側への影響が無いこと ---
 check('celebrate中はプレイ画面のタッチ入力を受け付けない(resultと同じ扱い)',
@@ -85,7 +94,7 @@ check('保存キーを増やしていない',!game.includes('mh_rhythm_celebrate
 
 // --- 合成音(SE)側 ---
 const seBlock=(()=>{
-  const at=rhythm.indexOf('const playFullCombo=()=>{');
+  const at=rhythm.indexOf("const playFullCombo=(tier='fc')=>{");
   // 公開するAPIが増えても切り出しがずれないよう、行頭のreturnだけを目印にする
   const end=rhythm.indexOf('\n  return {warm,',at);
   return at>=0&&end>at?rhythm.slice(at,end):'';
@@ -100,12 +109,16 @@ check('鳴らしたオシレーターは鳴らし終えたら片付ける(繋ぎ
   seBlock.includes("oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};"));
 check('外部からrhythmPlayFullComboとして呼べる',
   /playFullCombo,[^}]*_readSettings:readSettings\};/.test(rhythm) // holdSync などが間に増えても落ちない
-  &&game.includes('RHYTHM_NOTE_SE_RUNTIME.playFullCombo()'));
+  &&game.includes('RHYTHM_NOTE_SE_RUNTIME.playFullCombo('));
+check('上の段ほど音を重ねる(ae はきらめき、am はさらに和音と花火)。素材ファイルは使わない',
+  seBlock.includes("if(tier!=='ae'&&tier!=='am')return true;")&&seBlock.includes("if(tier!=='am')return true;")
+  &&seBlock.includes("burst(now+.3,'bandpass',420,.35,.9);")&&!/\.mp3|\.m4a|fetch\(/.test(seBlock));
 
 // --- CSS ---
-check('スラムイン演出のCSSがある',html.includes('[data-rhythm-celebrate-slam]{')&&html.includes('@keyframes mhRhythmCelebrateSlam'));
-check('動きを減らす設定の端末では動かさない',
-  /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-celebrate\]\{animation:none\}/.test(html));
+check('スラムイン演出のCSSがある',html.includes('[data-rhythm-celebrate-slam]{')&&html.includes('@keyframes mhRhythmCelebrateTitle'));
+check('段ごとの色(ae・am)のCSSがある',html.includes('[data-tier="ae"] [data-rhythm-celebrate-slam]{')&&html.includes('[data-tier="am"] [data-rhythm-celebrate-slam]{'));
+check('動きを減らす設定の端末では動かさない(柱・筋・粒は出さず、称号だけ止めて出す)',
+  /@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-celebrate\] \*\{animation:none!important\}/.test(html));
 
 // --- 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」) ---
 // それまでの祝いは曲の音が終わってから・しかも演出量「最小」(マルチの既定の「軽さ優先」)では何も出なかった。

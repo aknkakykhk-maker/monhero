@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 415102a8cb457f46
+// source-sha256: 74045dc316385b5d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40222,13 +40222,21 @@ const RhythmSongSelect = ({
       noticeOpen: !noticeOpen,
       noticeTouched: true
     }),
-    title: noticeOpen ? '助手のひとことと案内を畳む' : '助手のひとことと案内を出す',
+    title: noticeOpen ? '助手のひとこと: 入(押すと切)' : '助手のひとこと: 切(押すと入)',
     "aria-label": noticeOpen ? '助手のひとことと案内を畳む' : noticeHidden > 0 ? `畳んである案内が${noticeHidden + 1}つあります。出す` : '助手のひとことを出す',
     className: `relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    className: "hidden landscape:inline"
+  }, "ひとこと"), React.createElement("b", {
+    "data-rhythm-song-notice-state": noticeOpen ? 'on' : 'off',
+    "aria-hidden": "true",
+    className: `rounded px-0.5 leading-tight ${noticeOpen ? 'bg-fuchsia-300 text-fuchsia-950' : 'bg-slate-600 text-slate-100'}`
+  }, noticeOpen ? '入' : '切'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[9px]"
   }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
     "data-rhythm-song-notice-badge": true,
     className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
@@ -43046,10 +43054,6 @@ const rhythmPlayLogSend = async ({
 const RHYTHM_TOUCH_DIAG_KEY = 'mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP = 20;
 const RHYTHM_TOUCH_DIAG_VERSION = 1;
-const RHYTHM_RECORD_FX_COUNT_DELAY_MS = 600;
-const RHYTHM_RECORD_FX_COUNT_MS = 1500;
-const RHYTHM_RECORD_FX_TOTAL_MS = 3300;
-const RHYTHM_RECORD_FX_SPARKLES = 18;
 const RHYTHM_OUTSIDE_SLIDE_IN_SUBLANES = 1;
 const rhythmTouchDiagPlayId = () => {
   let id = '';
@@ -44035,6 +44039,130 @@ const RHYTHM_GRAND_STAGE_CONFETTI = Object.freeze(Array.from({
   delay: -(k * 13 % 11),
   color: ['#ffd45e', '#ff9ec4', '#8fd8ff', '#ffffff', '#ffc061'][k % 5]
 })));
+const RHYTHM_CELEBRATE_MS = 1800;
+const RHYTHM_CELEBRATE_TITLES = Object.freeze({
+  fc: 'FULL COMBO!',
+  ae: 'ALL EXCELLENT!!',
+  am: 'ALL MARVELOUS!!'
+});
+const rhythmCelebrateTierOf = a => !a ? null : a.allMarvelous ? 'am' : a.allExcellent ? 'ae' : a.fullCombo ? 'fc' : null;
+const RHYTHM_CELEBRATE_RAINBOW = Object.freeze(['#f0abfc', '#fde68a', '#86efac', '#67e8f9', '#c4b5fd', '#fb7185']);
+const RHYTHM_CELEBRATE_AE = Object.freeze(['#67e8f9', '#fde68a']);
+const RHYTHM_RESULT_COUNT = Object.freeze({
+  scoreAt: 300,
+  scoreMs: 1200,
+  janAt: 1500,
+  rowAt: 400,
+  rowStep: 110,
+  rowMs: 550,
+  stampAt: 1550,
+  ribbonAt: 1850,
+  restAt: 1900,
+  endAt: 2400
+});
+const rhythmResultCountAnimOn = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && !(typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
+const rhythmResultCrossMs = (previous, score) => {
+  const prev = Number(previous) || 0,
+    to = Number(score) || 0;
+  if (!(prev > 0) || !(to > prev)) return null;
+  return Math.round(RHYTHM_RESULT_COUNT.scoreAt + (1 - Math.cbrt(1 - prev / to)) * RHYTHM_RESULT_COUNT.scoreMs);
+};
+const rhythmBestDiffText = (value, prev) => {
+  const diff = value - prev;
+  return diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`;
+};
+const RhythmCelebrateFx = ({
+  tier,
+  maxCombo,
+  sparksOn,
+  onSkip
+}) => {
+  const rootRef = useRef(null);
+  const [lineRatio, setLineRatio] = useState(.88);
+  React.useLayoutEffect(() => {
+    const host = rootRef.current && rootRef.current.parentElement;
+    if (!host || typeof getComputedStyle !== 'function') return;
+    const pct = parseFloat(getComputedStyle(host).getPropertyValue('--mh-judgment-line-bottom'));
+    if (Number.isFinite(pct) && pct > 0 && pct < 60) setLineRatio(1 - pct / 100);
+  }, []);
+  const t = RHYTHM_CELEBRATE_TITLES[tier] ? tier : 'fc';
+  const lanes = Array.from({
+    length: RHYTHM_LANE_COUNT
+  }, (_, i) => {
+    const at = rhythmProjectLane(i, lineRatio);
+    return {
+      left: at.center * 100,
+      width: Math.max(4, at.width * 100 * .86)
+    };
+  });
+  const color = i => t === 'am' ? RHYTHM_CELEBRATE_RAINBOW[i % 6] : t === 'ae' ? RHYTHM_CELEBRATE_AE[i % 2] : '#fde68a';
+  const sparkCount = !sparksOn ? 0 : t === 'am' ? 30 : t === 'ae' ? 22 : 16;
+  const rings = t === 'am' ? 3 : t === 'ae' ? 1 : 0;
+  return React.createElement("div", {
+    ref: rootRef,
+    "data-rhythm-celebrate": true,
+    "data-tier": t,
+    role: "button",
+    "aria-label": `${RHYTHM_CELEBRATE_TITLES[t]} 結果へ進む`,
+    onClick: onSkip
+  }, React.createElement("i", {
+    "data-rhythm-celebrate-dim": true,
+    "aria-hidden": "true"
+  }), React.createElement("i", {
+    "data-rhythm-celebrate-line": true,
+    "aria-hidden": "true"
+  }), lanes.map((lane, i) => React.createElement("i", {
+    key: i,
+    "data-rhythm-celebrate-pillar": true,
+    "aria-hidden": "true",
+    style: {
+      left: `${lane.left.toFixed(2)}%`,
+      width: `${lane.width.toFixed(2)}%`,
+      '--c': color(i),
+      '--d': `${Math.round(150 + Math.abs(i - (RHYTHM_LANE_COUNT - 1) / 2) * 60)}ms`
+    }
+  })), t === 'am' && React.createElement("i", {
+    "data-rhythm-celebrate-flash": true,
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    "data-rhythm-celebrate-center": true,
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    "data-rhythm-celebrate-rays": true
+  }), Array.from({
+    length: rings
+  }, (_, i) => React.createElement("i", {
+    key: `r${i}`,
+    "data-rhythm-celebrate-ring": true,
+    style: {
+      '--c': ['#ffffff', '#f0abfc', '#67e8f9'][t === 'ae' ? 2 : i],
+      '--d': `${330 + i * 160}ms`
+    }
+  })), Array.from({
+    length: sparkCount
+  }, (_, i) => {
+    const angle = i * 137.5 * Math.PI / 180,
+      radius = 110 + i % 5 * 34;
+    return React.createElement("i", {
+      key: `s${i}`,
+      "data-rhythm-celebrate-spark": true,
+      style: {
+        '--x': `${Math.round(Math.cos(angle) * radius * 1.2)}px`,
+        '--y': `${Math.round(Math.sin(angle) * radius)}px`,
+        '--d': `${450 + i % 6 * 50}ms`,
+        '--s': `${5 + i % 4 * 2}px`,
+        '--c': t === 'am' ? RHYTHM_CELEBRATE_RAINBOW[i % 6] : t === 'ae' ? RHYTHM_CELEBRATE_AE[i % 2] : i % 3 ? '#fde68a' : '#ffffff'
+      }
+    });
+  })), React.createElement("div", {
+    "data-rhythm-celebrate-title": true
+  }, React.createElement("b", {
+    "data-rhythm-celebrate-slam": true
+  }, RHYTHM_CELEBRATE_TITLES[t]), React.createElement("small", {
+    "data-rhythm-celebrate-combo": true
+  }, "MAX COMBO ", maxCombo)));
+};
 const rhythmCelebrateSeWhen = (title, failed, showCelebrate) => !title || failed ? null : showCelebrate ? 'celebrate' : 'result';
 const rhythmCountdownCueOf = step => /^[1-9]$/.test(String(step));
 const RHYTHM_RECORD_SE_AFTER_FULLCOMBO_MS = 800;
@@ -46071,15 +46199,14 @@ const RhythmTapTest = ({
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
     const showCelebrate = !!celebrateTitle && !failed && rhythmFxOn(settings, 'fullComboBig', !settings.lightweightMode && settings.effectAmount !== 'MINIMAL');
     const previousBestScore = Math.max(0, Math.floor(Number(run.startBestScore) || 0));
-    const recordFx = isNewRecord && previousBestScore > 0 && !failed && !tutorial && !calibrating && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? {
-      id: `${Date.now()}-${score}`,
-      previous: previousBestScore,
-      score
+    const countAnim = !tutorial && !calibrating && rhythmResultCountAnimOn(settings) ? {
+      id: `${Date.now()}-${score}-count`
     } : null;
     const recordSeDelay = rhythmRecordSeDelayOf(isNewRecord, failed, tutorial || calibrating, rhythmCelebrateSeWhen(celebrateTitle, failed, showCelebrate));
-    const recordSe = recordSeDelay === null ? null : {
+    const recordSeAt = recordSeDelay === null ? null : countAnim ? Math.max(recordSeDelay, rhythmResultCrossMs(previousBestScore, score) ?? RHYTHM_RESULT_COUNT.janAt) : recordSeDelay;
+    const recordSe = recordSeAt === null ? null : {
       id: `${Date.now()}-${score}-se`,
-      delayMs: recordSeDelay
+      delayMs: recordSeAt
     };
     setView(v => ({
       ...v,
@@ -46097,7 +46224,7 @@ const RhythmTapTest = ({
         ...result,
         isNewRecord,
         previousBestScore,
-        recordFx,
+        countAnim,
         recordSe,
         bestScore: merged.bestScore,
         eventPointAward,
@@ -46110,7 +46237,7 @@ const RhythmTapTest = ({
     }));
     if (rhythmCelebrateSeWhen(celebrateTitle, failed, showCelebrate) === 'result') {
       try {
-        RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
+        RHYTHM_NOTE_SE_RUNTIME.playFullCombo(rhythmCelebrateTierOf(achievements) || 'fc');
       } catch {}
     }
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
@@ -46139,55 +46266,115 @@ const RhythmTapTest = ({
   }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.fx, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
-  const recordFxId = view.status === 'result' && view.result && view.result.recordFx ? view.result.recordFx.id : null;
-  const [recordFxHiddenFor, setRecordFxHiddenFor] = useState(null);
-  const recordScoreRef = useRef(null);
-  useEffect(() => {
-    if (!recordFxId) return undefined;
-    const fx = view.result.recordFx,
-      el = recordScoreRef.current;
-    let raf = 0;
-    const reduce = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const put = value => {
-      if (el) el.textContent = Math.round(value).toLocaleString();
+  const resultRootRef = useRef(null);
+  const recordSeFireRef = useRef(null);
+  const resultCountId = view.status === 'result' && view.result && view.result.countAnim ? view.result.countAnim.id : null;
+  React.useLayoutEffect(() => {
+    const root = resultRootRef.current;
+    if (!resultCountId || !root) return undefined;
+    const T = RHYTHM_RESULT_COUNT;
+    const items = [...root.querySelectorAll('[data-count-to]')].map(el => ({
+      el,
+      to: Number(el.dataset.countTo) || 0,
+      at: Number(el.dataset.countAt) || 0,
+      ms: Math.max(1, Number(el.dataset.countMs) || 1),
+      plain: el.dataset.countPlain === '1'
+    }));
+    const vs = root.querySelector('[data-rhythm-result-vs-best]'),
+      fill = vs && vs.querySelector('[data-rhythm-result-vs-best-fill]'),
+      diff = root.querySelector('[data-rhythm-best-diff]');
+    const card = root.querySelector('[data-rhythm-result-score-card]');
+    const prev = card ? Number(card.dataset.countPrev) || 0 : 0,
+      score = card ? Number(card.dataset.countScore) || 0 : 0,
+      gaugeMax = vs ? Math.max(1, Number(vs.dataset.max) || 1) : 1;
+    const wait = root.querySelector('[data-record-wait]');
+    let raf = 0,
+      start = 0,
+      over = false;
+    const valueAt = (item, t) => Math.round(item.to * rhythmCountEase(Math.max(0, Math.min(1, (t - item.at) / item.ms))));
+    const draw = t => {
+      for (const item of items) {
+        const v = valueAt(item, t);
+        const text = item.plain ? String(v) : v.toLocaleString();
+        if (item.el.textContent !== text) item.el.textContent = text;
+      }
+      {
+        const v = Math.round(score * rhythmCountEase(Math.max(0, Math.min(1, (t - T.scoreAt) / T.scoreMs))));
+        if (fill) fill.style.transform = `scaleX(${Math.min(1, v / gaugeMax).toFixed(4)})`;
+        if (diff && prev > 0) {
+          const text = rhythmBestDiffText(v, prev);
+          if (diff.textContent !== text) diff.textContent = text;
+          diff.dataset.reached = v >= prev ? '1' : '0';
+        }
+        if (!over && wait && (prev > 0 && v > prev || !(prev > 0) && t >= T.janAt)) {
+          over = true;
+          wait.removeAttribute('data-record-wait');
+        }
+      }
     };
-    if (reduce || typeof requestAnimationFrame !== 'function') put(fx.score);else {
-      put(fx.previous);
-      let start = 0;
-      const step = now => {
-        if (!start) start = now;
-        const p = Math.max(0, Math.min(1, (now - start - RHYTHM_RECORD_FX_COUNT_DELAY_MS) / RHYTHM_RECORD_FX_COUNT_MS));
-        put(fx.previous + (fx.score - fx.previous) * (1 - Math.pow(1 - p, 3)));
-        if (p < 1) raf = requestAnimationFrame(step);
-      };
-      raf = requestAnimationFrame(step);
+    const finish = () => {
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      raf = 0;
+      draw(1e9);
+      if (wait) wait.removeAttribute('data-record-wait');
+      root.setAttribute('data-rhythm-count-anim', 'done');
+      root.removeEventListener('pointerdown', skipCount);
+    };
+    const skipCount = () => {
+      if (root.getAttribute('data-rhythm-count-anim') !== '1') return;
+      finish();
+      if (recordSeFireRef.current) recordSeFireRef.current();
+    };
+    if (typeof requestAnimationFrame !== 'function') {
+      finish();
+      return undefined;
     }
-    const timer = setTimeout(() => setRecordFxHiddenFor(recordFxId), RHYTHM_RECORD_FX_TOTAL_MS);
+    draw(0);
+    const step = now => {
+      if (!start) start = now;
+      const t = now - start;
+      draw(t);
+      if (t < T.endAt) raf = requestAnimationFrame(step);else finish();
+    };
+    raf = requestAnimationFrame(step);
+    root.addEventListener('pointerdown', skipCount, {
+      passive: true
+    });
     return () => {
       if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
-      clearTimeout(timer);
+      root.removeEventListener('pointerdown', skipCount);
     };
-  }, [recordFxId]);
+  }, [resultCountId]);
   const recordSeId = view.status === 'result' && view.result && view.result.recordSe ? view.result.recordSe.id : null;
   useEffect(() => {
     if (!recordSeId) return undefined;
     const delay = Math.max(0, Number(view.result.recordSe.delayMs) || 0);
-    const timer = setTimeout(() => {
+    let done = false;
+    const fire = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      recordSeFireRef.current = null;
       try {
         RHYTHM_NOTE_SE_RUNTIME.playNewRecord();
       } catch {}
-    }, delay);
-    return () => clearTimeout(timer);
+    };
+    const timer = setTimeout(fire, delay);
+    recordSeFireRef.current = fire;
+    return () => {
+      clearTimeout(timer);
+      if (recordSeFireRef.current === fire) recordSeFireRef.current = null;
+    };
   }, [recordSeId]);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
-    RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
+    RHYTHM_NOTE_SE_RUNTIME.playFullCombo(rhythmCelebrateTierOf(view.result) || 'fc');
     celebrateTimerRef.current = setTimeout(() => {
       setView(v => v.status === 'celebrate' ? {
         ...v,
         status: 'result'
       } : v);
-    }, 1300);
+    }, RHYTHM_CELEBRATE_MS);
     return () => {
       if (celebrateTimerRef.current) {
         clearTimeout(celebrateTimerRef.current);
@@ -48190,26 +48377,6 @@ const RhythmTapTest = ({
       setPressedLanes([]);
     };
   }, [view.status]);
-  if (view.status === 'celebrate') {
-    const celebrateResult = view.result,
-      celebrateTitle = celebrateResult?.allMarvelous ? 'ALL MARVELOUS!!' : celebrateResult?.allExcellent ? 'ALL EXCELLENT!!' : 'FULL COMBO!';
-    return React.createElement("main", {
-      "data-rhythm-celebrate": true,
-      className: "flex flex-1 items-center justify-center bg-slate-950 text-white",
-      style: {
-        paddingTop: 'var(--mh-sa-top)',
-        paddingBottom: 'var(--mh-sa-bottom)'
-      },
-      onClick: skipCelebrate
-    }, React.createElement("div", {
-      className: "px-6 text-center"
-    }, React.createElement("b", {
-      "data-rhythm-celebrate-slam": true,
-      className: "block text-6xl font-black leading-tight"
-    }, celebrateTitle), React.createElement("small", {
-      className: "mt-3 block text-sm font-black tracking-[0.3em] text-slate-300"
-    }, "MAX COMBO ", view.maxCombo)));
-  }
   if (calibrating && view.status === 'result') {
     const measured = view.result && view.result.calibration ? view.result.calibration : null;
     const label = measured ? `${measured.offsetMs > 0 ? '+' : ''}${measured.offsetMs}ms` : '';
@@ -48282,66 +48449,33 @@ const RhythmTapTest = ({
       B: 1,
       C: 1
     }[rank] || 0;
+    const countOn = !!result.countAnim && !tutorialProp;
+    const prevBest = Math.max(0, Number(result.previousBestScore) || 0);
+    const crossMs = countOn && result.isNewRecord ? rhythmResultCrossMs(prevBest, view.score) ?? RHYTHM_RESULT_COUNT.janAt : null;
+    const titleTier = rhythmCelebrateTierOf(result);
+    const RC = RHYTHM_RESULT_COUNT;
     return React.createElement("main", {
+      ref: resultRootRef,
       "data-rhythm-result": true,
       "data-rank": rank,
       "data-rank-tier": String(rankTier),
+      "data-rhythm-count-anim": countOn ? '1' : undefined,
+      "data-rhythm-result-tier": titleTier || undefined,
       "data-rhythm-effect": settings.effectAmount,
       "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
       className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]",
       style: {
-        paddingTop: 'var(--mh-sa-top)'
+        paddingTop: 'var(--mh-sa-top)',
+        ...(crossMs !== null ? {
+          '--mh-record-badge-delay': `${crossMs}ms`
+        } : {}),
+        '--mh-count-score-at': `${RC.scoreAt}ms`,
+        '--mh-count-jan': `${RC.janAt}ms`,
+        '--mh-count-stamp': `${RC.stampAt}ms`,
+        '--mh-count-ribbon': `${RC.ribbonAt}ms`,
+        '--mh-count-rest': `${RC.restAt}ms`
       }
-    }, result.recordFx && recordFxHiddenFor !== result.recordFx.id && React.createElement("div", {
-      "data-rhythm-record-fx": true,
-      "aria-hidden": "true",
-      className: "pointer-events-none absolute inset-0 z-[60] flex items-center justify-center overflow-hidden"
-    }, React.createElement("i", {
-      "data-rhythm-record-fx-dim": true,
-      className: "absolute inset-0 block"
-    }), React.createElement("i", {
-      "data-rhythm-record-fx-rays": true,
-      className: "absolute left-1/2 top-1/2 block"
-    }), Array.from({
-      length: RHYTHM_RECORD_FX_SPARKLES
-    }, (_, i) => {
-      const angle = i * 137.5 * Math.PI / 180,
-        radius = 70 + i % 5 * 26;
-      return React.createElement("i", {
-        key: i,
-        "data-rhythm-record-fx-spark": true,
-        className: "absolute left-1/2 top-1/2 block rounded-full",
-        style: {
-          '--x': `${Math.round(Math.cos(angle) * radius * 1.5)}px`,
-          '--y': `${Math.round(Math.sin(angle) * radius)}px`,
-          '--d': `${i % 6 * 70 + 380}ms`,
-          '--s': `${4 + i % 4 * 2}px`,
-          background: i % 3 === 0 ? '#fff' : i % 3 === 1 ? '#fde68a' : '#f0abfc'
-        }
-      });
-    }), React.createElement("div", {
-      className: "relative px-6 text-center"
-    }, React.createElement("b", {
-      "data-rhythm-record-fx-title": true,
-      className: "block text-5xl font-black italic leading-tight"
-    }, "NEW RECORD!"), React.createElement("div", {
-      "data-rhythm-record-fx-scorebox": true,
-      className: "mt-1 flex items-baseline justify-center gap-1.5"
-    }, React.createElement("small", {
-      className: "text-[11px] font-black italic tracking-[.25em] text-amber-200"
-    }, "SCORE"), React.createElement("span", {
-      "data-rhythm-record-fx-score": true,
-      ref: recordScoreRef,
-      className: "text-[44px] font-black leading-none tabular-nums text-white"
-    })), React.createElement("div", {
-      className: "mt-1.5 flex items-center justify-center gap-2"
-    }, React.createElement("b", {
-      "data-rhythm-record-fx-gain": true,
-      className: "rounded-full border border-lime-300/80 bg-lime-400/20 px-3 py-0.5 text-lg font-black leading-tight tabular-nums text-lime-200"
-    }, "+", (result.recordFx.score - result.recordFx.previous).toLocaleString()), React.createElement("small", {
-      "data-rhythm-record-fx-prev": true,
-      className: "text-[11px] font-bold tabular-nums text-amber-100/90"
-    }, "前回のベスト ", result.recordFx.previous.toLocaleString())))), hudArtSrc && React.createElement("div", {
+    }, hudArtSrc && React.createElement("div", {
       "data-rhythm-result-backdrop": true,
       "aria-hidden": "true",
       style: {
@@ -48525,7 +48659,13 @@ const RhythmTapTest = ({
       "data-rhythm-result-rank": true,
       "data-rank-tier": String(rankTier),
       className: `relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-4 border-current text-[38px] font-black italic ${RHYTHM_RANK_COLORS[rank]}`
-    }, rank)), (result.assist || result.mirror) && React.createElement("div", {
+    }, rank, countOn && React.createElement("i", {
+      "data-rhythm-result-rank-ring": true,
+      "aria-hidden": "true"
+    }), titleTier && React.createElement("b", {
+      "data-rhythm-result-title-ribbon": true,
+      "data-tier": titleTier
+    }, titleTier === 'am' ? 'ALL MARVELOUS' : titleTier === 'ae' ? 'ALL EXCELLENT' : 'FULL COMBO'))), (result.assist || result.mirror) && React.createElement("div", {
       "data-rhythm-result-play-mode": true,
       className: "mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
     }, result.assist && React.createElement("span", {
@@ -48535,6 +48675,9 @@ const RhythmTapTest = ({
     }, "↔ ミラー譜面")), React.createElement("section", {
       "data-rhythm-result-score-card": true,
       "data-new-record": result.isNewRecord ? '1' : '0',
+      "data-record-wait": crossMs !== null ? '1' : undefined,
+      "data-count-prev": countOn ? prevBest : undefined,
+      "data-count-score": countOn ? view.score : undefined,
       className: "mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
@@ -48558,7 +48701,7 @@ const RhythmTapTest = ({
     }, "SCORE"), result.isNewRecord && React.createElement("b", {
       "data-rhythm-new-record": true,
       style: {
-        '--mh-record-badge-delay': result.recordFx ? '3s' : '.15s'
+        '--mh-record-badge-delay': crossMs !== null ? `${crossMs}ms` : '.15s'
       },
       className: "whitespace-nowrap rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black leading-none text-slate-950"
     }, "✨ NEW RECORD"), result.isNewRecord && Number(result.previousBestScore) > 0 && view.score > result.previousBestScore && React.createElement("b", {
@@ -48567,12 +48710,22 @@ const RhythmTapTest = ({
     }, "+", (view.score - result.previousBestScore).toLocaleString())), React.createElement("div", {
       className: "[container-type:inline-size] [--mh-result-score-max:42px] [@container(min-width:680px)]:[--mh-result-score-max:38px]"
     }, React.createElement("div", {
-      "data-rhythm-result-score": true,
+      className: "relative"
+    }, countOn && React.createElement("i", {
+      "data-rhythm-result-jan": true,
+      "aria-hidden": "true"
+    }), React.createElement("div", _extends({
+      "data-rhythm-result-score": true
+    }, countOn ? {
+      'data-count-to': view.score,
+      'data-count-at': RC.scoreAt,
+      'data-count-ms': RC.scoreMs
+    } : {}, {
       className: "font-black leading-none tabular-nums",
       style: {
         fontSize: `min(var(--mh-result-score-max), ${rhythmScoreFitSize(Math.max(Number(view.score) || 0, Number(result.score) || 0).toLocaleString(), 42, 22)})`
       }
-    }, view.score.toLocaleString())), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
+    }), view.score.toLocaleString()))), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
       "data-rhythm-record-prev": true,
       className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
     }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), tutorialProp && React.createElement("p", {
@@ -48613,14 +48766,39 @@ const RhythmTapTest = ({
         className: RHYTHM_RANK_COLORS[nextId] || 'text-white'
       }, nextId), " まで あと ", need.toLocaleString());
     })(), (() => {
-      const before = runRef.current?.startBest;
-      const prev = before && before.played ? Number(before.bestScore) || 0 : 0;
+      const prev = prevBest;
       if (!(prev > 0)) return null;
       const diff = view.score - prev;
-      return React.createElement("p", {
+      const max = Math.max(view.score, prev) * 1.004;
+      return React.createElement("div", {
+        "data-rhythm-result-vs-best": true,
+        "data-prev": prev,
+        "data-score": view.score,
+        "data-max": max,
+        className: "mt-1"
+      }, React.createElement("div", {
+        "data-rhythm-result-vs-best-gauge": true,
+        "aria-hidden": "true",
+        className: "relative mt-2.5 h-1.5 rounded-full bg-slate-800"
+      }, React.createElement("i", {
+        "data-rhythm-result-vs-best-fill": true,
+        className: "absolute inset-0 block rounded-full",
+        style: {
+          transform: `scaleX(${Math.min(1, view.score / max).toFixed(4)})`
+        }
+      }), React.createElement("i", {
+        "data-rhythm-result-vs-best-mark": true,
+        className: "absolute -top-1 -bottom-1 block w-0.5",
+        style: {
+          left: `${(prev / max * 100).toFixed(2)}%`
+        }
+      }, React.createElement("small", {
+        className: "absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] font-black not-italic leading-none"
+      }, "BEST"))), React.createElement("p", {
         "data-rhythm-best-diff": true,
-        className: `text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : 'text-slate-400'}`
-      }, diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`);
+        "data-reached": diff >= 0 ? '1' : '0',
+        className: `mt-1 text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : diff === 0 ? 'text-slate-400' : 'text-rose-300'}`
+      }, rhythmBestDiffText(view.score, prev)));
     })())), React.createElement("div", {
       "data-rhythm-result-summary-judgments": true,
       className: "mt-2 min-w-0 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0"
@@ -48655,25 +48833,55 @@ const RhythmTapTest = ({
       key: "precise"
     }, React.createElement("dt", {
       "data-rhythm-result-precise-label": true,
-      "data-rhythm-judgment-row": "JUST"
-    }, "JUST MARVELOUS"), React.createElement("dd", {
+      "data-rhythm-judgment-row": "JUST",
+      style: {
+        '--mh-row-d': `${RC.rowAt}ms`
+      }
+    }, "JUST MARVELOUS"), React.createElement("dd", _extends({
       "data-rhythm-result-precise": true,
       "data-rhythm-judgment-row": "JUST",
-      className: "text-right font-mono"
-    }, Number(view.precise) || 0)), React.createElement("dt", {
-      "data-rhythm-judgment-row": id
-    }, id), React.createElement("dd", {
-      "data-rhythm-judgment-row": id,
-      className: "text-right font-mono"
-    }, view.counts[id])))), React.createElement("div", {
+      className: "text-right font-mono",
+      style: {
+        '--mh-row-d': `${RC.rowAt}ms`
+      }
+    }, countOn ? {
+      'data-count-to': Number(view.precise) || 0,
+      'data-count-at': RC.rowAt,
+      'data-count-ms': RC.rowMs,
+      'data-count-plain': '1'
+    } : {}), Number(view.precise) || 0)), (() => {
+      const at = RC.rowAt + (RHYTHM_JUDGMENT_IDS.indexOf(id) + 1) * RC.rowStep;
+      return React.createElement(React.Fragment, null, React.createElement("dt", {
+        "data-rhythm-judgment-row": id,
+        style: {
+          '--mh-row-d': `${at}ms`
+        }
+      }, id), React.createElement("dd", _extends({
+        "data-rhythm-judgment-row": id,
+        className: "text-right font-mono",
+        style: {
+          '--mh-row-d': `${at}ms`
+        }
+      }, countOn ? {
+        'data-count-to': Number(view.counts[id]) || 0,
+        'data-count-at': at,
+        'data-count-ms': RC.rowMs,
+        'data-count-plain': '1'
+      } : {}), view.counts[id]));
+    })()))), React.createElement("div", {
       "data-rhythm-result-combo": true,
       className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]"
     }, React.createElement("small", {
       className: `whitespace-nowrap text-[10px] font-black tracking-[.2em] max-[359px]:tracking-[.06em] ${rhythmComboTextColor(view.maxCombo)}`
-    }, "MAX COMBO"), React.createElement("b", {
+    }, "MAX COMBO"), React.createElement("b", _extends({
       "data-rhythm-max-combo": true,
       className: `block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`
-    }, view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
+    }, countOn ? {
+      'data-count-to': Number(view.maxCombo) || 0,
+      'data-count-at': RC.rowAt,
+      'data-count-ms': RC.scoreMs - 200,
+      'data-count-plain': '1'
+    } : {}), view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
       "data-rhythm-result-ticks": true,
       className: "mt-0.5 block text-[10px] font-bold leading-tight text-slate-300"
     }, "刻み ", React.createElement("b", {
@@ -49499,7 +49707,12 @@ const RhythmTapTest = ({
       '--s': p.s,
       '--r': p.r
     }
-  })))), countdownStep !== null && React.createElement("div", {
+  })))), view.status === 'celebrate' && React.createElement(RhythmCelebrateFx, {
+    tier: rhythmCelebrateTierOf(view.result),
+    maxCombo: view.maxCombo,
+    sparksOn: !['OFF', 'NONE'].includes(rhythmFxPick(settings, 'sparks')),
+    onSkip: skipCelebrate
+  }), countdownStep !== null && React.createElement("div", {
     "data-rhythm-countdown": true,
     "aria-live": "assertive",
     style: {
