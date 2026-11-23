@@ -526,7 +526,7 @@
   "desert_crown/hell": "662c4a0b30060ef2",
   "brand_new_sky/hell": "184d3b1d09c53b39",
   "kimimachi_loop/hell": "c58629c2c246d6f1",
-  "zenbu_hissatsuwaza/hell": "003be68f60f0217e",
+  "zenbu_hissatsuwaza/hell": "52af5d2cacf4545f",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -1275,6 +1275,20 @@
   {
    "at": "2026-11-23 14:26",
    "reason": "r1119-136 全部必殺技でつ HELL: タップの割合を9割以下に(区切りの音をフリックへ)",
+   "changed": [
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 16:57",
+   "reason": "r1119-141 全部必殺技でつ HELL: 3か所の必殺ノーツを真ん中へ(時刻・数・種類は同じ)",
+   "changed": [
+    "zenbu_hissatsuwaza/hell"
+   ]
+  },
+  {
+   "at": "2026-11-23 17:00",
+   "reason": "r1119-141 追記5: C と B 1:30〜 を1つの区間にし、C の最後のノーツを元の位置へ戻す(必殺ノーツは2つを真ん中へ)",
    "changed": [
     "zenbu_hissatsuwaza/hell"
    ]
