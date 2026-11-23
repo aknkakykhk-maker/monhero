@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae04a661062113cf
+// source-sha256: 7d2738a90f0f8002
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -69688,7 +69688,7 @@ const growthFxSessionLevel = (list = []) => {
 };
 const GROWTH_FX_CSS = `
 .mh-gfx-chips{position:fixed;top:calc(env(safe-area-inset-top,0px) + 52px);right:10px;z-index:44000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
-.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
+.mh-gfx-chips.left{right:auto;left:10px;align-items:flex-start}@media (min-width:768px) and (min-height:601px){.mh-gfx-chips{right:max(10px,calc((100vw - 600px) / 2 + 10px))}.mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 600px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips{right:max(10px,calc((100vw - 1024px) / 2 + 10px))}html:has(.mh-home-scene:not([data-assistant-life-map])) .mh-gfx-chips.left{right:auto;left:max(10px,calc((100vw - 1024px) / 2 + 10px))}}.mh-gfx-chips.one .mh-gfx-chip:not(:first-child){display:none}.mh-gfx-chips.one .mh-gfx-chip:first-child::after{content:attr(data-more);margin-left:2px;border-radius:999px;background:#ffffff26;padding:0 5px;font-size:10px;font-weight:900}.mh-gfx-chips.row{flex-direction:row;align-items:flex-start;max-width:calc(100% - 20px);flex-wrap:nowrap}
 .mh-gfx-chips.mini .mh-gfx-chip>.min-w-0{display:none}.mh-gfx-chips.mini .mh-gfx-chip{padding:3px 8px 3px 4px;gap:4px}
 .mh-gfx-chip{position:relative;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:999px;background:linear-gradient(90deg,#1e1b2ef0,#0f172af0);
   border:1.5px solid var(--gc);box-shadow:0 0 14px color-mix(in srgb,var(--gc) 40%,transparent);font-weight:900;font-size:11px;color:#fff;
@@ -72889,7 +72889,7 @@ function BreederMarketScreen({
     label: 'ダイヤショップ',
     titleLines: ['ダイヤ', 'ショップ'],
     value: compactCount(gold),
-    hint: '円盤石・アシスト・アイテムが買える',
+    hint: costumeItems.length ? '円盤石・アシスト・アイテム・着替えが買える' : '円盤石・アシスト・アイテムが買える',
     border: 'border-cyan-400/35',
     title: 'text-cyan-200',
     arrow: 'text-cyan-300/80'
@@ -270195,7 +270195,9 @@ function MonsterHeroGame() {
       })), helpAssistantOpen && React.createElement("div", {
         className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
-          backgroundColor: 'rgba(15,23,42,0.75)'
+          backgroundColor: 'rgba(15,23,42,0.75)',
+          paddingLeft: 'max(.75rem, calc((100% - 48rem) / 2))',
+          paddingRight: 'max(.75rem, calc((100% - 48rem) / 2))'
         }
       }, React.createElement(AssistantBubble, {
         key: `${helpCatId || ''}/${helpTopicId || ''}`,
@@ -270211,7 +270213,9 @@ function MonsterHeroGame() {
       })), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
         style: {
-          backgroundColor: '#000000'
+          backgroundColor: '#000000',
+          paddingLeft: 'max(1rem, calc((100% - 48rem) / 2))',
+          paddingRight: 'max(1rem, calc((100% - 48rem) / 2))'
         }
       }, !cat && React.createElement("div", {
         className: "space-y-2.5"

@@ -26004,12 +26004,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <BubbleFoldButton open={helpAssistantOpen} onToggle={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} data-help-bubble-toggle=""/>
           </header>
           {helpAssistantOpen&&(
-            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
+            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)',paddingLeft:'max(.75rem, calc((100% - 48rem) / 2))',paddingRight:'max(.75rem, calc((100% - 48rem) / 2))'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
               <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={null} maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
-          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
+          {/* PC など広い画面では札と吹き出しが横いっぱいに伸び、題名と「›」が離れていた(API 総点検③)。中身の幅を48remで止める */}
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000',paddingLeft:'max(1rem, calc((100% - 48rem) / 2))',paddingRight:'max(1rem, calc((100% - 48rem) / 2))'}}>
             {!cat&&(
               <div className="space-y-2.5">
                 {/* ヘルプを開いてすぐ目に入る場所に、バトルのれんしゅうへの導線を置く。
