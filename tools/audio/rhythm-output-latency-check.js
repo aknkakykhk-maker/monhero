@@ -39,7 +39,7 @@ check('曲を鳴らしはじめるときに1回だけ測って固定する',
 check('songTimeSeconds の中で測り直していない(曲の時刻が飛ばない)',
   !/const (?:raw)?[sS]ongTimeSeconds=\(\)=>[^\n]*rhythmAudioOutputLatencyMs/.test(audio));
 check('鳴りはじめる前は 0 に留める(音より先にノーツが動き出さない)',
-  /const (?:raw)?[sS]ongTimeSeconds=\(\)=>Math\.min\(buffer\.duration,Math\.max\(0,/.test(audio));
+  /const (?:raw)?[sS]ongTimeSeconds=\(\)=>Math\.min\((?:buffer\.)?duration,Math\.max\(0,/.test(audio));
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
