@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ba3c060f1718e9f4
+// generated-sha256: 98513d1fc2513403
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -626,7 +626,7 @@ const eventReplayPlayAreaOf = (event) => EVENT_REPLAY_PLAY_AREAS.find(a => a.tes
 const eventReplayWhoOf = (event) => {
   const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
   const ids = song ? song.who : [String((event && event.id) || '').split('_')[0]];
-  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST : [];
+  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id)) : [];
   return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
 };
 // ジャンルごとのまとまりと話(どちらも古い順)。話の無いジャンルは出さない。

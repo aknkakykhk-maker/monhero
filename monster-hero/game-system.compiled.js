@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35980f5a8776a26f
+// source-sha256: a0a14f2bb144d6b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -889,7 +889,7 @@ const eventReplayPlayAreaOf = event => EVENT_REPLAY_PLAY_AREAS.find(a => a.test.
 const eventReplayWhoOf = event => {
   const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
   const ids = song ? song.who : [String(event && event.id || '').split('_')[0]];
-  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST : [];
+  const list = typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST) ? ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id)) : [];
   return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
 };
 const eventReplayGenreList = (keep = eventReplayReleased) => {

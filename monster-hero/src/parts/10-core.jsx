@@ -619,7 +619,7 @@ const eventReplayPlayAreaOf = (event) => EVENT_REPLAY_PLAY_AREAS.find(a => a.tes
 const eventReplayWhoOf = (event) => {
   const song = event && EVENT_REPLAY_SONG_STORIES[event.id];
   const ids = song ? song.who : [String((event && event.id) || '').split('_')[0]];
-  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST : [];
+  const list = (typeof ASSISTANT_LIST !== 'undefined' && Array.isArray(ASSISTANT_LIST)) ? ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id)) : [];
   return ids.map(id => list.find(a => a.id === id)).filter(Boolean);
 };
 // ジャンルごとのまとまりと話(どちらも古い順)。話の無いジャンルは出さない。
