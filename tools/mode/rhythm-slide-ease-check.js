@@ -19,15 +19,15 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 // 切り出しだと依存する定数を追いかけ続けることになるので、そのまま動かす
 const context={console};
 vm.createContext(context);
-vm.runInContext(`${source}\nglobalThis.__x={rhythmSlideExpectedLane,rhythmSlideLaneSpeedAt,rhythmSlideEaseProgress,rhythmSlideEaseSlope,rhythmSlideSegmentEase,rhythmSlideFittedLane,rhythmSlideWidthAt,RHYTHM_SLIDE_EASES,RHYTHM_SONGS};`,context);
+vm.runInContext(`${source}\nglobalThis.__x={rhythmSlideExpectedLane,rhythmSlideLaneSpeedAt,rhythmSlideEaseProgress,rhythmSlideEaseSlope,rhythmSlideSegmentEase,rhythmSlideFittedLane,rhythmSlideWidthAt,rhythmSlideSegmentLane,RHYTHM_SLIDE_EASES,RHYTHM_SONGS};`,context);
 context.out=context.__x;
 check('本体を読み込んで曲線の関数を取り出せる',typeof context.out.rhythmSlideEaseProgress==='function');
 const h=context.out;
 const near=(a,b,eps=1e-9)=>Math.abs(a-b)<=eps;
 
 // 1. 曲線の形
-check('ease は4種類だけ(linear / in / out / inout)',JSON.stringify([...h.RHYTHM_SLIDE_EASES])==='["linear","in","out","inout"]');
-check('どの曲線も両端は区間の始点と終点に一致する',['linear','in','out','inout'].every(e=>near(h.rhythmSlideEaseProgress(e,0),0)&&near(h.rhythmSlideEaseProgress(e,1),1)));
+check('ease は5種類だけ(linear / in / out / inout / through)',JSON.stringify([...h.RHYTHM_SLIDE_EASES])==='["linear","in","out","inout","through"]');
+check('どの曲線も両端は区間の始点と終点に一致する',['linear','in','out','inout','through'].every(e=>near(h.rhythmSlideEaseProgress(e,0),0)&&near(h.rhythmSlideEaseProgress(e,1),1)));
 check('inout は真ん中で半分・4分の1で 0.15625',near(h.rhythmSlideEaseProgress('inout',.5),.5)&&near(h.rhythmSlideEaseProgress('inout',.25),.15625));
 check('in は遅く出る・out は速く出る',h.rhythmSlideEaseProgress('in',.25)<.25&&h.rhythmSlideEaseProgress('out',.25)>.25);
 check('知らない ease・書いていない ease は直線',h.rhythmSlideSegmentEase({}, {ease:'bounce'})==='linear'&&h.rhythmSlideSegmentEase({}, {})==='linear'&&h.rhythmSlideSegmentEase(null,null)==='linear');
@@ -54,22 +54,24 @@ check('inout の速さは動き出しの瞬間は0',near(h.rhythmSlideLaneSpeedA
 const linear={...eased,slidePoints:[{timeMs:1000,lane:0},{timeMs:2000,lane:4}]};
 check('直線の速さは区間のどこでも平均のまま',[1000,1250,1500,1999].every(t=>near(h.rhythmSlideLaneSpeedAt(linear,t),avg,1e-6)));
 
-// 4. 配信中の譜面は1点も動かない(ease を書いていないので直線のまま)。
-//    本体を丸ごと読み込み(rhythm-runtime-notes.js の loadRuntime)、全曲・全難易度のSLIDEを
-//    本体の rhythmSlideExpectedLane と「直線の式」で突き合わせる。
+// 4. 配信中の譜面は1点も動かない(通り抜け 'through' を足す前と同じ式)。
+//    本体を丸ごと読み込み、全曲・全難易度のSLIDEを本体の rhythmSlideExpectedLane と「直線と in/out/inout の式」で突き合わせる
+//    (2026-11-23 r1119-133: ease の区間も含めて全部比べる。通り抜けを書いた譜面が混ざっていないことも確かめる)
 const rt=h;
 const songs=Array.isArray(rt.RHYTHM_SONGS)?rt.RHYTHM_SONGS:Object.values(rt.RHYTHM_SONGS||{});
-const linearLane=(note,t)=>{
-  const pts=rhythmPts(note);
-  if(t<=pts[0].timeMs)return rt.rhythmSlideFittedLane(Number(pts[0].lane)||0,rt.rhythmSlideWidthAt(note,pts[0].timeMs));
-  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(t<=b.timeMs){const p=Math.max(0,Math.min(1,(t-a.timeMs)/Math.max(1,b.timeMs-a.timeMs)));return rt.rhythmSlideFittedLane(Number(a.lane)+(Number(b.lane)-Number(a.lane))*p,rt.rhythmSlideWidthAt(note,t));}}
-  const last=pts[pts.length-1];return rt.rhythmSlideFittedLane(Number(last.lane)||0,rt.rhythmSlideWidthAt(note,last.timeMs));
+const oldProgress=(e,x)=>e==='in'?x*x:e==='out'?1-(1-x)*(1-x):e==='inout'?x*x*(3-2*x):x;
+const oldLane=(note,t)=>{
+  const pts=rhythmPts(note),fit=(lane,at)=>rt.rhythmSlideFittedLane(lane,rt.rhythmSlideWidthAt(note,at));
+  if(t<=pts[0].timeMs)return fit(Number(pts[0].lane)||0,pts[0].timeMs);
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(t<=b.timeMs){const p=Math.max(0,Math.min(1,(t-a.timeMs)/Math.max(1,b.timeMs-a.timeMs)));
+    const e=['in','out','inout'].includes(a.ease??note.slideEase)?(a.ease??note.slideEase):'linear';return fit(Number(a.lane)+(Number(b.lane)-Number(a.lane))*oldProgress(e,p),t);}}
+  const last=pts[pts.length-1];return fit(Number(last.lane)||0,last.timeMs);
 };
 function rhythmPts(note){
   return Array.isArray(note.slidePoints)&&note.slidePoints.length>=2?note.slidePoints
     :[{timeMs:Number(note.timeMs)||0,lane:Number(note.lane)||0},{timeMs:Number(note.endTimeMs)||Number(note.timeMs)||0,lane:Number(note.endLane??note.lane)||0}];
 }
-let slides=0,moved=0,withEase=0;
+let slides=0,moved=0,withEase=0,withThrough=0;
 for(const song of songs){
   const diffs=song&&song.difficulties?song.difficulties:{};
   for(const id of Object.keys(diffs)){
@@ -77,13 +79,34 @@ for(const song of songs){
     for(const note of notes){
       if(!note||note.type!=='SLIDE')continue;
       slides++;
-      if(note.slideEase!=null||(note.slidePoints||[]).some(p=>p&&p.ease!=null)){withEase++;continue;}
+      if(note.slideEase!=null||(note.slidePoints||[]).some(p=>p&&p.ease!=null))withEase++;
+      if(note.slideEase==='through'||(note.slidePoints||[]).some(p=>p&&p.ease==='through'))withThrough++;
       const start=Number(note.timeMs),end=Number(note.endTimeMs??note.timeMs);
-      for(let k=0;k<=8;k++){const t=start+(end-start)*k/8;if(!near(rt.rhythmSlideExpectedLane(note,t),linearLane(note,t),1e-9)){moved++;break;}}
+      for(let k=0;k<=16;k++){const t=start+(end-start)*k/16;if(!near(rt.rhythmSlideExpectedLane(note,t),oldLane(note,t),1e-9)){moved++;break;}}
     }
   }
 }
-check('配信中のSLIDEは ease を書いていないかぎり直線のまま',slides>0&&moved===0,`SLIDE ${slides}本 / 曲線を書いたもの ${withEase}本 / 動いたもの ${moved}本`);
+check('配信中のSLIDEは通り抜けを足す前と同じ位置(1点も動かない)',slides>0&&moved===0,`SLIDE ${slides}本 / 曲線を書いたもの ${withEase}本 / 動いたもの ${moved}本`);
+check('配信中の譜面に通り抜けを書いたものは無い(使うのは新曲から)',withThrough===0,`${withThrough}本`);
+
+// 4b. 通り抜け(through)の形
+const thr=(pts,w=2)=>({type:'SLIDE',timeMs:pts[0][0],endTimeMs:pts[pts.length-1][0],lane:pts[0][1],endLane:pts[pts.length-1][1],subLaneWidth:w,
+  slidePoints:pts.map(([timeMs,lane,ease])=>({timeMs,lane,...(ease?{ease}:{})}))});
+const kink=thr([[0,0,'through'],[500,1,'through'],[900,4,'through'],[1500,5]]);
+check('通り抜けは点の上で今までと同じ位置',[[0,0],[500,1],[900,4],[1500,5]].every(([t,l])=>near(h.rhythmSlideExpectedLane(kink,t),l,1e-9)));
+check('同じ向きへ進む点では止まらない(点の上の速さが0でない)',h.rhythmSlideLaneSpeedAt(kink,500)>1&&h.rhythmSlideLaneSpeedAt(kink,900)>1);
+const dl=1e-3,slopeL=(n,t)=>(h.rhythmSlideExpectedLane(n,t)-h.rhythmSlideExpectedLane(n,t-dl))/dl,slopeR=(n,t)=>(h.rhythmSlideExpectedLane(n,t+dl)-h.rhythmSlideExpectedLane(n,t))/dl;
+check('点の前後で傾きがつながる(折れ目が出ない)',[500,900].every(t=>Math.abs(slopeL(kink,t)-slopeR(kink,t))<1e-4));
+const zig=thr([[0,0,'through'],[500,2,'through'],[1000,0]]);
+check('向きが変わる点で行き過ぎない(点のレーンを越えない)',[400,450,500,550,600].every(t=>h.rhythmSlideExpectedLane(zig,t)<=2+1e-9));
+const pts=kink.slidePoints;
+check('どの区間も区間の両端のレーンの間から出ない',[1,2,3].every(i=>[.1,.3,.5,.7,.9].every(p=>{const v=h.rhythmSlideSegmentLane(kink,pts,i,p),a=pts[i-1].lane,b=pts[i].lane;return v>=Math.min(a,b)-1e-9&&v<=Math.max(a,b)+1e-9;})));
+const mixed=thr([[0,0],[500,1,'through'],[1000,3]]);
+check('となりが直線の点では、直線の傾きにつながる',Math.abs(slopeL(mixed,500)-slopeR(mixed,500))<1e-4);
+const speedMatches=[100,300,700,1200].every(t=>{const d=1e-3,num=Math.abs(h.rhythmSlideExpectedLane(kink,t+d)-h.rhythmSlideExpectedLane(kink,t-d))/(2*d)*1000;return Math.abs(num-h.rhythmSlideLaneSpeedAt(kink,t))<1e-3;});
+check('速さの上乗せ(rhythmSlideLaneSpeedAt)は通り抜けの曲線の傾きと一致する',speedMatches);
+const two=thr([[0,0,'through'],[1000,2]]);
+check('点2つだけの通り抜けは直線',[250,500,750].every(t=>near(h.rhythmSlideExpectedLane(two,t),t/500,1e-9)));
 
 // 5. 譜面の短い形(mhSlideV2 の点の4つ目)と、書き出し側の番号の並びがそろっている
 const {SLIDE_EASE_CODES}=require('./rhythm-runtime-notes.js');

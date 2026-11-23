@@ -400,10 +400,18 @@ const Audio_ = (() => {
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
     // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
     // こうすると、キーが変わっても同じ曲を二重に持たない。
-    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
+    // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げない(スマホのメモリで広げ切れない)。
+    // 中身を取ってきた時点で見分けて断り、区切って鳴らす側(演奏は startRhythmTrack、BGM は startBgmLong)へ回す。
+    // 先読み(preloadBGM・prepareBGM)が長い曲を丸ごと広げてしまうこともこれで無くなる(2026-11-23 r1119-134)
+    const request = (data ? Promise.resolve(data) : (longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), { cache: 'force-cache' }).then((res) => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    })).then((bytes) => decode(ctx, bytes)).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
+    }))).then((bytes) => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) { const entry = longEntryOf(url, new Uint8Array(bytes)); if (entry.long) throw longSongError(entry); }
+      return decode(ctx, bytes);
+    }).then((decoded) => { decodedBytes += bufferBytes(decoded); decodedCount += 1; return light ? lightenBuffer(decoded) : decoded; })
       .then((buffer) => { buffers.set(key, buffer); return buffer; })
       .finally(() => loadingBuffers.delete(key));
     loadingBuffers.set(key, request);
@@ -439,6 +447,34 @@ const Audio_ = (() => {
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  // 長い曲を BGM として流す(2026-11-23 r1119-134 社長「BGMも直す」)。演奏と同じく区切って広げて鳴らす。
+  // bgmSource には、止め方(stopSource)が同じになる入れ物を入れる。音量・フェードはこれまでどおり bgmGain で掛かる。
+  // 輪にする曲は、終わりの時刻ちょうどに頭の区切りを予約して、すき間なく頭へ戻る
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || (bgmSource && bgmSourceKey === key)) return;
+    let long = null;
+    try { long = await openLongSong(ctx, entry); } catch (e) { return; }
+    if (stale() || (bgmSource && bgmSourceKey === key) || !bgmGain) { long.release(); return; }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+    bgmSource = holder; bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
+    // __mhTestLongBgmFromSec … 検査(tools/audio/long-bgm-chunk-check.js)だけが置く。曲の途中から流して、輪の継ぎ目を待たずに測る
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) { try { await long.ready(fromSec); } catch (e) {} if (stale() || bgmSource !== holder) { if (bgmSource !== holder) long.release(); return; } }
+    const t0 = long.playFrom(fromSec, bgmGain, () => { const f = holder.onended; if (f) f(); }, { loop: once ? false : track.loop !== false });
+    if (t0 === false) { stopOthers(); return; }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = (key) => {
     const track = resolveTrack(key);
     if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
@@ -455,7 +491,9 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch((e) => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
@@ -502,15 +540,27 @@ const Audio_ = (() => {
     // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
-    try { const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+    try {
+      // 長い曲は丸ごと広げず、区切って広げて輪にして流す(startBgmLong と同じ。2026-11-23 r1119-134)
+      let buffer = null, longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) { try { buffer = await loadBuffer(track.src); rememberSongBuffer(track.src); } catch (e) { if (!e || !e.longEntry) throw e; longEntry = e.longEntry; } }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
       // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) { long = await openLongSong(ctx, longEntry); if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) { long.release(); return false; } }
       applyTrackGain(track);
-      const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
-      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      let source;
+      if (long) {
+        source = { buffer: null, longSong: long, onended: null, stop: () => long.release(), disconnect: () => {} };
+        previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); };
+        if (long.playFrom(0, bgmGain, () => { const f = source.onended; if (f) f(); }, { loop: track.loop !== false }) === false) { if (previewSource === source) { previewSource = null; previewKey = null; } return false; }
+      } else {
+        source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
+        source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      }
       // 止まったままのAudioContextで鳴らしても無音。もう一度だけ復帰を試し、
       // それでも動かなければ「鳴っている」と嘘をつかずに戻す(次のタップでやり直せる)
       if (ctx.state !== 'running') { await ensureAudioCtxRunning(); }
@@ -622,16 +672,21 @@ const Audio_ = (() => {
     }
     return offs.length ? { offsets: Uint32Array.from(offs), end, sr, spf } : null;
   };
-  const fetchSongBytes = async (url) => {
-    const hit = longSongBytes.get(url); if (hit) return hit;
-    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
-    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
+  // 取ってきた中身が長い曲かを見分ける。長い曲なら中身を持っておく(いちばん新しい1曲だけ)
+  const longEntryOf = (url, bytes) => {
     let map = null; try { map = parseMp3Frames(bytes); } catch (e) { map = null; }
     const long = !!(map && map.offsets.length * map.spf / map.sr > LONG_SONG_SEC);
     const entry = { url, bytes, map, long };
     if (long) { longSongBytes.clear(); longSongBytes.set(url, entry); }
     return entry;
+  };
+  // loadBuffer が長い曲を断るときの印(e.longEntry に中身)
+  const longSongError = (entry) => { const e = new Error('long song: play in chunks'); e.longEntry = entry; return e; };
+  const fetchSongBytes = async (url) => {
+    const hit = longSongBytes.get(url); if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), { cache: 'force-cache' });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   // 2つの音の波形を突き合わせ、b[j] が a[j+L] に当たる L(サンプル・小数)を探す。L0 の前後 R だけ見る
   const monoRange = (buf, from, len) => {
@@ -691,6 +746,9 @@ const Audio_ = (() => {
       return p;
     };
     const head = (await getChunk(0)).buffer, rate = head.sampleRate;
+    // 2回目からは、前に測った値(同じサンプルレートのとき)を使う。BGM として何度も流し直すので
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) { C = meta.C; aligned = meta.aligned; stats.probeCorr = meta.probeCorr; }
     // 区切りの頭のずれ方(C)を測る: 曲の頭の区切りの中で音のいちばん大きい所から短く広げ、頭の区切りと突き合わせる
     {
       const probeLen = 48, lo = LONG_PRE_FRAMES + 8, hi = Math.min(bounds[1] || n, n) - probeLen - 8;
@@ -700,7 +758,7 @@ const Audio_ = (() => {
         for (let i = 0; i < seg.length; i += 4) e += seg[i] * seg[i];
         if (e > bestE) { bestE = e; bestP = p; }
       }
-      if (bestP >= 0) {
+      if (bestP >= 0 && !meta) {
         try {
           const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
           const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
@@ -711,8 +769,9 @@ const Audio_ = (() => {
     }
     stats.offsetMs = Math.round(C * 10000) / 10;
     // 曲の長さ: 最後の区切りを広げて測る(持ち続けない)
-    let duration = head.duration;
-    if (count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) { const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer); stats.decoded++; duration = theoryStart(count - 1) + last.duration; }
+    if (!meta) entry.longMeta = { rate, C, aligned, probeCorr: stats.probeCorr, duration };
     let session = 0, live = [], timer = null, play = null;
     const chunkIndexAt = (s) => { let k = 0; while (k + 1 < count && s >= seamSec(k + 1)) k++; return k; };
     const dropLive = (x) => { stopSource(x.src); try { x.gain.disconnect(); } catch (e) {} };
@@ -733,7 +792,7 @@ const Audio_ = (() => {
         const prev = live.find((x) => x.k === k - 1);
         if (prev) { prev.gain.gain.setValueAtTime(1, when); prev.gain.gain.linearRampToValueAtTime(0, when + LONG_FADE_SEC); try { prev.src.stop(when + LONG_FADE_SEC + 0.01); } catch (e) {} }
       }
-      if (k === count - 1) src.onended = () => { if (my === session && play) { const done = play.onEnd; halt(); done(); } };
+      if (k === count - 1) src.onended = () => { if (my === session && play && !play.loopAt) { const done = play.onEnd; halt(); done(); } };
       src.start(when, Math.max(0, fromSong - c.startSec));
       stats.log.push({ k, first, marginMs: Math.round((when - ctx.currentTime) * 10000) / 10, devMs: Math.round((c.startSec - theoryStart(k)) * 1e5) / 100 }); if (stats.log.length > 8) stats.log.shift();
       live.push({ k, src, gain: g });
@@ -745,7 +804,28 @@ const Audio_ = (() => {
       if (next < count && !live.some((x) => x.k === next)) {
         getChunk(next).then(() => { if (my === session && play && !live.some((x) => x.k === next) && live.some((x) => x.k === next - 1)) scheduleChunk(next, false); }).catch(() => { stats.failed++; });
       }
-      live = live.filter((x) => { if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
+      // 輪にする(BGM): 最後の区切りが入ったら、曲の終わりの時刻ちょうどに頭の区切りを予約する(丸ごとの loop と同じく、終わりから頭へそのまま続ける)
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find((x) => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(), src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer; src.connect(g); g.connect(play.out); g.gain.value = 1;
+            play.loopAt = endAt; lastLive.src.onended = null;
+            try { lastLive.src.stop(endAt); } catch (e) {}
+            src.start(endAt, 0); live.push({ k: 0, src, gain: g, loopNew: true });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      // 頭へ戻った: 時刻の起点を頭に置き直し、前の周の区切りを捨てる
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt; play.o = 0; play.loopAt = null;
+        live = live.filter((x) => { if (x.loopNew) { x.loopNew = false; return true; } dropLive(x); return false; });
+        return;
+      }
+      live = live.filter((x) => { if (x.loopNew) return true; if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) { dropLive(x); return false; } return true; });
       for (const k of Array.from(chunks.keys())) if (k !== 0 && (k < cur || k > next) && !live.some((x) => x.k === k)) chunks.delete(k);
     };
     return {
@@ -755,10 +835,11 @@ const Audio_ = (() => {
       // 「いまの時刻」で入れると、ブラウザがその時刻をもう過ぎていて数ms〜十数ms遅れて鳴り始めることがある
       // (Chromium で seek のあとにたまに 512 サンプル遅れた)。続く区切りはこの起点から時刻を決めるので、
       // 少し先(LONG_START_LEAD_SEC)のサンプルの切れ目に予約して、起点と鳴り始めを必ず一致させる
-      playFrom: (o, out, onEnd) => {
+      // opts.loop … 終わりまで鳴ったら、すき間なく頭へ戻って鳴り続ける(BGM)
+      playFrom: (o, out, onEnd, opts = null) => {
         halt(); const k = chunkIndexAt(o); if (!chunks.has(k)) return false;
         const t0 = Math.ceil((ctx.currentTime + LONG_START_LEAD_SEC) * ctx.sampleRate) / ctx.sampleRate;
-        play = { t0, o, out, onEnd }; scheduleChunk(k, true);
+        play = { t0, o, out, onEnd, loop: !!(opts && opts.loop), loopAt: null }; scheduleChunk(k, true);
         timer = setInterval(tick, 250); tick(); return t0;
       },
       halt,
@@ -783,7 +864,10 @@ const Audio_ = (() => {
       // 長い曲(LONG_SONG_SEC より長い mp3)は丸ごと広げず、区切って鳴らす(openLongSong)。
       // すでに丸ごと広げてある曲(BGMで鳴らした等)はそれを使う。丸ごと広げるのに失敗した mp3 も、区切って鳴らしに回す
       let buffer=null,long=null,dctx=null;
-      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function')buffer=await loadBuffer(track.src);
+      if(buffers.has(track.src)||loadingBuffers.has(track.src)||typeof fetch!=='function'){
+        try{buffer=await loadBuffer(track.src);}
+        catch(e){if(!e||!e.longEntry)throw e;dctx=getAudioCtx();if(!dctx)return null;long=await openLongSong(dctx,e.longEntry);}
+      }
       else{
         const entry=await fetchSongBytes(track.src);dctx=getAudioCtx();
         if(!dctx)return null;
@@ -905,10 +989,11 @@ const Audio_ = (() => {
     } catch(e){ return null; }
   };
   const preloadBGM = (key) => { const track = resolveTrack(key); if (!track) return; const bufKey = sceneBufferKey(track.src); loadBuffer(bufKey).then(() => rememberSongBuffer(bufKey)).catch(() => {}); };
+  // 長い曲は丸ごと広げない(中身を取ってきたら用意できた扱い。鳴らすときに頭の区切りから広げる)
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
     const bufKey = sceneBufferKey(track.src);
-    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    return Promise.race([loadBuffer(bufKey).then(() => { rememberSongBuffer(bufKey); return true; }).catch((e) => !!(e && e.longEntry)), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([
     load().then(() => true).catch(() => false),
