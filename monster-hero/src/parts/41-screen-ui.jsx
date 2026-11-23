@@ -94,8 +94,9 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
 
 // 画面の説明文(見出しの下に1〜2行)。各画面が同じ指定を手で書き写していたのでまとめる。
 // 補足は 10px より小さくしない(8px は実機では模様にしか見えない)。
+// 文字だけのときは言葉の切れ目で折る(M/B管理「編成画面で選／ぶと」と言葉の途中で折れていた・API 総点検③ r1119-118)
 const ScreenLead = ({ children }) => (
-  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
+  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400" style={typeof children === 'string' ? JA_LABEL_STYLE : undefined}>{typeof children === 'string' ? jaWrap(children) : children}</p>
 );
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -106,10 +107,12 @@ const ScreenLead = ({ children }) => (
 const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
   <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-1.5 px-4 py-12 text-center">
     <span aria-hidden="true" className="leading-none" style={{fontSize:'40px'}}>{emoji}</span>
+    {/* 1行に収まる文は真ん中、2行以上に折れる文は左そろえ(中央そろえのまま折れて2行目の頭がずれていた・API 総点検③ r1119-118)。
+        中身を inline-block にすると、1行のときは文の幅に縮んで真ん中に置かれ、折れたときだけ左そろえに見える */}
     {(Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((line, index) => (
       <p key={index} className={index === 0
         ? 'text-[12px] font-black leading-relaxed text-slate-300'
-        : 'text-[10px] font-bold leading-relaxed text-slate-500'}>{line}</p>
+        : 'text-[10px] font-bold leading-relaxed text-slate-500'}><span className="inline-block max-w-full text-left align-top">{line}</span></p>
     ))}
     {action && <div className="mt-2 w-full">{action}</div>}
   </div>
