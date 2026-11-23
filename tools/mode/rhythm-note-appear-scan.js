@@ -27,6 +27,9 @@ fs.mkdirSync(OUT,{recursive:true});
 //   SKY_LIFT=nov22 … 11/22〜11/23 の式(上端で0・判定ラインまで一定の割合で上がる)
 //   案を並べた止め絵: docs/progress/beat/sky-rise-2026-11-23/
 const SKY_LIFT=process.env.SKY_LIFT||'';
+// 前の版と比べる(2026-11-23・台帳 r1119-149): RHYTHM_REV=origin/main で、配る rhythm-mode.js だけをその版の中身にする(git から読むだけ。ファイルは作らない)
+const RHYTHM_REV=process.env.RHYTHM_REV||'';let revCache=null;
+const revSource=()=>revCache||(revCache=require('child_process').execFileSync('git',['show',`${RHYTHM_REV}:monster-hero/data/rhythm-mode.js`],{cwd:ROOT,maxBuffer:64<<20}).toString('utf8'));
 const skyLiftPatched=src=>{
  const rep=(a,b)=>{if(!src.includes(a))throw new Error('差し替える所が見つからない: '+a.slice(0,80));src=src.replace(a,b);};
  const js="rise=u>=1?1:u*(2-u);",sh="float skyRise(float y){float u=y/uSkyRise;return u>=1.0?1.0:u*(2.0-u);}";
@@ -43,11 +46,12 @@ const skyLiftPatched=src=>{
  const server=http.createServer((req,res)=>{const f=path.join(ROOT,decodeURIComponent(req.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}
   const t={'.js':'text/javascript','.html':'text/html','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.mp3':'audio/mpeg','.m4a':'audio/mp4','.json':'application/json'}[path.extname(f)]||'application/octet-stream';res.writeHead(200,{'Content-Type':t});
   if(SKY_LIFT&&/data[\\/]rhythm-mode\.js$/.test(f)){res.end(skyLiftPatched(fs.readFileSync(f,'utf8')));return;}
+  if(RHYTHM_REV&&/data[\\/]rhythm-mode\.js$/.test(f)){res.end(revSource());return;}
   fs.createReadStream(f).pipe(res);}).listen(PORT);
  const b=await require('playwright').chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const MOBILE=process.env.MOBILE!=='0'; // PC で撮るときは MOBILE=0(端末の真似をしない)
  const page=await b.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,hasTouch:MOBILE,isMobile:MOBILE});
- await page.addInitScript(({songId,diff})=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ await page.addInitScript(({songId,diff,ls})=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
   put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
   put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
@@ -56,6 +60,7 @@ const skyLiftPatched=src=>{
   // HELL を開く口: 測るブラウザの中だけの MASTER クリアの記録
   if(songId){const rec={bestScore:900000,maxCombo:100,played:true,clear:true,fullCombo:false,allExcellent:false,allMarvelous:false};put('mh_rhythm_best_v1',{[songId]:{HARD:rec,EXPERT:rec,MASTER:rec}});put('mh_rhythm_owned_songs_v1',[songId,songId.replace(/_short$/,''),songId+'_short']);}
   localStorage.setItem('mh_rhythm_canvas_v1','webgl');localStorage.setItem('mh_rhythm_stage_gl_v1','webgl');
+  if(ls)for(const [k,v] of Object.entries(ls))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v)); // LS='{"キー":値}' で撮るときだけ入れる保存データ(このブラウザの中だけ)
   const proto=BaseAudioContext.prototype,desc=Object.getOwnPropertyDescriptor(proto,'currentTime');
   Object.defineProperty(proto,'currentTime',{configurable:true,get(){const f=window.__mhFrozen;if(f&&f.ctx===this)return f.t;return desc.get.call(this);}});
   const start=AudioBufferSourceNode.prototype.start;
@@ -66,7 +71,7 @@ const skyLiftPatched=src=>{
   window.__mhFreezeSong=sec=>{const s=window.__mhSong;if(!s)return false;const lat=typeof rhythmAudioOutputLatencyMs==='function'?rhythmAudioOutputLatencyMs(s.ctx)/1000:0;window.__mhFrozen={ctx:s.ctx,t:s.t+(sec-s.offset)+lat};return true;};
   window.__mhDraws=[];
   window.__mhHook=()=>{const R=RHYTHM_CANVAS_RENDERER;if(!R||R.__mhHooked)return;const orig=R.drawNote;R.drawNote=function(note,geo,opt){try{window.__mhDraws.push({i:note.index,t:note.timeMs,type:note._rhythmOriginalType||note.type,sky:typeof rhythmNoteSkyHeight==='function'?rhythmNoteSkyHeight(note):0,lane:note.lane,cx:Math.round(geo.head.cx),cy:Math.round(geo.head.cy),h:Math.round(geo.head.h||0),w:Math.round(geo.head.w),now:Number.isFinite(opt&&opt.heldMs)?note.timeMs+opt.heldMs:null,scale:Math.round((geo.scale||0)*1000)/1000,a:opt&&opt.alpha});}catch(_){}return orig.apply(this,arguments);};R.__mhHooked=true;};
- },{songId:SONG_ID,diff:DIFF});
+ },{songId:SONG_ID,diff:DIFF,ls:JSON.parse(process.env.LS||'null')});
  const clickText=p=>page.evaluate(s=>{const rx=new RegExp(s);const x=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!x)return false;x.click();return true;},p);
  await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:90000});
  await page.getByRole('button',{name:'TAP TO START'}).click({force:true,timeout:90000});

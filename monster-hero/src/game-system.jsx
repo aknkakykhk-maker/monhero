@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d6349369cdfc777
+// generated-sha256: 1a3d1ed51c0b6892
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5237,6 +5237,10 @@ const RHYTHM_SKY_RISE_MODES = Object.freeze(['NOW','OLD']);
 const RHYTHM_SKY_RISE_TYPE_LABELS = Object.freeze([['A','タイプA'],['B','タイプB']]);
 const RHYTHM_SKY_RISE_TYPES = Object.freeze(RHYTHM_SKY_RISE_TYPE_LABELS.map(([id])=>id));
 // 選んでいるタイプの見え方(オプションの説明文に出す)
+// 空中スライドの色の分け方(2026-11-23 台帳 r1119-149 追記3)。HEIGHT=空中・地上で色分け(既定・新しい見た目)/ HAND=左右の手で色分け(前の見た目)
+const RHYTHM_SKY_SLIDE_COLOR_LABELS = Object.freeze([['HEIGHT','空中・地上で色分け'],['HAND','左右の手で色分け']]);
+const RHYTHM_SKY_SLIDE_COLORS = Object.freeze(RHYTHM_SKY_SLIDE_COLOR_LABELS.map(([id])=>id));
+const RHYTHM_SKY_SLIDE_COLOR_NOTES = Object.freeze({HEIGHT:'空中を通る所は桃、地上を通る所は青になります。',HAND:'左手で取る帯は青、右手で取る帯は桃になります（前の見た目）。'});
 const RHYTHM_SKY_RISE_TYPE_NOTES = Object.freeze({A:'道の奥から出て、手前へ来るにつれてだんだん空の高さへ上がります。',B:'少し遅れて、画面の上から空の高さで出てきます。'});
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
@@ -5558,6 +5562,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 空中ノーツの上がり方のタイプ(2026-11-23 r1119-146)。新しい項目なので、保存値に無い・壊れている人は A で補われる。
   //   skyRise からは引き継がない(NOW は既定のまま保存された人がほとんどのため・全員 A から)。A・B 以外(C を含む)も A。見た目だけに効く
   skyRiseType:'A',
+  // 空中スライドの色の分け方(2026-11-23 r1119-149 追記3)。新しい項目なので、保存値に無い・壊れている人は HEIGHT(空中・地上で色分け)。見た目だけに効く
+  skySlideColor:'HEIGHT',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -5727,6 +5733,7 @@ const normalizeRhythmSettings = value => {
     roadDepth:RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth)?source.roadDepth:DEFAULT_RHYTHM_SETTINGS.roadDepth,
     skyRise:RHYTHM_SKY_RISE_MODES.includes(source.skyRise)?source.skyRise:DEFAULT_RHYTHM_SETTINGS.skyRise,
     skyRiseType:RHYTHM_SKY_RISE_TYPES.includes(source.skyRiseType)?source.skyRiseType:DEFAULT_RHYTHM_SETTINGS.skyRiseType,
+    skySlideColor:RHYTHM_SKY_SLIDE_COLORS.includes(source.skySlideColor)?source.skySlideColor:DEFAULT_RHYTHM_SETTINGS.skySlideColor,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
@@ -24044,6 +24051,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {field('空のノーツの上がり方',<>{segments('skyRiseType',RHYTHM_SKY_RISE_TYPE_LABELS)}
                 <p data-rhythm-sky-rise-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_RISE_TYPE_NOTES[draft.skyRiseType]||RHYTHM_SKY_RISE_TYPE_NOTES.A)}</p></>,
               `HELL などの空のノーツが、道の奥から空の道の高さまで上がる見え方を選びます（既定はタイプAです）。タイプAは手前へ来るにつれてだんだん上がり、タイプBは少し遅れて画面の上から空の高さで出てきます。見た目だけが変わり、叩くタイミング・スコアは変わりません。演奏中には切り替わらず、次の演奏から変わります。`,{full:true})}
+{/* 空中スライドの色の分け方(2026-11-23 台帳 r1119-149 追記3 社長: 新しい色分けを既定に・前の左右の手の色分けへ戻せる)。説明文の頭に、選んでいる分け方の見え方を出す */}
+{field('空中スライドの色',<>{segments('skySlideColor',RHYTHM_SKY_SLIDE_COLOR_LABELS)}
+                <p data-rhythm-sky-slide-color-note className={`mt-1.5 ${note}`} style={JA_WRAP_STYLE}>{jaWrap(RHYTHM_SKY_SLIDE_COLOR_NOTES[draft.skySlideColor]||RHYTHM_SKY_SLIDE_COLOR_NOTES.HEIGHT)}</p></>,
+              'HELL などの空中スライドの帯の色の分け方です（既定は空中・地上で色分け）。見た目だけが変わり、判定・スコアは変わりません。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
@@ -27075,7 +27086,9 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     // ノーツの形(2026-11-07)も同じ時に当てる
     try{if(typeof rhythmApplyNoteShape==='function')rhythmApplyNoteShape(settingsIn?.noteShape);}catch(e){}
     // 空中ノーツの上がり方のタイプ(2026-11-23 r1119-138・r1119-146)も同じ時に当てる。見た目だけで、演奏の途中では切り替わらない
-    try{if(typeof RHYTHM_SKY_RISE_MODE==='object')RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);}catch(e){}return 0;});
+    try{if(typeof RHYTHM_SKY_RISE_MODE==='object')RHYTHM_SKY_RISE_MODE.set(settingsIn?.skyRiseType);}catch(e){}
+    // 空中スライドの色の分け方(r1119-149 追記3)も同じ時に当てる
+    try{if(typeof RHYTHM_SKY_SLIDE_COLOR_MODE==='object')RHYTHM_SKY_SLIDE_COLOR_MODE.set(settingsIn?.skySlideColor);}catch(e){}return 0;});
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
