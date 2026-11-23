@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90db7eba91062dc2
+// source-sha256: 895bafc998f01639
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168441,7 +168441,6 @@ const MSX_HOME_CSS = `
 .mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
 .mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
 .mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
-.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
 @media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
 @media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
@@ -168468,9 +168467,10 @@ function MonheroSuccessHomeEntry({
     "data-home-monhero-success": true,
     onClick: () => setOpen(true),
     "aria-label": "モンヒロサクセス β"
-  }, React.createElement("i", {
-    className: "rb",
-    "aria-hidden": "true"
+  }, React.createElement("em", {
+    className: "rb mh-home-event-badge",
+    "aria-hidden": "true",
+    style: HOME_EVENT_BADGE_STYLE
   }, "β版 開幕！"), React.createElement("span", {
     className: "pic"
   }, React.createElement("img", {

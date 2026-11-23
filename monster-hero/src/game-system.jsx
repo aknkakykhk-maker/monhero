@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be14347b0cb56b74
+// generated-sha256: db334a1ff6c2af57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -93318,7 +93318,6 @@ const MSX_HOME_CSS = `
 .mh-home-success .txt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:calc(9.5px*1.15 + 1px + 9px*1.1)}
 .mh-home-success .nm{font-size:9.5px;font-weight:1000;line-height:1.15;white-space:nowrap}
 .mh-home-success .sb{font-size:9px;font-weight:800;color:#fbcfe8;line-height:1.1;white-space:nowrap}
-.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media(max-width:380px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
 @media(max-width:350px){.mh-home-success .nm{font-size:7.5px}.mh-home-success .txt{height:calc(7.5px*1.15 + 1px + 9px*1.1)}}
 @media(orientation:landscape) and (max-height:600px){.mh-home-success .nm{font-size:8.5px}.mh-home-success .txt{height:calc(8.5px*1.15 + 1px + 9px*1.1)}}
@@ -93338,7 +93337,9 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
         {/* リボン「β版 開幕！」は公開の日の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し)。
             βの表示はリボン1つだけ(2026-11-16 UI改修: 中の β と二重になっていた)。名前はフルネーム「モンヒロサクセス」+下の言葉「育成」
             (ホーム略称「サクセス」は 2026-11-17 の一新で一時使ったが、同日のあっくん追加指示でフルネームへ戻した) */}
-        <i className="rb" aria-hidden="true">β版 開幕！</i>
+        {/* 2026-11-23 r1119-130 社長「モンビーのイベント開催中と同じ作りにすればいい」: 傾けた10pxの字がにじんでいたので、
+            モンヒロビートの入口の「開催中」の札と同じ部品(HOME_EVENT_BADGE_STYLE・光り方の mh-home-event-badge)にそろえる。文と黄色はそのまま */}
+        <em className="rb mh-home-event-badge" aria-hidden="true" style={HOME_EVENT_BADGE_STYLE}>β版 開幕！</em>
         <span className="pic"><img src="images/home/facility-success.webp" alt="" draggable={false}/></span>
         <span className="txt"><span className="nm">モンヒロサクセス</span><span className="sb">育成</span></span>
       </button>
