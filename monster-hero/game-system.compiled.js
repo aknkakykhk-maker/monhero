@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d78352f0de61f9f
+// source-sha256: 591ec50c6670a4f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73046,7 +73046,8 @@ function BreederMarketScreen({
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"
   }), React.createElement("div", {
-    className: "relative grid grid-cols-2 gap-2.5 pt-1 pb-2"
+    "data-market-top-list": true,
+    className: "relative grid min-h-full grid-cols-1 auto-rows-fr gap-2.5 pt-1 pb-2"
   }, [{
     key: 'diamond',
     emoji: '💎',
@@ -73102,25 +73103,26 @@ function BreederMarketScreen({
     "data-market-section": section.key,
     "aria-label": section.label,
     onClick: () => setMarketSection(section.key),
-    className: `relative min-h-[112px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[.98]`
-  }, React.createElement("div", {
-    className: "flex items-center gap-2.5"
+    className: `relative flex min-h-[76px] items-center gap-3.5 rounded-2xl border ${section.border} bg-slate-950/70 py-3 pl-4 pr-9 text-left active:scale-[.98] [@media(orientation:portrait)]:gap-4`
   }, React.createElement("span", {
     "aria-hidden": "true",
-    className: "text-2xl"
+    className: "shrink-0 text-[34px] leading-none [@media(orientation:portrait)_and_(min-height:700px)]:text-[46px]"
   }, section.emoji), React.createElement("span", {
-    className: `text-[12px] font-black leading-tight ${section.title}`
-  }, section.titleLines ? section.titleLines.map(line => React.createElement("span", {
-    key: line,
-    className: "block whitespace-nowrap"
-  }, line)) : section.label)), React.createElement("div", {
-    className: "mt-2.5 font-mono text-xl font-black text-white"
-  }, section.value !== null ? section.value : ' '), React.createElement("div", {
-    className: "mt-0.5 text-[10px] font-bold text-slate-400",
+    className: "flex min-w-0 flex-1 flex-col gap-1"
+  }, React.createElement("span", {
+    className: `whitespace-nowrap text-[15px] font-black leading-tight ${section.title} [@media(orientation:portrait)_and_(min-height:700px)]:text-[17px]`
+  }, section.label), React.createElement("span", {
+    className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap(section.hint)), React.createElement("span", {
+  }, jaWrap(section.hint))), React.createElement("span", {
+    className: "flex shrink-0 flex-col items-end"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "所持"), React.createElement("span", {
+    className: "font-mono text-[22px] font-black leading-tight text-white [@media(orientation:portrait)_and_(min-height:700px)]:text-[28px]"
+  }, section.value !== null ? section.value : ' ')), React.createElement("span", {
     "aria-hidden": "true",
-    className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
+    className: `absolute right-3 top-1/2 -translate-y-1/2 text-xl font-black ${section.arrow}`
   }, "›"))))), marketSection && React.createElement(React.Fragment, null, marketSection !== 'card' && React.createElement(MarketBalanceBar, {
     balances: marketSection === 'diamond' ? [{
       currency: 'diamond',
