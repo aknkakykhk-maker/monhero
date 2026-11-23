@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b5a2a15eb7f91bf
+// source-sha256: 277f74caa9eb6a23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8688,12 +8688,20 @@ const Audio_ = (() => {
     if (!ctx || !data && typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
     const light = String(key).endsWith(BGM_LIGHT_SUFFIX);
     const url = light ? String(key).slice(0, -BGM_LIGHT_SUFFIX.length) : key;
-    const request = (data ? Promise.resolve(data) : fetch(audioUrlWithKey(url), {
+    const request = (data ? Promise.resolve(data) : longSongBytes.has(url) ? Promise.resolve(null) : fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
       return res.arrayBuffer();
-    })).then(bytes => decode(ctx, bytes)).then(decoded => {
+    })).then(bytes => {
+      const known = longSongBytes.get(url);
+      if (known) throw longSongError(known);
+      if (!data) {
+        const entry = longEntryOf(url, new Uint8Array(bytes));
+        if (entry.long) throw longSongError(entry);
+      }
+      return decode(ctx, bytes);
+    }).then(decoded => {
       decodedBytes += bufferBytes(decoded);
       decodedCount += 1;
       return light ? lightenBuffer(decoded) : decoded;
@@ -8769,6 +8777,66 @@ const Audio_ = (() => {
     }
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
+  const startBgmLong = async (key, track, entry, request) => {
+    const ctx = getAudioCtx();
+    const stale = () => !ctx || ctx !== getAudioCtx() || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource;
+    if (stale() || bgmSource && bgmSourceKey === key) return;
+    let long = null;
+    try {
+      long = await openLongSong(ctx, entry);
+    } catch (e) {
+      return;
+    }
+    if (stale() || bgmSource && bgmSourceKey === key || !bgmGain) {
+      long.release();
+      return;
+    }
+    stopOthers();
+    applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    const holder = {
+      buffer: null,
+      longSong: long,
+      onended: null,
+      stop: () => long.release(),
+      disconnect: () => {}
+    };
+    bgmSource = holder;
+    bgmSourceKey = key;
+    holder.onended = () => {
+      if (bgmSource !== holder) return;
+      bgmSource = null;
+      bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) {
+        bgmOnce = null;
+        try {
+          o.onEnd && o.onEnd();
+        } catch (e) {}
+      }
+    };
+    const fromSec = typeof window !== 'undefined' && Number.isFinite(Number(window.__mhTestLongBgmFromSec)) ? Math.max(0, Math.min(long.duration - 0.5, Number(window.__mhTestLongBgmFromSec))) : 0;
+    if (fromSec > 0) {
+      try {
+        await long.ready(fromSec);
+      } catch (e) {}
+      if (stale() || bgmSource !== holder) {
+        if (bgmSource !== holder) long.release();
+        return;
+      }
+    }
+    const t0 = long.playFrom(fromSec, bgmGain, () => {
+      const f = holder.onended;
+      if (f) f();
+    }, {
+      loop: once ? false : track.loop !== false
+    });
+    if (t0 === false) {
+      stopOthers();
+      return;
+    }
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
+  };
   const playBGM = key => {
     const track = resolveTrack(key);
     if (!track) {
@@ -8797,10 +8865,12 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
+    if (longSongBytes.has(track.src)) return startBgmLong(track.id, track, longSongBytes.get(track.src), request);
     return loadBuffer(bufKey).then(buffer => {
       rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
-    }).catch(() => {
+    }).catch(e => {
+      if (e && e.longEntry) return startBgmLong(track.id, track, e.longEntry, request);
       const o = bgmOnce;
       if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) {
         bgmOnce = null;
@@ -8864,22 +8934,66 @@ const Audio_ = (() => {
     previewKey = track.id;
     resumeAudioCtxNoWait();
     try {
-      const buffer = await loadBuffer(track.src);
-      rememberSongBuffer(track.src);
+      let buffer = null,
+        longEntry = longSongBytes.get(track.src) || null;
+      if (!longEntry) {
+        try {
+          buffer = await loadBuffer(track.src);
+          rememberSongBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          longEntry = e.longEntry;
+        }
+      }
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning();
       if (!ctx) return false;
       if (request !== previewRequest) return false;
+      let long = null;
+      if (longEntry) {
+        long = await openLongSong(ctx, longEntry);
+        if (request !== previewRequest || ctx !== getAudioCtx() || !bgmGain) {
+          long.release();
+          return false;
+        }
+      }
       applyTrackGain(track);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = track.loop !== false;
-      source.connect(bgmGain);
-      previewSource = source;
-      source.onended = () => {
-        if (previewSource === source) stopPreview(true);
-      };
-      source.start(0);
+      let source;
+      if (long) {
+        source = {
+          buffer: null,
+          longSong: long,
+          onended: null,
+          stop: () => long.release(),
+          disconnect: () => {}
+        };
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        if (long.playFrom(0, bgmGain, () => {
+          const f = source.onended;
+          if (f) f();
+        }, {
+          loop: track.loop !== false
+        }) === false) {
+          if (previewSource === source) {
+            previewSource = null;
+            previewKey = null;
+          }
+          return false;
+        }
+      } else {
+        source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = track.loop !== false;
+        source.connect(bgmGain);
+        previewSource = source;
+        source.onended = () => {
+          if (previewSource === source) stopPreview(true);
+        };
+        source.start(0);
+      }
       if (ctx.state !== 'running') {
         await ensureAudioCtxRunning();
       }
@@ -9054,14 +9168,7 @@ const Audio_ = (() => {
       spf
     } : null;
   };
-  const fetchSongBytes = async url => {
-    const hit = longSongBytes.get(url);
-    if (hit) return hit;
-    const res = await fetch(audioUrlWithKey(url), {
-      cache: 'force-cache'
-    });
-    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
+  const longEntryOf = (url, bytes) => {
     let map = null;
     try {
       map = parseMp3Frames(bytes);
@@ -9080,6 +9187,20 @@ const Audio_ = (() => {
       longSongBytes.set(url, entry);
     }
     return entry;
+  };
+  const longSongError = entry => {
+    const e = new Error('long song: play in chunks');
+    e.longEntry = entry;
+    return e;
+  };
+  const fetchSongBytes = async url => {
+    const hit = longSongBytes.get(url);
+    if (hit) return hit;
+    const res = await fetch(audioUrlWithKey(url), {
+      cache: 'force-cache'
+    });
+    if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+    return longEntryOf(url, new Uint8Array(await res.arrayBuffer()));
   };
   const monoRange = (buf, from, len) => {
     const out = new Float32Array(len),
@@ -9220,6 +9341,12 @@ const Audio_ = (() => {
     };
     const head = (await getChunk(0)).buffer,
       rate = head.sampleRate;
+    const meta = entry.longMeta && entry.longMeta.rate === rate ? entry.longMeta : null;
+    if (meta) {
+      C = meta.C;
+      aligned = meta.aligned;
+      stats.probeCorr = meta.probeCorr;
+    }
     {
       const probeLen = 48,
         lo = LONG_PRE_FRAMES + 8,
@@ -9236,7 +9363,7 @@ const Audio_ = (() => {
           bestP = p;
         }
       }
-      if (bestP >= 0) {
+      if (bestP >= 0 && !meta) {
         try {
           const probe = await decode(ctx, bytes.slice(map.offsets[bestP], map.offsets[bestP + probeLen]).buffer);
           const m = longAlignLag(head, probe, Math.round(8 * fsec * rate), Math.round(Math.min(0.5, 30 * fsec) * rate), Math.round(bestP * fsec * rate));
@@ -9250,12 +9377,19 @@ const Audio_ = (() => {
       }
     }
     stats.offsetMs = Math.round(C * 10000) / 10;
-    let duration = head.duration;
-    if (count > 1) {
+    let duration = meta ? meta.duration : head.duration;
+    if (!meta && count > 1) {
       const last = await decode(ctx, bytes.slice(...byteRange(count - 1)).buffer);
       stats.decoded++;
       duration = theoryStart(count - 1) + last.duration;
     }
+    if (!meta) entry.longMeta = {
+      rate,
+      C,
+      aligned,
+      probeCorr: stats.probeCorr,
+      duration
+    };
     let session = 0,
       live = [],
       timer = null,
@@ -9313,7 +9447,7 @@ const Audio_ = (() => {
         }
       }
       if (k === count - 1) src.onended = () => {
-        if (my === session && play) {
+        if (my === session && play && !play.loopAt) {
           const done = play.onEnd;
           halt();
           done();
@@ -9347,7 +9481,49 @@ const Audio_ = (() => {
           stats.failed++;
         });
       }
+      if (play.loop && !play.loopAt && cur === count - 1 && count > 1 && chunks.has(0)) {
+        const lastLive = live.find(x => x.k === count - 1);
+        if (lastLive) {
+          const endAt = Math.round((play.t0 + (duration - play.o)) * ctx.sampleRate) / ctx.sampleRate;
+          if (endAt > ctx.currentTime) {
+            const g = ctx.createGain(),
+              src = ctx.createBufferSource();
+            src.buffer = chunks.get(0).buffer;
+            src.connect(g);
+            g.connect(play.out);
+            g.gain.value = 1;
+            play.loopAt = endAt;
+            lastLive.src.onended = null;
+            try {
+              lastLive.src.stop(endAt);
+            } catch (e) {}
+            src.start(endAt, 0);
+            live.push({
+              k: 0,
+              src,
+              gain: g,
+              loopNew: true
+            });
+            stats.loops = (stats.loops || 0) + 1;
+          }
+        }
+      }
+      if (play.loopAt && ctx.currentTime >= play.loopAt) {
+        play.t0 = play.loopAt;
+        play.o = 0;
+        play.loopAt = null;
+        live = live.filter(x => {
+          if (x.loopNew) {
+            x.loopNew = false;
+            return true;
+          }
+          dropLive(x);
+          return false;
+        });
+        return;
+      }
       live = live.filter(x => {
+        if (x.loopNew) return true;
         if (x.k < cur && s > seamSec(x.k + 1) + LONG_FADE_SEC + 0.2) {
           dropLive(x);
           return false;
@@ -9364,7 +9540,7 @@ const Audio_ = (() => {
         held: chunks.size
       }),
       ready: o => getChunk(chunkIndexAt(o)),
-      playFrom: (o, out, onEnd) => {
+      playFrom: (o, out, onEnd, opts = null) => {
         halt();
         const k = chunkIndexAt(o);
         if (!chunks.has(k)) return false;
@@ -9373,7 +9549,9 @@ const Audio_ = (() => {
           t0,
           o,
           out,
-          onEnd
+          onEnd,
+          loop: !!(opts && opts.loop),
+          loopAt: null
         };
         scheduleChunk(k, true);
         timer = setInterval(tick, 250);
@@ -9402,7 +9580,16 @@ const Audio_ = (() => {
       let buffer = null,
         long = null,
         dctx = null;
-      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') buffer = await loadBuffer(track.src);else {
+      if (buffers.has(track.src) || loadingBuffers.has(track.src) || typeof fetch !== 'function') {
+        try {
+          buffer = await loadBuffer(track.src);
+        } catch (e) {
+          if (!e || !e.longEntry) throw e;
+          dctx = getAudioCtx();
+          if (!dctx) return null;
+          long = await openLongSong(dctx, e.longEntry);
+        }
+      } else {
         const entry = await fetchSongBytes(track.src);
         dctx = getAudioCtx();
         if (!dctx) return null;
@@ -9667,7 +9854,7 @@ const Audio_ = (() => {
     return Promise.race([loadBuffer(bufKey).then(() => {
       rememberSongBuffer(bufKey);
       return true;
-    }).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    }).catch(e => !!(e && e.longEntry)), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {
