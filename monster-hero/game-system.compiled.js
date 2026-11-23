@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1f8afa40bc44afe
+// source-sha256: a246e0227d5a387e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39965,13 +39965,21 @@ const RhythmSongSelect = ({
       noticeOpen: !noticeOpen,
       noticeTouched: true
     }),
-    title: noticeOpen ? '助手のひとことと案内を畳む' : '助手のひとことと案内を出す',
+    title: noticeOpen ? '助手のひとこと: 入(押すと切)' : '助手のひとこと: 切(押すと入)',
     "aria-label": noticeOpen ? '助手のひとことと案内を畳む' : noticeHidden > 0 ? `畳んである案内が${noticeHidden + 1}つあります。出す` : '助手のひとことを出す',
     className: `relative flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    className: "hidden landscape:inline"
+  }, "ひとこと"), React.createElement("b", {
+    "data-rhythm-song-notice-state": noticeOpen ? 'on' : 'off',
+    "aria-hidden": "true",
+    className: `rounded px-0.5 leading-tight ${noticeOpen ? 'bg-fuchsia-300 text-fuchsia-950' : 'bg-slate-600 text-slate-100'}`
+  }, noticeOpen ? '入' : '切'), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[9px]"
   }, noticeOpen ? '▲' : '▼'), !noticeOpen && noticeHidden > 0 && React.createElement("b", {
     "data-rhythm-song-notice-badge": true,
     className: "absolute -right-1 -top-1 min-w-[16px] rounded-full bg-fuchsia-400 px-1 text-[10px] leading-4 text-slate-950"
