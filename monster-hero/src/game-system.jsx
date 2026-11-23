@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f486ba95aa4e57de
+// generated-sha256: 78646d2cd1d98ce9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51763,6 +51763,8 @@ return(
 // 画面の真ん中に出す札(data-battle-float)は左の列の真ん中へ、列の右端に寄せる札
 // (data-battle-float-right="右からの余白")は左の列の右端へ寄せる(右の手札にかからないように)。
 // 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて、画面の幅の42%・最大420px(844 で約354px)。
+// 助手の案内(EXの案内・モンビーの案内)は右の手札の列の下に重ねる。左の下に重ねると自分の4枠の下半分が隠れていた
+// (API 総点検③ r1123-006。手札にかぶるのは社長の決めごと「コメントはカードなどにかぶらせてよい」の範囲。×で閉じる)。
 const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
 const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
 #root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
@@ -51775,7 +51777,7 @@ const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 5
 [data-battle-speed] > [data-battle-stage] { grid-row: 3; min-height: 0 !important; overflow: hidden !important; }
 [data-battle-speed] > [data-battle-buffs] { grid-row: 4; }
 [data-battle-speed] > [data-tactics-board-band] { grid-row: 5; padding-top: 2px !important; padding-bottom: 2px !important; }
-[data-battle-speed] > [data-tactics-ex-intro] { grid-row: 6; }
+[data-battle-speed] > [data-tactics-ex-intro], [data-battle-speed] > [data-quick-rhythm-intro] { grid-column: 2; grid-row: 6; position: relative; z-index: 45; border-left: 1px solid rgba(255,255,255,.14); }
 [data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
 [data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
 [data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
@@ -53959,7 +53961,8 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<><span className="whitespace-nowrap">{battleModeInfo(runMode).short}</span> / <span className="whitespace-nowrap">{enemy?.name||''}</span></>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[10px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン)。
+              WAVE を 10px にした(API 総点検③ r1123-006)ので、横の小さい画面(左の列が約330px)も同じく2行に */}<span className="min-w-0 overflow-hidden text-ellipsis text-[10px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight [@media(orientation:landscape)_and_(max-height:520px)_and_(max-width:700px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)_and_(max-width:700px)]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<><span className="whitespace-nowrap">{battleModeInfo(runMode).short}</span> / <span className="whitespace-nowrap">{enemy?.name||''}</span></>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
