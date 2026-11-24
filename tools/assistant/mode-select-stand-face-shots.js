@@ -28,8 +28,7 @@ const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 
 
 // 数字では前の 0.97 倍に届かないが、止め絵を目で見て前と同じ大きさ以上だった組(前の版の顔の表が前の絵と合っていない・表情が違う)。キーは 画面/向き/助手。理由を書く
 const EYE_OK = Object.freeze({
-  'card/tate/sorashido_hosei': '止め絵では前とほぼ同じ大きさ(前の版の表の目・顎の点が前の絵とずれている)',
-  'rhythm/yoko/momosuke_halloween': '止め絵では後のほうが大きい(前の版の表のずれ・表情の違い)',
+  'card/yoko/sorashido_hosei': '止め絵では前とほぼ同じ大きさ(前の版の表の目・顎の点が前の絵とずれている・表情が違う)',
 });
 const eyeOk = (r) => !!EYE_OK[`${r.screen}/${r.view}/${r.who}`];
 // 突き合わせ表(<out>/README.md)。決めごとの行ごとに、止め絵のどこで満たすかと、組ごとの数字
@@ -49,6 +48,7 @@ const writeTable = (rows) => {
   L.push('| 同「全助手・全服で前後を撮って確かめる」 | 全身絵からの立ち絵がある15組 × 3画面 × 縦・縦の低い枠・横 = ' + rows.length + '組 | 下の表 |');
   L.push('| r1115-143・r1119-153「色を減らさない・古い絵は消さない」 | 絵のファイルに触れていない | — |');
   L.push('| 顔が枠からはみ出さない | 顔(目〜顎)はどの組も枠の中' + (rows.some(r => !r.inside) ? '(★の組を除く)' : '') + '。背の低い枠では帽子・耳の先は切れてよいとした | `ms-*-tate-hikui-*.jpg` |', '');
+  L.push('## 残り', '', '- きき ツインテール: 数字では前とほぼ同じだが、止め絵ではどの画面も1割ほど小さめに見える。大きなリボンが顔の約4倍の高さまであり、リボンを上で切れないようにする決まり(`assistant-art-scenes-check.js` の「上が切れる」10%まで)と両立する寄せ方では、ここまで。リボンを切ってよいかは判断が要る(窓口へ)', '');
   L.push('## 組ごとの数字', '', '| 画面 | 向き | 助手・服 | 枠の高さ | 前 | 後 | 倍 |', '| --- | --- | --- | --- | --- | --- | --- |');
   for (const r of rows) L.push(`| ${SN[r.screen]} | ${VN[r.view]} | ${r.who} | ${r.after ? r.after.frame.h : '-'} | ${r.before ? r.before.head : '-'} | ${r.after ? r.after.head : '-'} | ×${r.ratio}${r.inside ? '' : ' ★枠の外'}${r.capped && !(r.ratio >= 0.97) ? '(元の絵の上限)' : ''}${eyeOk(r) && !(r.ratio >= 0.97) ? '(目で確かめた)' : ''} |`);
   fs.writeFileSync(path.join(OUT, 'README.md'), L.join('\n') + '\n');
