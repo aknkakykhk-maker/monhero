@@ -190,6 +190,12 @@ ok('光る段の息づかいも底上げした濃さの範囲で揺れる',(()=>
   return lows.length===2&&lows.every(value=>value>=comboTierOpacity[0]);
 })());
 // コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
+// 端に置いたコンボ数は、ノーツの層(z-5)より上に描く(2026-11-24 r1119-160 社長「コンボの1000以上の1番左の数値に色がない」)。
+// 4桁以上で左の桁がレーンへはみ出し、ノーツの層が描く道の面・空中の面の下で灰色に暗くなっていた。
+// 縮めて収める直しは🔄横で小さくなりすぎた(社長「縦横ボタンで横にしたときにコンボがめちゃくちゃ小さくなってる」)ので、大きさは変えない
+ok('端に置いたコンボ数はノーツの層より上に描き、大きさは縮めない',
+  html.includes('[data-rhythm-combo-box]:not([data-combo-pos="CENTER"]){z-index:6}')
+  &&!game.includes('rhythmComboFitScale'));
 ok('コンボ数の大きさを設定から変えられる',
   game.includes('comboSize:100')
   &&game.includes('comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP')
