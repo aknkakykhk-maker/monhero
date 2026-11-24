@@ -21380,7 +21380,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesRewardClaimed=difficultyId=>isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           const speciesCleared=difficultyId=>isSpeciesChallengeCleared(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
-          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen data-tactics-big={tacticsDiff?'':undefined} className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            {/* タクティクスの難易度の札は大きく(r1119-155 案A)。縦は札の余白・難易度名・倍率・報酬・挑戦ボタンを大きくし、案内は上・吹き出しは画面の下へ。
+                横の背の低い画面は札が2列で収まっているので、難易度名と倍率の字だけ大きく。ほかのモード(クラシック・クイックなど)の札は今のまま */}
+            {tacticsDiff&&<style>{TACTICS_DIFFICULTY_BIG_CSS}</style>}
             <RhythmModeSelectStage notes={false}/>
             <BattleScreenHead eyebrow="MONHERO BATTLE ・ SELECT LEVEL" title={mode.label} accentStyle={{color:mode.color}} disabled={!!battleTutorial} onBack={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))}/>
             {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=報酬・ボタン)にして、
@@ -21454,7 +21457,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mhbt-score">
                           {/* 種族チャレンジの自己ベストは「種族 × 難易度」ごとに独立している */}
                           
-                          <b>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          {/* タクティクスで記録が無い難易度は、大きな「0 pt」ではなく小さな「未挑戦」(r1119-155 案A。難易度名より目立っていた) */}
+                          {tacticsDiff&&!species&&!(Number(rec.score)>0)&&!(Number(rec.wave)>0)?<span data-tactics-untried className="inline-block rounded-full border px-2.5 py-0.5 text-[12px] font-black not-italic" style={{borderColor:'currentColor',opacity:.8}}>未挑戦</span>:
+                          <b>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>}
                           <small>{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'} ・ {species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small>
                         </div>
                         <div className="mhbt-cells" style={{gridTemplateColumns:`repeat(${rateCells(setting).length},minmax(0,1fr))`}}>{rateCells(setting).map(([label,value,boosted])=><div key={label}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>

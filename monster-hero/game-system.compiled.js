@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c980655ae52da9b0
+// source-sha256: 27ff5beec719eb9b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -1130,6 +1130,26 @@ const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
+const TACTICS_DIFFICULTY_BIG_CSS = `
+[data-tactics-big] .mhbt-name{font-size:30px!important}
+[data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:22px!important}
+[data-tactics-big] .mhbt-cells b{font-size:20px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]){margin-top:6px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]) small{display:none}
+@media (orientation:portrait){
+  [data-tactics-big] .mhbt-tile{padding-top:22px!important;padding-bottom:22px!important;gap:8px}
+  [data-tactics-big] .mhbt-name{font-size:36px!important}
+  [data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:24px!important}
+  [data-tactics-big] .mhbt-cells b{font-size:24px}
+  [data-tactics-big] .mhbt-cells>div{padding:6px 0}
+  [data-tactics-big] .mhbt-reward{min-height:84px!important}
+  [data-tactics-big] .mhbt-reward b{font-size:11px!important}
+  [data-tactics-big] .mhbt-pb{min-height:46px;font-size:13px}
+  [data-tactics-big] .mhbt-go{min-height:64px;font-size:18px}
+  [data-tactics-big] .mhbs-hint{margin-top:6px!important}
+  [data-tactics-big] [data-difficulty-assistant]{margin-top:auto!important;margin-bottom:0!important}
+}
+`;
 const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert', 'Master', 'GrandMaster', 'Hell', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE', 'INFINITY', 'GOD', 'RAGNAROK', 'HELHEIM', 'ETERNAL', 'INFERNO', 'EREBUS', 'COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
@@ -260664,12 +260684,13 @@ function MonsterHeroGame() {
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       return React.createElement("div", {
         "data-mh-screen": true,
+        "data-tactics-big": tacticsDiff ? '' : undefined,
         className: "mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white",
         style: {
           paddingTop: '.35rem',
           paddingBottom: '.35rem'
         }
-      }, React.createElement(RhythmModeSelectStage, {
+      }, tacticsDiff && React.createElement("style", null, TACTICS_DIFFICULTY_BIG_CSS), React.createElement(RhythmModeSelectStage, {
         notes: false
       }), React.createElement(BattleScreenHead, {
         eyebrow: "MONHERO BATTLE ・ SELECT LEVEL",
@@ -260822,7 +260843,14 @@ function MonsterHeroGame() {
           className: "ml-1 align-middle text-[11px]"
         }, "✅")), React.createElement("div", {
           className: "mhbt-score"
-        }, React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
+        }, tacticsDiff && !species && !(Number(rec.score) > 0) && !(Number(rec.wave) > 0) ? React.createElement("span", {
+          "data-tactics-untried": true,
+          className: "inline-block rounded-full border px-2.5 py-0.5 text-[12px] font-black not-italic",
+          style: {
+            borderColor: 'currentColor',
+            opacity: .8
+          }
+        }, "未挑戦") : React.createElement("b", null, species ? `${speciesRecord(key).bestScore.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), React.createElement("small", null, species ? 'この種族での自己ベスト' : ranked ? '自己ベストスコア' : '最高到達WAVE', " ・ ", species ? `クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns !== null ? ` ／ 最短 ${speciesRecord(key).bestTurns}T` : ''}` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), React.createElement("div", {
           className: "mhbt-cells",
           style: {
             gridTemplateColumns: `repeat(${rateCells(setting).length},minmax(0,1fr))`

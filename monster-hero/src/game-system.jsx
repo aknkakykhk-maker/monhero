@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e097d34d60703df
+// generated-sha256: e1e2bb650b2975bb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -1131,6 +1131,27 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
+// タクティクスの難易度の札を大きくする見た目(r1119-155 案A)。難易度の画面に data-tactics-big が付いたときだけ効く(ほかのモードは今のまま)
+const TACTICS_DIFFICULTY_BIG_CSS = `
+[data-tactics-big] .mhbt-name{font-size:30px!important}
+[data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:22px!important}
+[data-tactics-big] .mhbt-cells b{font-size:20px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]){margin-top:6px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]) small{display:none}
+@media (orientation:portrait){
+  [data-tactics-big] .mhbt-tile{padding-top:22px!important;padding-bottom:22px!important;gap:8px}
+  [data-tactics-big] .mhbt-name{font-size:36px!important}
+  [data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:24px!important}
+  [data-tactics-big] .mhbt-cells b{font-size:24px}
+  [data-tactics-big] .mhbt-cells>div{padding:6px 0}
+  [data-tactics-big] .mhbt-reward{min-height:84px!important}
+  [data-tactics-big] .mhbt-reward b{font-size:11px!important}
+  [data-tactics-big] .mhbt-pb{min-height:46px;font-size:13px}
+  [data-tactics-big] .mhbt-go{min-height:64px;font-size:18px}
+  [data-tactics-big] .mhbs-hint{margin-top:6px!important}
+  [data-tactics-big] [data-difficulty-assistant]{margin-top:auto!important;margin-bottom:0!important}
+}
+`;
 const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
@@ -147495,7 +147516,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesRewardClaimed=difficultyId=>isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           const speciesCleared=difficultyId=>isSpeciesChallengeCleared(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
-          <div data-mh-screen className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+          <div data-mh-screen data-tactics-big={tacticsDiff?'':undefined} className="mhms-stage mhbs-screen relative overflow-hidden flex-1 flex flex-col h-full min-h-0 px-4 text-white" style={{paddingTop:'.35rem',paddingBottom:'.35rem'}}>
+            {/* タクティクスの難易度の札は大きく(r1119-155 案A)。縦は札の余白・難易度名・倍率・報酬・挑戦ボタンを大きくし、案内は上・吹き出しは画面の下へ。
+                横の背の低い画面は札が2列で収まっているので、難易度名と倍率の字だけ大きく。ほかのモード(クラシック・クイックなど)の札は今のまま */}
+            {tacticsDiff&&<style>{TACTICS_DIFFICULTY_BIG_CSS}</style>}
             <RhythmModeSelectStage notes={false}/>
             <BattleScreenHead eyebrow="MONHERO BATTLE ・ SELECT LEVEL" title={mode.label} accentStyle={{color:mode.color}} disabled={!!battleTutorial} onBack={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))}/>
             {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=報酬・ボタン)にして、
@@ -147569,7 +147593,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="mhbt-score">
                           {/* 種族チャレンジの自己ベストは「種族 × 難易度」ごとに独立している */}
                           
-                          <b>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          {/* タクティクスで記録が無い難易度は、大きな「0 pt」ではなく小さな「未挑戦」(r1119-155 案A。難易度名より目立っていた) */}
+                          {tacticsDiff&&!species&&!(Number(rec.score)>0)&&!(Number(rec.wave)>0)?<span data-tactics-untried className="inline-block rounded-full border px-2.5 py-0.5 text-[12px] font-black not-italic" style={{borderColor:'currentColor',opacity:.8}}>未挑戦</span>:
+                          <b>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>}
                           <small>{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'} ・ {species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small>
                         </div>
                         <div className="mhbt-cells" style={{gridTemplateColumns:`repeat(${rateCells(setting).length},minmax(0,1fr))`}}>{rateCells(setting).map(([label,value,boosted])=><div key={label}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>

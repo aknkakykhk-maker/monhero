@@ -1124,6 +1124,27 @@ const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SELECT_ASSIST_KEY = 'mh_battle_select_assist_v1';
 // 難易度えらびの札で、地が暗いので白い文字にする難易度(2026-10-09 ユーザー指示「難易度にあった色合いで、強弱を」)。
 // 色そのものは 77-screen-rhythm-multi.jsx の .mhbt-d-<難易度> にまとめてある
+// タクティクスの難易度の札を大きくする見た目(r1119-155 案A)。難易度の画面に data-tactics-big が付いたときだけ効く(ほかのモードは今のまま)
+const TACTICS_DIFFICULTY_BIG_CSS = `
+[data-tactics-big] .mhbt-name{font-size:30px!important}
+[data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:22px!important}
+[data-tactics-big] .mhbt-cells b{font-size:20px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]){margin-top:6px}
+[data-tactics-big] .mhbt-score:has([data-tactics-untried]) small{display:none}
+@media (orientation:portrait){
+  [data-tactics-big] .mhbt-tile{padding-top:22px!important;padding-bottom:22px!important;gap:8px}
+  [data-tactics-big] .mhbt-name{font-size:36px!important}
+  [data-tactics-big] .mhbt-name.text-\\[19px\\]{font-size:24px!important}
+  [data-tactics-big] .mhbt-cells b{font-size:24px}
+  [data-tactics-big] .mhbt-cells>div{padding:6px 0}
+  [data-tactics-big] .mhbt-reward{min-height:84px!important}
+  [data-tactics-big] .mhbt-reward b{font-size:11px!important}
+  [data-tactics-big] .mhbt-pb{min-height:46px;font-size:13px}
+  [data-tactics-big] .mhbt-go{min-height:64px;font-size:18px}
+  [data-tactics-big] .mhbs-hint{margin-top:6px!important}
+  [data-tactics-big] [data-difficulty-assistant]{margin-top:auto!important;margin-bottom:0!important}
+}
+`;
 const BATTLE_DIFFICULTY_DARK_LOOKS = new Set(['Expert','Master','GrandMaster','Hell','EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM','ETERNAL','INFERNO','EREBUS','COCYTUS']);
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
