@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 398852ba986b2cd9
+// generated-sha256: bfb9f0e6998cf424
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43418,14 +43418,14 @@ const quickAnywhereFloatRect = (el, spot) => {
   const R = { left, top, right: left + w, bottom: top + h };
   return R;
 };
-// そこに置いたとき、ほかの押せるもの(button・a・[role=button])にかかるか。自分と、自分の詳細の窓は数えない。known に入っているもの(置いたときからあったもの)も数えない
+// そこに置いたとき、ほかの押せるもの(button・a・[role=button])と、札が隠したくない欄([data-quick-avoid]。プロフィールのデッキの札)にかかるか。自分と、自分の詳細の窓は数えない。known に入っているもの(置いたときからあったもの)も数えない
 const quickAnywhereFloatHits = (el, spot, known = null) => {
   if (typeof document === 'undefined' || !el) return 0;
   const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
-  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+  for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
-    if (known && known.has(o)) continue;
+    if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue; // 隠したくない欄は、置いたときからあっても数える(スクロールで下に来たら札を隠す)
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -43458,7 +43458,7 @@ const QuickAnywhereFloat = ({ screen, children, style, ...rest }) => {
   const placedRef = useRef(null);
   React.useLayoutEffect(() => {
     // 決めた場所にかかっているもの(画面を覆うシートなど)は入れない。かかっている間は隠し、どいたら出す
-    const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
+    const remember = (base) => { const set = new WeakSet(); const el = ref.current; if (typeof document !== 'undefined' && el) { const R = quickAnywhereFloatRect(el, base); for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) { const r = o.getBoundingClientRect(); if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o); } } knownRef.current = set; };
     // 決める(画面が変わったとき・向きや大きさが変わったときだけ)
     const decide = () => { if (!ref.current) return; const next = quickAnywhereFloatPick(ref.current, screen); const base = { side: next.side, lift: next.lift }; placedRef.current = { ...base, fromHidden: !!next.hidden }; remember(base); setSpot(next.hidden ? { ...base, hidden: true } : base); };
     // シート・確認の窓がかぶったかだけを見る。置いたときに無かったボタンにかかったら隠し、外れたら同じ場所に戻す(場所は変えない)
@@ -122335,6 +122335,8 @@ const useCardShareEntry = (breederId, self = false) => {
   return state;
 };
 const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+// デッキ名は切らずに折り返す(3行まで。ふつうは1〜2行)(2026-11-24 社長「デッキ名切れてる」)。裏クイックの札が名前の上に乗らないよう data-quick-avoid を付ける(45-quick-anywhere-float)
+const CARD_SHARE_NAME_STYLE = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden', ...JA_WRAP_STYLE };
 // 3体のカード絵を少し重ねて並べる
 const CardShareDeckThumbs = ({ entry }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -122457,11 +122459,11 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
   const t = entry ? cardShareNormalizeTactics(entry.tactics) : null;
   const head = <small className="block text-[10px] font-black text-amber-300">バトルカードのデッキ</small>;
   const tile = self ? (
-    <button type="button" data-profile-show="card-deck" data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
+    <button type="button" data-profile-show="card-deck" data-quick-avoid data-card-share-tile="self" onClick={() => { if (onOpen) { Audio_.fgSe.tap(); onOpen(); } }} className={`${CARD_SHARE_TILE_CLASS} block w-full text-left active:scale-[.98]`}>
       {head}
       {loading ? <span className="mt-2 block text-[12px] font-bold text-slate-400">読み込み中…</span> : entry ? (<>
         <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-        <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+        <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{jaWrap(t.name || 'デッキ')}</b>
         <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       </>) : (<>
         <span className="mt-2 block text-[13px] font-black text-slate-300">登録していません</span>
@@ -122469,10 +122471,10 @@ const CardShareDeckTile = ({ mode = 'self', breederId = null, onOpen = null }) =
       </>)}
     </button>
   ) : (
-    <div data-profile-show="card-deck" data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
+    <div data-profile-show="card-deck" data-quick-avoid data-card-share-tile="friend" className={CARD_SHARE_TILE_CLASS}>
       {head}
       <span className="mt-1.5 block"><CardShareDeckThumbs entry={entry}/></span>
-      <b className="mt-1 block truncate text-[14px] font-black text-white">{t.name || 'デッキ'}</b>
+      <b data-card-share-tile-name className="mt-1 block break-words text-[13px] font-black leading-tight text-white" style={CARD_SHARE_NAME_STYLE}>{jaWrap(t.name || 'デッキ')}</b>
       <small className="block text-[11px] font-black text-pink-300">{(cardShareSmartText(t).split('(')[0])}</small>
       <button type="button" data-card-share-tile-detail onClick={() => { Audio_.fgSe.tap(); setDetail(true); }} className="mt-0.5 text-[11px] font-black text-pink-200">
         {`${entry.battles}戦 ${entry.deckWins}勝 詳細 ›`}
