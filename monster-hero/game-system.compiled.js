@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5dc61c7f8f7c2b9
+// source-sha256: e456cbc12a6dc613
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102601,13 +102601,16 @@ function ModeSelectAssistToggles({
 }
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 const RHYTHM_MODE_STAND_FACE = Object.freeze({
-  h: 0.145,
+  h: 0.16,
   w: 0.35,
   below: 2.5,
   eyeMin: 2.4,
   topPad: 0.6,
   headLen: 2.63,
-  upMax: 1.5
+  upMax: 1.5,
+  lowH: 0.22,
+  lowPx: 20,
+  lowBelow: 0.8
 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
@@ -102622,12 +102625,12 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const eyeI = box.t + vis * face.eye,
     cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
-  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), ${(faceI * 100).toFixed(3)}cqh)`;
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px), ${(faceI * 100).toFixed(3)}cqh)`;
   const wK = box.ar / faceI;
   return {
     width: `calc(${F} * ${wK.toFixed(4)})`,
     left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
-    top: `max(calc(${F} * ${(eyeK - eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))`
+    top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))`
   };
 };
 const RHYTHM_MODE_CQ_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('width', '1cqh');
@@ -121399,10 +121402,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-twintail': {
     kiki: {
       top: 0.2539,
-      eye: 0.4133,
-      chin: 0.5496,
-      m: 1.014,
-      cx: 0.4955,
+      eye: 0.4735,
+      chin: 0.5974,
+      m: 0.922,
+      cx: 0.5317,
       above: 0.95
     }
   }

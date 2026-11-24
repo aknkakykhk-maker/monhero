@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da43d5559211a734
+// generated-sha256: 597360d382176fef
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60996,8 +60996,9 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 //   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
 //   目の線は、測った頭のてっぺん(耳・帽子を含む絵もある)から F の 0.6 倍上を空けた所。大きい帽子・リボンの服(表の above が 0.9 以上)はそのぶん下げる。
 //   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
-//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍は寄りすぎて帽子が切れた・あつがぼやけた)
-const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.145, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5 });
+//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
+//   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す(帽子の先は切れてよい)
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
   const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
@@ -61010,10 +61011,11 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
   // 絵の高さ = F / faceI。枠の下まで届く F は 枠の高さ × faceI
-  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), ${(faceI * 100).toFixed(3)}cqh)`;
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px), ${(faceI * 100).toFixed(3)}cqh)`;
   const wK = box.ar / faceI;
   return { width: `calc(${F} * ${wK.toFixed(4)})`, left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
-    top: `max(calc(${F} * ${(eyeK - eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))` };
+    // 目の線は eyeK の所。ただし顎の下に F の lowBelow 倍が残るよう、背の低い枠では上へ寄せる
+    top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))` };
 };
 const RHYTHM_MODE_CQ_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, artCorner = null }) {
