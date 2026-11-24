@@ -297,7 +297,7 @@ check('モンビーからクイックのバトルへ戻れる',
 check('ランを片付けるときに「実行中の印」も下ろす',
   /const abandonRunAnimations = \(\) => \{[\s\S]{0,400}?runGenerationRef\.current \+= 1;[\s\S]{0,400}?autoTurnRunningRef\.current = false;[\s\S]{0,400}?autoPostWaveRunningRef\.current = false;/.test(source));
 check('モンビーを開いている間はバトルのSEを鳴らさない',
-  source.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume);'));
+  /Audio_\.setSeVolume\(\(\(ultraEcoSession && !cardScreenOpen\) \|\| rhythmScreenOpen(?: \|\| assistantLifeRunMuted)?\) \? 0 : seVolume\);/.test(source)); // 助手ライフの裏クイック中も0(2026-11-24 r1119-164 で戻す条件を揃えた)
 // (2026-11-12 モンヒロサクセスの育成の画面 successScreenOpen も同じ印で止める・14-success-sound.jsx)
 // MFバトルカードは同じ効果音を使うので、音量ではなく「裏の周回の効果音だけ止める印」で止める。カードの画面は印を受けない fgSe で鳴らす
 check('MFバトルカードにいる間は、裏の周回の効果音だけを止める',
