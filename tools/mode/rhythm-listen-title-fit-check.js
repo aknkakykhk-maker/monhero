@@ -75,7 +75,7 @@ const seed = (songId) => `(() => {
     const g = await page.evaluate(() => {
       const box = s => { const e = [...document.querySelectorAll(s)].find(x => { const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(x).visibility !== 'hidden'; }); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, el: e }; };
       const t = box('[data-rhythm-listen-songbox] [data-rhythm-hud-song]');
-      const parts = { 曲名: t, 札: box('[data-rhythm-listen-badge]'), ジャケット: box('[data-rhythm-hud-art]'), '✕': box('[data-rhythm-listen-close]'), コンボ数: box('[data-rhythm-combo-box]'), '判定・コンボ': box('[data-rhythm-listen-hud]'), 下の帯: box('[data-rhythm-listen-bar]') };
+      const parts = { 曲名: t, 札: box('[data-rhythm-listen-badge]'), ジャケット: box('[data-rhythm-hud-art]'), '✕': box('[data-rhythm-listen-close]'), コンボ数: box('[data-rhythm-combo-box]'), '判定・コンボ': box('[data-rhythm-listen-toggle]'), 下の帯: box('[data-rhythm-listen-bar]') };
       const hit = (a, b) => a && b && a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
       const names = Object.keys(parts), over = [];
       for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) if (!(names[i] === '判定・コンボ' && names[j] === '下の帯') && hit(parts[names[i]], parts[names[j]])) over.push(`${names[i]}と${names[j]}`);
