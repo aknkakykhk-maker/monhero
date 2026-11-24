@@ -80,7 +80,7 @@ for (const file of files) {
     // 生成物は書き方が変わるので、編集元だけで見る
     if (file.includes('/src/')) {
       check(`${rel}: モンビー中のSE消音に巻き込まれない（負けの音はBGM側）`,
-        src.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume)')
+        /Audio_\.setSeVolume\(\(\(ultraEcoSession && !cardScreenOpen\) \|\| rhythmScreenOpen(?: \|\| assistantLifeRunMuted)?\) \? 0 : seVolume\)/.test(src) // 助手ライフの裏クイック中も0(2026-11-24 r1119-164 で戻す条件を揃えた)
         && !/setSeVolume[\s\S]{0,200}isGameOver/.test(src));
     }
   }
