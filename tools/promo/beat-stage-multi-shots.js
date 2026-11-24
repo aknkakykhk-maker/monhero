@@ -173,8 +173,9 @@ const measureResult = (page) => page.evaluate(() => {
       await page.locator('[data-rhythm-multi-ready]').click({ force: true, timeout: 15000 });
       // ライブが始まり、演奏の画面へ入ったら、自分の結果を知らせる。助手の結果もそこで出る
       await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]'), null, { timeout: 90000 });
+      // 結果はフルコンボにしない(縦390幅の MVP の枠で「FULL COMBO」が2行に折れ、スコアの数字に重なるため・ゲームの側の崩れは窓口へ知らせた)
       const round = await page.evaluate(() => RHYTHM_MULTI.view().room.round);
-      await page.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 987654, cleared: true, fullCombo: true, maxCombo: 431, judgments: { MARVELOUS: 400, EXCELLENT: 25, GREAT: 6, GOOD: 0, BAD: 0, MISS: 0 }, fast: 12, slow: 7 }, false, { diffId: 'HELL' }), round);
+      await page.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 987654, cleared: true, fullCombo: false, maxCombo: 402, judgments: { MARVELOUS: 400, EXCELLENT: 25, GREAT: 5, GOOD: 0, BAD: 0, MISS: 1 }, fast: 12, slow: 7 }, false, { diffId: 'HELL' }), round);
       for (let i = 0; i < 6; i += 1) {
         if (!(await page.evaluate(() => !!document.querySelector('[data-rhythm-play-area]')))) break;
         await page.evaluate(() => document.querySelector('[data-rhythm-pause]')?.click());
@@ -188,6 +189,9 @@ const measureResult = (page) => page.evaluate(() => {
       if (!all) console.log('INFO: ' + await page.evaluate(() => { const v = RHYTHM_MULTI.view(); return JSON.stringify(v.members.map((m) => ({ n: m.name, cpu: !!m.cpu, playing: m.playing, res: !!m.res }))); }));
       check(`${name}: 助手の結果もそろう`, all);
       await page.waitForTimeout(4000);
+      // 結果の数え上げ・数字の入れ替わりの動きが止まるまで待つ(途中で撮ると、MVP のスコアが2つ重なって写った・2026-11-24 第3版)
+      await page.waitForFunction(() => document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming().iterations !== Infinity).length === 0, null, { timeout: 30000, polling: 250 }).catch(() => {});
+      await page.waitForTimeout(3000);
       if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `result-${name}.png`) });
       if (process.env.DEBUG_GROWTH) console.log('GROWTH ' + await page.evaluate(() => { const g = document.querySelector('[data-rhythm-buddy-growth-list]'); const body = document.querySelector('[data-rhythm-multi-result-body]'); return JSON.stringify({ g: g && [g.clientHeight, g.scrollHeight, getComputedStyle(g).rowGap], kids: g && [...g.children].map((c) => c.offsetHeight), body: body && [body.clientHeight, body.scrollHeight], ul: document.querySelector('[data-rhythm-multi-result-row]')?.parentElement.offsetHeight, chat: document.querySelector('[data-rhythm-multi-result-chat]')?.offsetHeight }); }));
       const res = await measureResult(page);
