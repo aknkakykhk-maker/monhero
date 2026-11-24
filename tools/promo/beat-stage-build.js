@@ -61,13 +61,14 @@ const capture = (song, i) => {
   const dir = path.join(WORK, 'cap', song.songId);
   const from = song.from - 1000, to = song.from + T.stageDur * 1000 + 1000;
   const meta = path.join(dir, 'frames.json');
-  // 速度・設定・描き方が違う撮影は使わない(第3版: 速度9.5の旧録画を使わないため)
+  // 速度・設定が違う撮影は使わない(第3版: 速度9.5の旧録画を使わないため)
   const want = JSON.stringify(Object.assign({}, plan.captureSettings || {}, { noteSpeed: plan.noteSpeed || 9.5 }));
-  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1 && JSON.stringify(m.settings || { noteSpeed: m.noteSpeed }) === want && (m.draw || 'auto') === (plan.draw || 'auto'); })();
+  const wantHow = JSON.stringify({ listen: !!plan.listen, ui: plan.optionsUi || [], clock: 2 });
+  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1 && JSON.stringify(m.settings || { noteSpeed: m.noteSpeed }) === want && JSON.stringify(m.how || {}) === wantHow; })();
   if (ok && !argv.includes('--recapture')) return dir;
   console.log(`撮影 ${i + 1}: ${song.songId} ${song.diff || 'HELL'} ${from}〜${to}ms`);
   execFileSync('node', [R('tools/promo/beat-stage-capture.js'), '--song', song.songId, '--diff', song.diff || 'HELL', '--from', String(from), '--to', String(to), '--speed', String(plan.noteSpeed || 9.5),
-    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.draw ? ['--draw', plan.draw] : []), '--out', dir], { stdio: 'inherit' });
+    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.listen ? ['--listen'] : []), ...(plan.optionsUi ? ['--ui-settings', JSON.stringify(plan.optionsUi)] : []), '--out', dir], { stdio: 'inherit' });
   return dir;
 };
 
