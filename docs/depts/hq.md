@@ -28,7 +28,7 @@ node tools/ctx.js brief               いまの状態
 ## 関係する決まり
 
 - 新しい会話は node tools/ctx.js newsession <部> "<仕事>" の出力どおりに作る(モデル・最初に読むもの・報告先が入る)
-- claude-fable-5-2 は社長の許可なしでは絶対に使わない(2026-11-24 r1119-163・決まりの3つも opus)。使いたいときは、外れるときは社長に選択式で聞いてから、と同じく作る前に選択式で聞く
+- claude-fable-5-2 を使ってよいのは決まりの3つ(道具・仕組みを作る/強化する1回・新機能の公開前の最終確認・2回直しても直らない不具合)だけ。外れるときは社長に選択式で聞いてから
 - 配り直しは node tools/ctx.js redeploy assistant-chat の出力をそのまま deploy_edge_function に渡す
 - SQL は消す・書き換える・既存の表を変えるものも含めて、窓口の判断で社長に聞かずに流す(2026-11-12 社長。CLAUDE.md ⑦)。保存データ・ランキングを壊さない決まりは変わらない
 - 社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す。進め方の決めごとは「<日付> 進め方:」で書き、同じ PR で tools/team/decision-locks.json に錠を足す(docs/rules/DECISION_LOCKS.md)
