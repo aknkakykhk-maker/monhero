@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4ef6bad4ddf5d56
+// generated-sha256: 549a485acda4acf0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25410,7 +25410,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             それでも余るぶんは難易度と助手の一言の間に入れる(決定の下を空けない)。
             欄の高さが540px以上(PC など)は、ジャケット・HIGH SCORE・切り替えを欄の幅いっぱいに縦へ積む。
             ★高さは @media ではなく欄そのもの(container)で測る。🔄横(絵だけ回す)は端末が縦のままで、高さの @media が逆に効くため */}
-        <div data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 landscape:gap-y-1 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
+        {/* 縦は詳しい欄を細くして、上の曲の一覧を広く見せる(2026-11-24 r1119-160 社長の選択「案A 詳細の窓を細く」)。
+            ジャケットを小さく(64px)曲名の左へ、ハイスコアは1行(数字・MAX COMBO・ランク)、曲の長さ・ノーツ数の行は畳む。
+            見た目は index.html の [data-rhythm-detail-slim] が決める。横・🔄横(viewWide)は今のまま */}
+        <div data-rhythm-detail-slim={viewWide?undefined:'1'} data-rhythm-song-detail-grid className="grid items-start gap-x-3 gap-y-1.5 landscape:gap-y-1 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]">
           {/* 選んでいる難易度でフルコンボ以上を取っているときは、ジャケットへ光の枠と帯を重ねる(2026-10-07・ユーザー指示「フルコンボとかオールエクセレントとか表示して / 派手めに」)。
               選び直すたびに key が変わって、帯がもう一度ポンと出る */}
           {(()=>{const tier=rhythmDetailAchieveTier(best);
@@ -25430,7 +25433,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
             <div className="flex flex-wrap items-start gap-x-1.5 gap-y-1 [container-type:inline-size]">
               {/* 曲名は実際に測って収める(2026-11-23 r1119-142 社長「曲名のあとのてんてんがあるやつとないやつなんなの？」)。
                   字を小さくし、入らなければ2行に折り、それでも入らないときだけ「…」。縦の低い画面(高さ700以下)は一覧の場所を残すため1行のまま */}
-              {(()=>{const wideVer=viewWide&&versionsOf(song).length>1,shortTate=!viewWide&&isShortScreen;
+              {(()=>{const wideVer=viewWide&&versionsOf(song).length>1,shortTate=!viewWide;/* 縦は細い欄なので曲名は1行(入らない時だけ折る) */
                 // 縦は2行ぶん(43px)の高さの中で3行まで(題と副題が別のかたまりなので)。縦の低い画面は1行、入らない曲名だけ2〜3行
                 return <RhythmFitTitle key={song.songId} song={song} maxPx={shortTate?15:wideVer?14:viewWide?16:17} minPx={shortTate?10:10} lines={3}
                   maxH={shortTate?38:viewWide?0:43}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4677d8a8c60a6a18
+// source-sha256: 8cd31ec4a387b525
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40545,6 +40545,7 @@ const RhythmSongSelect = ({
   }, !song || !difficulty ? React.createElement("p", {
     className: "text-xs font-bold text-slate-400"
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-rhythm-detail-slim": viewWide ? undefined : '1',
     "data-rhythm-song-detail-grid": true,
     className: "grid items-start gap-x-3 gap-y-1.5 landscape:gap-y-1 [grid-template-areas:'art_title'_'art_stats'_'diff_diff'_'act_act'_'foot_foot'] [grid-template-columns:7rem_minmax(0,1fr)] landscape:min-h-full landscape:[grid-template-areas:'art_stats'_'art_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[grid-template-columns:auto_minmax(0,1fr)] landscape:[grid-template-rows:auto_auto_auto_auto_minmax(0,1fr)_auto_auto] landscape:[@container(min-height:540px)]:[grid-template-areas:'art_art'_'stats_stats'_'foot_foot'_'title_title'_'diff_diff'_'._.'_'note_note'_'act_act'] landscape:[@container(min-height:540px)]:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] landscape:[@container(min-height:540px)]:[grid-template-rows:auto_auto_auto_auto_auto_minmax(0,1fr)_auto_auto]"
   }, (() => {
@@ -40592,7 +40593,7 @@ const RhythmSongSelect = ({
     className: "flex flex-wrap items-start gap-x-1.5 gap-y-1 [container-type:inline-size]"
   }, (() => {
     const wideVer = viewWide && versionsOf(song).length > 1,
-      shortTate = !viewWide && isShortScreen;
+      shortTate = !viewWide;
     return React.createElement(RhythmFitTitle, {
       key: song.songId,
       song: song,
