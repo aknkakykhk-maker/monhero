@@ -9,7 +9,7 @@ const arg = (name, fb = null) => { const i = argv.indexOf(`--${name}`); return i
 const SONG = arg('song', 'rebellion'), DIFF = arg('diff', 'HELL');
 const FROM = Number(arg('from', 0)), SHOT = Number(arg('shot', 224000)), OUT = arg('out', 'shot.png');
 const ROT = argv.includes('--rot'), PORTRAIT = argv.includes('--portrait') || ROT, GPU = false, LOOK = arg('look'), DUMP = argv.includes('--dump');
-const MINIMAL = argv.includes('--minimal'), LIGHT = argv.includes('--light');
+const MINIMAL = argv.includes('--minimal'), LIGHT = argv.includes('--light'), MAX = argv.includes('--max');  // --max … 見た目のおまかせ「全部のせ」(演出量 最大)
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
 const { eventStorySeed } = require(path.join(ROOT, 'tools/boot/quiet-boot-seed.js'));
@@ -43,7 +43,7 @@ const seed = (songId) => `(() => {
   await context.addInitScript(seed(SONG));
   if (GPU) await context.addInitScript(() => { try { localStorage.setItem('mh_rhythm_canvas_v1', 'webgl'); } catch (_) {} });
   await context.addInitScript(eventStorySeed());
-  if (MINIMAL || LIGHT) await context.addInitScript(([m, l]) => { try { const s = JSON.parse(localStorage.getItem('mh_rhythm_settings_v1') || '{}'); if (m) s.effectAmount = 'MINIMAL'; if (l) s.lightweightMode = true; localStorage.setItem('mh_rhythm_settings_v1', JSON.stringify(s)); } catch (_) {} }, [MINIMAL, LIGHT]);
+  if (MINIMAL || LIGHT || MAX) await context.addInitScript(([m, l, x]) => { try { const s = JSON.parse(localStorage.getItem('mh_rhythm_settings_v1') || '{}'); if (m) s.effectAmount = 'MINIMAL'; if (l) s.lightweightMode = true; if (x) Object.assign(s, { effectAmount: 'NORMAL', stageEffect: 'LIVE', roadFx: true, judgmentFx: true, noteMotionFx: true, comboMilestoneFx: true, noteBloom: true, climaxFx: true }); localStorage.setItem('mh_rhythm_settings_v1', JSON.stringify(s)); } catch (_) {} }, [MINIMAL, LIGHT, MAX]);
   if (LOOK) await context.addInitScript({ content: `window.__skyLayerLook=${JSON.stringify(LOOK)};` + fs.readFileSync(path.join(__dirname, 'look.js'), 'utf8') });
   const page = await context.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
@@ -79,7 +79,7 @@ const seed = (songId) => `(() => {
     const walk = (el, d) => { if (d > 0) return; for (const c of el.children) { const cs = getComputedStyle(c); const r = c.getBoundingClientRect();
       if (r.width > 50) out.push(`${'  '.repeat(d)}${c.tagName.toLowerCase()} ${[...c.attributes].filter(x => x.name.startsWith('data-')).map(x => x.name).join(' ')} z=${cs.zIndex} pos=${cs.position} ${Math.round(r.width)}x${Math.round(r.height)}`); walk(c, d + 1); } };
     walk(a, 0); return out.join('\n'); }));
-  console.log(`撮った: ${OUT}(${SHOT}ms${LOOK ? '・案' + LOOK : ''}${ROT ? '・🔄横' : PORTRAIT ? '・縦' : '・横'})`);
+  console.log(`撮った: ${OUT}(${SHOT}ms${LOOK ? '・案' + LOOK : ''}${ROT ? '・🔄横' : PORTRAIT ? '・縦' : '・横'}${MAX ? '・全部のせ' : ''})`);
   if (errors.length) console.log('ページのエラー:', errors.slice(0, 3).join(' / '));
   await context.close(); await browser.close();
 })().catch(e => { console.error(e); process.exit(2); });
