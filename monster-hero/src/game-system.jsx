@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 978b66da0a022908
+// generated-sha256: 398852ba986b2cd9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25332,7 +25332,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   (2026-09-05・ユーザー指摘「文字数で枠がずれるのがださい」)。
                   2026-09-26 に2行ぶんの確保をやめて1行にした(ユーザー指示「見本のほうがサイズ感が見やすい」)。
                   曲名の全部は、選んだときに下の欄へ2行で出る。 */}
-              <span className="min-w-0 flex-1 [container-type:inline-size]">
+              <span className="relative min-w-0 flex-1 [container-type:inline-size]">
+                {/* 文字の列が細いとき(230px 以下: 小さい横・🔄横の細い端末)は、版の数を下の段の札ではなくジャケットの右下の角に小さく出す
+                    (2026-11-24 ミハリの気付き: 小さい横 568×320 で、行のスコア「C 799,166」と「2つの版」の札が重なっていた)。
+                    下の段の札と同じ列の幅(この span の container)で出し分けるので、両方出る・両方消えることはない */}
+                {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-corner':row.versions}:{})} aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0.5 hidden whitespace-nowrap rounded border border-sky-300/60 bg-slate-950/90 px-0.5 text-[9px] font-black leading-tight text-sky-200 [@container(max-width:230px)]:block"
+                  style={{right:'calc(100% + 6px)'}}>{row.versions}版</small>}
+                {/* 買う前(🔒)とイベント対象(🏆)も、列が細いときは下の段から外してジャケットの右上の角に出す(1つの札にまとめて重ならないように) */}
+                {(lockedSong(entry)||eventSong)&&<small {...(main?{'data-rhythm-song-row-corner-marks':''}:{})} aria-hidden="true"
+                  className="pointer-events-none absolute top-0.5 hidden whitespace-nowrap rounded border border-amber-300/60 bg-slate-950/90 px-0.5 text-[9px] leading-tight [@container(max-width:230px)]:block"
+                  style={{right:'calc(100% + 6px)'}}>{lockedSong(entry)?'🔒':''}{eventSong?'🏆':''}</small>}
                 {/* 曲名は幅に合わせて15px〜12pxで1行に収める。12pxでも入らない曲名だけ2行へ折り返す。
                     高さは15pxの2行ぶん(36px)で固定し、1行の曲は上下のまん中に置く(曲名の長さで行の高さを変えない)。
                     ★折り返しと高さはインラインで持つ(CSSが届かなくても行の高さがそろうように) */}
@@ -25383,16 +25393,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                         :<span className={`shrink-0 whitespace-nowrap${row.versions>1?' [@container(max-width:180px)]:hidden':''}`}>未プレイ</span>}
                     </small>;
                   })()}
-                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
+                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる)。列が細いときはジャケットの角へ移す(上の data-rhythm-song-row-version-corner) */}
                   {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
-                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
+                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200 [@container(max-width:230px)]:hidden">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰<span className="[@container(max-width:300px)]:hidden"> 初めての1曲</span></small>}
                   {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}{/* 列が細いときはジャケットの右上の角に🔒だけ出す(値段は右の欄の「買う」に出る・2026-11-24) */}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200 [@container(max-width:230px)]:hidden">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
               </span>
             </button>
