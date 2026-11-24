@@ -1,0 +1,292 @@
+[
+ {
+  "tag": "縦320",
+  "label": "自分",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   164,
+   344,
+   140,
+   132
+  ],
+  "name": [
+   174,
+   426,
+   120,
+   21
+  ],
+  "badge": [
+   251,
+   418,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W5/10",
+  "badgeOnTile": true,
+  "badgeOnName": true,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦320",
+  "label": "フレンド",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   164,
+   277,
+   140,
+   153
+  ],
+  "name": [
+   174,
+   358,
+   120,
+   21
+  ],
+  "badge": [
+   251,
+   490,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W6/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦375",
+  "label": "自分",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   192,
+   430,
+   168,
+   132
+  ],
+  "name": [
+   202,
+   512,
+   148,
+   21
+  ],
+  "badge": [
+   306,
+   770,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W4/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦375",
+  "label": "フレンド",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   192,
+   335,
+   168,
+   153
+  ],
+  "name": [
+   202,
+   416,
+   148,
+   21
+  ],
+  "badge": [
+   306,
+   770,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W5/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦390",
+  "label": "自分",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   199,
+   437,
+   175,
+   132
+  ],
+  "name": [
+   209,
+   520,
+   155,
+   21
+  ],
+  "badge": [
+   321,
+   802,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W4/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦390",
+  "label": "フレンド",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   199,
+   335,
+   175,
+   153
+  ],
+  "name": [
+   209,
+   416,
+   155,
+   21
+  ],
+  "badge": [
+   321,
+   802,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W5/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦430",
+  "label": "自分",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   219,
+   439,
+   195,
+   132
+  ],
+  "name": [
+   229,
+   522,
+   175,
+   21
+  ],
+  "badge": [
+   361,
+   890,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W6/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "縦430",
+  "label": "フレンド",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   219,
+   335,
+   195,
+   153
+  ],
+  "name": [
+   229,
+   416,
+   175,
+   21
+  ],
+  "badge": [
+   361,
+   866,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W7/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "横844",
+  "label": "自分",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   579,
+   141,
+   249,
+   132
+  ],
+  "name": [
+   589,
+   223,
+   229,
+   21
+  ],
+  "badge": [
+   8,
+   348,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W5/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ },
+ {
+  "tag": "横844",
+  "label": "フレンド",
+  "nameText": "☀️🌙いちかスペシャルデッキ（強め）",
+  "nameLines": 1,
+  "nameCut": true,
+  "tile": [
+   579,
+   119,
+   249,
+   153
+  ],
+  "name": [
+   589,
+   200,
+   229,
+   21
+  ],
+  "badge": [
+   775,
+   348,
+   61,
+   34
+  ],
+  "badgeText": "🔁 1周目 W6/10",
+  "badgeOnTile": false,
+  "badgeOnName": false,
+  "rectCount": 2
+ }
+]
