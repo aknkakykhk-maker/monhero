@@ -7,7 +7,7 @@
 //   ① ビートP交換所: 円盤石が2枚ある / 絵を押すと大きく見られる / 「詳細」でモンスターの詳細(能力・技)が開く
 //   ② 交換: ビートPを1,500払うとモンスターが解放され(mh_unlocked_monsters)、カードが「所持済み」になる。
 //      ビートPが足りない円盤石は交換できない。すでに持っている子は交換できない
-//   ③ ダイヤショップ: 近日追加の円盤石も「詳細」でモンスターの詳細が開く
+//   ③ ダイヤショップ: 近日追加の円盤石も、札を押すとモンスターの詳細が開く(2026-11-24 r1119-155 案B で「詳細」のボタンを札そのものに)
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8961;
 let failed = 0;
@@ -144,10 +144,10 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForTimeout(500);
     ok('ダイヤショップへ入れる', intoDiamond && diamondOk);
     for (const name of ['ユグドラシルの円盤石', 'メルホイップの円盤石']) {
-      const clicked = await page.evaluate(n => { const b = document.querySelector(`button[aria-label="${n}の詳細を見る"]`); if (!b) return false; b.scrollIntoView(); b.click(); return true; }, name);
+      const clicked = await page.evaluate(n => { const b = (document.querySelector(`[data-market-row-card][aria-label="${n}を詳しく見る"]`) || document.querySelector(`button[aria-label="${n}の詳細を見る"]`)); if (!b) return false; b.scrollIntoView(); b.click(); return true; }, name);
       await page.waitForTimeout(300);
       const d = await monsterDetail();
-      ok(`ダイヤショップ: ${name}(近日追加)に「詳細」があり、モンスターの詳細が開く`, clicked && !!d, d || (clicked ? '開かない' : 'ボタンが無い'));
+      ok(`ダイヤショップ: ${name}(近日追加)の札を押すと、モンスターの詳細が開く`, clicked && !!d, d || (clicked ? '開かない' : '札が無い'));
       await closeDialog(); await page.waitForTimeout(250);
     }
     ok('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
