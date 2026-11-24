@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abef1c0a3e074086
+// source-sha256: a36c14869d0b7fa1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40033,6 +40033,7 @@ const RhythmSongSelect = ({
   };
   const unlocked = item => unlockAll || !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
   const openList = available.filter(unlocked);
+  const listenList = available;
   const lockHint = (() => {
     if (!song) return '';
     const locked = available.filter(item => !unlocked(item));
@@ -41034,8 +41035,8 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && openList.length > 0 && (() => {
-      const pick = openList.find(item => item.id === listenDiffId) || (difficulty && openList.includes(difficulty) ? difficulty : openList[0]);
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), typeof onListen === 'function' && !lockedSong(song) && listenList.length > 0 && (() => {
+      const pick = listenList.find(item => item.id === listenDiffId) || (difficulty && listenList.includes(difficulty) ? difficulty : listenList[0]);
       return React.createElement("div", {
         "data-rhythm-listen-panel": true,
         onClick: e => e.stopPropagation(),
@@ -41045,7 +41046,7 @@ const RhythmSongSelect = ({
       }, "🎧 曲を鑑賞する(ノーツが自動で叩かれます)"), React.createElement("div", {
         "data-rhythm-listen-diffs": true,
         className: "mt-1.5 flex gap-1"
-      }, openList.map(item => {
+      }, listenList.map(item => {
         const on = item === pick;
         const lv = song.difficulties && song.difficulties[item.id] ? song.difficulties[item.id].level : '';
         return React.createElement("button", {
@@ -247541,7 +247542,7 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return;
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return;
+    if (!rhythmChartPlayable(song, difficulty.id)) return;
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({
       song,

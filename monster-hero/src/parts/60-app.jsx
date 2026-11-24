@@ -12592,7 +12592,8 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return; // 買っていない曲は流さない
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return; // 鍵のついた譜面は流さない
+    // 難易度の鍵は見ない(2026-11-24 r1119-168: 鑑賞ははじめから HELL まで。記録は何も残さないので演奏の解放には響かない)
+    if (!rhythmChartPlayable(song, difficulty.id)) return; // 譜面の無い難易度は流さない
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song, difficulty, from:'listen' });
     setGameState('RHYTHM_PLAY');
