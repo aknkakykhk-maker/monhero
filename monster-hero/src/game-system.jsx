@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bfb9f0e6998cf424
+// generated-sha256: d8ba937f9c6c4ecc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24951,6 +24951,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
   const unlocked=item=>unlockAll||!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
   const openList=available.filter(unlocked);
+  // 曲鑑賞で選べる難易度(2026-11-24 r1119-168 社長「モンビーの鑑賞ははじめからヘルまでできるようにして」)。
+  //   難易度の鍵(HARD・MASTER のクリア)に関係なく、譜面のある難易度を HELL まで全部出す。鑑賞は何も記録しないので鍵を見ない。
+  //   演奏の難易度(openList・difficulty)は今のまま鍵を見る。買っていない曲は下の lockedSong で鑑賞ごと出さない(今のまま)
+  const listenList=available;
   // 鍵のかかった難易度の開け方を、難易度の札の下に1行で出す(2026-11-22 r1119-094・点検 N8・V14)。
   //   札の中の「HARDで解放」は6pxで読めなかったので札から外し、10px以上の1行にまとめる。いちばん手前の条件だけ出す
   //   2026-11-23 API総点検② V10: HELL にも鍵があるのに EXPERT・MASTER の開け方しか書いていなかった。条件が2つ以上なら全部を並べる
@@ -25662,14 +25666,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         {(song.credit.link&&song.credit.link.label)||'詳しく見る'} ↗
       </a>}
       {/* ===== 曲鑑賞(2026-11-23 r1119-112 案B・社長の選択) =====
-          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは遊べる譜面だけ(鍵のついた難易度・買っていない曲は出さない)。
+          ノーツが自動で叩かれながら曲が最後まで流れる。流せるのは譜面のある難易度すべて(鍵のついた難易度も HELL まで鑑賞できる・r1119-168。買っていない曲は出さない)。
           スコア・ランキング・自己ベスト・ビートP・ミッション・日課には何も残さない(呼ぶ側が from:'listen' で記録を全部通さない) */}
-      {typeof onListen==='function'&&!lockedSong(song)&&openList.length>0&&(()=>{
-        const pick=openList.find(item=>item.id===listenDiffId)||(difficulty&&openList.includes(difficulty)?difficulty:openList[0]);
+      {typeof onListen==='function'&&!lockedSong(song)&&listenList.length>0&&(()=>{
+        const pick=listenList.find(item=>item.id===listenDiffId)||(difficulty&&listenList.includes(difficulty)?difficulty:listenList[0]);
         return <div data-rhythm-listen-panel onClick={e=>e.stopPropagation()} className="mt-3 w-full max-w-xs rounded-2xl border border-teal-300/50 bg-teal-950/60 p-2">
           <p className="text-[11px] font-black text-teal-100">🎧 曲を鑑賞する(ノーツが自動で叩かれます)</p>
           <div data-rhythm-listen-diffs className="mt-1.5 flex gap-1">
-            {openList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
+            {listenList.map(item=>{const on=item===pick;const lv=song.difficulties&&song.difficulties[item.id]?song.difficulties[item.id].level:'';
               return <button key={item.id} type="button" data-rhythm-listen-diff={item.id} aria-pressed={on} onClick={()=>setListenDiffId(item.id)}
                 className={`min-h-[44px] min-w-0 flex-1 rounded-lg border-2 px-0.5 text-center leading-none ${on?'border-amber-300 bg-amber-900/70 text-white':'border-slate-500 bg-slate-900/80 text-slate-100'}`}>
                 <b className="block text-sm font-black">{lv}</b><small className="mt-0.5 block text-[9px] font-black">{item.id}</small></button>;})}
@@ -138723,7 +138727,8 @@ function MonsterHeroGame() {
   const startRhythmListen = (song, difficulty) => {
     if (!song || !difficulty) return;
     if (rhythmSongLocked(song.songId, RHYTHM_SONG_OWNED.get())) return; // 買っていない曲は流さない
-    if (!rhythmChartPlayable(song, difficulty.id) || !rhythmDifficultyUnlocked(song.songId, difficulty.id, rhythmBestRecords)) return; // 鍵のついた譜面は流さない
+    // 難易度の鍵は見ない(2026-11-24 r1119-168: 鑑賞ははじめから HELL まで。記録は何も残さないので演奏の解放には響かない)
+    if (!rhythmChartPlayable(song, difficulty.id)) return; // 譜面の無い難易度は流さない
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song, difficulty, from:'listen' });
     setGameState('RHYTHM_PLAY');
