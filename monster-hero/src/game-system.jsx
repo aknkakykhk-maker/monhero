@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 45298ca4f770650d
+// generated-sha256: e6e7ead73877bb4f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61045,6 +61045,7 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 //   face … 顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT。top・eye・chin は見えている体の上0〜下1、cx は左0〜右1)/box … 見えている体の範囲(assistantLifeStandBox)
 //   顔(目の線〜顎の先)の長さ F を枠の高さの h 倍にする(枠の幅の w 倍まで・元の絵の顔の upMax 倍まで = 小さい絵を引き伸ばしてぼかさない)。
 //   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
+//   PC の縦に細く高い枠では、それでも枠の幅の w 倍まで(顔が大きくなりすぎた)。届かない分は絵を下へずらしてそろえる
 //   目の線は、測った頭のてっぺんから F の 0.6 倍上を空けた所。見えている絵の上端(帽子・リボン・上げた手)は上から visCut までしか切らない所まで下げる。
 //   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
 //   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
@@ -61065,7 +61066,7 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
   // 絵の高さ = F / faceI。枠の下まで届く F は 枠の高さ × faceI
-  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), ${(faceI * 100).toFixed(3)}cqh)`;
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), min(${(faceI * 100).toFixed(3)}cqh, ${(R.w * 100).toFixed(1)}cqw))`;
   const wK = box.ar / faceI;
   return { width: `calc(${F} * ${wK.toFixed(4)})`, left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
     // 目の線は eyeK の所。ただし顎の下に F の lowBelow 倍が残るよう、背の低い枠では上へ寄せる

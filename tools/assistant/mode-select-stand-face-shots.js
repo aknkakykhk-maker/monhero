@@ -24,7 +24,7 @@ const ALL = [
 const ONLY = arg('--only', '');
 const LIST = ONLY ? ALL.filter(([w]) => ONLY.split(',').includes(w)) : ALL;
 // tate-hikui … 縦で、助手の枠を高さ 150px に詰めたもの(社長の写真 frame/shacho-monbattle-select.png は、下に「いま〜にいる助手」の欄が出て枠が低かった)
-const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 844, low: 150 }, { tag: 'yoko', w: 844, h: 390 }].filter(v => !arg('--views', '') || arg('--views', '').split(',').includes(v.tag));
+const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 844, low: 150 }, { tag: 'yoko', w: 844, h: 390 }, { tag: 'pc', w: 1280, h: 800 }].filter(v => !arg('--views', '') || arg('--views', '').split(',').includes(v.tag));
 
 // 数字では前の 0.97 倍に届かないが、止め絵を目で見て前と同じ大きさ以上だった組(前の版の顔の表が前の絵と合っていない・表情が違う)。キーは 画面/向き/助手。理由を書く
 const EYE_OK = Object.freeze({
@@ -81,6 +81,8 @@ if (process.argv.includes('--table-only')) { writeTable(JSON.parse(fs.readFileSy
   const open = async (who, costume, view) => {
     const ctx = await browser.newContext({ viewport: { width: view.w, height: view.h }, deviceScaleFactor: 2, serviceWorkers: 'block' });
     const page = await ctx.newPage();
+    if (process.env.MS_DEBUG) page.on('console', m => { if (m.text().startsWith('MSDEBUG')) console.log(m.text()); });
+    if (process.env.MS_DEBUG) await page.addInitScript(() => { window.__msDebug = true; });
     page.on('pageerror', e => errors.push(`${mode} ${who}${costume ? ':' + costume : ''}: ${e.message}`));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
@@ -118,6 +120,7 @@ if (process.argv.includes('--table-only')) { writeTable(JSON.parse(fs.readFileSy
     const r = img.getBoundingClientRect(), b = boxEl.getBoundingClientRect();
     const vy = (f) => r.top + r.height * (box.t + (box.b - box.t) * f);
     const headTop = vy(face.top), eye = vy(face.eye), chin = vy(face.chin);
+    if (window.__msDebug) console.log('MSDEBUG ' + JSON.stringify({ style: img.getAttribute('style'), r: [r.left - b.left, r.top - b.top, r.width, r.height], b: [b.width, b.height], box, face }));
     return { src: src.replace(/\?.*$/, ''), pid, frame: { w: Math.round(b.width), h: Math.round(b.height), x: b.left, y: b.top },
       img: { w: Math.round(r.width), h: Math.round(r.height) }, head: +(chin - eye).toFixed(1), nat: +(img.naturalHeight * (box.b - box.t) * (face.chin - face.eye)).toFixed(1), headTop: +(headTop - b.top).toFixed(1), eye: +(eye - b.top).toFixed(1), chin: +(chin - b.top).toFixed(1) };
   });
