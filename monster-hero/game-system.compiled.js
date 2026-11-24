@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c980655ae52da9b0
+// source-sha256: de647c57e85b6f2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23050,6 +23050,7 @@ const AssistantBubble = ({
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openTopic, setOpenTopic] = useState(null);
   const foldKey = collapseKey !== undefined ? collapseKey : line || defaultOpen ? null : assistantBubbleFoldKey(scene);
   const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
   const bubbleSetting = useAssistantBubbleState();
@@ -23137,8 +23138,11 @@ const AssistantBubble = ({
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
   const menuItems = Array.isArray(menu) ? menu.filter(m => m && typeof m.onClick === 'function') : [];
-  const useMenu = menuItems.length > 0;
-  const Wrapper = hasDetail || useMenu ? 'button' : 'div';
+  const directItem = menuItems.length === 1 ? menuItems[0] : null;
+  const useMenu = menuItems.length > 0 && !directItem;
+  const directLabel = directItem ? String(directItem.label || '').replace(/^\S+\s+/, '').replace(/する$/, '') : '';
+  const helpCategory = directItem && ref ? helpCategoryById(ref.split('/')[0]) : null;
+  const Wrapper = hasDetail || useMenu || directItem ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
   if (foldKey && collapsed) {
@@ -23155,7 +23159,7 @@ const AssistantBubble = ({
   return React.createElement(React.Fragment, null, React.createElement("div", {
     "data-assistant-bubble": true,
     "data-bubble-one-line": oneLine ? '' : undefined,
-    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey ? 'relative' : ''}`
+    className: `w-full flex ${oneLine ? 'items-center' : 'items-end'} gap-2 ${foldKey || directItem ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -23166,7 +23170,12 @@ const AssistantBubble = ({
     size: size,
     accent: color,
     expression: face
-  })), React.createElement(Wrapper, _extends({}, useMenu ? {
+  })), React.createElement(Wrapper, _extends({}, directItem ? {
+    ...(directItem.attr || {}),
+    onClick: directItem.onClick,
+    'aria-label': `${who.name}と${directLabel}する`,
+    'data-bubble-direct': ''
+  } : useMenu ? {
     onClick: () => setMenuOpen(!menuOpen),
     'aria-label': `${who.name}のメニューを開く`,
     'aria-expanded': menuOpen,
@@ -23175,7 +23184,7 @@ const AssistantBubble = ({
     onClick: () => setOpen(true),
     'aria-label': `${who.name}の説明を開く`
   } : {}, {
-    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine ? 'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]' : compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
+    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine ? 'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]' : compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''} ${directItem && hasDetail ? 'pr-10' : ''}`,
     style: {
       borderColor: color,
       backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
@@ -23265,7 +23274,7 @@ const AssistantBubble = ({
       WebkitLineClamp: maxLines,
       overflow: 'hidden'
     } : bubbleWrapStyle()
-  }, bubbleWrap(text)), (hasDetail || footerSpace > 0) && React.createElement("span", {
+  }, bubbleWrap(text)), (hasDetail || directItem || footerSpace > 0) && React.createElement("span", {
     className: "mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black",
     style: {
       color,
@@ -23276,13 +23285,33 @@ const AssistantBubble = ({
         whiteSpace: 'nowrap'
       } : {})
     }
-  }, useMenu && !hasDetail && React.createElement("span", {
+  }, directItem ? React.createElement(React.Fragment, null, React.createElement("span", {
+    "data-bubble-more-text": true
+  }, `タップで${directLabel}`), React.createElement(ChevronRight, {
+    size: 11
+  })) : React.createElement(React.Fragment, null, useMenu && !hasDetail && React.createElement("span", {
     "data-bubble-more-text": true
   }, "タップでメニュー"), hasDetail && React.createElement(React.Fragment, null, React.createElement("span", {
     "data-bubble-more-text": true
   }, useMenu ? 'タップでメニュー' : 'タップで詳しく'), React.createElement(ChevronRight, {
     size: 11
-  }))))), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
+  })))))), directItem && hasDetail && React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setOpenTopic(null);
+      setOpen(true);
+    },
+    "aria-label": `${who.name}にこの画面の遊び方を聞く`,
+    "data-bubble-help-q": true,
+    className: "mh-hit-expand absolute top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90",
+    style: {
+      right: foldKey && !collapseHidden ? '56px' : '4px',
+      zIndex: 5,
+      borderColor: color,
+      color,
+      backgroundColor: 'rgba(15,23,42,0.97)'
+    }
+  }, "?"), foldKey && !collapseHidden && React.createElement(BubbleFoldButton, {
     open: true,
     onToggle: () => setCollapsed(true),
     size: "sm",
@@ -23370,7 +23399,42 @@ const AssistantBubble = ({
       } : bubbleWrapStyle()
     }, low ? text : bubbleWrap(text)))), React.createElement("div", {
       className: `flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low ? 'px-4 py-3' : 'p-4'}`
-    }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
+    }, helpCategory && Array.isArray(helpCategory.topics) && helpCategory.topics.length ? React.createElement(React.Fragment, null, React.createElement("div", {
+      "data-assistant-help-index": true
+    }, React.createElement("div", {
+      className: "text-[14px] font-black text-white"
+    }, helpCategory.title), React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-bold text-slate-400"
+    }, "知りたい項目を押すと開きます")), helpCategory.topics.map(t => {
+      const on = openTopic === t.id;
+      return React.createElement("div", {
+        key: t.id,
+        className: "rounded-2xl border",
+        style: {
+          borderColor: on ? color : 'rgba(255,255,255,0.12)'
+        }
+      }, React.createElement("button", {
+        type: "button",
+        onClick: () => setOpenTopic(on ? null : t.id),
+        "aria-expanded": on,
+        "data-assistant-help-topic": t.id,
+        className: "flex min-h-[48px] w-full items-center gap-2 px-3.5 text-left"
+      }, React.createElement("span", {
+        "aria-hidden": "true",
+        className: "shrink-0 text-[16px]"
+      }, t.emoji || '📖'), React.createElement("span", {
+        className: "min-w-0 flex-1 text-[13px] font-black text-white",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(t.title)), React.createElement("span", {
+        "aria-hidden": "true",
+        className: "shrink-0 text-[12px] font-black",
+        style: {
+          color
+        }
+      }, on ? '▲' : '▼')), on && React.createElement("div", {
+        className: "space-y-3 px-3.5 pb-3.5"
+      }, renderHelpBlocks(t.blocks, color)));
+    })) : topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => React.createElement("p", {
       key: i,
       className: "text-[12px] text-slate-200 leading-relaxed"
     }, helpWrap(x)))), React.createElement("div", {

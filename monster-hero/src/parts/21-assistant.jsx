@@ -470,6 +470,9 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   // menu … [{ key, label, onClick }]。渡すと、吹き出しを押したときに小さなメニュー(渡した項目+「📖 詳しく見る」)を出す。
   //   HOME は吹き出しの中に「💬 おしゃべり」と「タップで詳しく」の2つの押し所があり、違いが分からなかった(r1119-050 窓-36)。押し所を吹き出し1つにまとめ、機能は減らさない
   const [menuOpen, setMenuOpen] = useState(false);
+  // 項目が1つ(HOME の「おしゃべり」)のときはメニューを出さず、吹き出しを押すとすぐその項目へ。説明は吹き出しの角の「?」から(r1119-155 案A)。
+  //   「?」で開く説明の窓は、そのヘルプの分類の項目名を並べ、押した項目だけ開く(1項目の長い文がぎっしり出ていた)
+  const [openTopic, setOpenTopic] = useState(null);
   // 畳む・開くの名前。渡されたらそれ(null なら畳まない)、渡されなければ場面から(文を直接渡す・最初から開くものは畳まない)
   const foldKey = collapseKey !== undefined ? collapseKey : (line || defaultOpen ? null : assistantBubbleFoldKey(scene));
   const [collapsed, setCollapsed] = useBubbleCollapse(foldKey);
@@ -548,8 +551,11 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!((paragraphs && paragraphs.length) || topic);
   const menuItems = Array.isArray(menu) ? menu.filter((m) => m && typeof m.onClick === 'function') : [];
-  const useMenu = menuItems.length > 0;
-  const Wrapper = hasDetail || useMenu ? 'button' : 'div';
+  const directItem = menuItems.length === 1 ? menuItems[0] : null;
+  const useMenu = menuItems.length > 0 && !directItem;
+  const directLabel = directItem ? String(directItem.label || '').replace(/^\S+\s+/, '').replace(/する$/, '') : '';
+  const helpCategory = directItem && ref ? helpCategoryById(ref.split('/')[0]) : null;
+  const Wrapper = hasDetail || useMenu || directItem ? 'button' : 'div';
   const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   if (bubbleHidden) return null;
   // 畳んでいる間は、右に「💬▼」のボタンだけ(押すと開く。モンヒロビートの曲えらびと同じ形・r1119-135)
@@ -563,14 +569,14 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   }
   return (
     <>
-      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${foldKey?'relative':''}`}>
+      <div data-assistant-bubble data-bubble-one-line={oneLine?'':undefined} className={`w-full flex ${oneLine?'items-center':'items-end'} gap-2 ${foldKey||directItem?'relative':''}`}>
         {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
         <button type="button" onClick={onFaceTap} aria-label={`${who.name}に話しかける`} className="shrink-0 active:scale-90 transition-transform">
           <AssistantFace who={who} size={size} accent={color} expression={face}/>
         </button>
         <Wrapper
-          {...(useMenu ? { onClick:()=>setMenuOpen(!menuOpen), 'aria-label':`${who.name}のメニューを開く`, 'aria-expanded':menuOpen, 'data-bubble-menu-toggle':'' } : hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
-          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
+          {...(directItem ? { ...(directItem.attr||{}), onClick:directItem.onClick, 'aria-label':`${who.name}と${directLabel}する`, 'data-bubble-direct':'' } : useMenu ? { onClick:()=>setMenuOpen(!menuOpen), 'aria-label':`${who.name}のメニューを開く`, 'aria-expanded':menuOpen, 'data-bubble-menu-toggle':'' } : hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
+          className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${oneLine?'flex items-center gap-1.5 px-2.5 py-1 max-h-[36px]':compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''} ${directItem&&hasDetail?'pr-10':''}`}
           style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
           {/* oneLine … 名前とセリフを1行に並べ、はみ出す分は … で切る。「タップで詳しく」は右端の小さな「›」(高さ36px以内。
               2026-11-08 マモリ: 曲えらびの横の欄は空きが40pxほどしかなく、3行の吹き出しが画面の下へはみ出していた) */}
@@ -591,9 +597,13 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
           {/* 本文は言葉の切れ目で折り、行の長さをそろえる(2026-10-24。「ここからが本番じゃ／ん！」と最後の1字が落ちていた) */}
           <span data-bubble-text data-bubble-max-lines={maxLines>0?maxLines:undefined} className={`block text-white leading-relaxed ${compact?'text-[10px]':'text-[12px]'}`}
             style={maxLines>0?{...bubbleWrapStyle(),display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:maxLines,overflow:'hidden'}:bubbleWrapStyle()}>{bubbleWrap(text)}</span>
-          {(hasDetail||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</span>}
+          {(hasDetail||directItem||footerSpace>0)&&<span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-black" style={{ color, lineHeight:'13.5px', ...(footerSpace>0?{paddingLeft:`${footerSpace}px`,minHeight:'18px',whiteSpace:'nowrap'}:{}) }}>{directItem?<><span data-bubble-more-text>{`タップで${directLabel}`}</span><ChevronRight size={11}/></>:<>{useMenu&&!hasDetail&&<span data-bubble-more-text>タップでメニュー</span>}{hasDetail&&<><span data-bubble-more-text>{useMenu?'タップでメニュー':'タップで詳しく'}</span><ChevronRight size={11}/></>}</>}</span>}
           </>}
         </Wrapper>
+        {/* 吹き出しの角の「?」… この画面の遊び方(説明の窓)を開く。吹き出しを押したときはおしゃべり(r1119-155 案A) */}
+        {directItem&&hasDetail&&<button type="button" onClick={()=>{ setOpenTopic(null); setOpen(true); }} aria-label={`${who.name}にこの画面の遊び方を聞く`} data-bubble-help-q
+          className="mh-hit-expand absolute top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[14px] font-black shadow active:scale-90"
+          style={{ right: foldKey&&!collapseHidden ? '56px' : '4px', zIndex:5, borderColor:color, color, backgroundColor:'rgba(15,23,42,0.97)' }}>?</button>}
         {/* 開いている間は、吹き出しの右に「💬▲」(押すと畳む・画面ごとに覚える。r1119-135) */}
         {foldKey&&!collapseHidden&&<BubbleFoldButton open onToggle={() => setCollapsed(true)} size="sm" className="self-center" data-bubble-collapse=""/>}
         {useMenu&&menuOpen&&<>
@@ -622,7 +632,24 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
               </div>
             </div>
             <div className={`flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3.5 ${low?'px-4 py-3':'p-4'}`}>
-              {topic
+              {helpCategory&&Array.isArray(helpCategory.topics)&&helpCategory.topics.length
+                ? <>
+                  <div data-assistant-help-index>
+                    <div className="text-[14px] font-black text-white">{helpCategory.title}</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-slate-400">知りたい項目を押すと開きます</div>
+                  </div>
+                  {helpCategory.topics.map((t)=>{ const on = openTopic===t.id; return (
+                    <div key={t.id} className="rounded-2xl border" style={{ borderColor: on ? color : 'rgba(255,255,255,0.12)' }}>
+                      <button type="button" onClick={()=>setOpenTopic(on?null:t.id)} aria-expanded={on} data-assistant-help-topic={t.id}
+                        className="flex min-h-[48px] w-full items-center gap-2 px-3.5 text-left">
+                        <span aria-hidden="true" className="shrink-0 text-[16px]">{t.emoji||'📖'}</span>
+                        <span className="min-w-0 flex-1 text-[13px] font-black text-white" style={bubbleWrapStyle()}>{bubbleWrap(t.title)}</span>
+                        <span aria-hidden="true" className="shrink-0 text-[12px] font-black" style={{ color }}>{on?'▲':'▼'}</span>
+                      </button>
+                      {on&&<div className="space-y-3 px-3.5 pb-3.5">{renderHelpBlocks(t.blocks, color)}</div>}
+                    </div>); })}
+                </>
+                : topic
                 ? renderHelpBlocks(topic.blocks, color)
                 : (paragraphs || []).map((x,i)=><p key={i} className="text-[12px] text-slate-200 leading-relaxed">{helpWrap(x)}</p>)}
             </div>

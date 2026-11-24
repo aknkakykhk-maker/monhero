@@ -460,8 +460,9 @@ check('場面キーだけでも、直接指定でも呼べる',
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
-// 押せるのは詳細かメニュー(HOME のおしゃべり・r1119-050)があるときだけ
-check('詳細もメニューも無いときはボタンにしない', has("const Wrapper = hasDetail || useMenu ? 'button' : 'div';"));
+// 押せるのは詳細かメニュー、または項目1つのメニュー(HOME のおしゃべり。押すとすぐその項目・r1119-155)があるときだけ
+check('詳細もメニューも無いときはボタンにしない', has("const Wrapper = hasDetail || useMenu || directItem ? 'button' : 'div';"));
+check('項目が1つのメニューは、吹き出しを押すとすぐその項目へ・説明は角の「?」から(r1119-155)', has("const directItem = menuItems.length === 1 ? menuItems[0] : null;") && has('data-bubble-help-q') && has('data-assistant-help-topic'));
 check('チュートリアル用に最初から開いた状態にもできる', has('defaultOpen=false') && has('useState(defaultOpen)'));
 check('画面のテーマ色に合わせられる', has('const color = accent || who.accent || ASSISTANT_FALLBACK.accent;'));
 check('ヘルプ画面で実際に使っている', has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
