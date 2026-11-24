@@ -28,12 +28,14 @@ const VIEWS = [{ tag: 'tate', w: 390, h: 844 }, { tag: 'tate-hikui', w: 390, h: 
 
 // 数字では前の 0.97 倍に届かないが、止め絵を目で見て前と同じ大きさ以上だった組(前の版の顔の表が前の絵と合っていない・表情が違う)。キーは 画面/向き/助手。理由を書く
 const EYE_OK = Object.freeze({
-  'card/yoko/sorashido_hosei': '止め絵では前とほぼ同じ大きさ(前の版の表の目・顎の点が前の絵とずれている・表情が違う)',
+  'card/tate/mua': '止め絵では後のほうが大きい(前の版の表の点のずれ・表情の違い)',
+  'rhythm/yoko/mua': '止め絵では後のほうが大きい(前の版の表の点のずれ・表情の違い)',
+  'card/tate/sorashido_hosei': '止め絵では前とほぼ同じ大きさ(前の版の表の点のずれ・表情の違い)',
 });
 const eyeOk = (r) => !!EYE_OK[`${r.screen}/${r.view}/${r.who}`];
 // 突き合わせ表(<out>/README.md)。決めごとの行ごとに、止め絵のどこで満たすかと、組ごとの数字
 const writeTable = (rows) => {
-  const VN = { tate: '縦', 'tate-hikui': '縦・低い枠', yoko: '横' }, SN = { battle: 'モンヒロバトル', card: 'MFバトルカード', rhythm: 'モンヒロビート' };
+  const VN = { tate: '縦', 'tate-hikui': '縦・低い枠', yoko: '横', pc: 'PC' }, SN = { battle: 'モンヒロバトル', card: 'MFバトルカード', rhythm: 'モンヒロビート' };
   const bad = rows.filter(r => !((r.ratio >= 0.97) || r.capped || eyeOk(r)) || !r.inside), eyed = rows.filter(r => eyeOk(r) && !(r.ratio >= 0.97)), capped = rows.filter(r => r.capped && !(r.ratio >= 0.97));
   const min = (k) => Math.min(...rows.filter(r => r.ratio).map(r => r.ratio));
   const L = [];
@@ -45,10 +47,10 @@ const writeTable = (rows) => {
   L.push(`| r1119-153 追記4「顔が前より小さくならないように寄せ方を直す」 | 立ち絵を顔の位置と大きさで寄せる。${rows.length}組のうち前の0.97倍未満は ${bad.length}組${eyed.length ? `(ほかに数字は届かないが目で確かめた ${eyed.length}組: ${eyed.map(r => `${SN[r.screen]} ${VN[r.view]} ${r.who} ×${r.ratio} … ${EYE_OK[`${r.screen}/${r.view}/${r.who}`]}`).join('・')})` : ''}${capped.length ? `(ほかに元の絵が小さく上限で止めた ${capped.length}組: ${capped.map(r => `${SN[r.screen]} ${VN[r.view]} ${r.who} ×${r.ratio}`).join('・')})` : ''}。いちばん小さい倍率 ×${min()} | 全部の \`ms-*.jpg\`。社長の写真と同じ低い枠は \`ms-battle-tate-hikui-mua_halloween.jpg\` |`);
   L.push('| 同「絵は新しいまま・引き伸ばさない」 | 絵のファイルは替えない。画面での拡大は元の絵の顔の1.5倍まで(あつ・えるびん石油王のように元の絵が小さい組はそこで止める) | `ms-card-tate-atsu.jpg` |');
   L.push('| 同「モンヒロバトル・MFバトルカード・モンヒロビートのモード選びなど」 | 3画面とも同じ部品(ModeSelectAssistantPanel)なので、1か所の直しで3画面に効く | `ms-battle-*`・`ms-card-*`・`ms-rhythm-*` |');
-  L.push('| 同「全助手・全服で前後を撮って確かめる」 | 全身絵からの立ち絵がある15組 × 3画面 × 縦・縦の低い枠・横 = ' + rows.length + '組 | 下の表 |');
+  L.push('| 同「全助手・全服で前後を撮って確かめる」 | 全身絵からの立ち絵がある15組 × 3画面 × 縦・縦の低い枠・横・PC = ' + rows.length + '組 | 下の表 |');
   L.push('| r1115-143・r1119-153「色を減らさない・古い絵は消さない」 | 絵のファイルに触れていない | — |');
   L.push('| 顔が枠からはみ出さない | 顔(目〜顎)はどの組も枠の中' + (rows.some(r => !r.inside) ? '(★の組を除く)' : '') + '。背の低い枠では帽子・耳の先は切れてよいとした | `ms-*-tate-hikui-*.jpg` |', '');
-  L.push('## 残り', '', '- きき ツインテール: 数字では前とほぼ同じだが、止め絵ではどの画面も1割ほど小さめに見える。大きなリボンが顔の約4倍の高さまであり、リボンを上で切れないようにする決まり(`assistant-art-scenes-check.js` の「上が切れる」10%まで)と両立する寄せ方では、ここまで。リボンを切ってよいかは判断が要る(窓口へ)', '');
+  L.push('## 残り', '', '- えるびん(ふだん・石油王)の PC(縦に細く高い枠): 前の絵は顔の大写し(顔 100px 前後で枠の幅いっぱい)だったので、ほかの助手と顔の大きさをそろえた後は 0.65〜0.78 倍に見え、枠の上が空く。石油王は元の絵が小さく、引き伸ばしの上限でもある。PC だけ大写しへ戻すかは判断が要る(窓口へ)', '- きき ツインテールは、印(目が前髪・顎が口元)を直したので、どの画面でも前と同じかそれ以上になった', '- 助手ライフの場面の大きさ(顔の表の m)は main の値のまま。直した道具が出す m にするかは Muse が決める(MUSE.md)', '');
   L.push('## 組ごとの数字', '', '| 画面 | 向き | 助手・服 | 枠の高さ | 前 | 後 | 倍 |', '| --- | --- | --- | --- | --- | --- | --- |');
   for (const r of rows) L.push(`| ${SN[r.screen]} | ${VN[r.view]} | ${r.who} | ${r.after ? r.after.frame.h : '-'} | ${r.before ? r.before.head : '-'} | ${r.after ? r.after.head : '-'} | ×${r.ratio}${r.inside ? '' : ' ★枠の外'}${r.capped && !(r.ratio >= 0.97) ? '(元の絵の上限)' : ''}${eyeOk(r) && !(r.ratio >= 0.97) ? '(目で確かめた)' : ''} |`);
   fs.writeFileSync(path.join(OUT, 'README.md'), L.join('\n') + '\n');
