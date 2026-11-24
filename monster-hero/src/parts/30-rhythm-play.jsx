@@ -906,12 +906,14 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,inputLog,assist,mirro
             ...(typeof MH_SCREEN_TRAIL!=='undefined'?{scr:MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.sinceLast('play','start'))}:{})}};
 };
 // モンスターノーツの前後のコマ(2026-10-16・RHYTHM_FRAME_DIAG.mark)を stats.mon に足す。行の大きさの上限(stats は 4KB・表の check 制約)を
-// 超えると行ごと断られるので、文字にした大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す
-const RHYTHM_TOUCH_DIAG_MON_MAX=3500;
+// 超えると行ごと断られるので、大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す。
+// 【2026-11-24】大きさは文字数ではなく、データベースの中の形(rhythmJsonbSizeEstimate・data/rhythm-mode.js)で測る。文字数(3500)で測っていたあいだ、
+// iPhone の行が上限を超えて断られ、黙って消えていた。上限は 8192 へ上げ、送る側は 7600 で守る
+const RHYTHM_TOUCH_DIAG_MON_MAX=RHYTHM_TOUCH_DIAG_STATS_MAX;
 const rhythmTouchDiagWithMon=(diag,mon)=>{
   if(!diag||!diag.stats||!Array.isArray(mon)||!mon.length)return diag;
   const list=mon.map(m=>({...m}));
-  const size=()=>{try{return JSON.stringify({...diag.stats,mon:list}).length;}catch{return Infinity;}};
+  const size=()=>rhythmJsonbSizeEstimate({...diag.stats,mon:list});
   for(let i=list.length-1;i>=0&&size()>RHYTHM_TOUCH_DIAG_MON_MAX;i--){delete list[i].c;if(size()>RHYTHM_TOUCH_DIAG_MON_MAX)delete list[i].i;}
   while(list.length&&size()>RHYTHM_TOUCH_DIAG_MON_MAX)list.pop();
   return list.length?{...diag,stats:{...diag.stats,mon:list}}:diag;
@@ -927,7 +929,7 @@ const rhythmTouchDiagRecord=async(diag)=>{
     if(typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(diag.song_id))return false;
     const deviceKey=await rhythmPlayLogDeviceKey();
     return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:diag.platform,standalone:diag.standalone,
-      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:diag.stats,schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:rhythmTouchDiagFitStats(diag.stats),schema_version:RHYTHM_TOUCH_DIAG_VERSION});
   }catch{return false;}
 };
 /* リザルトの「押したのに反応しないことがあった」(2026-10-01・ユーザー指示)。

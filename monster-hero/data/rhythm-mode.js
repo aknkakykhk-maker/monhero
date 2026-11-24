@@ -3997,6 +3997,35 @@ const RHYTHM_TOUCH_ACTIVE_MS=700;
 //     alt   … その位置の近くには入力が無く、同じ頃ほかの位置には入力があった(=交互の抜けの候補。押したのに届かなかった・押し忘れた、の両方を含む)
 //     other … 近くに入力はあったが、別のノーツを取っていた / empty … 近くに入力はあったが、何も取れなかった(空打ち)
 //     none  … 同じ頃、どこにも入力が無かった(ふつうの見逃し)
+// 【2026-11-24】診断の行(stats)の、データベースの中の形(jsonb)での大きさの見積もり。表の決まりは pg_column_size(stats) で、文字数ではない(数字の多い行は文字の約1.7倍になる)。
+// それまで送る側は文字数(3500)で見張っていたので、11/17 に数を足したあと iPhone の行の 96% が上限(4096)を超えてサーバーに断られ、黙って消えていた
+// (社長が 11/23 に iPhone で遊んだ分が1行も届いていなかった)。上限は 2026-11-24 に 8192 へ上げた。見積もりは手元の PostgreSQL 16 の実測と 0〜2 バイトの差(412行)。
+//   形: 入れ物ごとに 4 バイトの頭 + 項目ごとに 4 バイト(オブジェクトは名前と値で 8)。数字は 4 バイトの境目へそろえて 6 + 2×(4桁ごとのかたまりの数)。文字はそのままのバイト数
+const rhythmJsonbSizeEstimate=value=>{
+  const utf8=s=>{let n=0;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c<0x80)n++;else if(c<0x800)n+=2;else if(c>=0xd800&&c<0xdc00){n+=4;i++;}else n+=3;}return n;};
+  const numLen=v=>{if(!Number.isFinite(v)||v===0)return 6;const s=String(Math.abs(v));if(/e/i.test(s))return 18;const parts=s.split('.'),i=parts[0].replace(/^0+/,''),f=(parts[1]||'').replace(/0+$/,'');return 6+2*(Math.ceil(i.length/4)+Math.ceil(f.length/4));};
+  let off=0;
+  const pad=()=>{off+=(4-off%4)%4;};
+  const walk=v=>{
+    if(v===null||v===undefined||typeof v==='boolean')return;
+    if(typeof v==='number'){pad();off+=numLen(v);return;}
+    if(typeof v==='string'){off+=utf8(v);return;}
+    if(Array.isArray(v)){pad();off+=4+4*v.length;v.forEach(walk);return;}
+    if(typeof v==='object'){/* jsonb は名前を「短い順 → 文字の順」に並べて持つ。数字をそろえる境目が並びで変わるので、同じ順で数える */const keys=Object.keys(v).filter(k=>v[k]!==undefined).sort((a,b)=>utf8(a)-utf8(b)||(a<b?-1:a>b?1:0));pad();off+=4+8*keys.length;keys.forEach(k=>{off+=utf8(k);});keys.forEach(k=>walk(v[k]));}
+  };
+  try{walk(value);}catch{return Infinity;}
+  return off+4;
+};
+// 表の上限(8192・2026-11-24 に 4096 から上げた)と、送る側が自分で守る上限(余裕を見て 7600)
+const RHYTHM_TOUCH_DIAG_STATS_SERVER_MAX=8192,RHYTHM_TOUCH_DIAG_STATS_MAX=7600;
+// 上限に収まるまで、大きい物から外す(モンスターノーツの前後 mon → 画面の出来事 scr → 1コマの重さ frame)。外した物の名前は stats.trim に残す。収まっていれば何もしない
+const RHYTHM_TOUCH_DIAG_TRIM_ORDER=Object.freeze(['mon','scr','frame']);
+const rhythmTouchDiagFitStats=(stats,max=RHYTHM_TOUCH_DIAG_STATS_MAX)=>{
+  if(!stats||typeof stats!=='object'||rhythmJsonbSizeEstimate(stats)<=max)return stats;
+  const out={...stats},dropped=[];
+  for(const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER){if(!(name in out))continue;delete out[name];dropped.push(name);out.trim=dropped.join('+');if(rhythmJsonbSizeEstimate(out)<=max)break;}
+  return out;
+};
 const RHYTHM_TAP_MISS_WINDOW_MS=200,RHYTHM_TAP_MISS_NEAR_SUB_LANES=2;
 const rhythmTapMissBreakdown=(notes,inputLog)=>{
   const log=(Array.isArray(inputLog)?inputLog:[]).filter(e=>Array.isArray(e)&&Number.isFinite(e[0])).slice().sort((a,b)=>a[0]-b[0]);
