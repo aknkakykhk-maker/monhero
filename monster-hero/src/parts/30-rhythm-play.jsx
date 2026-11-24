@@ -1259,12 +1259,15 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
    札が下から順に入る → スコアが0から数え上がる(横に自己ベストの印の付いた棒・「自己ベストまで あと ○○」が減る)
    → 越えた瞬間に NEW RECORD の札と伸びた点が弾む → 止まる瞬間に数字が光って決まる(じゃん！)→ ランクのはんこ → 称号の札。
    判定の内訳は行ごとに右から入って数え上がる。経験値など下の物は最後に出る。ボタンは初めから押せる。
-   ★タップでいつでも止まった形へ飛ぶ。演出量「最小」・軽量モード・動きを減らす設定では、初めから止まった形(数えない)。
+   ★タップでいつでも止まった形へ飛ぶ。演出の設定「結果の画面の演出」を「出さない」にしたときだけ、初めから止まった形(数えない)。
+   (2026-11-24 までは演出量「最小」・軽量モード・動きを減らすでも止めていた。r1119-156 追記でいつも動く形にした)
    ★数字は React を通さず、要素の文字を直接書き換える(毎フレーム描き直さない)。止まった形の数字は React が初めから持っている
    ★新記録の全画面の重ね(2026-10-06)は、この数え上げが同じ役をするのでやめた(結果の中へまとめた)。時刻の表は RHYTHM_RESULT_COUNT */
 const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:1200,janAt:1500,rowAt:400,rowStep:110,rowMs:550,stampAt:1550,ribbonAt:1850,restAt:1900,endAt:2400});
-const rhythmResultCountAnimOn=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
-  &&!(typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
+//   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
+//   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
+const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);
 const rhythmCountEase=k=>1-Math.pow(1-k,3);
 // 数え上げが前の自己ベストを越える時刻(結果の画面に出てからのミリ秒)。越えないときは null
 const rhythmResultCrossMs=(previous,score)=>{const prev=Number(previous)||0,to=Number(score)||0;if(!(prev>0)||!(to>prev))return null;
@@ -3463,7 +3466,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
-    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出量「最小」・軽量モード・動きを減らす・練習)
+    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出の設定「結果の画面の演出」が「出さない」・練習)
     const countOn=!!result.countAnim&&!tutorialProp;
     const prevBest=Math.max(0,Number(result.previousBestScore)||0);
     const crossMs=countOn&&result.isNewRecord?(rhythmResultCrossMs(prevBest,view.score)??RHYTHM_RESULT_COUNT.janAt):null;

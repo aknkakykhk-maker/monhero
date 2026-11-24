@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 67e04dba6a4630a4
+// generated-sha256: 1cb6df1e55bf4322
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -5672,6 +5672,9 @@ const RHYTHM_FX_ITEMS = Object.freeze([
   {key:'comboBounce',group:'combo',label:'コンボ数の跳ね',weight:'l',options:RHYTHM_FX_ON_OFF},
   {key:'combo100',group:'combo',label:'100コンボのお祝い',weight:'l',options:RHYTHM_FX_ON_OFF},
   {key:'fullComboBig',group:'combo',label:'フルコンボの大きな表示',weight:'l',options:RHYTHM_FX_ON_OFF},
+  // 結果の画面の数え上げと演出(2026-11-24・台帳 r1119-156 追記)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
+  // 「おまかせ」は演出量・軽量モード・端末の動きを減らす設定に関係なく出す。止めたい人だけ「出さない」
+  {key:'resultCount',group:'combo',label:'結果の画面の演出',weight:'l',options:RHYTHM_FX_ON_OFF},
 ]);
 const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item=>item.key));
 const RHYTHM_FX_GROUP_ICONS = Object.freeze({stage:'🌌',road:'🛣',note:'🎵',judge:'✨',combo:'🔥'});
@@ -5699,6 +5702,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
   fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
+  resultCount:'曲が終わったあとの結果の画面で、スコア・判定の数・MAX COMBO が0から数え上がり、決まった瞬間に光る演出です。既定は「おまかせ」（演出量・軽量モード・端末の「視差効果を減らす」などに関係なく出ます）。\n止めたいときは「出さない」にしてください。初めから結果の数字が出ます。タップでいつでも飛ばせます。判定・スコアは変わりません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
@@ -27117,12 +27121,15 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
    札が下から順に入る → スコアが0から数え上がる(横に自己ベストの印の付いた棒・「自己ベストまで あと ○○」が減る)
    → 越えた瞬間に NEW RECORD の札と伸びた点が弾む → 止まる瞬間に数字が光って決まる(じゃん！)→ ランクのはんこ → 称号の札。
    判定の内訳は行ごとに右から入って数え上がる。経験値など下の物は最後に出る。ボタンは初めから押せる。
-   ★タップでいつでも止まった形へ飛ぶ。演出量「最小」・軽量モード・動きを減らす設定では、初めから止まった形(数えない)。
+   ★タップでいつでも止まった形へ飛ぶ。演出の設定「結果の画面の演出」を「出さない」にしたときだけ、初めから止まった形(数えない)。
+   (2026-11-24 までは演出量「最小」・軽量モード・動きを減らすでも止めていた。r1119-156 追記でいつも動く形にした)
    ★数字は React を通さず、要素の文字を直接書き換える(毎フレーム描き直さない)。止まった形の数字は React が初めから持っている
    ★新記録の全画面の重ね(2026-10-06)は、この数え上げが同じ役をするのでやめた(結果の中へまとめた)。時刻の表は RHYTHM_RESULT_COUNT */
 const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:1200,janAt:1500,rowAt:400,rowStep:110,rowMs:550,stampAt:1550,ribbonAt:1850,restAt:1900,endAt:2400});
-const rhythmResultCountAnimOn=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
-  &&!(typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
+//   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
+//   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
+const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);
 const rhythmCountEase=k=>1-Math.pow(1-k,3);
 // 数え上げが前の自己ベストを越える時刻(結果の画面に出てからのミリ秒)。越えないときは null
 const rhythmResultCrossMs=(previous,score)=>{const prev=Number(previous)||0,to=Number(score)||0;if(!(prev>0)||!(to>prev))return null;
@@ -29321,7 +29328,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
-    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出量「最小」・軽量モード・動きを減らす・練習)
+    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出の設定「結果の画面の演出」が「出さない」・練習)
     const countOn=!!result.countAnim&&!tutorialProp;
     const prevBest=Math.max(0,Number(result.previousBestScore)||0);
     const crossMs=countOn&&result.isNewRecord?(rhythmResultCrossMs(prevBest,view.score)??RHYTHM_RESULT_COUNT.janAt):null;

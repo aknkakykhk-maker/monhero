@@ -839,6 +839,9 @@ const RHYTHM_FX_ITEMS = Object.freeze([
   {key:'comboBounce',group:'combo',label:'コンボ数の跳ね',weight:'l',options:RHYTHM_FX_ON_OFF},
   {key:'combo100',group:'combo',label:'100コンボのお祝い',weight:'l',options:RHYTHM_FX_ON_OFF},
   {key:'fullComboBig',group:'combo',label:'フルコンボの大きな表示',weight:'l',options:RHYTHM_FX_ON_OFF},
+  // 結果の画面の数え上げと演出(2026-11-24・台帳 r1119-156 追記)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
+  // 「おまかせ」は演出量・軽量モード・端末の動きを減らす設定に関係なく出す。止めたい人だけ「出さない」
+  {key:'resultCount',group:'combo',label:'結果の画面の演出',weight:'l',options:RHYTHM_FX_ON_OFF},
 ]);
 const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item=>item.key));
 const RHYTHM_FX_GROUP_ICONS = Object.freeze({stage:'🌌',road:'🛣',note:'🎵',judge:'✨',combo:'🔥'});
@@ -866,6 +869,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
   fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
+  resultCount:'曲が終わったあとの結果の画面で、スコア・判定の数・MAX COMBO が0から数え上がり、決まった瞬間に光る演出です。既定は「おまかせ」（演出量・軽量モード・端末の「視差効果を減らす」などに関係なく出ます）。\n止めたいときは「出さない」にしてください。初めから結果の数字が出ます。タップでいつでも飛ばせます。判定・スコアは変わりません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
