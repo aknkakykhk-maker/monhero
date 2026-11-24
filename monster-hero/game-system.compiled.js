@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7ec4d5283d61f4a
+// source-sha256: 05fbed597143964c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43717,6 +43717,51 @@ const RhythmHudScore = ({
     }
   }, "BEST ", Number(bestScore || 0).toLocaleString())));
 };
+const RHYTHM_COMBO_FIT_MARGIN_PX = 4;
+const rhythmComboRoadEdge = (side, yRatio, sky) => {
+  const y = Math.max(0, Math.min(1, yRatio)),
+    bound = side === 'right' ? RHYTHM_LANE_COUNT : 0;
+  let edge = rhythmProjectBoundary(bound, y);
+  if (sky && typeof rhythmSkyLiftRatio === 'function') {
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio;
+    let lo = y,
+      hi = line;
+    if (hi > lo && hi - rhythmSkyLiftRatio(hi) >= y) {
+      for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) / 2;
+        if (mid - rhythmSkyLiftRatio(mid) < y) lo = mid;else hi = mid;
+      }
+      const skyEdge = rhythmProjectBoundary(bound, hi);
+      edge = side === 'right' ? Math.max(edge, skyEdge) : Math.min(edge, skyEdge);
+    }
+  }
+  return edge;
+};
+const rhythmComboFitScale = (boxEl, numEl, position, visualScale, currentFit, sky) => {
+  if (!boxEl || !numEl || position === 'CENTER') return 1;
+  const area = boxEl.offsetParent;
+  if (!area) return 1;
+  const W = area.clientWidth,
+    H = area.clientHeight;
+  if (!(W > 0 && H > 0)) return 1;
+  const natural = numEl.offsetWidth / (currentFit > 0 ? currentFit : 1),
+    h = numEl.offsetHeight / (currentFit > 0 ? currentFit : 1);
+  if (!(natural > 0)) return 1;
+  const s = Math.max(.5, Number(visualScale) || 1),
+    side = position === 'LEFT' ? 'left' : 'right';
+  const centerY = boxEl.offsetTop + numEl.offsetTop + numEl.offsetHeight / 2;
+  let fit = 1;
+  for (let pass = 0; pass < 3; pass++) {
+    const bottom = (centerY + h * fit * s / 2) / H,
+      edge = rhythmComboRoadEdge(side, bottom, sky) * W;
+    const outer = side === 'right' ? boxEl.offsetLeft + numEl.offsetLeft + numEl.offsetWidth : boxEl.offsetLeft + numEl.offsetLeft;
+    const room = (side === 'right' ? outer - edge : edge - outer) - RHYTHM_COMBO_FIT_MARGIN_PX;
+    const next = Math.max(.4, Math.min(1, room / (natural * s)));
+    if (Math.abs(next - fit) < .005) break;
+    fit = next;
+  }
+  return Math.round(fit * 100) / 100;
+};
 const RhythmHudCombo = ({
   hud,
   settings,
@@ -43724,15 +43769,49 @@ const RhythmHudCombo = ({
   comboPosition,
   isLandscape,
   comboRef,
-  comboRingRef
+  comboRingRef,
+  skyChart = false
 }) => {
   const combo = useRhythmHudPick(hud, h => h.combo),
     countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
+  const comboBoxRef = useRef(null),
+    comboFitRef = useRef(1),
+    [comboFit, setComboFit] = useState(1),
+    [fitTick, setFitTick] = useState(0);
+  const comboDigits = combo > 0 ? String(Math.trunc(combo)).length : 0,
+    tierForFit = combo > 0 ? rhythmComboTier(combo) : 0;
+  const comboSizePct = rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100);
+  useEffect(() => {
+    const on = () => setFitTick(t => t + 1);
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', on);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (!comboDigits) return;
+    const side = comboPosition !== 'CENTER',
+      scale = side ? Math.min(rhythmComboTierScale(tierForFit), 1.25) : rhythmComboTierScale(tierForFit);
+    let next = 1;
+    try {
+      next = rhythmComboFitScale(comboBoxRef.current, comboRef && comboRef.current, comboPosition, scale, comboFitRef.current, skyChart);
+    } catch (_) {
+      next = 1;
+    }
+    if (Math.abs(next - comboFitRef.current) >= .01) {
+      comboFitRef.current = next;
+      setComboFit(next);
+    }
+  }, [comboDigits, tierForFit, comboSizePct, comboPosition, isLandscape, skyChart, fitTick]);
   if (settings.comboDisplay === false || !(combo > 0)) return null;
   const comboTier = rhythmComboTier(combo);
   const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
+    ref: comboBoxRef,
+    "data-combo-fit": comboFit < 1 ? String(comboFit) : undefined,
     "data-combo-status": comboStatus,
     "data-combo-tier": String(comboTier),
     "data-combo-pos": comboPosition,
@@ -43749,7 +43828,7 @@ const RhythmHudCombo = ({
     className: "block font-black leading-none tabular-nums text-white",
     style: {
       '--mh-combo-scale': rhythmComboTierScale(comboTier),
-      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
+      '--mh-combo-size': comboSizePct / 100 * comboFit
     }
   }, combo), settings.comboMilestoneFx === true && React.createElement("i", {
     ref: comboRingRef,
@@ -49884,7 +49963,8 @@ const RhythmTapTest = ({
     comboPosition: comboPosition,
     isLandscape: isLandscape,
     comboRef: comboRef,
-    comboRingRef: comboRingRef
+    comboRingRef: comboRingRef,
+    skyChart: !!skyChart
   }), React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
