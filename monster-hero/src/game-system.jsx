@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 549a485acda4acf0
+// generated-sha256: a17e0f92a483d804
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25226,17 +25226,23 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 <RhythmFitLabel text={rhythmSongVersionLabel(item.songId)||'原曲'} maxPx={viewWide?11:12} minPx={8} lines={2} className="block min-w-0 text-center leading-[1.15]"/>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
               </button>;})}</div>;})();
   // 横の一言が欄に収まるかを測る(上の noteFit)。曲・難易度・開け閉め・欄の大きさが変わったら、詰めない形から測り直す
-  const noteFitShow=!!notice&&noticeOpen&&viewWide;
-  React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
+  // 一言を出していない時も横では測る(2026-11-24 r1119-161 社長「横画面まだかぶってるじゃん」)。版が3つある曲は曲名が2行・版の札と♡が折れて欄が高くなり、
+  // iPhone の下の余白(ホームバー)も足されてあふれ、下に貼り付けた決定の段が難易度の札の下の段(自己ベストの数字)にかぶさっていた。
+  //   1 = 札を詰める(難易度44px・HIGH SCORE を低く・MAX COMBO を畳む) / 2 = 一言を出さない / 3 = 曲の長さ・ノーツ数の行を畳み、決定を少し低く(index.html)
+  //   4 = 曲名を1行ぶん取り、版の札と♡を次の1行に並べる(♡だけの行を作らない・index.html) / 5 = 曲名の字を縮めて行を減らし、難易度と決定をもう少し低く(小さい横 568×320 など)
+  const noteFitShow=viewWide;
+  const noteShown=!!notice&&noticeOpen;
+  React.useLayoutEffect(()=>{setNoteFit(0);},[noteFitShow,noteShown,noteFitKey,song&&song.songId,difficulty&&difficulty.id]);
   // 欄の大きさと、中の格子の高さ(字の太さ・絵の読み込みで後から変わる)の両方を見張る。詰めた形で高さが変わったときは測り直さない
   const noteFitRo=React.useRef(null);
-  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:2;
+  const noteFitNow=React.useRef(0);noteFitNow.current=noteFitShow?noteFit:5;
   React.useLayoutEffect(()=>{
     const el=detailRef.current;
     const grid=el&&el.querySelector('[data-rhythm-song-detail-grid]');
     if(noteFitRo.current&&grid)noteFitRo.current.observe(grid);
-    if(!noteFitShow||!el||noteFit>=2)return;
-    if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit+1);
+    if(!noteFitShow||!el||noteFit>=5)return;
+    // 一言が無い時の「2」は見た目が1と同じなので飛ばす
+    if(el.scrollHeight>el.clientHeight+1)setNoteFit(noteFit===1&&!noteShown?3:noteFit+1);
   });
   useEffect(()=>{
     const el=detailRef.current;
@@ -25246,7 +25252,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const box=`${el.clientWidth}x${el.clientHeight}`;
       if(box!==lastBox){lastBox=box;setNoteFitKey(k=>k+1);return;}
       // 中身が伸びて欄があふれたときだけ測り直す(詰めて縮んだときは何もしない)
-      if(noteFitNow.current<2&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
+      if(noteFitNow.current<5&&el.scrollHeight>el.clientHeight+1)setNoteFitKey(k=>k+1);
     });
     noteFitRo.current=ro;
     ro.observe(el);
@@ -25396,7 +25402,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
     {/* 選んでいる曲 */}
     <aside data-rhythm-song-detail ref={detailRef} data-rhythm-song-note-fit={noteFit}
       className="shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2 landscape:[container-type:size]"
-      style={{paddingBottom:'calc(0.5rem + var(--mh-sa-bottom))'}}>
+      style={{paddingBottom:viewWide?'max(0.5rem, var(--mh-sa-bottom))':'calc(0.5rem + var(--mh-sa-bottom))'}}>
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
@@ -25435,7 +25441,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   字を小さくし、入らなければ2行に折り、それでも入らないときだけ「…」。縦の低い画面(高さ700以下)は一覧の場所を残すため1行のまま */}
               {(()=>{const wideVer=viewWide&&versionsOf(song).length>1,shortTate=!viewWide;/* 縦は細い欄なので曲名は1行(入らない時だけ折る) */
                 // 縦は2行ぶん(43px)の高さの中で3行まで(題と副題が別のかたまりなので)。縦の低い画面は1行、入らない曲名だけ2〜3行
-                return <RhythmFitTitle key={song.songId} song={song} maxPx={shortTate?15:wideVer?14:viewWide?16:17} minPx={shortTate?10:10} lines={3}
+                const squeeze=viewWide&&noteFit>=5;/* 横で欄があふれる5段目: 9pxまで縮めて1行、入らなければ13px以下で2行まで(「…」にしない) */
+                return <RhythmFitTitle key={`${song.songId}:${squeeze?5:0}`} song={song} maxPx={squeeze?13:shortTate?15:wideVer?14:viewWide?16:17} minPx={squeeze?9:10} lines={squeeze?2:3}
                   maxH={shortTate?38:viewWide?0:43}
                   className={`block min-w-0 flex-1 overflow-hidden font-black leading-[1.25] text-white ${viewWide||shortTate?'':'h-[43px]'} ${wideVer?'basis-[9rem]':''}`}/>;})()}
               {viewWide&&versionTabs}
