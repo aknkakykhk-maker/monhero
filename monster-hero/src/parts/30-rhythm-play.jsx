@@ -906,12 +906,14 @@ const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,inputLog,assist,mirro
             ...(typeof MH_SCREEN_TRAIL!=='undefined'?{scr:MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.sinceLast('play','start'))}:{})}};
 };
 // モンスターノーツの前後のコマ(2026-10-16・RHYTHM_FRAME_DIAG.mark)を stats.mon に足す。行の大きさの上限(stats は 4KB・表の check 制約)を
-// 超えると行ごと断られるので、文字にした大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す
-const RHYTHM_TOUCH_DIAG_MON_MAX=3500;
+// 超えると行ごと断られるので、大きさが RHYTHM_TOUCH_DIAG_MON_MAX を超えるあいだ、うしろの回から手がかりを削り、それでも超えれば回ごと外す。
+// 【2026-11-24】大きさは文字数ではなく、データベースの中の形(rhythmJsonbSizeEstimate・data/rhythm-mode.js)で測る。文字数(3500)で測っていたあいだ、
+// iPhone の行が上限を超えて断られ、黙って消えていた。上限は 8192 へ上げ、送る側は 7600 で守る
+const RHYTHM_TOUCH_DIAG_MON_MAX=RHYTHM_TOUCH_DIAG_STATS_MAX;
 const rhythmTouchDiagWithMon=(diag,mon)=>{
   if(!diag||!diag.stats||!Array.isArray(mon)||!mon.length)return diag;
   const list=mon.map(m=>({...m}));
-  const size=()=>{try{return JSON.stringify({...diag.stats,mon:list}).length;}catch{return Infinity;}};
+  const size=()=>rhythmJsonbSizeEstimate({...diag.stats,mon:list});
   for(let i=list.length-1;i>=0&&size()>RHYTHM_TOUCH_DIAG_MON_MAX;i--){delete list[i].c;if(size()>RHYTHM_TOUCH_DIAG_MON_MAX)delete list[i].i;}
   while(list.length&&size()>RHYTHM_TOUCH_DIAG_MON_MAX)list.pop();
   return list.length?{...diag,stats:{...diag.stats,mon:list}}:diag;
@@ -927,7 +929,7 @@ const rhythmTouchDiagRecord=async(diag)=>{
     if(typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(diag.song_id))return false;
     const deviceKey=await rhythmPlayLogDeviceKey();
     return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:diag.platform,standalone:diag.standalone,
-      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:diag.stats,schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:rhythmTouchDiagFitStats(diag.stats),schema_version:RHYTHM_TOUCH_DIAG_VERSION});
   }catch{return false;}
 };
 /* リザルトの「押したのに反応しないことがあった」(2026-10-01・ユーザー指示)。
@@ -1066,11 +1068,57 @@ const RhythmHudScore=({hud,maxScore,bestScore,rankFx=true})=>{const score=useRhy
     }catch(_){}},[rank,rankFx]);
   return <div className="flex items-center gap-1.5"><div ref={rankBadgeRef} className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rank}</b>{rankFx&&<><i ref={rankRingRef} data-rhythm-rank-ring aria-hidden="true" style={{position:'absolute',inset:-3,borderRadius:'9999px',border:'2px solid currentColor',boxShadow:'0 0 12px currentColor',opacity:0,pointerEvents:'none'}}/><b ref={rankPopRef} data-rhythm-rank-pop aria-hidden="true" style={{position:'absolute',left:-2,top:'100%',marginTop:2,zIndex:2,whiteSpace:'nowrap',fontSize:11,fontWeight:900,fontStyle:'italic',lineHeight:1,padding:'2px 6px',borderRadius:9999,background:'rgba(2,6,23,.88)',boxShadow:'0 0 10px currentColor',textShadow:'0 0 6px currentColor',opacity:0,pointerEvents:'none'}}/></>}</div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div>{/* スコアは100万点を超えると、320幅の左上(約74px)に「1,050,000」がぎりぎりなので少し小さく(2026-10-29)。このコメントを style の中に書くと、横向きHUDの検査が読み取れなくなる */}<b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:score>=1000000?'min(18px,4cqw)':'min(18px,4.6cqw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestScore||0).toLocaleString()}</small></div></div>;};
 // フルコンボ・オールマーベラスが続いているか(comboStatus)。AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。アシストモードでは出さない
-const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
+// コンボ数を道の外の空きへ収める(2026-11-24 r1119-160 社長「コンボの1000以上の1番左の数値に色がない」)。
+// コンボ数はノーツより後ろ(z-2)に描くので、道の上へはみ出した桁は、ノーツの層が描く道の面・空中の面の下に入って暗く(灰色に)見える。
+// 端に置く位置(おすすめ・右寄り・右上・左寄り)では、数字の端が道(空中の面があればその外側)の縁より外に来るよう、桁が増えたら字を縮める。
+// 真ん中は道の上に重ねる置き場所なので縮めない。返すのは字の大きさに掛ける倍率(0.4〜1)
+const RHYTHM_COMBO_FIT_MARGIN_PX=4;
+const rhythmComboRoadEdge=(side,yRatio,sky)=>{
+  const y=Math.max(0,Math.min(1,yRatio)),bound=side==='right'?RHYTHM_LANE_COUNT:0;
+  let edge=rhythmProjectBoundary(bound,y);
+  // 空中の面は、道の縁を奥行きごとの持ち上げ幅ぶん上へずらした台形。画面の高さ y に来るのは、もっと手前(t>y)の道の縁
+  if(sky&&typeof rhythmSkyLiftRatio==='function'){
+    const line=RHYTHM_JUDGMENT_LINE_Y.ratio;let lo=y,hi=line;
+    if(hi>lo&&hi-rhythmSkyLiftRatio(hi)>=y){for(let i=0;i<24;i++){const mid=(lo+hi)/2;if(mid-rhythmSkyLiftRatio(mid)<y)lo=mid;else hi=mid;}
+      const skyEdge=rhythmProjectBoundary(bound,hi);edge=side==='right'?Math.max(edge,skyEdge):Math.min(edge,skyEdge);}
+  }
+  return edge;
+};
+const rhythmComboFitScale=(boxEl,numEl,position,visualScale,currentFit,sky)=>{
+  if(!boxEl||!numEl||position==='CENTER')return 1;
+  const area=boxEl.offsetParent;if(!area)return 1;
+  const W=area.clientWidth,H=area.clientHeight;if(!(W>0&&H>0))return 1;
+  const natural=numEl.offsetWidth/(currentFit>0?currentFit:1),h=numEl.offsetHeight/(currentFit>0?currentFit:1);
+  if(!(natural>0))return 1;
+  const s=Math.max(.5,Number(visualScale)||1),side=position==='LEFT'?'left':'right';
+  // 縮めた後の字の下端の高さで道の縁を測る(道は下ほど広いので、下端がいちばん厳しい)
+  const centerY=boxEl.offsetTop+numEl.offsetTop+numEl.offsetHeight/2;
+  let fit=1;
+  for(let pass=0;pass<3;pass++){
+    const bottom=(centerY+h*fit*s/2)/H,edge=rhythmComboRoadEdge(side,bottom,sky)*W;
+    const outer=side==='right'?boxEl.offsetLeft+numEl.offsetLeft+numEl.offsetWidth:boxEl.offsetLeft+numEl.offsetLeft;
+    const room=(side==='right'?outer-edge:edge-outer)-RHYTHM_COMBO_FIT_MARGIN_PX;
+    const next=Math.max(.4,Math.min(1,room/(natural*s)));
+    if(Math.abs(next-fit)<.005)break;fit=next;
+  }
+  return Math.round(fit*100)/100;
+};
+const RhythmHudCombo=({hud,settings,assistOn,comboPosition,isLandscape,comboRef,comboRingRef,skyChart=false})=>{const combo=useRhythmHudPick(hud,h=>h.combo),countsState=useRhythmHudPick(hud,h=>rhythmHudCountsState(h.counts));
+  const comboBoxRef=useRef(null),comboFitRef=useRef(1),[comboFit,setComboFit]=useState(1),[fitTick,setFitTick]=useState(0);
+  const comboDigits=combo>0?String(Math.trunc(combo)).length:0,tierForFit=combo>0?rhythmComboTier(combo):0;
+  const comboSizePct=rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100);
+  useEffect(()=>{const on=()=>setFitTick(t=>t+1);window.addEventListener('resize',on);window.addEventListener('orientationchange',on);return()=>{window.removeEventListener('resize',on);window.removeEventListener('orientationchange',on);};},[]);
+  // 桁・段・大きさ・置き場所・画面の大きさが変わった時だけ測る(コンボが1つ増えるたびには測らない)
+  React.useLayoutEffect(()=>{if(!comboDigits)return;
+    const side=comboPosition!=='CENTER',scale=side?Math.min(rhythmComboTierScale(tierForFit),1.25):rhythmComboTierScale(tierForFit);
+    // 測るのは1回だけ(測った倍率を入れ直してもう一度測ると、字の形の丸めで .01 ずつ行き来することがある)
+    let next=1;try{next=rhythmComboFitScale(comboBoxRef.current,comboRef&&comboRef.current,comboPosition,scale,comboFitRef.current,skyChart);}catch(_){next=1;}
+    if(Math.abs(next-comboFitRef.current)>=.01){comboFitRef.current=next;setComboFit(next);}
+  },[comboDigits,tierForFit,comboSizePct,comboPosition,isLandscape,skyChart,fitTick]);
   if(settings.comboDisplay===false||!(combo>0))return null;
   const comboTier=rhythmComboTier(combo);
   const comboStatus=settings.comboStatusDisplay===false||assistOn||!countsState||countsState==='broken'?'':countsState;
-  return <div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
+  return <div data-rhythm-combo-box ref={comboBoxRef} data-combo-fit={comboFit<1?String(comboFit):undefined} data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':comboSizePct/100*comboFit}}>{combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>;};
 // ライフの数字とバー。演奏画面全体が知る必要があるのはライフの状態(rhythmLifeState)だけなので、数字はここだけが作り直す
 // 帯の長さは幅(width)ではなく、幅いっぱいの帯を右から切り抜いて(clip-path)出す(2026-10-13 社長報告「モンスターノーツのかくつき」・「元気」でライフが増えるとき)。
 // 幅を140msかけて動かすと、そのあいだ毎コマ画面の並べ直し(レイアウト)が起きる。切り抜きなら塗り直しだけで済む。
@@ -1257,12 +1305,15 @@ const RHYTHM_CELEBRATE_AE=Object.freeze(['#67e8f9','#fde68a']);
    札が下から順に入る → スコアが0から数え上がる(横に自己ベストの印の付いた棒・「自己ベストまで あと ○○」が減る)
    → 越えた瞬間に NEW RECORD の札と伸びた点が弾む → 止まる瞬間に数字が光って決まる(じゃん！)→ ランクのはんこ → 称号の札。
    判定の内訳は行ごとに右から入って数え上がる。経験値など下の物は最後に出る。ボタンは初めから押せる。
-   ★タップでいつでも止まった形へ飛ぶ。演出量「最小」・軽量モード・動きを減らす設定では、初めから止まった形(数えない)。
+   ★タップでいつでも止まった形へ飛ぶ。演出の設定「結果の画面の演出」を「出さない」にしたときだけ、初めから止まった形(数えない)。
+   (2026-11-24 までは演出量「最小」・軽量モード・動きを減らすでも止めていた。r1119-156 追記でいつも動く形にした)
    ★数字は React を通さず、要素の文字を直接書き換える(毎フレーム描き直さない)。止まった形の数字は React が初めから持っている
    ★新記録の全画面の重ね(2026-10-06)は、この数え上げが同じ役をするのでやめた(結果の中へまとめた)。時刻の表は RHYTHM_RESULT_COUNT */
 const RHYTHM_RESULT_COUNT=Object.freeze({scoreAt:300,scoreMs:1200,janAt:1500,rowAt:400,rowStep:110,rowMs:550,stampAt:1550,ribbonAt:1850,restAt:1900,endAt:2400});
-const rhythmResultCountAnimOn=settings=>!!settings&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'
-  &&!(typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// ★2026-11-24(台帳 r1119-156 追記): 演出量「最小」・軽量モード・端末の「動きを減らす(視差効果を減らす)」では止まった形にしていたが、
+//   社長の iPhone で数え上げが見えなかった(動きを減らすが入っていると止まる)。社長「リザルトなんて重さ関係ないんだから設定とか関係なしに演出強くしていいよ」
+//   → いつも数える。止めるのは演出の設定「結果の画面の演出」を「出さない」にしたときだけ(settings.fx.resultCount)
+const rhythmResultCountAnimOn=settings=>!!settings&&rhythmFxOn(settings,'resultCount',true);
 const rhythmCountEase=k=>1-Math.pow(1-k,3);
 // 数え上げが前の自己ベストを越える時刻(結果の画面に出てからのミリ秒)。越えないときは null
 const rhythmResultCrossMs=(previous,score)=>{const prev=Number(previous)||0,to=Number(score)||0;if(!(prev>0)||!(to>prev))return null;
@@ -3461,7 +3512,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
-    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出量「最小」・軽量モード・動きを減らす・練習)
+    // 数え上げ(2026-11-23・案A)。止まった形のときは countAnim が無い(演出の設定「結果の画面の演出」が「出さない」・練習)
     const countOn=!!result.countAnim&&!tutorialProp;
     const prevBest=Math.max(0,Number(result.previousBestScore)||0);
     const crossMs=countOn&&result.isNewRecord?(rhythmResultCrossMs(prevBest,view.score)??RHYTHM_RESULT_COUNT.janAt):null;
@@ -3797,7 +3848,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-<RhythmHudCombo hud={hudRef.current} settings={settings} assistOn={assistOn} comboPosition={comboPosition} isLandscape={isLandscape} comboRef={comboRef} comboRingRef={comboRingRef}/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+<RhythmHudCombo hud={hudRef.current} settings={settings} assistOn={assistOn} comboPosition={comboPosition} isLandscape={isLandscape} comboRef={comboRef} comboRingRef={comboRingRef} skyChart={!!skyChart}/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに

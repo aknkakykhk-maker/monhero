@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 76c6ce4aeff47c83
+// source-sha256: 73621936af1c15db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7545,6 +7545,12 @@ const RHYTHM_FX_ITEMS = Object.freeze([{
   label: 'フルコンボの大きな表示',
   weight: 'l',
   options: RHYTHM_FX_ON_OFF
+}, {
+  key: 'resultCount',
+  group: 'combo',
+  label: '結果の画面の演出',
+  weight: 'l',
+  options: RHYTHM_FX_ON_OFF
 }]);
 const RHYTHM_FX_KEYS = Object.freeze(RHYTHM_FX_ITEMS.map(item => item.key));
 const RHYTHM_FX_GROUP_ICONS = Object.freeze({
@@ -7576,7 +7582,8 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash: 'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce: 'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100: 'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。'
+  fullComboBig: 'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
+  resultCount: '曲が終わったあとの結果の画面で、スコア・判定の数・MAX COMBO が0から数え上がり、決まった瞬間に光る演出です。既定は「おまかせ」（演出量・軽量モード・端末の「視差効果を減らす」などに関係なく出ます）。\n止めたいときは「出さない」にしてください。初めから結果の数字が出ます。タップでいつでも飛ばせます。判定・スコアは変わりません。'
 });
 const normalizeRhythmFx = raw => {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -36106,17 +36113,36 @@ const sbSendRhythmTouchDiag = async row => {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+    const post = body => fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
       method: 'POST',
       headers: {
         ...SB_HEADERS,
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(body),
       ...(controller ? {
         signal: controller.signal
       } : {})
     });
+    let res = await post(row);
+    if (res.status === 400 && row.stats && typeof row.stats === 'object' && typeof RHYTHM_TOUCH_DIAG_TRIM_ORDER !== 'undefined') {
+      const stats = {
+          ...row.stats
+        },
+        dropped = [];
+      for (const name of RHYTHM_TOUCH_DIAG_TRIM_ORDER) {
+        if (!(name in stats)) continue;
+        delete stats[name];
+        dropped.push(name);
+        stats.trim = dropped.join('+');
+        stats.retry = dropped.length;
+        res = await post({
+          ...row,
+          stats
+        });
+        if (res.status !== 400) break;
+      }
+    }
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
     return res.ok;
   } catch {
@@ -43304,22 +43330,16 @@ const rhythmTouchDiagOf = ({
     }
   };
 };
-const RHYTHM_TOUCH_DIAG_MON_MAX = 3500;
+const RHYTHM_TOUCH_DIAG_MON_MAX = RHYTHM_TOUCH_DIAG_STATS_MAX;
 const rhythmTouchDiagWithMon = (diag, mon) => {
   if (!diag || !diag.stats || !Array.isArray(mon) || !mon.length) return diag;
   const list = mon.map(m => ({
     ...m
   }));
-  const size = () => {
-    try {
-      return JSON.stringify({
-        ...diag.stats,
-        mon: list
-      }).length;
-    } catch {
-      return Infinity;
-    }
-  };
+  const size = () => rhythmJsonbSizeEstimate({
+    ...diag.stats,
+    mon: list
+  });
   for (let i = list.length - 1; i >= 0 && size() > RHYTHM_TOUCH_DIAG_MON_MAX; i--) {
     delete list[i].c;
     if (size() > RHYTHM_TOUCH_DIAG_MON_MAX) delete list[i].i;
@@ -43354,7 +43374,7 @@ const rhythmTouchDiagRecord = async diag => {
       song_id: diag.song_id,
       difficulty: diag.difficulty,
       note_count: Math.max(1, diag.note_count),
-      stats: diag.stats,
+      stats: rhythmTouchDiagFitStats(diag.stats),
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
   } catch {
@@ -43781,6 +43801,51 @@ const RhythmHudScore = ({
     }
   }, "BEST ", Number(bestScore || 0).toLocaleString())));
 };
+const RHYTHM_COMBO_FIT_MARGIN_PX = 4;
+const rhythmComboRoadEdge = (side, yRatio, sky) => {
+  const y = Math.max(0, Math.min(1, yRatio)),
+    bound = side === 'right' ? RHYTHM_LANE_COUNT : 0;
+  let edge = rhythmProjectBoundary(bound, y);
+  if (sky && typeof rhythmSkyLiftRatio === 'function') {
+    const line = RHYTHM_JUDGMENT_LINE_Y.ratio;
+    let lo = y,
+      hi = line;
+    if (hi > lo && hi - rhythmSkyLiftRatio(hi) >= y) {
+      for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) / 2;
+        if (mid - rhythmSkyLiftRatio(mid) < y) lo = mid;else hi = mid;
+      }
+      const skyEdge = rhythmProjectBoundary(bound, hi);
+      edge = side === 'right' ? Math.max(edge, skyEdge) : Math.min(edge, skyEdge);
+    }
+  }
+  return edge;
+};
+const rhythmComboFitScale = (boxEl, numEl, position, visualScale, currentFit, sky) => {
+  if (!boxEl || !numEl || position === 'CENTER') return 1;
+  const area = boxEl.offsetParent;
+  if (!area) return 1;
+  const W = area.clientWidth,
+    H = area.clientHeight;
+  if (!(W > 0 && H > 0)) return 1;
+  const natural = numEl.offsetWidth / (currentFit > 0 ? currentFit : 1),
+    h = numEl.offsetHeight / (currentFit > 0 ? currentFit : 1);
+  if (!(natural > 0)) return 1;
+  const s = Math.max(.5, Number(visualScale) || 1),
+    side = position === 'LEFT' ? 'left' : 'right';
+  const centerY = boxEl.offsetTop + numEl.offsetTop + numEl.offsetHeight / 2;
+  let fit = 1;
+  for (let pass = 0; pass < 3; pass++) {
+    const bottom = (centerY + h * fit * s / 2) / H,
+      edge = rhythmComboRoadEdge(side, bottom, sky) * W;
+    const outer = side === 'right' ? boxEl.offsetLeft + numEl.offsetLeft + numEl.offsetWidth : boxEl.offsetLeft + numEl.offsetLeft;
+    const room = (side === 'right' ? outer - edge : edge - outer) - RHYTHM_COMBO_FIT_MARGIN_PX;
+    const next = Math.max(.4, Math.min(1, room / (natural * s)));
+    if (Math.abs(next - fit) < .005) break;
+    fit = next;
+  }
+  return Math.round(fit * 100) / 100;
+};
 const RhythmHudCombo = ({
   hud,
   settings,
@@ -43788,15 +43853,49 @@ const RhythmHudCombo = ({
   comboPosition,
   isLandscape,
   comboRef,
-  comboRingRef
+  comboRingRef,
+  skyChart = false
 }) => {
   const combo = useRhythmHudPick(hud, h => h.combo),
     countsState = useRhythmHudPick(hud, h => rhythmHudCountsState(h.counts));
+  const comboBoxRef = useRef(null),
+    comboFitRef = useRef(1),
+    [comboFit, setComboFit] = useState(1),
+    [fitTick, setFitTick] = useState(0);
+  const comboDigits = combo > 0 ? String(Math.trunc(combo)).length : 0,
+    tierForFit = combo > 0 ? rhythmComboTier(combo) : 0;
+  const comboSizePct = rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100);
+  useEffect(() => {
+    const on = () => setFitTick(t => t + 1);
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', on);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (!comboDigits) return;
+    const side = comboPosition !== 'CENTER',
+      scale = side ? Math.min(rhythmComboTierScale(tierForFit), 1.25) : rhythmComboTierScale(tierForFit);
+    let next = 1;
+    try {
+      next = rhythmComboFitScale(comboBoxRef.current, comboRef && comboRef.current, comboPosition, scale, comboFitRef.current, skyChart);
+    } catch (_) {
+      next = 1;
+    }
+    if (Math.abs(next - comboFitRef.current) >= .01) {
+      comboFitRef.current = next;
+      setComboFit(next);
+    }
+  }, [comboDigits, tierForFit, comboSizePct, comboPosition, isLandscape, skyChart, fitTick]);
   if (settings.comboDisplay === false || !(combo > 0)) return null;
   const comboTier = rhythmComboTier(combo);
   const comboStatus = settings.comboStatusDisplay === false || assistOn || !countsState || countsState === 'broken' ? '' : countsState;
   return React.createElement("div", {
     "data-rhythm-combo-box": true,
+    ref: comboBoxRef,
+    "data-combo-fit": comboFit < 1 ? String(comboFit) : undefined,
     "data-combo-status": comboStatus,
     "data-combo-tier": String(comboTier),
     "data-combo-pos": comboPosition,
@@ -43813,7 +43912,7 @@ const RhythmHudCombo = ({
     className: "block font-black leading-none tabular-nums text-white",
     style: {
       '--mh-combo-scale': rhythmComboTierScale(comboTier),
-      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
+      '--mh-combo-size': comboSizePct / 100 * comboFit
     }
   }, combo), settings.comboMilestoneFx === true && React.createElement("i", {
     ref: comboRingRef,
@@ -44317,7 +44416,7 @@ const RHYTHM_RESULT_COUNT = Object.freeze({
   restAt: 1900,
   endAt: 2400
 });
-const rhythmResultCountAnimOn = settings => !!settings && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && !(typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
 const rhythmResultCrossMs = (previous, score) => {
   const prev = Number(previous) || 0,
@@ -49948,7 +50047,8 @@ const RhythmTapTest = ({
     comboPosition: comboPosition,
     isLandscape: isLandscape,
     comboRef: comboRef,
-    comboRingRef: comboRingRef
+    comboRingRef: comboRingRef,
+    skyChart: !!skyChart
   }), React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
