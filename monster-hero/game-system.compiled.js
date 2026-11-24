@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9b44222e43ae968
+// source-sha256: b3005296c313f0b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102441,6 +102441,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-art-img{width:var(--mhms-w)}
 @supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
 @container (max-height:120px){.mhms-art-img{left:30%!important}}
+/* 顔で寄せる立ち絵(stand-*)は、顔の真ん中を --mhms-fx に置く。背の低い枠では左へ寄せて、右下の「立ち絵ON」「コメントON」とぶつけない */
+.mhms-art-box{--mhms-fx:50%}
+@container (max-height:120px){.mhms-art-face{--mhms-fx:34%}}
 /* 細い枠(縦持ちの375幅まで)では「立ち絵ON」「コメントON」を右の端に縦に並べ、体にかかる幅を狭くする(2026-10-26 カゲあつ「あつの手と胸に乗る」) */
 @container (max-width:360px){.mhms-art-toggles{flex-direction:column;align-items:flex-end;gap:4px}.mhms-art-toggles>button{min-height:28px;padding-left:8px;padding-right:8px}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
@@ -102792,6 +102795,42 @@ function ModeSelectAssistToggles({
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
+const RHYTHM_MODE_STAND_FACE = Object.freeze({
+  h: 0.16,
+  w: 0.4,
+  below: 2.0,
+  eyeMin: 2.4,
+  topPad: 0.6,
+  headLen: 2.63,
+  upMax: 1.5,
+  lowH: 0.22,
+  lowPx: 20,
+  lowBelow: 0.8,
+  visCut: 0.04
+});
+const rhythmModeStandFacePlace = (face, box, natH) => {
+  if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
+  const vis = box.b - box.t,
+    faceI = vis * (face.chin - face.eye);
+  if (!(faceI > 0.005)) return null;
+  const R = RHYTHM_MODE_STAND_FACE;
+  const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
+  const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
+  const canvasTopK = (box.t + vis * face.eye - R.visCut) / faceI;
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK, canvasTopK);
+  const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
+  const eyeI = box.t + vis * face.eye,
+    cxI = box.l + (box.r - box.l) * face.cx;
+  const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), min(${(faceI * 100).toFixed(3)}cqh, ${(R.w * 100).toFixed(1)}cqw))`;
+  const wK = box.ar / faceI;
+  return {
+    width: `calc(${F} * ${wK.toFixed(4)})`,
+    left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
+    top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))`
+  };
+};
+const RHYTHM_MODE_CQ_OK = typeof window !== 'undefined' && !!window.CSS && typeof window.CSS.supports === 'function' && window.CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({
   assistant,
   showArt,
@@ -102800,14 +102839,34 @@ function ModeSelectAssistantPanel({
   artCorner = null
 }) {
   const [artRatio, setArtRatio] = React.useState(null);
+  const [artNatH, setArtNatH] = React.useState(0);
   const artSrc = assistant && assistant.image;
   React.useEffect(() => {
     setArtRatio(null);
+    setArtNatH(0);
   }, [artSrc]);
+  const standFace = assistant && RHYTHM_MODE_CQ_OK && /\/assistant\/stand-[a-z0-9-]+\//i.test(artSrc || '') && typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(assistant.id, artSrc) : null;
+  const standFaceOk = !!(standFace && Number.isFinite(standFace.cx));
+  const [standBox, setStandBox] = React.useState(null);
+  React.useEffect(() => {
+    setStandBox(null);
+    if (!standFaceOk || typeof assistantLifeStandBox !== 'function') return undefined;
+    let alive = true;
+    assistantLifeStandBox(artSrc).then(b => {
+      if (alive) setStandBox(b || null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [artSrc, standFaceOk]);
+  const standPlace = standFaceOk && standBox ? rhythmModeStandFacePlace(standFace, standBox, artNatH) : null;
   if (!assistant || !(showArt || showComment)) return null;
   const onArtLoad = e => {
     const im = e.currentTarget;
-    if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth);
+    if (im.naturalWidth > 0) {
+      setArtRatio(im.naturalHeight / im.naturalWidth);
+      setArtNatH(im.naturalHeight);
+    }
   };
   const capOf = show => artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px';
   return React.createElement("div", {
@@ -102828,7 +102887,21 @@ function ModeSelectAssistantPanel({
     withLabel: false
   }), artCorner, React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
-  }, RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
+  }, standPlace ? React.createElement("img", {
+    "data-rhythm-mode-assistant-art": true,
+    "data-rhythm-mode-assistant-art-face": true,
+    src: assistant.image,
+    alt: "",
+    draggable: false,
+    onLoad: onArtLoad,
+    className: "mhms-art-face absolute max-w-none",
+    style: {
+      width: standPlace.width,
+      height: 'auto',
+      left: standPlace.left,
+      top: standPlace.top
+    }
+  }) : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id] ? (() => {
     const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id];
     const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1];
     const cx = fr.cxBy && fr.cxBy[ex] || fr.cx;
@@ -121392,10 +121465,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-normal': {
     mua: {
-      top: 0.2058,
-      eye: 0.4599,
-      chin: 0.5379,
+      top: 0.1592,
+      eye: 0.3668,
+      chin: 0.4305,
       m: 0.58,
+      cx: 0.5339,
       above: 0.7
     },
     momosuke: {
@@ -121403,37 +121477,43 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3248,
       chin: 0.4296,
       m: 0.78,
+      cx: 0.5051,
       above: 0.7
     },
     kiki: {
-      top: 0.1181,
-      eye: 0.4372,
-      chin: 0.5587,
-      m: 0.904
+      top: 0.0879,
+      eye: 0.3357,
+      chin: 0.4301,
+      m: 0.904,
+      cx: 0.5388
     },
     atsu: {
       top: 0.0726,
       eye: 0.3274,
       chin: 0.4296,
-      m: 0.76
+      m: 0.76,
+      cx: 0.4669
     },
     kyuko: {
-      top: 0.0783,
-      eye: 0.3698,
-      chin: 0.4973,
-      m: 0.949
+      top: 0.0584,
+      eye: 0.3167,
+      chin: 0.4297,
+      m: 0.949,
+      cx: 0.5084
     },
     sorashido: {
       top: 0.0008,
       eye: 0.2722,
       chin: 0.4301,
-      m: 1.175
+      m: 1.175,
+      cx: 0.4165
     },
     erubin: {
       top: 0.0109,
       eye: 0.2535,
       chin: 0.4303,
-      m: 1.316
+      m: 1.316,
+      cx: 0.4834
     }
   },
   'stand-sekiyuou': {
@@ -121441,23 +121521,26 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: -0.0059,
       eye: 0.2449,
       chin: 0.4297,
-      m: 1.376
+      m: 1.376,
+      cx: 0.5112
     }
   },
   'stand-hosei': {
     sorashido: {
-      top: 0.0263,
-      eye: 0.3096,
-      chin: 0.452,
-      m: 1.059
+      top: 0.0227,
+      eye: 0.2938,
+      chin: 0.4301,
+      m: 1.059,
+      cx: 0.3906
     }
   },
   'stand-halloween': {
     mua: {
-      top: 0.2281,
-      eye: 0.4663,
-      chin: 0.539,
+      top: 0.1808,
+      eye: 0.3718,
+      chin: 0.4301,
       m: 0.541,
+      cx: 0.5108,
       above: 0.95
     },
     momosuke: {
@@ -121465,22 +121548,25 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3118,
       chin: 0.4301,
       m: 0.88,
+      cx: 0.5312,
       above: 0.95
     },
     kiki: {
-      top: 0.1731,
-      eye: 0.3825,
-      chin: 0.4899,
+      top: 0.1495,
+      eye: 0.3352,
+      chin: 0.4305,
       m: 0.799,
+      cx: 0.5309,
       above: 0.95
     }
   },
   'stand-card-master': {
     mua: {
-      top: 0.1476,
-      eye: 0.403,
-      chin: 0.5388,
+      top: 0.116,
+      eye: 0.3209,
+      chin: 0.4298,
       m: 1.01,
+      cx: 0.4725,
       above: 0.75
     }
   },
@@ -121497,7 +121583,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       top: 0.0137,
       eye: 0.3314,
       chin: 0.4303,
-      m: 0.736
+      m: 0.736,
+      cx: 0.5286
     }
   },
   twintail: {
@@ -121511,10 +121598,11 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   },
   'stand-twintail': {
     kiki: {
-      top: 0.2539,
-      eye: 0.4133,
-      chin: 0.5496,
+      top: 0.1807,
+      eye: 0.3402,
+      chin: 0.4301,
       m: 1.014,
+      cx: 0.5119,
       above: 0.95
     }
   }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d832273c99b6e29d
+// generated-sha256: af0fa9cd098db4e0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60858,6 +60858,9 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-art-img{width:var(--mhms-w)}
 @supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
 @container (max-height:120px){.mhms-art-img{left:30%!important}}
+/* 顔で寄せる立ち絵(stand-*)は、顔の真ん中を --mhms-fx に置く。背の低い枠では左へ寄せて、右下の「立ち絵ON」「コメントON」とぶつけない */
+.mhms-art-box{--mhms-fx:50%}
+@container (max-height:120px){.mhms-art-face{--mhms-fx:34%}}
 /* 細い枠(縦持ちの375幅まで)では「立ち絵ON」「コメントON」を右の端に縦に並べ、体にかかる幅を狭くする(2026-10-26 カゲあつ「あつの手と胸に乗る」) */
 @container (max-width:360px){.mhms-art-toggles{flex-direction:column;align-items:flex-end;gap:4px}.mhms-art-toggles>button{min-height:28px;padding-left:8px;padding-right:8px}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
@@ -61087,13 +61090,63 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
 // 立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない
 // 表に無い助手(みゅあ・きき・ハロウィンの衣装など)は、枠いっぱいに広げて上から22%(横向きは30%)の所を中心に見せる。背の低い枠でも絵の高さの8割は入れる
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
+// 立ち絵(助手の絵のフォルダの stand-*・全身絵からの切り出し)は、顔の位置と大きさで寄せる(2026-11-24 r1119-153 追記4)。
+//   #7449 で全身絵から切り出し直したら、羽・上げた腕まで横に広く入り、枠いっぱいに絵を収める置き方では顔が前より小さくなった
+//   (社長「モンバト助手の立ち絵こんなだったっけ？」→ 選択「新しい絵のまま・枠での大きさを直す」)。絵は替えず、枠での寄せ方だけを変える。
+//   face … 顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT。top・eye・chin は見えている体の上0〜下1、cx は左0〜右1)/box … 見えている体の範囲(assistantLifeStandBox)
+//   顔(目の線〜顎の先)の長さ F を枠の高さの h 倍にする(枠の幅の w 倍まで・元の絵の顔の upMax 倍まで = 小さい絵を引き伸ばしてぼかさない)。
+//   ただし絵の下の端は必ず枠の下まで届かせる(届かないときは F を大きくする。体が枠の途中で切れて見えないように)。
+//   PC の縦に細く高い枠では、それでも枠の幅の w 倍まで(顔が大きくなりすぎた)。届かない分は絵を下へずらしてそろえる
+//   目の線は、測った頭のてっぺんから F の 0.6 倍上を空けた所。見えている絵の上端(帽子・リボン・上げた手)は上から visCut までしか切らない所まで下げる。
+//   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
+//   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
+//   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す。
+//   ただし頭のてっぺんの上の余白(耳・帽子)が枠に入る大きさまで(みゅあのうさ耳が上で2割切れた・assistant-art-scenes-check)
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.4, below: 2.0, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8, visCut: 0.04 });
+const rhythmModeStandFacePlace = (face, box, natH) => {
+  if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
+  const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
+  if (!(faceI > 0.005)) return null;
+  const R = RHYTHM_MODE_STAND_FACE;
+  const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
+  // 見えている絵の上端(上げた手・耳の先)は、上から visCut(見えている絵の高さに対して)までしか切らない(assistant-art-scenes-check の「上が切れる」)
+  const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
+  // 帽子・大きなリボン・上げた手は、見えている絵の上端(visTopK)で入る。
+  //   表情によっては上げた手などで normal より上まで描いてあるので、絵の画布(8表情ぶんが入る)の上端も、上から visCut までしか切らない(canvasTopK)
+  const canvasTopK = (box.t + vis * face.eye - R.visCut) / faceI;
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad, visTopK, canvasTopK);
+  const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
+  const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
+  const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
+  // 絵の高さ = F / faceI。枠の下まで届く F は 枠の高さ × faceI
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), min(${(faceI * 100).toFixed(3)}cqh, ${(R.w * 100).toFixed(1)}cqw))`;
+  const wK = box.ar / faceI;
+  return { width: `calc(${F} * ${wK.toFixed(4)})`, left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
+    // 目の線は eyeK の所。ただし顎の下に F の lowBelow 倍が残るよう、背の低い枠では上へ寄せる
+    top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))` };
+};
+const RHYTHM_MODE_CQ_OK = typeof window !== 'undefined' && !!window.CSS && typeof window.CSS.supports === 'function' && window.CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, artCorner = null }) {
   // 絵の縦横の比(読み込んでから分かる)。分かるまでは、いつもの幅で出す
   const [artRatio, setArtRatio] = React.useState(null);
+  // 絵の元の高さ(px)。顔で寄せるとき、元の絵より大きく引き伸ばしすぎないように使う
+  const [artNatH, setArtNatH] = React.useState(0);
   const artSrc = assistant && assistant.image;
-  React.useEffect(() => { setArtRatio(null); }, [artSrc]);
+  React.useEffect(() => { setArtRatio(null); setArtNatH(0); }, [artSrc]);
+  // 立ち絵(stand-*)の顔の点と見えている体の範囲。測れるまでは、今までの置き方で出す
+  const standFace = (assistant && RHYTHM_MODE_CQ_OK && /\/assistant\/stand-[a-z0-9-]+\//i.test(artSrc || '') && typeof assistantLifeStandFace === 'function') ? assistantLifeStandFace(assistant.id, artSrc) : null;
+  const standFaceOk = !!(standFace && Number.isFinite(standFace.cx));
+  const [standBox, setStandBox] = React.useState(null);
+  React.useEffect(() => {
+    setStandBox(null);
+    if (!standFaceOk || typeof assistantLifeStandBox !== 'function') return undefined;
+    let alive = true;
+    assistantLifeStandBox(artSrc).then((b) => { if (alive) setStandBox(b || null); });
+    return () => { alive = false; };
+  }, [artSrc, standFaceOk]);
+  const standPlace = standFaceOk && standBox ? rhythmModeStandFacePlace(standFace, standBox, artNatH) : null;
   if (!assistant || !(showArt || showComment)) return null;
-  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth); };
+  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) { setArtRatio(im.naturalHeight / im.naturalWidth); setArtNatH(im.naturalHeight); } };
   // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
   const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
@@ -61105,7 +61158,9 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, a
           {/* 遊びに来ている助手(練習中)の顔。左上の角(右下の立ち絵ON/コメントONとぶつからない側) */}
           {artCorner}
           <div className="mhms-float pointer-events-none absolute inset-0">
-            {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
+            {standPlace
+              ? <img data-rhythm-mode-assistant-art data-rhythm-mode-assistant-art-face src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-face absolute max-w-none" style={{ width: standPlace.width, height: 'auto', left: standPlace.left, top: standPlace.top }} />
+              : RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
               : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ ...(artRatio && artRatio > 1.1 ? { '--mhms-y': 0.03 } : null), '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
@@ -71102,17 +71157,20 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.2058, eye: 0.4599, chin: 0.5379, m: 0.58, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, above: 0.7 }, kiki: { top: 0.1181, eye: 0.4372, chin: 0.5587, m: 0.904 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76 }, kyuko: { top: 0.0783, eye: 0.3698, chin: 0.4973, m: 0.949 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316 } },
-  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376 } },
-  'stand-hosei': { sorashido: { top: 0.0263, eye: 0.3096, chin: 0.452, m: 1.059 } },
-  'stand-halloween': { mua: { top: 0.2281, eye: 0.4663, chin: 0.539, m: 0.541, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, above: 0.95 }, kiki: { top: 0.1731, eye: 0.3825, chin: 0.4899, m: 0.799, above: 0.95 } },
-  'stand-card-master': { mua: { top: 0.1476, eye: 0.403, chin: 0.5388, m: 1.01, above: 0.75 } },
+  //   みゅあ(ふだん・ハロウィン)の cx は、長い髪が目の高さで横につながり道具では左へずれるので、立ち絵を目盛りつきで見て両目の真ん中に置いた(2026-11-24・life-stand-face-cx.py の MANUAL_X)
+  //   cx … 顔の横の真ん中(見えている体の左を0・右を1)。モードえらびの枠が顔で寄せるのに使う(2026-11-24 r1119-153 追記4)。測り直し: python3 -I tools/assistant/life-stand-face-cx.py --write
+  'stand-normal': { mua: { top: 0.1592, eye: 0.3668, chin: 0.4305, m: 0.58, cx: 0.5339, above: 0.7 }, momosuke: { top: 0.0635, eye: 0.3248, chin: 0.4296, m: 0.78, cx: 0.5051, above: 0.7 }, kiki: { top: 0.0879, eye: 0.3357, chin: 0.4301, m: 0.904, cx: 0.5388 }, atsu: { top: 0.0726, eye: 0.3274, chin: 0.4296, m: 0.76, cx: 0.4669 }, kyuko: { top: 0.0584, eye: 0.3167, chin: 0.4297, m: 0.949, cx: 0.5084 }, sorashido: { top: 0.0008, eye: 0.2722, chin: 0.4301, m: 1.175, cx: 0.4165 } , erubin: { top: 0.0109, eye: 0.2535, chin: 0.4303, m: 1.316, cx: 0.4834 } },
+  'stand-sekiyuou': { erubin: { top: -0.0059, eye: 0.2449, chin: 0.4297, m: 1.376, cx: 0.5112 } },
+  'stand-hosei': { sorashido: { top: 0.0227, eye: 0.2938, chin: 0.4301, m: 1.059, cx: 0.3906 } },
+  'stand-halloween': { mua: { top: 0.1808, eye: 0.3718, chin: 0.4301, m: 0.541, cx: 0.5108, above: 0.95 }, momosuke: { top: 0.061, eye: 0.3118, chin: 0.4301, m: 0.88, cx: 0.5312, above: 0.95 }, kiki: { top: 0.1495, eye: 0.3352, chin: 0.4305, m: 0.799, cx: 0.5309, above: 0.95 } },
+  'stand-card-master': { mua: { top: 0.116, eye: 0.3209, chin: 0.4298, m: 1.01, cx: 0.4725, above: 0.75 } },
   // 冬の装いの寝顔(winter/kyuko_sleep.PNG・392×1440の全身)。目・顎は絵を目盛りつきで測った(2026-11-19)
   winter: { kyuko: { top: 0.004, eye: 0.132, chin: 0.191, m: 0.441 } },
-  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736 } },
+  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3314, chin: 0.4303, m: 0.736, cx: 0.5286 } },
   // ききのツインテール(全身画から実測。2026-11-20)。top はリボンを除いた頭のてっぺん、above は大きなリボンが切れないように
+  //   2026-11-24 r1119-153 追記4: stand-* の行は、立ち絵を縮めた組で点がずれていたのを直して出し直した(life-stand-from-fullbody.py)。ツインテールの印も目の真ん中・顎の先へ直した
   twintail: { kiki: { top: 0.112, eye: 0.183, chin: 0.244, m: 0.383, above: 0.95 } },
-  'stand-twintail': { kiki: { top: 0.2539, eye: 0.4133, chin: 0.5496, m: 1.014, above: 0.95 } },
+  'stand-twintail': { kiki: { top: 0.1807, eye: 0.3402, chin: 0.4301, m: 1.014, cx: 0.5119, above: 0.95 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
