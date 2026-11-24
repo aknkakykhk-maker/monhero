@@ -5,6 +5,7 @@
 //   node tools/promo/beat-stage-build.js tools/promo/beat-stage-2.json            撮影(無ければ)→ 絵の層 → 組み立て → 一覧の絵
 //   node tools/promo/beat-stage-build.js tools/promo/beat-stage-2.json --recapture 演奏を撮り直す
 //   node tools/promo/beat-stage-build.js tools/promo/beat-stage-2.json --layers   絵の層(PNG)だけ作って止める(字の位置を見るとき)
+//   node tools/promo/beat-stage-build.js tools/promo/beat-stage-3.json --intro    作り直した冒頭(plan.intro)だけ書き出して止める(各場面の原寸のコマも残す)
 //   --work <フォルダ>  作業の場所(既定は OS の一時フォルダの monhero-promo)
 //   node tools/promo/beat-stage-build.js tools/promo/beat-stage-2.json --calib    見本の LAMIA の場面と同じ字で層を作り、見本のコマと重ねた絵を出す(位置合わせ用)
 //
@@ -60,10 +61,13 @@ const capture = (song, i) => {
   const dir = path.join(WORK, 'cap', song.songId);
   const from = song.from - 1000, to = song.from + T.stageDur * 1000 + 1000;
   const meta = path.join(dir, 'frames.json');
-  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1; })();
+  // 速度・設定・描き方が違う撮影は使わない(第3版: 速度9.5の旧録画を使わないため)
+  const want = JSON.stringify(Object.assign({}, plan.captureSettings || {}, { noteSpeed: plan.noteSpeed || 9.5 }));
+  const ok = fs.existsSync(meta) && (() => { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); return m.from <= from + 1 && m.to >= Math.min(to, song.endMs || to) - 1 && JSON.stringify(m.settings || { noteSpeed: m.noteSpeed }) === want && (m.draw || 'auto') === (plan.draw || 'auto'); })();
   if (ok && !argv.includes('--recapture')) return dir;
   console.log(`撮影 ${i + 1}: ${song.songId} ${song.diff || 'HELL'} ${from}〜${to}ms`);
-  execFileSync('node', [R('tools/promo/beat-stage-capture.js'), '--song', song.songId, '--diff', song.diff || 'HELL', '--from', String(from), '--to', String(to), '--speed', String(plan.noteSpeed || 9.5), '--out', dir], { stdio: 'inherit' });
+  execFileSync('node', [R('tools/promo/beat-stage-capture.js'), '--song', song.songId, '--diff', song.diff || 'HELL', '--from', String(from), '--to', String(to), '--speed', String(plan.noteSpeed || 9.5),
+    '--settings', JSON.stringify(plan.captureSettings || {}), ...(plan.draw ? ['--draw', plan.draw] : []), '--out', dir], { stdio: 'inherit' });
   return dir;
 };
 
@@ -94,7 +98,7 @@ const stageHtml = (song, scene) => {
   <img src="file://${R(song.art)}" class="abs" style="left:45px;top:78px;width:300px;height:300px;border:2px solid ${a};object-fit:cover">
   <div class="abs" style="left:377px;top:117px;font-size:31px;font-weight:700;letter-spacing:.03em;line-height:1;color:${a}">${esc(song.diffLabel || 'HELL')}</div>
   ${titleHtml(song, 373, titleTop, 58)}
-  <div class="abs" style="left:376px;top:334px;font-size:23px;font-weight:700;letter-spacing:.02em;line-height:1;color:#c9c6dc">NOTE SPEED<span style="margin-left:23px">${esc(String(plan.noteSpeed || 9.5))}</span></div>
+  <div class="abs" style="left:376px;top:334px;font-size:23px;font-weight:700;letter-spacing:.02em;line-height:1;color:#c9c6dc">NOTE SPEED<span style="margin-left:23px">${esc(Number(plan.noteSpeed || 9.5).toFixed(1))}</span></div>
   <div class="abs" style="left:0;top:${GP.y - 2}px;width:${W}px;height:${GP.h + 4}px;background:#050616;border-top:2px solid ${a};border-bottom:2px solid ${a}"></div>
   <div class="abs mincho" style="left:47px;top:924px;font-size:50px;line-height:1.2;color:#f5efe0">${esc(scene.title)}</div>
   <div class="abs" style="left:48px;top:1029px;font-size:30px;font-weight:500;line-height:1.2;color:#b9b8cc">${esc(scene.sub)}</div>
@@ -184,12 +188,26 @@ const stageClip = (song, i, L, gp) => {
 
 // ── 音(見本の音量にそろえる) ─────────────────────────────────────────────
 const meanDb = (args) => { const o = run('ffmpeg', ['-v', 'info', ...args, '-af', 'volumedetect', '-f', 'null', '-'], { quiet: true }); return Number((o.match(/mean_volume:\s*(-?[\d.]+)/) || [])[1]); };
-const audioClip = (song, i, refDb) => {
+const audioClip = async (song, i, refDb, capDir) => {
   const out = path.join(WORK, `a${i}.wav`), src = R(song.audio), ss = song.from / 1000, d = T.stageDur;
-  const have = meanDb(['-ss', String(ss), '-t', String(d), '-i', src]);
+  const end = song.fadeOut ? `,afade=t=out:st=${d - song.fadeOut}:d=${song.fadeOut}` : ',afade=t=out:st=' + (d - 0.02) + ':d=0.02';
+  // タップ音(第3版から): 撮影で控えたゲームのタップ音の呼び出しを、判定の瞬間の曲の時刻で鳴らし直した物(beat-stage-taps.js)。
+  // 曲(gain 1・音量100%)とタップ音はゲームの中と同じ比のまま足し、足した物を見本の曲の場面の音量へそろえる
+  const seFile = capDir && path.join(capDir, 'se.json');
+  let taps = null;
+  if (seFile && fs.existsSync(seFile) && plan.taps !== false) {
+    taps = path.join(WORK, `taps${i}.wav`);
+    const r = await require('./beat-stage-taps.js').renderTaps({ seFile, fromMs: song.from, durSec: d, out: taps });
+    console.log(`タップ音 ${i + 1}: 叩く ${r.tap}・フリック ${r.flick}・終わり ${r.clear}・必殺 ${r.accent}・空中 ${r.sky}・モンスター ${r.monster}(呼び直し ${r.called}件)`);
+    song._flickAt = r.flickAt;
+  } else if (plan.taps !== false) console.log(`  ⚠ タップ音の控え(se.json)が無い: ${song.songId}(撮り直すと入る)`);
+  const mix = path.join(WORK, `mix${i}.wav`);
+  if (taps) ff(['-ss', String(ss), '-t', String(d), '-i', src, '-i', taps, '-filter_complex', `[0:a]aresample=48000,apad,atrim=0:${d}[m];[1:a]aresample=48000[t];[m][t]amix=inputs=2:duration=first:normalize=0`, '-ac', '2', '-ar', '48000', '-c:a', 'pcm_f32le', mix]);
+  else ff(['-ss', String(ss), '-t', String(d), '-i', src, '-af', `aresample=48000,apad,atrim=0:${d}`, '-ac', '2', '-ar', '48000', '-c:a', 'pcm_f32le', mix]);
+  const have = meanDb(['-i', mix]);
   const gain = Math.max(-12, Math.min(12, refDb - have));
-  console.log(`音 ${i + 1}: ${path.basename(src)} ${ss.toFixed(2)}秒〜 平均 ${have.toFixed(1)}dB → ${gain >= 0 ? '+' : ''}${gain.toFixed(1)}dB(見本の曲の場面 ${refDb.toFixed(1)}dB)`);
-  ff(['-ss', String(ss), '-t', String(d), '-i', src, '-af', `aresample=48000,volume=${gain.toFixed(2)}dB,alimiter=limit=0.89:level=disabled,afade=t=in:d=0.02,apad,atrim=0:${d}${song.fadeOut ? `,afade=t=out:st=${d - song.fadeOut}:d=${song.fadeOut}` : ',afade=t=out:st=' + (d - 0.02) + ':d=0.02'}`, '-ac', '2', '-ar', '48000', out]);
+  console.log(`音 ${i + 1}: ${path.basename(src)} ${ss.toFixed(2)}秒〜${taps ? '+タップ音' : ''} 平均 ${have.toFixed(1)}dB → ${gain >= 0 ? '+' : ''}${gain.toFixed(1)}dB(見本の曲の場面 ${refDb.toFixed(1)}dB)`);
+  ff(['-i', mix, '-af', `volume=${gain.toFixed(2)}dB,alimiter=limit=0.89:level=disabled,afade=t=in:d=0.02${end}`, '-ac', '2', '-ar', '48000', out]);
   return out;
 };
 
@@ -214,14 +232,17 @@ const contactSheet = (video, out) => {
   const L = await renderLayers();
   console.log('絵の層:', L);
   if (argv.includes('--layers')) return;
+  if (argv.includes('--intro')) { const o = await require('./beat-stage-intro.js').buildIntro({ ROOT, WORK, fontsHead: fontsHead(), plan, end: T.introEnd + T.listFade + 0.1 }); console.log('冒頭:', o); return; }
   const dirs = plan.songs.map((s, i) => capture(s, i));
   const refDb = meanDb(['-ss', String(T.stageStart), '-t', String(T.outroStart - T.stageStart), '-i', tpl]);
   const stages = plan.songs.map((s, i) => stageClip(s, i, L, gameplayClip(s, i, dirs[i])));
-  const audios = plan.songs.map((s, i) => audioClip(s, i, refDb));
+  const audios = []; for (const [i, s] of plan.songs.entries()) audios.push(await audioClip(s, i, refDb, dirs[i]));
   // 頭(見本 0〜一覧の重ね終わり)+ 一覧 → 曲3つ → 締め(見本)
   const listLen = T.stageStart - T.introEnd;
   const head = path.join(WORK, 'head.mp4');
-  ff(['-i', tpl, '-loop', '1', '-framerate', String(FPS), '-t', String(listLen), '-i', path.join(L, 'list.png'), '-filter_complex',
+  // 冒頭の映像: plan.intro があれば作り直した物(beat-stage-intro.js)、無ければ見本のまま。音はどちらも見本の冒頭
+  const introSrc = plan.intro ? await require('./beat-stage-intro.js').buildIntro({ ROOT, WORK, fontsHead: fontsHead(), plan, end: T.introEnd + T.listFade + 0.1 }) : tpl;
+  ff(['-i', introSrc, '-loop', '1', '-framerate', String(FPS), '-t', String(listLen), '-i', path.join(L, 'list.png'), '-filter_complex',
     `[0:v]trim=0:${T.introEnd},setpts=PTS-STARTPTS,fps=${FPS},format=yuv420p,tpad=stop_mode=clone:stop_duration=${T.listFade}[a];[1:v]fps=${FPS},format=yuv420p[b];[a][b]xfade=transition=fade:duration=${T.listFade}:offset=${T.introEnd},trim=0:${T.stageStart},setpts=PTS-STARTPTS[v]`,
     '-map', '[v]', '-frames:v', String(Math.round(T.stageStart * FPS)), '-c:v', 'libx264', '-crf', '10', '-preset', 'veryfast', head]);
   const tail = path.join(WORK, 'tail.mp4');

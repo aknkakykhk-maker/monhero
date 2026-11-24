@@ -2,6 +2,9 @@
 // モンヒロビートの紹介動画「HELL の見どころ(ステージ)」の演奏の素材を撮る(2026-11-24 r1119-159・社長作の見本 monhero-beat-stage.mov の第2版から)。
 //
 //   node tools/promo/beat-stage-capture.js --song rebellion --diff HELL --from 60000 --to 92000 --out <フォルダ>
+//     [--speed 10] [--settings '{"effectAmount":"LIGHT","lightweightMode":false,"autoEffectDown":false,"noteSeEnabled":true,"noteSeType":"STANDARD"}'] [--draw dom]
+//   第3版(2026-11-24)から: --settings で演奏の設定を保存値へ入れる(読み込まれた設定は画面の data-rhythm-effect などで確かめて出す)。
+//   --draw は下の DRAW を参照。タップ音の呼び出しを se.json に控える(組み立てで beat-stage-taps.js が鳴らし直して重ねる)
 //
 // 何をするか:
 //   ふつうの演奏の画面(ソロライブ → 曲 → 難易度 → 決定)を横 844×390・deviceScaleFactor 3(2532×1170)で開き、
@@ -31,6 +34,12 @@ const OUT = path.resolve(arg('out', path.join(ROOT, 'tmp-promo', SONG || 'song')
 const SPEED = Number(arg('speed', 9.5));   // ノーツの速さ(見本は 9.5)
 const W = Number(arg('w', 844)), H = Number(arg('h', 390)), DPR = Number(arg('dpr', 3));
 const SLOW = Number(arg('slow', 0.15)), PRE = Number(arg('pre', 0.5));
+// 演奏の設定(--settings '<JSON>')。noteSpeed に重ねて保存値へ入れる(第3版: 演出量 LIGHT・軽量 OFF・自動軽減 OFF・タップ音スタンダード)
+// ノーツと叩いた光の描き方(--draw dom|canvas|webgl。既定はゲームのおまかせ)。撮影用のブラウザの中だけに入れる。
+//   この箱のブラウザは GPU が無い(SwiftShader)ので、おまかせだと 2D の canvas で描く。canvas で描くと、フリックの炎(判定ラインから吹き上がる羽と舌)が
+//   出ない(床の光だけ出る・2026-11-24 第3版で確かめた。WebGL に替えても同じ)。DOM で描くと演出量「標準」のまま炎が出るので、第3版は dom で撮った
+const DRAW = (() => { const v = arg('draw', ''); if (v && !['dom', 'canvas', 'webgl'].includes(v)) { console.error('--draw は dom / canvas / webgl'); process.exit(2); } return v; })();
+const EXTRA_SETTINGS = (() => { try { return JSON.parse(arg('settings', '{}')) || {}; } catch { console.error('--settings の JSON が読めない'); process.exit(2); } })();
 if (!SONG) { console.error('--song <songId> が要る'); process.exit(2); }
 const { chromium } = (() => { try { return require(path.join(ROOT, 'tools/node_modules/playwright')); } catch { return require('playwright'); } })();
 const { createFakeSupabase } = require(path.join(ROOT, 'tools/playbot/lib/fake-supabase.js'));
@@ -47,8 +56,8 @@ const seed = (songId) => `(() => {
   // 演奏の画面の左右に立つ飾り(育てたマスモンをモンヒロビートの枠に入れると出る)。見本と同じ4体
   put('mh_masu_mons', [['promo-mocchi', 'Mocchi', 'モッチー'], ['promo-golem', 'Golem', 'ゴーレム'], ['promo-suezo', 'Suezo', 'スエゾー'], ['promo-tiger', 'Tiger', 'タイガー']].map(([id, baseId, name]) => ({ id, baseId, name, createdAt: 1767225600000 })));
   put('mh_rhythm_monsters_v1', ['promo-mocchi', 'promo-suezo', 'promo-golem', 'promo-tiger']);
-  // 演奏の設定はノーツの速さだけ決める(ほかは既定のまま)
-  put('mh_rhythm_settings_v1', { noteSpeed: ${SPEED} });
+  // 演奏の設定はノーツの速さと --settings で渡したものだけ決める(ほかは既定のまま)
+  put('mh_rhythm_settings_v1', Object.assign(${JSON.stringify(EXTRA_SETTINGS)}, { noteSpeed: ${SPEED} }));
   put('mh_rhythm_owned_songs_v1', [${JSON.stringify(songId)}]);
   put('mh_rhythm_best_v1', { ${JSON.stringify(songId)}: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map(d => [d, { bestScore: 900000, maxCombo: 10, played: true, clear: true }])) });
 })()`;
@@ -124,6 +133,7 @@ const slowClock = () => {
   await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   if (SLOW < 1) await context.addInitScript(slowClock);
   await context.addInitScript(seed(SONG));
+  if (DRAW) await context.addInitScript((v) => { localStorage.setItem('mh_rhythm_canvas_v1', v); }, DRAW);
   await context.addInitScript(eventStorySeed());
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
@@ -150,6 +160,25 @@ const slowClock = () => {
   await page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks?.rhythmNotes?.(), null, { timeout: 30000, polling: 100 });
   const setRate = async (k) => { if (SLOW >= 1) return; await page.evaluate((x) => window.__promoSetRate(x), k); await cdp.send('Animation.enable').catch(() => {}); await cdp.send('Animation.setPlaybackRate', { playbackRate: k }).catch(() => {}); };
   await setRate(PRE);
+  // タップ音(ゲームの RHYTHM_NOTE_SE_RUNTIME)の呼び出しを、曲の時刻つきで控える。組み立てで同じ関数をオフラインで鳴らし直す(beat-stage-taps.js)
+  await page.evaluate(() => {
+    const R = RHYTHM_NOTE_SE_RUNTIME, log = window.__promoSe = [];
+    const songMs = () => { const v = window.__mhTestHooks?.rhythmSongMs?.(); return Number.isFinite(v) ? Math.round(v * 10) / 10 : null; };
+    let lastHold = '';
+    for (const name of ['play', 'playClear', 'playAccent', 'playFlick', 'playMonster', 'playSky', 'playTick', 'playEmpty', 'beginInputGroup', 'markInputGroupHandled', 'endInputGroup', 'holdSync', 'holdStopAll']) {
+      const orig = R[name]; if (typeof orig !== 'function') continue;
+      R[name] = function (...a) {
+        if (name === 'holdSync') {
+          const held = (Array.isArray(a[0]) ? a[0] : []).filter(Boolean).map(n => ({ index: n.index, type: n.type, _rhythmOriginalType: n._rhythmOriginalType }));
+          const key = held.map(n => n.index).join(',');
+          if (key !== lastHold) { lastHold = key; log.push([songMs(), name, [held]]); }
+        } else log.push([songMs(), name, JSON.parse(JSON.stringify(a.map(x => (x === undefined ? null : x))))]);
+        return orig.apply(this, a);
+      };
+    }
+  });
+  const look = await page.evaluate(() => { const a = document.querySelector('[data-rhythm-play-area]'); const el = a?.closest('[data-rhythm-effect]') || document.querySelector('[data-rhythm-effect]'); let saved = null; try { saved = JSON.parse(localStorage.getItem('mh_rhythm_settings_v1')); } catch (_) {} return { effect: el?.getAttribute('data-rhythm-effect'), lightweight: el?.getAttribute('data-rhythm-lightweight'), saved: saved && { noteSpeed: saved.noteSpeed, effectAmount: saved.effectAmount, lightweightMode: saved.lightweightMode, autoEffectDown: saved.autoEffectDown, noteSeEnabled: saved.noteSeEnabled, noteSeType: saved.noteSeType } }; });
+  console.log(`  読み込まれた設定: 画面 effect=${look.effect} lightweight=${look.lightweight} / 保存値 ${JSON.stringify(look.saved)}`);
   const head = await page.evaluate(() => (document.querySelector('[data-rhythm-play-area]')?.closest('main')?.innerText || '').replace(/\s+/g, ' ').slice(0, 80));
   console.log(`演奏: ${SONG} ${DIFF} / ${head}`);
   // 自動の手(曲鑑賞と同じ)。曲の時刻と壁の時計の対応を毎コマ控える(コマに曲の時刻を付けるため)
@@ -203,6 +232,8 @@ const slowClock = () => {
   await cdp.send('Page.stopScreencast');
   await writing;
   const clock = await page.evaluate(() => window.__promoClock);
+  const seLog = await page.evaluate(() => window.__promoSe || []);
+  const lookEnd = await page.evaluate(() => { const el = document.querySelector('[data-rhythm-effect]'); return el ? { effect: el.getAttribute('data-rhythm-effect'), lightweight: el.getAttribute('data-rhythm-lightweight') } : null; }).catch(() => null);
   await context.close(); await browser.close();
   // 壁の時計 → 曲の時刻(前後の控えで直線に補う)
   const songAt = (wall) => {
@@ -213,7 +244,10 @@ const slowClock = () => {
     return w1 === w0 ? m0 : m0 + (m1 - m0) * (wall - w0) / (w1 - w0);
   };
   const list = frames.map(f => ({ file: f.file, songMs: Math.round(songAt(f.wall) * 10) / 10 }));
-  fs.writeFileSync(path.join(OUT, 'frames.json'), JSON.stringify({ song: SONG, diff: DIFF, from: FROM, to: TO, size: [W * DPR, H * DPR], frames: list }));
+  fs.writeFileSync(path.join(OUT, 'frames.json'), JSON.stringify({ song: SONG, diff: DIFF, from: FROM, to: TO, size: [W * DPR, H * DPR], noteSpeed: SPEED, draw: DRAW || 'auto', settings: Object.assign({}, EXTRA_SETTINGS, { noteSpeed: SPEED }), look: { start: look, end: lookEnd }, frames: list }));
+  fs.writeFileSync(path.join(OUT, 'se.json'), JSON.stringify({ song: SONG, settings: Object.assign({}, EXTRA_SETTINGS, { noteSpeed: SPEED }), calls: seLog }));
+  const flicks = seLog.filter(c => c[1] === 'playFlick' && c[0] >= FROM && c[0] <= TO).map(c => (c[0] / 1000).toFixed(2));
+  console.log(`  タップ音の呼び出し ${seLog.length}件(区間のフリック ${flicks.length}: ${flicks.slice(0, 40).join(' ')})/ 終わりの画面 ${JSON.stringify(lookEnd)}`);
   const inWin = list.filter(f => f.songMs >= FROM && f.songMs <= TO).length;
   console.log(`  遅回し ${RATE}倍・${W * DPR}×${H * DPR} / コマ ${list.length}(区間の中 ${inWin}・1秒あたり ${(inWin / ((TO - FROM) / 1000)).toFixed(1)})/ ミス ${res.miss ?? '?'}(判定済み ${res.done ?? '?'}${res.where ? '・' + res.where : ''})→ ${path.relative(ROOT, OUT)}`);
   if (errors.length) console.log('  ページのエラー:', errors.slice(0, 3).join(' / '));
