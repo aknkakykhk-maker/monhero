@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abeebafb70602828
+// source-sha256: 59b6a671654b77d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70875,9 +70875,9 @@ const quickAnywhereFloatHits = (el, spot, known = null) => {
   if (typeof document === 'undefined' || !el) return 0;
   const R = quickAnywhereFloatRect(el, spot);
   let hits = 0;
-  for (const o of document.querySelectorAll('button,a,[role=button]')) {
+  for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
     if (o === el || el.contains(o) || o.contains(el) || o.closest('[data-quick-anywhere-detail]') || !o.getClientRects().length) continue;
-    if (known && known.has(o)) continue;
+    if (known && known.has(o) && !o.hasAttribute('data-quick-avoid')) continue;
     const cs = getComputedStyle(o);
     if (cs.visibility === 'hidden' || cs.pointerEvents === 'none' || Number(cs.opacity) === 0) continue;
     const r = o.getBoundingClientRect();
@@ -70931,7 +70931,7 @@ const QuickAnywhereFloat = ({
       const el = ref.current;
       if (typeof document !== 'undefined' && el) {
         const R = quickAnywhereFloatRect(el, base);
-        for (const o of document.querySelectorAll('button,a,[role=button]')) {
+        for (const o of document.querySelectorAll('button,a,[role=button],[data-quick-avoid]')) {
           const r = o.getBoundingClientRect();
           if (!(Math.min(R.right, r.right) - Math.max(R.left, r.left) > 1 && Math.min(R.bottom, r.bottom) - Math.max(R.top, r.top) > 1)) set.add(o);
         }
@@ -225277,6 +225277,13 @@ const useCardShareEntry = (breederId, self = false) => {
   return state;
 };
 const CARD_SHARE_TILE_CLASS = 'rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2';
+const CARD_SHARE_NAME_STYLE = {
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 3,
+  overflow: 'hidden',
+  ...JA_WRAP_STYLE
+};
 const CardShareDeckThumbs = ({
   entry
 }) => {
@@ -225508,6 +225515,7 @@ const CardShareDeckTile = ({
   const tile = self ? React.createElement("button", {
     type: "button",
     "data-profile-show": "card-deck",
+    "data-quick-avoid": true,
     "data-card-share-tile": "self",
     onClick: () => {
       if (onOpen) {
@@ -225523,8 +225531,10 @@ const CardShareDeckTile = ({
   }, React.createElement(CardShareDeckThumbs, {
     entry: entry
   })), React.createElement("b", {
-    className: "mt-1 block truncate text-[14px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
+    "data-card-share-tile-name": true,
+    className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
+    style: CARD_SHARE_NAME_STYLE
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0])) : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "mt-2 block text-[13px] font-black text-slate-300"
@@ -225532,6 +225542,7 @@ const CardShareDeckTile = ({
     className: "block text-[10px] font-bold text-slate-400"
   }, "押すとデッキ登録へ"))) : React.createElement("div", {
     "data-profile-show": "card-deck",
+    "data-quick-avoid": true,
     "data-card-share-tile": "friend",
     className: CARD_SHARE_TILE_CLASS
   }, head, React.createElement("span", {
@@ -225539,8 +225550,10 @@ const CardShareDeckTile = ({
   }, React.createElement(CardShareDeckThumbs, {
     entry: entry
   })), React.createElement("b", {
-    className: "mt-1 block truncate text-[14px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
+    "data-card-share-tile-name": true,
+    className: "mt-1 block break-words text-[13px] font-black leading-tight text-white",
+    style: CARD_SHARE_NAME_STYLE
+  }, jaWrap(t.name || 'デッキ')), React.createElement("small", {
     className: "block text-[11px] font-black text-pink-300"
   }, cardShareSmartText(t).split('(')[0]), React.createElement("button", {
     type: "button",
