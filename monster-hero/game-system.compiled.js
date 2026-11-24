@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df0954b0abed2bf1
+// source-sha256: f0738dd2db7298b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44263,15 +44263,17 @@ const RHYTHM_CELEBRATE_RAINBOW = Object.freeze(['#f0abfc', '#fde68a', '#86efac',
 const RHYTHM_CELEBRATE_AE = Object.freeze(['#67e8f9', '#fde68a']);
 const RHYTHM_RESULT_COUNT = Object.freeze({
   scoreAt: 300,
-  scoreMs: 1200,
-  janAt: 1500,
-  rowAt: 400,
-  rowStep: 110,
-  rowMs: 550,
-  stampAt: 1550,
-  ribbonAt: 1850,
-  restAt: 1900,
-  endAt: 2400
+  scoreMs: 2120,
+  janAt: 2420,
+  rowAt: 300,
+  rowStep: 260,
+  rowMs: 200,
+  comboAt: 2120,
+  comboMs: 300,
+  stampAt: 2490,
+  ribbonAt: 2750,
+  restAt: 2750,
+  endAt: 3300
 });
 const rhythmResultCountAnimOn = settings => !!settings && rhythmFxOn(settings, 'resultCount', true);
 const rhythmCountEase = k => 1 - Math.pow(1 - k, 3);
@@ -46582,10 +46584,31 @@ const RhythmTapTest = ({
       return undefined;
     }
     draw(0);
+    const rowItems = items.filter(item => item.el.closest('[data-rhythm-result-judgment-table]')).sort((a, b) => a.at - b.at);
+    const firstRecord = !!card && card.dataset.newRecord === '1' && !(prev > 0);
+    let rowSe = 0,
+      janSe = false;
+    const sound = t => {
+      let fire = -1;
+      while (rowSe < rowItems.length && t >= rowItems[rowSe].at + rowItems[rowSe].ms) {
+        fire = rowSe;
+        rowSe++;
+      }
+      if (fire >= 0) try {
+        RHYTHM_NOTE_SE_RUNTIME.playResultCount(fire, false);
+      } catch {}
+      if (!janSe && t >= T.janAt) {
+        janSe = true;
+        if (!firstRecord) try {
+          RHYTHM_NOTE_SE_RUNTIME.playResultCount(0, true);
+        } catch {}
+      }
+    };
     const step = now => {
       if (!start) start = now;
       const t = now - start;
       draw(t);
+      sound(t);
       if (t < T.endAt) raf = requestAnimationFrame(step);else finish();
     };
     raf = requestAnimationFrame(step);
@@ -48740,7 +48763,9 @@ const RhythmTapTest = ({
         '--mh-count-jan': `${RC.janAt}ms`,
         '--mh-count-stamp': `${RC.stampAt}ms`,
         '--mh-count-ribbon': `${RC.ribbonAt}ms`,
-        '--mh-count-rest': `${RC.restAt}ms`
+        '--mh-count-rest': `${RC.restAt}ms`,
+        '--mh-count-combo-pop': `${RC.comboAt + RC.comboMs}ms`,
+        '--mh-row-ms': `${RC.rowMs}ms`
       }
     }, hudArtSrc && React.createElement("div", {
       "data-rhythm-result-backdrop": true,
@@ -49145,8 +49170,8 @@ const RhythmTapTest = ({
       className: `block text-[34px] font-black leading-tight tabular-nums max-[359px]:text-[28px] ${rhythmComboTextColor(view.maxCombo)}`
     }, countOn ? {
       'data-count-to': Number(view.maxCombo) || 0,
-      'data-count-at': RC.rowAt,
-      'data-count-ms': RC.scoreMs - 200,
+      'data-count-at': RC.comboAt,
+      'data-count-ms': RC.comboMs,
       'data-count-plain': '1'
     } : {}), view.maxCombo), view.result?.scoreVersion === 2 && React.createElement("small", {
       "data-rhythm-result-ticks": true,

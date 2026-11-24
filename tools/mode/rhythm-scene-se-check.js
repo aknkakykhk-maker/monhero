@@ -18,7 +18,7 @@ const cueAt = RT.indexOf('const playCue=(kind)=>{');
 const cue = cueAt >= 0 ? RT.slice(cueAt, cueAt + 700) : '';
 ok('場面の合図の音 playCue がある(count・join・mvp)', cueAt >= 0 && /RHYTHM_CUE_NOTES=\{count:.*join:.*mvp:/.test(RT));
 ok('playCue が鳴らないのは「ノーツの効果音OFF・音量0・全体ミュート」(playFullCombo と同じ守り)', /!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)/.test(cue));
-ok('playCue を外から呼べる', /playNewRecord,playCue,holdSync/.test(RT));
+ok('playCue を外から呼べる', /playNewRecord,(?:playResultCount,)?playCue,holdSync/.test(RT));
 
 // ---- F6 演奏前の 3・2・1 ----
 const cueOf = pick(PLAY, /const rhythmCountdownCueOf=step=>[^\n]*;/, 'rhythmCountdownCueOf');
