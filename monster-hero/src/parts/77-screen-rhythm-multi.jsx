@@ -3022,7 +3022,7 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
 // 立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない
 // 表に無い助手(みゅあ・きき・ハロウィンの衣装など)は、枠いっぱいに広げて上から22%(横向きは30%)の所を中心に見せる。背の低い枠でも絵の高さの8割は入れる
 const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
-// 立ち絵(images/assistant/stand-*・全身絵からの切り出し)は、顔の位置と大きさで寄せる(2026-11-24 r1119-153 追記4)。
+// 立ち絵(助手の絵のフォルダの stand-*・全身絵からの切り出し)は、顔の位置と大きさで寄せる(2026-11-24 r1119-153 追記4)。
 //   #7449 で全身絵から切り出し直したら、羽・上げた腕まで横に広く入り、枠いっぱいに絵を収める置き方では顔が前より小さくなった
 //   (社長「モンバト助手の立ち絵こんなだったっけ？」→ 選択「新しい絵のまま・枠での大きさを直す」)。絵は替えず、枠での寄せ方だけを変える。
 //   face … 顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT。top・eye・chin は見えている体の上0〜下1、cx は左0〜右1)/box … 見えている体の範囲(assistantLifeStandBox)
@@ -3031,8 +3031,9 @@ const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 //   目の線は、測った頭のてっぺん(耳・帽子を含む絵もある)から F の 0.6 倍上を空けた所。大きい帽子・リボンの服(表の above が 0.9 以上)はそのぶん下げる。
 //   顎の下にも F の below 倍(首と胸元)が入るよう、背の低い枠では F を小さくする。
 //   数字は前後の止め絵 docs/progress/assistant-art/r1119-153-switch/frame/ で決めた(0.17 倍で帽子が切れ・あつがぼやけた → 帽子の余白と元の絵の上限を足して 0.16 倍)
-//   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す(帽子の先は切れてよい)
-const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8 });
+//   背の低い枠(社長の写真の枠は高さ 90px ほど)では、胸元を見せる余裕がないので、顔を枠の高さの lowH 倍(lowPx まで)に寄せ、顎の下は F の lowBelow 倍だけ残す。
+//   ただし頭のてっぺんの上の余白(耳・帽子)が枠に入る大きさまで(みゅあのうさ耳が上で2割切れた・assistant-art-scenes-check)
+const RHYTHM_MODE_STAND_FACE = Object.freeze({ h: 0.16, w: 0.35, below: 2.5, eyeMin: 2.4, topPad: 0.6, headLen: 2.63, upMax: 1.5, lowH: 0.22, lowPx: 20, lowBelow: 0.8, visCut: 0.02 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
   const vis = box.b - box.t, faceI = vis * (face.chin - face.eye);
@@ -3040,18 +3041,20 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const R = RHYTHM_MODE_STAND_FACE;
   const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
   const hat = Number.isFinite(face.above) && face.above >= 0.9 ? (face.above - 0.55) * R.headLen : 0;
-  const eyeK = Math.max(R.eyeMin, topK + R.topPad) + hat;
+  // 見えている絵の上端(上げた手・耳の先)は、上から visCut(見えている絵の高さに対して)までしか切らない(assistant-art-scenes-check の「上が切れる」)
+  const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad + hat, visTopK);
   const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
   const eyeI = box.t + vis * face.eye, cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
   // 絵の高さ = F / faceI。枠の下まで届く F は 枠の高さ × faceI
-  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px), ${(faceI * 100).toFixed(3)}cqh)`;
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), ${(faceI * 100).toFixed(3)}cqh)`;
   const wK = box.ar / faceI;
   return { width: `calc(${F} * ${wK.toFixed(4)})`, left: `calc(var(--mhms-fx) - ${F} * ${(cxI * wK).toFixed(4)})`,
     // 目の線は eyeK の所。ただし顎の下に F の lowBelow 倍が残るよう、背の低い枠では上へ寄せる
     top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))` };
 };
-const RHYTHM_MODE_CQ_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('width', '1cqh');
+const RHYTHM_MODE_CQ_OK = typeof window !== 'undefined' && !!window.CSS && typeof window.CSS.supports === 'function' && window.CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle, artCorner = null }) {
   // 絵の縦横の比(読み込んでから分かる)。分かるまでは、いつもの幅で出す
   const [artRatio, setArtRatio] = React.useState(null);

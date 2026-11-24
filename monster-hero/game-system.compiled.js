@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e456cbc12a6dc613
+// source-sha256: 9b72bce3e320dfeb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102610,7 +102610,8 @@ const RHYTHM_MODE_STAND_FACE = Object.freeze({
   upMax: 1.5,
   lowH: 0.22,
   lowPx: 20,
-  lowBelow: 0.8
+  lowBelow: 0.8,
+  visCut: 0.02
 });
 const rhythmModeStandFacePlace = (face, box, natH) => {
   if (!face || !box || !Number.isFinite(face.cx) || !Number.isFinite(face.eye) || !Number.isFinite(face.chin) || !(box.ar > 0)) return null;
@@ -102620,12 +102621,13 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
   const R = RHYTHM_MODE_STAND_FACE;
   const topK = Number.isFinite(face.top) ? (face.eye - face.top) / (face.chin - face.eye) : 1.63;
   const hat = Number.isFinite(face.above) && face.above >= 0.9 ? (face.above - 0.55) * R.headLen : 0;
-  const eyeK = Math.max(R.eyeMin, topK + R.topPad) + hat;
+  const visTopK = (face.eye - R.visCut) / (face.chin - face.eye);
+  const eyeK = Math.max(R.eyeMin, topK + R.topPad + hat, visTopK);
   const kh = Math.min(R.h, 1 / (eyeK + 1 + R.below));
   const eyeI = box.t + vis * face.eye,
     cxI = box.l + (box.r - box.l) * face.cx;
   const cap = natH > 0 ? ` ${(natH * faceI * R.upMax).toFixed(1)}px,` : '';
-  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px), ${(faceI * 100).toFixed(3)}cqh)`;
+  const F = `max(min(${(kh * 100).toFixed(3)}cqh,${cap} ${(R.w * 100).toFixed(1)}cqw), min(${(R.lowH * 100).toFixed(1)}cqh, ${R.lowPx}px, ${(100 / (eyeK + 1 + R.lowBelow)).toFixed(3)}cqh), ${(faceI * 100).toFixed(3)}cqh)`;
   const wK = box.ar / faceI;
   return {
     width: `calc(${F} * ${wK.toFixed(4)})`,
@@ -102633,7 +102635,7 @@ const rhythmModeStandFacePlace = (face, box, natH) => {
     top: `max(calc(min(${F} * ${eyeK.toFixed(4)}, 100cqh - ${F} * ${(1 + R.lowBelow).toFixed(2)}) - ${F} * ${(eyeI / faceI).toFixed(4)}), calc(100cqh - ${F} * ${(1 / faceI).toFixed(4)}))`
   };
 };
-const RHYTHM_MODE_CQ_OK = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('width', '1cqh');
+const RHYTHM_MODE_CQ_OK = typeof window !== 'undefined' && !!window.CSS && typeof window.CSS.supports === 'function' && window.CSS.supports('width', '1cqh');
 function ModeSelectAssistantPanel({
   assistant,
   showArt,
