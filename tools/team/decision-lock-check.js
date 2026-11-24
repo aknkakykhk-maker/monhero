@@ -157,7 +157,7 @@ function behaviours() {
   };
   B['道具を作る仕事は最新モデル・回す仕事は安いモデル'] = () => {
     const p = [];
-    if (model('譜面の全曲点検の道具を作る') !== 'claude-fable-5-2') p.push('道具を作る仕事が claude-fable-5-2 にならない');
+    if (model('譜面の全曲点検の道具を作る') !== 'claude-opus-5-5') p.push('道具を作る仕事が claude-opus-5-5 にならない(Fable は社長の許可なしに使わない・2026-11-24)');
     if (!/^claude-(sonnet|haiku)-/.test(model('rhythm-chart-review.js を回して全曲点検の結果をまとめる'))) p.push('道具を回してまとめる仕事が安いモデルにならない');
     return p;
   };
@@ -167,9 +167,9 @@ function behaviours() {
     const r = run('tools/team/newsession.js', ['dev', '全曲点検の道具を作る']);
     const out = r.stdout || '';
     const p = [];
-    if (!out.includes('model: claude-fable-5-2')) p.push('道具を作る仕事の newsession が claude-fable-5-2 を出さない(動きの例が古い)');
-    if (!out.includes('AskUserQuestion') || !out.includes('聞かずに使わない')) p.push('newsession が claude-fable-5-2 を出すとき、「当てはまらないなら社長に選択式で聞いてから」が出ない');
-    if (model('モンスターノーツのかくつきを直す', { failed: 1 }) === 'claude-fable-5-2') p.push('1回目の直しで claude-fable-5-2 が出る');
+    if (out.includes('model: claude-fable-5-2')) p.push('newsession が claude-fable-5-2 を出す(社長の許可なしに使わない・2026-11-24)');
+    if (!out.includes('AskUserQuestion') || !out.includes('聞かずに使わない')) p.push('newsession に「Fable は社長に選択式で聞いてから・聞かずに使わない」が出ない');
+    if (model('モンスターノーツのかくつきを直す', { failed: 2 }) === 'claude-fable-5-2') p.push('2回直しても claude-fable-5-2 が出る');
     return p;
   };
   B['窓口の返事に表の記法が残ると止まる'] = () => {
